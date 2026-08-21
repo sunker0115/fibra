@@ -1,0 +1,11 @@
+# 构建产物
+target/
+*.class
+.flattened-pom.xml
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# macOS
+.DS_Store
