@@ -12,14 +12,14 @@
 ## 决定
 
 1. 行为主基线固定为 DeepSeek Harness 提交 `141eb6fef83422698aef7a981029e843e8161534` 内置的 Cordis 4.0.1；独立 Cordis 提交 `8cc9e33fab69e2d0476d126baaf2acb24e6a6ab4` 的 core tests 作为用例语料。
-2. 工程固定为 `fibra-api`、`fibra-core`、`fibra-parity-tests` 三模块：API 不依赖实现，core 是唯一运行时，parity-tests 承载验收。运行时使用 Java 21、Reactor Core 和 SLF4J API；异步主契约统一使用 `Mono`/`Flux`，不混用 `CompletableFuture` 和 fire-and-forget `Runnable` 表达同一生命周期。
+2. 内核固定为 `fibra-api`、`fibra-core`、`fibra-parity-tests`，外部装载能力按适配模块增加；API 不依赖实现，core 始终是唯一运行时，parity-tests 承载内核验收与全部公开 API 冻结。运行时使用 Java 21、Reactor Core 和 SLF4J API；异步主契约统一使用 `Mono`/`Flux`，不混用 `CompletableFuture` 和 fire-and-forget `Runnable` 表达同一生命周期。
 3. Reactor 单线程 Scheduler 串行 Fibra 状态变更；插件工作 Publisher 可以在其他 Scheduler 执行，但状态决策必须回到 lifecycle Scheduler。
 4. Cordis 的动态 `ctx.foo` 改为显式 `ServiceKey<T>`。服务名必须声明，不能从类名、字段名推断。
 5. 服务调用者所有权通过 `BoundService<T>` 与 `InvocationContext` 显式传递。它比 ThreadLocal/JDK Proxy 更适合异步 Java；动态代理仅允许作为同步语法糖。
 6. effect 的异步多值形态直接使用 Publisher，并以 `request(1)` 保留 Cordis async generator 的在途产出边界。业务代码不承担协作取消正确性。
 7. 同一 effect 内逆序串行清理；Fibra 顶层 effects 并发清理并等待全部完成。手动清理传播局部错误，Fibra unload 在顶层边界记录并隔离错误。
 8. `provide` 返回可等待的 `ServiceRegistration`；撤销必须等所有受影响依赖 Fibra 收敛后才完成。
-9. PF4J 仅用于未来装载模块，OSGi DS 仅作静态贪婪依赖语义参照；二者都不替代 Cordis Fibra。
+9. PF4J 3.13.0 仅用于 `fibra-loader-pf4j` 的 JAR、依赖图、扩展索引和 ClassLoader；PF4J `STARTED` 不等于 Fibra `ACTIVE`，也不替代 Cordis Fibra。OSGi DS 仅作静态贪婪依赖语义参照。
 10. LoggerService、全部事件模式和 internal events 属于 core 行为，不因使用 SLF4J 或 Java 类型系统而删减。
 11. Cordis accessor/mixin/association 用 `PropertyKey`、`PropertyAccessor`、`Associated` 显式建模；这是 Java 强类型替换，不允许删除关联对象的调用方服务解析能力。
 12. 插件 runtime 按入口对象身份分组；类插件以 `PluginFactory` 为身份。批量移除返回 `Mono<Void>` 并等待所有 Fibra 完成。
@@ -27,10 +27,9 @@
 
 ## 非目标
 
-- JAR/ClassLoader 插件发现与卸载；
 - 字节码 HMR；
 - YAML/JSON 配置文件装载；
-- Spring、PF4J、OSGi 宿主适配；
+- Spring、Hasor、Solon、OSGi 宿主适配；
 - DeepSeek Harness 的 agent、tool、session 等业务插件。
 
 这些能力只能建立在同一个 `Context/Fibra/ServiceKey/PluginDescriptor` 契约之上，不得另建生命周期容器。

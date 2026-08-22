@@ -12,16 +12,16 @@ Fibra 是 DeepSeek Harness 内 Cordis 4.0.1 的 Java 21 等价内核。Java API 
 1. DeepSeek Harness 提交 `141eb6fef83422698aef7a981029e843e8161534` 下的 `vendor/cordis`，版本 `4.0.1`。源码文件摘要见 `../references/2026-08-21-fibra-cordis-mapping.md`。
 2. Cordis 提交 `8cc9e33fab69e2d0476d126baaf2acb24e6a6ab4` 下 `packages/core/tests` 的 12 组测试。它提供公开行为用例；若与第一项源码存在差异，以第一项为准并增加 Fibra 回归测试。
 
-本期只实现 Cordis core。PF4J/JAR/ClassLoader、HMR、配置文件 loader、timer 均在后续适配模块，不进入 `fibra-core`。
+本文只约束 Cordis core。PF4J/JAR/ClassLoader 已由独立适配模块实现，契约见 [Fibra PF4J 装载架构](./2026-08-22-fibra-pf4j-loader-architecture.md)；HMR、配置文件 loader、timer 仍不进入 `fibra-core`。
 
 ## 2. 技术与模块
 
 - Maven 父工程：`com.sstlfsj:fibra:${revision}`；`revision` 是唯一项目版本真源，安装和发布时由 Flatten Maven Plugin 展开。
-- 模块边界固定为：`fibra-api`（稳定公开契约）、`fibra-core`（唯一运行时实现）、`fibra-parity-tests`（Cordis 逐项门禁与 API 冻结）。依赖方向只能是 `fibra-core -> fibra-api`，验收模块依赖 `fibra-core`；运行时实现不得反向进入 API 模块。
+- 内核边界固定为：`fibra-api`（稳定公开契约）、`fibra-core`（唯一运行时实现）、`fibra-parity-tests`（Cordis 逐项门禁与 API 冻结）。适配层增加 `fibra-pf4j-api` 与 `fibra-loader-pf4j`，依赖方向固定为 `fibra-loader-pf4j -> fibra-core + fibra-pf4j-api -> fibra-api`；`fibra-core` 不依赖 PF4J，运行时实现不得反向进入 API 模块。
 - Java 21。
 - 第三方依赖、内部模块和 Maven 插件的版本集中在父 POM `properties`，依赖版本通过 `dependencyManagement` 传递，子模块不得重复声明。
 - 运行时依赖：Reactor Core 3.8.6、SLF4J API 2.0.18。core 不绑定日志 provider。
-- 测试依赖只存在于 `fibra-parity-tests`：JUnit 6.1.3、Reactor Test 3.8.6、Awaitility 4.3.0。时间相关测试使用虚拟时间或显式闩锁，禁止 `Thread.sleep` 猜时序。
+- 内核验收依赖只存在于 `fibra-parity-tests`：JUnit 6.1.3、Reactor Test 3.8.6、Awaitility 4.3.0。装载适配的真实 JAR 测试位于 `fibra-loader-pf4j`。时间相关测试使用虚拟时间或显式闩锁，禁止 `Thread.sleep` 猜时序。
 
 Reactor 负责 Publisher 协议、`Mono`/`Flux` 组合、单线程 `Scheduler` 与测试虚拟时间；Fibra 只实现 Cordis 特有的状态机、作用域服务表、事件策略和 effect 所有权。
 

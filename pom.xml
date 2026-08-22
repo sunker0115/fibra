@@ -12,6 +12,8 @@
   <modules>
     <module>fibra-api</module>
     <module>fibra-core</module>
+    <module>fibra-pf4j-api</module>
+    <module>fibra-loader-pf4j</module>
     <module>fibra-parity-tests</module>
   </modules>
 
@@ -24,6 +26,7 @@
     <slf4j.version>2.0.18</slf4j.version>
     <junit.version>6.1.3</junit.version>
     <awaitility.version>4.3.0</awaitility.version>
+    <pf4j.version>3.13.0</pf4j.version>
     <flatten-maven-plugin.version>1.7.0</flatten-maven-plugin.version>
     <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
     <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
@@ -58,6 +61,11 @@
         <artifactId>awaitility</artifactId>
         <version>${awaitility.version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.pf4j</groupId>
+        <artifactId>pf4j</artifactId>
+        <version>${pf4j.version}</version>
+      </dependency>
       <!-- 内部模块统一使用当前 reactor 版本，子模块引用时不声明版本。 -->
       <dependency>
         <groupId>com.sstlfsj</groupId>
@@ -67,6 +75,16 @@
       <dependency>
         <groupId>com.sstlfsj</groupId>
         <artifactId>fibra-core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-pf4j-api</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-loader-pf4j</artifactId>
         <version>${project.version}</version>
       </dependency>
     </dependencies>

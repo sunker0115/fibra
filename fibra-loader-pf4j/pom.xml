@@ -10,8 +10,8 @@
     <version>${revision}</version>
   </parent>
 
-  <artifactId>fibra-parity-tests</artifactId>
-  <description>Cordis core 逐项行为验收与 Fibra 公共 API 冻结门禁。</description>
+  <artifactId>fibra-loader-pf4j</artifactId>
+  <description>PF4J 制品、依赖图与 ClassLoader 到 Fibra 生命周期的装载适配。</description>
 
   <dependencies>
     <dependency>
@@ -23,22 +23,12 @@
       <artifactId>fibra-pf4j-api</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-loader-pf4j</artifactId>
+      <groupId>org.pf4j</groupId>
+      <artifactId>pf4j</artifactId>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.projectreactor</groupId>
-      <artifactId>reactor-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.awaitility</groupId>
-      <artifactId>awaitility</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

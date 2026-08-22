@@ -1,6 +1,6 @@
 # Fibra 公共 API 使用手册
 
-本文对应 `com.sstlfsj:fibra-api:${revision}` 的冻结契约，以及 `com.sstlfsj:fibra-core:${revision}` 的受支持运行时入口。业务应用通常只依赖 `fibra-core`，它会传递引入 API；只编译扩展协议、不创建运行时的模块可单独依赖 `fibra-api`。
+本文对应 `com.sstlfsj:fibra-api:${revision}`、`com.sstlfsj:fibra-core:${revision}`、`com.sstlfsj:fibra-pf4j-api:${revision}` 与 `com.sstlfsj:fibra-loader-pf4j:${revision}` 的冻结公开契约。业务应用通常依赖 `fibra-core`；需要运行时 JAR 插件时再依赖 `fibra-loader-pf4j`。
 
 ## 1. 创建与关闭
 
@@ -169,7 +169,129 @@ int answer = session.get(ANSWER);
 
 `LoggerService.buffer()` 返回固定对象的时间顺序环形缓冲区，`bufferSize(int)` 可动态裁剪。`exporter(LogExporter)` 返回归当前 Fibra 所有的 disposer；`LogExporter.to` 可适配 Consumer 并指定最低级别。`LogMessage` 包含 sequence、timestamp、name、level、arguments 和弱引用 Fibra。最终 backend 走 SLF4J，core 不绑定 provider。
 
-## 8. 稳定错误
+## 8. PF4J JAR 插件
+
+插件工程依赖 `fibra-pf4j-api`，作用域必须是 `provided`。以下 POM 可直接构建符合 loader 契约的 fat JAR；替换项目坐标、入口类业务和插件元数据即可：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.example</groupId>
+  <artifactId>greeting-plugin</artifactId>
+  <version>1.0.0</version>
+
+  <properties>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <fibra.version>0.1.0-SNAPSHOT</fibra.version>
+    <pf4j.version>3.13.0</pf4j.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-pf4j-api</artifactId>
+      <version>${fibra.version}</version>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.14.1</version>
+        <configuration>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.pf4j</groupId>
+              <artifactId>pf4j</artifactId>
+              <version>${pf4j.version}</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>3.7.1</version>
+        <configuration>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+          <appendAssemblyId>false</appendAssemblyId>
+          <archive>
+            <manifestEntries>
+              <Plugin-Id>greeting-plugin</Plugin-Id>
+              <Plugin-Version>1.0.0</Plugin-Version>
+              <Plugin-Provider>example</Plugin-Provider>
+              <Plugin-Dependencies></Plugin-Dependencies>
+            </manifestEntries>
+          </archive>
+        </configuration>
+        <executions>
+          <execution>
+            <id>plugin-jar</id>
+            <phase>package</phase>
+            <goals><goal>single</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+```
+
+入口类只实现 Fibra 生命周期，不继承 PF4J `Plugin`，也不创建 Spring Context：
+
+```java
+package com.example.greeting;
+
+import com.sstlfsj.fibra.Context;
+import com.sstlfsj.fibra.Disposable;
+import com.sstlfsj.fibra.Disposables;
+import com.sstlfsj.fibra.ServiceKey;
+import com.sstlfsj.fibra.pf4j.FibraPluginEntrypoint;
+import org.pf4j.Extension;
+import reactor.core.publisher.Mono;
+
+@Extension
+public final class GreetingPlugin implements FibraPluginEntrypoint {
+    public static final ServiceKey<String> GREETING =
+        ServiceKey.of("greeting.text", String.class);
+
+    @Override
+    public Mono<Disposable> apply(Context context, Void config) {
+        context.provide(GREETING, "你好，Fibra");
+        return Mono.just(Disposables.noop());
+    }
+}
+```
+
+PF4J 的注解处理器会生成 `META-INF/extensions.idx`。构建后把 `target/greeting-plugin-1.0.0.jar` 放到已存在的插件根目录，再由宿主装载：
+
+```java
+import com.sstlfsj.fibra.loader.pf4j.FibraPluginLoader;
+import com.sstlfsj.fibra.runtime.FibraRuntime;
+
+var pluginsRoot = java.nio.file.Path.of("plugins");
+try (var root = FibraRuntime.create();
+     var loader = new FibraPluginLoader(root, pluginsRoot)) {
+    loader.loadPlugins();
+    loader.startPlugins();
+    // 运行应用
+}
+```
+
+资源按声明逆序关闭，因此 loader 先 dispose 全部插件 Fibra，再 stop/unload PF4J 和关闭 ClassLoader，最后 root Context 关闭。`loadPlugins()` 只扫描根目录直接子级 fat JAR；共享的 Fibra/PF4J/Reactor/SLF4J 类不得打入插件 JAR，Manifest 不得声明 `Plugin-Class`，每个制品必须且只能有一个 `FibraPluginEntrypoint`。
+
+`Plugin-Dependencies` 只表示制品和类加载依赖；业务服务依赖仍由入口创建的 Fibra/子 Fibra 使用 `PluginDescriptor.require` 声明。PF4J `STARTED` 不等于 Fibra `ACTIVE`。
+
+## 9. 稳定错误
 
 参数为空、名称空白、类型不匹配等调用错误使用 `IllegalArgumentException`。运行时状态错误使用 `FibraException`，通过 `code()` 判断：
 
@@ -182,7 +304,7 @@ int answer = session.get(ANSWER);
 
 插件 config/startup 原异常、event listener 原异常和手动 disposer 原异常不包装；调用者可直接判断原类型。
 
-## 9. API 类型索引与冻结规则
+## 10. API 类型索引与冻结规则
 
 | 包/分组 | 类型 |
 |---|---|
@@ -194,12 +316,14 @@ int answer = session.get(ANSWER);
 | `annotation` | `InjectService`、`InjectServices` |
 | `event` | `EventKey`、`EventOptions`、`EventTarget`、`Next`、`AggregateEventException`、`CoreEvents` 及其 8 个 listener 契约 |
 | `logging` | `FibraLogger`、`LoggerService`、`LogExporter`、`LogMessage`、`LogLevel`、`LoggerIntercept` |
+| `pf4j` | `FibraPluginEntrypoint` |
+| `loader.pf4j` | `FibraPluginLoader` |
 
 `fibra-core` 只承诺 `com.sstlfsj.fibra.runtime` 包，其中当前唯一入口是 `FibraRuntime`。`com.sstlfsj.fibra.internal` 即使因实现协作需要包含 Java `public` 类型，也属于明确排除的实现细节，业务代码不得直接引用。
 
-完整 public/protected JVM 签名分别见 `fibra-api-public-signatures.txt` 和 `fibra-core-public-signatures.txt`。`ApiSignatureBaselineTest` 同时扫描两个制品的公开类型集合并调用 JDK `javap -protected`；任何新增、删除、可见性、泛型或方法签名变化都会使 `mvn verify` 失败，必须先完成 API 审核后显式更新基线。
+四个生产制品的完整 public/protected JVM 签名分别见本目录中的 `*-public-signatures.txt`。`ApiSignatureBaselineTest` 扫描全部制品的公开类型集合并调用 JDK `javap -protected`；任何新增、删除、可见性、泛型或方法签名变化都会使 `mvn verify` 失败，必须先完成 API 审核后显式更新基线。
 
-### 9.1 兼容性清单
+### 10.1 兼容性清单
 
 以下变化属于破坏公开契约，禁止在未审核时更新签名基线：
 
@@ -215,4 +339,4 @@ int answer = session.get(ANSWER);
 - `com.sstlfsj.fibra.internal` 内部类型的调整；
 - 文档、测试和私有成员调整。
 
-新增公开能力同样需要 API 审核；审核通过后必须同时更新使用文档、两个签名基线中受影响的文件以及对应测试。项目不提供为旧签名兜底的兼容适配层。
+新增公开能力同样需要 API 审核；审核通过后必须同时更新使用文档、对应签名基线和测试。项目不提供为旧签名兜底的兼容适配层。
