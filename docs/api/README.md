@@ -291,6 +291,32 @@ try (var root = FibraRuntime.create();
 
 `Plugin-Dependencies` 只表示制品和类加载依赖；业务服务依赖仍由入口创建的 Fibra/子 Fibra 使用 `PluginDescriptor.require` 声明。PF4J `STARTED` 不等于 Fibra `ACTIVE`。
 
+显式更新使用插件根目录外的候选 JAR：
+
+```java
+Path candidate = Path.of("releases/greeting-plugin-2.0.0.jar");
+String pluginId = loader.reloadPlugin(candidate);
+```
+
+`reloadPlugin` 会根据候选 Manifest 定位当前插件，停止并卸载全部传递依赖方，等待 Fibra dispose，关闭旧 ClassLoader，在插件根目录内原子替换 JAR，再批量装载并恢复原启动状态。候选无法装载或启动时恢复旧 JAR 和旧运行状态；候选文件本身不会被移动或删除。候选路径必须位于插件根目录外，且不能等于当前 JAR。
+
+自动更新监听独立的 incoming 目录。生产方必须先在目录外完整写出 JAR，再通过同一文件系统的原子 move 发布；监听器只消费 `ENTRY_CREATE`，不会观察半写文件：
+
+```java
+import com.sstlfsj.fibra.loader.pf4j.FibraPluginWatcher;
+import java.time.Duration;
+
+Path incoming = Path.of("plugin-incoming");
+try (var watcher = new FibraPluginWatcher(loader, incoming, Duration.ofSeconds(2))) {
+    watcher.start();
+    // 应用主循环
+    watcher.lastFailure().ifPresent(failure ->
+        root.logger().error("候选插件更新失败：{}", failure.candidate(), failure.cause()));
+}
+```
+
+同一插件在去抖窗口内出现多个候选时，监听器使用 PF4J SemVer 选择最高版本；同版本使用文件最后修改时间选择较新的候选，低于当前运行版本的候选被忽略。人工降级仍可直接调用 `reloadPlugin`。监听器不删除 incoming 文件；异步失败同时写入 SLF4J 并由 `lastFailure()` 暴露。关闭顺序必须是 watcher、loader、root。
+
 ## 9. 稳定错误
 
 参数为空、名称空白、类型不匹配等调用错误使用 `IllegalArgumentException`。运行时状态错误使用 `FibraException`，通过 `code()` 判断：
@@ -317,7 +343,7 @@ try (var root = FibraRuntime.create();
 | `event` | `EventKey`、`EventOptions`、`EventTarget`、`Next`、`AggregateEventException`、`CoreEvents` 及其 8 个 listener 契约 |
 | `logging` | `FibraLogger`、`LoggerService`、`LogExporter`、`LogMessage`、`LogLevel`、`LoggerIntercept` |
 | `pf4j` | `FibraPluginEntrypoint` |
-| `loader.pf4j` | `FibraPluginLoader` |
+| `loader.pf4j` | `FibraPluginLoader`、`FibraPluginWatcher`、`FibraPluginWatchFailure` |
 
 `fibra-core` 只承诺 `com.sstlfsj.fibra.runtime` 包，其中当前唯一入口是 `FibraRuntime`。`com.sstlfsj.fibra.internal` 即使因实现协作需要包含 Java `public` 类型，也属于明确排除的实现细节，业务代码不得直接引用。
 

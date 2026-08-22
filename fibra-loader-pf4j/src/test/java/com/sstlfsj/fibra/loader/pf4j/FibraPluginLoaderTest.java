@@ -7,6 +7,8 @@ import com.sstlfsj.fibra.runtime.FibraRuntime;
 import example.fibra.plugin.ConsumerEntrypoint;
 import example.fibra.plugin.FixtureEntrypoint;
 import example.fibra.plugin.ProviderEntrypoint;
+import example.fibra.plugin.ReplacementEntrypoint;
+import example.fibra.plugin.ReplacementProviderEntrypoint;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -151,6 +153,92 @@ class FibraPluginLoaderTest {
         }
     }
 
+    @Test
+    void reloadsStartedPluginFromExternalCandidateAndClosesOldClassLoader(@TempDir Path work)
+        throws Exception {
+        var pluginsRoot = Files.createDirectory(work.resolve("plugins"));
+        var incoming = Files.createDirectory(work.resolve("incoming"));
+        writePluginJar(pluginsRoot.resolve("fixture.jar"), "fixture", "1.0.0", "",
+            FixtureEntrypoint.class);
+        var candidate = incoming.resolve("fixture-2.0.0.jar");
+        writePluginJar(candidate, "fixture", "2.0.0", "", ReplacementEntrypoint.class);
+
+        try (Context root = FibraRuntime.create();
+             FibraPluginLoader loader = new FibraPluginLoader(root, pluginsRoot)) {
+            loader.loadPlugins();
+            loader.startPlugin("fixture");
+            var oldClassLoader = loader.pluginClassLoader("fixture");
+
+            assertEquals("fixture", loader.reloadPlugin(candidate));
+
+            assertEquals("replacement", root.get(VALUE));
+            assertTrue(oldClassLoader.isClosed());
+            assertNotEquals(oldClassLoader, loader.pluginClassLoader("fixture"));
+            assertEquals("2.0.0", pluginVersion(pluginsRoot.resolve("fixture.jar")));
+            assertTrue(Files.isRegularFile(candidate));
+        }
+    }
+
+    @Test
+    void reloadsDependentsAndRestartsThemInDependencyOrder(@TempDir Path work)
+        throws Exception {
+        PluginLifecycleRecorder.EVENTS.clear();
+        var pluginsRoot = Files.createDirectory(work.resolve("plugins"));
+        var incoming = Files.createDirectory(work.resolve("incoming"));
+        writePluginJar(pluginsRoot.resolve("provider.jar"), "provider", "1.0.0", "",
+            ProviderEntrypoint.class);
+        writePluginJar(pluginsRoot.resolve("consumer.jar"), "consumer", "1.0.0", "provider",
+            ConsumerEntrypoint.class);
+        var candidate = incoming.resolve("provider-2.0.0.jar");
+        writePluginJar(candidate, "provider", "2.0.0", "",
+            ReplacementProviderEntrypoint.class);
+
+        try (Context root = FibraRuntime.create();
+             FibraPluginLoader loader = new FibraPluginLoader(root, pluginsRoot)) {
+            loader.loadPlugins();
+            loader.startPlugin("consumer");
+            var oldProviderClassLoader = loader.pluginClassLoader("provider");
+            var oldConsumerClassLoader = loader.pluginClassLoader("consumer");
+
+            loader.reloadPlugin(candidate);
+
+            assertEquals(List.of(
+                "provider:start", "consumer:start",
+                "consumer:stop", "provider:stop",
+                "provider-v2:start", "consumer:start"),
+                PluginLifecycleRecorder.EVENTS);
+            assertTrue(oldProviderClassLoader.isClosed());
+            assertTrue(oldConsumerClassLoader.isClosed());
+            assertEquals(FibraState.ACTIVE, loader.fibra("provider").orElseThrow().state());
+            assertEquals(FibraState.ACTIVE, loader.fibra("consumer").orElseThrow().state());
+        }
+    }
+
+    @Test
+    void restoresOldArtifactAndRuntimeWhenReplacementCannotStart(@TempDir Path work)
+        throws Exception {
+        var pluginsRoot = Files.createDirectory(work.resolve("plugins"));
+        var incoming = Files.createDirectory(work.resolve("incoming"));
+        writePluginJar(pluginsRoot.resolve("fixture.jar"), "fixture", "1.0.0", "",
+            FixtureEntrypoint.class);
+        var candidate = incoming.resolve("invalid-2.0.0.jar");
+        writePluginJar(candidate, "fixture", "2.0.0", "");
+
+        try (Context root = FibraRuntime.create();
+             FibraPluginLoader loader = new FibraPluginLoader(root, pluginsRoot)) {
+            loader.loadPlugins();
+            loader.startPlugin("fixture");
+            var oldClassLoader = loader.pluginClassLoader("fixture");
+
+            assertThrows(IllegalStateException.class, () -> loader.reloadPlugin(candidate));
+
+            assertTrue(oldClassLoader.isClosed());
+            assertEquals("1.0.0", pluginVersion(pluginsRoot.resolve("fixture.jar")));
+            assertEquals("fixture", root.get(VALUE));
+            assertEquals(FibraState.ACTIVE, loader.fibra("fixture").orElseThrow().state());
+        }
+    }
+
     private static void writePluginJar(Path path, String id, String version,
                                        String dependencies, Class<?>... classes) throws IOException {
         var manifest = new Manifest();
@@ -184,5 +272,11 @@ class FibraPluginLoaderTest {
             input.transferTo(output);
         }
         output.closeEntry();
+    }
+
+    private static String pluginVersion(Path path) throws IOException {
+        try (var jar = new java.util.jar.JarFile(path.toFile())) {
+            return jar.getManifest().getMainAttributes().getValue("Plugin-Version");
+        }
     }
 }

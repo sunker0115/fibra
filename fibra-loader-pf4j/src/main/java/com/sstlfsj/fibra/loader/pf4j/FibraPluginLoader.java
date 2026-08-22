@@ -4,12 +4,17 @@ import com.sstlfsj.fibra.Context;
 import com.sstlfsj.fibra.Fibra;
 import com.sstlfsj.fibra.PluginDescriptor;
 import com.sstlfsj.fibra.pf4j.FibraPluginEntrypoint;
+import org.pf4j.DefaultVersionManager;
 import org.pf4j.PluginState;
 import org.pf4j.PluginWrapper;
+import org.pf4j.VersionManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -24,6 +29,8 @@ import java.util.jar.JarFile;
 
 /** 把 PF4J JAR 制品生命周期桥接到宿主 Fibra Context。 */
 public final class FibraPluginLoader implements AutoCloseable {
+    private static final Logger LOGGER = LoggerFactory.getLogger(FibraPluginLoader.class);
+    private static final VersionManager VERSIONS = new DefaultVersionManager();
     private static final List<String> FORBIDDEN_ARTIFACT_PREFIXES = List.of(
         "com/sstlfsj/fibra/",
         "org/pf4j/",
@@ -78,6 +85,11 @@ public final class FibraPluginLoader implements AutoCloseable {
     public String loadPlugin(Path pluginPath) {
         Objects.requireNonNull(pluginPath, "pluginPath");
         return locked(() -> loadPluginInternal(normalize(pluginPath)));
+    }
+
+    public String reloadPlugin(Path candidatePath) {
+        Objects.requireNonNull(candidatePath, "candidatePath");
+        return locked(() -> reloadPluginInternal(normalize(candidatePath)));
     }
 
     public Fibra startPlugin(String pluginId) {
@@ -150,10 +162,94 @@ public final class FibraPluginLoader implements AutoCloseable {
         return entrypointClassLoaders.get(pluginId);
     }
 
+    FibraPluginCandidate inspectCandidate(Path candidatePath) {
+        return validateArtifact(normalize(candidatePath));
+    }
+
+    String currentPluginVersion(String pluginId) {
+        return locked(() -> {
+            var plugin = pluginManager.getPlugin(pluginId);
+            return plugin == null ? null : plugin.getDescriptor().getVersion();
+        });
+    }
+
     private String loadPluginInternal(Path pluginPath) {
         requireDirectChild(pluginPath);
         validateArtifact(pluginPath);
         return pluginManager.loadPluginsStrict(List.of(pluginPath)).getFirst();
+    }
+
+    private String reloadPluginInternal(Path candidatePath) {
+        if (!Files.isRegularFile(candidatePath)) {
+            throw new IllegalArgumentException("candidate must be a regular JAR: "
+                + candidatePath);
+        }
+        var candidate = validateArtifact(candidatePath);
+        var current = pluginManager.getPlugin(candidate.pluginId());
+        if (current == null) {
+            throw new IllegalArgumentException("cannot reload unknown plugin "
+                + candidate.pluginId());
+        }
+
+        var currentPath = normalize(current.getPluginPath());
+        if (candidatePath.equals(currentPath)) {
+            throw new IllegalArgumentException(
+                "candidate must not overwrite the currently loaded plugin JAR");
+        }
+        if (Objects.equals(candidatePath.getParent(), pluginsRoot)) {
+            throw new IllegalArgumentException(
+                "candidate JAR must be staged outside the plugins root");
+        }
+
+        var affectedIds = dependentFirst(candidate.pluginId());
+        var artifactPaths = new ArrayList<Path>(affectedIds.size());
+        for (var pluginId : affectedIds) {
+            artifactPaths.add(normalize(pluginManager.getPlugin(pluginId).getPluginPath()));
+        }
+        var startedIds = new LinkedHashSet<String>();
+        for (var plugin : pluginManager.getStartedPlugins()) {
+            if (affectedIds.contains(plugin.getPluginId())) {
+                startedIds.add(plugin.getPluginId());
+            }
+        }
+
+        Path staged = null;
+        Path backup = null;
+        var oldArtifactMoved = false;
+        var runtimeMutationStarted = false;
+        try {
+            staged = Files.createTempFile(pluginsRoot, ".fibra-stage-", ".tmp");
+            Files.copy(candidatePath, staged, StandardCopyOption.REPLACE_EXISTING);
+            validateArtifact(staged);
+            backup = Files.createTempFile(pluginsRoot, ".fibra-backup-", ".tmp");
+
+            runtimeMutationStarted = true;
+            unloadAffected(affectedIds);
+            moveAtomically(currentPath, backup);
+            oldArtifactMoved = true;
+            moveAtomically(staged, currentPath);
+            staged = null;
+
+            loadArtifacts(artifactPaths);
+            restoreStarted(startedIds);
+            deleteTemporary(backup);
+            backup = null;
+            return candidate.pluginId();
+        } catch (RuntimeException | IOException failure) {
+            if (runtimeMutationStarted) {
+                recoverReload(candidate.pluginId(), affectedIds, artifactPaths, startedIds,
+                    currentPath, backup, oldArtifactMoved, failure);
+            }
+            throw new IllegalStateException("failed to reload plugin " + candidate.pluginId(),
+                failure);
+        } finally {
+            deleteTemporary(staged);
+            if (oldArtifactMoved && backup != null && !Files.notExists(backup)) {
+                LOGGER.error("Preserving Fibra plugin backup after failed recovery: {}", backup);
+            } else {
+                deleteTemporary(backup);
+            }
+        }
     }
 
     private Fibra startPluginInternal(String pluginId) {
@@ -272,13 +368,29 @@ public final class FibraPluginLoader implements AutoCloseable {
             .toList();
     }
 
-    private void validateArtifact(Path pluginPath) {
+    private FibraPluginCandidate validateArtifact(Path pluginPath) {
         try (var jar = new JarFile(pluginPath.toFile())) {
             var manifest = jar.getManifest();
             if (manifest == null) {
                 throw new IllegalArgumentException("plugin JAR has no manifest: " + pluginPath);
             }
-            var pluginClass = manifest.getMainAttributes().getValue("Plugin-Class");
+            var attributes = manifest.getMainAttributes();
+            var pluginId = attributes.getValue("Plugin-Id");
+            if (pluginId == null || pluginId.isBlank()) {
+                throw new IllegalArgumentException("plugin JAR has no Plugin-Id: " + pluginPath);
+            }
+            var version = attributes.getValue("Plugin-Version");
+            if (version == null || version.isBlank()) {
+                throw new IllegalArgumentException(
+                    "plugin JAR has no Plugin-Version: " + pluginPath);
+            }
+            try {
+                VERSIONS.compareVersions(version, version);
+            } catch (RuntimeException exception) {
+                throw new IllegalArgumentException("invalid Plugin-Version " + version
+                    + ": " + pluginPath, exception);
+            }
+            var pluginClass = attributes.getValue("Plugin-Class");
             if (pluginClass != null && !pluginClass.isBlank()) {
                 throw new IllegalArgumentException(
                     "Fibra plugin must not declare Plugin-Class: " + pluginPath);
@@ -292,9 +404,83 @@ public final class FibraPluginLoader implements AutoCloseable {
                 throw new IllegalArgumentException("plugin must not bundle shared class "
                     + bundled.get() + ": " + pluginPath);
             }
+            return new FibraPluginCandidate(pluginId, version,
+                Files.getLastModifiedTime(pluginPath));
         } catch (IOException exception) {
             throw new IllegalArgumentException("cannot inspect plugin JAR " + pluginPath,
                 exception);
+        }
+    }
+
+    private void unloadAffected(List<String> affectedIds) {
+        for (var pluginId : affectedIds) {
+            disposeFibra(pluginId);
+            var plugin = pluginManager.getPlugin(pluginId);
+            if (plugin != null && plugin.getPluginState() == PluginState.STARTED) {
+                pluginManager.stopPlugin(pluginId);
+            }
+        }
+        pluginManager.unloadPluginsStrict(affectedIds);
+    }
+
+    private void loadArtifacts(List<Path> artifactPaths) {
+        var sorted = artifactPaths.stream().sorted().toList();
+        for (var path : sorted) {
+            requireDirectChild(path);
+            validateArtifact(path);
+        }
+        pluginManager.loadPluginsStrict(sorted);
+    }
+
+    private void restoreStarted(Set<String> startedIds) {
+        var resolved = pluginManager.getResolvedPlugins().stream()
+            .map(PluginWrapper::getPluginId)
+            .filter(startedIds::contains)
+            .toList();
+        for (var pluginId : resolved) {
+            startPluginInternal(pluginId);
+        }
+    }
+
+    private void recoverReload(String pluginId, List<String> affectedIds,
+                               List<Path> artifactPaths, Set<String> startedIds,
+                               Path currentPath, Path backup, boolean oldArtifactMoved,
+                               Throwable failure) {
+        try {
+            unloadAffected(affectedIds);
+        } catch (RuntimeException cleanupFailure) {
+            failure.addSuppressed(cleanupFailure);
+        }
+        if (oldArtifactMoved && backup != null && Files.exists(backup)) {
+            try {
+                moveAtomically(backup, currentPath);
+            } catch (IOException restoreFailure) {
+                failure.addSuppressed(restoreFailure);
+                return;
+            }
+        }
+        try {
+            loadArtifacts(artifactPaths);
+            restoreStarted(startedIds);
+        } catch (RuntimeException restoreFailure) {
+            failure.addSuppressed(new IllegalStateException(
+                "failed to restore plugin " + pluginId, restoreFailure));
+        }
+    }
+
+    private static void moveAtomically(Path source, Path target) throws IOException {
+        Files.move(source, target, StandardCopyOption.ATOMIC_MOVE,
+            StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    private static void deleteTemporary(Path path) {
+        if (path == null) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(path);
+        } catch (IOException exception) {
+            LOGGER.warn("Cannot delete Fibra plugin temporary file: {}", path, exception);
         }
     }
 
@@ -356,4 +542,5 @@ public final class FibraPluginLoader implements AutoCloseable {
         var candidate = classPath;
         return FORBIDDEN_ARTIFACT_PREFIXES.stream().anyMatch(candidate::startsWith);
     }
+
 }

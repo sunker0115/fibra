@@ -40,6 +40,8 @@ fibra-loader-pf4j -> fibra-core -> fibra-api
 
 装载前会扫描 JAR 并拒绝重复打包的共享类。批量装载先加入全部 JAR，再统一解析依赖；任一装载或依赖解析失败时回滚本批次，不能留下半装载制品。
 
+版本更新候选必须位于插件根目录外。loader 先复制到插件根目录内的非 JAR 临时文件，再执行同文件系统原子替换；候选文件不归 loader 所有，不移动也不删除。
+
 ## 4. 生命周期与完成边界
 
 启动顺序固定为：
@@ -64,6 +66,27 @@ PF4J 解析并启动制品依赖
 
 PF4J `Plugin-Dependencies` 表达二进制/制品依赖；Fibra `PluginDescriptor.require` 表达运行期服务可用性。两层依赖不能互相推导。
 
+### 4.1 制品更新事务
+
+`reloadPlugin(candidate)` 的事务边界固定为：
+
+1. 完整校验候选 Manifest、SemVer、共享类和插件 ID；
+2. 捕获目标及全部传递依赖方的制品路径和启动状态；
+3. 依赖方优先完成 Fibra dispose、PF4J stop/unload 和 ClassLoader close；
+4. 备份旧 JAR，并在同一插件目录内原子安装候选；
+5. 批量装载全部受影响制品，按依赖顺序恢复原启动集合；
+6. 任一步失败，卸载新制品、原子恢复旧 JAR，并恢复旧启动集合；恢复失败作为 suppressed cause 暴露，禁止伪报成功。
+
+### 4.2 外部候选监听
+
+`FibraPluginWatcher` 只监听独立 incoming 目录的 `ENTRY_CREATE`。生产方必须在目录外完成写入，再原子 move 发布，因此 watcher 不需要猜测文件是否写完。
+
+- 按 `Plugin-Id` 去抖；窗口内用 PF4J SemVer 选择最高版本，同版本按最后修改时间选择；
+- 低于当前运行版本的自动候选被忽略；显式 `reloadPlugin` 仍允许人工降级；
+- watcher 只触发 `reloadPlugin`，不复制生命周期逻辑，也不删除 incoming 文件；
+- WatchService overflow、候选校验和更新失败必须记录 SLF4J，并通过 `lastFailure()` 可观测；
+- `close()` 关闭 WatchService、取消待执行更新并等待正在执行的更新完成。
+
 ## 5. ClassLoader 策略
 
 默认保持 PF4J 的 PDA 顺序：插件私有依赖优先，其次制品依赖，最后宿主。以下共享包强制由宿主加载，并同时禁止出现在插件 JAR：
@@ -85,13 +108,13 @@ PF4J `Plugin-Dependencies` 表达二进制/制品依赖；Fibra `PluginDescripto
 - 管理操作串行化；
 - 批量失败不遗留半初始化状态。
 
-后续做制品热更新时可继续吸收“按插件去抖、事件关联、关闭 WatchService/调度器”的思想，但更新顺序必须先等待 Fibra dispose，再替换 JAR 和关闭旧 ClassLoader。
+已继续吸收“按插件去抖、关闭 WatchService/调度器”的思想；更新实现仍完全复用 Fibra dispose 与 `reloadPlugin` 事务，不建立监听器专属生命周期。
 
 明确排除：每插件 Spring ApplicationContext、Spring Bean 扩展工厂、全局 parent-first、按 JAR 文件名推断版本、自动删除插件目录、未被调用的配置仓库，以及 Web/MyBatis/JPA 等宿主专用注册器。
 
 ## 7. 当前非目标
 
-- WatchService/HMR 与远程制品仓库；
+- JVMTI/Instrumentation 字节码原地重定义与远程制品仓库；
 - 删除磁盘制品；
 - Spring/Hasor/Solon 宿主集成；
 - 非 fat JAR 的 `lib/` 或 Manifest `Class-Path` 依赖布局；

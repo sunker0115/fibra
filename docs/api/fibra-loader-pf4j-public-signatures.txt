@@ -5,11 +5,31 @@ public final class com.sstlfsj.fibra.loader.pf4j.FibraPluginLoader implements ja
   public com.sstlfsj.fibra.loader.pf4j.FibraPluginLoader(com.sstlfsj.fibra.Context, java.nio.file.Path);
   public java.util.List<java.lang.String> loadPlugins();
   public java.lang.String loadPlugin(java.nio.file.Path);
+  public java.lang.String reloadPlugin(java.nio.file.Path);
   public com.sstlfsj.fibra.Fibra startPlugin(java.lang.String);
   public void startPlugins();
   public void stopPlugin(java.lang.String);
   public boolean unloadPlugin(java.lang.String);
   public java.util.List<java.lang.String> pluginIds();
   public java.util.Optional<com.sstlfsj.fibra.Fibra> fibra(java.lang.String);
+  public void close();
+}
+## com.sstlfsj.fibra.loader.pf4j.FibraPluginWatchFailure
+Compiled from "FibraPluginWatchFailure.java"
+public final class com.sstlfsj.fibra.loader.pf4j.FibraPluginWatchFailure extends java.lang.Record {
+  public com.sstlfsj.fibra.loader.pf4j.FibraPluginWatchFailure(java.nio.file.Path, java.lang.Throwable);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.nio.file.Path candidate();
+  public java.lang.Throwable cause();
+}
+## com.sstlfsj.fibra.loader.pf4j.FibraPluginWatcher
+Compiled from "FibraPluginWatcher.java"
+public final class com.sstlfsj.fibra.loader.pf4j.FibraPluginWatcher implements java.lang.AutoCloseable {
+  public com.sstlfsj.fibra.loader.pf4j.FibraPluginWatcher(com.sstlfsj.fibra.loader.pf4j.FibraPluginLoader, java.nio.file.Path, java.time.Duration);
+  public com.sstlfsj.fibra.loader.pf4j.FibraPluginWatcher start();
+  public boolean isRunning();
+  public java.util.Optional<com.sstlfsj.fibra.loader.pf4j.FibraPluginWatchFailure> lastFailure();
   public void close();
 }

@@ -55,4 +55,13 @@ final class FibraJarPluginManager extends JarPluginManager {
             throw exception;
         }
     }
+
+    void unloadPluginsStrict(List<String> pluginIds) {
+        for (var pluginId : pluginIds) {
+            if (getPlugin(pluginId) != null && !unloadPlugin(pluginId, false, false)) {
+                throw new IllegalStateException("failed to unload PF4J plugin " + pluginId);
+            }
+        }
+        resolvePlugins();
+    }
 }
