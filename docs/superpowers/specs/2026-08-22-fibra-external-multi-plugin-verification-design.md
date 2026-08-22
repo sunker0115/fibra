@@ -10,6 +10,59 @@
 
 本次只增强发布制品的仓库外验收，不修改 `fibra-api`、`fibra-core`、`fibra-pf4j-api`、`fibra-loader-pf4j`、现有 `fibra-example-*` 模块或 Fibra 根 reactor。旧 `plugin` 目录、`external-plugin` artifact 和旧入口名直接删除，不保留兼容层。
 
+### 1.1 模块关系图
+
+```mermaid
+flowchart LR
+    subgraph CORE["纯内核验收：与插件链完全独立"]
+        CORE_APP["core-app"] -->|"Maven 依赖"| FIBRA_CORE["fibra-core"]
+    end
+
+    subgraph PLUGINS["多插件依赖验收"]
+        PROVIDER["provider-plugin<br/>拥有 Greeting 契约"]
+        CONSUMER["consumer-plugin<br/>调用 Greeting 服务"]
+        HOST["host<br/>不依赖任何插件"]
+
+        PROVIDER -->|"provided 编译依赖"| PF4J_API["fibra-pf4j-api"]
+        CONSUMER -->|"provided 编译依赖"| PF4J_API
+        CONSUMER -->|"provided 编译依赖 Greeting"| PROVIDER
+        HOST -->|"Maven 依赖"| LOADER["fibra-loader-pf4j"]
+
+        HOST -. "从插件目录加载 JAR" .-> PROVIDER
+        HOST -. "从插件目录加载 JAR" .-> CONSUMER
+        CONSUMER -. "PF4J Plugin-Dependencies" .-> PROVIDER
+    end
+```
+
+读图时必须区分三种关系：
+
+- 实线表示 Maven 编译依赖；consumer 为了编译 `Greeting`，以 `provided` scope 依赖 provider，但不会把 provider 类打进自己的 JAR；
+- 点线 `Plugin-Dependencies` 表示运行时插件依赖；PF4J 根据它让 consumer 从 provider ClassLoader 获得同一个 `Greeting` 类型；
+- Host 与两个插件之间只有“从目录加载 JAR”的运行时关系，Host POM 不得依赖 provider 或 consumer。
+
+运行时服务流向如下：
+
+```mermaid
+sequenceDiagram
+    participant H as Host
+    participant L as FibraPluginLoader
+    participant P as provider-plugin
+    participant C as Root Context
+    participant U as consumer-plugin
+
+    H->>L: loadPlugins / startPlugins
+    L->>P: 先启动依赖方 provider
+    P->>C: 注册 Greeting 服务
+    L->>U: 再启动 consumer
+    U->>C: 按 Greeting.KEY 获取服务
+    C-->>U: 返回 provider 的 Greeting 实例
+    U->>P: greeting()
+    U->>C: 注册 consumer->provider-ready
+    H->>C: 读取并断言最终结果
+```
+
+`core-app` 不出现在运行时序列中，因为它是另一条独立验收链，只证明普通 Java 项目可以直接消费 `fibra-core`。
+
 ## 2. 方案比较
 
 ### 2.1 Provider 拥有契约，Consumer 声明双重依赖
