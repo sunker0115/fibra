@@ -2,18 +2,20 @@
 
 Fibra 是面向 Java 21 的 Cordis 4.0.1 等价内核，用作 Java 版 DeepSeek Harness 的生命周期、服务、插件、事件与日志基础设施。
 
-工程按职责拆成五个模块：
+工程按职责拆成七个模块：
 
 - `fibra-api`：稳定的内核公开契约；
 - `fibra-core`：唯一的 Context/Fibra 运行时；
 - `fibra-pf4j-api`：插件制品唯一启动扩展点；
 - `fibra-loader-pf4j`：PF4J JAR、依赖图和 ClassLoader 适配；
+- `fibra-example-plugin`：由 Maven 生成的真实插件及多版本验收制品；
+- `fibra-example-host`：纯 Java 宿主示例与真实制品黑盒验收；
 - `fibra-parity-tests`：Cordis 71 个逐项门禁、迁移测试和全部公开 API 冻结。
 
 ## 构建
 
 ```bash
-mvn verify
+mvn clean verify
 ```
 
 ## 最小用法

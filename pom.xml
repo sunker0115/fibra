@@ -15,6 +15,8 @@
     <module>fibra-core</module>
     <module>fibra-pf4j-api</module>
     <module>fibra-loader-pf4j</module>
+    <module>fibra-example-plugin</module>
+    <module>fibra-example-host</module>
     <module>fibra-parity-tests</module>
   </modules>
 
@@ -28,8 +30,15 @@
     <junit.version>6.1.3</junit.version>
     <awaitility.version>4.3.0</awaitility.version>
     <pf4j.version>3.13.0</pf4j.version>
+    <fibra-example-plugin-v1.version>1.0.0</fibra-example-plugin-v1.version>
+    <fibra-example-plugin-v2.version>2.0.0</fibra-example-plugin-v2.version>
+    <fibra-example-plugin-broken.version>3.0.0</fibra-example-plugin-broken.version>
     <flatten-maven-plugin.version>1.7.0</flatten-maven-plugin.version>
     <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
+    <maven-dependency-plugin.version>3.11.0</maven-dependency-plugin.version>
+    <maven-failsafe-plugin.version>3.5.4</maven-failsafe-plugin.version>
+    <maven-jar-plugin.version>3.5.1</maven-jar-plugin.version>
+    <maven-shade-plugin.version>3.6.2</maven-shade-plugin.version>
     <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
   </properties>
 
@@ -48,6 +57,11 @@
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-simple</artifactId>
         <version>${slf4j.version}</version>
       </dependency>
       <dependency>
@@ -88,6 +102,11 @@
         <artifactId>fibra-loader-pf4j</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-example-plugin</artifactId>
+        <version>${project.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -98,6 +117,26 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
           <version>${maven-compiler-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>${maven-dependency-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>${maven-failsafe-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>${maven-jar-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>${maven-shade-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>

@@ -171,108 +171,22 @@ int answer = session.get(ANSWER);
 
 ## 8. PF4J JAR 插件
 
-插件工程依赖 `fibra-pf4j-api`，作用域必须是 `provided`。以下 POM 可直接构建符合 loader 契约的 fat JAR；替换项目坐标、入口类业务和插件元数据即可：
+插件工程依赖 `fibra-pf4j-api` 与 PF4J，作用域必须是 `provided`。仓库中的 [真实插件 POM](../../fibra-example-plugin/pom.xml) 可直接构建符合 loader 契约的 JAR；[唯一入口实现](../../fibra-example-plugin/src/main/java/example/fibra/plugin/ExamplePluginEntrypoint.java)、[有限执行宿主](../../fibra-example-host/src/main/java/com/sstlfsj/fibra/example/host/FibraExampleHost.java)和[黑盒集成测试](../../fibra-example-host/src/test/java/com/sstlfsj/fibra/example/host/FibraExampleHostIT.java)共同构成不会与文档漂移的可执行示例。
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>com.example</groupId>
-  <artifactId>greeting-plugin</artifactId>
-  <version>1.0.0</version>
+入口类只实现 Fibra 生命周期，不继承 PF4J `Plugin`，不创建 Spring Context，业务包也不能使用宿主保留前缀 `com.sstlfsj.fibra`。
 
-  <properties>
-    <maven.compiler.release>21</maven.compiler.release>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <fibra.version>0.1.0-SNAPSHOT</fibra.version>
-    <pf4j.version>3.13.0</pf4j.version>
-  </properties>
+PF4J 的注解处理器会生成 `META-INF/extensions.idx`。仓库示例可直接构建和运行一次 1.0.0 到 2.0.0 的显式更新：
 
-  <dependencies>
-    <dependency>
-      <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-pf4j-api</artifactId>
-      <version>${fibra.version}</version>
-      <scope>provided</scope>
-    </dependency>
-  </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.14.1</version>
-        <configuration>
-          <annotationProcessorPaths>
-            <path>
-              <groupId>org.pf4j</groupId>
-              <artifactId>pf4j</artifactId>
-              <version>${pf4j.version}</version>
-            </path>
-          </annotationProcessorPaths>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>3.7.1</version>
-        <configuration>
-          <descriptorRefs>
-            <descriptorRef>jar-with-dependencies</descriptorRef>
-          </descriptorRefs>
-          <appendAssemblyId>false</appendAssemblyId>
-          <archive>
-            <manifestEntries>
-              <Plugin-Id>greeting-plugin</Plugin-Id>
-              <Plugin-Version>1.0.0</Plugin-Version>
-              <Plugin-Provider>example</Plugin-Provider>
-              <Plugin-Dependencies></Plugin-Dependencies>
-            </manifestEntries>
-          </archive>
-        </configuration>
-        <executions>
-          <execution>
-            <id>plugin-jar</id>
-            <phase>package</phase>
-            <goals><goal>single</goal></goals>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
-</project>
+```bash
+mvn clean verify
+mkdir -p plugins releases
+cp fibra-example-plugin/target/fibra-example-plugin.jar plugins/fibra-example-greeting.jar
+cp fibra-example-plugin/target/fibra-example-plugin-v2.jar releases/fibra-example-plugin-v2.jar
+java -jar fibra-example-host/target/fibra-example-host-all.jar \
+  plugins releases/fibra-example-plugin-v2.jar
 ```
 
-入口类只实现 Fibra 生命周期，不继承 PF4J `Plugin`，也不创建 Spring Context：
-
-```java
-package com.example.greeting;
-
-import com.sstlfsj.fibra.Context;
-import com.sstlfsj.fibra.Disposable;
-import com.sstlfsj.fibra.Disposables;
-import com.sstlfsj.fibra.ServiceKey;
-import com.sstlfsj.fibra.pf4j.FibraPluginEntrypoint;
-import org.pf4j.Extension;
-import reactor.core.publisher.Mono;
-
-@Extension
-public final class GreetingPlugin implements FibraPluginEntrypoint {
-    public static final ServiceKey<String> GREETING =
-        ServiceKey.of("greeting.text", String.class);
-
-    @Override
-    public Mono<Disposable> apply(Context context, Void config) {
-        context.provide(GREETING, "你好，Fibra");
-        return Mono.just(Disposables.noop());
-    }
-}
-```
-
-PF4J 的注解处理器会生成 `META-INF/extensions.idx`。构建后把 `target/greeting-plugin-1.0.0.jar` 放到已存在的插件根目录，再由宿主装载：
+宿主直接使用 loader 的标准 API：
 
 ```java
 import com.sstlfsj.fibra.loader.pf4j.FibraPluginLoader;
@@ -287,7 +201,7 @@ try (var root = FibraRuntime.create();
 }
 ```
 
-资源按声明逆序关闭，因此 loader 先 dispose 全部插件 Fibra，再 stop/unload PF4J 和关闭 ClassLoader，最后 root Context 关闭。`loadPlugins()` 只扫描根目录直接子级 fat JAR；共享的 Fibra/PF4J/Reactor/SLF4J 类不得打入插件 JAR，Manifest 不得声明 `Plugin-Class`，每个制品必须且只能有一个 `FibraPluginEntrypoint`。
+资源按声明逆序关闭，因此 loader 先 dispose 全部插件 Fibra，再 stop/unload PF4J 和关闭 ClassLoader，最后 root Context 关闭。`loadPlugins()` 只扫描根目录直接子级的自包含 JAR；插件存在私有第三方依赖时需打入同一 JAR，共享的 Fibra/PF4J/Reactor/SLF4J 类不得打入。Manifest 不得声明 `Plugin-Class`，每个制品必须且只能有一个 `FibraPluginEntrypoint`。
 
 `Plugin-Dependencies` 只表示制品和类加载依赖；业务服务依赖仍由入口创建的 Fibra/子 Fibra 使用 `PluginDescriptor.require` 声明。PF4J `STARTED` 不等于 Fibra `ACTIVE`。
 

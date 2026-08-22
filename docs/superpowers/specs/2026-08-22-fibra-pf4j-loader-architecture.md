@@ -112,7 +112,21 @@ PF4J `Plugin-Dependencies` 表达二进制/制品依赖；Fibra `PluginDescripto
 
 明确排除：每插件 Spring ApplicationContext、Spring Bean 扩展工厂、全局 parent-first、按 JAR 文件名推断版本、自动删除插件目录、未被调用的配置仓库，以及 Web/MyBatis/JPA 等宿主专用注册器。
 
-## 7. 当前非目标
+## 7. 真实制品黑盒验收
+
+`fibra-example-plugin` 使用与外部插件相同的 Maven 构建链和 PF4J 注解处理器。一次编译生成三个同 `Plugin-Id` 制品：主 JAR 为 1.0.0，`v2` classifier 为 2.0.0，`broken` classifier 为缺少扩展索引的 3.0.0。入口通过 JAR `Implementation-Version` 提供版本服务，因此更新结果来自实际 ClassLoader 所装载的制品，不依赖文件名或测试替身。
+
+`fibra-example-host` 的 Failsafe 黑盒测试必须从宿主测试 classpath 排除插件 artifact，并验证：
+
+- 主制品能由有限执行的纯 Java 宿主加载并显式更新到 v2；
+- incoming 原子发布能触发 v1 到 v2 更新；
+- broken 制品会真实进入启动失败路径，随后磁盘 JAR 和运行时服务都恢复到 v2；
+- 外部候选文件不被 loader 或 watcher 删除；
+- 宿主 `Class.forName` 无法找到插件入口，防止 classpath 泄漏制造假通过。
+
+该链路只在 Maven `verify` 阶段运行；全仓标准命令固定为 `mvn clean verify`。
+
+## 8. 当前非目标
 
 - JVMTI/Instrumentation 字节码原地重定义与远程制品仓库；
 - 删除磁盘制品；
