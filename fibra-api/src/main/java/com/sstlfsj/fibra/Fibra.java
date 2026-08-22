@@ -32,8 +32,16 @@ public interface Fibra extends Disposable {
 
     List<EffectMetadata> effects();
 
+    /**
+     * 等待当前 reload 或 unload 收敛，并传播启动错误。
+     * 依赖缺失且状态稳定为 {@link FibraState#PENDING} 时也会正常完成，
+     * 不表示实例已经 ACTIVE，也不等待未来 provider。
+     */
     Mono<Fibra> await();
 
+    /**
+     * {@link #await()} 的语义别名，不额外断言实例已经 ACTIVE。
+     */
     Mono<Fibra> ready();
 
     Mono<Fibra> restart();

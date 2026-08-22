@@ -37,7 +37,7 @@ Greeting snapshot = root.get(GREETING, false);
 root.set(GREETING, name -> "您好，" + name);
 ```
 
-`get(key)` 只返回 ACTIVE provider，`get(key, false)` 允许读取非 ACTIVE provider。需要调用方所有权时必须使用 `BoundService.invoke`：
+`get(key)` 只返回 ACTIVE provider，`get(key, false)` 允许读取非 ACTIVE provider。`BoundService.value()` 每次调用都会重新解析，但返回的原始 provider 不会随 reload 自动更新，不能跨调用缓存。需要调用方所有权或动态服务调用时必须使用 `BoundService.invoke`：
 
 ```java
 String text = root.service(GREETING).invoke((invocation, service) -> {
@@ -84,7 +84,7 @@ fibra.dispose().block();
 
 `Plugin<C>` 返回 `Publisher<? extends Disposable>`：Publisher 完成才算启动完成，0/1/N 个元素均可，每个元素都是卸载动作。类插件使用 `PluginFactory<C,P>` 与 `PluginInitializer<P>`；initializer 可异步完成并发出 0/1/N 个 `Disposable`，任何非空非 `Disposable` 元素都是错误。`PluginDescriptor.Builder.inject(type)` 把 `@InjectService` 字段/类依赖编译进 descriptor；方法注解由同一 Fibra 生命周期创建依赖子插件。
 
-状态固定为 `PENDING`、`LOADING`、`ACTIVE`、`FAILED`、`UNLOADING`、`DISPOSED`。`await()`/`ready()` 等待当前 inertia 收敛并传播 config/startup 原异常。`update` 先同步校验，再经过 `CoreEvents.UPDATE` waterfall；只有执行默认 `next` 才提交 config 和 restart。root `dispose()` 等价于 restart，root uid 永远为 0；普通 Fibra dispose 后 uid 为 null。
+状态固定为 `PENDING`、`LOADING`、`ACTIVE`、`FAILED`、`UNLOADING`、`DISPOSED`。`await()`/`ready()` 语义相同：等待当前 inertia 收敛并传播 config/startup 原异常；缺少依赖并稳定在 `PENDING` 时正常完成，不表示已经 `ACTIVE`，也不等待未来 provider。宿主启动门禁必须在等待后显式检查 `state()`。`update` 先同步校验，再经过 `CoreEvents.UPDATE` waterfall；只有执行默认 `next` 才提交 config 和 restart。root `dispose()` 等价于 restart，root uid 永远为 0；普通 Fibra dispose 后 uid 为 null。
 
 `PluginRegistry` 按插件入口对象身份分组，提供 `size`、`has`、`keys`、`values`、`entries`、全部/按入口 `fibras` 快照和可等待的 `remove`。同一入口可对应多个 Fibra。
 

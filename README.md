@@ -79,6 +79,7 @@ root.close();
 
 - [架构契约](docs/superpowers/specs/2026-08-21-fibra-kernel-architecture.md)
 - [PF4J 装载架构](docs/superpowers/specs/2026-08-22-fibra-pf4j-loader-architecture.md)
+- [Spring 与 Java DeepSeek Harness 集成架构](docs/superpowers/specs/2026-08-22-fibra-spring-harness-integration-architecture.md)
 - [仓库外多插件依赖验收设计（含关系图）](docs/superpowers/specs/2026-08-22-fibra-external-multi-plugin-verification-design.md)
 - [公共 API 使用手册](docs/api/README.md)
 - [发布与构建基线](docs/release.md)

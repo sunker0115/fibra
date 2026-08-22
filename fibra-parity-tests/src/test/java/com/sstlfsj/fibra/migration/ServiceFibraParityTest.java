@@ -72,6 +72,39 @@ class ServiceFibraParityTest {
     }
 
     @Test
+    void readyCompletesWhenMissingDependencyIsStablyPending() {
+        var consumer = context.plugin(
+            PluginDescriptor.<Void>builder("consumer").require(COUNTER).build(),
+            (pluginContext, ignored) -> Mono.empty(),
+            null
+        );
+
+        consumer.ready().block();
+
+        assertEquals(FibraState.PENDING, consumer.state());
+    }
+
+    @Test
+    void boundServiceInvocationRunsOnTheCallingThread() {
+        var callingThread = Thread.currentThread();
+        var requestContext = new ThreadLocal<String>();
+        requestContext.set("request");
+        context.provide(COUNTER, new Counter());
+
+        try {
+            int value = context.service(COUNTER).invoke((invocation, service) -> {
+                assertSame(callingThread, Thread.currentThread());
+                assertEquals("request", requestContext.get());
+                return service.value();
+            });
+
+            assertEquals(0, value);
+        } finally {
+            requestContext.remove();
+        }
+    }
+
+    @Test
     void replacingAProviderReloadsTheConsumerWithANewEpoch() {
         var loads = new AtomicInteger();
         var descriptor = PluginDescriptor.<Void>builder("consumer")

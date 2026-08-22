@@ -104,10 +104,10 @@ Mono<Void> disposed = fibra.dispose();
 Fibra 状态固定为：`PENDING`、`LOADING`、`ACTIVE`、`FAILED`、`UNLOADING`、`DISPOSED`。
 
 - root uid 为 0；插件 uid 单调递增；dispose 后 uid 为空。
-- epoch 是全部依赖 provider uid 的有序指纹；任一依赖缺失时为 INACTIVE。
+- epoch 是全部依赖 provider uid 的有序指纹；任一依赖缺失时使用内部 `INACTIVE` epoch，公开状态在收敛后为 `PENDING`。
 - 同一 Fibra 任何时刻只有一个 reload 或 unload 在途。目标 epoch 在操作期间变化时，只记录新目标，当前操作完成后再反向收敛。
 - reload 和 unload 开始前各让出一个 lifecycle tick，保持 Cordis 再入边界。
-- startup/config 错误进入 FAILED，`ready()` 传播原异常；其他 Fibra 不受影响。
+- startup/config 错误进入 FAILED，`await()`/`ready()` 传播原异常；其他 Fibra 不受影响。两者只等待当前 reload/unload 收敛且语义相同；缺少依赖并稳定在 `PENDING` 时正常完成，不表示已经 `ACTIVE`，也不等待未来 provider。
 - `update` 先经过 `internal/update` waterfall；`restart` 只按当前配置重启，两者不可合并。
 - root 的 dispose 等价于 restart，不进入 DISPOSED；`Context.close()` 是 Java 增强，用于最终关闭 lifecycle Scheduler。
 
@@ -139,7 +139,7 @@ Fibra 状态固定为：`PENDING`、`LOADING`、`ACTIVE`、`FAILED`、`UNLOADING
 
 同步公共方法从外部线程调用时把操作投递到 lifecycle Scheduler 并等待结果；若已经在 lifecycle 线程则内联，避免自死锁。异步完成信号可来自任意线程，但所有状态决策必须 `publishOn(lifecycleScheduler)` 后执行。
 
-插件同步段运行在 lifecycle 线程，必须非阻塞；耗时工作返回 Publisher。core 不修改 Reactor 全局 Hooks。
+插件同步段以及同步 `emit`/`bail`/`waterfall` listener 运行在 lifecycle 线程，必须非阻塞；耗时工作返回 Publisher。`BoundService.invoke` 的服务解析经过 lifecycle 线程，但用户 invocation 在原调用线程执行；`parallel`/`serial` 的用户 Publisher 按订阅链决定线程。core 不修改 Reactor 全局 Hooks。
 
 ## 6. Context 与隔离
 
@@ -153,7 +153,7 @@ Fibra 状态固定为：`PENDING`、`LOADING`、`ACTIVE`、`FAILED`、`UNLOADING
 
 全部事件模式共享一个按 EventKey 存储的 hook 表。`on` 返回归当前 Fibra 所有的 disposer；`once` 在调用用户 callback 前先注销。
 
-- `emit`：同步顺序调用，不等待异步结果；同步异常立即传播。若 listener 返回 Publisher，订阅并把异步错误记录到 logger。
+- `emit`：同步顺序调用 `Consumer` listener；同步异常立即传播。异步 listener 必须使用 `parallel` 或 `serial`，不能把未订阅 Publisher 交给 `emit`。
 - `parallel`：并发启动全部 listener，all-settled 后把所有错误聚合传播。
 - `serial`：按注册顺序等待，遇首个 bail 值停止。
 - `bail`：同步顺序执行，遇首个非 null/false 值停止，异常传播。
