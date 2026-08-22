@@ -31,6 +31,14 @@ mvn clean verify
 scripts/verify-reproducible-release.sh
 ```
 
+四个正式制品的仓库外消费能力使用：
+
+```bash
+scripts/verify-external-consumer.sh
+```
+
+该脚本把当前 `revision` 的四个正式制品部署到临时 Maven 仓库，再在仓库外的临时目录中构建并运行一个无 Fibra parent、未加入 Fibra reactor 的独立项目。独立项目只通过 Maven 坐标验证 `fibra-core` 应用、PF4J 插件编译和 `fibra-loader-pf4j` 宿主装载；脚本不读取用户 Maven 本地仓库中的 Fibra 制品，也不读取本仓库的 `target/classes`。模板中的版本哨兵由脚本从根 POM 统一传值，不需要且不得手工改模板。
+
 正式发布边界、deploy 行为和对外发布前置条件见[发布与构建基线](docs/release.md)。
 
 ## 最小用法

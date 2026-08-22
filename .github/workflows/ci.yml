@@ -50,3 +50,6 @@ jobs:
 
       - name: 验证四个发布制品可复现
         run: scripts/verify-reproducible-release.sh
+
+      - name: 验证仓库外项目可直接消费发布制品
+        run: scripts/verify-external-consumer.sh

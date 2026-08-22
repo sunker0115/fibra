@@ -7,6 +7,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.DataInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.jar.JarFile;
 
@@ -64,6 +65,45 @@ class ReleaseArtifactBaselineTest {
             assertFalse("false".equals(property(
                     parseProject(root.resolve(module).resolve("pom.xml")), "maven.deploy.skip")),
                 module + " 不得开启远程发布");
+        }
+    }
+
+    @Test
+    void externalConsumerFixtureIsIndependentFromFibraReactor() throws Exception {
+        var root = repositoryRoot();
+        var rootProject = parseProject(root.resolve("pom.xml"));
+        var rootModules = directChild(rootProject, "modules");
+        assertNotNull(rootModules, "Fibra 根 POM 缺少 modules");
+        assertFalse(childTexts(rootModules, "module").contains("verification/external-consumer"),
+            "外部消费验收不得加入 Fibra reactor");
+
+        var fixtureDirectory = root.resolve("verification/external-consumer");
+        var fixturePom = fixtureDirectory.resolve("pom.xml");
+        assertTrue(Files.isRegularFile(fixturePom), "缺少独立外部消费方 POM");
+
+        var fixtureProject = parseProject(fixturePom);
+        assertNull(directChild(fixtureProject, "parent"),
+            "外部消费方根 POM 不得继承 Fibra parent");
+        var fixtureModules = directChild(fixtureProject, "modules");
+        assertNotNull(fixtureModules, "外部消费方根 POM 缺少 modules");
+        assertEquals(List.of("core-app", "plugin", "host"),
+            childTexts(fixtureModules, "module"),
+            "外部消费方必须分别验证内核、插件编译和宿主装载");
+
+        var fixtureContent = Files.readString(fixturePom);
+        assertFalse(fixtureContent.contains("${revision}"),
+            "外部消费方不得读取 Fibra 的 revision 属性");
+        assertFalse(fixtureContent.contains("target/classes"),
+            "外部消费方不得引用 Fibra 编译输出");
+        assertFalse(fixtureContent.contains("systemPath"),
+            "外部消费方不得通过 systemPath 引用本地文件");
+
+        for (var module : List.of("core-app", "plugin", "host")) {
+            var moduleProject = parseProject(fixtureDirectory.resolve(module).resolve("pom.xml"));
+            var parent = directChild(moduleProject, "parent");
+            assertNotNull(parent, module + " 缺少独立消费方 parent");
+            assertEquals("external-consumer", directChildText(parent, "artifactId"),
+                module + " 不得继承 Fibra parent");
         }
     }
 
@@ -138,6 +178,16 @@ class ReleaseArtifactBaselineTest {
     private static String directChildText(Element parent, String localName) {
         var child = directChild(parent, localName);
         return child == null ? null : child.getTextContent().strip();
+    }
+
+    private static List<String> childTexts(Element parent, String localName) {
+        var result = new ArrayList<String>();
+        for (var child = parent.getFirstChild(); child != null; child = child.getNextSibling()) {
+            if (child instanceof Element element && localName.equals(element.getLocalName())) {
+                result.add(element.getTextContent().strip());
+            }
+        }
+        return List.copyOf(result);
     }
 
     private static Path repositoryRoot() {
