@@ -225,50 +225,118 @@ fi
 readonly java_executable jar_executable
 
 readonly core_jar="$consumer_worktree/core-app/target/external-core-app-all.jar"
-readonly plugin_jar="$consumer_worktree/plugin/target/external-plugin.jar"
+readonly provider_jar="$consumer_worktree/provider-plugin/target/external-provider-plugin.jar"
+readonly consumer_jar="$consumer_worktree/consumer-plugin/target/external-consumer-plugin.jar"
 readonly host_jar="$consumer_worktree/host/target/external-host-all.jar"
-for artifact in "$core_jar" "$plugin_jar" "$host_jar"; do
+for artifact in "$core_jar" "$provider_jar" "$consumer_jar" "$host_jar"; do
   if [[ ! -f "$artifact" ]]; then
     echo "外部消费方缺少可运行制品：$artifact" >&2
     exit 1
   fi
 done
 
-readonly plugin_listing="$temporary_root/plugin-contents.txt"
+readonly provider_listing="$temporary_root/provider-plugin-contents.txt"
+readonly consumer_listing="$temporary_root/consumer-plugin-contents.txt"
 readonly host_listing="$temporary_root/host-contents.txt"
-"$jar_executable" tf "$plugin_jar" > "$plugin_listing"
+"$jar_executable" tf "$provider_jar" > "$provider_listing"
+"$jar_executable" tf "$consumer_jar" > "$consumer_listing"
 "$jar_executable" tf "$host_jar" > "$host_listing"
 
-if ! grep -qx 'external/consumer/plugin/ExternalPluginEntrypoint.class' \
-    "$plugin_listing"; then
-  echo "外部插件 JAR 缺少 FibraPluginEntrypoint 实现" >&2
+if ! grep -qx 'external/consumer/provider/ExternalProviderEntrypoint.class' \
+    "$provider_listing" \
+    || ! grep -qx 'external/consumer/provider/api/Greeting.class' \
+    "$provider_listing"; then
+  echo "provider 插件 JAR 缺少入口或服务契约" >&2
   exit 1
 fi
-if ! grep -qx 'META-INF/extensions.idx' "$plugin_listing"; then
-  echo "外部插件 JAR 缺少 PF4J 扩展索引" >&2
+if ! grep -qx 'external/consumer/plugin/ExternalConsumerEntrypoint.class' \
+    "$consumer_listing"; then
+  echo "consumer 插件 JAR 缺少入口" >&2
   exit 1
 fi
-if grep -Eq '^(com/sstlfsj/fibra/|org/pf4j/|org/reactivestreams/|reactor/|org/slf4j/)' \
-    "$plugin_listing"; then
-  echo "外部插件必须是瘦 JAR，不得内嵌 Fibra、PF4J、Reactor 或 SLF4J" >&2
+if ! grep -qx 'META-INF/extensions.idx' "$provider_listing" \
+    || ! grep -qx 'META-INF/extensions.idx' "$consumer_listing"; then
+  echo "provider 或 consumer 插件 JAR 缺少 PF4J 扩展索引" >&2
   exit 1
 fi
-if grep -qx 'external/consumer/plugin/ExternalPluginEntrypoint.class' "$host_listing"; then
-  echo "外部宿主不得把插件入口放入自身 classpath" >&2
+for listing in "$provider_listing" "$consumer_listing"; do
+  if grep -Eq '^(com/sstlfsj/fibra/|org/pf4j/|org/reactivestreams/|reactor/|org/slf4j/)' \
+      "$listing"; then
+    echo "外部插件必须是瘦 JAR，不得内嵌 Fibra、PF4J、Reactor 或 SLF4J" >&2
+    exit 1
+  fi
+done
+if grep -qx 'external/consumer/provider/api/Greeting.class' "$consumer_listing"; then
+  echo "consumer 插件不得复制 provider 拥有的服务契约" >&2
+  exit 1
+fi
+if grep -Eq '^external/consumer/plugin/' "$provider_listing" \
+    || grep -Eq '^external/consumer/provider/' "$consumer_listing"; then
+  echo "provider 与 consumer 插件不得复制对方的实现或契约" >&2
+  exit 1
+fi
+if grep -Eq '^external/consumer/(provider/|plugin/)' \
+    "$host_listing"; then
+  echo "外部宿主不得把 provider 或 consumer 的类放入自身 classpath" >&2
   exit 1
 fi
 
-readonly manifest_directory="$temporary_root/manifest"
-mkdir -p "$manifest_directory"
+readonly provider_manifest_directory="$temporary_root/provider-manifest"
+readonly consumer_manifest_directory="$temporary_root/consumer-manifest"
+mkdir -p "$provider_manifest_directory" "$consumer_manifest_directory"
 (
-  cd "$manifest_directory"
-  "$jar_executable" xf "$plugin_jar" META-INF/MANIFEST.MF
+  cd "$provider_manifest_directory"
+  "$jar_executable" xf "$provider_jar" META-INF/MANIFEST.MF META-INF/extensions.idx
 )
-if ! grep -q '^Plugin-Id: external-consumer-plugin' \
-    "$manifest_directory/META-INF/MANIFEST.MF" \
-    || ! grep -q '^Plugin-Version: 1.0.0' \
-    "$manifest_directory/META-INF/MANIFEST.MF"; then
-  echo "外部插件 Manifest 缺少固定的 PF4J 标识或版本" >&2
+(
+  cd "$consumer_manifest_directory"
+  "$jar_executable" xf "$consumer_jar" META-INF/MANIFEST.MF META-INF/extensions.idx
+)
+readonly provider_manifest="$temporary_root/provider-manifest.txt"
+readonly consumer_manifest="$temporary_root/consumer-manifest.txt"
+tr -d '\r' < "$provider_manifest_directory/META-INF/MANIFEST.MF" > "$provider_manifest"
+tr -d '\r' < "$consumer_manifest_directory/META-INF/MANIFEST.MF" > "$consumer_manifest"
+if ! grep -Fqx 'Plugin-Id: external-provider-plugin' \
+    "$provider_manifest" \
+    || ! grep -Fqx 'Plugin-Version: 1.0.0' \
+    "$provider_manifest" \
+    || ! grep -Fqx 'Implementation-Version: 1.0.0' \
+    "$provider_manifest"; then
+  echo "provider 插件 Manifest 缺少固定的 PF4J 标识、版本或实现版本" >&2
+  exit 1
+fi
+if grep -q '^Plugin-Dependencies:' "$provider_manifest"; then
+  echo "provider 插件 Manifest 不得声明插件依赖" >&2
+  exit 1
+fi
+if ! grep -Fqx 'Plugin-Id: external-consumer-plugin' \
+    "$consumer_manifest" \
+    || ! grep -Fqx 'Plugin-Version: 1.0.0' \
+    "$consumer_manifest" \
+    || ! grep -Fqx 'Implementation-Version: 1.0.0' \
+    "$consumer_manifest" \
+    || ! grep -Fqx 'Plugin-Dependencies: external-provider-plugin' \
+    "$consumer_manifest"; then
+  echo "consumer 插件 Manifest 缺少固定标识、版本、实现版本或 provider 依赖" >&2
+  exit 1
+fi
+
+provider_extension_index="$provider_manifest_directory/META-INF/extensions.idx"
+consumer_extension_index="$consumer_manifest_directory/META-INF/extensions.idx"
+provider_extension_count="$(awk 'NF && $1 !~ /^#/ { count++ } END { print count + 0 }' \
+  "$provider_extension_index")"
+consumer_extension_count="$(awk 'NF && $1 !~ /^#/ { count++ } END { print count + 0 }' \
+  "$consumer_extension_index")"
+if [[ "$provider_extension_count" -ne 1 ]] \
+    || ! grep -Fqx 'external.consumer.provider.ExternalProviderEntrypoint' \
+    "$provider_extension_index"; then
+  echo "provider 插件扩展索引必须只包含自己的唯一入口" >&2
+  exit 1
+fi
+if [[ "$consumer_extension_count" -ne 1 ]] \
+    || ! grep -Fqx 'external.consumer.plugin.ExternalConsumerEntrypoint' \
+    "$consumer_extension_index"; then
+  echo "consumer 插件扩展索引必须只包含自己的唯一入口" >&2
   exit 1
 fi
 
@@ -281,13 +349,14 @@ if ! grep -q 'EXTERNAL_CORE_CONSUMER_OK' "$temporary_root/core-app.log"; then
   exit 1
 fi
 
-cp "$plugin_jar" "$plugins_directory/external-plugin.jar"
+cp "$provider_jar" "$plugins_directory/external-provider-plugin.jar"
+cp "$consumer_jar" "$plugins_directory/external-consumer-plugin.jar"
 (
   cd "$temporary_root"
   "$java_executable" -jar "$host_jar" "$plugins_directory" 2>&1 | tee host.log
 )
-if ! grep -q 'EXTERNAL_PLUGIN_CONSUMER_OK' "$temporary_root/host.log"; then
-  echo "fibra-loader-pf4j 仓库外运行验收未输出成功标记" >&2
+if ! grep -q 'EXTERNAL_MULTI_PLUGIN_CONSUMER_OK' "$temporary_root/host.log"; then
+  echo "fibra-loader-pf4j 仓库外多插件依赖验收未输出成功标记" >&2
   exit 1
 fi
 

@@ -11,7 +11,8 @@
 
   <modules>
     <module>core-app</module>
-    <module>plugin</module>
+    <module>provider-plugin</module>
+    <module>consumer-plugin</module>
     <module>host</module>
   </modules>
 
@@ -58,6 +59,11 @@
         <groupId>com.sstlfsj</groupId>
         <artifactId>fibra-loader-pf4j</artifactId>
         <version>${fibra.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj.verification</groupId>
+        <artifactId>external-provider-plugin</artifactId>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.pf4j</groupId>

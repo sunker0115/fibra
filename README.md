@@ -37,7 +37,7 @@ scripts/verify-reproducible-release.sh
 scripts/verify-external-consumer.sh
 ```
 
-该脚本把当前 `revision` 的四个正式制品部署到临时 Maven 仓库，再在仓库外的临时目录中构建并运行一个无 Fibra parent、未加入 Fibra reactor 的独立项目。独立项目只通过 Maven 坐标验证 `fibra-core` 应用、PF4J 插件编译和 `fibra-loader-pf4j` 宿主装载；脚本不读取用户 Maven 本地仓库中的 Fibra 制品，也不读取本仓库的 `target/classes`。模板中的版本哨兵由脚本从根 POM 统一传值，不需要且不得手工改模板。
+该脚本把当前 `revision` 的四个正式制品部署到临时 Maven 仓库，再在仓库外的临时目录中构建并运行一个无 Fibra parent、未加入 Fibra reactor 的独立项目。独立项目只通过 Maven 坐标验证 `fibra-core` 应用，以及 provider/consumer 两个瘦 PF4J 插件的编译、依赖 ClassLoader、服务调用、级联停止、依赖重启和级联卸载；Host 只依赖 `fibra-loader-pf4j`，不把任何插件放入自身 classpath。脚本不读取用户 Maven 本地仓库中的 Fibra 制品，也不读取本仓库的 `target/classes`。模板中的版本哨兵由脚本从根 POM 统一传值，不需要且不得手工改模板。
 
 正式发布边界、deploy 行为和对外发布前置条件见[发布与构建基线](docs/release.md)。
 
@@ -79,6 +79,7 @@ root.close();
 
 - [架构契约](docs/superpowers/specs/2026-08-21-fibra-kernel-architecture.md)
 - [PF4J 装载架构](docs/superpowers/specs/2026-08-22-fibra-pf4j-loader-architecture.md)
+- [仓库外多插件依赖验收设计（含关系图）](docs/superpowers/specs/2026-08-22-fibra-external-multi-plugin-verification-design.md)
 - [公共 API 使用手册](docs/api/README.md)
 - [发布与构建基线](docs/release.md)
 - [fibra-api 公共签名基线](docs/api/fibra-api-public-signatures.txt)

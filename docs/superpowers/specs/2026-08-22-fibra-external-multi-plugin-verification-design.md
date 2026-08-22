@@ -112,7 +112,7 @@ host -> com.sstlfsj:fibra-loader-pf4j
 
 ### 4.1 Provider
 
-`provider-plugin` 定义 `external.consumer.provider.api.Greeting`。接口拥有 `ServiceKey<Greeting>`，入口通过 `context.root().provide` 注册实现，并把返回的 `ServiceRegistration` 作为 provider 自身生命周期的 disposer 返回。
+`provider-plugin` 定义 `external.consumer.provider.api.Greeting`。接口拥有 `ServiceKey<Greeting>`。入口通过插件 `Context` 注册状态，该注册直接归 provider Fibra 所有；入口通过 `context.root().provide` 注册 `Greeting` 实现，该注册直接归 root Fibra 所有，再把返回的 `ServiceRegistration` 作为 provider 启动结果的 disposer，由 provider 生命周期显式持有其撤销时机。因此停止 provider 时两项服务都会撤销，但二者的直接注册所有者不同，不能把 disposer 归属等同于服务注册所有权。插件 `Context` 与 root 共享服务注册表，所以 Host 可从 root 读取两项服务。
 
 Provider Manifest 固定为：
 
@@ -126,7 +126,7 @@ Provider JAR 必须包含 `Greeting.class`、provider 入口和自己的 `META-I
 
 ### 4.2 Consumer
 
-`consumer-plugin` 必须真实导入 `Greeting`，通过 `Greeting.KEY` 获取服务并调用 `greeting()`，再向 root Context 注册字符串结果 `consumer->provider-ready`。字符串结果只供 Host 验证最终业务输出；它不能替代 consumer 对 `Greeting` 的类型化调用。
+`consumer-plugin` 必须真实导入 `Greeting`，通过 `Greeting.KEY` 获取服务并调用 `greeting()`，再通过自身插件 `Context` 注册字符串结果 `consumer->provider-ready`。该结果在共享服务注册表中可由 root 读取，但注册所有权属于 consumer Fibra，停止 consumer 时必须撤销。字符串结果只供 Host 验证最终业务输出；它不能替代 consumer 对 `Greeting` 的类型化调用。
 
 Consumer Manifest 固定为：
 

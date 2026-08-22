@@ -31,6 +31,12 @@ class ReleaseArtifactBaselineTest {
         "fibra-example-host",
         "fibra-parity-tests"
     );
+    private static final List<String> EXTERNAL_CONSUMER_MODULES = List.of(
+        "core-app",
+        "provider-plugin",
+        "consumer-plugin",
+        "host"
+    );
 
     @Test
     void productionModulesProduceCompleteSelfContainedArtifacts() throws Exception {
@@ -86,9 +92,9 @@ class ReleaseArtifactBaselineTest {
             "外部消费方根 POM 不得继承 Fibra parent");
         var fixtureModules = directChild(fixtureProject, "modules");
         assertNotNull(fixtureModules, "外部消费方根 POM 缺少 modules");
-        assertEquals(List.of("core-app", "plugin", "host"),
+        assertEquals(EXTERNAL_CONSUMER_MODULES,
             childTexts(fixtureModules, "module"),
-            "外部消费方必须分别验证内核、插件编译和宿主装载");
+            "外部消费方必须分别验证内核、provider、consumer 和宿主装载");
 
         var fixtureContent = Files.readString(fixturePom);
         assertFalse(fixtureContent.contains("${revision}"),
@@ -98,13 +104,27 @@ class ReleaseArtifactBaselineTest {
         assertFalse(fixtureContent.contains("systemPath"),
             "外部消费方不得通过 systemPath 引用本地文件");
 
-        for (var module : List.of("core-app", "plugin", "host")) {
+        for (var module : EXTERNAL_CONSUMER_MODULES) {
             var moduleProject = parseProject(fixtureDirectory.resolve(module).resolve("pom.xml"));
             var parent = directChild(moduleProject, "parent");
             assertNotNull(parent, module + " 缺少独立消费方 parent");
             assertEquals("external-consumer", directChildText(parent, "artifactId"),
                 module + " 不得继承 Fibra parent");
         }
+
+        assertEquals(List.of("fibra-pf4j-api:provided", "pf4j:provided"),
+            dependencies(fixtureDirectory.resolve("provider-plugin").resolve("pom.xml")),
+            "provider 只能通过 provided scope 使用 Fibra PF4J API 和 PF4J");
+        assertEquals(List.of(
+                "external-provider-plugin:provided",
+                "fibra-pf4j-api:provided",
+                "pf4j:provided"
+            ),
+            dependencies(fixtureDirectory.resolve("consumer-plugin").resolve("pom.xml")),
+            "consumer 必须以 provided scope 使用 provider、Fibra PF4J API 和 PF4J");
+        assertEquals(List.of("fibra-loader-pf4j:compile", "slf4j-simple:runtime"),
+            dependencies(fixtureDirectory.resolve("host").resolve("pom.xml")),
+            "Host 不得声明 provider 或 consumer Maven 依赖");
     }
 
     private static void assertJava21MainJar(Path jarPath) throws Exception {
@@ -185,6 +205,23 @@ class ReleaseArtifactBaselineTest {
         for (var child = parent.getFirstChild(); child != null; child = child.getNextSibling()) {
             if (child instanceof Element element && localName.equals(element.getLocalName())) {
                 result.add(element.getTextContent().strip());
+            }
+        }
+        return List.copyOf(result);
+    }
+
+    private static List<String> dependencies(Path pomPath) throws Exception {
+        var project = parseProject(pomPath);
+        var dependencies = directChild(project, "dependencies");
+        assertNotNull(dependencies, pomPath + " 缺少 dependencies");
+        var result = new ArrayList<String>();
+        for (var child = dependencies.getFirstChild(); child != null;
+             child = child.getNextSibling()) {
+            if (child instanceof Element dependency
+                && "dependency".equals(dependency.getLocalName())) {
+                var scope = directChildText(dependency, "scope");
+                result.add(directChildText(dependency, "artifactId") + ":"
+                    + (scope == null ? "compile" : scope));
             }
         }
         return List.copyOf(result);
