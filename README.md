@@ -25,6 +25,14 @@ Fibra 是 Cordis Core 4.0.1 的 Java 21 语义等价实现，用作 Java 版 Dee
 mvn clean verify
 ```
 
+该命令同时生成四个正式模块的主 JAR、sources JAR、Javadoc JAR 和自包含发布 POM，并执行 Cordis 对等、公开 API、真实 PF4J 插件链及发布制品门禁。连续构建的逐字节一致性使用：
+
+```bash
+scripts/verify-reproducible-release.sh
+```
+
+正式发布边界、deploy 行为和对外发布前置条件见[发布与构建基线](docs/release.md)。
+
 ## 最小用法
 
 ```java
@@ -64,6 +72,7 @@ root.close();
 - [架构契约](docs/superpowers/specs/2026-08-21-fibra-kernel-architecture.md)
 - [PF4J 装载架构](docs/superpowers/specs/2026-08-22-fibra-pf4j-loader-architecture.md)
 - [公共 API 使用手册](docs/api/README.md)
+- [发布与构建基线](docs/release.md)
 - [fibra-api 公共签名基线](docs/api/fibra-api-public-signatures.txt)
 - [fibra-core 运行时入口签名基线](docs/api/fibra-core-public-signatures.txt)
 - [fibra-pf4j-api 公共签名基线](docs/api/fibra-pf4j-api-public-signatures.txt)

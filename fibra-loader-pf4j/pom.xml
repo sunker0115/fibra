@@ -11,7 +11,14 @@
   </parent>
 
   <artifactId>fibra-loader-pf4j</artifactId>
+  <name>Fibra PF4J Loader</name>
   <description>PF4J 制品、依赖图与 ClassLoader 到 Fibra 生命周期的装载适配。</description>
+
+  <properties>
+    <maven.deploy.skip>false</maven.deploy.skip>
+    <maven.source.skip>false</maven.source.skip>
+    <maven.javadoc.skip>false</maven.javadoc.skip>
+  </properties>
 
   <dependencies>
     <dependency>

@@ -26,6 +26,7 @@
 11. Cordis accessor/mixin/association 用 `PropertyKey`、`PropertyAccessor`、`Associated` 显式建模；这是 Java 强类型替换，不允许删除关联对象的调用方服务解析能力。
 12. 插件 runtime 按入口对象身份分组；类插件以 `PluginFactory` 为身份。批量移除返回 `Mono<Void>` 并等待所有 Fibra 完成。
 13. `fibra-api` 的全部 public/protected 类型与签名用提交到仓库的 JDK 21 `javap -protected` 基线冻结；Cordis 12 组 71 个原始 `it` 必须逐项保留独立 Java 门禁。
+14. 远程发布面固定为 `fibra-api`、`fibra-core`、`fibra-pf4j-api`、`fibra-loader-pf4j` 四个自包含制品；根 POM与验证模块不发布。发布 POM必须展开 parent 与全部依赖版本，同时附带 sources/Javadoc，并通过 Java 21、API、deploy 边界及逐字节可复现门禁。
 
 ## 非目标
 

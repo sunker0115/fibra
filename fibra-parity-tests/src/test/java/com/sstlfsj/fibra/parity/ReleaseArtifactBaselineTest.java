@@ -1,0 +1,149 @@
+package com.sstlfsj.fibra.parity;
+
+import org.junit.jupiter.api.Test;
+import org.w3c.dom.Element;
+
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.DataInputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.jar.JarFile;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class ReleaseArtifactBaselineTest {
+    private static final int JAVA_21_CLASS_MAJOR_VERSION = 65;
+    private static final List<String> PRODUCTION_MODULES = List.of(
+        "fibra-api",
+        "fibra-core",
+        "fibra-pf4j-api",
+        "fibra-loader-pf4j"
+    );
+    private static final List<String> VERIFICATION_MODULES = List.of(
+        "fibra-example-provider-plugin",
+        "fibra-example-consumer-plugin",
+        "fibra-example-host",
+        "fibra-parity-tests"
+    );
+
+    @Test
+    void productionModulesProduceCompleteSelfContainedArtifacts() throws Exception {
+        for (var module : PRODUCTION_MODULES) {
+            var moduleDirectory = repositoryRoot().resolve(module);
+            var target = moduleDirectory.resolve("target");
+            var version = assertSelfContainedPom(
+                moduleDirectory.resolve(".flattened-pom.xml"), module);
+
+            assertTrue(Files.isRegularFile(target.resolve(module + "-" + version + ".jar")),
+                module + " 缺少主 JAR");
+            assertTrue(Files.isRegularFile(target.resolve(module + "-" + version + "-sources.jar")),
+                module + " 缺少 sources JAR");
+            assertTrue(Files.isRegularFile(target.resolve(module + "-" + version + "-javadoc.jar")),
+                module + " 缺少 Javadoc JAR");
+
+            assertJava21MainJar(target.resolve(module + "-" + version + ".jar"));
+        }
+    }
+
+    @Test
+    void onlyProductionModulesEnableRemoteDeployment() throws Exception {
+        var root = repositoryRoot();
+        assertEquals("true", property(parseProject(root.resolve("pom.xml")),
+            "maven.deploy.skip"));
+
+        for (var module : PRODUCTION_MODULES) {
+            assertEquals("false", property(parseProject(root.resolve(module).resolve("pom.xml")),
+                "maven.deploy.skip"), module + " 必须显式开启远程发布");
+        }
+        for (var module : VERIFICATION_MODULES) {
+            assertFalse("false".equals(property(
+                    parseProject(root.resolve(module).resolve("pom.xml")), "maven.deploy.skip")),
+                module + " 不得开启远程发布");
+        }
+    }
+
+    private static void assertJava21MainJar(Path jarPath) throws Exception {
+        try (var jar = new JarFile(jarPath.toFile())) {
+            var classes = jar.stream()
+                .filter(entry -> !entry.isDirectory())
+                .filter(entry -> entry.getName().endsWith(".class"))
+                .toList();
+
+            assertFalse(classes.isEmpty(), jarPath + " 不包含生产 class");
+            assertTrue(classes.stream().noneMatch(entry -> entry.getName().endsWith("Test.class")),
+                jarPath + " 混入测试 class");
+            for (var entry : classes) {
+                try (var input = new DataInputStream(jar.getInputStream(entry))) {
+                    assertEquals(0xCAFEBABE, input.readInt(), entry.getName() + " 不是 class 文件");
+                    input.readUnsignedShort();
+                    assertEquals(JAVA_21_CLASS_MAJOR_VERSION, input.readUnsignedShort(),
+                        entry.getName() + " 不是 Java 21 字节码");
+                }
+            }
+        }
+    }
+
+    private static String assertSelfContainedPom(Path pomPath, String artifactId) throws Exception {
+        assertTrue(Files.isRegularFile(pomPath), artifactId + " 缺少扁平发布 POM");
+        var content = Files.readString(pomPath);
+        assertFalse(content.contains("${revision}"), artifactId + " 发布 POM 残留 revision");
+        assertFalse(content.contains("${project.version}"), artifactId + " 发布 POM 残留 project.version");
+
+        var project = parseProject(pomPath);
+
+        assertNull(directChild(project, "parent"), artifactId + " 发布 POM 仍依赖根 parent");
+        assertEquals("com.sstlfsj", directChildText(project, "groupId"));
+        assertEquals(artifactId, directChildText(project, "artifactId"));
+        var version = directChildText(project, "version");
+        assertNotNull(version, artifactId + " 发布 POM 缺少 version");
+        assertNotNull(directChild(project, "name"), artifactId + " 发布 POM 缺少 name");
+        assertNotNull(directChild(project, "description"), artifactId + " 发布 POM 缺少 description");
+
+        var dependencies = project.getElementsByTagNameNS("*", "dependency");
+        for (int index = 0; index < dependencies.getLength(); index++) {
+            var dependency = (Element) dependencies.item(index);
+            assertNotNull(directChild(dependency, "version"),
+                artifactId + " 发布依赖未展开版本：" + directChildText(dependency, "artifactId"));
+            assertFalse("test".equals(directChildText(dependency, "scope")),
+                artifactId + " 发布 POM 混入测试依赖：" + directChildText(dependency, "artifactId"));
+        }
+        return version;
+    }
+
+    private static Element parseProject(Path pomPath) throws Exception {
+        var factory = DocumentBuilderFactory.newInstance();
+        factory.setNamespaceAware(true);
+        return factory.newDocumentBuilder().parse(pomPath.toFile()).getDocumentElement();
+    }
+
+    private static String property(Element project, String propertyName) {
+        var properties = directChild(project, "properties");
+        return properties == null ? null : directChildText(properties, propertyName);
+    }
+
+    private static Element directChild(Element parent, String localName) {
+        for (var child = parent.getFirstChild(); child != null; child = child.getNextSibling()) {
+            if (child instanceof Element element && localName.equals(element.getLocalName())) {
+                return element;
+            }
+        }
+        return null;
+    }
+
+    private static String directChildText(Element parent, String localName) {
+        var child = directChild(parent, localName);
+        return child == null ? null : child.getTextContent().strip();
+    }
+
+    private static Path repositoryRoot() {
+        var current = Path.of(System.getProperty("user.dir")).toAbsolutePath();
+        return current.getFileName().toString().equals("fibra-parity-tests")
+            ? current.getParent()
+            : current;
+    }
+}
