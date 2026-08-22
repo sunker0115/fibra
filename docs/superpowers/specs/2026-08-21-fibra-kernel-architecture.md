@@ -17,7 +17,7 @@ Fibra 是 DeepSeek Harness 内 Cordis 4.0.1 的 Java 21 等价内核。Java API 
 ## 2. 技术与模块
 
 - Maven 父工程：`com.sstlfsj:fibra:${revision}`；`revision` 是唯一项目版本真源，安装和发布时由 Flatten Maven Plugin 展开。
-- 内核边界固定为：`fibra-api`（稳定公开契约）、`fibra-core`（唯一运行时实现）、`fibra-parity-tests`（Cordis 逐项门禁与 API 冻结）。适配层增加 `fibra-pf4j-api` 与 `fibra-loader-pf4j`，依赖方向固定为 `fibra-loader-pf4j -> fibra-core + fibra-pf4j-api -> fibra-api`；`fibra-core` 不依赖 PF4J，运行时实现不得反向进入 API 模块。`fibra-example-plugin` 与 `fibra-example-host` 只负责真实制品和宿主黑盒验收，不属于稳定公共 API。
+- 内核边界固定为：`fibra-api`（稳定公开契约）、`fibra-core`（唯一运行时实现）、`fibra-parity-tests`（Cordis 逐项门禁与 API 冻结）。适配层增加 `fibra-pf4j-api` 与 `fibra-loader-pf4j`，依赖方向固定为 `fibra-loader-pf4j -> fibra-core + fibra-pf4j-api -> fibra-api`；`fibra-core` 不依赖 PF4J，运行时实现不得反向进入 API 模块。`fibra-example-provider-plugin`、`fibra-example-consumer-plugin` 与 `fibra-example-host` 只负责真实制品依赖链和宿主黑盒验收，不属于稳定公共 API。
 - Java 21。
 - 第三方依赖、内部模块和 Maven 插件的版本集中在父 POM `properties`，依赖版本通过 `dependencyManagement` 传递，子模块不得重复声明。
 - 运行时依赖：Reactor Core 3.8.6、SLF4J API 2.0.18。core 不绑定日志 provider。
@@ -147,6 +147,7 @@ Fibra 状态固定为：`PENDING`、`LOADING`、`ACTIVE`、`FAILED`、`UNLOADING
 - `isolate(key)` 为服务名安装新 token；传同一 label 的多个 Context 共享作用域。
 - `intercept(key, config)` 建立分层覆盖链，插件 descriptor 只消费声明过的 intercept。
 - 子 Context 共享 root 的 service/event/plugin registry 和 lifecycle Scheduler，但保留自己的 parent、Fibra、isolate/intercept/metadata 视图。
+- 同一服务名存在绑定期间只能对应同一个 `Class<?>`；最后一个绑定完成撤销后必须释放该类型声明，使动态插件 ClassLoader 可回收，并允许新版本以新的类身份重新注册。
 
 ## 7. 事件
 

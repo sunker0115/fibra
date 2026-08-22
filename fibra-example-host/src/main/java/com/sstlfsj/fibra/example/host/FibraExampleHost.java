@@ -9,8 +9,10 @@ import java.nio.file.Path;
 
 /** 加载一个已安装插件，再用外部候选 JAR 完成一次显式更新。 */
 public final class FibraExampleHost {
-    private static final ServiceKey<String> VERSION =
-        ServiceKey.of("example.plugin.version", String.class);
+    private static final ServiceKey<String> PROVIDER_VERSION =
+        ServiceKey.of("example.provider.version", String.class);
+    private static final ServiceKey<String> CONSUMER_RESULT =
+        ServiceKey.of("example.consumer.result", String.class);
 
     private FibraExampleHost() {
     }
@@ -26,10 +28,12 @@ public final class FibraExampleHost {
                  root, Path.of(arguments[0]))) {
             loader.loadPlugins();
             loader.startPlugins();
-            root.logger().info("Fibra example plugin started at version {}", root.get(VERSION));
+            root.logger().info("Fibra example provider started at version {} with result {}",
+                root.get(PROVIDER_VERSION), root.get(CONSUMER_RESULT));
 
             loader.reloadPlugin(Path.of(arguments[1]));
-            root.logger().info("Fibra example plugin updated to version {}", root.get(VERSION));
+            root.logger().info("Fibra example provider updated to version {} with result {}",
+                root.get(PROVIDER_VERSION), root.get(CONSUMER_RESULT));
         }
     }
 }

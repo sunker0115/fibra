@@ -171,20 +171,26 @@ int answer = session.get(ANSWER);
 
 ## 8. PF4J JAR 插件
 
-插件工程依赖 `fibra-pf4j-api` 与 PF4J，作用域必须是 `provided`。仓库中的 [真实插件 POM](../../fibra-example-plugin/pom.xml) 可直接构建符合 loader 契约的 JAR；[唯一入口实现](../../fibra-example-plugin/src/main/java/example/fibra/plugin/ExamplePluginEntrypoint.java)、[有限执行宿主](../../fibra-example-host/src/main/java/com/sstlfsj/fibra/example/host/FibraExampleHost.java)和[黑盒集成测试](../../fibra-example-host/src/test/java/com/sstlfsj/fibra/example/host/FibraExampleHostIT.java)共同构成不会与文档漂移的可执行示例。
+插件工程依赖 `fibra-pf4j-api` 与 PF4J，作用域必须是 `provided`。仓库中的 [provider POM](../../fibra-example-provider-plugin/pom.xml)、[provider 服务契约](../../fibra-example-provider-plugin/src/main/java/example/fibra/provider/api/Greeting.java)、[provider 入口](../../fibra-example-provider-plugin/src/main/java/example/fibra/provider/ProviderEntrypoint.java)、[consumer POM](../../fibra-example-consumer-plugin/pom.xml)与[consumer 入口](../../fibra-example-consumer-plugin/src/main/java/example/fibra/consumer/ConsumerEntrypoint.java)构成真实双插件示例；[有限执行宿主](../../fibra-example-host/src/main/java/com/sstlfsj/fibra/example/host/FibraExampleHost.java)和[黑盒集成测试](../../fibra-example-host/src/test/java/com/sstlfsj/fibra/example/host/FibraExampleHostIT.java)直接验收这些 Maven 制品，避免文档与实现漂移。
 
 入口类只实现 Fibra 生命周期，不继承 PF4J `Plugin`，不创建 Spring Context，业务包也不能使用宿主保留前缀 `com.sstlfsj.fibra`。
 
-PF4J 的注解处理器会生成 `META-INF/extensions.idx`。仓库示例可直接构建和运行一次 1.0.0 到 2.0.0 的显式更新：
+PF4J 的注解处理器会为两个模块分别生成 `META-INF/extensions.idx`。consumer 对 provider 使用 `provided` 编译依赖，并通过 Manifest 的 `Plugin-Dependencies` 建立运行时依赖；provider 契约不会被打入 consumer JAR。仓库示例可直接构建和运行一次 provider 1.0.0 到 2.0.0 的显式更新：
 
 ```bash
 mvn clean verify
 mkdir -p plugins releases
-cp fibra-example-plugin/target/fibra-example-plugin.jar plugins/fibra-example-greeting.jar
-cp fibra-example-plugin/target/fibra-example-plugin-v2.jar releases/fibra-example-plugin-v2.jar
+cp fibra-example-provider-plugin/target/fibra-example-provider-plugin.jar \
+  plugins/fibra-example-provider.jar
+cp fibra-example-consumer-plugin/target/fibra-example-consumer-plugin.jar \
+  plugins/fibra-example-consumer.jar
+cp fibra-example-provider-plugin/target/fibra-example-provider-plugin-v2.jar \
+  releases/fibra-example-provider-v2.jar
 java -jar fibra-example-host/target/fibra-example-host-all.jar \
-  plugins releases/fibra-example-plugin-v2.jar
+  plugins releases/fibra-example-provider-v2.jar
 ```
+
+只执行真实制品验收可使用 `mvn -pl fibra-example-host -am verify`。跨兄弟插件发布服务时，provider 应在 `context.root()` 注册，并把返回的 `ServiceRegistration` 作为入口 Publisher 的 disposer 交给自身生命周期；直接在 provider 子 Context 注册的服务只对该 Fibra 及其后代可见。
 
 宿主直接使用 loader 的标准 API：
 

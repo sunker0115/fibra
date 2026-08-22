@@ -25,7 +25,12 @@
     </dependency>
     <dependency>
       <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-example-plugin</artifactId>
+      <artifactId>fibra-example-provider-plugin</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-example-consumer-plugin</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -67,29 +72,37 @@
               <artifactItems>
                 <artifactItem>
                   <groupId>com.sstlfsj</groupId>
-                  <artifactId>fibra-example-plugin</artifactId>
+                  <artifactId>fibra-example-provider-plugin</artifactId>
                   <version>${project.version}</version>
                   <type>jar</type>
                   <outputDirectory>${project.build.directory}/plugin-artifacts</outputDirectory>
-                  <destFileName>fibra-example-plugin-v1.jar</destFileName>
+                  <destFileName>fibra-example-provider-v1.jar</destFileName>
                 </artifactItem>
                 <artifactItem>
                   <groupId>com.sstlfsj</groupId>
-                  <artifactId>fibra-example-plugin</artifactId>
+                  <artifactId>fibra-example-provider-plugin</artifactId>
                   <version>${project.version}</version>
                   <classifier>v2</classifier>
                   <type>jar</type>
                   <outputDirectory>${project.build.directory}/plugin-artifacts</outputDirectory>
-                  <destFileName>fibra-example-plugin-v2.jar</destFileName>
+                  <destFileName>fibra-example-provider-v2.jar</destFileName>
                 </artifactItem>
                 <artifactItem>
                   <groupId>com.sstlfsj</groupId>
-                  <artifactId>fibra-example-plugin</artifactId>
+                  <artifactId>fibra-example-provider-plugin</artifactId>
                   <version>${project.version}</version>
                   <classifier>broken</classifier>
                   <type>jar</type>
                   <outputDirectory>${project.build.directory}/plugin-artifacts</outputDirectory>
-                  <destFileName>fibra-example-plugin-broken.jar</destFileName>
+                  <destFileName>fibra-example-provider-broken.jar</destFileName>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>com.sstlfsj</groupId>
+                  <artifactId>fibra-example-consumer-plugin</artifactId>
+                  <version>${project.version}</version>
+                  <type>jar</type>
+                  <outputDirectory>${project.build.directory}/plugin-artifacts</outputDirectory>
+                  <destFileName>fibra-example-consumer-v1.jar</destFileName>
                 </artifactItem>
               </artifactItems>
             </configuration>
@@ -101,7 +114,8 @@
         <artifactId>maven-failsafe-plugin</artifactId>
         <configuration>
           <classpathDependencyExcludes>
-            <classpathDependencyExclude>com.sstlfsj:fibra-example-plugin</classpathDependencyExclude>
+            <classpathDependencyExclude>com.sstlfsj:fibra-example-provider-plugin</classpathDependencyExclude>
+            <classpathDependencyExclude>com.sstlfsj:fibra-example-consumer-plugin</classpathDependencyExclude>
           </classpathDependencyExcludes>
           <systemPropertyVariables>
             <fibra.example.artifacts>${project.build.directory}/plugin-artifacts</fibra.example.artifacts>

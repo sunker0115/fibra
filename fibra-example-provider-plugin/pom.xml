@@ -10,8 +10,8 @@
     <version>${revision}</version>
   </parent>
 
-  <artifactId>fibra-example-plugin</artifactId>
-  <description>由 Maven 构建的真实 Fibra PF4J 示例插件制品。</description>
+  <artifactId>fibra-example-provider-plugin</artifactId>
+  <description>由 Maven 构建的真实 Fibra PF4J provider 示例插件制品。</description>
 
   <dependencies>
     <dependency>
@@ -27,7 +27,7 @@
   </dependencies>
 
   <build>
-    <finalName>fibra-example-plugin</finalName>
+    <finalName>fibra-example-provider-plugin</finalName>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -48,9 +48,9 @@
         <configuration>
           <archive>
             <manifestEntries>
-              <Plugin-Id>fibra-example-greeting</Plugin-Id>
-              <Plugin-Version>${fibra-example-plugin-v1.version}</Plugin-Version>
-              <Implementation-Version>${fibra-example-plugin-v1.version}</Implementation-Version>
+              <Plugin-Id>fibra-example-provider</Plugin-Id>
+              <Plugin-Version>${fibra-example-provider-v1.version}</Plugin-Version>
+              <Implementation-Version>${fibra-example-provider-v1.version}</Implementation-Version>
             </manifestEntries>
           </archive>
         </configuration>
@@ -65,9 +65,9 @@
               <classifier>v2</classifier>
               <archive>
                 <manifestEntries>
-                  <Plugin-Id>fibra-example-greeting</Plugin-Id>
-                  <Plugin-Version>${fibra-example-plugin-v2.version}</Plugin-Version>
-                  <Implementation-Version>${fibra-example-plugin-v2.version}</Implementation-Version>
+                  <Plugin-Id>fibra-example-provider</Plugin-Id>
+                  <Plugin-Version>${fibra-example-provider-v2.version}</Plugin-Version>
+                  <Implementation-Version>${fibra-example-provider-v2.version}</Implementation-Version>
                 </manifestEntries>
               </archive>
             </configuration>
@@ -85,9 +85,9 @@
               </excludes>
               <archive>
                 <manifestEntries>
-                  <Plugin-Id>fibra-example-greeting</Plugin-Id>
-                  <Plugin-Version>${fibra-example-plugin-broken.version}</Plugin-Version>
-                  <Implementation-Version>${fibra-example-plugin-broken.version}</Implementation-Version>
+                  <Plugin-Id>fibra-example-provider</Plugin-Id>
+                  <Plugin-Version>${fibra-example-provider-broken.version}</Plugin-Version>
+                  <Implementation-Version>${fibra-example-provider-broken.version}</Implementation-Version>
                 </manifestEntries>
               </archive>
             </configuration>

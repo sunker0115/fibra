@@ -17,6 +17,14 @@ fibra-loader-pf4j -> fibra-core -> fibra-api
 
 `fibra-core` 不感知 PF4J；PF4J 类型不进入 `fibra-api`。当前只有 PF4J 一个装载实现，因此不增加没有第二实现支撑的通用 loader SPI。
 
+真实制品验收依赖方向为：
+
+```text
+fibra-example-consumer-plugin -> fibra-example-provider-plugin（provided）
+fibra-example-host -> fibra-loader-pf4j
+                   -> provider + consumer（test，仅用于 reactor 排序和复制制品）
+```
+
 ## 2. 开源方案对比
 
 | 方案 | 架构边界 | 与 Fibra 的贴合度 | 结论 |
@@ -37,6 +45,8 @@ fibra-loader-pf4j -> fibra-core -> fibra-api
 - 用 `@Extension` 提供且只提供一个 `FibraPluginEntrypoint`；
 - 把 `fibra-*`、PF4J、Reactive Streams、Reactor、SLF4J 作为宿主提供依赖，禁止打入插件 JAR；
 - 插件业务包不得使用保留前缀 `com.sstlfsj.fibra`。
+
+插件间共享的业务服务契约归 provider 制品所有。consumer 使用 `provided` Maven 依赖编译，并在 Manifest 通过 `Plugin-Dependencies` 声明运行时制品依赖；不得把 provider 契约复制或打入 consumer JAR，也不得为示例契约增加宿主共享 API 模块。
 
 装载前会扫描 JAR 并拒绝重复打包的共享类。批量装载先加入全部 JAR，再统一解析依赖；任一装载或依赖解析失败时回滚本批次，不能留下半装载制品。
 
@@ -99,6 +109,8 @@ PF4J `Plugin-Dependencies` 表达二进制/制品依赖；Fibra `PluginDescripto
 
 这既保留插件私有库隔离，也避免 `Context`、`FibraPluginEntrypoint` 等跨边界类型产生 ClassLoader 身份分裂。ClassLoader 不是安全沙箱；当前只支持可信的进程内插件。不可信插件必须使用进程隔离。
 
+provider 的插件私有服务类型由 provider ClassLoader 定义，consumer 必须通过 PF4J 依赖 ClassLoader 获得同一类型。跨兄弟插件发布服务时，provider 在 root Context 注册并把 `ServiceRegistration` 交回自身生命周期持有；最后一个绑定撤销后，core 同时释放服务名保存的动态 `Class<?>`，避免阻止旧 ClassLoader 回收，并允许新版本以新的类身份重新注册。
+
 ## 6. 从 gj.spring.pf4j 吸收与排除
 
 已吸收：
@@ -114,15 +126,17 @@ PF4J `Plugin-Dependencies` 表达二进制/制品依赖；Fibra `PluginDescripto
 
 ## 7. 真实制品黑盒验收
 
-`fibra-example-plugin` 使用与外部插件相同的 Maven 构建链和 PF4J 注解处理器。一次编译生成三个同 `Plugin-Id` 制品：主 JAR 为 1.0.0，`v2` classifier 为 2.0.0，`broken` classifier 为缺少扩展索引的 3.0.0。入口通过 JAR `Implementation-Version` 提供版本服务，因此更新结果来自实际 ClassLoader 所装载的制品，不依赖文件名或测试替身。
+`fibra-example-provider-plugin` 使用与外部插件相同的 Maven 构建链和 PF4J 注解处理器。一次编译生成三个同 `Plugin-Id` 制品：主 JAR 为 1.0.0，`v2` classifier 为 2.0.0，`broken` classifier 为缺少扩展索引的 3.0.0。入口通过 JAR `Implementation-Version` 构造 provider 服务，因此更新结果来自实际 ClassLoader 所装载的制品，不依赖文件名或测试替身。
+
+`fibra-example-consumer-plugin` 独立编译并生成自己的唯一扩展索引；它的 JAR 不包含 provider 服务契约，通过 `Plugin-Dependencies: fibra-example-provider` 从 provider ClassLoader 解析契约，并向宿主暴露 `consumer->provider-<version>` 字符串结果。provider 与 consumer 不得在同一源码模块中靠 JAR include/exclude 拆分，否则 PF4J 注解处理器生成的合并扩展索引会破坏“一制品一个入口”契约。
 
 `fibra-example-host` 的 Failsafe 黑盒测试必须从宿主测试 classpath 排除插件 artifact，并验证：
 
-- 主制品能由有限执行的纯 Java 宿主加载并显式更新到 v2；
-- incoming 原子发布能触发 v1 到 v2 更新；
-- broken 制品会真实进入启动失败路径，随后磁盘 JAR 和运行时服务都恢复到 v2；
+- provider v1 与 consumer v1 能由有限执行的纯 Java 宿主按依赖顺序加载；
+- incoming 原子发布 provider v2 后，consumer 会先停止再重新启动，并把结果更新为 `consumer->provider-2.0.0`；
+- broken provider 会真实进入启动失败路径，随后 provider、consumer、磁盘 JAR 和运行时服务都恢复到 v2；
 - 外部候选文件不被 loader 或 watcher 删除；
-- 宿主 `Class.forName` 无法找到插件入口，防止 classpath 泄漏制造假通过。
+- consumer JAR 不包含 provider 契约，宿主 `Class.forName` 也无法找到 provider 契约及两个插件入口，防止 classpath 泄漏制造假通过。
 
 该链路只在 Maven `verify` 阶段运行；全仓标准命令固定为 `mvn clean verify`。
 

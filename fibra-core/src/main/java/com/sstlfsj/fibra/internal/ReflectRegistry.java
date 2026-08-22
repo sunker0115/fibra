@@ -161,7 +161,15 @@ final class ReflectRegistry {
             })
             .flatMapMany(Flux::fromIterable)
             .flatMap(fibra -> fibra.await().onErrorResume(error -> Mono.empty()))
-            .then(lifecycle.run(() -> impl.fibra().removeOwnedService(impl)));
+            .then(lifecycle.run(() -> {
+                impl.fibra().removeOwnedService(impl);
+                var name = impl.key().name();
+                var stillBound = bindings.values().stream()
+                    .anyMatch(binding -> binding.key().name().equals(name));
+                if (!stillBound) {
+                    declaredTypes.remove(name, impl.key().type());
+                }
+            }));
     }
 
     private ServiceImpl<?> resolveFromFibra(DefaultContext context, String name, boolean strict) {

@@ -7,7 +7,9 @@
 
 ## 目标
 
-为 Java 版 DeepSeek Harness 提供 Cordis core 等价内核。Java 版允许用强类型接口、显式调用上下文和 Reactor 改善开发体验，但不得牺牲 Cordis 的生命周期、作用域、所有权、顺序、错误和完成边界。
+为 Java 版 DeepSeek Harness 提供 Cordis Core 4.0.1 的 Java 21 语义等价内核。Java 版允许用强类型接口、显式调用上下文和 Reactor 改善开发体验，但不得牺牲 Cordis 的生命周期、作用域、所有权、顺序、错误和完成边界。
+
+项目完成形态不是整个 DeepSeek Harness 的 Java 翻译，也不是 Cordis JavaScript 语法的机械移植。`fibra-api` 与 `fibra-core` 构成等价内核；独立的 PF4J 适配层只补充插件 JAR、依赖图、ClassLoader、更新与回滚。Java 版 DeepSeek Harness 的 agent、tool、provider、session 等业务能力作为上层插件使用该内核，不反向进入内核仓库。
 
 ## 决定
 
