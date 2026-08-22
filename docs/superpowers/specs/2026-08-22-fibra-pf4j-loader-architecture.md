@@ -27,14 +27,17 @@ fibra-example-host -> fibra-loader-pf4j
 
 ## 2. 开源方案对比
 
-| 方案 | 架构边界 | 与 Fibra 的贴合度 | 结论 |
+| 方案 | 架构层 | 业务层 | 结论 |
 |---|---|---|---|
-| PF4J 3.13.0 | 轻量 JAR/ClassLoader/依赖/扩展机制，不提供 DI | 能补足制品层，且不要求替换 Fibra | 采用 |
-| gj.spring.pf4j | PF4J 上叠加每插件 Spring Context、Web/MyBatis/JPA 等注册器 | 资源逆序注销与操作锁值得吸收，但会形成第二容器 | 只参考思想 |
+| PF4J 3.13.0 | 轻量 JAR/ClassLoader/依赖/扩展机制，不提供 DI；默认批量操作偏 best-effort | 补足独立制品部署，不要求替换 Fibra；事务、完成与串行边界需由适配层收紧 | 采用 |
+| Spring Plugin `312ce6d` | 同 ClassLoader、同 Spring 容器内的策略注册表，无安装、卸载和制品依赖图 | `supports`、排序和默认策略适合业务路由，不是运行时插件能力 | 不引入；上层按需用 Fibra 服务表达 |
+| gj.spring.pf4j `44b7174` | PF4J 上叠加每插件 Spring Context、分阶段资源 registrar、Web/MyBatis/JPA 等宿主注册器 | 适合 Spring 应用模块化；资源逆序注销值得吸收，但会形成第二容器 | 只参考宿主资源桥接思想 |
 | Hasor | 完整 IoC/AOP/插件生态 | 容器职责与 Fibra 重叠，迁移和运行边界更重 | 不采用 |
 | Solon | 应用框架与插件体系一体化 | 适合以 Solon 为宿主的应用，不适合作为中立内核装载层 | 不采用 |
 
-参考源码：[PF4J 3.13.0](https://github.com/pf4j/pf4j/tree/release-3.13.0)、[gj.spring.pf4j](https://github.com/wangpengxpy/gj.spring.pf4j)、[Hasor](https://github.com/zycgit/hasor)、[Solon](https://github.com/opensolon/solon)。
+参考源码：[PF4J 3.13.0](https://github.com/pf4j/pf4j/tree/release-3.13.0)、[Spring Plugin `312ce6d`](https://github.com/spring-projects/spring-plugin/tree/312ce6d2c3f36f7487fdf8fd7652144bce0e386a)、[gj.spring.pf4j `44b7174`](https://github.com/wangpengxpy/gj.spring.pf4j/tree/44b7174a6c4ff8b34a8be076119b36d487b6ea99)、[Hasor](https://github.com/zycgit/hasor)、[Solon](https://github.com/opensolon/solon)。
+
+表中的“采用”表示当前生产代码已依赖；“只参考”表示只记录设计取舍，不表示当前已有对应模块或 API。当前仓库没有 Spring Plugin、Spring、Hasor 或 Solon 适配模块。
 
 ## 3. 制品契约
 
@@ -111,18 +114,29 @@ PF4J `Plugin-Dependencies` 表达二进制/制品依赖；Fibra `PluginDescripto
 
 provider 的插件私有服务类型由 provider ClassLoader 定义，consumer 必须通过 PF4J 依赖 ClassLoader 获得同一类型。跨兄弟插件发布服务时，provider 在 root Context 注册并把 `ServiceRegistration` 交回自身生命周期持有；最后一个绑定撤销后，core 同时释放服务名保存的动态 `Class<?>`，避免阻止旧 ClassLoader 回收，并允许新版本以新的类身份重新注册。
 
-## 6. 从 gj.spring.pf4j 吸收与排除
+## 6. 三个插件项目的吸收与排除
 
-已吸收：
+### 6.1 PF4J
+
+直接复用 JAR 描述、依赖拓扑与版本约束、扩展索引、PDA ClassLoader 和卸载时关闭 ClassLoader。PF4J `AbstractPluginManager` 的默认 `loadPlugins()`/`startPlugins()`会记录单个失败后继续，且不负责跨 PF4J/Fibra/磁盘制品的更新事务，因此 Fibra 必须继续使用严格批量装载、loader 级串行锁和显式回滚，不能直接暴露 PF4J 的宽松批量语义。
+
+### 6.2 Spring Plugin
+
+`Plugin<S>.supports(S)` 与有序 `PluginRegistry` 是宿主内策略选择，不是制品插件生命周期。Fibra 不引入该依赖，也不在 core 增加通用策略注册表。上层确有条件路由需求时，由一个业务插件通过类型化 `ServiceKey` 提供包含选择规则的服务实现，或者在该业务插件内部使用普通 Java 组合；不得向 core 增加另一套发现 API。这样避免“PF4J 扩展、Spring Plugin registry、Fibra service”形成三套并行发现机制。
+
+### 6.3 gj.spring.pf4j
+
+当前已经由 Fibra 自身实现：
 
 - 插件拥有自己注册的宿主资源；在 Fibra 中统一由 Context/effect 表达；
 - 依赖方先于提供方逆序清理；
 - 管理操作串行化；
-- 批量失败不遗留半初始化状态。
+- 批量失败不遗留半初始化状态；
+- watcher 按插件去抖，并在关闭时终止 WatchService 和调度器。
 
-已继续吸收“按插件去抖、关闭 WatchService/调度器”的思想；更新实现仍完全复用 Fibra dispose 与 `reloadPlugin` 事务，不建立监听器专属生命周期。
+未来宿主适配约束，当前尚未实现：Spring、HTTP 或数据访问适配器可以按明确阶段组织资源桥接，但每项注册都必须转换为插件 Context 所有且可等待撤销的 effect/disposer；更新仍必须复用 Fibra dispose 与 `reloadPlugin` 事务，不得建立适配器或监听器专属生命周期。
 
-明确排除：每插件 Spring ApplicationContext、Spring Bean 扩展工厂、全局 parent-first、按 JAR 文件名推断版本、自动删除插件目录、未被调用的配置仓库，以及 Web/MyBatis/JPA 等宿主专用注册器。
+明确排除：每插件 Spring ApplicationContext、Spring Bean 扩展工厂、全局 parent-first、按 JAR 文件名推断版本、先卸载再安装且无旧制品回滚的热更新、自动删除插件目录、registrar 异常吞并，以及把 Web/MyBatis/JPA 等宿主专用注册器放入通用 loader。宿主专用能力若未来实现，只能位于新增的独立适配模块，不能进入 `fibra-api`、`fibra-core` 或通用 PF4J 制品契约。
 
 ## 7. 真实制品黑盒验收
 
@@ -144,6 +158,6 @@ provider 的插件私有服务类型由 provider ClassLoader 定义，consumer �
 
 - JVMTI/Instrumentation 字节码原地重定义与远程制品仓库；
 - 删除磁盘制品；
-- Spring/Hasor/Solon 宿主集成；
+- Spring Plugin 策略注册表，以及 Spring/Hasor/Solon 宿主集成；
 - 非 fat JAR 的 `lib/` 或 Manifest `Class-Path` 依赖布局；
 - 不可信插件沙箱。

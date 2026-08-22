@@ -78,5 +78,6 @@ root.close();
 - [fibra-pf4j-api 公共签名基线](docs/api/fibra-pf4j-api-public-signatures.txt)
 - [fibra-loader-pf4j 公共签名基线](docs/api/fibra-loader-pf4j-public-signatures.txt)
 - [设计决定](docs/superpowers/specs/2026-08-21-fibra-kernel-design.md)
+- [开源基线与取舍](docs/superpowers/references/2026-08-21-fibra-opensource-baselines.md)
 - [Cordis 源码映射](docs/superpowers/references/2026-08-21-fibra-cordis-mapping.md)
 - [测试等价表](docs/superpowers/references/2026-08-21-fibra-cordis-test-parity.md)
