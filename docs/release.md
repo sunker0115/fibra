@@ -2,7 +2,9 @@
 
 ## 发布边界
 
-远程 Maven 仓库只接收以下五个生产制品：
+远程 Maven 仓库接收以下六个可发布制品，分两类：
+
+五个中立内核/loader 制品（仅依赖 Reactor + SLF4J，父 POM 保持 Spring-free）：
 
 - `com.sstlfsj:fibra-api`；
 - `com.sstlfsj:fibra-core`；
@@ -10,9 +12,13 @@
 - `com.sstlfsj:fibra-loader-pf4j`；
 - `com.sstlfsj:fibra-loader-config`。
 
+一个可选 Spring 适配制品（自管 Spring Boot BOM，Spring 只在该模块内部，不进内核也不进父 POM）：
+
+- `com.sstlfsj:fibra-spring-boot-starter`。
+
 根 `fibra` 只负责聚合、版本和构建策略；contract/provider/consumer 三个插件示例、示例宿主及 `fibra-parity-tests` 只负责验证。它们允许安装到本地 Maven 仓库以支持 reactor 开发，但统一跳过远程 deploy，不形成可消费产品坐标。
 
-五个生产模块使用 Flatten Maven Plugin 的 `oss` 模式生成自包含发布 POM。发布 POM不保留未发布的根 parent，不包含 `${revision}` 或 `${project.version}`，所有消费依赖都展开为明确版本。因此消费者不需要 `com.sstlfsj:fibra` 父 POM。
+六个可发布模块使用 Flatten Maven Plugin 的 `oss` 模式生成自包含发布 POM。发布 POM不保留未发布的根 parent，不包含 `${revision}` 或 `${project.version}`，所有消费依赖都展开为明确版本。因此消费者不需要 `com.sstlfsj:fibra` 父 POM。
 
 ## 权威构建
 
@@ -29,7 +35,7 @@ Maven Enforcer 在每个模块检查：
 - 依赖图必须收敛；
 - clean、verify、install、deploy 生命周期使用的插件必须有明确版本。
 
-五个生产模块每次 `package` 都附加 sources JAR 与 Javadoc JAR。`ReleaseArtifactBaselineTest` 检查主 JAR、sources JAR、Javadoc JAR、自包含 POM、Java 21 class major version、测试 class 隔离和 deploy 模块边界。公开 API 由 `ApiSignatureBaselineTest` 与五份 `javap -protected` 基线冻结。
+六个可发布模块每次 `package` 都附加 sources JAR 与 Javadoc JAR。`ReleaseArtifactBaselineTest` 检查主 JAR、sources JAR、Javadoc JAR、自包含 POM、Java 21 class major version、测试 class 隔离和 deploy 模块边界。公开 API 由 `ApiSignatureBaselineTest` 与六份 `javap -protected` 基线冻结（含 `fibra-spring-boot-starter`）。
 
 ## 可复现构建
 
@@ -80,7 +86,7 @@ CI 固定按以下顺序执行：完整 `mvn clean verify`、可复现制品比�
 
 ## 部署
 
-发布仓库由调用方通过 Maven settings、`distributionManagement` 或 `altDeploymentRepository` 提供。执行全 reactor deploy 时，根与验证模块会明确跳过，只有五个生产模块上传：
+发布仓库由调用方通过 Maven settings、`distributionManagement` 或 `altDeploymentRepository` 提供。执行全 reactor deploy 时，根与验证模块会明确跳过，只有六个可发布模块（五个中立内核/loader + `fibra-spring-boot-starter`）上传：
 
 ```bash
 mvn deploy -DaltDeploymentRepository=release::https://repo.example.invalid/maven
@@ -99,4 +105,4 @@ mvn deploy -DaltDeploymentRepository=release::https://repo.example.invalid/maven
 - 目标仓库、制品签名和发布凭据策略；
 - 非 `SNAPSHOT` 的 `revision`。
 
-这些信息确定后统一写入根 POM，由五个生产模块的扁平 POM保留；不得使用虚假 URL、临时开发者或推测的许可证通过公共仓库校验。
+这些信息确定后统一写入根 POM，由六个可发布模块的扁平 POM保留；不得使用虚假 URL、临时开发者或推测的许可证通过公共仓库校验。

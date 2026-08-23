@@ -57,7 +57,8 @@ flowchart TB
 harness-domain / harness-plugin-* -> harness-api -> fibra-api
 harness-runtime                  -> harness-api + fibra-core
 harness-loader-config            -> harness-api + fibra-loader-config
-harness-spring-boot              -> harness-runtime + Spring Boot
+fibra-spring-boot-starter        -> fibra-loader-pf4j + fibra-loader-config + Spring Boot（Fibra 可选 Spring 适配模块，自管 Spring BOM）
+harness-spring-boot              -> harness-runtime + fibra-spring-boot-starter
 harness-provider-deepseek        -> harness-api + 选定的直接 HTTP/SSE 实现
 harness-adapter-spring-ai        -> harness-api + Spring AI（未来可选，首版不存在）
 ```

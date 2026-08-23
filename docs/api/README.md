@@ -1,6 +1,8 @@
 # Fibra 公共 API 使用手册
 
-本文对应 `com.sstlfsj:fibra-api:${revision}`、`com.sstlfsj:fibra-core:${revision}`、`com.sstlfsj:fibra-pf4j-api:${revision}`、`com.sstlfsj:fibra-loader-pf4j:${revision}` 与 `com.sstlfsj:fibra-loader-config:${revision}` 的冻结公开契约。业务应用通常依赖 `fibra-core`；需要直接管理标准插件包时依赖 `fibra-loader-pf4j`；需要 YAML/JSON 动态组合时只需依赖 `fibra-loader-config`，后者会传递引入前两层。
+本文对应 `com.sstlfsj:fibra-api:${revision}`、`com.sstlfsj:fibra-core:${revision}`、`com.sstlfsj:fibra-pf4j-api:${revision}`、`com.sstlfsj:fibra-loader-pf4j:${revision}` 与 `com.sstlfsj:fibra-loader-config:${revision}` 五个中立内核/loader 制品的冻结公开契约。业务应用通常依赖 `fibra-core`；需要直接管理标准插件包时依赖 `fibra-loader-pf4j`；需要 YAML/JSON 动态组合时只需依赖 `fibra-loader-config`，后者会传递引入前两层。
+
+在 Spring Boot 宿主中还可使用可选适配制品 `com.sstlfsj:fibra-spring-boot-starter:${revision}`，它按 `fibra.*` 属性自动装配 Fibra 装配与生命周期，公开签名见本目录 `fibra-spring-boot-starter-public-signatures.txt`。Spring 只存在于该可选制品内，不进内核。
 
 ## 1. 创建与关闭
 
@@ -299,7 +301,7 @@ patch 分 `insert` 与 `override`，按列表顺序应用；override 的显式 `
 
 `fibra-core` 只承诺 `com.sstlfsj.fibra.runtime` 包，其中当前唯一入口是 `FibraRuntime`。`com.sstlfsj.fibra.internal` 即使因实现协作需要包含 Java `public` 类型，也属于明确排除的实现细节，业务代码不得直接引用。
 
-五个生产制品的完整 public/protected JVM 签名分别见本目录中的 `*-public-signatures.txt`。`ApiSignatureBaselineTest` 扫描全部制品的公开类型集合并调用 JDK `javap -protected`；任何新增、删除、可见性、泛型或方法签名变化都会使 `mvn verify` 失败，必须先完成 API 审核后显式更新基线。
+六个可发布制品（五个中立内核/loader 制品 + 可选 Spring 适配制品 `fibra-spring-boot-starter`）的完整 public/protected JVM 签名分别见本目录中的 `*-public-signatures.txt`。`ApiSignatureBaselineTest` 扫描全部制品的公开类型集合并调用 JDK `javap -protected`；任何新增、删除、可见性、泛型或方法签名变化都会使 `mvn verify` 失败，必须先完成 API 审核后显式更新基线。
 
 ### 10.1 兼容性清单
 

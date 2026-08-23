@@ -30,6 +30,13 @@
       <groupId>com.sstlfsj</groupId>
       <artifactId>fibra-loader-config</artifactId>
     </dependency>
+    <!-- 仅供 API/发布基线门禁校验可选 Spring 适配制品；test scope 不进任何发布产物。 -->
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-spring-boot-starter</artifactId>
+      <version>${revision}</version>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>

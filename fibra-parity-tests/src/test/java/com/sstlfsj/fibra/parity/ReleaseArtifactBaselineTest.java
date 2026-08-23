@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.jar.JarFile;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -19,13 +20,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ReleaseArtifactBaselineTest {
     private static final int JAVA_21_CLASS_MAJOR_VERSION = 65;
-    private static final List<String> PRODUCTION_MODULES = List.of(
+    // 5 个中立内核/loader 制品：只依赖 Reactor + SLF4J，父 POM 保持 Spring-free。
+    private static final List<String> NEUTRAL_KERNEL_MODULES = List.of(
         "fibra-api",
         "fibra-core",
         "fibra-pf4j-api",
         "fibra-loader-pf4j",
         "fibra-loader-config"
     );
+    // 第 6 个可发布制品：可选 Spring 适配制品，自管 Spring BOM，与中立制品分类区分。
+    private static final List<String> SPRING_ADAPTER_MODULES = List.of(
+        "fibra-spring-boot-starter"
+    );
+    // 全部可发布制品享有一致发布待遇：主 JAR + sources + Javadoc + flatten POM + deploy。
+    private static final List<String> RELEASABLE_MODULES =
+        Stream.concat(NEUTRAL_KERNEL_MODULES.stream(), SPRING_ADAPTER_MODULES.stream()).toList();
     private static final List<String> VERIFICATION_MODULES = List.of(
         "fibra-example-contract-plugin",
         "fibra-example-provider-plugin",
@@ -42,8 +51,8 @@ class ReleaseArtifactBaselineTest {
     );
 
     @Test
-    void productionModulesProduceCompleteSelfContainedArtifacts() throws Exception {
-        for (var module : PRODUCTION_MODULES) {
+    void releasableModulesProduceCompleteSelfContainedArtifacts() throws Exception {
+        for (var module : RELEASABLE_MODULES) {
             var moduleDirectory = repositoryRoot().resolve(module);
             var target = moduleDirectory.resolve("target");
             var version = assertSelfContainedPom(
@@ -61,12 +70,12 @@ class ReleaseArtifactBaselineTest {
     }
 
     @Test
-    void onlyProductionModulesEnableRemoteDeployment() throws Exception {
+    void onlyReleasableModulesEnableRemoteDeployment() throws Exception {
         var root = repositoryRoot();
         assertEquals("true", property(parseProject(root.resolve("pom.xml")),
             "maven.deploy.skip"));
 
-        for (var module : PRODUCTION_MODULES) {
+        for (var module : RELEASABLE_MODULES) {
             assertEquals("false", property(parseProject(root.resolve(module).resolve("pom.xml")),
                 "maven.deploy.skip"), module + " 必须显式开启远程发布");
         }

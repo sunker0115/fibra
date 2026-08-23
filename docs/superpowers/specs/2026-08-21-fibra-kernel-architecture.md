@@ -19,7 +19,7 @@ Fibra 是 DeepSeek Harness 内 Cordis 4.0.1 的 Java 21 等价内核。Java API 
 - Maven 聚合父工程：`com.sstlfsj:fibra:${revision}`；`revision` 是唯一项目版本真源。根 POM不远程发布，五个生产模块由 Flatten Maven Plugin 生成不依赖根 parent 的自包含发布 POM。
 - 内核边界固定为：`fibra-api`（稳定公开契约）、`fibra-core`（唯一运行时实现）、`fibra-parity-tests`（Cordis 逐项门禁与 API 冻结）。制品层为 `fibra-pf4j-api` 与 `fibra-loader-pf4j`；动态组合层为 `fibra-loader-config`。依赖方向固定为 `fibra-loader-config -> fibra-loader-pf4j -> fibra-core + fibra-pf4j-api -> fibra-api`；`fibra-core` 不依赖 PF4J 或配置解析器，运行时实现不得反向进入 API 模块。`fibra-example-provider-plugin`、`fibra-example-consumer-plugin` 与 `fibra-example-host` 只负责真实制品依赖链和宿主黑盒验收，不属于稳定公共 API。
 - Java 21。
-- 第三方依赖、内部模块和 Maven 插件的版本集中在父 POM `properties`，依赖版本通过 `dependencyManagement` 传递，子模块不得重复声明。
+- 第三方依赖、内部模块和 Maven 插件的版本集中在父 POM `properties`，依赖版本通过 `dependencyManagement` 传递，子模块不得重复声明。显式例外：可选 Spring 适配制品 `fibra-spring-boot-starter` 在自身模块 POM 内导入 Spring Boot BOM 并管理 `spring-boot.version`，父 POM 绝不引入任何 Spring 依赖或版本属性，以保持内核 Spring-free。
 - 运行时依赖：Reactor Core 3.8.6、SLF4J API 2.0.18。core 不绑定日志 provider。
 - 内核验收依赖只存在于 `fibra-parity-tests`：JUnit 6.1.3、Reactor Test 3.8.6、Awaitility 4.3.0。装载适配的真实 JAR 测试位于 `fibra-loader-pf4j`。时间相关测试使用虚拟时间或显式闩锁，禁止 `Thread.sleep` 猜时序。
 
