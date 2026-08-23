@@ -354,4 +354,13 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>benchmarks</id>
+      <modules>
+        <module>fibra-benchmarks</module>
+      </modules>
+    </profile>
+  </profiles>
 </project>
