@@ -4,6 +4,7 @@ import com.sstlfsj.fibra.Context;
 import com.sstlfsj.fibra.FibraState;
 import com.sstlfsj.fibra.ServiceKey;
 import com.sstlfsj.fibra.loader.pf4j.FibraPluginLoader;
+import com.sstlfsj.fibra.loader.pf4j.FibraPluginLoaderBusyException;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
 import example.fibra.config.ConfigLoaderEntrypoint;
 import example.fibra.config.ConfigConsumerEntrypoint;
@@ -472,7 +473,7 @@ class FibraConfigLoaderTest {
     }
 
     @Test
-    void refreshUsesTheSameExclusiveBoundaryAsArtifactTransactions(@TempDir Path work)
+    void refreshFailsBusyWithoutChangingRuntimeDuringAnArtifactTransaction(@TempDir Path work)
         throws Exception {
         var plugins = Files.createDirectory(work.resolve("plugins"));
         writePluginJar(plugins.resolve("fixture.jar"), ConfigLoaderEntrypoint.class);
@@ -485,12 +486,10 @@ class FibraConfigLoaderTest {
                  .build()) {
             artifacts.loadArtifacts();
             loader.load();
+            var firstContext = loader.resolve("first").orElseThrow().context();
             writeConfig(config, "serialized", "two");
             var lockEntered = new CountDownLatch(1);
             var releaseLock = new CountDownLatch(1);
-            var refreshStarted = new CountDownLatch(1);
-            var refreshFinished = new CountDownLatch(1);
-            var refreshFailure = new AtomicReference<Throwable>();
             var holder = Thread.ofPlatform().start(() -> artifacts.runExclusive(() -> {
                 lockEntered.countDown();
                 try {
@@ -503,36 +502,24 @@ class FibraConfigLoaderTest {
                 }
             }));
             assertTrue(lockEntered.await(3, TimeUnit.SECONDS));
-            var refresher = Thread.ofPlatform().start(() -> {
-                refreshStarted.countDown();
-                try {
-                    loader.refresh();
-                } catch (Throwable failure) {
-                    refreshFailure.set(failure);
-                } finally {
-                    refreshFinished.countDown();
-                }
-            });
 
             try {
-                assertTrue(refreshStarted.await(3, TimeUnit.SECONDS));
-                assertFalse(refreshFinished.await(100, TimeUnit.MILLISECONDS));
+                assertThrows(FibraPluginLoaderBusyException.class, loader::refresh);
+                assertEquals("first:one", firstContext.get(VALUE));
+                assertEquals(List.of("first", "second"), artifacts.entryIds());
             } finally {
                 releaseLock.countDown();
             }
-            assertTrue(refreshFinished.await(3, TimeUnit.SECONDS));
             holder.join();
-            refresher.join();
-            if (refreshFailure.get() != null) {
-                throw new AssertionError("serialized refresh failed", refreshFailure.get());
-            }
+
+            loader.refresh();
             assertEquals("first:serialized", loader.resolve("first").orElseThrow()
                 .context().get(VALUE));
         }
     }
 
     @Test
-    void typedConfigRefreshAndArtifactReloadConvergeWhenStartedTogether(@TempDir Path work)
+    void typedConfigRefreshAndArtifactReloadRejectOverlapAndConvergeAfterRetry(@TempDir Path work)
         throws Exception {
         var plugins = Files.createDirectory(work.resolve("plugins"));
         var incoming = Files.createDirectory(work.resolve("incoming"));
@@ -562,36 +549,38 @@ class FibraConfigLoaderTest {
                   config:
                     value: after
                 """);
-            var start = new CountDownLatch(1);
-            var refreshFailure = new AtomicReference<Throwable>();
+            var applyFinished = new CountDownLatch(1);
+            var releaseApply = new CountDownLatch(1);
             var reloadFailure = new AtomicReference<Throwable>();
-            var refresh = Thread.ofPlatform().start(() -> {
-                awaitGate(start, refreshFailure);
-                try {
-                    loader.refresh();
-                } catch (Throwable failure) {
-                    refreshFailure.set(failure);
-                }
-            });
             var reload = Thread.ofPlatform().start(() -> {
-                awaitGate(start, reloadFailure);
                 try {
-                    artifacts.reloadArtifact(candidate);
+                    artifacts.runExclusive(() -> {
+                        artifacts.reloadArtifact(candidate);
+                        applyFinished.countDown();
+                        try {
+                            if (!releaseApply.await(3, TimeUnit.SECONDS)) {
+                                throw new IllegalStateException("apply test gate was not released");
+                            }
+                        } catch (InterruptedException exception) {
+                            Thread.currentThread().interrupt();
+                            throw new IllegalStateException(exception);
+                        }
+                    });
                 } catch (Throwable failure) {
                     reloadFailure.set(failure);
                 }
             });
 
-            start.countDown();
-            refresh.join();
+            assertTrue(applyFinished.await(3, TimeUnit.SECONDS));
+            assertThrows(FibraPluginLoaderBusyException.class, loader::refresh);
+            releaseApply.countDown();
             reload.join();
 
-            if (refreshFailure.get() != null) {
-                throw new AssertionError("concurrent refresh failed", refreshFailure.get());
+            var reloadError = reloadFailure.get();
+            if (reloadError != null) {
+                throw new AssertionError("artifact reload failed", reloadError);
             }
-            if (reloadFailure.get() != null) {
-                throw new AssertionError("concurrent reload failed", reloadFailure.get());
-            }
+            loader.refresh();
             assertNotSame(oldClassLoader, artifacts.configType("typed").getClassLoader());
             assertEquals("typed-entry:after",
                 loader.resolve("typed-entry").orElseThrow().context().get(VALUE));

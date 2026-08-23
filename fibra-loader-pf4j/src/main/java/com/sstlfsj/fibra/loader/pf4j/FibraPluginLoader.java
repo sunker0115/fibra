@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 import java.util.jar.JarFile;
 
@@ -45,9 +44,8 @@ public final class FibraPluginLoader implements AutoCloseable {
     private final Context root;
     private final Path pluginsRoot;
     private final FibraJarPluginManager pluginManager;
-    private final ReentrantLock lifecycleLock = new ReentrantLock();
+    private final LoaderOperationGate operationGate = new LoaderOperationGate();
     private final Map<String, MountedEntry> entries = new LinkedHashMap<>();
-    private boolean closed;
 
     public FibraPluginLoader(Context root, Path pluginsRoot) {
         this.root = Objects.requireNonNull(root, "root");
@@ -131,11 +129,11 @@ public final class FibraPluginLoader implements AutoCloseable {
     }
 
     public List<String> artifactIds() {
-        return runExclusive(this::artifactIdsInternal);
+        return operationGate.snapshot().artifactIds();
     }
 
     public List<String> entryIds() {
-        return runExclusive(() -> List.copyOf(entries.keySet()));
+        return operationGate.snapshot().entryIds();
     }
 
     public Optional<Fibra> fibra(String entryId) {
@@ -147,13 +145,7 @@ public final class FibraPluginLoader implements AutoCloseable {
     /** 在制品更新和配置 reconcile 共用的可重入串行边界内执行。 */
     public <T> T runExclusive(Supplier<T> action) {
         Objects.requireNonNull(action, "action");
-        lifecycleLock.lock();
-        try {
-            requireOpen();
-            return action.get();
-        } finally {
-            lifecycleLock.unlock();
-        }
+        return operationGate.runExclusive(action, this::identitySnapshotInternal);
     }
 
     /** 在制品更新和配置 reconcile 共用的可重入串行边界内执行。 */
@@ -167,21 +159,14 @@ public final class FibraPluginLoader implements AutoCloseable {
 
     @Override
     public void close() {
-        lifecycleLock.lock();
-        try {
-            if (closed) {
-                return;
-            }
+        operationGate.close(() -> {
             var mounted = new ArrayList<>(entries.keySet());
             Collections.reverse(mounted);
             for (var entryId : mounted) {
                 unmountInternal(entryId);
             }
             pluginManager.unloadPlugins();
-            closed = true;
-        } finally {
-            lifecycleLock.unlock();
-        }
+        });
     }
 
     FibraPluginClassLoader pluginClassLoader(String pluginId) {
@@ -198,10 +183,7 @@ public final class FibraPluginLoader implements AutoCloseable {
     }
 
     String currentPluginVersion(String pluginId) {
-        return runExclusive(() -> {
-            var plugin = pluginManager.getPlugin(pluginId);
-            return plugin == null ? null : plugin.getDescriptor().getVersion();
-        });
+        return operationGate.snapshot().artifactVersions().get(pluginId);
     }
 
     private String loadArtifactInternal(Path pluginPath) {
@@ -529,6 +511,16 @@ public final class FibraPluginLoader implements AutoCloseable {
             .toList();
     }
 
+    private LoaderOperationGate.IdentitySnapshot identitySnapshotInternal() {
+        var versions = new LinkedHashMap<String, String>();
+        pluginManager.getPlugins().stream()
+            .sorted(java.util.Comparator.comparing(PluginWrapper::getPluginId))
+            .forEach(plugin -> versions.put(plugin.getPluginId(),
+                plugin.getDescriptor().getVersion()));
+        return new LoaderOperationGate.IdentitySnapshot(versions,
+            List.copyOf(entries.keySet()));
+    }
+
     private FibraPluginCandidate validateArtifact(Path pluginPath) {
         try (var jar = new JarFile(pluginPath.toFile())) {
             var manifest = jar.getManifest();
@@ -654,12 +646,6 @@ public final class FibraPluginLoader implements AutoCloseable {
             || !Objects.equals(pluginPath.getParent(), pluginsRoot)) {
             throw new IllegalArgumentException(
                 "plugin must be a direct JAR child of " + pluginsRoot + ": " + pluginPath);
-        }
-    }
-
-    private void requireOpen() {
-        if (closed) {
-            throw new IllegalStateException("FibraPluginLoader is closed");
         }
     }
 
