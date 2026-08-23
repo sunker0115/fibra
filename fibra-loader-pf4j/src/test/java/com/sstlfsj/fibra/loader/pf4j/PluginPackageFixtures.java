@@ -32,6 +32,29 @@ final class PluginPackageFixtures {
         return packageRoot;
     }
 
+    static Path executableDirectory(Path packagesRoot, String id, String version,
+                                    String dependencies, Class<?>... classes)
+        throws IOException {
+        var packageRoot = standardDirectory(packagesRoot, id, version);
+        var properties = new LinkedHashMap<String, String>();
+        properties.put("plugin.id", id);
+        properties.put("plugin.version", version);
+        if (!dependencies.isBlank()) {
+            properties.put("plugin.dependencies", dependencies);
+        }
+        writeProperties(packageRoot, properties);
+        var entries = new LinkedHashMap<String, byte[]>();
+        if (classes.length > 0) {
+            entries.put("META-INF/extensions.idx", extensionIndex(List.of(classes).stream()
+                .map(Class::getName).toList()));
+        }
+        for (var type : classes) {
+            entries.put(type.getName().replace('.', '/') + ".class", classBytes(type));
+        }
+        writeJar(packageRoot.resolve("lib").resolve(id + '-' + version + ".jar"), entries);
+        return packageRoot;
+    }
+
     static void writeProperties(Path packageRoot, Map<String, String> values)
         throws IOException {
         var text = values.entrySet().stream()

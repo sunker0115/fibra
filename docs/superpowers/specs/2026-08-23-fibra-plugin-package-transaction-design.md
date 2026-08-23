@@ -296,7 +296,7 @@ plugins/.fibra-transactions/<txid>/
 
 正式事务目录创建后，第一个持久动作必须是原子发布 `PREPARED` 的 `journal.properties`；随后才把预检工作区的 `input/`、`next/` 原子移入该目录。若进程只创建了空正式目录、尚未发布 journal，该目录可安全清理；无 journal 却存在 `previous/` 属于协议不可能状态，必须以 `ROLLBACK` 拒绝启动。
 
-`journal.properties` 至少记录事务 ID、状态、按字典序排列的候选 ID、各 ID 更新前是否存在、旧规范摘要和新规范摘要。journal 每次修改都先写同目录临时文件并 `FileChannel.force(true)`，再 `ATOMIC_MOVE + REPLACE_EXISTING`，最后 force 事务目录。每次插件目录 move 后同样 force 源父目录与目标父目录，再进入下一步。文件系统不支持原子 move 或目录 force 时以对应事务阶段失败，不退化为普通 move、复制覆盖或仅依赖进程内缓存。
+`journal.properties` 至少记录事务 ID、状态、按字典序排列的候选 ID、各 ID 更新前是否存在、旧规范摘要和新规范摘要。运行时回滚已经恢复旧目录和旧运行态、准备开始删除事务 payload 时，journal 额外原子记录 `cleanup.outcome=ROLLBACK`；该字段是清理意图证明，不是新的事务状态。journal 每次修改都先写同目录临时文件并 `FileChannel.force(true)`，再 `ATOMIC_MOVE + REPLACE_EXISTING`，最后 force 事务目录。每次插件目录 move 后同样 force 源父目录与目标父目录，再进入下一步。文件系统不支持原子 move 或目录 force 时以对应事务阶段失败，不退化为普通 move、复制覆盖或仅依赖进程内缓存。
 
 状态只有：
 
@@ -323,7 +323,7 @@ PREPARED -> INSTALLING -> APPLYING -> COMMITTED
 1. 卸载本次创建的新 entry 和新 PF4J 运行态；
 2. 按 journal 逆序把安装目录移回 `next/`，把 `previous/` 恢复到原 ID；新安装且原来不存在的 ID从安装目录撤回；
 3. 重装旧依赖图、旧 started 状态和旧 entries；
-4. 恢复成功时抛原阶段 `FibraArtifactException`，安装目录和运行态保持旧状态；
+4. 恢复成功后先原子写入 `cleanup.outcome=ROLLBACK`，再按 payload-first、journal-last 顺序清理并抛原阶段 `FibraArtifactException`；安装目录和运行态保持旧状态；
 5. 恢复失败时抛 stage 为 `ROLLBACK` 的异常，原阶段异常作为 cause，恢复失败按发生顺序加入 suppressed，并保留事务目录供诊断和下次启动恢复。
 
 ### 7.4 进程崩溃后恢复
@@ -332,6 +332,7 @@ PREPARED -> INSTALLING -> APPLYING -> COMMITTED
 
 - 先清理 `.fibra-preflight`；空的无 journal 正式事务目录也可清理，无 journal 却存在 `previous/` 时拒绝启动；
 - `COMMITTED`：每个 `plugins/<id>` 必须匹配 journal 的新摘要；全部匹配才保留新目录并清理 `previous/next/input`，任一不匹配都报告 `ROLLBACK`；
+- `cleanup.outcome=ROLLBACK`：每个旧存在 ID 的安装目录必须匹配旧摘要，每个新安装 ID 必须不存在；全部匹配才继续删除可能残留的 payload 和 journal，任一不匹配都报告 `ROLLBACK`；
 - `PREPARED`：安装目录尚未交换，旧 ID 必须仍匹配旧摘要、新安装 ID 必须不存在；满足时清理正式事务和残留预检目录，否则报告 `ROLLBACK`；
 - `INSTALLING` 或 `APPLYING`：按候选安装顺序的逆序逐 ID 执行下述确定性恢复，全部恢复旧摘要后才清理事务；
 - journal 损坏或任一目录/摘要组合不属于下述合法状态：构造失败并报告 `ROLLBACK`，不得猜测一个图继续启动。
@@ -344,7 +345,7 @@ PREPARED -> INSTALLING -> APPLYING -> COMMITTED
 
 `plugins/<id>` 与 `next/<id>` 同时存在或同时缺失、旧摘要/新摘要不匹配、journal 重复 ID 或候选顺序不规范都属于无法闭合，不允许覆盖或删除其中任一份来“尝试恢复”。
 
-成功提交清理、成功回滚清理和构造期恢复清理都使用同一 journal-last 顺序。因而进程在清理期间再次退出时，要么 journal 仍在且可按原状态重复恢复/清理，要么只剩可安全删除的空无 journal 事务目录；协议不会自行产生“无 journal 但有 previous”的状态。
+成功提交清理、成功回滚清理和构造期恢复清理都使用同一 journal-last 顺序。`COMMITTED` 证明新图，`cleanup.outcome=ROLLBACK` 证明旧图，因此 payload 已部分删除时仍能只依赖安装目录摘要重复完成清理。进程在清理期间再次退出时，要么 journal 仍在且可证明目标图并继续清理，要么只剩可安全删除的空无 journal 事务目录；协议不会自行产生“无 journal 但有 previous”的状态。
 
 恢复完成后才允许 `loadArtifacts()` 创建 ClassLoader。该机制保证进程内失败和目录交换期间的进程崩溃都不会被静默接受为半批次安装图。
 

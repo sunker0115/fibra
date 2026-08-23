@@ -272,7 +272,7 @@ class FibraConfigLoaderTest {
             try (var watcher = loader.watch(Duration.ofMillis(30), failures::add)) {
                 writeConfig(config, "watched", "two");
                 await().atMost(Duration.ofSeconds(3)).untilAsserted(() ->
-                    assertEquals("first:watched", loader.resolve("first").orElseThrow()
+                    assertEquals("first:watched", resolved(loader, "first")
                         .context().get(VALUE)));
 
                 Files.writeString(config, "not: [valid");
@@ -284,7 +284,7 @@ class FibraConfigLoaderTest {
 
                 writeConfig(config, "recovered", "two");
                 await().atMost(Duration.ofSeconds(3)).untilAsserted(() ->
-                    assertEquals("first:recovered", loader.resolve("first").orElseThrow()
+                    assertEquals("first:recovered", resolved(loader, "first")
                         .context().get(VALUE)));
 
                 var failureCount = failures.size();
@@ -298,8 +298,51 @@ class FibraConfigLoaderTest {
 
                 writeConfig(config, "recreated", "two");
                 await().atMost(Duration.ofSeconds(3)).untilAsserted(() ->
-                    assertEquals("first:recreated", loader.resolve("first").orElseThrow()
+                    assertEquals("first:recreated", resolved(loader, "first")
                         .context().get(VALUE)));
+            }
+        }
+    }
+
+    @Test
+    void watcherRetainsDirtyConfigWithoutPublishingBusyAsAConfigFailure(@TempDir Path work)
+        throws Exception {
+        var plugins = Files.createDirectory(work.resolve("plugins"));
+        writePluginJar(plugins.resolve("fixture.jar"), ConfigLoaderEntrypoint.class);
+        var config = work.resolve("fibra.yaml");
+        writeConfig(config, "one", "two");
+        var failures = new CopyOnWriteArrayList<FibraConfigReloadFailure>();
+        var entered = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+
+        try (Context root = FibraRuntime.create();
+             FibraPluginLoader artifacts = new FibraPluginLoader(root, plugins);
+             FibraConfigLoader loader = FibraConfigLoader.builder(root, artifacts, config)
+                 .build()) {
+            artifacts.loadArtifacts();
+            loader.load();
+            try (var watcher = loader.watch(Duration.ofMillis(30), failures::add)) {
+                var holder = Thread.ofPlatform().start(() -> artifacts.runExclusive(() -> {
+                    entered.countDown();
+                    try {
+                        release.await();
+                    } catch (InterruptedException exception) {
+                        Thread.currentThread().interrupt();
+                    }
+                }));
+                assertTrue(entered.await(2, TimeUnit.SECONDS));
+                writeConfig(config, "after-busy", "two");
+                await().during(Duration.ofMillis(200)).atMost(Duration.ofSeconds(2))
+                    .untilAsserted(() -> assertTrue(failures.isEmpty()));
+                release.countDown();
+                holder.join();
+
+                await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
+                    assertEquals("first:after-busy", resolved(loader, "first")
+                        .context().get(VALUE)));
+                assertTrue(failures.isEmpty());
+            } finally {
+                release.countDown();
             }
         }
     }
@@ -340,9 +383,8 @@ class FibraConfigLoaderTest {
                     """);
 
                 await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-                    var child = loader.resolve("late:child");
-                    assertTrue(child.isPresent());
-                    assertEquals("late:child:recovered", child.orElseThrow()
+                    var child = resolved(loader, "late:child");
+                    assertEquals("late:child:recovered", child
                         .context().get(VALUE));
                 });
             }
@@ -555,7 +597,7 @@ class FibraConfigLoaderTest {
             var reload = Thread.ofPlatform().start(() -> {
                 try {
                     artifacts.runExclusive(() -> {
-                        artifacts.reloadArtifact(candidate);
+                        artifacts.applyArtifacts(List.of(candidate));
                         applyFinished.countDown();
                         try {
                             if (!releaseApply.await(3, TimeUnit.SECONDS)) {
@@ -642,7 +684,7 @@ class FibraConfigLoaderTest {
             var before = loader.resolve("typed-entry").orElseThrow().fibra();
             var oldClassLoader = artifacts.configType("typed").getClassLoader();
 
-            artifacts.reloadArtifact(candidate);
+            artifacts.applyArtifacts(List.of(candidate));
 
             var after = loader.resolve("typed-entry").orElseThrow();
             assertNotSame(before, after.fibra());
@@ -1096,19 +1138,35 @@ class FibraConfigLoaderTest {
     private static void writePluginJar(Path path, String pluginId, String version,
                                        Class<?> entrypoint, Class<?>... supportTypes)
         throws IOException {
-        var manifest = new Manifest();
-        var attributes = manifest.getMainAttributes();
-        attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
-        attributes.putValue("Plugin-Id", pluginId);
-        attributes.putValue("Plugin-Version", version);
-        attributes.putValue("Plugin-Dependencies", "");
-        try (var output = new JarOutputStream(Files.newOutputStream(path), manifest)) {
+        var source = path.getFileName().toString().equals(pluginId + ".jar")
+            ? path.getParent()
+            : Files.createTempDirectory(path.getParent(), ".package-source-");
+        var packageRoot = source.resolve(pluginId);
+        Files.createDirectories(packageRoot.resolve("lib"));
+        Files.writeString(packageRoot.resolve("plugin.properties"), """
+            plugin.id=%s
+            plugin.version=%s
+            """.formatted(pluginId, version));
+        var mainJar = packageRoot.resolve("lib").resolve(pluginId + '-' + version + ".jar");
+        try (var output = new JarOutputStream(Files.newOutputStream(mainJar))) {
             output.putNextEntry(new JarEntry("META-INF/extensions.idx"));
             output.write((entrypoint.getName() + '\n').getBytes(StandardCharsets.UTF_8));
             output.closeEntry();
             addClass(output, entrypoint);
             for (var supportType : supportTypes) {
                 addClass(output, supportType);
+            }
+        }
+        if (!source.equals(path.getParent())) {
+            try (var output = new java.util.zip.ZipOutputStream(Files.newOutputStream(path));
+                 var files = Files.walk(packageRoot)) {
+                for (var file : files.filter(Files::isRegularFile).sorted().toList()) {
+                    var name = pluginId + '/'
+                        + packageRoot.relativize(file).toString().replace('\\', '/');
+                    output.putNextEntry(new java.util.zip.ZipEntry(name));
+                    Files.copy(file, output);
+                    output.closeEntry();
+                }
             }
         }
     }
@@ -1123,6 +1181,14 @@ class FibraConfigLoaderTest {
             input.transferTo(output);
         }
         output.closeEntry();
+    }
+
+    private static FibraConfigRuntimeEntry resolved(FibraConfigLoader loader, String entryId) {
+        try {
+            return loader.resolve(entryId).orElseThrow();
+        } catch (FibraPluginLoaderBusyException | java.util.NoSuchElementException exception) {
+            throw new AssertionError("config entry is not ready", exception);
+        }
     }
 
     private static void awaitGate(CountDownLatch latch,

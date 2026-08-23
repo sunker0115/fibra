@@ -119,7 +119,7 @@
 
 #### Scenario: 清理期间再次退出
 - **WHEN** 成功提交、成功回滚或构造期恢复正在清理事务目录
-- **THEN** 系统先删除 `previous/next/input`，最后删除 journal 和空事务目录，使下次启动仍能重复证明状态或只清理空目录
+- **THEN** 成功回滚先原子记录 `cleanup.outcome=ROLLBACK`，系统再删除 `previous/next/input`，最后删除 journal 和空事务目录，使下次启动仍能从 `COMMITTED` 或回滚清理标记重复证明目标图，或只清理空目录
 
 #### Scenario: Journal 损坏
 - **WHEN** 事务目录无法证明应恢复的 ID、旧存在状态或目录闭合关系

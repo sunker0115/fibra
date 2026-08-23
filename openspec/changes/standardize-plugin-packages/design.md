@@ -58,7 +58,7 @@ PF4J 3.15.0 已提供目录 `lib/`、properties 描述、SemVer、依赖解析�
 
 ### D6：持久 journal 是批量原子语义的一部分
 
-候选先进入无 journal、可直接清理的 `plugins/.fibra-preflight/<txid>`；完整预检后才创建 `plugins/.fibra-transactions/<txid>`，并把原子发布 `PREPARED` journal 作为正式事务的第一个持久动作。随后保存不可变输入、新目录、旧目录，状态按 `PREPARED -> INSTALLING -> APPLYING -> COMMITTED` 推进。构造 loader 时先清理预检垃圾，再按 journal 中每个 ID 的旧存在状态、旧/新摘要与 `plugins/previous/next` 组合确定恢复，最后才创建活动 manager。
+候选先进入无 journal、可直接清理的 `plugins/.fibra-preflight/<txid>`；完整预检后才创建 `plugins/.fibra-transactions/<txid>`，并把原子发布 `PREPARED` journal 作为正式事务的第一个持久动作。随后保存不可变输入、新目录、旧目录，状态按 `PREPARED -> INSTALLING -> APPLYING -> COMMITTED` 推进。运行时回滚完成、开始清理 payload 前额外原子记录 `cleanup.outcome=ROLLBACK`，用旧安装图摘要证明清理意图而不增加事务状态。构造 loader 时先清理预检垃圾，再按 journal 中每个 ID 的旧存在状态、旧/新摘要与 `plugins/previous/next` 组合确定恢复，最后才创建活动 manager。
 
 原因：多个目录不存在单一原子 rename；只做内存回滚不能覆盖进程在两个 move 之间退出。把预检垃圾和正式事务分开，才能保证预检期崩溃不会因缺 journal 错误阻止启动。
 

@@ -1,5 +1,6 @@
 package com.sstlfsj.fibra.loader.config;
 
+import com.sstlfsj.fibra.loader.pf4j.FibraPluginLoaderBusyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,6 +83,8 @@ public final class FibraConfigWatcher implements AutoCloseable {
                 try {
                     owner.refresh();
                     refreshRegistrations(false);
+                } catch (FibraPluginLoaderBusyException exception) {
+                    pendingRefresh = true;
                 } catch (FibraConfigException exception) {
                     pendingRefresh = refreshRegistrations(true);
                     publishFailure(exception);

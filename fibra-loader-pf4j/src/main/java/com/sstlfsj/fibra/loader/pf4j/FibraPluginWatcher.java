@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-/** 监听外部候选目录，并按插件 ID 去抖触发 {@link FibraPluginLoader#reloadArtifact(Path)}。 */
+/** 监听外部候选目录，并按插件 ID 去抖触发单包事务更新。 */
 public final class FibraPluginWatcher implements AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger(FibraPluginWatcher.class);
     private static final VersionManager VERSIONS = new DefaultVersionManager();
@@ -118,7 +118,7 @@ public final class FibraPluginWatcher implements AutoCloseable {
                     }
                     var relative = (Path) event.context();
                     var candidate = incomingRoot.resolve(relative).toAbsolutePath().normalize();
-                    if (candidate.getFileName().toString().endsWith(".jar")) {
+                    if (candidate.getFileName().toString().endsWith(".zip")) {
                         schedule(candidate);
                     }
                 }
@@ -151,7 +151,7 @@ public final class FibraPluginWatcher implements AutoCloseable {
 
         var currentVersion = loader.currentPluginVersion(inspected.pluginId());
         if (currentVersion != null
-            && VERSIONS.compareVersions(inspected.version(), currentVersion) < 0) {
+            && VERSIONS.compareVersions(inspected.version(), currentVersion) <= 0) {
             return;
         }
 
@@ -180,10 +180,12 @@ public final class FibraPluginWatcher implements AutoCloseable {
         try {
             var currentVersion = loader.currentPluginVersion(pluginId);
             if (currentVersion != null
-                && VERSIONS.compareVersions(update.version, currentVersion) < 0) {
+                && VERSIONS.compareVersions(update.version, currentVersion) <= 0) {
                 return;
             }
-            loader.reloadArtifact(update.candidate);
+            loader.applyArtifacts(java.util.List.of(update.candidate));
+        } catch (FibraPluginLoaderBusyException exception) {
+            schedule(update.candidate);
         } catch (RuntimeException exception) {
             recordFailure(update.candidate, exception);
         }

@@ -9,16 +9,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
-import java.util.List;
-import java.util.jar.Attributes;
-import java.util.jar.JarEntry;
-import java.util.jar.JarOutputStream;
-import java.util.jar.Manifest;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -28,107 +24,132 @@ class FibraPluginWatcherTest {
     private static final ServiceKey<String> VALUE = ServiceKey.of("fixture.value", String.class);
 
     @Test
-    void reloadsLatestAtomicallyPublishedCandidateAfterPerPluginDebounce(@TempDir Path work)
+    void appliesOnlyTheHighestAtomicallyPublishedZipAfterPerPluginDebounce(@TempDir Path work)
         throws Exception {
         PluginLifecycleRecorder.EVENTS.clear();
-        var pluginsRoot = Files.createDirectory(work.resolve("plugins"));
+        var plugins = Files.createDirectory(work.resolve("plugins"));
         var incoming = Files.createDirectory(work.resolve("incoming"));
-        var staging = Files.createDirectory(work.resolve("staging"));
-        writePluginJar(pluginsRoot.resolve("fixture.jar"), "fixture", "1.0.0",
+        PluginPackageFixtures.executableDirectory(plugins, "fixture", "1.0.0", "",
             FixtureEntrypoint.class);
-        var second = staging.resolve("fixture-2.0.0.jar");
-        var third = staging.resolve("fixture-3.0.0.jar");
-        writePluginJar(second, "fixture", "2.0.0", ReplacementEntrypoint.class);
-        writePluginJar(third, "fixture", "3.0.0", ReplacementEntrypoint.class);
+        var second = candidate(work, "fixture", "2.0.0", ReplacementEntrypoint.class);
+        var third = candidate(work, "fixture", "3.0.0", ReplacementEntrypoint.class);
 
         try (Context root = FibraRuntime.create();
-             FibraPluginLoader loader = new FibraPluginLoader(root, pluginsRoot);
-             FibraPluginWatcher watcher = new FibraPluginWatcher(
-                 loader, incoming, Duration.ofMillis(150))) {
+             var loader = new FibraPluginLoader(root, plugins);
+             var watcher = new FibraPluginWatcher(loader, incoming, Duration.ofMillis(150))) {
             loader.loadArtifacts();
             loader.mount(PluginInstanceSpec.builder("fixture", "fixture")
-                .parentContext(root)
-                .build());
+                .parentContext(root).build());
             watcher.start();
 
-            publish(second, incoming.resolve(second.getFileName()));
-            publish(third, incoming.resolve(third.getFileName()));
+            publish(second, incoming.resolve("fixture-2.0.0.zip"));
+            publish(third, incoming.resolve("fixture-3.0.0.zip"));
 
             await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-                assertEquals("3.0.0", pluginVersion(pluginsRoot.resolve("fixture.jar")));
+                assertEquals("3.0.0", version(plugins.resolve("fixture")));
                 assertEquals("replacement", root.get(VALUE));
             });
-            assertEquals(List.of("replacement:start"), PluginLifecycleRecorder.EVENTS);
+            assertEquals(java.util.List.of("replacement:start"),
+                PluginLifecycleRecorder.EVENTS);
             assertTrue(watcher.lastFailure().isEmpty());
         }
     }
 
     @Test
-    void exposesInvalidPublishedCandidateFailure(@TempDir Path work) throws Exception {
-        var pluginsRoot = Files.createDirectory(work.resolve("plugins"));
+    void retainsDirtyCandidateAndRetriesAfterTheLoaderTransactionBecomesIdle(
+        @TempDir Path work) throws Exception {
+        var plugins = Files.createDirectory(work.resolve("plugins"));
         var incoming = Files.createDirectory(work.resolve("incoming"));
-        var staging = Files.createDirectory(work.resolve("staging"));
-        writePluginJar(pluginsRoot.resolve("fixture.jar"), "fixture", "1.0.0",
+        PluginPackageFixtures.executableDirectory(plugins, "fixture", "1.0.0", "",
             FixtureEntrypoint.class);
-        var invalid = staging.resolve("invalid.jar");
-        writePluginJar(invalid, "fixture", "2.0.0", Context.class);
+        var candidate = candidate(work, "fixture", "2.0.0", ReplacementEntrypoint.class);
+        var entered = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
 
         try (Context root = FibraRuntime.create();
-             FibraPluginLoader loader = new FibraPluginLoader(root, pluginsRoot);
-             FibraPluginWatcher watcher = new FibraPluginWatcher(
-                 loader, incoming, Duration.ofMillis(50))) {
+             var loader = new FibraPluginLoader(root, plugins);
+             var watcher = new FibraPluginWatcher(loader, incoming, Duration.ofMillis(40))) {
             loader.loadArtifacts();
             loader.mount(PluginInstanceSpec.builder("fixture", "fixture")
-                .parentContext(root)
-                .build());
+                .parentContext(root).build());
+            var holder = Thread.ofPlatform().start(() -> loader.runExclusive(() -> {
+                entered.countDown();
+                try {
+                    release.await();
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                }
+            }));
+            assertTrue(entered.await(2, TimeUnit.SECONDS));
             watcher.start();
+            publish(candidate, incoming.resolve("fixture-2.0.0.zip"));
 
-            var published = incoming.resolve(invalid.getFileName());
-            publish(invalid, published);
+            await().during(Duration.ofMillis(200)).atMost(Duration.ofSeconds(2))
+                .untilAsserted(() -> {
+                    assertEquals("1.0.0", version(plugins.resolve("fixture")));
+                    assertTrue(watcher.lastFailure().isEmpty());
+                });
+            release.countDown();
+            holder.join();
 
-            await().atMost(Duration.ofSeconds(5))
-                .untilAsserted(() -> assertTrue(watcher.lastFailure().isPresent()));
-            assertEquals(published.toAbsolutePath().normalize(),
-                watcher.lastFailure().orElseThrow().candidate());
-            assertEquals("fixture", root.get(VALUE));
+            await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
+                assertEquals("2.0.0", version(plugins.resolve("fixture"))));
+        } finally {
+            release.countDown();
         }
+    }
+
+    @Test
+    void ignoresJarAndNonHigherVersionsButExposesInvalidZipFailure(@TempDir Path work)
+        throws Exception {
+        var plugins = Files.createDirectory(work.resolve("plugins"));
+        var incoming = Files.createDirectory(work.resolve("incoming"));
+        PluginPackageFixtures.executableDirectory(plugins, "fixture", "2.0.0", "",
+            FixtureEntrypoint.class);
+        var lower = candidate(work, "fixture", "1.0.0", ReplacementEntrypoint.class);
+        var same = candidate(work, "fixture", "2.0.0", ReplacementEntrypoint.class);
+        var invalid = Files.createTempFile(work, "invalid-", ".zip");
+        Files.writeString(invalid, "not-a-zip");
+
+        try (Context root = FibraRuntime.create();
+             var loader = new FibraPluginLoader(root, plugins);
+             var watcher = new FibraPluginWatcher(loader, incoming, Duration.ofMillis(40))) {
+            loader.loadArtifacts();
+            watcher.start();
+            publish(lower, incoming.resolve("lower.zip"));
+            publish(same, incoming.resolve("same.jar"));
+
+            await().during(Duration.ofMillis(200)).atMost(Duration.ofSeconds(2))
+                .untilAsserted(() -> {
+                    assertEquals("2.0.0", version(plugins.resolve("fixture")));
+                    assertTrue(watcher.lastFailure().isEmpty());
+                });
+
+            var publishedInvalid = incoming.resolve("invalid.zip");
+            publish(invalid, publishedInvalid);
+            await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+                assertTrue(watcher.lastFailure().isPresent());
+                assertEquals(publishedInvalid.toAbsolutePath().normalize(),
+                    watcher.lastFailure().orElseThrow().candidate());
+            });
+        }
+    }
+
+    private static Path candidate(Path work, String id, String version, Class<?> entrypoint)
+        throws Exception {
+        var source = Files.createTempDirectory(work, "watch-candidate-");
+        var packageRoot = PluginPackageFixtures.executableDirectory(source, id, version, "",
+            entrypoint);
+        return PluginPackageFixtures.zipDirectory(packageRoot,
+            Files.createTempFile(work, id + '-', ".zip"));
     }
 
     private static void publish(Path source, Path target) throws IOException {
         Files.move(source, target, StandardCopyOption.ATOMIC_MOVE);
     }
 
-    private static void writePluginJar(Path path, String id, String version,
-                                       Class<?>... classes) throws IOException {
-        var manifest = new Manifest();
-        var attributes = manifest.getMainAttributes();
-        attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
-        attributes.putValue("Plugin-Id", id);
-        attributes.putValue("Plugin-Version", version);
-
-        try (var output = new JarOutputStream(Files.newOutputStream(path), manifest)) {
-            output.putNextEntry(new JarEntry("META-INF/extensions.idx"));
-            for (var type : classes) {
-                output.write((type.getName() + '\n').getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            }
-            output.closeEntry();
-            for (var type : classes) {
-                var resource = type.getName().replace('.', '/') + ".class";
-                output.putNextEntry(new JarEntry(resource));
-                try (InputStream input = type.getClassLoader().getResourceAsStream(resource)) {
-                    if (input == null) {
-                        throw new IllegalStateException("missing class resource " + resource);
-                    }
-                    input.transferTo(output);
-                }
-                output.closeEntry();
-            }
-        }
-    }
-
-    private static String pluginVersion(Path path) throws IOException {
-        try (var jar = new java.util.jar.JarFile(path.toFile())) {
-            return jar.getManifest().getMainAttributes().getValue("Plugin-Version");
-        }
+    private static String version(Path packageRoot) {
+        return new PluginPackageInspector().inspectDirectory(packageRoot)
+            .descriptor().getVersion();
     }
 }

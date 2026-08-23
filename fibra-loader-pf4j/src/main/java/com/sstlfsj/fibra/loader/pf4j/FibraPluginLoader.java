@@ -5,20 +5,17 @@ import com.sstlfsj.fibra.Fibra;
 import com.sstlfsj.fibra.Plugin;
 import com.sstlfsj.fibra.PluginDescriptor;
 import com.sstlfsj.fibra.pf4j.FibraPluginEntrypoint;
-import org.pf4j.DefaultVersionManager;
 import org.pf4j.PluginState;
 import org.pf4j.PluginWrapper;
-import org.pf4j.VersionManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -27,25 +24,18 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
-import java.util.jar.JarFile;
 
-/** 把 PF4J JAR 制品生命周期桥接到可独立寻址的 Fibra 运行实例。 */
+/** 把标准 PF4J 目录包生命周期桥接到可独立寻址的 Fibra 运行实例。 */
 public final class FibraPluginLoader implements AutoCloseable {
-    private static final Logger LOGGER = LoggerFactory.getLogger(FibraPluginLoader.class);
-    private static final VersionManager VERSIONS = new DefaultVersionManager();
-    private static final List<String> FORBIDDEN_ARTIFACT_PREFIXES = List.of(
-        "com/sstlfsj/fibra/",
-        "org/pf4j/",
-        "org/reactivestreams/",
-        "reactor/",
-        "org/slf4j/"
-    );
-
     private final Context root;
     private final Path pluginsRoot;
-    private final FibraJarPluginManager pluginManager;
+    private final FibraDirectoryPluginManager pluginManager;
+    private final PluginPackageInspector inspector = new PluginPackageInspector();
+    private final PluginGraphPreflight preflight = new PluginGraphPreflight();
     private final LoaderOperationGate operationGate = new LoaderOperationGate();
     private final Map<String, MountedEntry> entries = new LinkedHashMap<>();
+
+    private boolean initialized;
 
     public FibraPluginLoader(Context root, Path pluginsRoot) {
         this.root = Objects.requireNonNull(root, "root");
@@ -53,79 +43,75 @@ public final class FibraPluginLoader implements AutoCloseable {
             throw new IllegalArgumentException("root must be the Fibra root Context");
         }
         this.pluginsRoot = validatePluginsRoot(pluginsRoot);
-        this.pluginManager = new FibraJarPluginManager(this.pluginsRoot);
+        new PluginCrashRecovery(this.pluginsRoot).recover();
+        this.pluginManager = new FibraDirectoryPluginManager(this.pluginsRoot);
     }
 
     public List<String> loadArtifacts() {
         return runExclusive(() -> {
-            var loadedPaths = new LinkedHashSet<Path>();
-            for (var plugin : pluginManager.getPlugins()) {
-                loadedPaths.add(normalize(plugin.getPluginPath()));
+            var installed = installedPackages();
+            preflight.validate(List.of(), installed);
+            var installedIds = installed.stream()
+                .map(plugin -> plugin.descriptor().getPluginId())
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+            var obsolete = pluginManager.getPlugins().stream()
+                .map(PluginWrapper::getPluginId)
+                .filter(id -> !installedIds.contains(id))
+                .toList();
+            if (!obsolete.isEmpty()) {
+                disposeAffected(obsolete);
             }
-            try (var paths = Files.list(pluginsRoot)) {
-                var additions = paths.filter(Files::isRegularFile)
-                    .filter(path -> path.getFileName().toString().endsWith(".jar"))
-                    .map(FibraPluginLoader::normalize)
-                    .sorted()
-                    .filter(path -> !loadedPaths.contains(path))
-                    .toList();
-                for (var path : additions) {
-                    requireDirectChild(path);
-                    validateArtifact(path);
-                }
-                pluginManager.loadPluginsStrict(additions);
-            } catch (IOException exception) {
-                throw new IllegalStateException("cannot list plugins root " + pluginsRoot,
-                    exception);
-            }
+            var missing = installed.stream()
+                .filter(plugin -> pluginManager.getPlugin(
+                    plugin.descriptor().getPluginId()) == null)
+                .map(InspectedPluginPackage::packageRoot)
+                .toList();
+            pluginManager.loadPluginsStrict(missing);
+            initialized = true;
             return artifactIdsInternal();
         });
     }
 
-    public String loadArtifact(Path pluginPath) {
-        Objects.requireNonNull(pluginPath, "pluginPath");
-        return runExclusive(() -> loadArtifactInternal(normalize(pluginPath)));
-    }
-
-    public String reloadArtifact(Path candidatePath) {
-        Objects.requireNonNull(candidatePath, "candidatePath");
-        return runExclusive(() -> reloadArtifactInternal(normalize(candidatePath)));
+    public List<String> applyArtifacts(List<Path> candidatePaths) {
+        requireInitialized();
+        return runExclusive(() -> new PluginUpdateTransaction(this, pluginsRoot,
+            inspector, preflight).apply(candidatePaths));
     }
 
     public Class<?> configType(String pluginId) {
         Objects.requireNonNull(pluginId, "pluginId");
-        return runExclusive(() -> configTypeInternal(pluginId));
+        return runInitialized(() -> configTypeInternal(pluginId));
     }
 
     public Fibra mount(PluginInstanceSpec spec) {
         Objects.requireNonNull(spec, "spec");
-        return runExclusive(() -> mountInternal(spec));
+        return runInitialized(() -> mountInternal(spec));
     }
 
     public Fibra update(String entryId, Object config) {
         Objects.requireNonNull(entryId, "entryId");
-        return runExclusive(() -> updateInternal(entryId, ignored -> config, true));
+        return runInitialized(() -> updateInternal(entryId, ignored -> config, true));
     }
 
     public Fibra updateWithFactory(String entryId, PluginConfigFactory configFactory) {
         Objects.requireNonNull(entryId, "entryId");
         Objects.requireNonNull(configFactory, "configFactory");
-        return runExclusive(() -> updateInternal(entryId, configFactory, false));
+        return runInitialized(() -> updateInternal(entryId, configFactory, false));
     }
 
     public void unmount(String entryId) {
         Objects.requireNonNull(entryId, "entryId");
-        runExclusive(() -> unmountInternal(entryId));
+        runInitialized(() -> unmountInternal(entryId));
     }
 
     public void stopArtifact(String pluginId) {
         Objects.requireNonNull(pluginId, "pluginId");
-        runExclusive(() -> stopArtifactInternal(pluginId));
+        runInitialized(() -> stopArtifactInternal(pluginId));
     }
 
     public boolean unloadArtifact(String pluginId) {
         Objects.requireNonNull(pluginId, "pluginId");
-        return runExclusive(() -> unloadArtifactInternal(pluginId));
+        return runInitialized(() -> unloadArtifactInternal(pluginId));
     }
 
     public List<String> artifactIds() {
@@ -138,7 +124,7 @@ public final class FibraPluginLoader implements AutoCloseable {
 
     public Optional<Fibra> fibra(String entryId) {
         Objects.requireNonNull(entryId, "entryId");
-        return runExclusive(() -> Optional.ofNullable(entries.get(entryId))
+        return runInitialized(() -> Optional.ofNullable(entries.get(entryId))
             .map(MountedEntry::fibra));
     }
 
@@ -179,89 +165,92 @@ public final class FibraPluginLoader implements AutoCloseable {
     }
 
     FibraPluginCandidate inspectCandidate(Path candidatePath) {
-        return validateArtifact(normalize(candidatePath));
+        Objects.requireNonNull(candidatePath, "candidatePath");
+        var inspectRoot = pluginsRoot.resolve(PluginCrashRecovery.PREFLIGHT_DIRECTORY)
+            .resolve("inspect-" + java.util.UUID.randomUUID());
+        try {
+            var inspected = inspector.inspectCandidate(candidatePath, inspectRoot);
+            return new FibraPluginCandidate(inspected.descriptor().getPluginId(),
+                inspected.descriptor().getVersion(), Files.getLastModifiedTime(candidatePath));
+        } catch (IOException exception) {
+            throw new FibraArtifactException(FibraArtifactErrorStage.READ,
+                List.of(candidatePath), List.of(), "cannot inspect plugin candidate", exception);
+        } finally {
+            try {
+                PluginCrashRecovery.deleteTree(inspectRoot);
+            } catch (IOException ignored) {
+                // 构造期会安全清理只读预检垃圾。
+            }
+        }
     }
 
     String currentPluginVersion(String pluginId) {
         return operationGate.snapshot().artifactVersions().get(pluginId);
     }
 
-    private String loadArtifactInternal(Path pluginPath) {
-        requireDirectChild(pluginPath);
-        validateArtifact(pluginPath);
-        return pluginManager.loadPluginsStrict(List.of(pluginPath)).getFirst();
+    List<InspectedPluginPackage> installedPackages() {
+        try (var paths = Files.list(pluginsRoot)) {
+            var packages = new ArrayList<InspectedPluginPackage>();
+            for (var path : paths
+                .filter(candidate -> Files.isDirectory(candidate, LinkOption.NOFOLLOW_LINKS))
+                .filter(candidate -> !candidate.getFileName().toString().startsWith("."))
+                .sorted(Comparator.comparing(candidate -> candidate.getFileName().toString()))
+                .toList()) {
+                packages.add(inspector.inspectDirectory(path));
+            }
+            return List.copyOf(packages);
+        } catch (IOException exception) {
+            throw new FibraArtifactException(FibraArtifactErrorStage.READ,
+                List.of(pluginsRoot), List.of(), "cannot inspect installed plugin graph",
+                exception);
+        }
     }
 
-    private String reloadArtifactInternal(Path candidatePath) {
-        if (!Files.isRegularFile(candidatePath)) {
-            throw new IllegalArgumentException("candidate must be a regular JAR: "
-                + candidatePath);
-        }
-        var candidate = validateArtifact(candidatePath);
-        var current = pluginManager.getPlugin(candidate.pluginId());
-        if (current == null) {
-            throw new IllegalArgumentException("cannot reload unknown plugin "
-                + candidate.pluginId());
-        }
-
-        var currentPath = normalize(current.getPluginPath());
-        if (candidatePath.equals(currentPath)) {
-            throw new IllegalArgumentException(
-                "candidate must not overwrite the currently loaded plugin JAR");
-        }
-        if (Objects.equals(candidatePath.getParent(), pluginsRoot)) {
-            throw new IllegalArgumentException(
-                "candidate JAR must be staged outside the plugins root");
-        }
-
-        var affectedIds = dependentFirst(candidate.pluginId());
-        var artifactPaths = new ArrayList<Path>(affectedIds.size());
-        for (var pluginId : affectedIds) {
-            artifactPaths.add(normalize(pluginManager.getPlugin(pluginId).getPluginPath()));
-        }
-        var startedIds = startedArtifactIds();
-        startedIds.retainAll(new LinkedHashSet<>(affectedIds));
-        var instanceSpecs = entries.values().stream()
-            .map(MountedEntry::spec)
-            .filter(spec -> affectedIds.contains(spec.pluginId()))
+    RuntimeSnapshot snapshotRuntime(List<String> affectedArtifactIds) {
+        var affected = Set.copyOf(affectedArtifactIds);
+        var started = dependencyFirst(affected).stream()
+            .filter(id -> pluginManager.getPlugin(id).getPluginState() == PluginState.STARTED)
             .toList();
+        var specs = entries.values().stream()
+            .map(MountedEntry::spec)
+            .filter(spec -> affected.contains(spec.pluginId()))
+            .toList();
+        return new RuntimeSnapshot(affectedArtifactIds, started, specs);
+    }
 
-        Path staged = null;
-        Path backup = null;
-        var oldArtifactMoved = false;
-        var runtimeMutationStarted = false;
-        try {
-            staged = Files.createTempFile(pluginsRoot, ".fibra-stage-", ".tmp");
-            Files.copy(candidatePath, staged, StandardCopyOption.REPLACE_EXISTING);
-            validateArtifact(staged);
-            backup = Files.createTempFile(pluginsRoot, ".fibra-backup-", ".tmp");
-
-            runtimeMutationStarted = true;
-            unloadAffected(affectedIds);
-            moveAtomically(currentPath, backup);
-            oldArtifactMoved = true;
-            moveAtomically(staged, currentPath);
-            staged = null;
-
-            loadArtifactPaths(artifactPaths);
-            restoreRuntime(startedIds, instanceSpecs);
-            deleteTemporary(backup);
-            backup = null;
-            return candidate.pluginId();
-        } catch (RuntimeException | IOException failure) {
-            if (runtimeMutationStarted) {
-                recoverReload(candidate.pluginId(), affectedIds, artifactPaths, startedIds,
-                    instanceSpecs, currentPath, backup, oldArtifactMoved, failure);
+    void disposeAffected(List<String> affectedArtifactIds) {
+        var affected = Set.copyOf(affectedArtifactIds);
+        var order = dependentFirst(affected);
+        for (var pluginId : order) {
+            unmountEntriesForArtifact(pluginId);
+            var plugin = pluginManager.getPlugin(pluginId);
+            if (plugin != null && plugin.getPluginState() == PluginState.STARTED) {
+                pluginManager.stopPlugin(pluginId);
             }
-            throw new IllegalStateException("failed to reload plugin " + candidate.pluginId(),
-                failure);
-        } finally {
-            deleteTemporary(staged);
-            if (oldArtifactMoved && backup != null && !Files.notExists(backup)) {
-                LOGGER.error("Preserving Fibra plugin backup after failed recovery: {}", backup);
-            } else {
-                deleteTemporary(backup);
+        }
+        pluginManager.unloadPluginsStrict(order.stream()
+            .filter(id -> pluginManager.getPlugin(id) != null).toList());
+    }
+
+    void loadInstalledAffected(List<String> affectedArtifactIds) {
+        var affected = Set.copyOf(affectedArtifactIds);
+        var paths = installedPackages().stream()
+            .filter(plugin -> affected.contains(plugin.descriptor().getPluginId()))
+            .filter(plugin -> pluginManager.getPlugin(
+                plugin.descriptor().getPluginId()) == null)
+            .map(InspectedPluginPackage::packageRoot)
+            .toList();
+        pluginManager.loadPluginsStrict(paths);
+    }
+
+    void restoreRuntime(RuntimeSnapshot snapshot) {
+        for (var pluginId : dependencyFirst(Set.copyOf(snapshot.startedArtifactIds()))) {
+            if (snapshot.startedArtifactIds().contains(pluginId)) {
+                startArtifactInternal(pluginId);
             }
+        }
+        for (var spec : snapshot.instanceSpecs()) {
+            mountInternal(spec);
         }
     }
 
@@ -327,7 +316,11 @@ public final class FibraPluginLoader implements AutoCloseable {
     }
 
     private void stopArtifactInternal(String pluginId) {
-        for (var affectedId : dependentFirst(pluginId)) {
+        if (pluginManager.getPlugin(pluginId) == null) {
+            throw new IllegalArgumentException("unknown plugin " + pluginId);
+        }
+        var affected = dependentClosure(pluginId);
+        for (var affectedId : dependentFirst(affected)) {
             unmountEntriesForArtifact(affectedId);
             var plugin = pluginManager.getPlugin(affectedId);
             if (plugin != null && plugin.getPluginState() == PluginState.STARTED) {
@@ -340,8 +333,9 @@ public final class FibraPluginLoader implements AutoCloseable {
         if (pluginManager.getPlugin(pluginId) == null) {
             return false;
         }
-        stopArtifactInternal(pluginId);
-        return pluginManager.unloadPlugin(pluginId);
+        var affected = dependentClosure(pluginId);
+        disposeAffected(List.copyOf(affected));
+        return true;
     }
 
     private void startArtifactInternal(String pluginId) {
@@ -367,20 +361,24 @@ public final class FibraPluginLoader implements AutoCloseable {
     }
 
     private FibraPluginEntrypoint<?> newEntrypointInternal(String pluginId) {
-        if (pluginManager.getPlugin(pluginId) == null) {
+        var plugin = pluginManager.getPlugin(pluginId);
+        if (plugin == null) {
             throw new IllegalArgumentException("unknown plugin " + pluginId);
         }
         startArtifactInternal(pluginId);
-        var found = pluginManager.getExtensionClasses(FibraPluginEntrypoint.class, pluginId);
-        if (found.size() != 1) {
+        var installed = inspector.inspectDirectory(plugin.getPluginPath());
+        var classNames = installed.entrypointClassNames();
+        if (classNames.size() != 1) {
             throw new IllegalStateException("plugin " + pluginId
-                + " must provide exactly one FibraPluginEntrypoint, found " + found.size());
+                + " must provide exactly one FibraPluginEntrypoint, found "
+                + classNames.size());
         }
         try {
-            return (FibraPluginEntrypoint<?>) found.getFirst().getDeclaredConstructor()
-                .newInstance();
-        } catch (NoSuchMethodException | InstantiationException | IllegalAccessException
-                 | InvocationTargetException exception) {
+            var type = Class.forName(classNames.getFirst(), true,
+                pluginManager.getPluginClassLoader(pluginId));
+            return (FibraPluginEntrypoint<?>) type.getConstructor().newInstance();
+        } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException
+                 | IllegalAccessException | InvocationTargetException exception) {
             throw new IllegalStateException("cannot create FibraPluginEntrypoint for "
                 + pluginId, exception);
         }
@@ -460,7 +458,8 @@ public final class FibraPluginLoader implements AutoCloseable {
     }
 
     private boolean hasEntries(String pluginId) {
-        return entries.values().stream().anyMatch(entry -> entry.spec().pluginId().equals(pluginId));
+        return entries.values().stream().anyMatch(entry ->
+            entry.spec().pluginId().equals(pluginId));
     }
 
     private void unmountEntriesForArtifact(String pluginId) {
@@ -473,27 +472,71 @@ public final class FibraPluginLoader implements AutoCloseable {
         }
     }
 
-    private List<String> dependentFirst(String pluginId) {
-        if (pluginManager.getPlugin(pluginId) == null) {
-            throw new IllegalArgumentException("unknown plugin " + pluginId);
-        }
-        var result = new ArrayList<String>();
-        collectDependents(pluginId, new LinkedHashSet<>(), result);
+    private Set<String> dependentClosure(String pluginId) {
+        var result = new LinkedHashSet<String>();
+        collectDependents(pluginId, result);
         return result;
     }
 
-    private void collectDependents(String pluginId, Set<String> visited, List<String> result) {
-        if (!visited.add(pluginId)) {
+    private void collectDependents(String pluginId, Set<String> result) {
+        if (!result.add(pluginId)) {
             return;
         }
-        for (var plugin : pluginManager.getPlugins()) {
-            var dependsOnPlugin = plugin.getDescriptor().getDependencies().stream()
-                .anyMatch(dependency -> dependency.getPluginId().equals(pluginId));
-            if (dependsOnPlugin) {
-                collectDependents(plugin.getPluginId(), visited, result);
-            }
+        pluginManager.getPlugins().stream()
+            .sorted(Comparator.comparing(PluginWrapper::getPluginId))
+            .filter(plugin -> plugin.getDescriptor().getDependencies().stream()
+                .anyMatch(dependency -> dependency.getPluginId().equals(pluginId)))
+            .forEach(plugin -> collectDependents(plugin.getPluginId(), result));
+    }
+
+    private List<String> dependentFirst(Set<String> affected) {
+        var result = new ArrayList<String>();
+        var visited = new LinkedHashSet<String>();
+        for (var pluginId : affected.stream().sorted().toList()) {
+            collectDependentFirst(pluginId, affected, visited, result);
         }
+        return result;
+    }
+
+    private void collectDependentFirst(String pluginId, Set<String> affected,
+                                       Set<String> visited, List<String> result) {
+        if (!affected.contains(pluginId) || !visited.add(pluginId)) {
+            return;
+        }
+        pluginManager.getPlugins().stream()
+            .sorted(Comparator.comparing(PluginWrapper::getPluginId))
+            .filter(plugin -> affected.contains(plugin.getPluginId()))
+            .filter(plugin -> plugin.getDescriptor().getDependencies().stream()
+                .anyMatch(dependency -> dependency.getPluginId().equals(pluginId)))
+            .forEach(plugin -> collectDependentFirst(plugin.getPluginId(), affected,
+                visited, result));
         result.add(pluginId);
+    }
+
+    private List<String> dependencyFirst(Set<String> affected) {
+        var result = new ArrayList<String>();
+        var visited = new LinkedHashSet<String>();
+        for (var pluginId : affected.stream().sorted().toList()) {
+            collectDependencyFirst(pluginId, affected, visited, result);
+        }
+        return result;
+    }
+
+    private void collectDependencyFirst(String pluginId, Set<String> affected,
+                                        Set<String> visited, List<String> result) {
+        if (!affected.contains(pluginId) || !visited.add(pluginId)) {
+            return;
+        }
+        var plugin = pluginManager.getPlugin(pluginId);
+        if (plugin != null) {
+            plugin.getDescriptor().getDependencies().stream()
+                .map(dependency -> dependency.getPluginId())
+                .filter(affected::contains)
+                .sorted()
+                .forEach(dependency -> collectDependencyFirst(dependency, affected,
+                    visited, result));
+            result.add(pluginId);
+        }
     }
 
     private Set<String> startedArtifactIds() {
@@ -514,144 +557,37 @@ public final class FibraPluginLoader implements AutoCloseable {
     private LoaderOperationGate.IdentitySnapshot identitySnapshotInternal() {
         var versions = new LinkedHashMap<String, String>();
         pluginManager.getPlugins().stream()
-            .sorted(java.util.Comparator.comparing(PluginWrapper::getPluginId))
+            .sorted(Comparator.comparing(PluginWrapper::getPluginId))
             .forEach(plugin -> versions.put(plugin.getPluginId(),
                 plugin.getDescriptor().getVersion()));
         return new LoaderOperationGate.IdentitySnapshot(versions,
             List.copyOf(entries.keySet()));
     }
 
-    private FibraPluginCandidate validateArtifact(Path pluginPath) {
-        try (var jar = new JarFile(pluginPath.toFile())) {
-            var manifest = jar.getManifest();
-            if (manifest == null) {
-                throw new IllegalArgumentException("plugin JAR has no manifest: " + pluginPath);
-            }
-            var attributes = manifest.getMainAttributes();
-            var pluginId = attributes.getValue("Plugin-Id");
-            if (pluginId == null || pluginId.isBlank()) {
-                throw new IllegalArgumentException("plugin JAR has no Plugin-Id: " + pluginPath);
-            }
-            var version = attributes.getValue("Plugin-Version");
-            if (version == null || version.isBlank()) {
-                throw new IllegalArgumentException(
-                    "plugin JAR has no Plugin-Version: " + pluginPath);
-            }
-            try {
-                VERSIONS.compareVersions(version, version);
-            } catch (RuntimeException exception) {
-                throw new IllegalArgumentException("invalid Plugin-Version " + version
-                    + ": " + pluginPath, exception);
-            }
-            var pluginClass = attributes.getValue("Plugin-Class");
-            if (pluginClass != null && !pluginClass.isBlank()) {
-                throw new IllegalArgumentException(
-                    "Fibra plugin must not declare Plugin-Class: " + pluginPath);
-            }
-            var bundled = jar.stream()
-                .map(entry -> entry.getName())
-                .filter(name -> name.endsWith(".class"))
-                .filter(FibraPluginLoader::isSharedClass)
-                .findFirst();
-            if (bundled.isPresent()) {
-                throw new IllegalArgumentException("plugin must not bundle shared class "
-                    + bundled.get() + ": " + pluginPath);
-            }
-            return new FibraPluginCandidate(pluginId, version,
-                Files.getLastModifiedTime(pluginPath));
-        } catch (IOException exception) {
-            throw new IllegalArgumentException("cannot inspect plugin JAR " + pluginPath,
-                exception);
-        }
+    private <T> T runInitialized(Supplier<T> action) {
+        return runExclusive(() -> {
+            requireInitialized();
+            return action.get();
+        });
     }
 
-    private void unloadAffected(List<String> affectedIds) {
-        for (var pluginId : affectedIds) {
-            unmountEntriesForArtifact(pluginId);
-            var plugin = pluginManager.getPlugin(pluginId);
-            if (plugin != null && plugin.getPluginState() == PluginState.STARTED) {
-                pluginManager.stopPlugin(pluginId);
-            }
-        }
-        pluginManager.unloadPluginsStrict(affectedIds);
+    private void runInitialized(Runnable action) {
+        runInitialized(() -> {
+            action.run();
+            return null;
+        });
     }
 
-    private void loadArtifactPaths(List<Path> artifactPaths) {
-        var sorted = artifactPaths.stream().sorted().toList();
-        for (var path : sorted) {
-            requireDirectChild(path);
-            validateArtifact(path);
-        }
-        pluginManager.loadPluginsStrict(sorted);
-    }
-
-    private void restoreRuntime(Set<String> startedIds, List<PluginInstanceSpec> specs) {
-        var resolved = pluginManager.getResolvedPlugins().stream()
-            .map(PluginWrapper::getPluginId)
-            .filter(startedIds::contains)
-            .toList();
-        for (var pluginId : resolved) {
-            startArtifactInternal(pluginId);
-        }
-        for (var spec : specs) {
-            mountInternal(spec);
-        }
-    }
-
-    private void recoverReload(String pluginId, List<String> affectedIds,
-                               List<Path> artifactPaths, Set<String> startedIds,
-                               List<PluginInstanceSpec> specs, Path currentPath,
-                               Path backup, boolean oldArtifactMoved, Throwable failure) {
-        try {
-            unloadAffected(affectedIds);
-        } catch (RuntimeException cleanupFailure) {
-            failure.addSuppressed(cleanupFailure);
-        }
-        if (oldArtifactMoved && backup != null && Files.exists(backup)) {
-            try {
-                moveAtomically(backup, currentPath);
-            } catch (IOException restoreFailure) {
-                failure.addSuppressed(restoreFailure);
-                return;
-            }
-        }
-        try {
-            loadArtifactPaths(artifactPaths);
-            restoreRuntime(startedIds, specs);
-        } catch (RuntimeException restoreFailure) {
-            failure.addSuppressed(new IllegalStateException(
-                "failed to restore plugin " + pluginId, restoreFailure));
-        }
-    }
-
-    private static void moveAtomically(Path source, Path target) throws IOException {
-        Files.move(source, target, StandardCopyOption.ATOMIC_MOVE,
-            StandardCopyOption.REPLACE_EXISTING);
-    }
-
-    private static void deleteTemporary(Path path) {
-        if (path == null) {
-            return;
-        }
-        try {
-            Files.deleteIfExists(path);
-        } catch (IOException exception) {
-            LOGGER.warn("Cannot delete Fibra plugin temporary file: {}", path, exception);
-        }
-    }
-
-    private void requireDirectChild(Path pluginPath) {
-        if (!Files.isRegularFile(pluginPath)
-            || !pluginPath.getFileName().toString().endsWith(".jar")
-            || !Objects.equals(pluginPath.getParent(), pluginsRoot)) {
-            throw new IllegalArgumentException(
-                "plugin must be a direct JAR child of " + pluginsRoot + ": " + pluginPath);
+    private void requireInitialized() {
+        if (!initialized) {
+            throw new IllegalStateException(
+                "FibraPluginLoader.loadArtifacts() must complete before management operations");
         }
     }
 
     private static Path validatePluginsRoot(Path path) {
         Objects.requireNonNull(path, "pluginsRoot");
-        var normalized = normalize(path);
+        var normalized = path.toAbsolutePath().normalize();
         if (!Files.isDirectory(normalized)) {
             throw new IllegalArgumentException("pluginsRoot must be an existing directory: "
                 + normalized);
@@ -659,21 +595,14 @@ public final class FibraPluginLoader implements AutoCloseable {
         return normalized;
     }
 
-    private static Path normalize(Path path) {
-        return path.toAbsolutePath().normalize();
-    }
-
-    private static boolean isSharedClass(String entryName) {
-        var classPath = entryName;
-        var versionsPrefix = "META-INF/versions/";
-        if (classPath.startsWith(versionsPrefix)) {
-            var versionEnd = classPath.indexOf('/', versionsPrefix.length());
-            if (versionEnd >= 0) {
-                classPath = classPath.substring(versionEnd + 1);
-            }
+    record RuntimeSnapshot(List<String> affectedArtifactIds,
+                           List<String> startedArtifactIds,
+                           List<PluginInstanceSpec> instanceSpecs) {
+        RuntimeSnapshot {
+            affectedArtifactIds = List.copyOf(affectedArtifactIds);
+            startedArtifactIds = List.copyOf(startedArtifactIds);
+            instanceSpecs = List.copyOf(instanceSpecs);
         }
-        var candidate = classPath;
-        return FORBIDDEN_ARTIFACT_PREFIXES.stream().anyMatch(candidate::startsWith);
     }
 
     private record MountedEntry(PluginInstanceSpec spec, Fibra fibra,
