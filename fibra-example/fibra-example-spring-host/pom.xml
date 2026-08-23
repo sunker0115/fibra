@@ -8,6 +8,7 @@
     <groupId>com.sstlfsj</groupId>
     <artifactId>fibra</artifactId>
     <version>${revision}</version>
+    <relativePath>../../pom.xml</relativePath>
   </parent>
 
   <artifactId>fibra-example-spring-host</artifactId>
@@ -94,7 +95,7 @@
               <outputDirectory>${project.build.directory}/plugin-artifacts</outputDirectory>
               <resources>
                 <resource>
-                  <directory>${maven.multiModuleProjectDirectory}/fibra-example-spring-host-plugin/target</directory>
+                  <directory>${maven.multiModuleProjectDirectory}/fibra-example/fibra-example-spring-host-plugin/target</directory>
                   <includes><include>fibra-example-spring-host-provider-*.zip</include></includes>
                   <filtering>false</filtering>
                 </resource>

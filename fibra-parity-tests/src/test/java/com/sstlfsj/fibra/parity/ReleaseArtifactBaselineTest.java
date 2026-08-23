@@ -36,13 +36,13 @@ class ReleaseArtifactBaselineTest {
     private static final List<String> RELEASABLE_MODULES =
         Stream.concat(NEUTRAL_KERNEL_MODULES.stream(), SPRING_ADAPTER_MODULES.stream()).toList();
     private static final List<String> VERIFICATION_MODULES = List.of(
-        "fibra-example-contract-plugin",
-        "fibra-example-provider-plugin",
-        "fibra-example-consumer-plugin",
-        "fibra-example-host",
-        "fibra-example-spring-host-api",
-        "fibra-example-spring-host-plugin",
-        "fibra-example-spring-host",
+        "fibra-example/fibra-example-contract-plugin",
+        "fibra-example/fibra-example-provider-plugin",
+        "fibra-example/fibra-example-consumer-plugin",
+        "fibra-example/fibra-example-host",
+        "fibra-example/fibra-example-spring-host-api",
+        "fibra-example/fibra-example-spring-host-plugin",
+        "fibra-example/fibra-example-spring-host",
         "fibra-parity-tests"
     );
     private static final List<String> EXTERNAL_CONSUMER_MODULES = List.of(

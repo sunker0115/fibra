@@ -8,14 +8,15 @@
     <groupId>com.sstlfsj</groupId>
     <artifactId>fibra</artifactId>
     <version>${revision}</version>
+    <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>fibra-example-provider-plugin</artifactId>
-  <description>由 Maven 构建的真实 Fibra PF4J provider 示例插件制品。</description>
+  <artifactId>fibra-example-consumer-plugin</artifactId>
+  <description>只依赖独立 contract 的 Fibra PF4J consumer 示例插件。</description>
 
   <properties>
-    <plugin.id>fibra-example-provider</plugin.id>
-    <plugin.version>${fibra-example-provider-v1.version}</plugin.version>
+    <plugin.id>fibra-example-consumer</plugin.id>
+    <plugin.version>${fibra-example-consumer-v1.version}</plugin.version>
   </properties>
 
   <dependencies>
@@ -37,7 +38,7 @@
   </dependencies>
 
   <build>
-    <finalName>fibra-example-provider-plugin</finalName>
+    <finalName>fibra-example-consumer-plugin</finalName>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -58,42 +59,18 @@
         <configuration>
           <archive>
             <manifestEntries>
-              <Implementation-Version>${fibra-example-provider-v1.version}</Implementation-Version>
+              <Implementation-Version>${fibra-example-consumer-v1.version}</Implementation-Version>
             </manifestEntries>
           </archive>
         </configuration>
         <executions>
           <execution>
-            <id>v2-plugin</id>
+            <id>v2-jar</id>
             <phase>package</phase>
-            <goals>
-              <goal>jar</goal>
-            </goals>
+            <goals><goal>jar</goal></goals>
             <configuration>
               <classifier>v2</classifier>
-              <archive>
-                <manifestEntries>
-                  <Implementation-Version>${fibra-example-provider-v2.version}</Implementation-Version>
-                </manifestEntries>
-              </archive>
-            </configuration>
-          </execution>
-          <execution>
-            <id>broken-plugin</id>
-            <phase>package</phase>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-            <configuration>
-              <classifier>broken</classifier>
-              <excludes>
-                <exclude>META-INF/extensions.idx</exclude>
-              </excludes>
-              <archive>
-                <manifestEntries>
-                  <Implementation-Version>${fibra-example-provider-broken.version}</Implementation-Version>
-                </manifestEntries>
-              </archive>
+              <archive><manifestEntries><Implementation-Version>${fibra-example-consumer-v2.version}</Implementation-Version></manifestEntries></archive>
             </configuration>
           </execution>
         </executions>
@@ -108,9 +85,7 @@
             <phase>package</phase>
             <goals><goal>single</goal></goals>
             <configuration>
-              <descriptors>
-                <descriptor>${maven.multiModuleProjectDirectory}/build/plugin-package-assembly.xml</descriptor>
-              </descriptors>
+              <descriptors><descriptor>${maven.multiModuleProjectDirectory}/build/plugin-package-assembly.xml</descriptor></descriptors>
               <finalName>${plugin.id}-${plugin.version}</finalName>
               <appendAssemblyId>false</appendAssemblyId>
             </configuration>
@@ -121,17 +96,7 @@
             <goals><goal>single</goal></goals>
             <configuration>
               <descriptors><descriptor>src/assembly/plugin-v2.xml</descriptor></descriptors>
-              <finalName>${plugin.id}-${fibra-example-provider-v2.version}</finalName>
-              <appendAssemblyId>false</appendAssemblyId>
-            </configuration>
-          </execution>
-          <execution>
-            <id>broken-package</id>
-            <phase>package</phase>
-            <goals><goal>single</goal></goals>
-            <configuration>
-              <descriptors><descriptor>src/assembly/plugin-broken.xml</descriptor></descriptors>
-              <finalName>${plugin.id}-${fibra-example-provider-broken.version}</finalName>
+              <finalName>${plugin.id}-${fibra-example-consumer-v2.version}</finalName>
               <appendAssemblyId>false</appendAssemblyId>
             </configuration>
           </execution>

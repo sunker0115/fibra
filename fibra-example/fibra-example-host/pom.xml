@@ -8,6 +8,7 @@
     <groupId>com.sstlfsj</groupId>
     <artifactId>fibra</artifactId>
     <version>${revision}</version>
+    <relativePath>../../pom.xml</relativePath>
   </parent>
 
   <artifactId>fibra-example-host</artifactId>
@@ -74,17 +75,17 @@
               <outputDirectory>${project.build.directory}/plugin-artifacts</outputDirectory>
               <resources>
                 <resource>
-                  <directory>${maven.multiModuleProjectDirectory}/fibra-example-contract-plugin/target</directory>
+                  <directory>${maven.multiModuleProjectDirectory}/fibra-example/fibra-example-contract-plugin/target</directory>
                   <includes><include>fibra-example-contract-*.zip</include></includes>
                   <filtering>false</filtering>
                 </resource>
                 <resource>
-                  <directory>${maven.multiModuleProjectDirectory}/fibra-example-provider-plugin/target</directory>
+                  <directory>${maven.multiModuleProjectDirectory}/fibra-example/fibra-example-provider-plugin/target</directory>
                   <includes><include>fibra-example-provider-*.zip</include></includes>
                   <filtering>false</filtering>
                 </resource>
                 <resource>
-                  <directory>${maven.multiModuleProjectDirectory}/fibra-example-consumer-plugin/target</directory>
+                  <directory>${maven.multiModuleProjectDirectory}/fibra-example/fibra-example-consumer-plugin/target</directory>
                   <includes><include>fibra-example-consumer-*.zip</include></includes>
                   <filtering>false</filtering>
                 </resource>
