@@ -12,7 +12,7 @@
 - **THEN** `loadArtifacts()` 在创建该 JAR ClassLoader 前以 `VALIDATE` 失败，且不存在兼容装载路径
 
 ### Requirement: 唯一候选 ZIP格式
-系统 SHALL 只接受包含一个顶层 `<plugin-id>/` 标准目录的 ZIP候选，并 SHALL 在解压时拒绝绝对路径、`..`、越界目标、符号链接、多个顶层目录和非标准层级。
+系统 SHALL 只接受包含一个顶层 `<plugin-id>/` 标准目录的 ZIP候选，并 SHALL 在解压时拒绝绝对路径、`..`、越界目标、符号链接、非普通文件/目录条目、多个顶层目录和非标准层级。
 
 #### Scenario: 标准 ZIP进入预检
 - **WHEN** ZIP只有一个名称等于 `plugin.id` 的顶层目录且目录内容有效
@@ -70,10 +70,20 @@
 - **WHEN** 候选与当前安装包 ID和版本相同但规范摘要不同
 - **THEN** apply 以 `VALIDATE` 失败
 
+#### Scenario: 同版本普通重建改变 JAR 字节
+- **WHEN** 插件作者以相同版本重新构建且 JAR 时间戳、条目顺序或生成内容导致摘要变化
+- **THEN** 系统仍按同版本不同内容拒绝；作者必须提升版本，或使用可复现构建得到原摘要
+
+### Requirement: 重复业务契约是显式残留风险
+系统 SHALL 扫描并拒绝设计文档第 4.3 节列出的共享运行时类，但 MUST NOT 以启发式包名猜测任意业务 contract；插件作者文档 SHALL 把跨插件 `ClassCastException`、`LinkageError` 和同限定名类型不相等指向重复携带 contract 的诊断路径。
+
+#### Scenario: 两个插件各自携带相同业务接口
+- **WHEN** provider 和 consumer 的私有 `lib/` 各自包含同限定名 contract 类型且没有独立 contract dependency
+- **THEN** 仓库外 ClassLoader 验收必须暴露类型不相等，诊断文档要求将 contract 拆为独立插件或宿主公共 API，不增加运行期兼容桥
+
 ### Requirement: 契约归属不绑定 provider 角色
 系统 SHALL 支持宿主公共 API、独立 contract-only 插件和 executable 内部契约三种归属，并 MUST NOT 根据 provider/consumer 业务角色改变安装层级。
 
 #### Scenario: 中间插件同时消费和提供
 - **WHEN** 一个插件依赖上游 contract并向下游注册服务
 - **THEN** 它仍以单一 `pluginId` 扁平安装，层次只由依赖图和 Fibra Context/服务图表达
-

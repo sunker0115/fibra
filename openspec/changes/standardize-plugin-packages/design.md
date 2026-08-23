@@ -1,6 +1,6 @@
 ## Context
 
-本变更的完整架构、包结构、公开数据结构、流程和开源对比以 [`docs/superpowers/specs/2026-08-23-fibra-plugin-package-transaction-design.md`](../../../docs/superpowers/specs/2026-08-23-fibra-plugin-package-transaction-design.md) 为权威源。本文件只记录 OpenSpec 实施级决定，不重复字段定义。
+本变更的完整架构、包结构、公开数据结构、流程和开源对比以 [`docs/superpowers/specs/2026-08-23-fibra-plugin-package-transaction-design.md`](../../../docs/superpowers/specs/2026-08-23-fibra-plugin-package-transaction-design.md) 为权威源。本文件只记录 OpenSpec 实施级决定，不重复字段定义；两者出现差异时以该完整架构文档为准，并必须在同一变更中修正本文件和对应规格，不能让两份语义长期并存。
 
 当前实现使用 `FibraJarPluginManager`、直接 JAR Manifest 和 `reloadArtifact(Path)`。它能在单包运行失败后恢复，但只有关闭旧依赖闭包后才验证新图；多个插件必须分次更新；文件恢复依赖内存状态，进程崩溃时没有 journal。
 
@@ -28,9 +28,9 @@ PF4J 3.13.0 已提供目录 `lib/`、properties 描述、SemVer、依赖解析�
 
 ### D1：使用显式目录包，不使用 PF4J 默认 ZIP repository
 
-候选 ZIP由 `PluginPackageInspector` 复制到同文件系统事务区并安全解压，安装目录只由 Fibra 的事务步骤替换。活动 `FibraDirectoryPluginManager` 只看直接子目录，忽略隐藏事务目录，不隐式展开 ZIP。
+候选 ZIP由 `PluginPackageInspector` 复制到同文件系统事务区，并用 Apache Commons Compress 1.28.0 的 ZIP 中央目录/Unix mode 能力识别符号链接后安全解压；安装目录只由 Fibra 的事务步骤替换。活动 `FibraDirectoryPluginManager` 只看直接子目录，忽略隐藏事务目录，不隐式展开 ZIP。
 
-原因：必须在任何安装目录变化前完成结构和全图校验，也必须让单包与多包共享同一 apply 路径。
+原因：必须在任何安装目录变化前完成结构和全图校验，也必须让单包与多包共享同一 apply 路径。JDK 21 `ZipEntry` 不暴露 Unix mode，自行解析 ZIP external attributes 会重复成熟组件且容易漏掉符号链接。
 
 ### D2：`plugin.properties` 是唯一描述真源
 
@@ -58,9 +58,9 @@ PF4J 3.13.0 已提供目录 `lib/`、properties 描述、SemVer、依赖解析�
 
 ### D6：持久 journal 是批量原子语义的一部分
 
-目录交换在 `plugins/.fibra-transactions/<txid>` 下保存不可变输入、新目录、旧目录和原子更新的 properties journal。状态为 `PREPARED -> INSTALLING -> APPLYING -> COMMITTED`。构造 loader 时先恢复所有未提交事务，再创建活动 manager。
+候选先进入无 journal、可直接清理的 `plugins/.fibra-preflight/<txid>`；完整预检后才创建 `plugins/.fibra-transactions/<txid>`，并把原子发布 `PREPARED` journal 作为正式事务的第一个持久动作。随后保存不可变输入、新目录、旧目录，状态按 `PREPARED -> INSTALLING -> APPLYING -> COMMITTED` 推进。构造 loader 时先清理预检垃圾，再按 journal 中每个 ID 的旧存在状态、旧/新摘要与 `plugins/previous/next` 组合确定恢复，最后才创建活动 manager。
 
-原因：多个目录不存在单一原子 rename；只做内存回滚不能覆盖进程在两个 move 之间退出。
+原因：多个目录不存在单一原子 rename；只做内存回滚不能覆盖进程在两个 move 之间退出。把预检垃圾和正式事务分开，才能保证预检期崩溃不会因缺 journal 错误阻止启动。
 
 ### D7：正式 apply 仍保留运行态反向恢复
 
@@ -80,6 +80,12 @@ Watcher 对单一 `pluginId` 去抖并执行 `applyArtifacts(List.of(candidate))
 
 原因：根据文件到达时间猜测事务批次不可重复，也无法区分“等待下一文件”和“完整部署已到齐”。
 
+### D10：loader 使用逻辑事务门，不跨 lifecycle 等待持有物理锁
+
+制品和 entry 变更、配置 reconcile 共用可重入逻辑事务门。事务门只在短临界区登记调用线程、重入深度和已提交身份快照，执行文件/PF4J/插件操作及等待 Fibra lifecycle 时不持有 Java `Lock`。同一阻塞线程可以重入；其他线程或 Reactor non-blocking 线程调用同步管理 API 时立即抛 `FibraPluginLoaderBusyException`。`artifactIds/entryIds` 读取已提交不可变快照，watcher 遇忙保留 dirty 并重试。
+
+原因：持有 loader 锁等待单线程 lifecycle，而插件 dispose/effect 回调反向调用 loader，会形成跨线程自等。立即报忙和 lock-free 身份快照在不允许 config/apply 交叉提交的同时切断该锁环。
+
 ## Risks / Trade-offs
 
 - [临时全图 manager 增加短时 ClassLoader 和内存] → 不初始化/实例化业务入口，完成预检立即关闭。
@@ -88,6 +94,8 @@ Watcher 对单一 `pluginId` 去抖并执行 `applyArtifacts(List.of(candidate))
 - [journal 或备份损坏无法自动判断正确图] → 构造阶段以 `ROLLBACK` 失败，不猜测、不继续加载半图。
 - [更新会重建 Fibra Java 对象] → 公开文档冻结 `entryId` 为稳定身份，禁止缓存旧 `Fibra`/入口/插件对象。
 - [严格主 JAR命名和同版本摘要拒绝提高打包要求] → 提供真实 Maven 示例和仓库外模板，换取确定性和可审计更新。
+- [同版本普通 JAR重新构建常因时间戳或条目顺序改变摘要] → 明确要求重新发布必须升版本，重现同版本必须使用可复现构建。
+- [升级或降级后的私有配置类型与当前配置不兼容] → 正式 mount 以 `APPLY` 失败并回滚整个批次；完全不兼容时由宿主先停用 entry、更新制品、再提交新配置，不在 Fibra 内增加跨版本配置兼容层或隐式配置/制品联合事务。
 
 ## Migration Plan
 
@@ -104,4 +112,3 @@ Watcher 对单一 `pluginId` 去抖并执行 `applyArtifacts(List.of(candidate))
 ## Open Questions
 
 无。候选格式、API、入口判定、optional edge、批次边界、崩溃恢复和示例 contract 拆分均已确定。
-

@@ -8,22 +8,26 @@
 - [ ] 2.1 以 TDD 实现标准 ZIP/目录/properties/lib/摘要校验和稳定阶段错误
 - [ ] 2.2 以 TDD 用目录 manager/loader 替换直接 JAR manager/loader
 - [ ] 2.3 以 TDD 实现主 JAR自身索引判定、contract-only 与 executable 门禁
+- [ ] 2.4 用直接行为测试锁定 PF4J 3.13.0 的扩展 finder 类加载失败和 SemVer 范围
 
 ## 3. 完整依赖图
 
 - [ ] 3.1 以 TDD 实现 prospective 全图装载、必需依赖和 SemVer 范围校验
 - [ ] 3.2 以 TDD 补齐 optional edge 版本校验、旧/新 dependent 闭包和 ClassLoader 隔离
+- [ ] 3.3 用直接行为测试锁定 PF4J 3.13.0 不把 optional edge 纳入依赖图
 
 ## 4. 批量事务
 
 - [ ] 4.1 以 TDD 实现事务目录、原子 journal 和 loader 构造期崩溃恢复
 - [ ] 4.2 以 TDD 实现 `applyArtifacts` 的目录交换、运行态顺序恢复和全部 entry 重建
 - [ ] 4.3 以 TDD 实现正式 apply 失败回滚、`ROLLBACK` cause/suppressed 和诊断保留
+- [ ] 4.4 以 TDD 覆盖无 journal 预检垃圾、逐 ID 半交换组合、摘要不闭合拒启和 configType 变化回滚
 
 ## 5. Watcher 与配置协作
 
 - [ ] 5.1 以 TDD 把 Watcher 改为 ZIP严格升级并删除旧 JAR candidate 语义
-- [ ] 5.2 验证 config reconcile 与 artifact apply 共享同一独占锁和配置工厂重建边界
+- [ ] 5.2 以 TDD 实现不跨 lifecycle 等待持锁的可重入逻辑事务门、报忙语义和 watcher dirty 重试
+- [ ] 5.3 验证 config reconcile 与 artifact apply 不交叉提交、身份快照查询不死锁和配置工厂重建边界
 
 ## 6. 真实示例与仓库外验收
 

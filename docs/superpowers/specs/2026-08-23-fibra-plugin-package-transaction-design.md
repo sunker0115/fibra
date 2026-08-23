@@ -32,6 +32,7 @@ OpenSpec：[`standardize-plugin-packages`](../../../openspec/changes/standardize
 ### 2.2 吸收与不吸收
 
 - PF4J 3.13.0：吸收 `plugin.properties`、标准 `lib/` 目录、SemVer 范围、依赖图和每插件 ClassLoader；不采用默认 best-effort 批量装载、隐式 ZIP 展开、扩展对象缓存和默认扩展索引判定。
+- Apache Commons Compress 1.28.0：只使用 ZIP 中央目录和 `ZipArchiveEntry.isUnixSymlink()` 完成符号链接/条目类型检查；JDK 21 `ZipEntry` 不暴露 Unix mode，禁止自己解析 ZIP external attributes。解压后的路径规范化、目标越界检查和目录协议仍由 Fibra 执行。
 - gj.spring.pf4j：吸收“一插件一目录、版本化主 JAR、私有 `lib/`、卸载释放资源”；不吸收目录内隐式选择最新 JAR、Manifest `Class-Path`、失败后继续和 Spring 子容器。
 - Spring Plugin：只吸收按调用查询当前运行状态、不维护第二份长期对象缓存的思想，不引入依赖。
 - Cordis HMR：吸收依赖闭包、先加载验证、失败恢复旧实例的原则；包版本仍由 Java 制品层表达。
@@ -45,6 +46,7 @@ OpenSpec：[`standardize-plugin-packages`](../../../openspec/changes/standardize
 - Cordis：`/Users/sunke/dev/ai-project/cordis/packages/hmr/src/index.ts`；
 - DeepSeek Harness：`/Users/sunke/dev/ai-project/deepseek-harness/vendor/README.md` 及各 package manifest；
 - Spring Plugin：`/Users/sunke/dev/ai-project/spring-plugin/README.markdown`。
+- Apache Commons Compress：[`1.28.0` 官方发布页](https://commons.apache.org/proper/commons-compress/)和[官方安全报告](https://commons.apache.org/proper/commons-compress/security.html)。
 
 ## 3. 身份和公开数据结构
 
@@ -86,6 +88,10 @@ public final class FibraPluginLoader implements AutoCloseable {
     public void runExclusive(Runnable action);
     public void close();
 }
+
+public final class FibraPluginLoaderBusyException extends IllegalStateException {
+    public FibraPluginLoaderBusyException(String message);
+}
 ```
 
 以下方法直接删除，不保留转发：
@@ -96,6 +102,20 @@ reloadArtifact(Path)
 ```
 
 单包安装、升级或降级调用 `applyArtifacts(List.of(candidate))`；有关联版本变化时，把全部候选一次传给同一个 `applyArtifacts`。显式调用允许安装新 ID、升级和降级，但最终完整图必须有效。
+
+构造器只恢复磁盘事务，不创建插件 ClassLoader。宿主必须先调用 `loadArtifacts()` 完成首次完整安装图校验和活动 manager 初始化，之后才能调用 `applyArtifacts`、mount 或其它运行态 API；初始化前调用以 `IllegalStateException` 拒绝且不创建事务。`unloadArtifact` 只卸载活动制品及其受影响运行实例，不删除标准安装目录；后续 `loadArtifacts()` 可以按当前完整安装图重新装载所有仍在磁盘但未活动的制品。`loadArtifacts()` 因而是可重复的完整图同步入口，不是旧单 JAR旁路。
+
+`runExclusive` 和全部制品/entry 变更 API 共用一个可重入逻辑事务门，而不是在整个操作期间持有 Java `Lock`：
+
+- 事务门只用短临界区登记当前调用线程、重入深度和已提交只读快照；文件操作、PF4J 调用、插件回调及任何 `Mono.block()` 期间均不得持有物理锁；
+- 同一阻塞调用线程可以重入，供 `FibraConfigLoader` 在一次 reconcile 内调用 mount/update/unmount；其他线程在事务活动时立即抛 `FibraPluginLoaderBusyException`，不得排队等待持门线程；
+- 同步管理 API 不得从 Reactor non-blocking 线程调用；这种调用同样立即抛 `FibraPluginLoaderBusyException`。Fibra root 的 lifecycle Scheduler 属于该范围，因此插件生命周期/effect 回调不能反向执行 loader 管理操作；
+- `artifactIds()`、`entryIds()` 只读取上一次完整提交的不可变身份快照，不进入事务门；内部快照同时保存每个活动制品的版本供 watcher 比较，但不保存插件类。`configType()`、`fibra()` 和全部变更 API 依赖实时 ClassLoader/运行态，事务活动时按前述规则报忙；
+- 同步宿主调用自行处理报忙；`FibraPluginWatcher` 和 `FibraConfigWatcher` 必须把报忙视为瞬时竞争，保留 dirty 状态并在当前事务释放后重新执行，不能丢失文件事件。
+
+`close()` 只能由普通阻塞线程在事务门空闲时开始，并把完整停止/unload/关闭 ClassLoader 作为最后一个独占事务；活动事务期间（包括从 `runExclusive` 回调内）调用立即报忙且 loader 保持打开。宿主必须先关闭两个 watcher 并等待其在途任务结束，再关闭 config loader、plugin loader 和 root Context。
+
+这个规则把 loader 事务门放在 Fibra lifecycle 调度之外：loader 可以发起并等待内核生命周期收敛，但内核回调不能等待或重入 loader 管理事务。不存在“持有 loader 物理锁等待 lifecycle、lifecycle 再等待 loader 锁”的锁环。
 
 ### 3.3 稳定异常
 
@@ -194,6 +214,12 @@ loader 对解压后的 `plugin.properties` 和排序后的 `lib/*.jar` 相对路
 - 同一 `plugin.id`、同一版本、不同规范摘要：拒绝，禁止同版本原地重发；
 - 不同版本：进入正常 prospective 图预检。
 
+### 4.5 发布约束与重复契约诊断
+
+同版本不同摘要拒绝是刻意的制品不可变策略，不对普通 JAR 的非可复现构建做内容归一化。插件作者重新构建后只要字节发生变化就必须提升 `plugin.version`；需要重现同一版本时，构建必须固定时间戳、条目顺序和生成内容，使规范摘要逐字节一致。
+
+普通 JAR 扫描无法可靠识别任意业务 contract 是否被复制进另一个插件的 `lib/`。若跨插件服务接缝出现同限定名类型无法转换、`ClassCastException`、`LinkageError` 或接口方法链接失败，首要诊断是检查 provider/consumer 是否各自携带了 contract 类；正确修复是把 contract 作为独立插件依赖或宿主公共 API，而不是增加 ClassLoader 强转、反射适配或兼容桥。该残留风险不通过启发式包名扫描掩盖。
+
 ## 5. 制品类型与契约归属
 
 ### 5.1 自身入口判定
@@ -230,8 +256,8 @@ prospective graph = 当前全部安装包 - 同 ID 旧包 + 本批次全部候�
 
 预检顺序固定为：
 
-1. 在 loader 锁内把每个候选 ZIP复制到同文件系统内部事务区，后续不再读取外部可变文件；
-2. 安全解压，拒绝绝对路径、`..`、目标越界、符号链接、多个顶层目录和非标准层级；
+1. 在 loader 逻辑事务门内把每个候选 ZIP复制到同文件系统的 `plugins/.fibra-preflight/<txid>/input/`，后续不再读取外部可变文件；
+2. 用 Apache Commons Compress 读取 ZIP 中央目录和 Unix mode，再安全解压；拒绝绝对路径、`..`、目标越界、符号链接、非普通文件/目录条目、多个顶层目录和非标准层级；
 3. 校验目录、`plugin.properties`、ID、SemVer、主 JAR、私有 JAR、共享类、同版本摘要和 `plugin.class`；
 4. 以候选覆盖同 ID 当前包，形成唯一 ID 的 prospective 全图；
 5. 使用临时 `FibraDirectoryPluginManager` 装载全图，校验缺失依赖、循环和版本范围；
@@ -248,7 +274,17 @@ prospective graph = 当前全部安装包 - 同 ID 旧包 + 本批次全部候�
 
 ### 7.1 事务目录
 
-每次非 no-op 更新在插件根目录内创建：
+预检使用无 journal 的临时工作区：
+
+```text
+plugins/.fibra-preflight/<txid>/
+  input/                 # 候选 ZIP不可变副本
+  next/<plugin-id>/      # 已解压并验证的新目录
+```
+
+它不属于正式事务，不允许包含 `previous/`，也不允许改变安装目录或活动运行态。loader 构造时可直接清理全部预检工作区；预检期崩溃不会触发 `ROLLBACK` 拒绝启动。
+
+每次非 no-op 更新在预检完成后创建正式事务目录：
 
 ```text
 plugins/.fibra-transactions/<txid>/
@@ -258,7 +294,9 @@ plugins/.fibra-transactions/<txid>/
   previous/<plugin-id>/  # 被替换的旧目录
 ```
 
-`journal.properties` 至少记录事务 ID、状态、按字典序排列的候选 ID、各 ID 更新前是否存在和规范摘要。journal 每次修改都先写同目录临时文件，再原子 rename。
+正式事务目录创建后，第一个持久动作必须是原子发布 `PREPARED` 的 `journal.properties`；随后才把预检工作区的 `input/`、`next/` 原子移入该目录。若进程只创建了空正式目录、尚未发布 journal，该目录可安全清理；无 journal 却存在 `previous/` 属于协议不可能状态，必须以 `ROLLBACK` 拒绝启动。
+
+`journal.properties` 至少记录事务 ID、状态、按字典序排列的候选 ID、各 ID 更新前是否存在、旧规范摘要和新规范摘要。journal 每次修改都先写同目录临时文件并 `FileChannel.force(true)`，再 `ATOMIC_MOVE + REPLACE_EXISTING`，最后 force 事务目录。每次插件目录 move 后同样 force 源父目录与目标父目录，再进入下一步。文件系统不支持原子 move 或目录 force 时以对应事务阶段失败，不退化为普通 move、复制覆盖或仅依赖进程内缓存。
 
 状态只有：
 
@@ -269,14 +307,14 @@ PREPARED -> INSTALLING -> APPLYING -> COMMITTED
 ### 7.2 正常更新
 
 1. 预检通过后记录旧 PF4J started 状态、受影响制品全部 `PluginInstanceSpec` 和稳定 entry 顺序；快照只保存配置工厂，不保存旧 ClassLoader 创建的 typed config；
-2. 依赖方优先、子 entry 优先 dispose，随后 stop/unload 受影响制品并关闭 ClassLoader；
-3. 写入 `PREPARED` journal；
+2. 创建正式事务目录并把 `PREPARED` journal 作为第一个持久动作原子发布，再把预检 `input/next` 移入正式事务目录；
+3. 依赖方优先、子 entry 优先 dispose，随后 stop/unload 受影响制品并关闭 ClassLoader；
 4. 写入 `INSTALLING`，对每个候选 ID 按字典序把旧目录原子 move 到 `previous/`，再把 `next/` 目录原子 move 到 `plugins/<pluginId>/`；
 5. 写入 `APPLYING`，加载更新后的受影响制品，按依赖顺序恢复 started 状态，再按原 entry 顺序用配置工厂重新物化 typed config 并 mount；
 6. 全部运行态恢复成功后写入 `COMMITTED`；
-7. 清理事务目录。外部候选 ZIP 始终保留。
+7. 更新已提交只读身份快照并清理事务目录。清理固定先删除 `previous/next/input` 和 journal 临时文件，最后删除 `journal.properties`，再删除空事务目录；不得先删 journal。外部候选 ZIP 始终保留。
 
-多个目录没有一个文件系统级原子替换操作，因此不能把“逐个原子 rename”描述成“批次天然原子”。对外原子性由预检、独占锁、反向恢复和持久 journal 共同提供。
+多个目录没有一个文件系统级原子替换操作，因此不能把“逐个原子 rename”描述成“批次天然原子”。对外原子性由预检、逻辑事务门、反向恢复和持久 journal 共同提供。
 
 ### 7.3 运行中失败
 
@@ -292,9 +330,21 @@ PREPARED -> INSTALLING -> APPLYING -> COMMITTED
 
 构造 `FibraPluginLoader` 时，在创建活动 PF4J manager 之前扫描 `.fibra-transactions`：
 
-- `COMMITTED`：保留当前新目录，只清理未完成的事务垃圾；
-- 其他状态：依据 journal 和 `previous/` 恢复旧安装目录；原来不存在的候选 ID从安装目录撤回；
-- journal 缺失、损坏或目录与 journal 无法闭合：构造失败并报告 `ROLLBACK`，不得猜测一个图继续启动。
+- 先清理 `.fibra-preflight`；空的无 journal 正式事务目录也可清理，无 journal 却存在 `previous/` 时拒绝启动；
+- `COMMITTED`：每个 `plugins/<id>` 必须匹配 journal 的新摘要；全部匹配才保留新目录并清理 `previous/next/input`，任一不匹配都报告 `ROLLBACK`；
+- `PREPARED`：安装目录尚未交换，旧 ID 必须仍匹配旧摘要、新安装 ID 必须不存在；满足时清理正式事务和残留预检目录，否则报告 `ROLLBACK`；
+- `INSTALLING` 或 `APPLYING`：按候选安装顺序的逆序逐 ID 执行下述确定性恢复，全部恢复旧摘要后才清理事务；
+- journal 损坏或任一目录/摘要组合不属于下述合法状态：构造失败并报告 `ROLLBACK`，不得猜测一个图继续启动。
+
+逐 ID 恢复只允许以下组合，其中摘要均按第 4.4 节重新计算：
+
+1. `oldExists=true` 且 `previous/<id>` 存在：`previous` 必须匹配旧摘要；新目录必须恰好位于一个位置——`plugins/<id>` 匹配新摘要且 `next/<id>` 不存在，或 `plugins/<id>` 不存在且 `next/<id>` 匹配新摘要。前一种先把新目录原子移回空的 `next/<id>`，然后两种情况都把 `previous/<id>` 原子恢复到安装目录；
+2. `oldExists=true` 且 `previous/<id>` 不存在：`plugins/<id>` 必须匹配旧摘要且 `next/<id>` 必须匹配新摘要，表示该 ID 尚未开始交换；当前旧目录或待安装新目录缺失、摘要未知都无法闭合，必须报告 `ROLLBACK`；
+3. `oldExists=false`：`previous/<id>` 必须不存在；新目录同样必须恰好位于一个位置——`plugins/<id>` 匹配新摘要且 `next/<id>` 不存在表示已经安装，反之表示尚未安装。已安装时把新目录原子移回空的 `next/<id>`，最终保持该 ID 不存在；其他组合报告 `ROLLBACK`。
+
+`plugins/<id>` 与 `next/<id>` 同时存在或同时缺失、旧摘要/新摘要不匹配、journal 重复 ID 或候选顺序不规范都属于无法闭合，不允许覆盖或删除其中任一份来“尝试恢复”。
+
+成功提交清理、成功回滚清理和构造期恢复清理都使用同一 journal-last 顺序。因而进程在清理期间再次退出时，要么 journal 仍在且可按原状态重复恢复/清理，要么只剩可安全删除的空无 journal 事务目录；协议不会自行产生“无 journal 但有 previous”的状态。
 
 恢复完成后才允许 `loadArtifacts()` 创建 ClassLoader。该机制保证进程内失败和目录交换期间的进程崩溃都不会被静默接受为半批次安装图。
 
@@ -305,6 +355,10 @@ PREPARED -> INSTALLING -> APPLYING -> COMMITTED
 更新候选 ID时，受影响集合是候选 ID加上旧图和新图中的传递依赖方并集。停止顺序为 dependent-first，重新装载和启动为 dependency-first。contract ClassLoader 更新同样会重建实际依赖方的 ClassLoader。
 
 `PluginConfigFactory` 可能在候选校验后的正式 mount、失败恢复和配置 reconcile 中多次调用，必须可重复执行，只捕获普通不可变值，不得捕获插件 `Class<?>`、typed config、入口、插件对象或旧 ClassLoader。
+
+升级、降级或失败恢复时，loader 总是把目标版本当前 ClassLoader 的 `configType` 传给同一个配置工厂重新物化。若配置字段不能转换、工厂拒绝该类型或入口 mount 失败，当前批次按 `APPLY` 失败并执行完整目录与运行态回滚；Fibra 不提供跨插件版本的配置迁移或兼容层。
+
+`applyArtifacts` 的批次只包含插件候选，不包含配置文件事务。需要零停机改变配置 schema 时，现有不可变原始配置和配置工厂必须能分别为旧/新 `configType` 物化合法对象；完全不兼容的变更必须由宿主先通过 config reconcile 禁用/移除受影响 entry，再 apply 制品，最后写入新配置并重新启用。Fibra 不猜测字段映射，也不把配置与制品文件隐式拼成一个事务。
 
 Spring Bean、静态缓存、ThreadLocal 或业务单例持有插件类都会阻止 ClassLoader 回收；插件对象不得进入 Spring BeanFactory。框架宿主只能持有 `FibraPluginLoader`/`FibraConfigLoader` 等父 ClassLoader 类型，并按 `entryId` 每次查询当前运行实例。
 
@@ -322,6 +376,7 @@ PF4J 二进制依赖和 Fibra 服务依赖继续完全分离：
 - 同一去抖窗口内同 ID 选择最高版本，同版本选择最后修改时间较新的文件；
 - watcher 不删除、移动候选，不复制事务算法；
 - 单包 prospective 图不兼容时失败并保留旧状态，通过 SLF4J 与 `lastFailure()` 暴露；
+- 遇到 `FibraPluginLoaderBusyException` 时保留该 ID 的 dirty 候选，在活动事务退出后重新执行，不把瞬时竞争写入 `lastFailure()`；
 - 多插件联动更新不能依赖文件到达时序，必须由部署协调器显式调用一次 `applyArtifacts(allCandidates)`；
 - `close()` 停止接收事件并等待在途 apply 与 failure callback 完成。
 
@@ -360,6 +415,9 @@ provider 与 consumer 都依赖 contract，但 consumer 不因为使用服务而
 13. config reconcile 与 artifact apply 共用同一串行边界；
 14. 示例宿主和仓库外工程只使用真实 `plugin.properties + lib` 包；
 15. 全部公开 API 签名、使用手册、架构文档和发布说明与实现一致。
+16. loader 在等待 Fibra lifecycle 时不持有物理锁；lifecycle/Reactor non-blocking 回调管理重入立即报忙，身份快照查询不死锁；
+17. 无 journal 预检垃圾可清理，`PREPARED/INSTALLING/APPLYING/COMMITTED` 的逐 ID 崩溃状态均按摘要确定恢复或拒绝；
+18. PF4J 3.13.0 的 optional edge、扩展 finder 类加载失败和 SemVer 范围行为由直接测试锁定。
 
 ## 12. 明确非目标
 

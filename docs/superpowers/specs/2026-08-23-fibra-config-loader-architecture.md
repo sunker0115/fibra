@@ -3,7 +3,7 @@
 日期：2026-08-23
 状态：`0.2.0` 当前实现契约
 
-> `0.3.0` 制品层将按[插件制品与事务更新设计](./2026-08-23-fibra-plugin-package-transaction-design.md)把 `reloadArtifact(Path)` 直接替换为 `applyArtifacts(List<Path>)`。本文以下 JAR reload 描述只对应 `v0.2.0`；配置树、typed config 和 reconcile 语义继续保留，实施跟踪见 [`standardize-plugin-packages`](../../../openspec/changes/standardize-plugin-packages/)。
+> `0.3.0` 制品层将按[插件制品与事务更新设计](./2026-08-23-fibra-plugin-package-transaction-design.md)把 `reloadArtifact(Path)` 直接替换为 `applyArtifacts(List<Path>)`，并以不跨 lifecycle 等待持有物理锁的逻辑事务门替换本文 `v0.2.0` 的长持锁实现。本文以下 JAR reload 与事务协调锁描述只对应 `v0.2.0`；配置树、typed config 和 reconcile 语义继续保留，实施跟踪见 [`standardize-plugin-packages`](../../../openspec/changes/standardize-plugin-packages/)。
 
 ## 1. 目标与真源
 
