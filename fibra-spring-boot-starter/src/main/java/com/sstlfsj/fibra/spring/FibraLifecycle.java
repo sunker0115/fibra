@@ -66,6 +66,11 @@ public final class FibraLifecycle implements SmartLifecycle {
                 }
             }
             try {
+                configLoader.close();
+            } catch (RuntimeException e) {
+                log.error("关闭 FibraConfigLoader 失败", e);
+            }
+            try {
                 loader.close();
             } catch (RuntimeException e) {
                 log.error("关闭 FibraPluginLoader 失败", e);
