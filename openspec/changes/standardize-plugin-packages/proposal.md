@@ -8,13 +8,13 @@
 
 - **BREAKING**：插件安装形态从直接 JAR改为 `plugins/<plugin-id>/plugin.properties + lib/*.jar` 标准目录，候选改为含唯一顶层插件目录的 ZIP。
 - **BREAKING**：删除 `loadArtifact(Path)` 与 `reloadArtifact(Path)`，新增 `applyArtifacts(List<Path>)` 作为单包和批量安装、升级、降级的唯一入口，不提供兼容转发。
-- 使用 `plugin.properties` 作为唯一描述真源，禁止 `plugin.class`、`plugin.requires`、共享运行时类内嵌和同版本不同内容重发。
+- 使用 `plugin.properties` 作为唯一描述真源，只允许已列出的描述键，禁止非空 `plugin.class`、任何 `plugin.requires`、共享运行时类内嵌和同版本不同内容重发。
 - 区分 contract-only 与 executable 制品；contract-only 可被依赖但不可创建 Fibra entry，executable 必须恰好有一个自身入口且可创建多个 entry。
 - 在触碰当前 ClassLoader、运行实例和安装目录前，对候选覆盖后的完整 prospective 图执行结构、依赖、版本、optional edge、入口和 ClassLoader 预检。
 - 单包不兼容更新直接拒绝；provider、consumer、contract 等相关候选可在同一 `applyArtifacts` 批次中事务更新。
 - 增加持久事务 journal，使运行中失败和目录交换期间的进程崩溃都能恢复旧安装图；恢复不完整时稳定报告 `ROLLBACK`。
 - Watcher 只自动应用已安装 ID 的严格更高版本；多插件联动更新必须由部署协调器显式批量调用，不能依赖文件到达时序。
-- 示例和仓库外验证增加独立 contract-only 插件，改用真实 ZIP 包，证明 PF4J 二进制依赖图与 Fibra 服务依赖图相互独立。
+- 示例和仓库外验证增加独立 contract-only 插件，改用真实 ZIP 包，证明 PF4J 二进制依赖图与 Fibra 服务依赖图相互独立；仓库外工程同时成为可直接构建、并由同一黑盒脚本持续验收的唯一用户插件模板。
 
 ## Capabilities
 

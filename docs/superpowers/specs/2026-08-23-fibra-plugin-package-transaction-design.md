@@ -179,7 +179,7 @@ plugin.version=1.2.0
 plugin.dependencies=example.greeting.contract@>=1.0.0 & <2.0.0
 ```
 
-允许 PF4J 的 `plugin.description`、`plugin.provider` 和 `plugin.license`。`plugin.class` 必须不存在或为空；插件作者不得提供 PF4J `Plugin` 子类，避免在 Fibra 外建立第二套业务生命周期。`plugin.requires` 在 `0.3.0` 不接受，宿主/Fibra API 兼容性通过宿主公共 API 或显式 contract artifact 的版本依赖表达，不能写一个实际未校验的字段制造安全感。
+允许 PF4J 的 `plugin.description`、`plugin.provider` 和 `plugin.license`。`plugin.class` 必须不存在或为空；插件作者不得提供 PF4J `Plugin` 子类，避免在 Fibra 外建立第二套业务生命周期。`plugin.requires` 在 `0.3.0` 不接受，宿主/Fibra API 兼容性通过宿主公共 API 或显式 contract artifact 的版本依赖表达，不能写一个实际未校验的字段制造安全感。除 `plugin.id`、`plugin.version`、`plugin.dependencies` 及本段明确列出的三个可选描述字段外，其他键一律拒绝；业务配置只进入 `fibra-loader-config` 管理的独立配置文件，不得塞入制品描述。
 
 `plugin.id` 只允许 ASCII 字母、数字、点、下划线和连字符，且首字符必须是字母或数字。`plugin.version` 必须是 PF4J `DefaultVersionManager` 可解析的 SemVer。依赖只使用 `plugin.dependencies`：
 
@@ -208,7 +208,7 @@ org/slf4j/
 
 ### 4.4 同版本内容
 
-loader 对解压后的 `plugin.properties` 和排序后的 `lib/*.jar` 相对路径及文件字节计算规范 SHA-256：
+loader 对解压后的 `plugin.properties` 和排序后的 `lib/*.jar` 计算规范 SHA-256。输入顺序固定为 `plugin.properties` 在前，随后按使用 `/` 分隔的 UTF-8 相对路径字典序排列 `lib/*.jar`；每个文件依次写入 4 字节大端路径字节长度、路径 UTF-8 字节、8 字节大端文件长度和原始文件字节。摘要不包含绝对路径、ZIP 文件名、ZIP metadata 或解压后的文件时间：
 
 - 同一 `plugin.id`、同一版本、同一规范摘要：该候选是 no-op；
 - 同一 `plugin.id`、同一版本、不同规范摘要：拒绝，禁止同版本原地重发；
@@ -396,6 +396,8 @@ provider 与 consumer 都依赖 contract，但 consumer 不因为使用服务而
 
 仓库外验证同步增加 contract-only 模块，并生成真实 ZIP：Host classpath 不包含任何插件或 contract 类型，只从插件目录加载；同一 provider 多 entry、consumer 服务等待、私有依赖隔离、版本范围、批量升级和失败恢复都必须由独立进程黑盒验证。
 
+`verification/external-consumer` 同时是唯一用户插件工程模板和黑盒验收输入，不再维护第二份会漂移的脚手架。`0.3.0` 收口时它必须具备可直接执行的默认版本与 `mvn verify` 路径，产出 contract-only、executable 和多依赖示例的标准 ZIP；README 必须区分最小插件必需模块、可选 contract/consumer 和仅用于本地验证的 Host。验收脚本在复制后的工程上覆盖 Fibra 版本与临时仓库地址，不修改模板源文件。该工程始终不加入 Fibra reactor、不继承 Fibra parent，也不使用 Fibra 工作树 classpath；当前开发期不可解析版本哨兵必须在模板验收阶段删除。
+
 ## 11. 验收不变量
 
 完成 `0.3.0` 必须由自动测试锁定：
@@ -418,6 +420,7 @@ provider 与 consumer 都依赖 contract，但 consumer 不因为使用服务而
 16. loader 在等待 Fibra lifecycle 时不持有物理锁；lifecycle/Reactor non-blocking 回调管理重入立即报忙，身份快照查询不死锁；
 17. 无 journal 预检垃圾可清理，`PREPARED/INSTALLING/APPLYING/COMMITTED` 的逐 ID 崩溃状态均按摘要确定恢复或拒绝；
 18. PF4J 3.13.0 的 optional edge、扩展 finder 类加载失败和 SemVer 范围行为由直接测试锁定。
+19. 仓库外插件模板可独立执行 `mvn verify` 并产出标准 ZIP，同一份模板由黑盒脚本在隔离仓库中实际构建，不存在未受验收的第二份脚手架。
 
 ## 12. 明确非目标
 

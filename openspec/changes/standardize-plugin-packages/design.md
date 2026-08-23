@@ -34,7 +34,7 @@ PF4J 3.13.0 已提供目录 `lib/`、properties 描述、SemVer、依赖解析�
 
 ### D2：`plugin.properties` 是唯一描述真源
 
-`FibraDirectoryPluginManager` 只配置 `PropertiesPluginDescriptorFinder`，主 JAR Manifest 中的 PF4J 描述不参与选择。`plugin.class` 和 `plugin.requires` 非空都在校验期拒绝。
+`FibraDirectoryPluginManager` 只配置 `PropertiesPluginDescriptorFinder`，主 JAR Manifest 中的 PF4J 描述不参与选择。校验期拒绝非空 `plugin.class`、任何 `plugin.requires` 和架构文档第 4.2 节未列出的键；业务配置不能混入制品描述。
 
 原因：避免 properties、Manifest 和 PF4J Plugin 子类形成三个身份/生命周期来源；当前没有真实 system version 输入，接受 `plugin.requires` 会制造未执行的兼容承诺。
 

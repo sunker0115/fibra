@@ -5,16 +5,16 @@
 
 ## 2. 目录包与入口类型
 
-- [ ] 2.1 以 TDD 实现标准 ZIP/目录/properties/lib/摘要校验和稳定阶段错误
+- [x] 2.1 以 TDD 实现标准 ZIP/目录/properties/lib/摘要校验和稳定阶段错误
 - [ ] 2.2 以 TDD 用目录 manager/loader 替换直接 JAR manager/loader
 - [ ] 2.3 以 TDD 实现主 JAR自身索引判定、contract-only 与 executable 门禁
-- [ ] 2.4 用直接行为测试锁定 PF4J 3.13.0 的扩展 finder 类加载失败和 SemVer 范围
+- [x] 2.4 用直接行为测试锁定 PF4J 3.13.0 的扩展 finder 类加载失败和 SemVer 范围
 
 ## 3. 完整依赖图
 
 - [ ] 3.1 以 TDD 实现 prospective 全图装载、必需依赖和 SemVer 范围校验
 - [ ] 3.2 以 TDD 补齐 optional edge 版本校验、旧/新 dependent 闭包和 ClassLoader 隔离
-- [ ] 3.3 用直接行为测试锁定 PF4J 3.13.0 不把 optional edge 纳入依赖图
+- [x] 3.3 用直接行为测试锁定 PF4J 3.13.0 不把 optional edge 纳入依赖图
 
 ## 4. 批量事务
 
@@ -33,7 +33,7 @@
 
 - [ ] 6.1 新增 contract-only 示例包，改造 provider/consumer 为 contract 二进制依赖和 Fibra 服务依赖
 - [ ] 6.2 改造示例 Host、Maven 打包和集成测试为标准 ZIP、批量升级和失败恢复
-- [ ] 6.3 改造仓库外独立工程与脚本，验证 Host classpath隔离、私有依赖和完整多插件图
+- [ ] 6.3 改造仓库外独立工程为可直接构建且由同一脚本验收的用户模板，验证 Host classpath隔离、私有依赖和完整多插件图
 
 ## 7. 文档、API 与收口
 

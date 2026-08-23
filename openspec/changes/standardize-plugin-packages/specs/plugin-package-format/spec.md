@@ -23,7 +23,7 @@
 - **THEN** apply 以 `VALIDATE` 失败，当前安装目录和运行态不变
 
 ### Requirement: Properties 是唯一描述真源
-系统 SHALL 只从根 `plugin.properties` 读取 PF4J 制品描述，并 MUST 拒绝非空 `plugin.class` 与 `plugin.requires`；主 JAR Manifest 中的 PF4J 描述不得覆盖它。
+系统 SHALL 只从根 `plugin.properties` 读取 PF4J 制品描述，只允许设计文档第 4.2 节列出的描述键，并 MUST 拒绝非空 `plugin.class`、`plugin.requires` 和任何未列出的键；主 JAR Manifest 中的 PF4J 描述不得覆盖它。
 
 #### Scenario: Plugin-Class 被拒绝
 - **WHEN** properties 声明非空 `plugin.class`
@@ -87,3 +87,14 @@
 #### Scenario: 中间插件同时消费和提供
 - **WHEN** 一个插件依赖上游 contract并向下游注册服务
 - **THEN** 它仍以单一 `pluginId` 扁平安装，层次只由依赖图和 Fibra Context/服务图表达
+
+### Requirement: 可直接构建的仓库外插件模板
+仓库 SHALL 维护一份不属于 Fibra reactor、也不继承 Fibra parent 的独立插件工程，同时作为用户模板与黑盒验收输入；不得另存一份未被同一验收构建的脚手架。
+
+#### Scenario: 用户按模板构建标准包
+- **WHEN** 用户在独立目录按模板 README 执行 `mvn verify`
+- **THEN** 工程通过公开 Maven 坐标编译并产出 contract-only、executable 和依赖示例的标准 ZIP，不读取 Fibra 源码或工作树 classpath
+
+#### Scenario: 开发版本隔离验收模板
+- **WHEN** Fibra 仓库执行仓库外验证脚本
+- **THEN** 脚本复制同一模板并只覆盖开发版本与临时仓库参数，在隔离 Maven 仓库中完成构建和运行，不修改模板源文件

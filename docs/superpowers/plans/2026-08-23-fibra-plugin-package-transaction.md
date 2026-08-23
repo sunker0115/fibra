@@ -44,7 +44,7 @@ git diff --check
   - `DefaultVersionManager` 对 `>=1.0.0 & <2.0.0` 的边界值、非法版本和非法约束执行真实行为断言。
 - `fibra-loader-pf4j/src/test/java/com/sstlfsj/fibra/loader/pf4j/PluginPackageInspectorTest.java`
   - 标准安装目录和单顶层目录 ZIP；ZIP slip、绝对路径、符号链接、多个顶层目录、额外层级。
-  - `plugin.properties` 唯一描述、ID 字符集、SemVer、`plugin.class`/`plugin.requires`、固定主 JAR、`lib/` 非 JAR/子目录。
+  - `plugin.properties` 唯一描述、字段白名单、ID 字符集、SemVer、`plugin.class`/`plugin.requires`、固定主 JAR、`lib/` 非 JAR/子目录。
   - 所有 `lib/*.jar` 的共享运行时包扫描；规范 SHA-256；同版本同摘要 no-op、同版本不同摘要拒绝。
   - 主 JAR 自身索引不存在/空/单声明/多声明；本阶段只读取主 JAR 自身索引，不在缺少完整依赖 ClassLoader 时加载入口类。
 - `fibra-loader-pf4j/src/test/java/com/sstlfsj/fibra/loader/pf4j/PluginPackageFixtures.java`：测试专用目录包、ZIP、JAR 和 properties 构造器，替换各测试类复制的 Manifest JAR helper；不进入生产代码。
@@ -197,6 +197,7 @@ mvn -pl fibra-loader-pf4j,fibra-loader-config -am -Dtest=FibraPluginWatcherTest,
 - 新增 `verification/external-consumer/contract-plugin`，把 `Greeting` 从 provider 移入 contract-only 模块；根 POM 模块顺序改为 `core-app, contract-plugin, provider-plugin, consumer-plugin, host`。
 - provider/consumer 都以 `provided` 依赖 contract；Host classpath 不含 contract/provider/consumer 类型。
 - 外部插件均生成标准 ZIP；至少一个 executable 在 `lib/` 携带私有依赖，并验证另一个插件不可见。
+- 把该独立工程从“仅脚本可用的版本哨兵夹具”收敛为唯一用户插件工程模板：给出可直接构建的默认版本和 `mvn verify`，README 分别说明最小 executable、可选 contract/consumer 与开发 Host；不另建 Maven Archetype 或第二份模板。
 - 修改 `scripts/verify-external-consumer.sh`：检查 ZIP 单顶层目录、properties、固定主 JAR、contract 类型只在 contract 包、Host 无插件类型，并从 ZIP 安装目录启动真实 Host。
 
 验证：
@@ -206,7 +207,7 @@ mvn -pl fibra-example-host -am verify
 bash scripts/verify-external-consumer.sh
 ```
 
-成功标准：Host classpath 不含任何插件/contract 类；provider 与 consumer 从同一个 contract ClassLoader 得到同一接口；私有依赖隔离；多包更新必须由一次显式批量 apply 完成。
+成功标准：Host classpath 不含任何插件/contract 类；provider 与 consumer 从同一个 contract ClassLoader 得到同一接口；私有依赖隔离；多包更新必须由一次显式批量 apply 完成；用户按模板 README 可在独立目录执行一次 `mvn verify` 产出标准 ZIP，黑盒脚本构建的就是同一份模板。
 
 提交边界：`test: verify standard plugin packages end to end`
 
