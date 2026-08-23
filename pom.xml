@@ -20,6 +20,7 @@
     <module>fibra-example-provider-plugin</module>
     <module>fibra-example-consumer-plugin</module>
     <module>fibra-example-host</module>
+    <module>fibra-spring-boot-starter</module>
     <module>fibra-parity-tests</module>
   </modules>
 
