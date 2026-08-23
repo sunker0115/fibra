@@ -786,6 +786,155 @@ git commit -m "chore: fibra-spring-boot-starter 收口"
 
 ---
 
+## Task 9: 示例宿主 fibra-example-spring-host（HTTP 上传 + 请求驱动热装）
+
+**契约归属决定**：宿主定义 `Greeting` SPI（宿主公共 API，父 ClassLoader 提供），上传的 provider 插件以 `provided` scope 实现它。宿主控制器按 `ServiceKey.of("greeting", Greeting.class)` 调用。
+
+**Files:**
+- Modify: 根 `pom.xml`（`<modules>` 加 `fibra-example-spring-host`）
+- Create: `fibra-example-spring-host/pom.xml`（非发布示例，deploy skip；依赖 `fibra-spring-boot-starter` + `spring-boot-starter-web`）
+- Create: `.../spring/host/ExampleSpringHostApplication.java`
+- Create: `.../spring/host/Greeting.java`（宿主 SPI）
+- Create: `.../spring/host/PluginController.java`
+- Create: `src/main/resources/application.yml`
+- Create: `fibra-example-spring-host/README.md`（含安全告警）
+- Create: `.../spring/host/ExampleSpringHostIT.java`（真实 HTTP：upload → apply → mount → greet → unload）
+- Test fixture: 一个实现宿主 `Greeting` 的 executable provider 标准 ZIP（`provided` 依赖宿主 API，assembly 产出到 `target`），供 IT 上传。
+
+- [ ] **Step 1: 根 POM 注册示例模块 + 写 pom.xml（非发布）**
+
+根 `pom.xml` `<modules>` 追加 `<module>fibra-example-spring-host</module>`。`fibra-example-spring-host/pom.xml` 继承父 POM，依赖 `com.sstlfsj:fibra-spring-boot-starter:${revision}` 与 `org.springframework.boot:spring-boot-starter-web`（版本随 starter 传递的 Spring BOM，或本模块自 import BOM），并按现有 `fibra-example-*` 方式在自身 `build`/父 POM 约定下 `skip deploy`。
+
+- [ ] **Step 2: 写宿主 SPI 与应用入口**
+
+`Greeting.java`：
+```java
+package com.sstlfsj.fibra.spring.host;
+public interface Greeting { String greet(String name); }
+```
+`ExampleSpringHostApplication.java`：
+```java
+package com.sstlfsj.fibra.spring.host;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class ExampleSpringHostApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(ExampleSpringHostApplication.class, args);
+    }
+}
+```
+
+- [ ] **Step 3: 写失败 IT（真实 HTTP 全链路）**
+
+`ExampleSpringHostIT.java`：`@SpringBootTest(webEnvironment = RANDOM_PORT)`，用 `TestRestTemplate`：
+1. `GET /greet?name=x` → 期望 404/空（尚无 provider）；
+2. `POST /plugins/upload`（multipart provider ZIP，路径由系统属性 `fibra.it.provider-zip` 传入）→ 200，返回暂存名，**此时 `GET /greet` 仍无结果**（未 apply）；
+3. `POST /plugins/apply`（body 指定暂存候选）→ 200，返回装入的 pluginId；
+4. `POST /plugins/{entryId}/mount` 或配置驱动 → entry ACTIVE；
+5. `GET /greet?name=x` → 200，返回 provider 的问候串；
+6. `DELETE /plugins/{pluginId}` → 200，`GET /plugins` 不再含该 entry。
+断言覆盖「上传不生效、apply 才生效、URL 调插件、热卸」。
+
+- [ ] **Step 4: 运行验证失败**
+
+Run: `mvn -pl fibra-example-spring-host -am verify`
+Expected: 编译/IT 失败（`PluginController` 不存在）。
+
+- [ ] **Step 5: 写 PluginController（upload=仅暂存；apply=显式热装）**
+
+`PluginController.java`（要点，实现时补全 import 与错误处理）：
+```java
+package com.sstlfsj.fibra.spring.host;
+
+import com.sstlfsj.fibra.Context;
+import com.sstlfsj.fibra.ServiceKey;
+import com.sstlfsj.fibra.loader.pf4j.FibraPluginLoader;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.nio.file.*;
+import java.util.List;
+
+@RestController
+@RequestMapping("/plugins")
+public class PluginController {
+    private static final ServiceKey<Greeting> GREETING = ServiceKey.of("greeting", Greeting.class);
+    private final Context root;
+    private final FibraPluginLoader loader;
+    private final Path staging;
+
+    public PluginController(Context root, FibraPluginLoader loader,
+                            com.sstlfsj.fibra.spring.FibraProperties props) {
+        this.root = root;
+        this.loader = loader;
+        this.staging = props.getStagingRoot();
+    }
+
+    /** 仅上传落盘到 staging，不 apply。 */
+    @PostMapping("/upload")
+    public String upload(@RequestParam("file") MultipartFile file) throws Exception {
+        Files.createDirectories(staging);
+        Path dest = staging.resolve(Path.of(file.getOriginalFilename()).getFileName());
+        file.transferTo(dest);
+        return dest.getFileName().toString();
+    }
+
+    /** 显式请求驱动的事务热装。 */
+    @PostMapping("/apply")
+    public List<String> apply(@RequestBody List<String> stagedNames) {
+        List<Path> candidates = stagedNames.stream().map(staging::resolve).toList();
+        return loader.applyArtifacts(candidates);
+    }
+
+    @GetMapping
+    public java.util.Map<String, List<String>> list() {
+        return java.util.Map.of("artifacts", loader.artifactIds(), "entries", loader.entryIds());
+    }
+
+    @GetMapping("/../greet")
+    public String greet(@RequestParam String name) {
+        return root.service(GREETING).invoke((inv, svc) -> svc.greet(name));
+    }
+
+    @DeleteMapping("/{pluginId}")
+    public boolean unload(@PathVariable String pluginId) {
+        return loader.unloadArtifact(pluginId);
+    }
+}
+```
+说明：`/greet` 用独立 `@GetMapping("/greet")` 放在类级 `@RequestMapping` 之外的另一个 controller 或调整为顶层路径（实现时把 greet 拆到 `GreetController` 用 `@GetMapping("/greet")`，避免上面 `/../` 写法）。mount 端点按 `FibraConfigLoader.create/resolve` 或 `FibraPluginLoader.mount(PluginInstanceSpec)` 补全（实现时核对 `PluginInstanceSpec` 构造）。
+
+- [ ] **Step 6: application.yml（关 watcher，走显式 apply）**
+
+```yaml
+fibra:
+  plugins-root: ${FIBRA_PLUGINS_ROOT:./run/plugins}
+  staging-root: ${FIBRA_STAGING_ROOT:./run/staging}
+  config-location: ${FIBRA_CONFIG:./run/plugins.yaml}
+  watcher:
+    enabled: false
+```
+
+- [ ] **Step 7: README 安全告警**
+
+`fibra-example-spring-host/README.md` 明确：`/plugins/apply` 加载插件 = 任意代码执行；本示例仅演示机制，**生产必须在 apply 前鉴权 + 校验 + 签名**，禁止裸开上传/apply 口。
+
+- [ ] **Step 8: 运行 IT 通过**
+
+Run: `mvn -pl fibra-example-spring-host -am verify`
+Expected: IT PASS（上传不生效 → apply 生效 → greet 返回 → 卸载）。
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add pom.xml fibra-example-spring-host/
+git commit -m "test: fibra-example-spring-host HTTP 上传与请求驱动热装示例"
+```
+
+---
+
 ## Self-Review（计划作者已执行）
 
 - **Spec 覆盖**：§1 边界→Task1/7；§3 位置与依赖→Task1；§4.2 Properties→Task2；§4.4 桥接→Task3；§4.3 Lifecycle/readiness→Task4；§4.1 AutoConfig→Task5；§7 黑盒→Task6；§8 发布/文档→Task7；全量→Task8。无缺口。
