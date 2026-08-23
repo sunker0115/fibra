@@ -1,6 +1,6 @@
 ## 1. 版本与规格基线
 
-- [ ] 1.1 将 reactor revision 切换为 `0.3.0-SNAPSHOT`，提交独立开发起点
+- [x] 1.1 将 reactor revision 切换为 `0.3.0-SNAPSHOT`，提交独立开发起点
 - [ ] 1.2 按本 change 对照并维护 superpowers 设计、OpenSpec specs 和实现计划
 
 ## 2. 目录包与入口类型
