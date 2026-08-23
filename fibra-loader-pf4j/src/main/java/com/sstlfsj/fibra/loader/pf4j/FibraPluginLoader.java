@@ -177,7 +177,6 @@ public final class FibraPluginLoader implements AutoCloseable {
             for (var entryId : mounted) {
                 unmountInternal(entryId);
             }
-            pluginManager.stopPlugins();
             pluginManager.unloadPlugins();
             closed = true;
         } finally {

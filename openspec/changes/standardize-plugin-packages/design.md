@@ -4,7 +4,7 @@
 
 当前实现使用 `FibraJarPluginManager`、直接 JAR Manifest 和 `reloadArtifact(Path)`。它能在单包运行失败后恢复，但只有关闭旧依赖闭包后才验证新图；多个插件必须分次更新；文件恢复依赖内存状态，进程崩溃时没有 journal。
 
-PF4J 3.13.0 已提供目录 `lib/`、properties 描述、SemVer、依赖解析和每插件 ClassLoader，但其默认 ZIP repository 会先解压、批量装载是 best-effort。它的扩展 finder 还会沿依赖查找资源并吞掉部分类加载失败，不能直接作为 Fibra 自身入口判定。
+PF4J 3.15.0 已提供目录 `lib/`、properties 描述、SemVer、依赖解析、每插件 ClassLoader 和父委派定制点，但其默认 ZIP repository 会先解压、批量装载是 best-effort。它的扩展 finder 还会沿依赖查找资源并吞掉部分类加载失败，不能直接作为 Fibra 自身入口判定。
 
 ## Goals / Non-Goals
 

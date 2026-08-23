@@ -7,7 +7,7 @@ import org.pf4j.DefaultPluginManager;
 import org.pf4j.DefaultVersionManager;
 import org.pf4j.DependencyResolver;
 import org.pf4j.ExtensionWrapper;
-import org.pf4j.LegacyExtensionFinder;
+import org.pf4j.IndexedExtensionFinder;
 import org.pf4j.PluginState;
 import org.pf4j.PluginWrapper;
 
@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class Pf4j313BehaviorTest {
+class Pf4j315BehaviorTest {
 
     @Test
     void dependencyResolverOmitsExistingOptionalDependencyAndItsWrongVersion() {
@@ -54,7 +54,7 @@ class Pf4j313BehaviorTest {
         };
         var manager = new FixturePluginManager();
         manager.addStartedPlugin(descriptor("fixture", "1.0.0", ""), classLoader);
-        var indexedFinder = new LegacyExtensionFinder(manager) {
+        var indexedFinder = new IndexedExtensionFinder(manager) {
             @Override
             public Map<String, Set<String>> readPluginsStorages() {
                 return Map.of("fixture",

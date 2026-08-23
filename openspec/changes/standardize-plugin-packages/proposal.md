@@ -34,4 +34,4 @@
 - 公开 API：`fibra-loader-pf4j` 签名发生明确破坏性变化；`fibra-api`、`fibra-core` 和 `fibra-pf4j-api` 核心语义不变。
 - 示例与验收：新增非发布 contract-only 示例模块，provider/consumer 包装、宿主、仓库外工程和脚本全部改用标准 ZIP。
 - 文档：PF4J 架构、配置 loader、公共 API、README、发布说明和公开签名基线整体同步，删除旧直接 JAR语义。
-- 依赖：继续使用 PF4J 3.13.0、SLF4J 和 JDK 21；`fibra-loader-pf4j` 新增 Apache Commons Compress 1.28.0 直接依赖及其运行时传递依赖，只用于可靠读取 ZIP 条目类型和 Unix symlink metadata，不自行解析 ZIP external attributes。全部版本继续由根 properties/dependencyManagement 固定。
+- 依赖：使用 PF4J 3.15.0、SLF4J 和 JDK 21；`fibra-loader-pf4j` 新增 Apache Commons Compress 1.28.0 直接依赖及其运行时传递依赖，只用于可靠读取 ZIP 条目类型和 Unix symlink metadata，不自行解析 ZIP external attributes。全部版本继续由根 properties/dependencyManagement 固定。

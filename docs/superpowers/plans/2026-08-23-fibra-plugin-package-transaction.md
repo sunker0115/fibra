@@ -34,11 +34,11 @@ git diff --check
 
 提交边界：`chore: start 0.3.0 development`
 
-## 2. 冻结 PF4J 3.13.0 行为和标准包检查
+## 2. 冻结 PF4J 3.15.0 行为和标准包检查
 
 先新增失败测试：
 
-- `fibra-loader-pf4j/src/test/java/com/sstlfsj/fibra/loader/pf4j/Pf4j313BehaviorTest.java`
+- `fibra-loader-pf4j/src/test/java/com/sstlfsj/fibra/loader/pf4j/Pf4j315BehaviorTest.java`
   - `DependencyResolver` 对存在的 optional dependency 不建立 dependency/dependent edge，也不报告其错误版本；证明 Fibra 必须补检 optional 范围。
   - `DefaultExtensionFinder` 对索引缺类和 `NoClassDefFoundError` 返回空结果而不是传播异常；证明制品类型不能使用该结果。
   - `DefaultVersionManager` 对 `>=1.0.0 & <2.0.0` 的边界值、非法版本和非法约束执行真实行为断言。
@@ -59,10 +59,10 @@ git diff --check
 定向验证：
 
 ```bash
-mvn -pl fibra-loader-pf4j -am -Dtest=Pf4j313BehaviorTest,PluginPackageInspectorTest -Dsurefire.failIfNoSpecifiedTests=false test
+mvn -pl fibra-loader-pf4j -am -Dtest=Pf4j315BehaviorTest,PluginPackageInspectorTest -Dsurefire.failIfNoSpecifiedTests=false test
 ```
 
-成功标准：三项 PF4J 载荷性断言直接由 3.13.0 测试锁定；全部非法候选在创建活动 ClassLoader 前给出稳定 stage；外部 ZIP 字节不变。
+成功标准：三项 PF4J 载荷性断言直接由 3.15.0 测试锁定；全部非法候选在创建活动 ClassLoader 前给出稳定 stage；外部 ZIP 字节不变。
 
 提交边界：`feat: define standard plugin packages`
 
@@ -248,6 +248,6 @@ git status --short
 4. `PluginConfigFactory`、异常、Spring Bean、静态缓存和 ThreadLocal 是否保留旧 ClassLoader 类型；
 5. 所有 ZIP/JAR/流/ClassLoader/watcher 是否在成功、失败、回滚和 close 路径关闭；
 6. 是否残留直接 JAR、Manifest 描述、兼容转发或 provider-owned contract 特例；
-7. 三项 PF4J 3.13.0 行为测试是否直接调用真实依赖而非复制其算法。
+7. 三项 PF4J 3.15.0 行为测试是否直接调用真实依赖而非复制其算法。
 
 只有审查问题清零并重新通过第 8 阶段全部命令后，才允许把 OpenSpec change 归档并评估 `0.3.0` release。

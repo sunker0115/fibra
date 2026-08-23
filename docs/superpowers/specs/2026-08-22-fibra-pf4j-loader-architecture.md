@@ -7,7 +7,7 @@
 
 ## 1. 边界
 
-PF4J 3.13.0 只负责 JAR 描述、版本约束、制品依赖图、扩展索引和每制品 ClassLoader。Fibra 是唯一的服务、事件、effect、配置和业务生命周期运行时。
+PF4J 3.15.0 只负责 properties 描述、版本约束、制品依赖图、扩展索引和每制品 ClassLoader。Fibra 是唯一的服务、事件、effect、配置和业务生命周期运行时。
 
 ```text
 fibra-loader-config -> fibra-loader-pf4j -> fibra-core -> fibra-api
@@ -97,7 +97,7 @@ runExclusive                              跨配置与 JAR 更新的事务协调
 
 | 方案 | 可吸收能力 | 不进入当前实现的能力 | 结论 |
 |---|---|---|---|
-| PF4J 3.13.0 | JAR/ClassLoader/依赖/扩展类发现 | 默认 best-effort 管理语义与 `ExtensionWrapper` 实例缓存 | 直接依赖；外层收紧事务并自行创建一次性入口 |
+| PF4J 3.15.0 | 目录/ClassLoader/依赖/索引读取 | 默认 best-effort 管理语义与 `ExtensionWrapper` 实例缓存 | 直接依赖；外层收紧事务并自行创建一次性入口 |
 | Spring Plugin `312ce6d` | `Supplier` 查询当前 BeanFactory 的动态视图 | 同容器策略 registry | 吸收“不另存运行实例”的查询思想，不引入依赖 |
 | gj.spring.pf4j `44b7174` | 每次启动创建、停止关闭插件 Context，卸载清理插件级缓存 | 每插件 Spring Context、Web/MyBatis/JPA 通用化 | 吸收跨 ClassLoader 重建与资源清理思想 |
 | Hasor | 插件/IoC 的完整方案对照 | 第二套容器和 AOP 体系 | 不采用 |

@@ -21,7 +21,7 @@
 6. effect 的异步多值形态直接使用 Publisher，并以 `request(1)` 保留 Cordis async generator 的在途产出边界。业务代码不承担协作取消正确性。
 7. 同一 effect 内逆序串行清理；Fibra 顶层 effects 并发清理并等待全部完成。手动清理传播局部错误，Fibra unload 在顶层边界记录并隔离错误。
 8. `provide` 返回可等待的 `ServiceRegistration`；撤销必须等所有受影响依赖 Fibra 收敛后才完成。
-9. PF4J 3.13.0 仅用于 `fibra-loader-pf4j` 的 JAR、依赖图、扩展索引和 ClassLoader；PF4J `STARTED` 不等于 Fibra `ACTIVE`，也不替代 Cordis Fibra。OSGi DS 仅作静态贪婪依赖语义参照。
+9. PF4J 3.15.0 仅用于 `fibra-loader-pf4j` 的目录包、依赖图、扩展索引和 ClassLoader；PF4J `STARTED` 不等于 Fibra `ACTIVE`，也不替代 Cordis Fibra。OSGi DS 仅作静态贪婪依赖语义参照。
 10. LoggerService、全部事件模式和 internal events 属于 core 行为，不因使用 SLF4J 或 Java 类型系统而删减。
 11. Cordis accessor/mixin/association 用 `PropertyKey`、`PropertyAccessor`、`Associated` 显式建模；这是 Java 强类型替换，不允许删除关联对象的调用方服务解析能力。
 12. 插件 runtime 按入口对象身份分组；类插件以 `PluginFactory` 为身份。批量移除返回 `Mono<Void>` 并等待所有 Fibra 完成。

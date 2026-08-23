@@ -11,7 +11,7 @@
 | JUnit | 6.1.3 | 单元测试 |
 | Reactor Test | 3.8.6 | StepVerifier 与响应式时序测试 |
 | Awaitility | 4.3.0 | 必要时等待最终状态收敛 |
-| PF4J | 3.13.0 | 独立 loader 中的 JAR 发现、依赖解析、扩展索引与 ClassLoader |
+| PF4J | 3.15.0 | 独立 loader 中的目录发现、依赖解析、扩展索引与 ClassLoader |
 | Jackson Databind/YAML | 3.1.5 | 配置字面值解析、YAML/JSON 写回和插件 ClassLoader typed config 转换 |
 | SnakeYAML Engine | 3.0.1（Jackson YAML 传递依赖） | YAML token 与语法解析 |
 
@@ -25,7 +25,7 @@ PF4J 不进入 `fibra-core`；它只在 `fibra-pf4j-api` 与 `fibra-loader-pf4j`
 
 | 项目 | 源码基线 | 实际职责 |
 |---|---|---|
-| PF4J | `release-3.13.0` | JAR 描述、依赖图、扩展索引、插件状态与每插件 ClassLoader |
+| PF4J | `release-3.15.0` | properties 描述、目录 Classpath、依赖图、扩展索引、插件状态与每插件 ClassLoader |
 | Spring Plugin | `312ce6d`（`4.2.0-SNAPSHOT`） | 同一 ClassLoader、同一 Spring 容器内的类型安全策略注册、排序与选择 |
 | gj.spring.pf4j | `44b7174` | 在 PF4J 上叠加每插件 Spring 子容器和宿主资源注册器 |
 | Spring AI | `db45fc548fd2b7eb2797758b6a69ac750554e52b` | Spring Boot AI 自动配置、ChatModel、模型 API、retry、工具循环、MCP、RAG 与观测 |
@@ -34,9 +34,11 @@ PF4J 不进入 `fibra-core`；它只在 `fibra-pf4j-api` 与 `fibra-loader-pf4j`
 
 本文中的“采用”表示依赖已进入当前生产模块并由现有代码调用；“已实现”表示仓库中已有代码和验收；“参考”或“未来约束”只表示设计规则，不表示已有模块、API 或运行能力；“不引入”表示 Fibra 仓库不增加该依赖，不限制上层应用在 Fibra 边界之外独立使用它。
 
-PF4J 的默认批量装载和启动会隔离单个失败并继续，管理操作本身也不提供 Fibra 所需的事务与串行边界。当前 `fibra-loader-pf4j` 已用 `FibraJarPluginManager.loadPluginsStrict` 提供批次回滚，用 `FibraPluginLoader` 的 loader 级锁串行管理操作，并由 `reloadArtifact` 完成磁盘制品、PF4J 状态及全部受影响 Fibra 实例的失败恢复。PF4J 默认卸载依赖方、关闭 ClassLoader、重算依赖图以及扩展类发现能力继续直接复用。
+PF4J 的默认批量装载和启动会隔离单个失败并继续，管理操作本身也不提供 Fibra 所需的事务与串行边界。已发布的 `0.2.0` 使用 `FibraJarPluginManager.loadPluginsStrict`、loader 级锁和 `reloadArtifact`；开发中的 `0.3.0` 由 OpenSpec change `standardize-plugin-packages` 直接替换为标准目录包、完整 prospective 图、逻辑事务门和持久 journal，不保留上述直接 JAR API。PF4J 的依赖解析、每插件 ClassLoader、依赖类可见性与卸载关闭 ClassLoader 继续复用，默认 ZIP 展开、best-effort 批量装载和扩展对象发现不进入新路径。
 
-PF4J 3.13.0 的 `ExtensionWrapper` 在首次 `getExtension()` 后保存同一个扩展对象。Fibra 的入口是运行实例工厂，跨 entry 或 reload 复用该对象会把可变状态和旧 ClassLoader 带到新实例，因此当前 loader 只读取 `getExtensionClasses(...)` 的唯一入口类，并按每次 mount/update/reload 恢复调用其无参构造器。这个差异是 Fibra 对 PF4J 扩展缓存语义的显式收紧，不依赖 PF4J 内部 wrapper 何时失效。
+PF4J 3.15.0 的 `AbstractPluginManager.stopPlugins()` 使用迭代器遍历 `startedPlugins`，但它调用的 `doStopPlugin()` 又直接从同一列表删除元素，多插件停止会触发 `ConcurrentModificationException`。Fibra 不调用该批量 API；关闭路径直接调用 PF4J `unloadPlugins()`，由逐插件 `unloadPlugin -> stopPlugin` 完成停止并关闭 ClassLoader。这个规避点只针对 PF4J 管理层调用顺序，不复制或修改 PF4J 的停止算法。
+
+PF4J 3.15.0 的 `ExtensionWrapper` 在首次 `getExtension()` 后保存同一个扩展对象。Fibra 的入口是运行实例工厂，跨 entry 或 reload 复用该对象会把可变状态和旧 ClassLoader 带到新实例，因此 loader 只读取主 JAR 自身 `extensions.idx` 的入口类声明，并按每次 mount/update/reload 恢复调用其无参构造器。这个差异是 Fibra 对 PF4J 扩展缓存语义的显式收紧，不依赖 PF4J 内部 wrapper 何时失效。
 
 Spring Plugin 的 `Plugin<S>.supports(S)`、`PluginRegistry` 首个/全部/默认选择和 `OrderAwarePluginRegistry` 只解决宿主 classpath 内的策略路由。其 BeanFactory 适配通过 `Supplier<List<Plugin<S>>>` 在使用时查询当前容器，而不是在 registry 中复制一份实例集合。Fibra 吸收的是这一条所有权规则：`fibra-loader-config` 为配置声明的 group/include scope 持有自己创建的 Fibra，但插件 entry 只保存不可变原始配置和身份；`resolve` 始终向 `FibraPluginLoader` 查询当前插件运行实例，不缓存该实例。Spring Plugin 没有插件制品、安装、卸载、依赖图、ClassLoader 或运行期生命周期，不能替代 PF4J，也不应进入 Fibra core。若上层业务需要“按条件选择策略”，应作为普通 Fibra 服务或业务插件实现，不能再建立一套与 `ServiceKey`、`PluginDescriptor.require` 并行的注册表。
 

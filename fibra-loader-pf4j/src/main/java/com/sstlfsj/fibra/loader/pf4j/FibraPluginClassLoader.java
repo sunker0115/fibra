@@ -19,12 +19,15 @@ final class FibraPluginClassLoader extends PluginClassLoader {
     }
 
     @Override
-    public Class<?> loadClass(String className) throws ClassNotFoundException {
+    protected boolean shouldDelegateToParent(String className) {
+        if (super.shouldDelegateToParent(className)) {
+            return true;
+        }
         for (var prefix : SHARED_PACKAGE_PREFIXES) {
             if (className.startsWith(prefix)) {
-                return getParent().loadClass(className);
+                return true;
             }
         }
-        return super.loadClass(className);
+        return false;
     }
 }

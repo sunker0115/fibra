@@ -31,7 +31,7 @@ OpenSpec：[`standardize-plugin-packages`](../../../openspec/changes/standardize
 
 ### 2.2 吸收与不吸收
 
-- PF4J 3.13.0：吸收 `plugin.properties`、标准 `lib/` 目录、SemVer 范围、依赖图和每插件 ClassLoader；不采用默认 best-effort 批量装载、隐式 ZIP 展开、扩展对象缓存和默认扩展索引判定。
+- PF4J 3.15.0：吸收 `plugin.properties`、标准 `lib/` 目录、SemVer 范围、依赖图、每插件 ClassLoader 和父委派定制点；不采用默认 best-effort 批量装载、隐式 ZIP 展开、扩展对象缓存和默认扩展索引判定。
 - Apache Commons Compress 1.28.0：只使用 ZIP 中央目录和 `ZipArchiveEntry.isUnixSymlink()` 完成符号链接/条目类型检查；JDK 21 `ZipEntry` 不暴露 Unix mode，禁止自己解析 ZIP external attributes。解压后的路径规范化、目标越界检查和目录协议仍由 Fibra 执行。
 - gj.spring.pf4j：吸收“一插件一目录、版本化主 JAR、私有 `lib/`、卸载释放资源”；不吸收目录内隐式选择最新 JAR、Manifest `Class-Path`、失败后继续和 Spring 子容器。
 - Spring Plugin：只吸收按调用查询当前运行状态、不维护第二份长期对象缓存的思想，不引入依赖。
@@ -41,7 +41,7 @@ OpenSpec：[`standardize-plugin-packages`](../../../openspec/changes/standardize
 
 可回溯源码：
 
-- PF4J：本机 `org.pf4j.DefaultPluginManager`、`DefaultPluginLoader`、`PropertiesPluginDescriptorFinder`、`DependencyResolver`，源码包位于 `/Users/sunke/.m2/repository/org/pf4j/pf4j/3.13.0/pf4j-3.13.0-sources.jar`；
+- PF4J：本机 `org.pf4j.DefaultPluginManager`、`DefaultPluginLoader`、`PropertiesPluginDescriptorFinder`、`DependencyResolver`，源码包位于 Maven 本地仓库的 `org/pf4j/pf4j/3.15.0/pf4j-3.15.0-sources.jar`；
 - gj.spring.pf4j：`/Users/sunke/dev/ai-project/gj.spring.pf4j/src/gj-pf4j/src/main/java/gj/pf4j/GJJarPluginRepository.java` 与 `src/gj-plugin-demo/pom-parent.xml`；
 - Cordis：`/Users/sunke/dev/ai-project/cordis/packages/hmr/src/index.ts`；
 - DeepSeek Harness：`/Users/sunke/dev/ai-project/deepseek-harness/vendor/README.md` 及各 package manifest；
@@ -261,7 +261,7 @@ prospective graph = 当前全部安装包 - 同 ID 旧包 + 本批次全部候�
 3. 校验目录、`plugin.properties`、ID、SemVer、主 JAR、私有 JAR、共享类、同版本摘要和 `plugin.class`；
 4. 以候选覆盖同 ID 当前包，形成唯一 ID 的 prospective 全图；
 5. 使用临时 `FibraDirectoryPluginManager` 装载全图，校验缺失依赖、循环和版本范围；
-6. 对实际存在的 optional dependency 额外检查版本范围，因为 PF4J 3.13.0 的 `DependencyResolver` 不把 optional edge 纳入依赖图；
+6. 对实际存在的 optional dependency 额外检查版本范围，因为 PF4J 3.15.0 的 `DependencyResolver` 不把 optional edge 纳入依赖图；
 7. 启动无操作 PF4J wrapper，并按上一节直接检查每个主 JAR 自身扩展索引；
 8. 关闭临时 manager 的全部 ClassLoader；
 9. 计算候选 ID 在旧图和 prospective 图中传递依赖方的并集。实际存在的 optional edge 也进入受影响闭包。
@@ -419,7 +419,7 @@ provider 与 consumer 都依赖 contract，但 consumer 不因为使用服务而
 15. 全部公开 API 签名、使用手册、架构文档和发布说明与实现一致。
 16. loader 在等待 Fibra lifecycle 时不持有物理锁；lifecycle/Reactor non-blocking 回调管理重入立即报忙，身份快照查询不死锁；
 17. 无 journal 预检垃圾可清理，`PREPARED/INSTALLING/APPLYING/COMMITTED` 的逐 ID 崩溃状态均按摘要确定恢复或拒绝；
-18. PF4J 3.13.0 的 optional edge、扩展 finder 类加载失败和 SemVer 范围行为由直接测试锁定。
+18. PF4J 3.15.0 的 optional edge、扩展 finder 类加载失败和 SemVer 范围行为由直接测试锁定。
 19. 仓库外插件模板可独立执行 `mvn verify` 并产出标准 ZIP，同一份模板由黑盒脚本在隔离仓库中实际构建，不存在未受验收的第二份脚手架。
 
 ## 12. 明确非目标
