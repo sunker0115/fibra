@@ -186,7 +186,9 @@ Spring AI 的 BOM 和 starter 只有在首个可选模块真正实现时才加�
 
 ## 7. 后续实现门禁
 
-Fibra `0.1.1` 只固化本文所需的现有核心语义和文档，不新增 Spring 模块。创建 Java DeepSeek Harness 项目后，第一阶段按顺序完成：
+Fibra `0.1.1` 只固化本文所需的现有核心语义和文档，不新增 Spring 模块。在创建 Java DeepSeek Harness 项目之前，Fibra `0.2.0` 先交付框架中立的 `fibra-loader-config`。该模块负责 YAML/JSON 配置解析、校验、插件条目树装配、更新与回滚，可调用 `fibra-loader-pf4j`，但不依赖 Spring、Spring Boot 或 Spring AI。Spring Boot 的 `application.yml` 只配置静态宿主；动态插件组合由 `fibra-loader-config` 管理。
+
+`fibra-loader-config` 完成并发布后，Java DeepSeek Harness 第一阶段按顺序完成：
 
 1. 定义框架中立的 Harness LLM/message/chunk/tool/session API，并以原项目测试与日志格式验收；
 2. 建立 Spring Boot 宿主和 Fibra `SmartLifecycle`/readiness 适配，验证静态 Spring 服务到 root `ServiceKey` 的桥接；
