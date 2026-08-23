@@ -5,6 +5,7 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -71,6 +72,16 @@ final class PluginPackageFixtures {
 
     static byte[] extensionIndex(List<String> classNames) {
         return (String.join("\n", classNames) + "\n").getBytes(StandardCharsets.UTF_8);
+    }
+
+    static byte[] classBytes(Class<?> type) throws IOException {
+        var resource = "/" + type.getName().replace('.', '/') + ".class";
+        try (InputStream input = type.getResourceAsStream(resource)) {
+            if (input == null) {
+                throw new IOException("missing class resource " + resource);
+            }
+            return input.readAllBytes();
+        }
     }
 
     static Path zipDirectory(Path packageRoot, Path zip) throws IOException {

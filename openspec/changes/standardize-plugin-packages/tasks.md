@@ -7,14 +7,14 @@
 
 - [x] 2.1 以 TDD 实现标准 ZIP/目录/properties/lib/摘要校验和稳定阶段错误
 - [ ] 2.2 以 TDD 用目录 manager/loader 替换直接 JAR manager/loader
-- [ ] 2.3 以 TDD 实现主 JAR自身索引判定、contract-only 与 executable 门禁
-- [x] 2.4 用直接行为测试锁定 PF4J 3.13.0 的扩展 finder 类加载失败和 SemVer 范围
+- [x] 2.3 以 TDD 实现主 JAR自身索引判定、contract-only 与 executable 门禁
+- [x] 2.4 用直接行为测试锁定 PF4J 3.15.0 的扩展 finder 类加载失败和 SemVer 范围
 
 ## 3. 完整依赖图
 
-- [ ] 3.1 以 TDD 实现 prospective 全图装载、必需依赖和 SemVer 范围校验
-- [ ] 3.2 以 TDD 补齐 optional edge 版本校验、旧/新 dependent 闭包和 ClassLoader 隔离
-- [x] 3.3 用直接行为测试锁定 PF4J 3.13.0 不把 optional edge 纳入依赖图
+- [x] 3.1 以 TDD 实现 prospective 全图装载、必需依赖和 SemVer 范围校验
+- [x] 3.2 以 TDD 补齐 optional edge 版本校验、旧/新 dependent 闭包和 ClassLoader 隔离
+- [x] 3.3 用直接行为测试锁定 PF4J 3.15.0 不把 optional edge 纳入依赖图
 
 ## 4. 批量事务
 
