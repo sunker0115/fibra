@@ -21,7 +21,7 @@ public final class ProviderEntrypoint implements VoidFibraPluginEntrypoint {
                 throw new IllegalStateException("plugin JAR has no Implementation-Version");
             }
             context.provide(VERSION, version);
-            var greeting = context.root().provide(Greeting.KEY, () -> "provider-" + version);
+            var greeting = context.provide(Greeting.KEY, () -> "provider-" + version);
             return Mono.just(greeting);
         };
     }

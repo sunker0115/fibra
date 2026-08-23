@@ -17,7 +17,7 @@ Fibra 是 Cordis Core 4.0.1 的 Java 21 语义等价实现，用作 Java 版 Dee
 - `fibra-loader-config`：框架中立的 YAML/JSON 配置树、typed config、运行时事务和文件监听；
 - `fibra-example-provider-plugin`：拥有跨插件服务契约的真实 provider 及多版本制品；
 - `fibra-example-consumer-plugin`：通过 PF4J 依赖 ClassLoader 消费 provider 的真实插件；
-- `fibra-example-host`：纯 Java 宿主示例与真实依赖链黑盒验收；
+- `fibra-example-host`：使用真实 YAML 装配插件树的纯 Java 宿主示例与真实依赖链黑盒验收；
 - `fibra-parity-tests`：Cordis 71 个逐项门禁、迁移测试和全部公开 API 冻结。
 
 ## 构建

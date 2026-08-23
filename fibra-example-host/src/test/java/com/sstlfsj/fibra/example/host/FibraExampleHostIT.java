@@ -3,9 +3,9 @@ package com.sstlfsj.fibra.example.host;
 import com.sstlfsj.fibra.Context;
 import com.sstlfsj.fibra.FibraState;
 import com.sstlfsj.fibra.ServiceKey;
+import com.sstlfsj.fibra.loader.config.FibraConfigLoader;
 import com.sstlfsj.fibra.loader.pf4j.FibraPluginLoader;
 import com.sstlfsj.fibra.loader.pf4j.FibraPluginWatcher;
-import com.sstlfsj.fibra.loader.pf4j.PluginInstanceSpec;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -47,11 +47,13 @@ class FibraExampleHostIT {
             plugins.resolve("fibra-example-consumer.jar"));
         var update = Files.copy(artifacts.resolve("fibra-example-provider-v2.jar"),
             work.resolve("fibra-example-provider-v2.jar"));
+        var config = work.resolve("fibra.yaml");
+        copyConfig(config);
 
         var javaExecutable = Path.of(System.getProperty("java.home"), "bin", "java");
         var host = Path.of(System.getProperty("fibra.example.host.jar"));
         var process = new ProcessBuilder(javaExecutable.toString(), "-jar", host.toString(),
-            plugins.toString(), update.toString())
+            plugins.toString(), config.toString(), update.toString())
             .redirectErrorStream(true)
             .start();
         var finished = process.waitFor(10, TimeUnit.SECONDS);
@@ -61,6 +63,7 @@ class FibraExampleHostIT {
         assertTrue(finished, "executable example host did not finish");
         var output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         assertEquals(0, process.exitValue(), output);
+        assertTrue(output.contains("consumer->provider-1.0.0"), output);
         assertTrue(output.contains("consumer->provider-2.0.0"), output);
 
         assertEquals("2.0.0", pluginVersion(installed));
@@ -85,23 +88,26 @@ class FibraExampleHostIT {
             staging.resolve("fibra-example-provider-v2.jar"));
         var broken = Files.copy(artifacts.resolve("fibra-example-provider-broken.jar"),
             staging.resolve("fibra-example-provider-broken.jar"));
+        var configPath = work.resolve("fibra.yaml");
+        copyConfig(configPath);
 
         assertEquals("fibra-example-provider", pluginDependencies(consumer));
         assertFalse(jarContains(consumer, "example/fibra/provider/api/Greeting.class"));
 
         try (Context root = FibraRuntime.create();
              FibraPluginLoader loader = new FibraPluginLoader(root, plugins);
+             FibraConfigLoader config = FibraConfigLoader.builder(
+                 root, loader, configPath).build();
              FibraPluginWatcher watcher = new FibraPluginWatcher(
                  loader, incoming, Duration.ofMillis(100))) {
             loader.loadArtifacts();
-            loader.mount(instance(root, "fibra-example-provider"));
-            loader.mount(instance(root, "fibra-example-consumer"));
+            config.load();
             assertEquals("1.0.0", root.get(PROVIDER_VERSION));
             assertEquals("consumer->provider-1.0.0", root.get(CONSUMER_RESULT));
             assertEquals(FibraState.ACTIVE,
-                loader.fibra("fibra-example-provider").orElseThrow().state());
+                config.resolve("fibra-example-provider").orElseThrow().fibra().state());
             assertEquals(FibraState.ACTIVE,
-                loader.fibra("fibra-example-consumer").orElseThrow().state());
+                config.resolve("fibra-example-consumer").orElseThrow().fibra().state());
             watcher.start();
 
             var publishedUpdate = incoming.resolve(update.getFileName());
@@ -124,9 +130,9 @@ class FibraExampleHostIT {
             assertEquals("2.0.0", pluginVersion(installed));
             assertEquals("1.0.0", pluginVersion(consumer));
             assertEquals(FibraState.ACTIVE,
-                loader.fibra("fibra-example-provider").orElseThrow().state());
+                config.resolve("fibra-example-provider").orElseThrow().fibra().state());
             assertEquals(FibraState.ACTIVE,
-                loader.fibra("fibra-example-consumer").orElseThrow().state());
+                config.resolve("fibra-example-consumer").orElseThrow().fibra().state());
             assertTrue(Files.isRegularFile(publishedBroken));
         }
     }
@@ -135,10 +141,8 @@ class FibraExampleHostIT {
         Files.move(source, target, StandardCopyOption.ATOMIC_MOVE);
     }
 
-    private static PluginInstanceSpec instance(Context root, String pluginId) {
-        return PluginInstanceSpec.builder(pluginId, pluginId)
-            .parentContext(root)
-            .build();
+    private static void copyConfig(Path target) throws IOException {
+        Files.copy(Path.of(System.getProperty("fibra.example.config")), target);
     }
 
     private static String pluginVersion(Path plugin) throws IOException {

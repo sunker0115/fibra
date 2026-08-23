@@ -16,7 +16,7 @@
   <dependencies>
     <dependency>
       <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-loader-pf4j</artifactId>
+      <artifactId>fibra-loader-config</artifactId>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -120,6 +120,7 @@
           <systemPropertyVariables>
             <fibra.example.artifacts>${project.build.directory}/plugin-artifacts</fibra.example.artifacts>
             <fibra.example.host.jar>${project.build.directory}/fibra-example-host-all.jar</fibra.example.host.jar>
+            <fibra.example.config>${project.basedir}/config/fibra.yaml</fibra.example.config>
           </systemPropertyVariables>
         </configuration>
         <executions>

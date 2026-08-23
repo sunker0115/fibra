@@ -105,6 +105,6 @@ Spring、Hasor、Solon、Spring Plugin 不进入五个生产模块。未来宿�
 
 ## 9. 验收
 
-仓内 `FibraPluginLoaderTest` 与 `FibraPluginWatcherTest` 必须覆盖同制品多 entry、依赖顺序、失败装载、停止/卸载、JAR 更新全部 entry 恢复及失败回滚。`fibra-example-host` 必须用真实 provider/consumer JAR 验证 ClassLoader 依赖、v1 到 v2 更新和 broken JAR 回滚。仓库外五制品验收另见[独立消费设计](./2026-08-22-fibra-external-multi-plugin-verification-design.md)。
+仓内 `FibraPluginLoaderTest` 与 `FibraPluginWatcherTest` 必须覆盖同制品多 entry、依赖顺序、失败装载、停止/卸载、JAR 更新全部 entry 恢复及失败回滚。`fibra-example-host` 必须通过 `fibra-loader-config` 读取真实 YAML，并用真实 provider/consumer JAR 验证 ClassLoader 依赖、v1 到 v2 更新和 broken JAR 回滚；它不得继续把 `PluginInstanceSpec` 作为宿主推荐接入方式。仓库外五制品验收另见[独立消费设计](./2026-08-22-fibra-external-multi-plugin-verification-design.md)。
 
 当前非目标：非可信插件沙箱、同一 `pluginId` 多版本并存、远程制品仓库、JVMTI 字节码重定义、Spring/Hasor/Solon 宿主集成。

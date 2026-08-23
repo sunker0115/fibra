@@ -1,0 +1,9 @@
+- id: fibra-example-consumer
+  name: fibra-example-consumer
+  inject: [example.provider.greeting]
+  isolate:
+    example.provider.greeting: example
+- id: fibra-example-provider
+  name: fibra-example-provider
+  isolate:
+    example.provider.greeting: example
