@@ -9,7 +9,7 @@
 
 1. `fibra-api`、`fibra-core` 不引入 Spring 或 Spring AI。内核继续只依赖 Reactor Core 与 SLF4J API。
 2. Java DeepSeek Harness 使用 Spring Boot 作为宿主框架，负责静态应用装配、配置、HTTP、数据访问、Actuator/Micrometer 和进程启动关闭。
-3. Fibra 是 Harness 动态插件、服务、事件、effect 与配置生命周期的唯一运行时。动态插件不注册为 Spring Bean，不创建每插件 Spring `ApplicationContext`，也不扫描插件 JAR。
+3. Fibra 是 Harness 动态插件、服务、事件、effect 与配置生命周期的唯一运行时。动态插件不注册为 Spring Bean，不创建每插件 Spring `ApplicationContext`，也不对插件包做 Spring 扫描。
 4. Spring AI 不作为 Java DeepSeek Harness 首版的基础模型层，也不进入 Fibra 仓库。Harness 先定义并实现自己的消息、`StreamChunk`、模型适配器、重试、工具执行和持久会话契约。
 5. 以后若有具体能力通过语义验收，可以新增独立、可选的 Spring AI 适配模块；该模块只能实现 Harness seam，不能让 `ChatClient`、`ToolCallingAdvisor`、Spring AI retry 或 Spring AI message 类型成为 Harness 核心契约。
 6. 当前核对未发现必须修改 `fibra-core` 状态机或服务语义的问题。Spring 接入所需能力属于 Harness 宿主适配层；`Fibra.ready()`、线程边界和原始服务引用的精确语义必须在使用前被明确遵守。
@@ -62,7 +62,7 @@ harness-provider-deepseek        -> harness-api + 选定的直接 HTTP/SSE 实�
 harness-adapter-spring-ai        -> harness-api + Spring AI（未来可选，首版不存在）
 ```
 
-`harness-api` 的跨插件类型由宿主 ClassLoader 提供，插件以 `provided` 方式编译且不得把这些类型打入插件 JAR。Spring、Spring AI、Spring Data 或宿主实现类不得出现在跨 ClassLoader 的公共服务签名中。
+`harness-api` 的跨插件类型由宿主 ClassLoader 提供，插件以 `provided` 方式编译且不得把这些类型打入插件私有 `lib/`。Spring、Spring AI、Spring Data 或宿主实现类不得出现在跨 ClassLoader 的公共服务签名中。
 
 ## 3. 两个容器的唯一边界
 
@@ -94,7 +94,7 @@ gj.spring.pf4j 的刷新前、刷新后、关闭前三阶段以及关闭时逆�
 
 ### 4.2 依赖解析与就绪
 
-服务选择键是服务名对应的 isolate token；`Class<T>` 负责声明类型身份与读取校验，不执行 Spring 式按类型候选选择。相同服务名只能在不同 isolate token 下共存；当前 PF4J loader 也不支持同一 `Plugin-Id` 的多个版本同时运行。因此“同接口 v1/v2 默认并存”不是现有能力。
+服务选择键是服务名对应的 isolate token；`Class<T>` 负责声明类型身份与读取校验，不执行 Spring 式按类型候选选择。相同服务名只能在不同 isolate token 下共存；当前 PF4J loader 也不支持同一 `plugin.id` 的多个版本同时运行。因此“同接口 v1/v2 默认并存”不是现有能力。
 
 `BoundService.value()` 每次调用都会重新解析当前 ACTIVE provider，但调用者保存它返回的原始对象后，该对象不会自动更新。动态服务调用默认使用 `BoundService.invoke`，不得跨调用缓存返回的 provider 实例。
 
@@ -130,10 +130,10 @@ Spring Boot 先停止接收新请求并等待在途请求
 
 core 在最后一个同名 binding 撤销后删除保存的动态 `Class<?>`；loader 在 Fibra dispose 后移除入口引用，再由 PF4J unload 关闭 ClassLoader。该顺序具备回收前提，但不能控制宿主或第三方库保存的外部强引用。
 
-Spring Boot 可执行 JAR 的 Launcher 创建能读取 `BOOT-INF/classes` 与 `BOOT-INF/lib` 的应用 ClassLoader；当前 PF4J ClassLoader 以装载 `FibraJarPluginLoader` 的应用 ClassLoader 为 parent，不应改用 `ClassLoader.getSystemClassLoader()`。Java Harness 发布前必须增加“Spring Boot 可执行 JAR + 外部多插件 + reload/unload”的黑盒测试，并验证：
+Spring Boot 可执行 JAR 的 Launcher 创建能读取 `BOOT-INF/classes` 与 `BOOT-INF/lib` 的应用 ClassLoader；PF4J ClassLoader 以装载 `FibraPluginLoader` 的应用 ClassLoader 为 parent，不应改用 `ClassLoader.getSystemClassLoader()`。Java Harness 发布前必须增加“Spring Boot 可执行 JAR + 外部标准插件包 + apply/unload”的黑盒测试，并验证：
 
 - 插件能从宿主读取 Fibra 与 Harness 公共契约；
-- 插件 JAR 不包含宿主共享 API、Spring 或 Spring AI 的副本；
+- 插件私有 `lib/` 不包含宿主共享 API、Spring 或 Spring AI 的副本；
 - unload 后 Fibra、loader、宿主注册表、缓存与 ThreadLocal 均不再持有插件实例或类；
 - 新版本以新的 ClassLoader 身份重新注册同名插件服务成功。
 
@@ -192,6 +192,6 @@ Java DeepSeek Harness 第一阶段按顺序完成：
 
 1. 定义框架中立的 Harness LLM/message/chunk/tool/session API，并以原项目测试与日志格式验收；
 2. 建立 Spring Boot 宿主和 Fibra `SmartLifecycle`/readiness 适配，验证静态 Spring 服务到 root `ServiceKey` 的桥接；
-3. 建立 Spring Boot 可执行 JAR 的多插件、关闭、reload 与 ClassLoader 黑盒测试；
+3. 建立 Spring Boot 可执行 JAR 的多插件、关闭、批量 apply 与 ClassLoader 黑盒测试；
 4. 实现直接 DeepSeek adapter，证明 tool delta、reasoning、usage、finish、错误、取消和单次尝试语义；
 5. 只有前四项稳定后，才评估独立 `harness-adapter-spring-ai`，不得提前把 Spring AI 类型写入核心 API。

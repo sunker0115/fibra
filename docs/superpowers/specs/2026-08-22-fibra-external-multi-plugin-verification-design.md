@@ -1,91 +1,70 @@
-# Fibra 仓库外五制品验收设计
+# Fibra 仓库外多插件与用户模板验收设计
 
-日期：2026-08-23
-状态：`0.2.0` 当前实现契约
+本文定义 `verification/external-consumer` 在 0.3.0 的唯一职责：它同时是用户可复制的独立插件工程模板和 `scripts/verify-external-consumer.sh` 实际构建的黑盒输入。不得另建一份 Maven Archetype 或未被同一脚本持续验收的脚手架。
 
-> 本文当前验收形态对应 `v0.2.0` 直接 JAR。`0.3.0` 将按[插件制品与事务更新设计](./2026-08-23-fibra-plugin-package-transaction-design.md)改为 contract-only、provider、consumer 三个标准 ZIP包；形式化变更见 [`standardize-plugin-packages`](../../../openspec/changes/standardize-plugin-packages/)。实现完成时本文整体重写，不保留旧 JAR验收分支。
+## 1. 隔离边界
 
-## 1. 目标
+独立工程不加入 Fibra reactor、不继承 Fibra parent、不引用 Fibra 源码、工作树 `target/classes`、`systemPath` 或符号链接。构建只通过五个公开 Maven 坐标消费 Fibra。脚本先把当前工作树的五个生产制品部署到临时文件仓库，再从另一个空本地仓库构建模板；解析后的主 JAR 和 POM 必须逐字节等于临时远端制品，并带 Maven 来源追踪记录。
 
-`verification/external-consumer` 是不属于 Fibra reactor、也不继承 Fibra parent 的独立 Maven 工程。它必须只通过临时 Maven 仓库中的五个正式坐标证明：
-
-1. 普通 Java 应用可直接消费 `fibra-core`；
-2. 两个瘦插件可通过 `fibra-pf4j-api` 编译，并由 PF4J 依赖 ClassLoader 共享 provider 契约；
-3. 独立 host 可只依赖 `fibra-loader-config`，从真实 YAML 创建同制品多实例，完成配置更新和失败回滚。
-
-## 2. 关系图
-
-```mermaid
-flowchart LR
-    CORE_APP["core-app"] -->|Maven| CORE["fibra-core"]
-
-    PROVIDER["provider-plugin<br/>拥有 Greeting"]
-    CONSUMER["consumer-plugin<br/>调用 Greeting"]
-    HOST["host<br/>不含插件类"]
-
-    PROVIDER -->|provided| PF4J_API["fibra-pf4j-api"]
-    CONSUMER -->|provided| PF4J_API
-    CONSUMER -->|provided 编译契约| PROVIDER
-    CONSUMER -. "Plugin-Dependencies" .-> PROVIDER
-
-    HOST -->|Maven| CONFIG["fibra-loader-config"]
-    CONFIG --> PF4J_LOADER["fibra-loader-pf4j"]
-    HOST -. "插件目录" .-> PROVIDER
-    HOST -. "插件目录" .-> CONSUMER
-    HOST -. "fibra.yaml" .-> CONFIG
-```
-
-实线是 Maven 依赖；`Plugin-Dependencies` 点线是运行时 ClassLoader 依赖；Host 与插件之间只有目录装载关系。Host POM、编译 classpath 和 shaded JAR 都不得包含 provider、consumer 或 `Greeting`。
-
-## 3. 独立工程
+模板固定为五个模块：
 
 ```text
-verification/external-consumer/
-├── pom.xml
-├── settings.xml
-├── core-app/
-├── provider-plugin/
-├── consumer-plugin/
-└── host/
+core-app                         普通 Java 坐标消费，不参与插件链
+
+contract-plugin                 contract-only，拥有 Greeting
+       ↑                 ↑
+       │ PF4J 二进制依赖  │ PF4J 二进制依赖
+provider-plugin          consumer-plugin
+       │                 │
+       └── Fibra 服务 ───┘
+
+host                            开发验收宿主，只依赖 fibra-loader-config
 ```
 
-依赖固定为：
+`provider`、`consumer` 是本示例的业务角色，不是 Fibra 通用插件类别。PF4J 图只包含两条到 contract 的二进制依赖；consumer 不二进制依赖 provider。配置树用 `inject` 与 isolate 表达 consumer 等待哪个 provider 服务，因此二进制图与服务图保持正交。
 
-```text
-core-app -> fibra-core
-provider-plugin -> fibra-pf4j-api + PF4J（provided）
-consumer-plugin -> provider-plugin + fibra-pf4j-api + PF4J（provided）
-host -> fibra-loader-config + slf4j-simple（runtime）
-```
+## 2. 模板可用性
 
-外部根 POM 用不可解析的版本哨兵；唯一验证脚本从 Fibra 根 POM 读取 `revision` 与统一依赖/插件版本，通过 `-D` 传入复制到临时目录的工程。模板不得直接执行 Maven，也不得引用 Fibra 工作树路径、`target/classes`、`systemPath` 或用户本地 Fibra 制品。
+根 POM 必须给出可解析形态的真实默认值，不得保留 `REQUIRED_BY_VERIFY_SCRIPT` 等哨兵。0.3.0 发布后，用户在模板根执行 `mvn verify` 即生成标准 ZIP；开发期仓库脚本只在临时副本上以 `-D` 覆盖 `fibra.version`、临时仓库 URL 和与根 POM 统一的工具版本，不改模板源文件。
 
-## 4. 插件与配置
+README 必须明确区分：
 
-Provider 拥有 `Greeting` 接口和 `ServiceKey<Greeting>`，入口实现 `FibraPluginEntrypoint<String>`。字符串 config 是 greeting 返回值；值为 `fail` 时启动失败。Provider descriptor 声明提供 Greeting，服务注册在 entry Context。
+- 最小 executable：单插件模块、唯一入口、properties 与 assembly；
+- 可选 contract-only：仅在跨插件共享类型或独立版本演进时需要；
+- 可选 consumer：展示多插件依赖和 Fibra 服务等待；
+- 开发 Host/core-app：用于验证，不是插件发布物。
 
-Consumer 真实导入 provider 的 `Greeting` 并调用它，再在自身 entry Context 注册字符串结果。Consumer JAR 不含 `Greeting.class`，Manifest 精确声明 `Plugin-Dependencies: external-provider-plugin`。
+## 3. 标准包与 ClassLoader 门禁
 
-脚本生成的 YAML 顺序固定为 `consumer-one/provider-one/consumer-two/provider-two`。两个 consumer 用 name-only `inject` 声明 Greeting，因此 provider 尚未到位时先稳定为 `PENDING`；provider mount 后自动收敛为 `ACTIVE`。每对 entry 对 Greeting 和 consumer 结果使用同一标签 isolate，不同对使用不同标签，证明两个 provider 实例互不串线。
+contract/provider/consumer 都生成 v1、v2 标准 ZIP。每份 ZIP 必须只有一个 `plugin.id` 顶层目录，包含根 `plugin.properties`、`lib/<id>-<version>.jar` 和可选私有依赖；不得用直接 JAR 或 Manifest 提供插件身份。
 
-## 5. Host 验收顺序
+脚本逐包检查：
 
-1. `loadArtifacts()` 后 artifact 集合恰好为 provider 与 consumer；
-2. `config.load()` 后四个 entry 全部 `ACTIVE`，结果分别是 `consumer->provider-one`、`consumer->provider-two`；
-3. 保存 `provider-one` uid，程序化 update 其 config 为 `provider-one-updated`；结果随服务重载更新，uid 保持不变；
-4. 保存 snapshot 对象和 YAML 字节，程序化 update `provider-two` 为 `fail`；必须得到 `APPLY`，snapshot 对象与 YAML 字节不变；
-5. 失败后两个 consumer 仍分别返回最后成功值，artifact 集合不变；
-6. 全部资源按 config loader、PF4J loader、root 的顺序关闭，最后输出 `EXTERNAL_CONFIG_LOADER_CONSUMER_OK`。
+1. 根目录、ID、版本和固定主 JAR 命名一致；
+2. contract 主 JAR 只拥有 `Greeting` 且没有入口索引；
+3. provider/consumer 主 JAR 各自只有自身入口索引，不复制 `Greeting`；
+4. 三份主 JAR 不内嵌 Fibra、PF4J、Reactive Streams、Reactor 或 SLF4J；
+5. provider/consumer 的 properties 只声明 compatible contract 范围，不声明彼此依赖；
+6. provider 的 `lib/` 携带 Commons Text 私有依赖，consumer 包不携带，并在 consumer 入口内实际确认该类不可见；
+7. Host shaded JAR 不包含 contract/provider/consumer 类型。
 
-## 6. 防假通过与发布边界
+provider 与 consumer 都能调用 `Greeting` 本身即证明它们从 contract dependency ClassLoader 得到同一个接口类型；若各自复制 contract，服务读取会在真实进程暴露类型不等或链接错误。
 
-脚本必须：
+## 4. 运行验收
 
-- 使用空用户/全局 settings、独立 producer/consumer 本地仓库和临时 file remote；
-- 临时远端只出现 `fibra-api`、`fibra-core`、`fibra-pf4j-api`、`fibra-loader-pf4j`、`fibra-loader-config`；
-- 每个坐标都具有 POM、主 JAR、sources JAR、Javadoc JAR；外部解析的主 JAR/POM 与临时远端逐字节相同且来源记录正确；
-- provider/consumer 都是瘦 JAR，各自只有唯一入口和扩展索引；consumer 与 Host 不含 `Greeting.class`；
-- 用独立 `java -jar` 进程运行 core-app 和 Host，不使用 Maven exec 或 Fibra 工作树 classpath；
-- 只有两个成功标记都出现才通过。
+脚本把三份 v1 ZIP 解压为已安装目录，复制模板自己的 YAML，再启动独立 Host JAR。YAML 按 consumer-first 顺序声明两个 provider、两个 consumer，分别使用 isolate `one/two`；验收覆盖：
 
-该门禁只证明当前工作树生成的五个制品可被仓库外 Java 21 Maven 工程消费，不表示制品已发布到公共仓库。权威顺序固定为：`mvn clean verify`、可复现构建比较、仓库外五制品验收。
+- consumer 在 provider 到位前稳定等待，最终四个 entry 全部 `ACTIVE`；
+- 两组服务不串线；
+- config-only 更新保持 provider Fibra uid；
+- 失败配置更新保持上一 snapshot 对象、配置文件字节和服务值；
+- consumer 运行时看不到 provider 私有 Commons Text；
+- Host 用一次 `applyArtifacts(List.of(contractV2, providerV2, consumerV2))` 完成关联升级；
+- v1 的 contract 范围与 v2 不兼容，只有三候选共同提交后的 prospective 图有效；
+- 更新后四个 entry 用新 ClassLoader 重建，服务值保持，三个安装目录版本均为 `2.0.0`。
+
+只有普通 core 进程输出 `EXTERNAL_CORE_CONSUMER_OK`，插件 Host 输出 `EXTERNAL_CONFIG_LOADER_CONSUMER_OK`，且所有静态包检查通过，脚本才输出最终成功标记。
+
+## 5. 结论边界
+
+该门禁证明当前五个生产制品能被另一个 Java 21 Maven 工程仅通过坐标消费，并能以标准 ZIP 运行完整多插件图。它不表示坐标已经发布到 Maven Central，不验证恶意插件隔离，也不替代全 reactor 测试和可复现构建。首次使用空 Maven 仓库下载第三方依赖需要网络；CI 顺序固定为全量 `clean verify`、可复现比较、仓库外脚本。

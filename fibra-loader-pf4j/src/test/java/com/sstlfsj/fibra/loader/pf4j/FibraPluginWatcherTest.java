@@ -46,9 +46,10 @@ class FibraPluginWatcherTest {
             publish(third, incoming.resolve("fixture-3.0.0.zip"));
 
             await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-                assertEquals("3.0.0", version(plugins.resolve("fixture")));
+                assertEquals("3.0.0", loader.currentPluginVersion("fixture"));
                 assertEquals("replacement", root.get(VALUE));
             });
+            assertEquals("3.0.0", version(plugins.resolve("fixture")));
             assertEquals(java.util.List.of("replacement:start"),
                 PluginLifecycleRecorder.EVENTS);
             assertTrue(watcher.lastFailure().isEmpty());
@@ -93,7 +94,8 @@ class FibraPluginWatcherTest {
             holder.join();
 
             await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
-                assertEquals("2.0.0", version(plugins.resolve("fixture"))));
+                assertEquals("2.0.0", loader.currentPluginVersion("fixture")));
+            assertEquals("2.0.0", version(plugins.resolve("fixture")));
         } finally {
             release.countDown();
         }

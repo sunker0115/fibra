@@ -4,11 +4,11 @@ import com.sstlfsj.fibra.Disposables;
 import com.sstlfsj.fibra.Plugin;
 import com.sstlfsj.fibra.ServiceKey;
 import com.sstlfsj.fibra.pf4j.VoidFibraPluginEntrypoint;
-import example.fibra.provider.api.Greeting;
+import example.fibra.contract.Greeting;
 import org.pf4j.Extension;
 import reactor.core.publisher.Mono;
 
-/** 通过 PF4J 依赖 ClassLoader 消费 provider 私有服务契约。 */
+/** 通过 PF4J 依赖 ClassLoader 消费独立 contract 服务契约。 */
 @Extension
 public final class ConsumerEntrypoint implements VoidFibraPluginEntrypoint {
     private static final ServiceKey<String> RESULT =

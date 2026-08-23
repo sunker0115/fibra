@@ -4,7 +4,8 @@ import com.sstlfsj.fibra.Plugin;
 import com.sstlfsj.fibra.PluginDescriptor;
 import com.sstlfsj.fibra.ServiceKey;
 import com.sstlfsj.fibra.pf4j.FibraPluginEntrypoint;
-import external.consumer.provider.api.Greeting;
+import external.consumer.contract.Greeting;
+import org.apache.commons.text.StringEscapeUtils;
 import org.pf4j.Extension;
 import reactor.core.publisher.Mono;
 
@@ -26,7 +27,8 @@ public final class ExternalProviderEntrypoint implements FibraPluginEntrypoint<S
             if ("fail".equals(config)) {
                 return Mono.error(new IllegalStateException("configured provider failure"));
             }
-            return Mono.just(context.provide(Greeting.KEY, () -> config));
+            return Mono.just(context.provide(Greeting.KEY,
+                () -> StringEscapeUtils.escapeJava(config)));
         };
     }
 }

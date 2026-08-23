@@ -1,26 +1,41 @@
-# Fibra 配置驱动宿主示例
+# Fibra 标准插件包与配置驱动宿主示例
 
-本示例在 Fibra 的生产制品中只直接依赖 `fibra-loader-config`，通过 [`config/fibra.yaml`](config/fibra.yaml) 创建真实 provider 和 consumer 插件实例。consumer 在配置中声明 `example.provider.greeting` 依赖，因此即使配置顺序位于 provider 之前，也会先保持 `PENDING`，等 provider 提供服务后再进入 `ACTIVE`。
+本示例只把 `fibra-loader-config` 放入宿主 classpath。`Greeting` 契约、provider 和 consumer 分别打成三个标准 ZIP，Host 不编译也不加载它们的类；PF4J 图负责共享 contract 二进制类型，Fibra 配置图负责 consumer 等待 provider 服务，两张图不合并。
 
-先在仓库根目录执行：
+三个包的关系如下：
 
-```bash
-mvn clean verify
+```text
+fibra-example-contract       contract-only，只拥有 Greeting 类型
+          ↑             ↑
+          │ PF4J        │ PF4J
+          │ 二进制依赖   │ 二进制依赖
+provider executable     consumer executable
+          │             │
+          └── Fibra 服务 ┘
 ```
 
-该命令会构建宿主可执行 JAR，并把四个验收插件制品放入 `fibra-example-host/target/plugin-artifacts`。运行示例时，插件目录必须只安装 provider v1 和 consumer v1；provider v2 作为更新候选保留在目录外：
+在仓库根目录执行：
+
+```bash
+mvn -pl fibra-example-host -am verify
+```
+
+命令会生成 contract/provider/consumer 的 v1、v2 标准 ZIP，并运行真实独立进程。该进程先用一次 `applyArtifacts` 安装三份 v1 包，根据 [`config/fibra.yaml`](config/fibra.yaml) 创建 provider/consumer entry，再用一次三候选批量事务升级到 v2。验收还会提交一个启动失败的 provider v3，确认磁盘、PF4J 图、Fibra entry 和服务值全部恢复到 v2。
+
+手工运行时传入空安装目录、配置文件、三份 v1 ZIP 和三份 v2 ZIP：
 
 ```bash
 example_work="$(mktemp -d)"
 mkdir "$example_work/plugins"
-cp fibra-example-host/target/plugin-artifacts/fibra-example-provider-v1.jar \
-  "$example_work/plugins/fibra-example-provider.jar"
-cp fibra-example-host/target/plugin-artifacts/fibra-example-consumer-v1.jar \
-  "$example_work/plugins/fibra-example-consumer.jar"
 java -jar fibra-example-host/target/fibra-example-host-all.jar \
   "$example_work/plugins" \
   fibra-example-host/config/fibra.yaml \
-  fibra-example-host/target/plugin-artifacts/fibra-example-provider-v2.jar
+  fibra-example-contract-plugin/target/fibra-example-contract-1.0.0.zip \
+  fibra-example-provider-plugin/target/fibra-example-provider-1.0.0.zip \
+  fibra-example-consumer-plugin/target/fibra-example-consumer-1.0.0.zip \
+  fibra-example-contract-plugin/target/fibra-example-contract-2.0.0.zip \
+  fibra-example-provider-plugin/target/fibra-example-provider-2.0.0.zip \
+  fibra-example-consumer-plugin/target/fibra-example-consumer-2.0.0.zip
 ```
 
-进程先从 YAML 装载 v1 插件树，再把 provider 原子更新到 v2。成功日志必须同时出现 `consumer->provider-1.0.0` 和 `consumer->provider-2.0.0`。
+成功日志必须依次包含 `consumer->provider-1.0.0` 和 `consumer->provider-2.0.0`，最终安装目录中的三个 `plugin.properties` 版本都必须是 `2.0.0`。

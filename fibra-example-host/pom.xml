@@ -25,6 +25,11 @@
     </dependency>
     <dependency>
       <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-example-contract-plugin</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
       <artifactId>fibra-example-provider-plugin</artifactId>
       <scope>test</scope>
     </dependency>
@@ -57,54 +62,33 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
+        <artifactId>maven-resources-plugin</artifactId>
         <executions>
           <execution>
             <id>copy-example-plugin-artifacts</id>
             <phase>pre-integration-test</phase>
             <goals>
-              <goal>copy</goal>
+              <goal>copy-resources</goal>
             </goals>
             <configuration>
-              <overWriteIfNewer>true</overWriteIfNewer>
-              <overWriteReleases>true</overWriteReleases>
-              <overWriteSnapshots>true</overWriteSnapshots>
-              <artifactItems>
-                <artifactItem>
-                  <groupId>com.sstlfsj</groupId>
-                  <artifactId>fibra-example-provider-plugin</artifactId>
-                  <version>${project.version}</version>
-                  <type>jar</type>
-                  <outputDirectory>${project.build.directory}/plugin-artifacts</outputDirectory>
-                  <destFileName>fibra-example-provider-v1.jar</destFileName>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>com.sstlfsj</groupId>
-                  <artifactId>fibra-example-provider-plugin</artifactId>
-                  <version>${project.version}</version>
-                  <classifier>v2</classifier>
-                  <type>jar</type>
-                  <outputDirectory>${project.build.directory}/plugin-artifacts</outputDirectory>
-                  <destFileName>fibra-example-provider-v2.jar</destFileName>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>com.sstlfsj</groupId>
-                  <artifactId>fibra-example-provider-plugin</artifactId>
-                  <version>${project.version}</version>
-                  <classifier>broken</classifier>
-                  <type>jar</type>
-                  <outputDirectory>${project.build.directory}/plugin-artifacts</outputDirectory>
-                  <destFileName>fibra-example-provider-broken.jar</destFileName>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>com.sstlfsj</groupId>
-                  <artifactId>fibra-example-consumer-plugin</artifactId>
-                  <version>${project.version}</version>
-                  <type>jar</type>
-                  <outputDirectory>${project.build.directory}/plugin-artifacts</outputDirectory>
-                  <destFileName>fibra-example-consumer-v1.jar</destFileName>
-                </artifactItem>
-              </artifactItems>
+              <outputDirectory>${project.build.directory}/plugin-artifacts</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${maven.multiModuleProjectDirectory}/fibra-example-contract-plugin/target</directory>
+                  <includes><include>fibra-example-contract-*.zip</include></includes>
+                  <filtering>false</filtering>
+                </resource>
+                <resource>
+                  <directory>${maven.multiModuleProjectDirectory}/fibra-example-provider-plugin/target</directory>
+                  <includes><include>fibra-example-provider-*.zip</include></includes>
+                  <filtering>false</filtering>
+                </resource>
+                <resource>
+                  <directory>${maven.multiModuleProjectDirectory}/fibra-example-consumer-plugin/target</directory>
+                  <includes><include>fibra-example-consumer-*.zip</include></includes>
+                  <filtering>false</filtering>
+                </resource>
+              </resources>
             </configuration>
           </execution>
         </executions>
@@ -116,6 +100,7 @@
           <classpathDependencyExcludes>
             <classpathDependencyExclude>com.sstlfsj:fibra-example-provider-plugin</classpathDependencyExclude>
             <classpathDependencyExclude>com.sstlfsj:fibra-example-consumer-plugin</classpathDependencyExclude>
+            <classpathDependencyExclude>com.sstlfsj:fibra-example-contract-plugin</classpathDependencyExclude>
           </classpathDependencyExcludes>
           <systemPropertyVariables>
             <fibra.example.artifacts>${project.build.directory}/plugin-artifacts</fibra.example.artifacts>

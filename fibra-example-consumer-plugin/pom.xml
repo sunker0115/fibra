@@ -11,12 +11,17 @@
   </parent>
 
   <artifactId>fibra-example-consumer-plugin</artifactId>
-  <description>依赖真实 provider 制品的 Fibra PF4J consumer 示例插件。</description>
+  <description>只依赖独立 contract 的 Fibra PF4J consumer 示例插件。</description>
+
+  <properties>
+    <plugin.id>fibra-example-consumer</plugin.id>
+    <plugin.version>${fibra-example-consumer-v1.version}</plugin.version>
+  </properties>
 
   <dependencies>
     <dependency>
       <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-example-provider-plugin</artifactId>
+      <artifactId>fibra-example-contract-plugin</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -53,13 +58,48 @@
         <configuration>
           <archive>
             <manifestEntries>
-              <Plugin-Id>fibra-example-consumer</Plugin-Id>
-              <Plugin-Version>${fibra-example-consumer.version}</Plugin-Version>
-              <Implementation-Version>${fibra-example-consumer.version}</Implementation-Version>
-              <Plugin-Dependencies>fibra-example-provider</Plugin-Dependencies>
+              <Implementation-Version>${fibra-example-consumer-v1.version}</Implementation-Version>
             </manifestEntries>
           </archive>
         </configuration>
+        <executions>
+          <execution>
+            <id>v2-jar</id>
+            <phase>package</phase>
+            <goals><goal>jar</goal></goals>
+            <configuration>
+              <classifier>v2</classifier>
+              <archive><manifestEntries><Implementation-Version>${fibra-example-consumer-v2.version}</Implementation-Version></manifestEntries></archive>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration><attach>false</attach></configuration>
+        <executions>
+          <execution>
+            <id>v1-package</id>
+            <phase>package</phase>
+            <goals><goal>single</goal></goals>
+            <configuration>
+              <descriptors><descriptor>${maven.multiModuleProjectDirectory}/build/plugin-package-assembly.xml</descriptor></descriptors>
+              <finalName>${plugin.id}-${plugin.version}</finalName>
+              <appendAssemblyId>false</appendAssemblyId>
+            </configuration>
+          </execution>
+          <execution>
+            <id>v2-package</id>
+            <phase>package</phase>
+            <goals><goal>single</goal></goals>
+            <configuration>
+              <descriptors><descriptor>src/assembly/plugin-v2.xml</descriptor></descriptors>
+              <finalName>${plugin.id}-${fibra-example-consumer-v2.version}</finalName>
+              <appendAssemblyId>false</appendAssemblyId>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

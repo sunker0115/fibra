@@ -27,6 +27,7 @@ class ReleaseArtifactBaselineTest {
         "fibra-loader-config"
     );
     private static final List<String> VERIFICATION_MODULES = List.of(
+        "fibra-example-contract-plugin",
         "fibra-example-provider-plugin",
         "fibra-example-consumer-plugin",
         "fibra-example-host",
@@ -34,6 +35,7 @@ class ReleaseArtifactBaselineTest {
     );
     private static final List<String> EXTERNAL_CONSUMER_MODULES = List.of(
         "core-app",
+        "contract-plugin",
         "provider-plugin",
         "consumer-plugin",
         "host"
@@ -95,7 +97,7 @@ class ReleaseArtifactBaselineTest {
         assertNotNull(fixtureModules, "外部消费方根 POM 缺少 modules");
         assertEquals(EXTERNAL_CONSUMER_MODULES,
             childTexts(fixtureModules, "module"),
-            "外部消费方必须分别验证内核、provider、consumer 和宿主装载");
+            "外部消费方必须分别验证内核、contract、provider、consumer 和宿主装载");
 
         var fixtureContent = Files.readString(fixturePom);
         assertFalse(fixtureContent.contains("${revision}"),
@@ -113,16 +115,24 @@ class ReleaseArtifactBaselineTest {
                 module + " 不得继承 Fibra parent");
         }
 
-        assertEquals(List.of("fibra-pf4j-api:provided", "pf4j:provided"),
-            dependencies(fixtureDirectory.resolve("provider-plugin").resolve("pom.xml")),
-            "provider 只能通过 provided scope 使用 Fibra PF4J API 和 PF4J");
+        assertEquals(List.of("fibra-api:provided"),
+            dependencies(fixtureDirectory.resolve("contract-plugin").resolve("pom.xml")),
+            "contract 只能通过 provided scope 使用 Fibra API");
         assertEquals(List.of(
-                "external-provider-plugin:provided",
+                "external-contract-plugin:provided",
+                "fibra-pf4j-api:provided",
+                "pf4j:provided",
+                "commons-text:compile"
+            ),
+            dependencies(fixtureDirectory.resolve("provider-plugin").resolve("pom.xml")),
+            "provider 必须依赖 contract，并只把 Commons Text 作为私有运行时依赖");
+        assertEquals(List.of(
+                "external-contract-plugin:provided",
                 "fibra-pf4j-api:provided",
                 "pf4j:provided"
             ),
             dependencies(fixtureDirectory.resolve("consumer-plugin").resolve("pom.xml")),
-            "consumer 必须以 provided scope 使用 provider、Fibra PF4J API 和 PF4J");
+            "consumer 必须以 provided scope 使用 contract、Fibra PF4J API 和 PF4J");
         assertEquals(List.of("fibra-loader-config:compile", "slf4j-simple:runtime"),
             dependencies(fixtureDirectory.resolve("host").resolve("pom.xml")),
             "Host 不得声明 provider 或 consumer Maven 依赖");

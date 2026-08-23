@@ -1,112 +1,103 @@
 # Fibra PF4J 装载架构
 
-日期：2026-08-22
-状态：`0.2.0` 当前实现契约
-
-> `0.3.0` 开发分支不再以本文作为实现目标。目录插件包、contract-only、完整图预检、批量事务和崩溃恢复的唯一目标设计见[插件制品与事务更新设计](./2026-08-23-fibra-plugin-package-transaction-design.md)，形式化行为见 [`standardize-plugin-packages`](../../../openspec/changes/standardize-plugin-packages/)。本文只用于准确说明 `v0.2.0` 已发布行为；`0.3.0` 实现完成时将整体重写，不保留直接 JAR语义。
+本文是 `fibra-loader-pf4j` 0.3.0 的当前实现契约。格式、事务状态机和逐项不变量的完整定义见[插件制品与事务更新设计](./2026-08-23-fibra-plugin-package-transaction-design.md)；本文只说明生产代码边界和使用路径，不维护第二套不同语义。
 
 ## 1. 边界
 
-PF4J 3.15.0 只负责 properties 描述、版本约束、制品依赖图、扩展索引和每制品 ClassLoader。Fibra 是唯一的服务、事件、effect、配置和业务生命周期运行时。
+PF4J 层只管理可信进程内插件的二进制制品、依赖图和 ClassLoader；Fibra Core 仍是业务插件生命周期、服务、事件和 effect 的唯一运行时。禁止 PF4J `Plugin-Class`，不创建 PF4J 业务生命周期，也不创建 Spring 子容器。
 
 ```text
-fibra-loader-config -> fibra-loader-pf4j -> fibra-core -> fibra-api
-                    -> fibra-pf4j-api ----^
-fibra-loader-pf4j   -> PF4J
+标准 ZIP候选 ──预检/事务──> plugins/<plugin-id>/
+                                      │
+                           PF4J 依赖图与 ClassLoader
+                                      │ FibraPluginEntrypoint
+                                      ▼
+                           Fibra entry 与服务依赖图
 ```
 
-`fibra-core` 不感知 PF4J，PF4J 类型不进入 `fibra-api`。当前只有 PF4J 一个制品装载实现，因此不增加通用 loader SPI。
+`pluginId` 标识一个已安装制品、PF4J 依赖节点和 ClassLoader；`entryId` 标识一个由 executable 创建的 Fibra 运行实例。一个 `pluginId` 可以创建多个 `entryId`。PF4J `plugin.dependencies` 只描述二进制类型可见性，Fibra `require`/配置 `inject` 只描述服务就绪，两张图不互相推导。
 
-## 2. 身份与入口
+## 2. 标准包
 
-`pluginId` 来自 Manifest `Plugin-Id`，标识 JAR 制品、ClassLoader 和 PF4J 依赖节点。`entryId` 标识一棵运行配置树中的 Fibra 实例。一个 `pluginId` 可以同时创建多个 `entryId`；停止、卸载或更新制品必须处理它的全部 entry 及传递依赖方 entry。
+安装态固定为：
 
-每个 JAR 必须提供且只提供一个工厂入口：
+```text
+plugins/
+  <plugin-id>/
+    plugin.properties
+    lib/
+      <plugin-id>-<plugin-version>.jar
+      <private-dependency>.jar
+```
+
+候选 ZIP 必须只有一个同名顶层目录，内部结构与安装态完全相同。ZIP 文件名没有身份语义。`plugin.properties` 只允许：
+
+```properties
+plugin.id=example.consumer
+plugin.version=2.0.0
+plugin.dependencies=example.contract@>=2.0.0 & <3.0.0
+```
+
+另允许 `plugin.description`、`plugin.provider`、`plugin.license`。`plugin.class`、`plugin.requires` 和其他键拒绝。身份和依赖不从主 JAR Manifest 读取；不生成或使用 Manifest `Class-Path`。
+
+主 JAR 自身没有 `META-INF/extensions.idx` 或索引为空时为 contract-only，可以装载、启动并作为 PF4J 依赖，但不能 `configType`/`mount`。executable 的自身索引必须恰好有一个实现 `FibraPluginEntrypoint` 的 public concrete class；缺类、链接失败、错误 ClassLoader 或继承关系错误都在预检期拒绝。
+
+## 3. ClassLoader 与契约
+
+每个插件使用独立 PDA ClassLoader：自身 `lib/*.jar`、显式 PF4J 依赖、宿主。Fibra API/Core、PF4J、Reactive Streams、Reactor 和 SLF4J 强制由父 ClassLoader 提供，包内出现这些类立即拒绝。私有第三方 JAR 只对当前插件可见。
+
+跨插件类型只有三种合法归属：宿主公共 API、独立 contract-only 插件、单个 executable 内部且不跨边界。provider 与 consumer 共享类型时都以 Maven `provided` 依赖独立 contract 模块，并在 `plugin.dependencies` 声明同一 contract 包；consumer 是否等待 provider 服务由 Fibra 配置另行声明。出现同限定名类型不可转换、`ClassCastException`、`LinkageError` 或接口链接失败时，首先检查是否把 contract 复制进多个 `lib/`，不能增加反射桥或兼容 ClassLoader。
+
+## 4. 装载与运行实例
 
 ```java
-public interface FibraPluginEntrypoint<C> extends ExtensionPoint {
-    Class<C> configType();
-    PluginDescriptor<C> descriptor(String entryId);
-    Plugin<C> create(String entryId);
+try (var root = FibraRuntime.create();
+     var loader = new FibraPluginLoader(root, Path.of("plugins"))) {
+    loader.loadArtifacts();
+    loader.applyArtifacts(List.of(Path.of("incoming/plugin-2.0.0.zip")));
+    loader.mount(PluginInstanceSpec.builder("entry-one", "plugin")
+        .parentContext(root)
+        .configFactory(type -> createConfig(type))
+        .build());
 }
 ```
 
-PF4J 的 `ExtensionWrapper` 会缓存一次创建的扩展对象，因此 loader 只使用 PF4J 的扩展类发现结果，不调用会返回缓存实例的扩展对象 API。mount 与 reload remount 都从入口类的无参构造器创建新入口，再调用 `descriptor(entryId)` 和 `create(entryId)`；update 也创建一次性入口，但只读取当前 `configType`，随后更新已有 Fibra，不创建新的 descriptor 或插件回调。不同 entry 和同一 entry 的不同生命周期都不共享可变入口或插件回调。无配置插件实现 `VoidFibraPluginEntrypoint`，其配置类型固定为 `Void.class` 且只接受 `null`。
+构造器先恢复或拒绝未完成事务，再创建活动 PF4J manager。`loadArtifacts()` 只装载已安装目录并校验完整图；候选安装、升级和降级的唯一入口是 `applyArtifacts(List<Path>)`，单包也是长度为 1 的批次。`configType` 临时启动目标及依赖后恢复原启动集合；`mount` 自动启动二进制依赖并创建全新入口；`update/updateWithFactory/unmount` 只操作 entry；`stopArtifact/unloadArtifact` 处理该制品及传递依赖方的全部 entry。
 
-## 3. 制品契约
+`PluginConfigFactory` 只能捕获父 ClassLoader 类型和不可变原始值，不能捕获插件 `Class<?>`、typed config、入口对象或旧 ClassLoader。每次 mount、更新和制品恢复都用当前入口的 `configType` 重新物化；跨版本 schema 不兼容属于 `APPLY` 失败并回滚。
 
-插件根目录必须存在，只扫描直接子级 `.jar`。每个 JAR 必须：
+## 5. 批量事务与崩溃恢复
 
-- 在 Manifest 声明非空 `Plugin-Id` 与 SemVer `Plugin-Version`；制品依赖只使用 PF4J `Plugin-Dependencies`；
-- 不声明 `Plugin-Class`，避免 PF4J 与 Fibra 出现两套业务生命周期；
-- 通过 `@Extension` 和 `META-INF/extensions.idx` 提供唯一入口；
-- 不内嵌 `com.sstlfsj.fibra.*`、`org.pf4j.*`、`org.reactivestreams.*`、`reactor.*`、`org.slf4j.*`；
-- 不使用保留业务包前缀 `com.sstlfsj.fibra`。
+`applyArtifacts` 在任何运行态拆除前完成所有候选解压、结构/共享类/摘要/入口校验，以及候选替换后的完整 prospective 图解析。缺失必需依赖、必需或 optional 版本范围不匹配、循环、重复候选 ID、同版本不同 SHA-256 都直接拒绝；相关 contract/provider/consumer 可以在同一批次中共同升级。
 
-插件间共享契约归 provider 制品所有。consumer 以 Maven `provided` scope 编译，并通过 `Plugin-Dependencies` 从 provider ClassLoader 获取同一个类型；不得复制 provider 契约到 consumer 或 host。
-
-批量 `loadArtifacts()` 先加入全部 JAR，再统一解析依赖；任何装载或解析失败都回滚本批次。PF4J 默认的 best-effort 批量方法不作为 Fibra 公开语义。
-
-## 4. 运行实例 API
-
-`PluginInstanceSpec` 固定包含 `entryId`、`pluginId`、`parentContext`、`PluginConfigFactory` 和 name-only requirements，并由 builder 构造。工厂接收当前入口返回的 `configType`，必须为每次 mount、update 和 JAR reload 恢复生成属于当前插件 ClassLoader 的配置对象。`config(Object)` 只适用于 `null` 或由宿主/父 ClassLoader 定义的共享配置类型；插件私有配置类型必须使用 `configFactory(...)`，否则 loader 在首次 mount 时直接拒绝，不能把旧 ClassLoader 对象带入 reload。
+持久时序固定为：
 
 ```text
-loadArtifacts/loadArtifact/reloadArtifact  制品装载和替换
-configType                                 读取插件 ClassLoader 中的配置类型
-mount/update/unmount                       entry 运行实例操作
-stopArtifact/unloadArtifact                制品及其依赖方运行实例操作
-artifactIds/entryIds/fibra                 状态查询
-runExclusive                              跨配置与 JAR 更新的事务协调
+PREPARED -> INSTALLING -> APPLYING -> COMMITTED -> 清理
+             │              │
+             └────失败───────┴──> 反向恢复旧图
 ```
 
-`configType(pluginId)` 可以在制品未启动时读取入口类型：loader 临时启动目标及其依赖，创建一次性入口，随后只停止本次调用新启动且没有运行 entry 的制品，不留下隐藏的 `STARTED` 状态。`mount` 自动启动目标制品及其 PF4J 依赖，再创建指定 entry。PF4J `STARTED` 只表示制品可贡献扩展；Fibra 可能因服务依赖缺失稳定在 `PENDING`。PF4J `Plugin-Dependencies` 只表达二进制/ClassLoader 依赖，Fibra `require` 和配置 `inject` 只表达运行时服务就绪，两者不得互相推导。
+`PREPARED` journal 是事务目录的第一个持久动作。无 journal 的预检残留是可删除垃圾；有效 journal 包含每个 ID 的旧/新存在性、规范 SHA-256 和运行态快照。安装按 ID 原子交换目录，正式 apply 先装载/启动新图并重建全部受影响 entry，成功后才写 `COMMITTED`。失败按反向顺序恢复；恢复成功后写 `cleanup.outcome=ROLLBACK` 再清理，使清理期再次崩溃仍可重复完成。摘要无法闭合或回滚失败时构造器以 `ROLLBACK` 拒绝启动并保留诊断目录，不猜测一个图继续运行。
 
-`stopArtifact` 和 `unloadArtifact` 先按依赖方优先、子 entry 优先 dispose 全部受影响 Fibra，再停止/卸载 PF4J 制品并关闭 ClassLoader。`FibraPluginLoader.close()` 执行同一完整清理，不关闭调用者拥有的 root Context。
+受影响集合是 candidate ID 与旧图、新图传递依赖方的并集。拆除顺序 dependent-first，装载与启动顺序 dependency-first；contract ClassLoader 更新会重建所有实际依赖方。
 
-## 5. JAR 更新事务
+## 6. 串行门与 Watcher
 
-`reloadArtifact(candidate)` 要求候选位于插件根目录外。固定过程为：
+制品事务和 config reconcile 共用 `runExclusive` 逻辑事务门。所有者线程可重入；其他线程竞争立即抛 `FibraPluginLoaderBusyException`。门只在短临界区更新所有者/深度/最后成功身份快照，不在跨 Fibra lifecycle 阻塞等待时持有 `Lock` 或 monitor，因此生命周期回调查询 `artifactIds()/entryIds()` 不会形成反向锁序。
 
-1. 校验候选 Manifest、SemVer、共享类和 `Plugin-Id`；
-2. 快照目标制品、传递依赖方及其全部 `PluginInstanceSpec`；快照只保留配置工厂，不保留插件私有 typed config；
-3. 依赖方优先 dispose entry，随后 stop/unload 制品并关闭 ClassLoader；
-4. 在插件根目录内备份旧 JAR并原子安装候选；候选文件本身不移动、不删除；
-5. 重新装载受影响制品并按旧 entry 顺序恢复全部实例；
-6. 任一步失败时卸载新制品、原子恢复旧 JAR、旧 PF4J 状态和全部旧实例；恢复错误按发生顺序加入 suppressed。
+`FibraPluginWatcher` 只监听 incoming 根目录原子创建的 `.zip`，按 `pluginId` 去抖，窗口内选择最高 SemVer，同版本选择更新时间较新的候选；只提交严格高于已安装版本的包。busy 不写入 `lastFailure`，候选保持 dirty 并重试；格式、预检或 apply 失败写入最后失败并记录 SLF4J。Watcher 不自动解析或下载依赖，关联升级必须由调用方显式提交一次批量 `applyArtifacts`。
 
-所有公开管理操作和配置事务共用 loader 级可重入锁。`runExclusive` 只提供闭包式协调，不暴露锁、tryLock、超时或手工事务状态。
+## 7. 错误与关闭
 
-## 6. 候选监听
+`FibraArtifactException` 稳定字段为 `stage()`、`packages()`、`artifactIds()`：
 
-`FibraPluginWatcher` 监听独立 incoming 目录的 `ENTRY_CREATE`。生产方必须在目录外写完候选，再用同文件系统原子 move 发布。
+- `READ`：文件、ZIP 或真实路径读取失败；
+- `VALIDATE`：包协议、摘要、共享类或入口错误；
+- `RESOLVE`：完整依赖图无解；
+- `DISPOSE`：旧运行态拆除失败；
+- `INSTALL`：持久 journal 或目录交换失败；
+- `APPLY`：新图装载、启动、typed config 或 entry 重建失败；
+- `ROLLBACK`：旧磁盘/运行态无法完整恢复，必须停止启动并人工处理。
 
-- 按 `Plugin-Id` 去抖；窗口内选最高 SemVer，同版本选修改时间较新者；
-- 低于当前版本的自动候选忽略；显式 `reloadArtifact` 允许人工降级；
-- watcher 只调用 `reloadArtifact`，不复制事务，也不删除候选；
-- overflow、校验和更新失败通过 SLF4J 与 `lastFailure()` 暴露；
-- `close()` 停止接收新事件，并等待正在执行的更新结束。
-
-## 7. ClassLoader 与服务
-
-默认采用 PF4J PDA 顺序：插件自身、声明的插件依赖、宿主。共享包强制由宿主加载且禁止出现在插件 JAR。ClassLoader 不是安全沙箱，本模块只支持可信的进程内插件。
-
-服务是否对子插件或兄弟插件可见取决于注册 Context 与 isolate token，不取决于 PF4J 依赖。provider 在自身 Context 注册的服务只对自身及其后代可见；需要兄弟 entry 共享时，配置层必须把它们挂在共同父 Context 并使用相同 isolate 标签，或由插件明确在共同父/root 注册且把 disposer 交给自身生命周期。停止实例后 loader 先移除入口引用，再等待 Fibra dispose；core 在最后一个绑定撤销后释放服务名持有的动态类型，之后 PF4J 才能关闭并回收 ClassLoader。
-
-## 8. 开源方案取舍
-
-| 方案 | 可吸收能力 | 不进入当前实现的能力 | 结论 |
-|---|---|---|---|
-| PF4J 3.15.0 | 目录/ClassLoader/依赖/索引读取 | 默认 best-effort 管理语义与 `ExtensionWrapper` 实例缓存 | 直接依赖；外层收紧事务并自行创建一次性入口 |
-| Spring Plugin `312ce6d` | `Supplier` 查询当前 BeanFactory 的动态视图 | 同容器策略 registry | 吸收“不另存运行实例”的查询思想，不引入依赖 |
-| gj.spring.pf4j `44b7174` | 每次启动创建、停止关闭插件 Context，卸载清理插件级缓存 | 每插件 Spring Context、Web/MyBatis/JPA 通用化 | 吸收跨 ClassLoader 重建与资源清理思想 |
-| Hasor | 插件/IoC 的完整方案对照 | 第二套容器和 AOP 体系 | 不采用 |
-| Solon | 框架一体化插件方案对照 | 以 Solon 替代宿主与内核 | 不采用 |
-
-Spring、Hasor、Solon、Spring Plugin 不进入五个生产模块。未来宿主资源桥接必须位于独立适配模块，并把每项资源转换为 Context 所有、可等待撤销的 effect/disposer；不得建立第二套插件生命周期。
-
-## 9. 验收
-
-仓内 `FibraPluginLoaderTest` 与 `FibraPluginWatcherTest` 必须覆盖同制品多 entry、依赖顺序、失败装载、停止/卸载、JAR 更新全部 entry 恢复及失败回滚。`fibra-example-host` 必须通过 `fibra-loader-config` 读取真实 YAML，并用真实 provider/consumer JAR 验证 ClassLoader 依赖、v1 到 v2 更新和 broken JAR 回滚；它不得继续把 `PluginInstanceSpec` 作为宿主推荐接入方式。仓库外五制品验收另见[独立消费设计](./2026-08-22-fibra-external-multi-plugin-verification-design.md)。
-
-当前非目标：非可信插件沙箱、同一 `pluginId` 多版本并存、远程制品仓库、JVMTI 字节码重定义、Spring/Hasor/Solon 宿主集成。
+关闭顺序固定为插件 watcher、config watcher、config loader、PF4J loader、root Context；try-with-resources 按相反声明顺序即可。loader close 拒绝新事务，等待当前所有者结束，逆序卸载 entry，再停止并关闭全部插件 ClassLoader。ClassLoader 不是安全沙箱，插件签名、权限与恶意代码隔离不属于本模块。

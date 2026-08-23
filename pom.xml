@@ -16,6 +16,7 @@
     <module>fibra-pf4j-api</module>
     <module>fibra-loader-pf4j</module>
     <module>fibra-loader-config</module>
+    <module>fibra-example-contract-plugin</module>
     <module>fibra-example-provider-plugin</module>
     <module>fibra-example-consumer-plugin</module>
     <module>fibra-example-host</module>
@@ -48,7 +49,10 @@
     <fibra-example-provider-v1.version>1.0.0</fibra-example-provider-v1.version>
     <fibra-example-provider-v2.version>2.0.0</fibra-example-provider-v2.version>
     <fibra-example-provider-broken.version>3.0.0</fibra-example-provider-broken.version>
-    <fibra-example-consumer.version>1.0.0</fibra-example-consumer.version>
+    <fibra-example-contract-v1.version>1.0.0</fibra-example-contract-v1.version>
+    <fibra-example-contract-v2.version>2.0.0</fibra-example-contract-v2.version>
+    <fibra-example-consumer-v1.version>1.0.0</fibra-example-consumer-v1.version>
+    <fibra-example-consumer-v2.version>2.0.0</fibra-example-consumer-v2.version>
     <flatten-maven-plugin.version>1.7.0</flatten-maven-plugin.version>
     <maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
     <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
@@ -137,6 +141,11 @@
         <version>${jackson.version}</version>
       </dependency>
       <!-- 内部模块统一使用当前 reactor 版本，子模块引用时不声明版本。 -->
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-example-contract-plugin</artifactId>
+        <version>${project.version}</version>
+      </dependency>
       <dependency>
         <groupId>com.sstlfsj</groupId>
         <artifactId>fibra-api</artifactId>

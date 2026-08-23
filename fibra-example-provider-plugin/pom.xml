@@ -13,7 +13,17 @@
   <artifactId>fibra-example-provider-plugin</artifactId>
   <description>由 Maven 构建的真实 Fibra PF4J provider 示例插件制品。</description>
 
+  <properties>
+    <plugin.id>fibra-example-provider</plugin.id>
+    <plugin.version>${fibra-example-provider-v1.version}</plugin.version>
+  </properties>
+
   <dependencies>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-example-contract-plugin</artifactId>
+      <scope>provided</scope>
+    </dependency>
     <dependency>
       <groupId>com.sstlfsj</groupId>
       <artifactId>fibra-pf4j-api</artifactId>
@@ -48,8 +58,6 @@
         <configuration>
           <archive>
             <manifestEntries>
-              <Plugin-Id>fibra-example-provider</Plugin-Id>
-              <Plugin-Version>${fibra-example-provider-v1.version}</Plugin-Version>
               <Implementation-Version>${fibra-example-provider-v1.version}</Implementation-Version>
             </manifestEntries>
           </archive>
@@ -65,8 +73,6 @@
               <classifier>v2</classifier>
               <archive>
                 <manifestEntries>
-                  <Plugin-Id>fibra-example-provider</Plugin-Id>
-                  <Plugin-Version>${fibra-example-provider-v2.version}</Plugin-Version>
                   <Implementation-Version>${fibra-example-provider-v2.version}</Implementation-Version>
                 </manifestEntries>
               </archive>
@@ -85,11 +91,48 @@
               </excludes>
               <archive>
                 <manifestEntries>
-                  <Plugin-Id>fibra-example-provider</Plugin-Id>
-                  <Plugin-Version>${fibra-example-provider-broken.version}</Plugin-Version>
                   <Implementation-Version>${fibra-example-provider-broken.version}</Implementation-Version>
                 </manifestEntries>
               </archive>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration><attach>false</attach></configuration>
+        <executions>
+          <execution>
+            <id>v1-package</id>
+            <phase>package</phase>
+            <goals><goal>single</goal></goals>
+            <configuration>
+              <descriptors>
+                <descriptor>${maven.multiModuleProjectDirectory}/build/plugin-package-assembly.xml</descriptor>
+              </descriptors>
+              <finalName>${plugin.id}-${plugin.version}</finalName>
+              <appendAssemblyId>false</appendAssemblyId>
+            </configuration>
+          </execution>
+          <execution>
+            <id>v2-package</id>
+            <phase>package</phase>
+            <goals><goal>single</goal></goals>
+            <configuration>
+              <descriptors><descriptor>src/assembly/plugin-v2.xml</descriptor></descriptors>
+              <finalName>${plugin.id}-${fibra-example-provider-v2.version}</finalName>
+              <appendAssemblyId>false</appendAssemblyId>
+            </configuration>
+          </execution>
+          <execution>
+            <id>broken-package</id>
+            <phase>package</phase>
+            <goals><goal>single</goal></goals>
+            <configuration>
+              <descriptors><descriptor>src/assembly/plugin-broken.xml</descriptor></descriptors>
+              <finalName>${plugin.id}-${fibra-example-provider-broken.version}</finalName>
+              <appendAssemblyId>false</appendAssemblyId>
             </configuration>
           </execution>
         </executions>

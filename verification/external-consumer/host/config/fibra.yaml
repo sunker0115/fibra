@@ -1,0 +1,22 @@
+- id: consumer-one
+  name: external-consumer-plugin
+  inject: [external.consumer.provider.greeting]
+  isolate:
+    external.consumer.provider.greeting: one
+    external.consumer.plugin.result: one
+- id: provider-one
+  name: external-provider-plugin
+  isolate:
+    external.consumer.provider.greeting: one
+  config: provider-one
+- id: consumer-two
+  name: external-consumer-plugin
+  inject: [external.consumer.provider.greeting]
+  isolate:
+    external.consumer.provider.greeting: two
+    external.consumer.plugin.result: two
+- id: provider-two
+  name: external-provider-plugin
+  isolate:
+    external.consumer.provider.greeting: two
+  config: provider-two

@@ -11,23 +11,26 @@
 
   <modules>
     <module>core-app</module>
+    <module>contract-plugin</module>
     <module>provider-plugin</module>
     <module>consumer-plugin</module>
     <module>host</module>
   </modules>
 
   <properties>
-    <fibra.version>REQUIRED_BY_VERIFY_SCRIPT</fibra.version>
-    <fibra.repository.url>REQUIRED_BY_VERIFY_SCRIPT</fibra.repository.url>
-    <pf4j.version>REQUIRED_BY_VERIFY_SCRIPT</pf4j.version>
-    <slf4j.version>REQUIRED_BY_VERIFY_SCRIPT</slf4j.version>
-    <maven.compiler.release>REQUIRED_BY_VERIFY_SCRIPT</maven.compiler.release>
+    <fibra.version>0.3.0</fibra.version>
+    <fibra.repository.url>https://repo.maven.apache.org/maven2</fibra.repository.url>
+    <pf4j.version>3.15.0</pf4j.version>
+    <slf4j.version>2.0.18</slf4j.version>
+    <commons-text.version>1.14.0</commons-text.version>
+    <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven-compiler-plugin.version>REQUIRED_BY_VERIFY_SCRIPT</maven-compiler-plugin.version>
-    <maven-jar-plugin.version>REQUIRED_BY_VERIFY_SCRIPT</maven-jar-plugin.version>
-    <maven-resources-plugin.version>REQUIRED_BY_VERIFY_SCRIPT</maven-resources-plugin.version>
-    <maven-shade-plugin.version>REQUIRED_BY_VERIFY_SCRIPT</maven-shade-plugin.version>
-    <maven-surefire-plugin.version>REQUIRED_BY_VERIFY_SCRIPT</maven-surefire-plugin.version>
+    <maven-assembly-plugin.version>3.8.0</maven-assembly-plugin.version>
+    <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
+    <maven-jar-plugin.version>3.5.1</maven-jar-plugin.version>
+    <maven-resources-plugin.version>3.5.0</maven-resources-plugin.version>
+    <maven-shade-plugin.version>3.6.2</maven-shade-plugin.version>
+    <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
   </properties>
 
   <repositories>
@@ -45,6 +48,11 @@
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-api</artifactId>
+        <version>${fibra.version}</version>
+      </dependency>
       <dependency>
         <groupId>com.sstlfsj</groupId>
         <artifactId>fibra-core</artifactId>
@@ -67,7 +75,7 @@
       </dependency>
       <dependency>
         <groupId>com.sstlfsj.verification</groupId>
-        <artifactId>external-provider-plugin</artifactId>
+        <artifactId>external-contract-plugin</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -80,12 +88,22 @@
         <artifactId>slf4j-simple</artifactId>
         <version>${slf4j.version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-text</artifactId>
+        <version>${commons-text.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
   <build>
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>${maven-assembly-plugin.version}</version>
+        </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>

@@ -3,16 +3,22 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-
   <parent>
     <groupId>com.sstlfsj.verification</groupId>
     <artifactId>external-consumer</artifactId>
     <version>1.0.0</version>
   </parent>
-
   <artifactId>external-provider-plugin</artifactId>
-
+  <properties>
+    <plugin.id>external-provider-plugin</plugin.id>
+    <plugin.version>1.0.0</plugin.version>
+  </properties>
   <dependencies>
+    <dependency>
+      <groupId>com.sstlfsj.verification</groupId>
+      <artifactId>external-contract-plugin</artifactId>
+      <scope>provided</scope>
+    </dependency>
     <dependency>
       <groupId>com.sstlfsj</groupId>
       <artifactId>fibra-pf4j-api</artifactId>
@@ -23,10 +29,13 @@
       <artifactId>pf4j</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-text</artifactId>
+    </dependency>
   </dependencies>
-
   <build>
-    <finalName>external-provider-plugin</finalName>
+    <finalName>${plugin.id}-${plugin.version}</finalName>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -45,14 +54,47 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <configuration>
-          <archive>
-            <manifestEntries>
-              <Plugin-Id>external-provider-plugin</Plugin-Id>
-              <Plugin-Version>1.0.0</Plugin-Version>
-              <Implementation-Version>1.0.0</Implementation-Version>
-            </manifestEntries>
-          </archive>
+          <archive><manifestEntries><Implementation-Version>${plugin.version}</Implementation-Version></manifestEntries></archive>
         </configuration>
+        <executions>
+          <execution>
+            <id>v2-jar</id>
+            <phase>prepare-package</phase>
+            <goals><goal>jar</goal></goals>
+            <configuration>
+              <classifier>v2</classifier>
+              <archive><manifestEntries><Implementation-Version>2.0.0</Implementation-Version></manifestEntries></archive>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>v1-package</id>
+            <phase>package</phase>
+            <goals><goal>single</goal></goals>
+            <configuration>
+              <descriptors><descriptor>${maven.multiModuleProjectDirectory}/build/plugin-package-assembly.xml</descriptor></descriptors>
+              <finalName>${plugin.id}-${plugin.version}</finalName>
+              <appendAssemblyId>false</appendAssemblyId>
+              <attach>false</attach>
+            </configuration>
+          </execution>
+          <execution>
+            <id>v2-package</id>
+            <phase>package</phase>
+            <goals><goal>single</goal></goals>
+            <configuration>
+              <descriptors><descriptor>${maven.multiModuleProjectDirectory}/build/plugin-package-v2-assembly.xml</descriptor></descriptors>
+              <finalName>${plugin.id}-2.0.0</finalName>
+              <appendAssemblyId>false</appendAssemblyId>
+              <attach>false</attach>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

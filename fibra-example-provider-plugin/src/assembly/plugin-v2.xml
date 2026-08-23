@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.3">
+  <id>plugin-v2</id>
+  <formats><format>zip</format></formats>
+  <includeBaseDirectory>true</includeBaseDirectory>
+  <baseDirectory>${plugin.id}</baseDirectory>
+  <files>
+    <file><source>${project.basedir}/src/main/plugin/plugin-v2.properties</source><outputDirectory>/</outputDirectory><filtered>true</filtered><destName>plugin.properties</destName></file>
+    <file><source>${project.build.directory}/${project.build.finalName}-v2.jar</source><outputDirectory>/lib</outputDirectory><destName>${plugin.id}-${fibra-example-provider-v2.version}.jar</destName></file>
+  </files>
+</assembly>

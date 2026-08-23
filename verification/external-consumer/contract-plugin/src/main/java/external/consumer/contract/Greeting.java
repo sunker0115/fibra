@@ -1,4 +1,4 @@
-package external.consumer.provider.api;
+package external.consumer.contract;
 
 import com.sstlfsj.fibra.ServiceKey;
 

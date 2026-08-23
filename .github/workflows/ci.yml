@@ -48,7 +48,7 @@ jobs:
       - name: 全量构建与兼容性验收
         run: mvn --batch-mode --no-transfer-progress clean verify
 
-      - name: 验证四个发布制品可复现
+      - name: 验证五个发布制品可复现
         run: scripts/verify-reproducible-release.sh
 
       - name: 验证仓库外项目可直接消费发布制品
