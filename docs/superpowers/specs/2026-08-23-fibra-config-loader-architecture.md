@@ -3,6 +3,8 @@
 日期：2026-08-23
 状态：`0.2.0` 当前实现契约
 
+> `0.3.0` 制品层将按[插件制品与事务更新设计](./2026-08-23-fibra-plugin-package-transaction-design.md)把 `reloadArtifact(Path)` 直接替换为 `applyArtifacts(List<Path>)`。本文以下 JAR reload 描述只对应 `v0.2.0`；配置树、typed config 和 reconcile 语义继续保留，实施跟踪见 [`standardize-plugin-packages`](../../../openspec/changes/standardize-plugin-packages/)。
+
 ## 1. 目标与真源
 
 `fibra-loader-config` 是 Fibra 的框架中立动态组合层。它负责把 YAML/JSON 配置转换为插件条目树，并以可回滚事务把目标树同步到 `fibra-loader-pf4j`。它不是 Spring Boot 配置绑定工具，也不是只减少几行启动代码的便捷封装。

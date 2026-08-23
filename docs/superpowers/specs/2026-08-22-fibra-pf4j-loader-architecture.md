@@ -3,6 +3,8 @@
 日期：2026-08-22
 状态：`0.2.0` 当前实现契约
 
+> `0.3.0` 开发分支不再以本文作为实现目标。目录插件包、contract-only、完整图预检、批量事务和崩溃恢复的唯一目标设计见[插件制品与事务更新设计](./2026-08-23-fibra-plugin-package-transaction-design.md)，形式化行为见 [`standardize-plugin-packages`](../../../openspec/changes/standardize-plugin-packages/)。本文只用于准确说明 `v0.2.0` 已发布行为；`0.3.0` 实现完成时将整体重写，不保留直接 JAR语义。
+
 ## 1. 边界
 
 PF4J 3.13.0 只负责 JAR 描述、版本约束、制品依赖图、扩展索引和每制品 ClassLoader。Fibra 是唯一的服务、事件、effect、配置和业务生命周期运行时。

@@ -3,6 +3,8 @@
 日期：2026-08-23
 状态：`0.2.0` 当前实现契约
 
+> 本文当前验收形态对应 `v0.2.0` 直接 JAR。`0.3.0` 将按[插件制品与事务更新设计](./2026-08-23-fibra-plugin-package-transaction-design.md)改为 contract-only、provider、consumer 三个标准 ZIP包；形式化变更见 [`standardize-plugin-packages`](../../../openspec/changes/standardize-plugin-packages/)。实现完成时本文整体重写，不保留旧 JAR验收分支。
+
 ## 1. 目标
 
 `verification/external-consumer` 是不属于 Fibra reactor、也不继承 Fibra parent 的独立 Maven 工程。它必须只通过临时 Maven 仓库中的五个正式坐标证明：

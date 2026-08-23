@@ -1,5 +1,7 @@
 # Fibra 开源基线与取舍
 
+> 本文记录到 `v0.2.0` 为止的已实现基线。`0.3.0` 对 PF4J、gj.spring.pf4j、IDEA/VS Code、Cordis HMR 和 DeepSeek Harness contract seam 的新取舍，以[插件制品与事务更新设计](../specs/2026-08-23-fibra-plugin-package-transaction-design.md)和 [`standardize-plugin-packages`](../../../openspec/changes/standardize-plugin-packages/) 为唯一目标；旧 `reloadArtifact` 描述不代表 `0.3.0` 方案。
+
 ## 采用
 
 | 项目 | 版本 | 用途 |
