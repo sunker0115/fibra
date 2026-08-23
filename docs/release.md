@@ -39,7 +39,7 @@ Maven Enforcer 在每个模块检查：
 
 ## 可复现构建
 
-根 POM固定 `project.build.outputTimestamp`，Javadoc 固定编码、locale 并移除生成时间。验证脚本先保存已通过完整 `verify` 的五模块产物，再只重建生产依赖图，并逐字节比较主 JAR、sources JAR、Javadoc JAR 和发布 POM：
+根 POM固定 `project.build.outputTimestamp`，Javadoc 固定编码、locale 并移除生成时间。验证脚本先保存已通过完整 `verify` 的六个可发布制品（五个中立内核/loader + `fibra-spring-boot-starter`）产物，再只重建这些依赖图，并逐字节比较主 JAR、sources JAR、Javadoc JAR 和发布 POM：
 
 ```bash
 scripts/verify-reproducible-release.sh

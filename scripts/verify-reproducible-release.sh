@@ -7,8 +7,9 @@ readonly production_modules=(
   fibra-pf4j-api
   fibra-loader-pf4j
   fibra-loader-config
+  fibra-spring-boot-starter
 )
-readonly module_list="fibra-api,fibra-core,fibra-pf4j-api,fibra-loader-pf4j,fibra-loader-config"
+readonly module_list="fibra-api,fibra-core,fibra-pf4j-api,fibra-loader-pf4j,fibra-loader-config,fibra-spring-boot-starter"
 readonly maven_executable="${MVN:-mvn}"
 snapshot_directory="$(mktemp -d)"
 trap 'rm -rf "$snapshot_directory"' EXIT
