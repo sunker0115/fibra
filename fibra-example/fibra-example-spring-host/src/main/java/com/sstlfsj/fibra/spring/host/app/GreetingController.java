@@ -1,6 +1,7 @@
 package com.sstlfsj.fibra.spring.host.app;
 
 import com.sstlfsj.fibra.Context;
+import com.sstlfsj.fibra.FibraException;
 import com.sstlfsj.fibra.spring.host.Greeting;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,8 +26,11 @@ public class GreetingController {
         try {
             String result = root.service(Greeting.KEY).invoke((invocation, greeting) -> greeting.greet(name));
             return ResponseEntity.ok(result);
-        } catch (RuntimeException inactive) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("greeting service inactive");
+        } catch (FibraException e) {
+            if (FibraException.SERVICE_INACTIVE.equals(e.code())) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("greeting service inactive");
+            }
+            throw e;
         }
     }
 }

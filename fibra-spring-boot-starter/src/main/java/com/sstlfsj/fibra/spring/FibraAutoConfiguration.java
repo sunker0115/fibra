@@ -9,6 +9,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
+import java.nio.file.Path;
+
 /**
  * Fibra 可选 Spring Boot 适配层的自动装配入口。
  *
@@ -28,7 +30,11 @@ public class FibraAutoConfiguration {
     @Bean(destroyMethod = "")
     @ConditionalOnMissingBean
     public FibraPluginLoader fibraPluginLoader(Context fibraRootContext, FibraProperties props) {
-        return new FibraPluginLoader(fibraRootContext, props.getPluginsRoot());
+        Path pluginsRoot = props.getPluginsRoot();
+        if (pluginsRoot == null) {
+            throw new IllegalStateException("必填配置缺失: fibra.plugins-root（插件安装目录根）");
+        }
+        return new FibraPluginLoader(fibraRootContext, pluginsRoot);
     }
 
     @Bean(destroyMethod = "")
@@ -36,7 +42,11 @@ public class FibraAutoConfiguration {
     public FibraConfigLoader fibraConfigLoader(Context fibraRootContext,
                                                FibraPluginLoader loader,
                                                FibraProperties props) {
-        return FibraConfigLoader.builder(fibraRootContext, loader, props.getConfigLocation()).build();
+        Path configLocation = props.getConfigLocation();
+        if (configLocation == null) {
+            throw new IllegalStateException("必填配置缺失: fibra.config-location（配置树位置）");
+        }
+        return FibraConfigLoader.builder(fibraRootContext, loader, configLocation).build();
     }
 
     @Bean

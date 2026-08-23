@@ -39,6 +39,14 @@ class FibraAutoConfigurationTest {
                 .isSameAs(CustomContextConfig.CUSTOM));
     }
 
+    @Test
+    void failsFastWithClearMessageWhenPluginsRootMissing() {
+        runner.run(ctx -> {
+            assertThat(ctx).hasFailed();
+            assertThat(ctx).getFailure().hasStackTraceContaining("fibra.plugins-root");
+        });
+    }
+
     @org.springframework.context.annotation.Configuration
     static class CustomContextConfig {
         static final Context CUSTOM = com.sstlfsj.fibra.runtime.FibraRuntime.create();

@@ -72,12 +72,18 @@ public class PluginAdminController {
         List<String> applied = loader.applyArtifacts(paths);
         List<String> mounted = new ArrayList<>();
         for (String pluginId : applied) {
-            if (loader.fibra(pluginId).isEmpty()) {
+            if (loader.fibra(pluginId).isPresent()) {
+                continue; // 已有运行实例，跳过重复 mount
+            }
+            try {
                 loader.mount(PluginInstanceSpec.builder(pluginId, pluginId)
                     .parentContext(root)
                     .build());
+                mounted.add(pluginId);
+            } catch (RuntimeException e) {
+                // contract-only 制品不可 mount：跳过而非让整批 apply 失败。
+                log.warn("跳过不可 mount 的制品（可能是 contract-only）: {}", pluginId, e);
             }
-            mounted.add(pluginId);
         }
         return Map.of("applied", applied, "mounted", mounted);
     }
