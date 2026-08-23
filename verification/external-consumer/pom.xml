@@ -61,6 +61,11 @@
         <version>${fibra.version}</version>
       </dependency>
       <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-loader-config</artifactId>
+        <version>${fibra.version}</version>
+      </dependency>
+      <dependency>
         <groupId>com.sstlfsj.verification</groupId>
         <artifactId>external-provider-plugin</artifactId>
         <version>${project.version}</version>

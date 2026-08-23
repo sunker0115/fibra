@@ -27,7 +27,7 @@ final class DefaultFibra implements Fibra {
     private final Plugin<Object> plugin;
     private final Object pluginIdentity;
     private final IdentityList<EffectHandleImpl> effects = new IdentityList<>();
-    private final Map<ServiceKey<?>, Object> dependencies = new LinkedHashMap<>();
+    private final Map<String, Dependency> dependencies = new LinkedHashMap<>();
     private final Map<String, ServiceImpl<?>> candidates = new LinkedHashMap<>();
     private final Map<String, ServiceImpl<?>> ownedServices = new LinkedHashMap<>();
     private final boolean root;
@@ -71,8 +71,14 @@ final class DefaultFibra implements Fibra {
         this.state = FibraState.PENDING;
         this.rawConfig = config;
         this.epoch = INACTIVE;
-        this.dependencies.putAll(descriptor.dependencies());
-        this.context = parent.child(this, dependencies);
+        descriptor.dependencies().forEach((key, intercept) ->
+            this.dependencies.put(key.name(), new Dependency(key.name(), key, intercept)));
+        descriptor.namedDependencies().forEach((name, intercept) ->
+            this.dependencies.put(name, new Dependency(name, null, intercept)));
+        var dependencyIntercepts = new LinkedHashMap<String, Object>();
+        dependencies.forEach((name, dependency) ->
+            dependencyIntercepts.put(name, dependency.intercept()));
+        this.context = parent.child(this, dependencyIntercepts);
     }
 
     public static DefaultFibra root(DefaultContext context) {
@@ -85,8 +91,8 @@ final class DefaultFibra implements Fibra {
         parent.pluginStore().add(pluginIdentity, fibra);
         fibra.parentHandle = parent.fibra().effect(() -> fibra::disposeInternal, "ctx.plugin()");
         fibra.context.emit(CoreEvents.PLUGIN, listener -> listener.onPlugin(fibra));
-        for (var key : fibra.dependencies.keySet()) {
-            fibra.checkDependency(key);
+        for (var dependency : fibra.dependencies.values()) {
+            fibra.checkDependency(dependency);
         }
         fibra.refresh();
         return fibra;
@@ -253,8 +259,7 @@ final class DefaultFibra implements Fibra {
     }
 
     public boolean requires(String name) {
-        return descriptor != null && dependencies.keySet().stream()
-            .anyMatch(key -> key.name().equals(name));
+        return descriptor != null && dependencies.containsKey(name);
     }
 
     public void require(ServiceKey<?> key) {
@@ -262,14 +267,36 @@ final class DefaultFibra implements Fibra {
     }
 
     public void require(ServiceKey<?> key, Object intercept) {
+        Objects.requireNonNull(key, "key");
+        require(key.name(), new Dependency(key.name(), key, intercept));
+    }
+
+    public void require(String serviceName) {
+        require(serviceName, (Object) null);
+    }
+
+    public void require(String serviceName, Object intercept) {
+        if (serviceName == null || serviceName.isBlank()) {
+            throw new IllegalArgumentException("service name must not be blank");
+        }
+        require(serviceName, new Dependency(serviceName, null, intercept));
+    }
+
+    private void require(String serviceName, Dependency dependency) {
         lifecycle.call(() -> {
             if (state != FibraState.PENDING || transitioning) {
                 throw new IllegalStateException("dependencies can only be added while fibra is pending");
             }
-            dependencies.put(Objects.requireNonNull(key, "key"), intercept);
-            if (intercept != null) {
-                context.putIntercept(key.name(), intercept);
+            if (dependencies.containsKey(serviceName)) {
+                throw new IllegalArgumentException(
+                    "service dependency \"" + serviceName + "\" is already declared");
             }
+            dependencies.put(serviceName, dependency);
+            if (dependency.intercept() != null) {
+                context.putIntercept(serviceName, dependency.intercept());
+            }
+            checkDependency(dependency);
+            refresh();
             return null;
         });
     }
@@ -308,20 +335,20 @@ final class DefaultFibra implements Fibra {
         if (!requires(name)) {
             return;
         }
-        var key = dependencies.keySet().stream()
-            .filter(candidate -> candidate.name().equals(name))
-            .findFirst()
-            .orElseThrow();
-        checkDependency(key);
+        checkDependency(dependencies.get(name));
         refresh();
     }
 
-    private void checkDependency(ServiceKey<?> key) {
-        var impl = context.reflect().lookupBinding(context, key, true);
+    private void checkDependency(Dependency dependency) {
+        var key = dependency.key();
+        var impl = key == null
+            ? context.reflect().lookupBinding(context, dependency.name(), true)
+            : context.reflect().lookupBinding(context, key, true);
+        var name = dependency.name();
         if (impl == null) {
-            candidates.remove(key.name());
+            candidates.remove(name);
         } else {
-            candidates.put(key.name(), impl);
+            candidates.put(name, impl);
         }
     }
 
@@ -331,8 +358,8 @@ final class DefaultFibra implements Fibra {
             return;
         }
         var builder = new StringBuilder();
-        for (var key : dependencies.keySet()) {
-            var impl = candidates.get(key.name());
+        for (var name : dependencies.keySet()) {
+            var impl = candidates.get(name);
             if (impl == null) {
                 setEpoch(INACTIVE);
                 return;
@@ -340,6 +367,9 @@ final class DefaultFibra implements Fibra {
             builder.append(':').append(impl.fibra().uid);
         }
         setEpoch(builder.toString());
+    }
+
+    private record Dependency(String name, ServiceKey<?> key, Object intercept) {
     }
 
     private void setEpoch(String nextEpoch) {

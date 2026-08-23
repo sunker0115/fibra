@@ -4,16 +4,17 @@ Fibra 是 Cordis Core 4.0.1 的 Java 21 语义等价实现，用作 Java 版 Dee
 
 ## 项目定位
 
-完整项目由两层组成：`fibra-api` 与 `fibra-core` 负责 Cordis Core 的 Java 等价运行时；`fibra-pf4j-api` 与 `fibra-loader-pf4j` 在内核之外增加插件 JAR、依赖图、ClassLoader 隔离、原子更新和失败回滚。PF4J 只承担制品层，不替代 Fibra 生命周期。
+完整项目由三层组成：`fibra-api` 与 `fibra-core` 负责 Cordis Core 的 Java 等价运行时；`fibra-pf4j-api` 与 `fibra-loader-pf4j` 增加插件 JAR、依赖图、ClassLoader 隔离、原子更新和失败回滚；`fibra-loader-config` 把 YAML/JSON 插件树事务化同步到 PF4J 制品和 Fibra 运行实例。PF4J 只承担制品层，配置 loader 只承担动态组合，两者都不替代 Fibra 生命周期。
 
 目标使用场景是 Java 版 DeepSeek Harness、AI Agent 工具平台，以及需要可信进程内插件动态装载的纯 Java 或框架宿主。agent、tool、provider、session 等业务插件建立在 Fibra 之上，但不属于本仓库的内核实现；Spring、Hasor、Solon 也不进入内核。
 
-工程按职责拆成八个模块：
+工程按职责拆成九个模块：
 
 - `fibra-api`：稳定的内核公开契约；
 - `fibra-core`：唯一的 Context/Fibra 运行时；
 - `fibra-pf4j-api`：插件制品唯一启动扩展点；
 - `fibra-loader-pf4j`：PF4J JAR、依赖图和 ClassLoader 适配；
+- `fibra-loader-config`：框架中立的 YAML/JSON 配置树、typed config、运行时事务和文件监听；
 - `fibra-example-provider-plugin`：拥有跨插件服务契约的真实 provider 及多版本制品；
 - `fibra-example-consumer-plugin`：通过 PF4J 依赖 ClassLoader 消费 provider 的真实插件；
 - `fibra-example-host`：纯 Java 宿主示例与真实依赖链黑盒验收；
@@ -25,19 +26,19 @@ Fibra 是 Cordis Core 4.0.1 的 Java 21 语义等价实现，用作 Java 版 Dee
 mvn clean verify
 ```
 
-该命令同时生成四个正式模块的主 JAR、sources JAR、Javadoc JAR 和自包含发布 POM，并执行 Cordis 对等、公开 API、真实 PF4J 插件链及发布制品门禁。连续构建的逐字节一致性使用：
+该命令同时生成五个正式模块的主 JAR、sources JAR、Javadoc JAR 和自包含发布 POM，并执行 Cordis 对等、公开 API、真实 PF4J 插件链、配置装载事务及发布制品门禁。连续构建的逐字节一致性使用：
 
 ```bash
 scripts/verify-reproducible-release.sh
 ```
 
-四个正式制品的仓库外消费能力使用：
+五个正式制品的仓库外消费能力使用：
 
 ```bash
 scripts/verify-external-consumer.sh
 ```
 
-该脚本把当前 `revision` 的四个正式制品部署到临时 Maven 仓库，再在仓库外的临时目录中构建并运行一个无 Fibra parent、未加入 Fibra reactor 的独立项目。独立项目只通过 Maven 坐标验证 `fibra-core` 应用，以及 provider/consumer 两个瘦 PF4J 插件的编译、依赖 ClassLoader、服务调用、级联停止、依赖重启和级联卸载；Host 只依赖 `fibra-loader-pf4j`，不把任何插件放入自身 classpath。脚本不读取用户 Maven 本地仓库中的 Fibra 制品，也不读取本仓库的 `target/classes`。模板中的版本哨兵由脚本从根 POM 统一传值，不需要且不得手工改模板。
+该脚本把当前 `revision` 的五个正式制品部署到临时 Maven 仓库，再在仓库外的临时目录中构建并运行一个无 Fibra parent、未加入 Fibra reactor 的独立项目。独立 Host 只依赖 `fibra-loader-config`，从真实 YAML 创建同一 provider 制品的两个实例和两个依赖 consumer，验证依赖 ClassLoader、配置更新保持 Fibra 身份、失败更新回滚运行态与文件；Host 不把任何插件放入自身 classpath。脚本不读取用户 Maven 本地仓库中的 Fibra 制品，也不读取本仓库的 `target/classes`。模板中的版本哨兵由脚本从根 POM 统一传值，不需要且不得手工改模板。
 
 正式发布边界、deploy 行为和对外发布前置条件见[发布与构建基线](docs/release.md)。
 
@@ -79,6 +80,7 @@ root.close();
 
 - [架构契约](docs/superpowers/specs/2026-08-21-fibra-kernel-architecture.md)
 - [PF4J 装载架构](docs/superpowers/specs/2026-08-22-fibra-pf4j-loader-architecture.md)
+- [配置装载架构](docs/superpowers/specs/2026-08-23-fibra-config-loader-architecture.md)
 - [Spring 与 Java DeepSeek Harness 集成架构](docs/superpowers/specs/2026-08-22-fibra-spring-harness-integration-architecture.md)
 - [仓库外多插件依赖验收设计（含关系图）](docs/superpowers/specs/2026-08-22-fibra-external-multi-plugin-verification-design.md)
 - [公共 API 使用手册](docs/api/README.md)
@@ -87,6 +89,7 @@ root.close();
 - [fibra-core 运行时入口签名基线](docs/api/fibra-core-public-signatures.txt)
 - [fibra-pf4j-api 公共签名基线](docs/api/fibra-pf4j-api-public-signatures.txt)
 - [fibra-loader-pf4j 公共签名基线](docs/api/fibra-loader-pf4j-public-signatures.txt)
+- [fibra-loader-config 公共签名基线](docs/api/fibra-loader-config-public-signatures.txt)
 - [设计决定](docs/superpowers/specs/2026-08-21-fibra-kernel-design.md)
 - [开源基线与取舍](docs/superpowers/references/2026-08-21-fibra-opensource-baselines.md)
 - [Cordis 源码映射](docs/superpowers/references/2026-08-21-fibra-cordis-mapping.md)

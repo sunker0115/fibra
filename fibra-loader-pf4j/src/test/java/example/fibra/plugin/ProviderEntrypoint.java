@@ -1,19 +1,20 @@
 package example.fibra.plugin;
 
-import com.sstlfsj.fibra.Context;
-import com.sstlfsj.fibra.Disposable;
 import com.sstlfsj.fibra.Disposables;
+import com.sstlfsj.fibra.Plugin;
 import com.sstlfsj.fibra.loader.pf4j.PluginLifecycleRecorder;
-import com.sstlfsj.fibra.pf4j.FibraPluginEntrypoint;
+import com.sstlfsj.fibra.pf4j.VoidFibraPluginEntrypoint;
 import org.pf4j.Extension;
 import reactor.core.publisher.Mono;
 
 @Extension
-public final class ProviderEntrypoint implements FibraPluginEntrypoint {
+public final class ProviderEntrypoint implements VoidFibraPluginEntrypoint {
     @Override
-    public Mono<Disposable> apply(Context context, Void config) {
-        PluginLifecycleRecorder.EVENTS.add("provider:start");
-        return Mono.just(Disposables.from(
-            () -> PluginLifecycleRecorder.EVENTS.add("provider:stop")));
+    public Plugin<Void> create(String entryId) {
+        return (context, config) -> {
+            PluginLifecycleRecorder.EVENTS.add("provider:start");
+            return Mono.just(Disposables.from(
+                () -> PluginLifecycleRecorder.EVENTS.add("provider:stop")));
+        };
     }
 }

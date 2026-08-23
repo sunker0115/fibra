@@ -26,15 +26,14 @@
 11. Cordis accessor/mixin/association 用 `PropertyKey`、`PropertyAccessor`、`Associated` 显式建模；这是 Java 强类型替换，不允许删除关联对象的调用方服务解析能力。
 12. 插件 runtime 按入口对象身份分组；类插件以 `PluginFactory` 为身份。批量移除返回 `Mono<Void>` 并等待所有 Fibra 完成。
 13. `fibra-api` 的全部 public/protected 类型与签名用提交到仓库的 JDK 21 `javap -protected` 基线冻结；Cordis 12 组 71 个原始 `it` 必须逐项保留独立 Java 门禁。
-14. 远程发布面固定为 `fibra-api`、`fibra-core`、`fibra-pf4j-api`、`fibra-loader-pf4j` 四个自包含制品；根 POM与验证模块不发布。发布 POM必须展开 parent 与全部依赖版本，同时附带 sources/Javadoc，并通过 Java 21、API、deploy 边界及逐字节可复现门禁。
+14. `0.2.0` 的远程发布面是 `fibra-api`、`fibra-core`、`fibra-pf4j-api`、`fibra-loader-pf4j`、`fibra-loader-config` 五个自包含制品。根 POM与验证模块不发布。发布 POM必须展开 parent 与全部依赖版本，同时附带 sources/Javadoc，并通过 Java 21、API、deploy 边界及逐字节可复现门禁。
 15. PF4J、Spring Plugin 与 gj.spring.pf4j 分属制品装载、宿主内策略路由、Spring 宿主资源桥接三个层次，不能合并成一套 core 抽象。PF4J 仍是当前唯一制品层实现。当前仓库不提供 Spring Plugin 策略注册表或 Spring 宿主适配：上层确需条件策略时，由业务插件通过类型化 `ServiceKey` 暴露包含选择规则的服务；未来若新增宿主适配模块，必须把外部资源注册转换为插件 Context 所有的 effect/disposer，不得创建第二生命周期容器。
 16. Java DeepSeek Harness 使用 Spring Boot 作为静态宿主，但动态插件不进入 Spring BeanFactory。Spring AI 不作为首版 Harness 的基础模型层；自有 LLM、流式 chunk、重试、工具和会话契约保持权威，Spring AI 以后只能通过独立可选适配模块接入。完整边界见 [Fibra、Spring 与 Java DeepSeek Harness 集成架构](./2026-08-22-fibra-spring-harness-integration-architecture.md)。
 17. Fibra `0.2.0` 新增框架中立的 `fibra-loader-config`，负责配置文件解析、校验、插件条目树装配、更新与回滚，并复用成熟 YAML/JSON 实现。该模块可以依赖 `fibra-loader-pf4j`，但不得依赖 Spring、Spring Boot 或 Spring AI；Spring Boot 的静态宿主配置仍属于 Java DeepSeek Harness，不得替代 Fibra 的动态插件配置模型。
 
 ## 非目标
 
-- 字节码 HMR；
-- YAML/JSON 配置文件装载；
+- `fibra-core` 内的字节码 HMR 或 YAML/JSON 配置文件装载；配置装载只存在于 `fibra-loader-config`；
 - Spring Plugin 策略注册表，以及 Spring、Hasor、Solon、OSGi 宿主适配；
 - DeepSeek Harness 的 agent、tool、session 等业务插件。
 

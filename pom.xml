@@ -15,6 +15,7 @@
     <module>fibra-core</module>
     <module>fibra-pf4j-api</module>
     <module>fibra-loader-pf4j</module>
+    <module>fibra-loader-config</module>
     <module>fibra-example-provider-plugin</module>
     <module>fibra-example-consumer-plugin</module>
     <module>fibra-example-host</module>
@@ -30,7 +31,7 @@
     <maven.compiler.release>21</maven.compiler.release>
     <maven.runtime.version>3.9.9</maven.runtime.version>
     <maven.runtime.sha512>a555254d6b53d267965a3404ecb14e53c3827c09c3b94b5678835887ab404556bfaf78dcfe03ba76fa2508649dca8531c74bca4d5846513522404d48e8c4ac8b</maven.runtime.sha512>
-    <!-- 聚合根与验证模块不发布；四个生产模块在各自 POM 中显式开启。 -->
+    <!-- 聚合根与验证模块不发布；五个生产模块在各自 POM 中显式开启。 -->
     <maven.deploy.skip>true</maven.deploy.skip>
     <maven.source.skip>true</maven.source.skip>
     <maven.javadoc.skip>true</maven.javadoc.skip>
@@ -39,6 +40,7 @@
     <junit.version>6.1.3</junit.version>
     <awaitility.version>4.3.0</awaitility.version>
     <pf4j.version>3.13.0</pf4j.version>
+    <jackson.version>3.1.5</jackson.version>
     <fibra-example-provider-v1.version>1.0.0</fibra-example-provider-v1.version>
     <fibra-example-provider-v2.version>2.0.0</fibra-example-provider-v2.version>
     <fibra-example-provider-broken.version>3.0.0</fibra-example-provider-broken.version>
@@ -99,6 +101,16 @@
         <artifactId>pf4j</artifactId>
         <version>${pf4j.version}</version>
       </dependency>
+      <dependency>
+        <groupId>tools.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>tools.jackson.dataformat</groupId>
+        <artifactId>jackson-dataformat-yaml</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
       <!-- 内部模块统一使用当前 reactor 版本，子模块引用时不声明版本。 -->
       <dependency>
         <groupId>com.sstlfsj</groupId>
@@ -118,6 +130,11 @@
       <dependency>
         <groupId>com.sstlfsj</groupId>
         <artifactId>fibra-loader-pf4j</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-loader-config</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

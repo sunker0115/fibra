@@ -28,6 +28,8 @@ public interface com.sstlfsj.fibra.Context extends java.lang.AutoCloseable {
   public abstract java.lang.Object metadata(java.lang.String);
   public abstract <T> com.sstlfsj.fibra.Context isolate(com.sstlfsj.fibra.ServiceKey<T>);
   public abstract <T> com.sstlfsj.fibra.Context isolate(com.sstlfsj.fibra.ServiceKey<T>, java.lang.Object);
+  public abstract com.sstlfsj.fibra.Context isolate(java.lang.String);
+  public abstract com.sstlfsj.fibra.Context isolate(java.lang.String, java.lang.Object);
   public abstract <T> com.sstlfsj.fibra.Context intercept(com.sstlfsj.fibra.ServiceKey<T>, java.lang.Object);
   public abstract com.sstlfsj.fibra.Context intercept(java.lang.String, java.lang.Object);
   public abstract java.lang.Object intercept(com.sstlfsj.fibra.ServiceKey<?>);
@@ -129,6 +131,8 @@ public interface com.sstlfsj.fibra.Fibra extends com.sstlfsj.fibra.Disposable {
   public abstract boolean requires(java.lang.String);
   public abstract void require(com.sstlfsj.fibra.ServiceKey<?>);
   public abstract void require(com.sstlfsj.fibra.ServiceKey<?>, java.lang.Object);
+  public abstract void require(java.lang.String);
+  public abstract void require(java.lang.String, java.lang.Object);
 }
 ## com.sstlfsj.fibra.FibraException
 Compiled from "FibraException.java"
@@ -175,14 +179,18 @@ public final class com.sstlfsj.fibra.PluginDescriptor<C> {
   public static <C> com.sstlfsj.fibra.PluginDescriptor$Builder<C> builder(java.lang.String);
   public java.lang.String name();
   public java.util.Map<com.sstlfsj.fibra.ServiceKey<?>, java.lang.Object> dependencies();
+  public java.util.Map<java.lang.String, java.lang.Object> namedDependencies();
   public C validate(C);
   public java.util.Set<com.sstlfsj.fibra.ServiceKey<?>> providedServices();
+  public com.sstlfsj.fibra.PluginDescriptor<C> withRequirements(java.util.Map<java.lang.String, ?>);
 }
 ## com.sstlfsj.fibra.PluginDescriptor$Builder
 Compiled from "PluginDescriptor.java"
 public final class com.sstlfsj.fibra.PluginDescriptor$Builder<C> {
   public com.sstlfsj.fibra.PluginDescriptor$Builder<C> require(com.sstlfsj.fibra.ServiceKey<?>);
   public com.sstlfsj.fibra.PluginDescriptor$Builder<C> require(com.sstlfsj.fibra.ServiceKey<?>, java.lang.Object);
+  public com.sstlfsj.fibra.PluginDescriptor$Builder<C> require(java.lang.String);
+  public com.sstlfsj.fibra.PluginDescriptor$Builder<C> require(java.lang.String, java.lang.Object);
   public com.sstlfsj.fibra.PluginDescriptor$Builder<C> validator(com.sstlfsj.fibra.ConfigValidator<C>);
   public com.sstlfsj.fibra.PluginDescriptor$Builder<C> provide(com.sstlfsj.fibra.ServiceKey<?>);
   public com.sstlfsj.fibra.PluginDescriptor$Builder<C> inject(java.lang.Class<?>);

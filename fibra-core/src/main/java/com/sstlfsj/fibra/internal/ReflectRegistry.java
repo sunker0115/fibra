@@ -131,7 +131,12 @@ final class ReflectRegistry {
 
     public ServiceImpl<?> lookupBinding(DefaultContext context, ServiceKey<?> key, boolean strict) {
         declare(key);
-        var impl = bindings.get(context.isolateToken(key.name()));
+        return lookupBinding(context, key.name(), strict);
+    }
+
+    public ServiceImpl<?> lookupBinding(DefaultContext context, String serviceName,
+                                         boolean strict) {
+        var impl = bindings.get(context.isolateToken(serviceName));
         if (impl == null) {
             return null;
         }

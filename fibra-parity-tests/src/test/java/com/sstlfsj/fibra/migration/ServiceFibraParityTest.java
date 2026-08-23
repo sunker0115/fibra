@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ServiceFibraParityTest {
     private static final ServiceKey<Counter> COUNTER = ServiceKey.of("counter", Counter.class);
@@ -40,6 +41,77 @@ class ServiceFibraParityTest {
         assertSame(rootCounter, context.get(COUNTER));
         assertNull(isolated.get(COUNTER));
         assertSame(sharedCounter, second.get(COUNTER));
+    }
+
+    @Test
+    void nameOnlyIsolationDoesNotDeclareAServiceType() {
+        var label = new Object();
+        var first = context.isolate(COUNTER.name(), label);
+        var second = context.isolate(COUNTER.name(), label);
+        var counter = new Counter();
+
+        first.provide(COUNTER, counter);
+
+        assertSame(counter, second.get(COUNTER));
+        assertNull(context.get(COUNTER));
+    }
+
+    @Test
+    void nameOnlyDependencyWaitsForTheTypedProviderWithoutDeclaringObjectType() {
+        var loads = new AtomicInteger();
+        var consumer = context.plugin(
+            PluginDescriptor.<Void>builder("consumer").require(COUNTER.name()).build(),
+            (pluginContext, ignored) -> {
+                assertSame(context.get(COUNTER), pluginContext.get(COUNTER));
+                loads.incrementAndGet();
+                return Mono.empty();
+            },
+            null
+        );
+
+        assertEquals(FibraState.PENDING, consumer.state());
+        context.provide(COUNTER, new Counter());
+        consumer.await().block();
+
+        assertEquals(FibraState.ACTIVE, consumer.state());
+        assertEquals(1, loads.get());
+    }
+
+    @Test
+    void pendingFibraCanAddANameOnlyDependencyDirectly() {
+        var consumer = context.plugin(
+            PluginDescriptor.<Void>builder("consumer").require("gate").build(),
+            (pluginContext, ignored) -> Mono.empty(),
+            null
+        );
+
+        consumer.require(COUNTER.name());
+
+        assertEquals(FibraState.PENDING, consumer.state());
+        assertEquals(true, consumer.requires(COUNTER.name()));
+    }
+
+    @Test
+    void descriptorRejectsTheSameDependencyDeclaredByNameAndType() {
+        assertThrows(IllegalArgumentException.class, () ->
+            PluginDescriptor.<Void>builder("consumer")
+                .require(COUNTER.name())
+                .require(COUNTER));
+        assertThrows(IllegalArgumentException.class, () ->
+            PluginDescriptor.<Void>builder("consumer")
+                .require(COUNTER)
+                .require(COUNTER.name()));
+    }
+
+    @Test
+    void configurationRequirementsOverrideTypedInterceptWithoutLosingItsType() {
+        var descriptor = PluginDescriptor.<Void>builder("consumer")
+            .require(COUNTER, "original")
+            .build()
+            .withRequirements(java.util.Map.of(COUNTER.name(), "configured"));
+
+        assertEquals("configured", descriptor.dependencies().get(COUNTER));
+        assertEquals(java.util.Map.of(), descriptor.namedDependencies());
     }
 
     @Test

@@ -32,6 +32,10 @@ public interface Context extends AutoCloseable {
 
     <T> Context isolate(ServiceKey<T> key, Object label);
 
+    Context isolate(String serviceName);
+
+    Context isolate(String serviceName, Object label);
+
     <T> Context intercept(ServiceKey<T> key, Object config);
 
     Context intercept(String name, Object config);

@@ -7,9 +7,9 @@
 - `core-app`：与插件链独立，只验证普通 Java 应用通过坐标消费 `fibra-core`；
 - `provider-plugin`：拥有 `Greeting` 契约并提供服务；
 - `consumer-plugin`：编译期以 `provided` scope 依赖 provider，运行时通过 PF4J `Plugin-Dependencies` 使用 provider ClassLoader 中的同一契约；
-- `host`：只依赖 `fibra-loader-pf4j`，不依赖两个插件；脚本在运行前把两个插件 JAR 放入临时插件目录。
+- `host`：只依赖 `fibra-loader-config`，不依赖两个插件；脚本在运行前把两个插件 JAR 放入临时插件目录，并生成真实 YAML 配置树。
 
-Host 会依次验证两个插件加载与启动、停止 provider 时级联停止 consumer、从 consumer 重启时自动恢复 provider，以及卸载 provider 时级联卸载 consumer。只有全部状态、服务注册和释放断言都成立，才会输出 `EXTERNAL_MULTI_PLUGIN_CONSUMER_OK`。
+Host 会从 YAML 创建两个 provider 实例和两个 consumer 实例，验证 consumer 先声明依赖仍能在 provider 到位后激活、config-only 更新保持 provider Fibra 身份，以及失败更新同时保留上一份运行态、snapshot 和配置文件。只有全部断言成立，才会输出 `EXTERNAL_CONFIG_LOADER_CONSUMER_OK`。
 
 不要修改版本哨兵，也不要在本目录直接执行 Maven。请始终从 Fibra 仓库根目录执行：
 

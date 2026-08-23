@@ -1,6 +1,6 @@
 # Fibra 公共 API 使用手册
 
-本文对应 `com.sstlfsj:fibra-api:${revision}`、`com.sstlfsj:fibra-core:${revision}`、`com.sstlfsj:fibra-pf4j-api:${revision}` 与 `com.sstlfsj:fibra-loader-pf4j:${revision}` 的冻结公开契约。业务应用通常依赖 `fibra-core`；需要运行时 JAR 插件时再依赖 `fibra-loader-pf4j`。
+本文对应 `com.sstlfsj:fibra-api:${revision}`、`com.sstlfsj:fibra-core:${revision}`、`com.sstlfsj:fibra-pf4j-api:${revision}`、`com.sstlfsj:fibra-loader-pf4j:${revision}` 与 `com.sstlfsj:fibra-loader-config:${revision}` 的冻结公开契约。业务应用通常依赖 `fibra-core`；需要直接管理 JAR 制品时依赖 `fibra-loader-pf4j`；需要 YAML/JSON 动态组合时只需依赖 `fibra-loader-config`，后者会传递引入前两层。
 
 ## 1. 创建与关闭
 
@@ -17,7 +17,7 @@ try (Context root = FibraRuntime.create()) {
 
 `Context.close()` 阻塞到整棵 Context 树清理完成；响应式链使用 `closeAsync()`。子 Context 调用关闭等价于关闭 root。`root()` 返回根 Context，`fibra()` 返回当前资源所有者。
 
-`extend(Map)` 创建只读继承的元数据视图，`metadata(name)` 沿父链读取。`isolate(ServiceKey)` 创建独立服务作用域；`isolate(key, label)` 使用对象身份共享作用域。`intercept` 创建分层调用配置，原 Context 不变。
+`extend(Map)` 创建只读继承的元数据视图，`metadata(name)` 沿父链读取。`isolate(ServiceKey)` 创建独立服务作用域；`isolate(key, label)` 使用对象身份共享作用域。配置层使用 `isolate(String)`/`isolate(String, label)` 只声明名称与 token，不向服务类型表写入 `Object.class`。`intercept` 创建分层调用配置，原 Context 不变。
 
 ## 2. 服务
 
@@ -87,6 +87,8 @@ fibra.dispose().block();
 状态固定为 `PENDING`、`LOADING`、`ACTIVE`、`FAILED`、`UNLOADING`、`DISPOSED`。`await()`/`ready()` 语义相同：等待当前 inertia 收敛并传播 config/startup 原异常；缺少依赖并稳定在 `PENDING` 时正常完成，不表示已经 `ACTIVE`，也不等待未来 provider。宿主启动门禁必须在等待后显式检查 `state()`。`update` 先同步校验，再经过 `CoreEvents.UPDATE` waterfall；只有执行默认 `next` 才提交 config 和 restart。root `dispose()` 等价于 restart，root uid 永远为 0；普通 Fibra dispose 后 uid 为 null。
 
 `PluginRegistry` 按插件入口对象身份分组，提供 `size`、`has`、`keys`、`values`、`entries`、全部/按入口 `fibras` 快照和可等待的 `remove`。同一入口可对应多个 Fibra。
+
+`PluginDescriptor.Builder.require(String)` 与 `Fibra.require(String)` 供配置装载器声明只有服务名、尚不知道插件 ClassLoader 类型的依赖。类型化插件代码仍应优先使用 `ServiceKey<?>`。同一 descriptor 同时声明同名 typed 与 name-only 依赖会在构建时拒绝。
 
 ## 4. Effect 与清理
 
@@ -171,71 +173,86 @@ int answer = session.get(ANSWER);
 
 ## 8. PF4J JAR 插件
 
-插件工程依赖 `fibra-pf4j-api` 与 PF4J，作用域必须是 `provided`。仓库中的 [provider POM](../../fibra-example-provider-plugin/pom.xml)、[provider 服务契约](../../fibra-example-provider-plugin/src/main/java/example/fibra/provider/api/Greeting.java)、[provider 入口](../../fibra-example-provider-plugin/src/main/java/example/fibra/provider/ProviderEntrypoint.java)、[consumer POM](../../fibra-example-consumer-plugin/pom.xml)与[consumer 入口](../../fibra-example-consumer-plugin/src/main/java/example/fibra/consumer/ConsumerEntrypoint.java)构成真实双插件示例；[有限执行宿主](../../fibra-example-host/src/main/java/com/sstlfsj/fibra/example/host/FibraExampleHost.java)和[黑盒集成测试](../../fibra-example-host/src/test/java/com/sstlfsj/fibra/example/host/FibraExampleHostIT.java)直接验收这些 Maven 制品，避免文档与实现漂移。
-
-入口类只实现 Fibra 生命周期，不继承 PF4J `Plugin`，不创建 Spring Context，业务包也不能使用宿主保留前缀 `com.sstlfsj.fibra`。
-
-PF4J 的注解处理器会为两个模块分别生成 `META-INF/extensions.idx`。consumer 对 provider 使用 `provided` 编译依赖，并通过 Manifest 的 `Plugin-Dependencies` 建立运行时依赖；provider 契约不会被打入 consumer JAR。仓库示例可直接构建和运行一次 provider 1.0.0 到 2.0.0 的显式更新：
-
-```bash
-mvn clean verify
-mkdir -p plugins releases
-cp fibra-example-provider-plugin/target/fibra-example-provider-plugin.jar \
-  plugins/fibra-example-provider.jar
-cp fibra-example-consumer-plugin/target/fibra-example-consumer-plugin.jar \
-  plugins/fibra-example-consumer.jar
-cp fibra-example-provider-plugin/target/fibra-example-provider-plugin-v2.jar \
-  releases/fibra-example-provider-v2.jar
-java -jar fibra-example-host/target/fibra-example-host-all.jar \
-  plugins releases/fibra-example-provider-v2.jar
-```
-
-只执行真实制品验收可使用 `mvn -pl fibra-example-host -am verify`。跨兄弟插件发布服务时，provider 应在 `context.root()` 注册，并把返回的 `ServiceRegistration` 作为入口 Publisher 的 disposer 交给自身生命周期；直接在 provider 子 Context 注册的服务只对该 Fibra 及其后代可见。
-
-宿主直接使用 loader 的标准 API：
+插件工程依赖 `fibra-pf4j-api` 与 PF4J，作用域必须是 `provided`。每个 JAR 必须在 Manifest 声明 `Plugin-Id` 与 `Plugin-Version`，只能提供一个 `FibraPluginEntrypoint<C>`，不得声明 PF4J `Plugin-Class`，也不得内嵌 Fibra、PF4J、Reactive Streams、Reactor 或 SLF4J 共享类。
 
 ```java
-import com.sstlfsj.fibra.loader.pf4j.FibraPluginLoader;
-import com.sstlfsj.fibra.runtime.FibraRuntime;
+@Extension
+public final class GreetingEntrypoint implements FibraPluginEntrypoint<GreetingConfig> {
+    public Class<GreetingConfig> configType() {
+        return GreetingConfig.class;
+    }
 
-var pluginsRoot = java.nio.file.Path.of("plugins");
+    public PluginDescriptor<GreetingConfig> descriptor(String entryId) {
+        return PluginDescriptor.<GreetingConfig>builder(entryId).provide(GREETING).build();
+    }
+
+    public Plugin<GreetingConfig> create(String entryId) {
+        return (context, config) -> Mono.just(
+            context.provide(GREETING, name -> config.prefix() + name));
+    }
+}
+```
+
+无配置入口可以实现 `VoidFibraPluginEntrypoint`，只需实现 `create(entryId)`。`pluginId` 是 JAR 制品身份，`entryId` 是运行实例身份；一个制品可以同时创建多个 entry。直接使用 PF4J loader 时先 `loadArtifacts()`，再通过 `PluginInstanceSpec` mount。下面的 `GreetingConfig` 必须来自宿主与插件共享、由父 ClassLoader 装载的契约 JAR：
+
+```java
 try (var root = FibraRuntime.create();
-     var loader = new FibraPluginLoader(root, pluginsRoot)) {
-    loader.loadPlugins();
-    loader.startPlugins();
-    // 运行应用
+     var artifacts = new FibraPluginLoader(root, Path.of("plugins"))) {
+    artifacts.loadArtifacts();
+    artifacts.mount(PluginInstanceSpec.builder("greeting-one", "greeting-plugin")
+        .parentContext(root)
+        .config(new GreetingConfig("你好，"))
+        .build());
 }
 ```
 
-资源按声明逆序关闭，因此 loader 先 dispose 全部插件 Fibra，再 stop/unload PF4J 和关闭 ClassLoader，最后 root Context 关闭。`loadPlugins()` 只扫描根目录直接子级的自包含 JAR；插件存在私有第三方依赖时需打入同一 JAR，共享的 Fibra/PF4J/Reactor/SLF4J 类不得打入。Manifest 不得声明 `Plugin-Class`，每个制品必须且只能有一个 `FibraPluginEntrypoint`。
+`configType(pluginId)` 返回插件 ClassLoader 中的配置类型，但读取完成后不会把原本未启动的 artifact 留在 `STARTED`。`mount/update/unmount` 只操作 entry；`stopArtifact/unloadArtifact/reloadArtifact` 操作制品及其全部受影响 entry。PF4J 会缓存扩展对象，Fibra loader 不使用该对象缓存，而是为每次 mount、update 和 reload 恢复创建全新入口。
 
-`Plugin-Dependencies` 只表示制品和类加载依赖；业务服务依赖仍由入口创建的 Fibra/子 Fibra 使用 `PluginDescriptor.require` 声明。PF4J `STARTED` 不等于 Fibra `ACTIVE`。
+`config(Object)` 只能传 `null` 或父 ClassLoader 定义的共享配置对象。配置类型定义在插件 JAR 内时，必须使用 `configFactory(type -> ...)`，在每次调用中根据参数 `type` 创建当前 ClassLoader 的对象；同理，动态配置更新使用 `updateWithFactory`，普通共享配置更新使用 `update`，两个方法名分开以保证 `update(entryId, null)` 没有 Java 重载歧义。生产宿主通常直接使用下一节的 `fibra-loader-config`，由它从不可变 YAML/JSON 值重新物化。`reloadArtifact(candidate)` 快照的是配置工厂而不是旧 typed config，恢复目标制品及传递依赖方的所有实例，失败时恢复旧 JAR、PF4J 状态和旧实例。`runExclusive` 是 config loader 与 JAR reload 共用的事务协调入口，不向调用者暴露锁对象。
 
-显式更新使用插件根目录外的候选 JAR：
+## 8.1 YAML/JSON 配置装载
 
-```java
-Path candidate = Path.of("releases/greeting-plugin-2.0.0.jar");
-String pluginId = loader.reloadPlugin(candidate);
-```
-
-`reloadPlugin` 会根据候选 Manifest 定位当前插件，停止并卸载全部传递依赖方，等待 Fibra dispose，关闭旧 ClassLoader，在插件根目录内原子替换 JAR，再批量装载并恢复原启动状态。候选无法装载或启动时恢复旧 JAR 和旧运行状态；候选文件本身不会被移动或删除。候选路径必须位于插件根目录外，且不能等于当前 JAR。
-
-自动更新监听独立的 incoming 目录。生产方必须先在目录外完整写出 JAR，再通过同一文件系统的原子 move 发布；监听器只消费 `ENTRY_CREATE`，不会观察半写文件：
+生产宿主通常直接依赖 `fibra-loader-config`：
 
 ```java
-import com.sstlfsj.fibra.loader.pf4j.FibraPluginWatcher;
-import java.time.Duration;
-
-Path incoming = Path.of("plugin-incoming");
-try (var watcher = new FibraPluginWatcher(loader, incoming, Duration.ofSeconds(2))) {
-    watcher.start();
-    // 应用主循环
-    watcher.lastFailure().ifPresent(failure ->
-        root.logger().error("候选插件更新失败：{}", failure.candidate(), failure.cause()));
+try (var root = FibraRuntime.create();
+     var artifacts = new FibraPluginLoader(root, Path.of("plugins"));
+     var config = FibraConfigLoader.builder(root, artifacts, Path.of("fibra.yaml"))
+         .warningSink(warning -> root.logger().warn(warning))
+         .build()) {
+    artifacts.loadArtifacts();
+    config.load();
+    try (var watcher = config.watch(Duration.ofMillis(200),
+        failure -> root.logger().error(failure.exception()))) {
+        // 应用主循环
+    }
 }
 ```
 
-同一插件在去抖窗口内出现多个候选时，监听器使用 PF4J SemVer 选择最高版本；同版本使用文件最后修改时间选择较新的候选，低于当前运行版本的候选被忽略。人工降级仍可直接调用 `reloadPlugin`。监听器不删除 incoming 文件；异步失败同时写入 SLF4J 并由 `lastFailure()` 暴露。关闭顺序必须是 watcher、loader、root。
+根文件扩展名只接受 `.yaml`、`.yml`、`.json`，顶层必须是数组。节点恰好分为三种：插件节点使用 `name`，分组使用 `group: true` 和子数组 `config`，include 使用相对路径 `include`。完整 entry ID 用 `:` 连接祖先 ID，raw `id` 禁止包含 `:`。
+
+```yaml
+- id: agents
+  group: true
+  isolate:
+    greeting: primary
+  config:
+    - id: provider
+      name: greeting-plugin
+      config:
+        prefix: "你好，"
+    - id: consumer
+      name: consumer-plugin
+      inject: [greeting]
+```
+
+`load()` 只能成功一次；`refresh()` 重新解析并事务化应用，内容等价且运行态未漂移时返回同一 snapshot 对象；若托管 entry 被 loader 外部卸载，等价 refresh 会按同一 snapshot 自动补回。只有 config 变化时保持 Fibra 身份并调用 update；entry/plugin/父节点/inject/isolate/intercept/节点类型变化会替换实例。disabled 条目也校验 artifact 和 typed config，禁用不能隐藏配置错误。任一条目失败时严格逆序回滚，`snapshot()` 和运行态仍是上一份成功状态。
+
+`create(parentId, position, entry)` 在指定 group/include 下创建节点；`parentId == null` 表示根，`position < 0` 表示尾部，非负位置大于长度时按尾部处理。`update(entryId, overridePatch, parentId, position)` 修改字段并可移动节点；`remove(entryId)` 删除节点。三者先校验序列化结果仍满足 loader 的大小、深度、字符串和 entry 数限制，再暂存同目录临时文件并完成运行态事务，最后以原子 rename 提交源文件。单文件失败时源文件和 snapshot 不变；多文件没有文件系统级整体原子提交，rename 失败时 loader 恢复已替换文件和旧运行态，若恢复本身失败则报告 `ROLLBACK`，各恢复失败直接位于 suppressed。include 子节点写回其 include 文件；由 builder patch 插入、原文件中不存在的合成节点不可写，update/remove 返回 `VALIDATE`。
+
+patch 分 `insert` 与 `override`，按列表顺序应用；override 的显式 `null` 删除字段。缺失目标、目标不是 group 或 expected plugin 不匹配会通过 `warningSink` 报告并跳过。配置只接受字面值，不执行 SpEL、JEXL、JavaScript、反射构造或环境表达式；宿主必须把环境/profile 解析为显式 `FibraConfigPatch`。
+
+`FibraConfigException` 的 `stage/path/entryId/pluginId` 是稳定定位字段：`READ` 为文件访问/真实路径失败，`PARSE` 为 YAML/JSON 语法失败，`VALIDATE` 为配置结构失败，`RESOLVE` 为插件制品或配置类型解析失败，`CONVERT` 为字面值到 typed config 的映射失败，`DISPOSE/APPLY` 为运行态卸载/应用失败，`WRITE` 为文件暂存或原子替换失败，`ROLLBACK` 为恢复旧状态失败。watcher 合并根文件、全部 include 文件以及失败候选尝试访问路径的 create/modify/delete，并补充路径存在状态检查；即使新增 include 文件及其父目录暂时不存在，随后创建也会自动触发恢复。刷新失败保留最后成功运行态，通过 failure sink 和 SLF4J 同时报告。watcher close 会等待在途 refresh 与 failure callback 完成，config loader 进入关闭状态后不允许并发安装新 watcher。关闭顺序固定为 config watcher、config loader、PF4J loader、root Context；try-with-resources 按上例声明即可得到该逆序。
 
 ## 9. 稳定错误
 
@@ -262,12 +279,13 @@ try (var watcher = new FibraPluginWatcher(loader, incoming, Duration.ofSeconds(2
 | `annotation` | `InjectService`、`InjectServices` |
 | `event` | `EventKey`、`EventOptions`、`EventTarget`、`Next`、`AggregateEventException`、`CoreEvents` 及其 8 个 listener 契约 |
 | `logging` | `FibraLogger`、`LoggerService`、`LogExporter`、`LogMessage`、`LogLevel`、`LoggerIntercept` |
-| `pf4j` | `FibraPluginEntrypoint` |
-| `loader.pf4j` | `FibraPluginLoader`、`FibraPluginWatcher`、`FibraPluginWatchFailure` |
+| `pf4j` | `FibraPluginEntrypoint`、`VoidFibraPluginEntrypoint` |
+| `loader.pf4j` | `FibraPluginLoader`、`PluginInstanceSpec`、`PluginConfigFactory`、`FibraPluginWatcher`、`FibraPluginWatchFailure` |
+| `loader.config` | `FibraConfigLoader`、`FibraConfigEntry`、`FibraConfigPatch`、`FibraConfigSnapshot`、`FibraConfigRuntimeEntry`、`FibraConfigException`、`FibraConfigErrorStage`、`FibraConfigWarning`、`FibraConfigWatcher`、`FibraConfigReloadFailure` |
 
 `fibra-core` 只承诺 `com.sstlfsj.fibra.runtime` 包，其中当前唯一入口是 `FibraRuntime`。`com.sstlfsj.fibra.internal` 即使因实现协作需要包含 Java `public` 类型，也属于明确排除的实现细节，业务代码不得直接引用。
 
-四个生产制品的完整 public/protected JVM 签名分别见本目录中的 `*-public-signatures.txt`。`ApiSignatureBaselineTest` 扫描全部制品的公开类型集合并调用 JDK `javap -protected`；任何新增、删除、可见性、泛型或方法签名变化都会使 `mvn verify` 失败，必须先完成 API 审核后显式更新基线。
+五个生产制品的完整 public/protected JVM 签名分别见本目录中的 `*-public-signatures.txt`。`ApiSignatureBaselineTest` 扫描全部制品的公开类型集合并调用 JDK `javap -protected`；任何新增、删除、可见性、泛型或方法签名变化都会使 `mvn verify` 失败，必须先完成 API 审核后显式更新基线。
 
 ### 10.1 兼容性清单
 

@@ -45,8 +45,10 @@ class FibraPluginWatcherTest {
              FibraPluginLoader loader = new FibraPluginLoader(root, pluginsRoot);
              FibraPluginWatcher watcher = new FibraPluginWatcher(
                  loader, incoming, Duration.ofMillis(150))) {
-            loader.loadPlugins();
-            loader.startPlugin("fixture");
+            loader.loadArtifacts();
+            loader.mount(PluginInstanceSpec.builder("fixture", "fixture")
+                .parentContext(root)
+                .build());
             watcher.start();
 
             publish(second, incoming.resolve(second.getFileName()));
@@ -75,8 +77,10 @@ class FibraPluginWatcherTest {
              FibraPluginLoader loader = new FibraPluginLoader(root, pluginsRoot);
              FibraPluginWatcher watcher = new FibraPluginWatcher(
                  loader, incoming, Duration.ofMillis(50))) {
-            loader.loadPlugins();
-            loader.startPlugin("fixture");
+            loader.loadArtifacts();
+            loader.mount(PluginInstanceSpec.builder("fixture", "fixture")
+                .parentContext(root)
+                .build());
             watcher.start();
 
             var published = incoming.resolve(invalid.getFileName());

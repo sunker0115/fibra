@@ -3,7 +3,7 @@
 日期：2026-08-22
 状态：已接受
 
-本文固定 Fibra 接入 Spring 宿主以及未来 Java DeepSeek Harness 的边界。本文中的“当前”指 Fibra `0.1.1` 与 Spring AI 源码提交 `db45fc548`；后续实现不得用 Spring 的容器、事件、工具循环或模型类型替换 Harness/Fibra 已定义的语义。
+本文固定 Fibra `0.2.0` 接入 Spring 宿主以及后续 Java DeepSeek Harness 的边界；Spring AI 对照基线为源码提交 `db45fc548`。后续实现不得用 Spring 的容器、事件、工具循环或模型类型替换 Harness/Fibra 已定义的语义。
 
 ## 1. 结论
 
@@ -34,7 +34,7 @@ flowchart TB
 
   subgraph Fibra[Fibra：动态运行时]
     Core[Context / Fibra / ServiceKey / Event / Effect]
-    Loader[PF4J 制品与 ClassLoader]
+    Loader[Config 动态组合 / PF4J 制品与 ClassLoader]
     Plugins[动态 Harness 插件]
   end
 
@@ -56,7 +56,7 @@ flowchart TB
 ```text
 harness-domain / harness-plugin-* -> harness-api -> fibra-api
 harness-runtime                  -> harness-api + fibra-core
-harness-loader-pf4j              -> harness-api + fibra-loader-pf4j
+harness-loader-config            -> harness-api + fibra-loader-config
 harness-spring-boot              -> harness-runtime + Spring Boot
 harness-provider-deepseek        -> harness-api + 选定的直接 HTTP/SSE 实现
 harness-adapter-spring-ai        -> harness-api + Spring AI（未来可选，首版不存在）
@@ -186,9 +186,9 @@ Spring AI 的 BOM 和 starter 只有在首个可选模块真正实现时才加�
 
 ## 7. 后续实现门禁
 
-Fibra `0.1.1` 只固化本文所需的现有核心语义和文档，不新增 Spring 模块。在创建 Java DeepSeek Harness 项目之前，Fibra `0.2.0` 先交付框架中立的 `fibra-loader-config`。该模块负责 YAML/JSON 配置解析、校验、插件条目树装配、更新与回滚，可调用 `fibra-loader-pf4j`，但不依赖 Spring、Spring Boot 或 Spring AI。Spring Boot 的 `application.yml` 只配置静态宿主；动态插件组合由 `fibra-loader-config` 管理。
+Fibra `0.2.0` 已交付框架中立的 `fibra-loader-config`，包括 YAML/JSON 解析、校验、多实例配置树、更新、回滚、watcher 和仓库外五制品验收；该模块不依赖 Spring、Spring Boot 或 Spring AI。Java DeepSeek Harness 的 Spring Boot `application.yml` 只配置静态宿主；动态插件组合必须交给 `fibra-loader-config`。
 
-`fibra-loader-config` 完成并发布后，Java DeepSeek Harness 第一阶段按顺序完成：
+Java DeepSeek Harness 第一阶段按顺序完成：
 
 1. 定义框架中立的 Harness LLM/message/chunk/tool/session API，并以原项目测试与日志格式验收；
 2. 建立 Spring Boot 宿主和 Fibra `SmartLifecycle`/readiness 适配，验证静态 Spring 服务到 root `ServiceKey` 的桥接；

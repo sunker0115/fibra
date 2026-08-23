@@ -5,6 +5,8 @@ import com.sstlfsj.fibra.FibraState;
 import com.sstlfsj.fibra.ServiceKey;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
 import example.fibra.plugin.ConsumerEntrypoint;
+import example.fibra.plugin.ConfigurableEntrypoint;
+import example.fibra.plugin.ConfigurableReplacementEntrypoint;
 import example.fibra.plugin.FixtureEntrypoint;
 import example.fibra.plugin.ProviderEntrypoint;
 import example.fibra.plugin.ReplacementEntrypoint;
@@ -34,15 +36,95 @@ class FibraPluginLoaderTest {
     private static final ServiceKey<String> VALUE = ServiceKey.of("fixture.value", String.class);
 
     @Test
+    void mountsUpdatesAndUnmountsMultipleEntriesFromOneArtifact(@TempDir Path pluginsRoot)
+        throws Exception {
+        writePluginJar(pluginsRoot.resolve("fixture.jar"), "fixture", "1.0.0", "",
+            ConfigurableEntrypoint.class);
+
+        try (Context root = FibraRuntime.create();
+             FibraPluginLoader loader = new FibraPluginLoader(root, pluginsRoot)) {
+            assertEquals(List.of("fixture"), loader.loadArtifacts());
+            var firstContext = root.isolate(VALUE, "first");
+            var secondContext = root.isolate(VALUE, "second");
+
+            var first = loader.mount(PluginInstanceSpec.builder("first", "fixture")
+                .parentContext(firstContext)
+                .config("one")
+                .build());
+            var second = loader.mount(PluginInstanceSpec.builder("second", "fixture")
+                .parentContext(secondContext)
+                .config("two")
+                .build());
+
+            assertEquals(String.class, loader.configType("fixture"));
+            assertEquals(List.of("first", "second"), loader.entryIds());
+            assertEquals("first:one", firstContext.get(VALUE));
+            assertEquals("second:two", secondContext.get(VALUE));
+            assertNotEquals(first.uid(), second.uid());
+
+            assertSame(first, loader.update("first", "updated"));
+            assertEquals("first:updated", firstContext.get(VALUE));
+            assertEquals("second:two", secondContext.get(VALUE));
+
+            loader.unmount("first");
+            assertNull(firstContext.get(VALUE));
+            assertEquals(List.of("second"), loader.entryIds());
+            assertTrue(loader.fibra("second").isPresent());
+        }
+    }
+
+    @Test
+    void reloadAndFailedReloadRestoreEveryEntryOfTheAffectedArtifact(@TempDir Path work)
+        throws Exception {
+        var pluginsRoot = Files.createDirectory(work.resolve("plugins"));
+        var incoming = Files.createDirectory(work.resolve("incoming"));
+        writePluginJar(pluginsRoot.resolve("fixture.jar"), "fixture", "1.0.0", "",
+            ConfigurableEntrypoint.class);
+        var replacement = incoming.resolve("fixture-2.0.0.jar");
+        writePluginJar(replacement, "fixture", "2.0.0", "",
+            ConfigurableReplacementEntrypoint.class);
+        var invalid = incoming.resolve("fixture-3.0.0.jar");
+        writePluginJar(invalid, "fixture", "3.0.0", "");
+
+        try (Context root = FibraRuntime.create();
+             FibraPluginLoader loader = new FibraPluginLoader(root, pluginsRoot)) {
+            loader.loadArtifacts();
+            var firstContext = root.isolate(VALUE, "first");
+            var secondContext = root.isolate(VALUE, "second");
+            loader.mount(PluginInstanceSpec.builder("first", "fixture")
+                .parentContext(firstContext).config("one").build());
+            loader.mount(PluginInstanceSpec.builder("second", "fixture")
+                .parentContext(secondContext).config("two").build());
+            var firstClassLoader = loader.pluginClassLoader("fixture");
+
+            loader.reloadArtifact(replacement);
+
+            assertTrue(firstClassLoader.isClosed());
+            assertEquals(List.of("first", "second"), loader.entryIds());
+            assertEquals("v2:first:one", firstContext.get(VALUE));
+            assertEquals("v2:second:two", secondContext.get(VALUE));
+
+            var secondClassLoader = loader.pluginClassLoader("fixture");
+            assertThrows(IllegalStateException.class, () -> loader.reloadArtifact(invalid));
+
+            assertTrue(secondClassLoader.isClosed());
+            assertEquals("2.0.0", pluginVersion(pluginsRoot.resolve("fixture.jar")));
+            assertEquals(List.of("first", "second"), loader.entryIds());
+            assertEquals("v2:first:one", firstContext.get(VALUE));
+            assertEquals("v2:second:two", secondContext.get(VALUE));
+        }
+    }
+
+    @Test
     void loadsStartsStopsAndUnloadsRealPluginJar(@TempDir Path pluginsRoot) throws Exception {
         writePluginJar(pluginsRoot.resolve("fixture.jar"), "fixture", "1.0.0", "",
             FixtureEntrypoint.class);
 
         try (Context root = FibraRuntime.create();
              FibraPluginLoader loader = new FibraPluginLoader(root, pluginsRoot)) {
-            assertEquals(List.of("fixture"), loader.loadPlugins());
+            assertEquals(List.of("fixture"), loader.loadArtifacts());
 
-            var fibra = loader.startPlugin("fixture");
+            var fibra = loader.mount(instance(root, "fixture", "fixture"));
 
             assertEquals(FibraState.ACTIVE, fibra.state());
             assertEquals("fixture", root.get(VALUE));
@@ -54,13 +136,13 @@ class FibraPluginLoaderTest {
                 .loadClass(Context.class.getName()));
 
             var classLoader = loader.pluginClassLoader("fixture");
-            loader.stopPlugin("fixture");
+            loader.stopArtifact("fixture");
             assertFalse(loader.fibra("fixture").isPresent());
             assertNull(root.get(VALUE));
 
-            assertTrue(loader.unloadPlugin("fixture"));
+            assertTrue(loader.unloadArtifact("fixture"));
             assertTrue(classLoader.isClosed());
-            assertEquals(List.of(), loader.pluginIds());
+            assertEquals(List.of(), loader.artifactIds());
         }
     }
 
@@ -75,13 +157,14 @@ class FibraPluginLoaderTest {
 
         try (Context root = FibraRuntime.create();
              FibraPluginLoader loader = new FibraPluginLoader(root, pluginsRoot)) {
-            loader.loadPlugins();
-            loader.startPlugin("consumer");
+            loader.loadArtifacts();
+            loader.mount(instance(root, "provider", "provider"));
+            loader.mount(instance(root, "consumer", "consumer"));
 
             assertEquals(List.of("provider:start", "consumer:start"),
                 PluginLifecycleRecorder.EVENTS);
 
-            loader.stopPlugin("provider");
+            loader.stopArtifact("provider");
 
             assertEquals(List.of("provider:start", "consumer:start", "consumer:stop", "provider:stop"),
                 PluginLifecycleRecorder.EVENTS);
@@ -97,10 +180,10 @@ class FibraPluginLoaderTest {
 
         try (Context root = FibraRuntime.create();
              FibraPluginLoader loader = new FibraPluginLoader(root, pluginsRoot)) {
-            loader.loadPlugins();
+            loader.loadArtifacts();
 
             var error = assertThrows(IllegalStateException.class,
-                () -> loader.startPlugin("empty"));
+                () -> loader.mount(instance(root, "empty", "empty")));
 
             assertTrue(error.getMessage().contains("exactly one FibraPluginEntrypoint"));
             assertFalse(loader.fibra("empty").isPresent());
@@ -115,10 +198,10 @@ class FibraPluginLoaderTest {
 
         try (Context root = FibraRuntime.create();
              FibraPluginLoader loader = new FibraPluginLoader(root, pluginsRoot)) {
-            loader.loadPlugins();
+            loader.loadArtifacts();
 
             var error = assertThrows(IllegalStateException.class,
-                () -> loader.startPlugin("multiple"));
+                () -> loader.mount(instance(root, "multiple", "multiple")));
 
             assertTrue(error.getMessage().contains("found 2"));
             assertFalse(loader.fibra("multiple").isPresent());
@@ -132,10 +215,10 @@ class FibraPluginLoaderTest {
 
         try (Context root = FibraRuntime.create();
              FibraPluginLoader loader = new FibraPluginLoader(root, pluginsRoot)) {
-            var error = assertThrows(IllegalArgumentException.class, loader::loadPlugins);
+            var error = assertThrows(IllegalArgumentException.class, loader::loadArtifacts);
 
             assertTrue(error.getMessage().contains("must not bundle shared class"));
-            assertEquals(List.of(), loader.pluginIds());
+            assertEquals(List.of(), loader.artifactIds());
         }
     }
 
@@ -147,9 +230,9 @@ class FibraPluginLoaderTest {
 
         try (Context root = FibraRuntime.create();
              FibraPluginLoader loader = new FibraPluginLoader(root, pluginsRoot)) {
-            assertThrows(RuntimeException.class, loader::loadPlugins);
+            assertThrows(RuntimeException.class, loader::loadArtifacts);
 
-            assertEquals(List.of(), loader.pluginIds());
+            assertEquals(List.of(), loader.artifactIds());
         }
     }
 
@@ -165,11 +248,11 @@ class FibraPluginLoaderTest {
 
         try (Context root = FibraRuntime.create();
              FibraPluginLoader loader = new FibraPluginLoader(root, pluginsRoot)) {
-            loader.loadPlugins();
-            loader.startPlugin("fixture");
+            loader.loadArtifacts();
+            loader.mount(instance(root, "fixture", "fixture"));
             var oldClassLoader = loader.pluginClassLoader("fixture");
 
-            assertEquals("fixture", loader.reloadPlugin(candidate));
+            assertEquals("fixture", loader.reloadArtifact(candidate));
 
             assertEquals("replacement", root.get(VALUE));
             assertTrue(oldClassLoader.isClosed());
@@ -195,12 +278,13 @@ class FibraPluginLoaderTest {
 
         try (Context root = FibraRuntime.create();
              FibraPluginLoader loader = new FibraPluginLoader(root, pluginsRoot)) {
-            loader.loadPlugins();
-            loader.startPlugin("consumer");
+            loader.loadArtifacts();
+            loader.mount(instance(root, "provider", "provider"));
+            loader.mount(instance(root, "consumer", "consumer"));
             var oldProviderClassLoader = loader.pluginClassLoader("provider");
             var oldConsumerClassLoader = loader.pluginClassLoader("consumer");
 
-            loader.reloadPlugin(candidate);
+            loader.reloadArtifact(candidate);
 
             assertEquals(List.of(
                 "provider:start", "consumer:start",
@@ -226,11 +310,11 @@ class FibraPluginLoaderTest {
 
         try (Context root = FibraRuntime.create();
              FibraPluginLoader loader = new FibraPluginLoader(root, pluginsRoot)) {
-            loader.loadPlugins();
-            loader.startPlugin("fixture");
+            loader.loadArtifacts();
+            loader.mount(instance(root, "fixture", "fixture"));
             var oldClassLoader = loader.pluginClassLoader("fixture");
 
-            assertThrows(IllegalStateException.class, () -> loader.reloadPlugin(candidate));
+            assertThrows(IllegalStateException.class, () -> loader.reloadArtifact(candidate));
 
             assertTrue(oldClassLoader.isClosed());
             assertEquals("1.0.0", pluginVersion(pluginsRoot.resolve("fixture.jar")));
@@ -260,6 +344,12 @@ class FibraPluginLoaderTest {
                 addClass(output, type);
             }
         }
+    }
+
+    private static PluginInstanceSpec instance(Context root, String entryId, String pluginId) {
+        return PluginInstanceSpec.builder(entryId, pluginId)
+            .parentContext(root)
+            .build();
     }
 
     private static void addClass(JarOutputStream output, Class<?> type) throws IOException {

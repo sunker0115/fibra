@@ -2,16 +2,17 @@
 
 ## 发布边界
 
-远程 Maven 仓库只接收以下四个生产制品：
+远程 Maven 仓库只接收以下五个生产制品：
 
 - `com.sstlfsj:fibra-api`；
 - `com.sstlfsj:fibra-core`；
 - `com.sstlfsj:fibra-pf4j-api`；
-- `com.sstlfsj:fibra-loader-pf4j`。
+- `com.sstlfsj:fibra-loader-pf4j`；
+- `com.sstlfsj:fibra-loader-config`。
 
 根 `fibra` 只负责聚合、版本和构建策略；两个插件示例、示例宿主及 `fibra-parity-tests` 只负责验证。它们允许安装到本地 Maven 仓库以支持 reactor 开发，但统一跳过远程 deploy，不形成可消费产品坐标。
 
-四个生产模块使用 Flatten Maven Plugin 的 `oss` 模式生成自包含发布 POM。发布 POM不保留未发布的根 parent，不包含 `${revision}` 或 `${project.version}`，所有消费依赖都展开为明确版本。因此消费者不需要第五个 `com.sstlfsj:fibra` 父 POM。
+五个生产模块使用 Flatten Maven Plugin 的 `oss` 模式生成自包含发布 POM。发布 POM不保留未发布的根 parent，不包含 `${revision}` 或 `${project.version}`，所有消费依赖都展开为明确版本。因此消费者不需要 `com.sstlfsj:fibra` 父 POM。
 
 ## 权威构建
 
@@ -28,11 +29,11 @@ Maven Enforcer 在每个模块检查：
 - 依赖图必须收敛；
 - clean、verify、install、deploy 生命周期使用的插件必须有明确版本。
 
-四个生产模块每次 `package` 都附加 sources JAR 与 Javadoc JAR。`ReleaseArtifactBaselineTest` 继续检查主 JAR、sources JAR、Javadoc JAR、自包含 POM、Java 21 class major version、测试 class 隔离和 deploy 模块边界。公开 API 仍由 `ApiSignatureBaselineTest` 与四份 `javap -protected` 基线冻结。
+五个生产模块每次 `package` 都附加 sources JAR 与 Javadoc JAR。`ReleaseArtifactBaselineTest` 检查主 JAR、sources JAR、Javadoc JAR、自包含 POM、Java 21 class major version、测试 class 隔离和 deploy 模块边界。公开 API 由 `ApiSignatureBaselineTest` 与五份 `javap -protected` 基线冻结。
 
 ## 可复现构建
 
-根 POM固定 `project.build.outputTimestamp`，Javadoc 固定编码、locale 并移除生成时间。验证脚本先保存已通过完整 `verify` 的四模块产物，再只重建生产依赖图，并逐字节比较主 JAR、sources JAR、Javadoc JAR 和发布 POM：
+根 POM固定 `project.build.outputTimestamp`，Javadoc 固定编码、locale 并移除生成时间。验证脚本先保存已通过完整 `verify` 的五模块产物，再只重建生产依赖图，并逐字节比较主 JAR、sources JAR、Javadoc JAR 和发布 POM：
 
 ```bash
 scripts/verify-reproducible-release.sh
@@ -45,9 +46,9 @@ scripts/verify-reproducible-release.sh
 `verification/external-consumer` 是纳入版本控制的独立 Maven 工程模板，不是 Fibra reactor 模块，也不继承 `com.sstlfsj:fibra`。不得把它加入根 POM 的 `<modules>`。它包含四个职责互不替代的模块：
 
 - `core-app` 在 Fibra 制品中只直接依赖 `com.sstlfsj:fibra-core`，另以 runtime scope 使用 `slf4j-simple`，验证运行时创建、服务注册、读取和释放；
-- `provider-plugin` 以 provided scope 依赖 `com.sstlfsj:fibra-pf4j-api` 和 PF4J，拥有 `Greeting` 服务契约及实现，生成 `external-provider-plugin` 瘦 JAR；
+- `provider-plugin` 以 provided scope 依赖 `com.sstlfsj:fibra-pf4j-api` 和 PF4J，拥有 `Greeting` 服务契约及 typed config 入口，生成 `external-provider-plugin` 瘦 JAR；
 - `consumer-plugin` 以 provided scope 依赖 provider、`com.sstlfsj:fibra-pf4j-api` 和 PF4J，真实调用 `Greeting`；其 Manifest 通过 `Plugin-Dependencies` 声明运行时依赖 provider，JAR 不复制 provider 契约；
-- `host` 在 Fibra 制品中只直接依赖 `com.sstlfsj:fibra-loader-pf4j`，另以 runtime scope 使用 `slf4j-simple`；Host POM 不依赖任一插件，脚本只在构建完成后把两个插件 JAR 复制到运行时插件目录。
+- `host` 在 Fibra 制品中只直接依赖 `com.sstlfsj:fibra-loader-config`，另以 runtime scope 使用 `slf4j-simple`；Host POM 不依赖任一插件，脚本只在构建完成后把两个插件 JAR 复制到运行时插件目录并生成 YAML。
 
 `core-app` 与插件链完全独立。插件链的编译关系为 `consumer-plugin -> provider-plugin`，运行时依赖关系也为 consumer 依赖 provider；Host 与插件之间没有 Maven 依赖，只有目录装载关系。完整关系图见[仓库外多插件依赖验收设计](superpowers/specs/2026-08-22-fibra-external-multi-plugin-verification-design.md)。
 
@@ -61,23 +62,23 @@ scripts/verify-external-consumer.sh
 
 脚本完整执行以下黑盒边界：
 
-1. 使用空的用户与全局 Maven settings 和独立临时本地仓库，只构建四个生产模块，并把它们 deploy 到临时文件仓库；
-2. 检查临时仓库只有四个约定模块，且每个模块都具有发布 POM、主 JAR、sources JAR 和 Javadoc JAR；
+1. 使用空的用户与全局 Maven settings 和独立临时本地仓库，只构建五个生产模块，并把它们 deploy 到临时文件仓库；
+2. 检查临时仓库只有五个约定模块，且每个模块都具有发布 POM、主 JAR、sources JAR 和 Javadoc JAR；
 3. 把模板复制到系统临时目录，拒绝符号链接、仓库绝对路径、`target/classes`、`target/test-classes` 和 `systemPath`；
-4. 使用第二个从空目录开始的 Maven 本地仓库构建独立项目，分别检查四个 Fibra 坐标的主 JAR 和 POM 都来源于临时仓库，并逐字节比较本地解析制品与临时远端制品；
+4. 使用第二个从空目录开始的 Maven 本地仓库构建独立项目，分别检查五个 Fibra 坐标的主 JAR 和 POM 都来源于临时仓库，并逐字节比较本地解析制品与临时远端制品；
 5. 检查 provider 和 consumer 都是瘦 JAR，分别具有入口、`META-INF/extensions.idx` 和固定 PF4J Manifest，且不内嵌 Fibra、PF4J、Reactor 或 SLF4J 类；provider 必须包含 `Greeting.class`，consumer 必须不包含该类，Consumer Manifest 必须精确声明 `Plugin-Dependencies: external-provider-plugin`；
 6. 检查 Host JAR 不包含 provider 入口、consumer 入口或 `Greeting.class`，证明 Host 未通过 shade 或编译依赖获得插件实现与契约；
 7. 以两个独立 `java -jar` 进程运行内核应用和插件宿主，不通过 Maven `exec:java` 或 Fibra 仓库 classpath 运行；
-8. Host 加载两个插件并启动后，断言两个 Fibra 均为 `ACTIVE` 且 consumer 得到 `consumer->provider-ready`；停止 provider 后，断言 consumer 被级联停止、两个服务都消失但插件仍保持已装载；精确的 consumer-before-provider 内部停止顺序由 `FibraPluginLoaderTest` 单独门禁；
-9. Host 再次启动 consumer，断言 PF4J 自动启动 provider 依赖、两个 Fibra 和服务都恢复；卸载 provider 后，断言 consumer 被级联卸载、插件集合为空、Fibra 和服务均不存在；全部成立后才输出 `EXTERNAL_MULTI_PLUGIN_CONSUMER_OK`。
+8. Host 读取真实 YAML，以同一 provider 制品创建 `provider-one/provider-two`，并让 `consumer-one/consumer-two` 通过 name-only `inject` 与 isolate 标签分别绑定；四个 entry 必须全部 `ACTIVE` 且结果互不串线；
+9. Host 用程序化 update 修改 `provider-one`，断言配置更新后的服务值可见且 provider Fibra uid 不变；再令 `provider-two` 更新失败，断言错误阶段为 `APPLY`、上一份 snapshot 对象和配置文件字节不变、两个 consumer 仍返回最后成功值；全部成立后才输出 `EXTERNAL_CONFIG_LOADER_CONSUMER_OK`。
 
-该门禁通过只证明“当前工作树生成的四个发布制品，可由另一个 Java 21 Maven 项目仅通过坐标直接编译和运行”。它不表示这些坐标已经存在于 Maven Central 或任何公共仓库，也不替代公开发布前置条件。两个空本地仓库需要从 Maven Central 下载第三方依赖和构建插件，因此首次执行必须具备网络访问能力。
+该门禁通过只证明“当前工作树生成的五个发布制品，可由另一个 Java 21 Maven 项目仅通过坐标直接编译和运行”。它不表示这些坐标已经存在于 Maven Central 或任何公共仓库，也不替代公开发布前置条件。两个空本地仓库需要从 Maven Central 下载第三方依赖和构建插件，因此首次执行必须具备网络访问能力。
 
 CI 固定按以下顺序执行：完整 `mvn clean verify`、可复现制品比较、仓库外消费验收。仓库外脚本生产制品时使用的 `-DskipTests` 不能替代前面的完整测试门禁。
 
 ## 部署
 
-发布仓库由调用方通过 Maven settings、`distributionManagement` 或 `altDeploymentRepository` 提供。执行全 reactor deploy 时，根与验证模块会明确跳过，只有四个生产模块上传：
+发布仓库由调用方通过 Maven settings、`distributionManagement` 或 `altDeploymentRepository` 提供。执行全 reactor deploy 时，根与验证模块会明确跳过，只有五个生产模块上传：
 
 ```bash
 mvn deploy -DaltDeploymentRepository=release::https://repo.example.invalid/maven
@@ -96,4 +97,4 @@ mvn deploy -DaltDeploymentRepository=release::https://repo.example.invalid/maven
 - 目标仓库、制品签名和发布凭据策略；
 - 非 `SNAPSHOT` 的 `revision`。
 
-这些信息确定后统一写入根 POM，由四个生产模块的扁平 POM保留；不得使用虚假 URL、临时开发者或推测的许可证通过公共仓库校验。
+这些信息确定后统一写入根 POM，由五个生产模块的扁平 POM保留；不得使用虚假 URL、临时开发者或推测的许可证通过公共仓库校验。

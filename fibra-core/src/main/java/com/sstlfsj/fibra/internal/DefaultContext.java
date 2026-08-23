@@ -67,11 +67,11 @@ public final class DefaultContext implements Context {
         this.fibra = Objects.requireNonNull(fibra, "fibra");
     }
 
-    DefaultContext child(DefaultFibra fibra, Map<ServiceKey<?>, Object> dependencies) {
+    DefaultContext child(DefaultFibra fibra, Map<String, Object> dependencyIntercepts) {
         var child = new DefaultContext(this, fibra);
-        dependencies.forEach((key, config) -> {
+        dependencyIntercepts.forEach((name, config) -> {
             if (config != null) {
-                child.intercepts.put(key.name(), config);
+                child.intercepts.put(name, config);
             }
         });
         return child;
@@ -114,9 +114,18 @@ public final class DefaultContext implements Context {
 
     public <T> Context isolate(ServiceKey<T> key, Object label) {
         Objects.requireNonNull(key, "key");
+        return isolate(key.name(), label);
+    }
+
+    public Context isolate(String serviceName) {
+        return isolate(serviceName, new Object());
+    }
+
+    public Context isolate(String serviceName, Object label) {
+        validateServiceName(serviceName);
         Objects.requireNonNull(label, "label");
         var child = new DefaultContext(this, fibra);
-        child.isolates.put(key.name(), label);
+        child.isolates.put(serviceName, label);
         return child;
     }
 
@@ -128,12 +137,16 @@ public final class DefaultContext implements Context {
     }
 
     public Context intercept(String name, Object config) {
-        if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("intercept name must not be blank");
-        }
+        validateServiceName(name);
         var child = new DefaultContext(this, fibra);
         child.intercepts.put(name, config);
         return child;
+    }
+
+    private static void validateServiceName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("service name must not be blank");
+        }
     }
 
     public Object intercept(ServiceKey<?> key) {

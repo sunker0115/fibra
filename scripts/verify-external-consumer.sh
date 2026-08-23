@@ -6,8 +6,9 @@ readonly production_modules=(
   fibra-core
   fibra-pf4j-api
   fibra-loader-pf4j
+  fibra-loader-config
 )
-readonly module_list="fibra-api,fibra-core,fibra-pf4j-api,fibra-loader-pf4j"
+readonly module_list="fibra-api,fibra-core,fibra-pf4j-api,fibra-loader-pf4j,fibra-loader-config"
 readonly maven_executable="${MVN:-mvn}"
 readonly repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly fixture_directory="$repository_root/verification/external-consumer"
@@ -73,7 +74,7 @@ actual_modules="$(
 )"
 expected_modules="$(printf '%s\n' "${production_modules[@]}" | LC_ALL=C sort)"
 if [[ "$actual_modules" != "$expected_modules" ]]; then
-  echo "临时仓库中的 Fibra 模块不是约定的四个生产制品" >&2
+  echo "临时仓库中的 Fibra 模块不是约定的五个生产制品" >&2
   printf '实际模块：\n%s\n' "$actual_modules" >&2
   exit 1
 fi
@@ -351,12 +352,36 @@ fi
 
 cp "$provider_jar" "$plugins_directory/external-provider-plugin.jar"
 cp "$consumer_jar" "$plugins_directory/external-consumer-plugin.jar"
+readonly config_file="$temporary_root/fibra.yaml"
+printf '%s\n' \
+  '- id: consumer-one' \
+  '  name: external-consumer-plugin' \
+  '  inject: [external.consumer.provider.greeting]' \
+  '  isolate:' \
+  '    external.consumer.provider.greeting: one' \
+  '    external.consumer.plugin.result: one' \
+  '- id: provider-one' \
+  '  name: external-provider-plugin' \
+  '  isolate:' \
+  '    external.consumer.provider.greeting: one' \
+  '  config: provider-one' \
+  '- id: consumer-two' \
+  '  name: external-consumer-plugin' \
+  '  inject: [external.consumer.provider.greeting]' \
+  '  isolate:' \
+  '    external.consumer.provider.greeting: two' \
+  '    external.consumer.plugin.result: two' \
+  '- id: provider-two' \
+  '  name: external-provider-plugin' \
+  '  isolate:' \
+  '    external.consumer.provider.greeting: two' \
+  '  config: provider-two' > "$config_file"
 (
   cd "$temporary_root"
-  "$java_executable" -jar "$host_jar" "$plugins_directory" 2>&1 | tee host.log
+  "$java_executable" -jar "$host_jar" "$plugins_directory" "$config_file" 2>&1 | tee host.log
 )
-if ! grep -q 'EXTERNAL_MULTI_PLUGIN_CONSUMER_OK' "$temporary_root/host.log"; then
-  echo "fibra-loader-pf4j 仓库外多插件依赖验收未输出成功标记" >&2
+if ! grep -q 'EXTERNAL_CONFIG_LOADER_CONSUMER_OK' "$temporary_root/host.log"; then
+  echo "fibra-loader-config 仓库外配置事务验收未输出成功标记" >&2
   exit 1
 fi
 

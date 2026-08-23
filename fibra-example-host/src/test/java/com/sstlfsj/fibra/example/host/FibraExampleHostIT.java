@@ -5,6 +5,7 @@ import com.sstlfsj.fibra.FibraState;
 import com.sstlfsj.fibra.ServiceKey;
 import com.sstlfsj.fibra.loader.pf4j.FibraPluginLoader;
 import com.sstlfsj.fibra.loader.pf4j.FibraPluginWatcher;
+import com.sstlfsj.fibra.loader.pf4j.PluginInstanceSpec;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -92,8 +93,9 @@ class FibraExampleHostIT {
              FibraPluginLoader loader = new FibraPluginLoader(root, plugins);
              FibraPluginWatcher watcher = new FibraPluginWatcher(
                  loader, incoming, Duration.ofMillis(100))) {
-            loader.loadPlugins();
-            loader.startPlugins();
+            loader.loadArtifacts();
+            loader.mount(instance(root, "fibra-example-provider"));
+            loader.mount(instance(root, "fibra-example-consumer"));
             assertEquals("1.0.0", root.get(PROVIDER_VERSION));
             assertEquals("consumer->provider-1.0.0", root.get(CONSUMER_RESULT));
             assertEquals(FibraState.ACTIVE,
@@ -131,6 +133,12 @@ class FibraExampleHostIT {
 
     private static void publish(Path source, Path target) throws IOException {
         Files.move(source, target, StandardCopyOption.ATOMIC_MOVE);
+    }
+
+    private static PluginInstanceSpec instance(Context root, String pluginId) {
+        return PluginInstanceSpec.builder(pluginId, pluginId)
+            .parentContext(root)
+            .build();
     }
 
     private static String pluginVersion(Path plugin) throws IOException {

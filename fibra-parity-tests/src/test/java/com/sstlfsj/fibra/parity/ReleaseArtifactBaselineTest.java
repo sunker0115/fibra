@@ -23,7 +23,8 @@ class ReleaseArtifactBaselineTest {
         "fibra-api",
         "fibra-core",
         "fibra-pf4j-api",
-        "fibra-loader-pf4j"
+        "fibra-loader-pf4j",
+        "fibra-loader-config"
     );
     private static final List<String> VERIFICATION_MODULES = List.of(
         "fibra-example-provider-plugin",
@@ -122,7 +123,7 @@ class ReleaseArtifactBaselineTest {
             ),
             dependencies(fixtureDirectory.resolve("consumer-plugin").resolve("pom.xml")),
             "consumer 必须以 provided scope 使用 provider、Fibra PF4J API 和 PF4J");
-        assertEquals(List.of("fibra-loader-pf4j:compile", "slf4j-simple:runtime"),
+        assertEquals(List.of("fibra-loader-config:compile", "slf4j-simple:runtime"),
             dependencies(fixtureDirectory.resolve("host").resolve("pom.xml")),
             "Host 不得声明 provider 或 consumer Maven 依赖");
     }

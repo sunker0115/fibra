@@ -10,10 +10,12 @@
 | Reactor Test | 3.8.6 | StepVerifier 与响应式时序测试 |
 | Awaitility | 4.3.0 | 必要时等待最终状态收敛 |
 | PF4J | 3.13.0 | 独立 loader 中的 JAR 发现、依赖解析、扩展索引与 ClassLoader |
+| Jackson Databind/YAML | 3.1.5 | 配置字面值解析、YAML/JSON 写回和插件 ClassLoader typed config 转换 |
+| SnakeYAML Engine | 3.0.1（Jackson YAML 传递依赖） | YAML token 与语法解析 |
 
 采用这些库是为了复用成熟的异步协议、调度和测试工具；Cordis 特有的 Fibra 状态机、effect 所有权、隔离服务表和事件策略仍由内核实现。
 
-PF4J 不进入 `fibra-core`；它只在 `fibra-pf4j-api` 与 `fibra-loader-pf4j` 中提供制品层机制。
+PF4J 不进入 `fibra-core`；它只在 `fibra-pf4j-api` 与 `fibra-loader-pf4j` 中提供制品层机制。Jackson 与 SnakeYAML Engine 只进入 `fibra-loader-config`，任何公开签名都不暴露其类型。
 
 ## 源码审阅基线
 
@@ -30,11 +32,13 @@ PF4J 不进入 `fibra-core`；它只在 `fibra-pf4j-api` 与 `fibra-loader-pf4j`
 
 本文中的“采用”表示依赖已进入当前生产模块并由现有代码调用；“已实现”表示仓库中已有代码和验收；“参考”或“未来约束”只表示设计规则，不表示已有模块、API 或运行能力；“不引入”表示 Fibra 仓库不增加该依赖，不限制上层应用在 Fibra 边界之外独立使用它。
 
-PF4J 的默认批量装载和启动会隔离单个失败并继续，管理操作本身也不提供 Fibra 所需的事务与串行边界。当前 `fibra-loader-pf4j` 已用 `FibraJarPluginManager.loadPluginsStrict` 提供批次回滚，用 `FibraPluginLoader` 的 loader 级锁串行管理操作，并由 `reloadPlugin` 完成磁盘制品、PF4J 状态和 Fibra 生命周期的失败恢复。PF4J 默认卸载依赖方、关闭 ClassLoader、重算依赖图以及按插件状态失效扩展索引缓存的能力继续直接复用。
+PF4J 的默认批量装载和启动会隔离单个失败并继续，管理操作本身也不提供 Fibra 所需的事务与串行边界。当前 `fibra-loader-pf4j` 已用 `FibraJarPluginManager.loadPluginsStrict` 提供批次回滚，用 `FibraPluginLoader` 的 loader 级锁串行管理操作，并由 `reloadArtifact` 完成磁盘制品、PF4J 状态及全部受影响 Fibra 实例的失败恢复。PF4J 默认卸载依赖方、关闭 ClassLoader、重算依赖图以及扩展类发现能力继续直接复用。
 
-Spring Plugin 的 `Plugin<S>.supports(S)`、`PluginRegistry` 首个/全部/默认选择和 `OrderAwarePluginRegistry` 只解决宿主 classpath 内的策略路由。它没有插件制品、安装、卸载、依赖图、ClassLoader 或运行期生命周期，不能替代 PF4J，也不应进入 Fibra core。若上层业务需要“按条件选择策略”，应作为普通 Fibra 服务或业务插件实现，不能再建立一套与 `ServiceKey`、`PluginDescriptor.require` 并行的注册表。
+PF4J 3.13.0 的 `ExtensionWrapper` 在首次 `getExtension()` 后保存同一个扩展对象。Fibra 的入口是运行实例工厂，跨 entry 或 reload 复用该对象会把可变状态和旧 ClassLoader 带到新实例，因此当前 loader 只读取 `getExtensionClasses(...)` 的唯一入口类，并按每次 mount/update/reload 恢复调用其无参构造器。这个差异是 Fibra 对 PF4J 扩展缓存语义的显式收紧，不依赖 PF4J 内部 wrapper 何时失效。
 
-gj.spring.pf4j 的 `PluginLifecycleEngine` 把宿主资源桥接拆为刷新前、刷新后、关闭前三个阶段，并在关闭阶段逆序执行 registrar；这个资源归属与逆序撤销原则只作为未来宿主适配的设计约束。当前仓库没有 Spring、HTTP 或数据访问宿主适配模块。以后若新增此类模块，每项宿主资源注册都必须转换为当前插件 Context 所有的 effect/disposer，由 Fibra 统一等待完成和处理错误；不得复制每插件 Spring Context 或 registrar 的异常吞并策略。
+Spring Plugin 的 `Plugin<S>.supports(S)`、`PluginRegistry` 首个/全部/默认选择和 `OrderAwarePluginRegistry` 只解决宿主 classpath 内的策略路由。其 BeanFactory 适配通过 `Supplier<List<Plugin<S>>>` 在使用时查询当前容器，而不是在 registry 中复制一份实例集合。Fibra 吸收的是这一条所有权规则：`fibra-loader-config` 为配置声明的 group/include scope 持有自己创建的 Fibra，但插件 entry 只保存不可变原始配置和身份；`resolve` 始终向 `FibraPluginLoader` 查询当前插件运行实例，不缓存该实例。Spring Plugin 没有插件制品、安装、卸载、依赖图、ClassLoader 或运行期生命周期，不能替代 PF4J，也不应进入 Fibra core。若上层业务需要“按条件选择策略”，应作为普通 Fibra 服务或业务插件实现，不能再建立一套与 `ServiceKey`、`PluginDescriptor.require` 并行的注册表。
+
+gj.spring.pf4j 的插件容器在每次 start 创建新的插件 `ApplicationContext`，在 stop 时关闭并注销，unload 时还会删除插件作用域的 `ObjectMapper` 等缓存；`PluginLifecycleEngine` 另外把宿主资源桥接拆为刷新前、刷新后、关闭前三个阶段，并在关闭阶段逆序执行 registrar。Fibra 不复制 Spring 子容器，但吸收相同的 ClassLoader 生命周期结论：typed config 必须在当前插件 ClassLoader 下重新物化，旧运行实例和转换缓存不得跨 reload 留存。资源归属与逆序撤销原则只作为未来宿主适配的设计约束。当前仓库没有 Spring、HTTP 或数据访问宿主适配模块。以后若新增此类模块，每项宿主资源注册都必须转换为当前插件 Context 所有的 effect/disposer，由 Fibra 统一等待完成和处理错误；不得复制每插件 Spring Context 或 registrar 的异常吞并策略。
 
 Spring AI 的 `DeepSeekApi.chatCompletionStream` 会合并流式工具调用 chunk，`DeepSeekChatModel` 通过 Spring AI retry 执行模型调用，`ChatClient` 的 `ToolCallingAdvisor` 可以接管工具循环。这些职责与 DeepSeek Harness 对原始 `StreamChunk`、单次 adapter 尝试、独立重试插件、工具流水线和持久会话事实的边界不等价。因此 Spring AI 不作为 Java DeepSeek Harness 首版模型主干，只允许以后通过独立可选模块实现 Harness 自有 seam。Google ADK Java 采用“核心模型契约自有、Spring AI 外置适配”的依赖方向，与本项目约束一致；Embabel 的 Spring 原生平台方向适合另一类产品目标，不作为 DeepSeek Harness 一比一迁移基线。完整决定见 [Fibra、Spring 与 Java DeepSeek Harness 集成架构](../specs/2026-08-22-fibra-spring-harness-integration-architecture.md)。
 
@@ -56,7 +60,7 @@ Spring AI 的 `DeepSeekApi.chatCompletionStream` 会合并流式工具调用 chu
 - 不自造 Promise、事件循环、背压协议或日志 backend。
 - 不用 `CompletableFuture` 建第二套异步生命周期。
 - 不用 `System.Logger`、`System.out` 或具体日志实现替代 SLF4J。
-- 不用反射猜测类插件构造器；使用 `PluginFactory`。
+- core 类插件不反射猜测构造器，使用 `PluginFactory`；PF4J 入口的 public 无参构造器是独立制品协议，由 loader 明确校验并为每个运行生命周期调用。
 - 不用动态代理或 ThreadLocal 隐式传播 caller；使用 `BoundService` 与 `InvocationContext`。
 
 ## 项目适配结论

@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-/** 监听外部候选目录，并按插件 ID 去抖触发 {@link FibraPluginLoader#reloadPlugin(Path)}。 */
+/** 监听外部候选目录，并按插件 ID 去抖触发 {@link FibraPluginLoader#reloadArtifact(Path)}。 */
 public final class FibraPluginWatcher implements AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger(FibraPluginWatcher.class);
     private static final VersionManager VERSIONS = new DefaultVersionManager();
@@ -183,7 +183,7 @@ public final class FibraPluginWatcher implements AutoCloseable {
                 && VERSIONS.compareVersions(update.version, currentVersion) < 0) {
                 return;
             }
-            loader.reloadPlugin(update.candidate);
+            loader.reloadArtifact(update.candidate);
         } catch (RuntimeException exception) {
             recordFailure(update.candidate, exception);
         }

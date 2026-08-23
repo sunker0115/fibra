@@ -55,4 +55,8 @@ public interface Fibra extends Disposable {
     void require(ServiceKey<?> key);
 
     void require(ServiceKey<?> key, Object intercept);
+
+    void require(String serviceName);
+
+    void require(String serviceName, Object intercept);
 }

@@ -3,15 +3,21 @@
 Compiled from "FibraPluginLoader.java"
 public final class com.sstlfsj.fibra.loader.pf4j.FibraPluginLoader implements java.lang.AutoCloseable {
   public com.sstlfsj.fibra.loader.pf4j.FibraPluginLoader(com.sstlfsj.fibra.Context, java.nio.file.Path);
-  public java.util.List<java.lang.String> loadPlugins();
-  public java.lang.String loadPlugin(java.nio.file.Path);
-  public java.lang.String reloadPlugin(java.nio.file.Path);
-  public com.sstlfsj.fibra.Fibra startPlugin(java.lang.String);
-  public void startPlugins();
-  public void stopPlugin(java.lang.String);
-  public boolean unloadPlugin(java.lang.String);
-  public java.util.List<java.lang.String> pluginIds();
+  public java.util.List<java.lang.String> loadArtifacts();
+  public java.lang.String loadArtifact(java.nio.file.Path);
+  public java.lang.String reloadArtifact(java.nio.file.Path);
+  public java.lang.Class<?> configType(java.lang.String);
+  public com.sstlfsj.fibra.Fibra mount(com.sstlfsj.fibra.loader.pf4j.PluginInstanceSpec);
+  public com.sstlfsj.fibra.Fibra update(java.lang.String, java.lang.Object);
+  public com.sstlfsj.fibra.Fibra updateWithFactory(java.lang.String, com.sstlfsj.fibra.loader.pf4j.PluginConfigFactory);
+  public void unmount(java.lang.String);
+  public void stopArtifact(java.lang.String);
+  public boolean unloadArtifact(java.lang.String);
+  public java.util.List<java.lang.String> artifactIds();
+  public java.util.List<java.lang.String> entryIds();
   public java.util.Optional<com.sstlfsj.fibra.Fibra> fibra(java.lang.String);
+  public <T> T runExclusive(java.util.function.Supplier<T>);
+  public void runExclusive(java.lang.Runnable);
   public void close();
 }
 ## com.sstlfsj.fibra.loader.pf4j.FibraPluginWatchFailure
@@ -32,4 +38,30 @@ public final class com.sstlfsj.fibra.loader.pf4j.FibraPluginWatcher implements j
   public boolean isRunning();
   public java.util.Optional<com.sstlfsj.fibra.loader.pf4j.FibraPluginWatchFailure> lastFailure();
   public void close();
+}
+## com.sstlfsj.fibra.loader.pf4j.PluginConfigFactory
+Compiled from "PluginConfigFactory.java"
+public interface com.sstlfsj.fibra.loader.pf4j.PluginConfigFactory {
+  public abstract java.lang.Object create(java.lang.Class<?>);
+}
+## com.sstlfsj.fibra.loader.pf4j.PluginInstanceSpec
+Compiled from "PluginInstanceSpec.java"
+public final class com.sstlfsj.fibra.loader.pf4j.PluginInstanceSpec {
+  public static com.sstlfsj.fibra.loader.pf4j.PluginInstanceSpec$Builder builder(java.lang.String, java.lang.String);
+  public java.lang.String entryId();
+  public java.lang.String pluginId();
+  public com.sstlfsj.fibra.Context parentContext();
+  public com.sstlfsj.fibra.loader.pf4j.PluginConfigFactory configFactory();
+  public java.util.Map<java.lang.String, java.lang.Object> requirements();
+}
+## com.sstlfsj.fibra.loader.pf4j.PluginInstanceSpec$Builder
+Compiled from "PluginInstanceSpec.java"
+public final class com.sstlfsj.fibra.loader.pf4j.PluginInstanceSpec$Builder {
+  public com.sstlfsj.fibra.loader.pf4j.PluginInstanceSpec$Builder parentContext(com.sstlfsj.fibra.Context);
+  public com.sstlfsj.fibra.loader.pf4j.PluginInstanceSpec$Builder config(java.lang.Object);
+  public com.sstlfsj.fibra.loader.pf4j.PluginInstanceSpec$Builder configFactory(com.sstlfsj.fibra.loader.pf4j.PluginConfigFactory);
+  public com.sstlfsj.fibra.loader.pf4j.PluginInstanceSpec$Builder require(java.lang.String);
+  public com.sstlfsj.fibra.loader.pf4j.PluginInstanceSpec$Builder require(java.lang.String, java.lang.Object);
+  public com.sstlfsj.fibra.loader.pf4j.PluginInstanceSpec$Builder requirements(java.util.Map<java.lang.String, ?>);
+  public com.sstlfsj.fibra.loader.pf4j.PluginInstanceSpec build();
 }
