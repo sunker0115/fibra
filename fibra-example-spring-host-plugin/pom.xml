@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.sstlfsj</groupId>
+    <artifactId>fibra</artifactId>
+    <version>${revision}</version>
+  </parent>
+
+  <artifactId>fibra-example-spring-host-plugin</artifactId>
+  <description>实现宿主 Greeting SPI 的真实 PF4J 插件制品，供 Spring 宿主示例热装/热卸黑盒验收。</description>
+
+  <properties>
+    <plugin.id>fibra-example-spring-host-provider</plugin.id>
+    <plugin.version>1.0.0</plugin.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-example-spring-host-api</artifactId>
+      <version>${revision}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-pf4j-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.pf4j</groupId>
+      <artifactId>pf4j</artifactId>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>fibra-example-spring-host-plugin</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.pf4j</groupId>
+              <artifactId>pf4j</artifactId>
+              <version>${pf4j.version}</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Implementation-Version>${plugin.version}</Implementation-Version>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration><attach>false</attach></configuration>
+        <executions>
+          <execution>
+            <id>plugin-package</id>
+            <phase>package</phase>
+            <goals><goal>single</goal></goals>
+            <configuration>
+              <descriptors>
+                <descriptor>${maven.multiModuleProjectDirectory}/build/plugin-package-assembly.xml</descriptor>
+              </descriptors>
+              <finalName>${plugin.id}-${plugin.version}</finalName>
+              <appendAssemblyId>false</appendAssemblyId>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

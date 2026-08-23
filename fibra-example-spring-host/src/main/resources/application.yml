@@ -1,0 +1,16 @@
+fibra:
+  # 已装插件目录（PF4J 安装根）；手动运行前需存在。
+  plugins-root: ./run/plugins
+  # 上传暂存目录；apply 前的 ZIP 落在这里。
+  staging-root: ./run/staging
+  # 配置树位置（本示例走请求驱动的显式 mount，配置树保持空数组即可）。
+  config-location: ./run/fibra.yaml
+  # 显式 apply 驱动，不用自动 watcher。
+  watcher:
+    enabled: false
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 32MB
+      max-request-size: 32MB

@@ -21,6 +21,9 @@
     <module>fibra-example-consumer-plugin</module>
     <module>fibra-example-host</module>
     <module>fibra-spring-boot-starter</module>
+    <module>fibra-example-spring-host-api</module>
+    <module>fibra-example-spring-host-plugin</module>
+    <module>fibra-example-spring-host</module>
     <module>fibra-parity-tests</module>
   </modules>
 

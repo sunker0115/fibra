@@ -40,6 +40,9 @@ class ReleaseArtifactBaselineTest {
         "fibra-example-provider-plugin",
         "fibra-example-consumer-plugin",
         "fibra-example-host",
+        "fibra-example-spring-host-api",
+        "fibra-example-spring-host-plugin",
+        "fibra-example-spring-host",
         "fibra-parity-tests"
     );
     private static final List<String> EXTERNAL_CONSUMER_MODULES = List.of(
