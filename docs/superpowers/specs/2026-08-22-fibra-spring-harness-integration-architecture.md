@@ -3,7 +3,7 @@
 日期：2026-08-22
 状态：已接受
 
-本文固定 Fibra 接入 Spring 宿主以及未来 Java DeepSeek Harness 的边界。本文中的“当前”指 Fibra `0.1.1-SNAPSHOT` 与 Spring AI 源码提交 `db45fc548`；后续实现不得用 Spring 的容器、事件、工具循环或模型类型替换 Harness/Fibra 已定义的语义。
+本文固定 Fibra 接入 Spring 宿主以及未来 Java DeepSeek Harness 的边界。本文中的“当前”指 Fibra `0.1.1` 与 Spring AI 源码提交 `db45fc548`；后续实现不得用 Spring 的容器、事件、工具循环或模型类型替换 Harness/Fibra 已定义的语义。
 
 ## 1. 结论
 

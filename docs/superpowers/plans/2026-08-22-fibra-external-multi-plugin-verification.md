@@ -6,7 +6,7 @@
 
 **Architecture:** Provider JAR 独占 `Greeting` 契约，Consumer 通过 Maven `provided` 依赖完成编译，并通过 PF4J `Plugin-Dependencies` 在运行时从 provider ClassLoader 获得同一类型。Host 不依赖任何插件，只用 `fibra-loader-pf4j` 从目录加载两个瘦 JAR；旧单 `plugin` fixture 直接删除。
 
-**Tech Stack:** Java 21、Maven 3.9.9、Fibra 0.1.1-SNAPSHOT、PF4J 3.13.0、Reactor 3.8.6、SLF4J 2.0.18、JUnit 6.1.3、Bash。
+**Tech Stack:** Java 21、Maven 3.9.9、Fibra 0.1.1、PF4J 3.13.0、Reactor 3.8.6、SLF4J 2.0.18、JUnit 6.1.3、Bash。
 
 ---
 
@@ -389,7 +389,7 @@ export MVN=/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbar
 scripts/verify-external-consumer.sh
 ```
 
-Expected: 输出 `EXTERNAL_CORE_CONSUMER_OK`、`EXTERNAL_MULTI_PLUGIN_CONSUMER_OK` 和 `仓库外消费验收通过：0.1.1-SNAPSHOT`。
+Expected: 输出 `EXTERNAL_CORE_CONSUMER_OK`、`EXTERNAL_MULTI_PLUGIN_CONSUMER_OK` 和 `仓库外消费验收通过：0.1.1`。
 
 - [ ] **Step 7: 提交 Host、脚本和文档**
 
