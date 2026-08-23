@@ -13,6 +13,7 @@ public class FibraProperties {
     private Path stagingRoot;
     private Path configLocation;
     private List<String> startupRequiredPlugins = new ArrayList<>();
+    private Duration readinessTimeout = Duration.ofSeconds(60);
     private Duration shutdownTimeout = Duration.ofSeconds(30);
     private final Watcher watcher = new Watcher();
 
@@ -24,6 +25,8 @@ public class FibraProperties {
     public void setConfigLocation(Path v) { this.configLocation = v; }
     public List<String> getStartupRequiredPlugins() { return startupRequiredPlugins; }
     public void setStartupRequiredPlugins(List<String> v) { this.startupRequiredPlugins = v; }
+    public Duration getReadinessTimeout() { return readinessTimeout; }
+    public void setReadinessTimeout(Duration v) { this.readinessTimeout = v; }
     public Duration getShutdownTimeout() { return shutdownTimeout; }
     public void setShutdownTimeout(Duration v) { this.shutdownTimeout = v; }
     public Watcher getWatcher() { return watcher; }

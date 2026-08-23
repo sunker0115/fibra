@@ -38,7 +38,7 @@ public final class FibraLifecycle implements SmartLifecycle {
     public void start() {
         loader.loadArtifacts();
         configLoader.load();
-        Duration timeout = props.getShutdownTimeout();
+        Duration timeout = props.getReadinessTimeout();
         for (String entryId : props.getStartupRequiredPlugins()) {
             Optional<Fibra> fibra = loader.fibra(entryId);
             if (fibra.isEmpty()) {
@@ -59,11 +59,22 @@ public final class FibraLifecycle implements SmartLifecycle {
     public void stop() {
         try {
             if (watcher != null) {
-                watcher.close();
+                try {
+                    watcher.close();
+                } catch (RuntimeException e) {
+                    log.error("关闭 FibraPluginWatcher 失败", e);
+                }
             }
-            loader.close();
-            Duration timeout = props.getShutdownTimeout();
-            root.closeAsync().block(timeout);
+            try {
+                loader.close();
+            } catch (RuntimeException e) {
+                log.error("关闭 FibraPluginLoader 失败", e);
+            }
+            try {
+                root.closeAsync().block(props.getShutdownTimeout());
+            } catch (RuntimeException e) {
+                log.error("关闭 Fibra 根 Context 失败", e);
+            }
         } finally {
             running = false;
         }

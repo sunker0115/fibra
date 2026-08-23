@@ -20,6 +20,7 @@ class FibraPropertiesTest {
             .withProperty("fibra.startup-required-plugins", "a,b")
             .withProperty("fibra.watcher.enabled", "true")
             .withProperty("fibra.watcher.debounce", "2s")
+            .withProperty("fibra.readiness-timeout", "45s")
             .withProperty("fibra.shutdown-timeout", "30s");
         var binder = new Binder(ConfigurationPropertySources.get(env));
 
@@ -30,6 +31,7 @@ class FibraPropertiesTest {
         assertEquals(List.of("a", "b"), props.getStartupRequiredPlugins());
         assertTrue(props.getWatcher().isEnabled());
         assertEquals(Duration.ofSeconds(2), props.getWatcher().getDebounce());
+        assertEquals(Duration.ofSeconds(45), props.getReadinessTimeout());
         assertEquals(Duration.ofSeconds(30), props.getShutdownTimeout());
     }
 }
