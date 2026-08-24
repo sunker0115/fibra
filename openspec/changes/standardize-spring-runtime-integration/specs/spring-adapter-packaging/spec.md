@@ -1,53 +1,41 @@
 ## ADDED Requirements
 
-### Requirement: 自动配置实现与依赖入口分离
+### Requirement: 通用 Spring、自动配置和依赖入口分离
 
-系统 SHALL 以 `fibra-spring-boot-autoconfigure` 承载全部 Spring 自动配置代码和注册资源，并以 `fibra-spring-boot-starter` 作为无生产代码的用户依赖入口。starter MUST NOT 自己包含自动配置类、其他生产 class 或 `AutoConfiguration.imports`。
+系统 SHALL 以 `fibra-spring` 承载 Spring Framework 接缝，以 `fibra-spring-boot-autoconfigure` 承载 Boot 属性与自动配置，以 `fibra-spring-boot-starter` 作为无生产代码依赖入口。
 
 #### Scenario: 用户引入 starter
 - **WHEN** Spring Boot 宿主只声明 `com.sstlfsj:fibra-spring-boot-starter`
-- **THEN** Maven 传递解析得到 autoconfigure、两个 Fibra loader 和自动配置所需 Spring 类型，Boot 能发现唯一 Fibra 自动配置入口
+- **THEN** Maven 传递解析得到 autoconfigure、spring adapter、engine 和其运行依赖，Boot 发现唯一 Fibra 自动配置入口
 
-#### Scenario: 检查 starter 主 JAR
-- **WHEN** 构建发布版 `fibra-spring-boot-starter` 主 JAR
-- **THEN** JAR不含 `.class`、`AutoConfiguration.imports` 或业务资源，只保留 Maven 制品必要元数据
+#### Scenario: 检查 starter
+- **WHEN** 构建 starter 主 JAR
+- **THEN** JAR不含 `.class`、`AutoConfiguration.imports` 或业务资源
 
-#### Scenario: 检查 autoconfigure 主 JAR
-- **WHEN** 构建发布版 `fibra-spring-boot-autoconfigure` 主 JAR
-- **THEN** JAR包含 Fibra 自动配置实现、唯一 `AutoConfiguration.imports` 和生成的配置元数据
+#### Scenario: 检查两个代码模块
+- **WHEN** 构建 spring 与 autoconfigure 主 JAR
+- **THEN** spring 不含 Boot 类型或 imports，autoconfigure 含唯一 imports 和配置元数据
 
-### Requirement: Spring 依赖不进入中立制品
+### Requirement: Spring 依赖不进入框架中立制品
 
-五个中立生产制品的编译和运行依赖图 MUST NOT 出现 Spring、Spring Boot、Spring Shell 或 Spring AI。根父 POM MUST NOT import Spring BOM 或声明 Spring 依赖；Spring Boot 版本与 BOM SHALL 只由 autoconfigure 模块管理。
+六个框架中立运行时制品 `fibra-api`、`fibra-core`、`fibra-pf4j-api`、`fibra-loader-pf4j`、`fibra-loader-config`、`fibra-engine` 的 compile/runtime 依赖图 MUST NOT 出现 Spring家族坐标；根父 POM MUST NOT import Spring BOM或声明 Spring依赖。
 
-#### Scenario: 验证中立模块依赖树
-- **WHEN** 对五个中立生产模块解析 compile/runtime 依赖树
-- **THEN** 结果不存在 `org.springframework*` 或 Spring AI/Shell 坐标
+#### Scenario: 验证依赖树和父 POM
+- **WHEN** 执行中立依赖门禁
+- **THEN** 六个模块无 Spring，根 POM只有内部 Spring模块的当前版本管理，Boot BOM只在 autoconfigure
 
-#### Scenario: 验证父 POM
-- **WHEN** 检查根父 POM dependencyManagement 和 dependencies
-- **THEN** 不存在 Spring BOM import 或 Spring 依赖，只有 Fibra 内部 Spring 模块的当前 reactor 版本管理可以位于父 POM
+### Requirement: Spring change 完成后有九个运行时制品
 
-### Requirement: Spring 适配以七制品发布
+系统 SHALL 发布六个框架中立运行时制品、`fibra-spring`、autoconfigure 和 starter。九个模块均生成项目要求的主制品、辅助制品和展开 POM并进入可复现构建。
 
-系统 SHALL 把 autoconfigure 和 starter 都作为可发布模块，使生产制品总数为七；两个模块均须生成主 JAR、sources JAR、Javadoc JAR和展开后的发布 POM，并进入可复现构建验收。
+#### Scenario: 完整运行时发布构建
+- **WHEN** 执行运行时制品门禁
+- **THEN** 九个模块制品完整，聚合根、示例和验证模块仍跳过 deploy
 
-#### Scenario: 完整发布构建
-- **WHEN** 执行 reactor 发布制品门禁
-- **THEN** 七个生产模块全部具有要求的四类制品，聚合根、示例和验证模块仍跳过 deploy
+### Requirement: 分模块冻结最小 Spring API
 
-#### Scenario: 连续可复现构建
-- **WHEN** 从同一源码和固定构建环境连续构建两次七个生产模块
-- **THEN** 对应主 JAR、sources JAR、Javadoc JAR和发布 POM逐字节一致
+`fibra-spring` SHALL 只冻结 `FibraSpringLifecycle` 和 `FibraServiceBridge`；autoconfigure SHALL 只冻结 `FibraAutoConfiguration` 类名和 `FibraProperties` 数据结构；starter MUST NOT 有 Java签名基线。
 
-### Requirement: 只冻结宿主需要的 Spring 公共 API
-
-autoconfigure SHALL 只把 `FibraAutoConfiguration` 类名、设计文档第 4 节定义的 `FibraProperties` 数据结构和 `FibraServiceBridge` 作为 Java 公共签名；lifecycle、bean 方法和 watcher 协作类型 MUST NOT 进入公开签名基线。starter MUST NOT 有 Java 公共签名基线。
-
-#### Scenario: 生成 autoconfigure 签名
-- **WHEN** 对 autoconfigure 生成公开和 protected 签名基线
-- **THEN** 基线只包含自动配置入口类、properties 类型和 service bridge，不包含 `FibraLifecycle` 或自动配置 bean 方法
-
-#### Scenario: 检查旧签名
-- **WHEN** 全仓搜索 `0.3.1` 的公共 `FibraLifecycle` 构造器和 starter Java 签名基线
-- **THEN** 生产 API、当前 API 文档和验收中均不存在这些旧契约
+#### Scenario: 生成签名
+- **WHEN** 生成两个代码模块的 javap 基线
+- **THEN** 不含 loader/source/controller、自动配置 bean 方法或旧 `FibraLifecycle`
