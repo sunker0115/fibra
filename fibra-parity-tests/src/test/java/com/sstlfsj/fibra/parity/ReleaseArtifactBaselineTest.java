@@ -29,13 +29,25 @@ class ReleaseArtifactBaselineTest {
         "fibra-loader-config",
         "fibra-engine"
     );
-    // 第 7 个可发布制品：可选 Spring 适配制品，自管 Spring BOM，与中立制品分类区分。
+    // 3 个可选 Spring 适配制品，与中立制品分类区分。
     private static final List<String> SPRING_ADAPTER_MODULES = List.of(
+        "fibra-spring",
+        "fibra-spring-boot-autoconfigure",
         "fibra-spring-boot-starter"
     );
-    // 全部可发布制品享有一致发布待遇：主 JAR + sources + Javadoc + flatten POM + deploy。
+    private static final List<String> TEMPLATE_MODULES = List.of(
+        "fibra-plugin-archetype"
+    );
+    private static final List<String> CLASS_BEARING_MODULES = Stream.concat(
+        NEUTRAL_KERNEL_MODULES.stream(),
+        SPRING_ADAPTER_MODULES.stream().filter(module -> !module.endsWith("-starter"))
+    ).toList();
+    // 10 个可发布制品享有一致发布待遇：主 JAR + sources + Javadoc + flatten POM + deploy。
     private static final List<String> RELEASABLE_MODULES =
-        Stream.concat(NEUTRAL_KERNEL_MODULES.stream(), SPRING_ADAPTER_MODULES.stream()).toList();
+        Stream.concat(
+            Stream.concat(NEUTRAL_KERNEL_MODULES.stream(), SPRING_ADAPTER_MODULES.stream()),
+            TEMPLATE_MODULES.stream()
+        ).toList();
     private static final List<String> VERIFICATION_MODULES = List.of(
         "fibra-example/fibra-example-contract-plugin",
         "fibra-example/fibra-example-provider-plugin",
@@ -69,8 +81,17 @@ class ReleaseArtifactBaselineTest {
             assertTrue(Files.isRegularFile(target.resolve(module + "-" + version + "-javadoc.jar")),
                 module + " 缺少 Javadoc JAR");
 
-            assertJava21MainJar(target.resolve(module + "-" + version + ".jar"));
+            var mainJar = target.resolve(module + "-" + version + ".jar");
+            if (CLASS_BEARING_MODULES.contains(module)) {
+                assertJava21MainJar(mainJar);
+            } else {
+                assertNoClasses(mainJar);
+            }
         }
+
+        assertJarContains(repositoryRoot().resolve("fibra-plugin-archetype/target")
+                .resolve("fibra-plugin-archetype-" + projectVersion() + ".jar"),
+            "META-INF/maven/archetype-metadata.xml");
     }
 
     @Test
@@ -146,9 +167,27 @@ class ReleaseArtifactBaselineTest {
             ),
             dependencies(fixtureDirectory.resolve("consumer-plugin").resolve("pom.xml")),
             "consumer 必须以 provided scope 使用 contract、Fibra PF4J API 和 PF4J");
-        assertEquals(List.of("fibra-loader-config:compile", "slf4j-simple:runtime"),
+        assertEquals(List.of("fibra-engine:compile", "slf4j-simple:runtime"),
             dependencies(fixtureDirectory.resolve("host").resolve("pom.xml")),
             "Host 不得声明 provider 或 consumer Maven 依赖");
+    }
+
+    private static void assertNoClasses(Path jarPath) throws Exception {
+        try (var jar = new JarFile(jarPath.toFile())) {
+            assertTrue(jar.stream().noneMatch(entry -> entry.getName().endsWith(".class")),
+                jarPath + " 不得包含生产 class");
+        }
+    }
+
+    private static void assertJarContains(Path jarPath, String entryName) throws Exception {
+        try (var jar = new JarFile(jarPath.toFile())) {
+            assertNotNull(jar.getEntry(entryName), jarPath + " 缺少 " + entryName);
+        }
+    }
+
+    private static String projectVersion() throws Exception {
+        return directChildText(parseProject(repositoryRoot().resolve(".flattened-pom.xml")),
+            "version");
     }
 
     private static void assertJava21MainJar(Path jarPath) throws Exception {

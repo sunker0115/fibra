@@ -1,6 +1,10 @@
 # Fibra PF4J 装载架构
 
-本文是 `fibra-loader-pf4j` 0.3.0 的当前实现契约。格式、事务状态机和逐项不变量的完整定义见[插件制品与事务更新设计](./2026-08-23-fibra-plugin-package-transaction-design.md)；本文只说明生产代码边界和使用路径，不维护第二套不同语义。
+状态：`0.3.0` 历史实现契约，托管 watcher 与宿主编排已被 `0.4.0` Engine 取代
+
+> 本文只用于追溯 PF4J loader 的历史行为，不得把其中 watcher 或关闭顺序用于 `0.4.0` 宿主。当前低层 loader API 以 [`docs/api/README.md`](../../api/README.md) 为准，托管运行时以 [Fibra Engine 架构](./2026-08-24-fibra-engine-architecture.md)为准。
+
+本文是 `fibra-loader-pf4j` 0.3.0 的历史实现契约。格式、事务状态机和逐项不变量的历史定义见[插件制品与事务更新设计](./2026-08-23-fibra-plugin-package-transaction-design.md)；本文只说明当时的生产代码边界和使用路径，不维护当前语义。
 
 ## 1. 边界
 

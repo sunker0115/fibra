@@ -36,10 +36,19 @@ final class ConfigFileSource implements AutoCloseable {
         this.pathsSupplier = Objects.requireNonNull(pathsSupplier, "pathsSupplier");
         this.debounceNanos = positive(debounce);
         this.dirtyCallback = Objects.requireNonNull(dirtyCallback, "dirtyCallback");
+        WatchService created = null;
         try {
-            watchService = FileSystems.getDefault().newWatchService();
+            created = FileSystems.getDefault().newWatchService();
+            watchService = created;
             refreshRegistrations();
         } catch (IOException | RuntimeException exception) {
+            if (created != null) {
+                try {
+                    created.close();
+                } catch (IOException closeFailure) {
+                    exception.addSuppressed(closeFailure);
+                }
+            }
             throw new IllegalStateException("cannot create config file source", exception);
         }
     }

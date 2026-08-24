@@ -1,9 +1,11 @@
 # Fibra 配置装载架构
 
 日期：2026-08-23
-状态：`0.3.0` 当前实现契约
+状态：`0.3.0` 历史实现契约，已被 `0.4.0` Engine 架构取代
 
-> 本文是 `fibra-loader-config` 0.3.0 的当前实现契约。制品格式、`applyArtifacts(List<Path>)` 和逻辑事务门以[插件制品与事务更新设计](./2026-08-23-fibra-plugin-package-transaction-design.md)为准；本文只定义配置树、typed config、reconcile 与制品事务的协作边界。
+> 本文只用于追溯 `0.3.0` 配置 loader 的历史行为。其中 watcher、宿主编排、关闭顺序和模块数量均不是 `0.4.0` 当前契约，不得据此实现或使用。当前权威源是 [Fibra Engine 架构](./2026-08-24-fibra-engine-architecture.md) 和 [`docs/api/README.md`](../../api/README.md)。
+
+> 本文是 `fibra-loader-config` 0.3.0 的历史实现契约。制品格式、`applyArtifacts(List<Path>)` 和逻辑事务门以当时的[插件制品与事务更新设计](./2026-08-23-fibra-plugin-package-transaction-design.md)为准；本文只记录历史配置树、typed config、reconcile 与制品事务的协作边界。
 
 ## 1. 目标与真源
 

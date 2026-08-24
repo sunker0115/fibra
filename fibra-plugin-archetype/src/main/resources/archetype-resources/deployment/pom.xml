@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>${groupId}</groupId>
+    <artifactId>${artifactId}</artifactId>
+    <version>${version}</version>
+  </parent>
+  <artifactId>${artifactId}-deployment</artifactId>
+
+  <dependencies>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>${project.parent.artifactId}-plugin-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>${project.parent.artifactId}-plugin-impl</artifactId>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>prepare-deployment</id>
+            <phase>prepare-package</phase>
+            <goals><goal>run</goal></goals>
+            <configuration>
+              <target>
+                <mkdir dir="${project.build.directory}/deployment/config"/>
+                <mkdir dir="${project.build.directory}/deployment/plugins"/>
+                <copy file="../config/fibra.yaml"
+                      tofile="${project.build.directory}/deployment/config/fibra.yaml"/>
+                <copy file="../plugin-api/target/${pluginId}-contract-${project.version}.zip"
+                      tofile="${project.build.directory}/deployment/plugins/${pluginId}-contract-${project.version}.zip"/>
+                <copy file="../plugin-impl/target/${pluginId}-${project.version}.zip"
+                      tofile="${project.build.directory}/deployment/plugins/${pluginId}-${project.version}.zip"/>
+                <echo file="${project.build.directory}/deployment/deployment.properties">deployment.id=${pluginId}
+deployment.version=${project.version}
+config.path=config/fibra.yaml
+plugin.0=plugins/${pluginId}-${project.version}.zip
+plugin.1=plugins/${pluginId}-contract-${project.version}.zip
+</echo>
+                <checksum file="${project.build.directory}/deployment/config/fibra.yaml"
+                          property="config.sha256" algorithm="SHA-256"/>
+                <checksum file="${project.build.directory}/deployment/deployment.properties"
+                          property="descriptor.sha256" algorithm="SHA-256"/>
+                <checksum file="${project.build.directory}/deployment/plugins/${pluginId}-${project.version}.zip"
+                          property="plugin.sha256" algorithm="SHA-256"/>
+                <checksum file="${project.build.directory}/deployment/plugins/${pluginId}-contract-${project.version}.zip"
+                          property="contract.sha256" algorithm="SHA-256"/>
+                <echo file="${project.build.directory}/deployment/checksums.sha256">${config.sha256}  config/fibra.yaml
+${descriptor.sha256}  deployment.properties
+${plugin.sha256}  plugins/${pluginId}-${project.version}.zip
+${contract.sha256}  plugins/${pluginId}-contract-${project.version}.zip
+</echo>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <attach>false</attach>
+          <descriptors><descriptor>../build/deployment.xml</descriptor></descriptors>
+          <finalName>${pluginId}-deployment-${project.version}</finalName>
+          <appendAssemblyId>false</appendAssemblyId>
+        </configuration>
+        <executions>
+          <execution>
+            <id>deployment-package</id>
+            <phase>package</phase>
+            <goals><goal>single</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

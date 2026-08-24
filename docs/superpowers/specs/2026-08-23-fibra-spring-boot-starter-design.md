@@ -15,7 +15,7 @@
 
 本设计冻结以下边界：
 
-- `fibra-api`、`fibra-core`、`fibra-pf4j-api`、`fibra-loader-pf4j` 和 `fibra-loader-config` 的生产依赖图不出现 Spring；
+- `fibra-api`、`fibra-core`、`fibra-pf4j-api`、`fibra-loader-pf4j`、`fibra-loader-config` 和 `fibra-engine` 六个框架中立制品的生产依赖图不出现 Spring；
 - 根父 POM 不导入 Spring BOM、不声明 Spring 依赖；Spring Framework 与 Spring Boot 版本只由 Boot BOM 在 autoconfigure 模块解析，`fibra-engine` 保持 Spring-free，`fibra-spring` 不建立第二个版本真源；
 - 插件对象不进入 Spring `BeanFactory`，不建立每插件 Spring `ApplicationContext`，不扫描插件内 `@Component`、`spring.factories` 或 Boot 自动配置；
 - Spring 管理静态宿主装配，Fibra 管理动态插件的创建、依赖、服务、reload、dispose 和 ClassLoader；
@@ -48,26 +48,24 @@ Spring Framework 7.0.8 `DefaultLifecycleProcessor.onRefresh()` 会在某个 life
 
 ### 2.3 本地参考项目
 
-本地 `/Users/sunke/dev/ai-project/disruptor-spring-boot` 已采用：
-
-来源：已核对该仓库根 POM、`disruptor-spring-boot-autoconfigure/pom.xml` 和 `disruptor-spring-boot-starter/pom.xml`。
+本地参考项目 `disruptor-spring-boot` 已采用以下拆分；已核对其根 POM、autoconfigure POM 和 starter POM：
 
 ```text
 disruptor-spring-boot-autoconfigure  # 自动配置实现
 disruptor-spring-boot-starter        # 无代码依赖入口
 ```
 
-Fibra 吸收该分层和“对具体 lifecycle 类型退让”的测试思想；但 Fibra 不复制它的简单启停模型，因为 Fibra 还必须协调配置 reconcile、两个 watcher、插件 ClassLoader 和可等待 root 关闭。
+Fibra 吸收该分层和“对具体 lifecycle 类型退让”的测试思想；但 Fibra 不复制它的简单启停模型，因为 Fibra 还必须协调配置 reconcile、两个 source、插件 ClassLoader 和可等待 root 关闭。
 
 ### 2.4 Fibra 现有真实约束
 
-以下结论直接来自当前生产源码：
+以下结论直接来自 `0.4.0-SNAPSHOT` 当前生产源码：
 
 - `FibraPluginLoader` 构造时要求安装根已经存在，并在构造期执行崩溃恢复；来源：`fibra-loader-pf4j/.../FibraPluginLoader.java`；
-- `FibraPluginWatcher` 构造时要求 incoming 目录已经存在，构造只分配 watch service 和 scheduler，调用 `start()` 后才启动监听线程；来源：`fibra-loader-pf4j/.../FibraPluginWatcher.java`；
-- `FibraConfigLoader.watch(...)` 要求初始 `load()` 已完成，调用后立即启动 `FibraConfigWatcher` 工作线程；来源：`fibra-loader-config/.../FibraConfigLoader.java` 和 `FibraConfigWatcher.java`；
+- `FibraEngine.Builder.artifactSource(...)` 和 `configSource(...)` 只记录完整参数；Engine 首次 `start()` 完成初载和 readiness 后才创建并启动 source；来源：`fibra-engine/.../FibraEngine.java`；
+- `ArtifactDirectorySource` 与 `ConfigFileSource` 只提交 dirty signal，真正的重试、周期重读和串行执行由内部 `ReconcileCoordinator` 负责；来源：`fibra-engine/...`；
 - `Fibra.ready()` 是 `await()` 的语义别名；稳定 `PENDING` 会正常完成而不是等待未来 provider，因此 readiness 必须在完成后显式检查 `ACTIVE`；来源：`fibra-api/.../Fibra.java` 和 `fibra-core/.../DefaultFibra.java`；
-- plugin watcher、config watcher、config reconcile 和 artifact apply 已共享 loader 事务门；starter 不复制串行化算法。
+- config reconcile、artifact apply 和 Engine deployment 共享唯一协调域；starter 不复制串行化算法。
 
 ### 2.5 未采用方案
 
@@ -226,7 +224,7 @@ public final class FibraServiceBridge {
 
 ### 5.4 Engine 资源暴露
 
-自动配置创建一个 `FibraEngine` 和一个 `FibraSpringLifecycle`，只额外暴露 root 与 `FibraServiceBridge`。engine 内部两个 loader、watch source、reconcile controller 和 deployment coordinator 都不是 Spring bean，也不进入 Spring 公共签名；唯一关闭权属于 engine。
+自动配置创建一个 `FibraEngine` 和一个 `FibraSpringLifecycle`，只额外暴露 root 与 `FibraServiceBridge`。engine 内部两个 loader、watch source、`ReconcileCoordinator` 和 deployment 事务组件都不是 Spring bean，也不进入 Spring 公共签名；唯一关闭权属于 engine。
 
 ## 6. 启动、就绪与失败回滚
 
@@ -312,7 +310,7 @@ FibraSpringLifecycle.stop()
 不冻结：
 
 - 自动配置 `@Bean` 方法；
-- engine 的 source、controller、回滚辅助类型和内部方法；
+- engine 的 source、coordinator、回滚辅助类型和内部方法；
 - Spring 条件实现细节。
 
 `fibra-spring-boot-starter` 没有 Java 公共签名基线，只冻结“无生产 class 的依赖入口”制品规则。
@@ -358,7 +356,7 @@ FibraSpringLifecycle.stop()
 - 三个 Spring 模块的 POM、sources、Javadoc、主 JAR和可复现构建；
 - starter JAR无 `.class` 和自动配置注册文件；
 - autoconfigure JAR包含唯一注册文件和配置元数据；
-- 五个中立制品的依赖树继续无 Spring；
+- 六个框架中立制品的依赖树继续无 Spring；
 - README、API 手册、release、示例、公开签名和发布模块基线同步为十个可发布制品；
 - Web 示例的 staging 配置迁到示例命名空间；
 - 旧属性和旧模块实现描述从文档中直接删除，不保留历史残渣。

@@ -1,8 +1,10 @@
 # Fibra 插件制品与事务更新设计
 
 日期：2026-08-23  
-状态：`0.3.0` 已确认设计，作为实现与验收的权威输入  
+状态：`0.3.0` 历史实现契约，已被 `0.4.0` Engine 架构取代
 OpenSpec：[`standardize-plugin-packages`](../../../openspec/changes/standardize-plugin-packages/)
+
+> 本文只用于追溯 `0.3.0` 插件包事务实现。其中 watcher、宿主编排和关闭顺序均不是 `0.4.0` 当前契约，不得据此实现或使用。插件包结构仍受稳定 OpenSpec 约束；托管 source、联合事务、恢复与宿主入口以 [Fibra Engine 架构](./2026-08-24-fibra-engine-architecture.md)为准。
 
 ## 1. 目标与边界
 

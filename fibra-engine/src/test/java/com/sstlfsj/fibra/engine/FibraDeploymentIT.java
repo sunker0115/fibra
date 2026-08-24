@@ -38,10 +38,7 @@ class FibraDeploymentIT {
             assertNotEquals(before, result.appliedRevision());
         }
 
-        var tampered = deployment(work.resolve("tampered.zip"), "[ ]\n");
-        var bytes = Files.readAllBytes(tampered);
-        bytes[bytes.length - 10] ^= 1;
-        Files.write(tampered, bytes);
+        var tampered = deployment(work.resolve("tampered.zip"), "[ ]\n", "[]\n");
         try (var engine = FibraEngine.builder(installed, config).build()) {
             engine.start();
             assertThrows(FibraDeploymentException.class,
@@ -50,6 +47,11 @@ class FibraDeploymentIT {
     }
 
     private static Path deployment(Path target, String config) throws Exception {
+        return deployment(target, config, config);
+    }
+
+    private static Path deployment(Path target, String config, String checksummedConfig)
+        throws Exception {
         var properties = """
             deployment.id=sample
             deployment.version=1.0.0
@@ -59,9 +61,11 @@ class FibraDeploymentIT {
         entries.put("deployment.properties", properties);
         entries.put("config/fibra.yaml", config.getBytes(StandardCharsets.UTF_8));
         var checksums = new StringBuilder();
-        entries.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry ->
-            checksums.append(sha(entry.getValue())).append("  ").append(entry.getKey())
-                .append('\n'));
+        entries.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {
+            var bytes = entry.getKey().equals("config/fibra.yaml")
+                ? checksummedConfig.getBytes(StandardCharsets.UTF_8) : entry.getValue();
+            checksums.append(sha(bytes)).append("  ").append(entry.getKey()).append('\n');
+        });
         entries.put("checksums.sha256", checksums.toString()
             .getBytes(StandardCharsets.UTF_8));
         try (var output = new ZipOutputStream(Files.newOutputStream(target))) {

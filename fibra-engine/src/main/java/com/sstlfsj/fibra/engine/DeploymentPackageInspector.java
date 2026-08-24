@@ -1,6 +1,9 @@
 package com.sstlfsj.fibra.engine;
 
 import org.pf4j.DefaultVersionManager;
+import org.apache.commons.compress.archivers.zip.UnixStat;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipFile;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,7 +19,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
-import java.util.zip.ZipFile;
 
 final class DeploymentPackageInspector {
     private static final Pattern ID = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._-]*");
@@ -35,8 +37,8 @@ final class DeploymentPackageInspector {
             Files.createDirectories(workspace);
             var names = new HashSet<String>();
             long total = 0;
-            try (var zip = new ZipFile(source.toFile())) {
-                var entries = zip.entries();
+            try (var zip = ZipFile.builder().setPath(source).get()) {
+                var entries = zip.getEntries();
                 var count = 0;
                 while (entries.hasMoreElements()) {
                     var entry = entries.nextElement();
@@ -44,14 +46,16 @@ final class DeploymentPackageInspector {
                         throw failure(FibraDeploymentErrorStage.VALIDATE, source,
                             "deployment package has too many entries", null);
                     }
-                    var name = validateName(entry.getName(), source);
+                    var name = validateName(entry.getName(), entry.isDirectory(), source);
                     if (!names.add(name)) {
                         throw failure(FibraDeploymentErrorStage.VALIDATE, source,
                             "duplicate deployment entry " + name, null);
                     }
                     if (entry.isDirectory()) {
+                        validateEntryType(entry, zip, source);
                         continue;
                     }
+                    validateEntryType(entry, zip, source);
                     if (entry.getSize() > MAX_ENTRY || entry.getSize() < -1) {
                         throw failure(FibraDeploymentErrorStage.VALIDATE, source,
                             "deployment entry exceeds size limit " + name, null);
@@ -179,7 +183,7 @@ final class DeploymentPackageInspector {
                     "invalid checksums.sha256 line", null);
             }
             var digest = line.substring(0, 64);
-            var name = validateName(line.substring(66), source);
+            var name = validateName(line.substring(66), false, source);
             if (!SHA.matcher(digest).matches() || result.putIfAbsent(name, digest) != null) {
                 throw failure(FibraDeploymentErrorStage.VALIDATE, source,
                     "invalid or duplicate checksum", null);
@@ -202,12 +206,34 @@ final class DeploymentPackageInspector {
         }
     }
 
+    private static void validateEntryType(ZipArchiveEntry entry, ZipFile zip,
+                                          Path source) {
+        if (entry.isUnixSymlink()) {
+            throw failure(FibraDeploymentErrorStage.VALIDATE, source,
+                "deployment package must not contain symbolic links", null);
+        }
+        var fileType = entry.getUnixMode() & UnixStat.FILE_TYPE_FLAG;
+        if (entry.isDirectory()) {
+            if (fileType != 0 && fileType != UnixStat.DIR_FLAG) {
+                throw failure(FibraDeploymentErrorStage.VALIDATE, source,
+                    "deployment directory entry has a non-directory type", null);
+            }
+        } else if (fileType != 0 && fileType != UnixStat.FILE_FLAG) {
+            throw failure(FibraDeploymentErrorStage.VALIDATE, source,
+                "deployment file entry has a non-regular type", null);
+        }
+        if (!zip.canReadEntryData(entry)) {
+            throw failure(FibraDeploymentErrorStage.VALIDATE, source,
+                "deployment package contains an unreadable entry", null);
+        }
+    }
+
     private static String validateRelative(String value, String prefix, Path source) {
         if (value == null) {
             throw failure(FibraDeploymentErrorStage.VALIDATE, source,
                 "missing deployment path", null);
         }
-        var name = validateName(value, source);
+        var name = validateName(value, false, source);
         if (!name.startsWith(prefix)) {
             throw failure(FibraDeploymentErrorStage.VALIDATE, source,
                 "deployment path must start with " + prefix, null);
@@ -215,19 +241,25 @@ final class DeploymentPackageInspector {
         return name;
     }
 
-    private static String validateName(String name, Path source) {
+    private static String validateName(String name, boolean directory, Path source) {
         if (name.isBlank() || name.startsWith("/") || name.contains("\\")
             || name.matches("[A-Za-z]:.*")) {
             throw failure(FibraDeploymentErrorStage.VALIDATE, source,
                 "invalid deployment entry path " + name, null);
         }
-        var normalized = Path.of(name).normalize().toString().replace('\\', '/');
-        if (!normalized.equals(name) || normalized.startsWith("../")
+        var pathName = directory && name.endsWith("/")
+            ? name.substring(0, name.length() - 1) : name;
+        if (pathName.isBlank() || directory && !name.endsWith("/")) {
+            throw failure(FibraDeploymentErrorStage.VALIDATE, source,
+                "invalid deployment directory path " + name, null);
+        }
+        var normalized = Path.of(pathName).normalize().toString().replace('\\', '/');
+        if (!normalized.equals(pathName) || normalized.startsWith("../")
             || normalized.equals("..")) {
             throw failure(FibraDeploymentErrorStage.VALIDATE, source,
                 "deployment entry path is not normalized " + name, null);
         }
-        return name;
+        return directory ? pathName + "/" : pathName;
     }
 
     private static long copyLimited(InputStream input, java.io.OutputStream output,

@@ -7,20 +7,20 @@
 
 ## 0. 已核实基线与执行纪律
 
-- 🟢 `pom.xml:13-22`：当前 reactor 有五个框架中立生产模块、一个 Spring starter、example 和 parity；`pom.xml:26` 的唯一版本真源为已发布 `0.3.1`。
+- 🟢 实施起点：reactor 原有五个框架中立生产模块、一个 Spring starter、example 和 parity，唯一版本真源为 `0.3.1`；本计划完成态以十个发布制品和 `0.4.0-SNAPSHOT` 为准。
 - 🟢 `fibra-loader-pf4j/src/main/java/com/sstlfsj/fibra/loader/pf4j/FibraPluginLoader.java:29-155`：当前 loader 同时拥有制品、运行 entry、一步式事务和公开 `runExclusive`。
 - 🟢 `fibra-loader-pf4j/src/main/java/com/sstlfsj/fibra/loader/pf4j/PluginUpdateTransaction.java:16`、`PluginCrashRecovery.java:10`：现有单 loader journal/恢复实现是重构输入，不建立第二套并行算法。
 - 🟢 `fibra-loader-config/src/main/java/com/sstlfsj/fibra/loader/config/FibraConfigLoader.java:32-245`：当前 loader 混合配置解析、文件写入、运行 reconcile 和 watcher 所有权。
 - 🟢 `fibra-loader-pf4j/src/main/java/com/sstlfsj/fibra/loader/pf4j/FibraPluginWatcher.java:27`、`fibra-loader-config/src/main/java/com/sstlfsj/fibra/loader/config/FibraConfigWatcher.java:24`：两个 watcher 是必须迁出并删除的旧公共 API，不保留 deprecated、转发或双路径。
 - 🟢 `fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/ReleaseArtifactBaselineTest.java:21-151`：发布制品、外部消费方模块及依赖边界已有自动门禁，必须与共享符号同一任务更新。
-- 🟢 `scripts/verify-reproducible-release.sh:4-41`：当前可复现构建脚本固定六个制品，本 change 只把它扩为七个；Spring 与 archetype change 最终扩为十个。
+- 🟢 实施起点的可复现构建脚本固定六个制品；engine change 先扩为七个，Spring 与 archetype change 完成后统一扩为十个。
 - 🟢 `verification/external-consumer/pom.xml`：仓库外工程不在 Fibra reactor 内，host 当前直接消费 config loader；本 change 将它改为消费 engine。
 
 执行规则：
 
 1. 每个任务先写失败测试，确认失败原因正是缺少目标能力，再写最小实现；测试和实现进入同一提交。
 2. 不修改 `fibra-api`、`fibra-core`、`fibra-pf4j-api` 的公开语义；Cordis 71 项测试每个阶段保持通过。
-3. 删除 watcher 时同步删除测试、签名和现行文档，不留兼容代码。可复用的 watch 行为测试迁到 engine source/controller 测试，不复制实现。
+3. 删除 watcher 时同步删除测试、签名和现行文档，不留兼容代码。可复用的 watch 行为测试迁到 engine source/coordinator 测试，不复制实现。
 4. 所有管理操作继续由 🟢 `LoaderOperationGate` 提供逻辑可重入、跨线程 fail-fast 的底层门；engine 在其外层提供唯一排队和重试，不把 loader 的 busy 变为阻塞锁。
 5. engine 不新增 Spring 依赖；按源码真实使用关系直接依赖 `fibra-api`、`fibra-core`、`fibra-loader-pf4j`、`fibra-loader-config`、PF4J 和 `slf4j-api`，测试可使用 JUnit、Awaitility、`slf4j-simple`。
 6. engine 持久状态目录固定为 `<installedRoot>/.fibra-engine/`，其中只有 `transactions/`、`revisions/` 和临时预检目录；安装根、配置根的父目录必须在构造任何 Context、loader、线程或 WatchService 前通过完整校验。
@@ -166,23 +166,23 @@ git diff --check
 
 提交边界：`refactor: expose composable config changes`
 
-## 4. 实现 source/controller 并删除 loader watcher 公共 API
+## 4. 实现 source/coordinator 并删除 loader watcher 公共 API
 
-新增 engine 内部 `ArtifactDirectorySource`、`ConfigFileSource`、`FibraReconcileController` 和测试专用 `ReconcileAction` 接缝。source 只调用无参数 dirty callback，不传路径操作；controller 使用容量一的信号位加 `dirtyWhileRunning`，不建立无界事件队列。
+新增 engine 内部 `ArtifactDirectorySource`、`ConfigFileSource`、`ReconcileCoordinator` 和测试专用 `ReconcileAction` 接缝。source 只调用无参数 dirty callback，不传路径操作；coordinator 使用容量一的信号位加 `dirtyWhileRunning`，不建立无界事件队列。
 
 先迁移并扩展测试：
 
-- 把 🟢 `FibraPluginWatcherTest` 的原子 ZIP、去抖、busy 保留 dirty、close 等待场景迁入 `ArtifactDirectorySourceTest`/`FibraReconcileControllerTest`。
-- 把 🟢 `FibraConfigLoaderTest` 中 watcher 恢复、missing include、busy、callback close、并发 converge 场景迁入 `ConfigFileSourceTest`/controller 测试。
+- 把 🟢 `FibraPluginWatcherTest` 的原子 ZIP、去抖、busy 保留 dirty、close 等待场景迁入 `ArtifactDirectorySourceTest`/`ReconcileCoordinatorTest`。
+- 把 🟢 `FibraConfigLoaderTest` 中 watcher 恢复、missing include、busy、callback close、并发 converge 场景迁入 `ConfigFileSourceTest`/coordinator 测试。
 - `ArtifactDirectorySourceTest.java`：只监听 incoming 直接子级原子发布的 `.zip`；部分文件、子目录、删除、close 后事件不触发；构造中途失败释放 WatchService/线程。
 - `ConfigFileSourceTest.java`：监听 root、当前 include 和上次失败尝试路径；snapshot 变化后原子替换监听集合；missing include 创建后可恢复；close 等待 callback 边界且 worker 回调 close 不自等。
-- `FibraReconcileControllerTest.java`：突发事件去重；执行期 dirty 保证再跑一次；同一时刻最多一个操作；周期 resync；busy/真实失败有界指数退避；close 停止接收并收敛在途操作。
+- `ReconcileCoordinatorTest.java`：突发事件去重；执行期 dirty 保证再跑一次；同一时刻最多一个操作；周期 resync；busy/真实失败有界指数退避；close 停止接收并收敛在途操作。
 - 修改 API 基线测试，先断言旧类型和 `watch(...)`/公开 `runExclusive` 不再是用户管理入口；`runExclusive` 保留为 engine 组合事务所需的低层 API，但文档明确普通宿主不得并发绕过 engine。
 
 再实现并删除：
 
 - source 使用 JDK `WatchService`，只拥有自身单线程；debounce 由 source 合并为一次 dirty callback。
-- controller 使用单个 daemon worker，不持 monitor/Lock 跨 reconcile callback；底层 busy 只触发重试，不写成候选损坏。
+- coordinator 使用单个 daemon worker，不持 monitor/Lock 跨 reconcile callback；底层 busy 只触发重试，不写成候选损坏。
 - `FibraPluginWatcher.java`、`FibraPluginWatchFailure.java`、`FibraConfigWatcher.java`、`FibraConfigReloadFailure.java` 及其旧测试。
 - 🟢 `FibraConfigLoader` 中 watcher 字段、`watch(...)`、callback close 特例和 watchedPaths 所有权；由第 3 项冻结的公开 `sourcePaths()` 提供 engine 所需只读路径集合，公共 snapshot 不暴露可变集合。
 - 同步 `docs/api/fibra-loader-pf4j-public-signatures.txt`、`docs/api/fibra-loader-config-public-signatures.txt`，删除现行 README 中旧 watcher 用法。
@@ -190,7 +190,7 @@ git diff --check
 验证：
 
 ```bash
-$MVN -pl fibra-engine,fibra-parity-tests -am -Dtest=ArtifactDirectorySourceTest,ConfigFileSourceTest,FibraReconcileControllerTest,ApiSignatureBaselineTest -Dsurefire.failIfNoSpecifiedTests=false test
+$MVN -pl fibra-engine,fibra-parity-tests -am -Dtest=ArtifactDirectorySourceTest,ConfigFileSourceTest,ReconcileCoordinatorTest,ApiSignatureBaselineTest -Dsurefire.failIfNoSpecifiedTests=false test
 rg -n "FibraPluginWatcher|FibraPluginWatchFailure|FibraConfigWatcher|FibraConfigReloadFailure|\.watch\(" --glob '!target/**' --glob '!openspec/changes/**' .
 git diff --check
 ```
@@ -204,7 +204,7 @@ git diff --check
 新增 engine 内部数据类型：
 
 - `DeploymentPackageInspector`、`InspectedDeploymentPackage`、`DeploymentDescriptor`、`DeploymentChecksum`。
-- 公开 `FibraDeploymentException`、`FibraDeploymentErrorStage`，stage 固定为 `READ`、`VALIDATE`、`PREPARE`、`COMMIT`、`READINESS`、`ROLLBACK`、`RECOVERY`。
+- 公开 `FibraDeploymentException`、`FibraDeploymentErrorStage`，stage 固定为 `READ`、`VALIDATE`、`PREPARE`、`COMMIT`、`READINESS`、`ROLLBACK`；构造期恢复无法证明一致状态同样报告 `ROLLBACK`。
 
 先写失败测试 `DeploymentPackageInspectorTest.java`：
 
@@ -267,7 +267,7 @@ public record FibraDeploymentResult(String deploymentId,
 
 public enum FibraEngineFailureStage {
     STARTUP, ARTIFACT_RECONCILE, CONFIG_RECONCILE,
-    DEPLOYMENT, READINESS, RECOVERY, CLOSE
+    DEPLOYMENT, READINESS, CLOSE
 }
 ```
 
@@ -281,7 +281,7 @@ builder 命名方法：`artifactSource(Path, Duration)`、`configSource(Duration
 - `FibraEngineLifecycleTest.java`：NEW→STARTING→RUNNING；初载、config、required readiness 任一失败后逆序清理并 TERMINATED；不可 restart；close 幂等；close 顺序用真实 root/loader 资源观测。
 - `FibraEngineStatusTest.java`：四个数据载体的相等性、Optional 默认、不可变列表 round-trip，失败快照按 stage 唯一且不保存 Throwable 或插件类型。
 
-再实现 `EngineTransactionJournal`、`EngineCrashRecovery`、上述公开类型及包内 `EngineResources`。journal 的临时文件 force、父目录 force、原子 rename 和 payload-first/journal-last 清理沿用 🟢 `PluginTransactionJournal` 已验证模式。engine builder 的 `build()` 固定按“全部路径校验 → `<installedRoot>/.fibra-engine` 崩溃恢复 → root → plugin loader → config loader”执行；恢复早于 PF4J manager/ClassLoader 创建。Spring 可在 lifecycle start 前取得 root；build 不创建线程/source，也不公开内部 loader。`start()` 执行初载、配置和 readiness，成功后才创建 source/controller。build 或 start 任一步失败都逆序释放已取得资源，start 失败后该实例终止且不可重启。
+再实现 `EngineTransactionJournal`、`EngineCrashRecovery`、上述公开类型及包内 `EngineResources`。journal 的临时文件 force、父目录 force、原子 rename 和 payload-first/journal-last 清理沿用 🟢 `PluginTransactionJournal` 已验证模式。engine builder 的 `build()` 固定按“全部路径校验 → `<installedRoot>/.fibra-engine` 崩溃恢复 → root → plugin loader → config loader”执行；恢复早于 PF4J manager/ClassLoader 创建。Spring 可在 lifecycle start 前取得 root；build 不创建线程/source，也不公开内部 loader。`start()` 执行初载、配置和 readiness，成功后才创建 source/coordinator。build 或 start 任一步失败都逆序释放已取得资源，start 失败后该实例终止且不可重启。
 
 验证：
 
@@ -294,28 +294,28 @@ git diff --check
 
 提交边界：`feat: add the Fibra engine lifecycle`
 
-## 7. 把 source/controller 接入真实 desired state
+## 7. 把 source/coordinator 接入真实 desired state
 
-新增内部 `DesiredStateReader`、`DesiredState`、`EngineRevision`，把第 4 项的 source/controller 接入 engine 和两个变更参与者。reconcile 不消费事件差量，每次读取完整安装目录、incoming 候选和配置依赖树。incoming 按插件 ID 选择唯一最高 SemVer；低于已安装版本的候选忽略，同版本同摘要 no-op，同版本不同摘要失败；成功不要求删除候选文件。
+新增内部 `DesiredStateReader`、`DesiredState`、`EngineRevision`，把第 4 项的 source/coordinator 接入 engine 和两个变更参与者。reconcile 不消费事件差量，每次读取完整安装目录、incoming 候选和配置依赖树。incoming 按插件 ID 选择唯一最高 SemVer；低于已安装版本的候选忽略，同版本同摘要 no-op，同版本不同摘要失败；成功不要求删除候选文件。
 
 一轮同时发现 artifact/config 变化时，固定先执行独立 artifact 事务，再对执行后的活动 catalog 执行独立 config 事务；两个事务不共享候选 catalog、不合并 rollback。artifact 失败不阻止 config 独立尝试，二者按 `ARTIFACT_RECONCILE`、`CONFIG_RECONCILE` 分别记录或清除失败。只有 `applyDeployment` 使用第 8 项联合事务。
 
 先写失败测试：
 
 - `DesiredStateReaderTest.java`：候选目录排序、同 ID 最高 SemVer、低版本忽略、同版本摘要规则、稳定文件检查、完整配置来源摘要、相同内容相同 revision、任一插件或 include 字节变化产生新 revision。
-- 扩展 `FibraReconcileControllerTest.java`：手工 deployment 执行期间只累计 dirty；artifact/config 独立尝试和独立失败；成功更新 desired/applied revision；失败保持最后成功 applied revision；下一次成功只清对应 stage 的 retry和失败。
+- 扩展 `ReconcileCoordinatorTest.java`：手工 deployment 执行期间只累计 dirty；artifact/config 独立尝试和独立失败；成功更新 desired/applied revision；失败保持最后成功 applied revision；下一次成功只清对应 stage 的 retry和失败。
 - `FibraEngineReconcileIT.java`：真实多插件目录和 typed config；先 consumer 后 provider 最终收敛；失败保留最后成功服务与 applied revision；修正后自动恢复。
 
 再实现：
 
-- engine `start()` 成功初载后启动 controller/source；`requestReconcile()` 与两个 source 进入同一信号位；`applyDeployment()` 通过同一 controller 的独占操作入口执行。
+- engine `start()` 成功初载后启动 coordinator/source；`requestReconcile()` 与两个 source 进入同一信号位；`applyDeployment()` 通过同一 coordinator 的独占操作入口执行。
 - 停止接收后关闭 source、丢弃尚未开始的重复信号、等待正在执行操作完成；不得持 monitor/Lock 跨 loader 调用或 Fibra await。
 - revision 为完整 desired 输入的规范 SHA-256：已安装/候选插件 descriptor+摘要、配置 snapshot literal+来源摘要；不使用时间戳作为身份。
 
 验证：
 
 ```bash
-$MVN -pl fibra-engine -am -Dtest=DesiredStateReaderTest,FibraReconcileControllerTest,FibraEngineReconcileIT -Dsurefire.failIfNoSpecifiedTests=false test
+$MVN -pl fibra-engine -am -Dtest=DesiredStateReaderTest,ReconcileCoordinatorTest,FibraEngineReconcileIT -Dsurefire.failIfNoSpecifiedTests=false test
 git diff --check
 ```
 
@@ -405,7 +405,7 @@ git diff --check
 git status --short
 ```
 
-成功标准：Cordis 71 项、loader、engine、example、外部消费、API、七制品和可复现构建全部通过；生成物未进入 Git；文档对“已发布 0.3.1”“开发中 0.4.0-SNAPSHOT”和“后续十制品目标”无歧义。
+成功标准：Cordis 71 项、loader、engine、example、外部消费、API、十制品和可复现构建全部通过；生成物未进入 Git；文档明确区分 `v0.3.1` 正式基线与仅位于开发分支的 `0.4.0-SNAPSHOT`。
 
 提交边界：`docs: freeze the Fibra engine API`
 
@@ -415,7 +415,7 @@ git status --short
 
 1. prepare 失败是否严格早于旧 entry/ClassLoader/安装目录/配置文件变化；
 2. engine、loader、source 是否存在持 Java 锁跨用户回调、PF4J 回调或 Reactor/Fibra 等待；
-3. source 是否只发 dirty signal，controller 是否只有一个串行执行域；
+3. source 是否只发 dirty signal，coordinator 是否只有一个串行执行域；
 4. journal、participant workspace、摘要和崩溃恢复是否逐状态可证明；
 5. config factory/status/failure/日志/静态缓存/ThreadLocal 是否保留插件 ClassLoader 类型；
 6. close 是否覆盖构造失败、启动失败、执行中关闭、回调内关闭和重复关闭；

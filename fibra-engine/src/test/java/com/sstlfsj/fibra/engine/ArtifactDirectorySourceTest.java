@@ -22,15 +22,15 @@ class ArtifactDirectorySourceTest {
             source.start();
             Files.writeString(work.resolve("partial.tmp"), "partial");
             Files.writeString(nested.resolve("nested.zip"), "nested");
-            Thread.sleep(100);
-            assertEquals(0, calls.get());
+            await().during(Duration.ofMillis(100)).atMost(Duration.ofSeconds(2))
+                .untilAsserted(() -> assertEquals(0, calls.get()));
 
             Files.writeString(work.resolve("plugin.zip"), "zip");
-            await().atMost(Duration.ofSeconds(2)).untilAsserted(() ->
+            await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
                 assertEquals(1, calls.get()));
         }
         Files.writeString(work.resolve("after-close.zip"), "zip");
-        Thread.sleep(100);
-        assertEquals(1, calls.get());
+        await().during(Duration.ofMillis(100)).atMost(Duration.ofSeconds(2))
+            .untilAsserted(() -> assertEquals(1, calls.get()));
     }
 }

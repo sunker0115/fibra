@@ -11,7 +11,6 @@ import example.fibra.config.ConfigConsumerEntrypoint;
 import example.fibra.config.ConfigProviderEntrypoint;
 import example.fibra.config.ConfigValue;
 import example.fibra.config.TypedConfigEntrypoint;
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -21,10 +20,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -34,12 +31,10 @@ import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.awaitility.Awaitility.await;
 
 class FibraConfigLoaderTest {
     private static final ServiceKey<String> VALUE =
@@ -251,242 +246,6 @@ class FibraConfigLoaderTest {
             assertSame(groupFibra, loader.resolve("group").orElseThrow().fibra());
             assertEquals("group:child:enabled",
                 loader.resolve("group:child").orElseThrow().context().get(VALUE));
-        }
-    }
-
-    @Test
-    void watcherKeepsLastGoodRuntimeAndRecoversAfterARefreshFailure(@TempDir Path work)
-        throws Exception {
-        var plugins = Files.createDirectory(work.resolve("plugins"));
-        writePluginJar(plugins.resolve("fixture.jar"), ConfigLoaderEntrypoint.class);
-        var config = work.resolve("fibra.yaml");
-        writeConfig(config, "one", "two");
-        var failures = new CopyOnWriteArrayList<FibraConfigReloadFailure>();
-
-        try (Context root = FibraRuntime.create();
-             FibraPluginLoader artifacts = new FibraPluginLoader(root, plugins);
-             FibraConfigLoader loader = FibraConfigLoader.builder(root, artifacts, config)
-                 .build()) {
-            artifacts.loadArtifacts();
-            loader.load();
-            try (var watcher = loader.watch(Duration.ofMillis(30), failures::add)) {
-                writeConfig(config, "watched", "two");
-                await().atMost(Duration.ofSeconds(3)).untilAsserted(() ->
-                    assertEquals("first:watched", resolved(loader, "first")
-                        .context().get(VALUE)));
-
-                Files.writeString(config, "not: [valid");
-                await().atMost(Duration.ofSeconds(5)).until(() -> !failures.isEmpty());
-                assertEquals("first:watched", loader.resolve("first").orElseThrow()
-                    .context().get(VALUE));
-                assertEquals(FibraConfigErrorStage.PARSE,
-                    failures.getLast().exception().stage());
-
-                writeConfig(config, "recovered", "two");
-                await().atMost(Duration.ofSeconds(3)).untilAsserted(() ->
-                    assertEquals("first:recovered", resolved(loader, "first")
-                        .context().get(VALUE)));
-
-                var failureCount = failures.size();
-                Files.delete(config);
-                await().atMost(Duration.ofSeconds(3)).until(() ->
-                    failures.size() > failureCount);
-                assertEquals(FibraConfigErrorStage.READ,
-                    failures.getLast().exception().stage());
-                assertEquals("first:recovered", loader.resolve("first").orElseThrow()
-                    .context().get(VALUE));
-
-                writeConfig(config, "recreated", "two");
-                await().atMost(Duration.ofSeconds(3)).untilAsserted(() ->
-                    assertEquals("first:recreated", resolved(loader, "first")
-                        .context().get(VALUE)));
-            }
-        }
-    }
-
-    @Test
-    void watcherRetainsDirtyConfigWithoutPublishingBusyAsAConfigFailure(@TempDir Path work)
-        throws Exception {
-        var plugins = Files.createDirectory(work.resolve("plugins"));
-        writePluginJar(plugins.resolve("fixture.jar"), ConfigLoaderEntrypoint.class);
-        var config = work.resolve("fibra.yaml");
-        writeConfig(config, "one", "two");
-        var failures = new CopyOnWriteArrayList<FibraConfigReloadFailure>();
-        var entered = new CountDownLatch(1);
-        var release = new CountDownLatch(1);
-
-        try (Context root = FibraRuntime.create();
-             FibraPluginLoader artifacts = new FibraPluginLoader(root, plugins);
-             FibraConfigLoader loader = FibraConfigLoader.builder(root, artifacts, config)
-                 .build()) {
-            artifacts.loadArtifacts();
-            loader.load();
-            try (var watcher = loader.watch(Duration.ofMillis(30), failures::add)) {
-                var holder = Thread.ofPlatform().start(() -> artifacts.runExclusive(() -> {
-                    entered.countDown();
-                    try {
-                        release.await();
-                    } catch (InterruptedException exception) {
-                        Thread.currentThread().interrupt();
-                    }
-                }));
-                assertTrue(entered.await(2, TimeUnit.SECONDS));
-                writeConfig(config, "after-busy", "two");
-                await().during(Duration.ofMillis(200)).atMost(Duration.ofSeconds(2))
-                    .untilAsserted(() -> assertTrue(failures.isEmpty()));
-                release.countDown();
-                holder.join();
-
-                await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
-                    assertEquals("first:after-busy", resolved(loader, "first")
-                        .context().get(VALUE)));
-                assertTrue(failures.isEmpty());
-            } finally {
-                release.countDown();
-            }
-        }
-    }
-
-    @RepeatedTest(5)
-    void watcherRecoversWhenAMissingIncludedFileIsCreated(@TempDir Path work)
-        throws Exception {
-        var plugins = Files.createDirectory(work.resolve("plugins"));
-        writePluginJar(plugins.resolve("fixture.jar"), ConfigLoaderEntrypoint.class);
-        var config = work.resolve("fibra.yaml");
-        var includedDirectory = work.resolve("late");
-        var included = includedDirectory.resolve("entries.yaml");
-        writeConfig(config, "one", "two");
-        var failures = new CopyOnWriteArrayList<FibraConfigReloadFailure>();
-
-        try (Context root = FibraRuntime.create();
-             FibraPluginLoader artifacts = new FibraPluginLoader(root, plugins);
-             FibraConfigLoader loader = FibraConfigLoader.builder(root, artifacts, config)
-                 .build()) {
-            artifacts.loadArtifacts();
-            loader.load();
-            try (var watcher = loader.watch(Duration.ofMillis(30), failures::add)) {
-                Files.writeString(config, """
-                    - id: late
-                      include: ./late/entries.yaml
-                    """);
-                await().atMost(Duration.ofSeconds(5)).until(() -> !failures.isEmpty());
-                assertEquals(included.toFile().getCanonicalFile().toPath(),
-                    failures.getLast().exception().path());
-                assertTrue(loader.watchedPaths().contains(
-                    included.toFile().getCanonicalFile().toPath()));
-
-                Files.createDirectory(includedDirectory);
-                Files.writeString(included, """
-                    - id: child
-                      name: fixture
-                      config: recovered
-                    """);
-
-                await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-                    var child = resolved(loader, "late:child");
-                    assertEquals("late:child:recovered", child
-                        .context().get(VALUE));
-                });
-            }
-        }
-    }
-
-    @Test
-    void loaderCloseWaitsForWatcherAndRejectsAConcurrentWatcher(@TempDir Path work)
-        throws Exception {
-        var plugins = Files.createDirectory(work.resolve("plugins"));
-        writePluginJar(plugins.resolve("fixture.jar"), ConfigLoaderEntrypoint.class);
-        var config = work.resolve("fibra.yaml");
-        writeConfig(config, "one", "two");
-        var callbackEntered = new CountDownLatch(1);
-        var releaseCallback = new CountDownLatch(1);
-        var closeFinished = new CountDownLatch(1);
-
-        try (Context root = FibraRuntime.create();
-             FibraPluginLoader artifacts = new FibraPluginLoader(root, plugins);
-             FibraConfigLoader loader = FibraConfigLoader.builder(root, artifacts, config)
-                 .build()) {
-            artifacts.loadArtifacts();
-            loader.load();
-            loader.watch(Duration.ZERO, ignored -> {
-                callbackEntered.countDown();
-                try {
-                    releaseCallback.await();
-                } catch (InterruptedException exception) {
-                    Thread.currentThread().interrupt();
-                    throw new IllegalStateException(exception);
-                }
-            });
-            Files.writeString(config, "not: [valid");
-            assertTrue(callbackEntered.await(5, TimeUnit.SECONDS));
-            var closer = Thread.ofPlatform().start(() -> {
-                loader.close();
-                closeFinished.countDown();
-            });
-
-            try {
-                assertFalse(closeFinished.await(100, TimeUnit.MILLISECONDS));
-                await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-                    var error = assertThrows(IllegalStateException.class,
-                        () -> loader.watch(Duration.ZERO, ignored -> { }));
-                    assertTrue(error.getMessage().contains("closed"));
-                });
-            } finally {
-                releaseCallback.countDown();
-            }
-            assertTrue(closeFinished.await(5, TimeUnit.SECONDS));
-            closer.join();
-        }
-    }
-
-    @Test
-    void failureCallbackCanCloseLoaderWhileAnotherThreadIsClosing(@TempDir Path work)
-        throws Exception {
-        var plugins = Files.createDirectory(work.resolve("plugins"));
-        writePluginJar(plugins.resolve("fixture.jar"), ConfigLoaderEntrypoint.class);
-        var config = work.resolve("fibra.yaml");
-        writeConfig(config, "one", "two");
-        var callbackEntered = new CountDownLatch(1);
-        var closeFromCallback = new CountDownLatch(1);
-        var callbackCloseReturned = new CountDownLatch(1);
-        var externalCloseReturned = new CountDownLatch(1);
-
-        try (Context root = FibraRuntime.create();
-             FibraPluginLoader artifacts = new FibraPluginLoader(root, plugins)) {
-            var loader = FibraConfigLoader.builder(root, artifacts, config).build();
-            artifacts.loadArtifacts();
-            loader.load();
-            loader.watch(Duration.ZERO, ignored -> {
-                callbackEntered.countDown();
-                try {
-                    closeFromCallback.await();
-                    loader.close();
-                    callbackCloseReturned.countDown();
-                } catch (InterruptedException exception) {
-                    Thread.currentThread().interrupt();
-                    throw new IllegalStateException(exception);
-                }
-            });
-            Files.writeString(config, "not: [valid");
-            assertTrue(callbackEntered.await(5, TimeUnit.SECONDS));
-            var externalCloser = Thread.ofVirtual().start(() -> {
-                loader.close();
-                externalCloseReturned.countDown();
-            });
-
-            try {
-                await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-                    var error = assertThrows(IllegalStateException.class,
-                        () -> loader.watch(Duration.ZERO, ignored -> { }));
-                    assertTrue(error.getMessage().contains("closed"));
-                });
-                closeFromCallback.countDown();
-                assertTrue(callbackCloseReturned.await(5, TimeUnit.SECONDS));
-                assertTrue(externalCloseReturned.await(5, TimeUnit.SECONDS));
-                externalCloser.join();
-            } finally {
-                closeFromCallback.countDown();
-            }
         }
     }
 

@@ -1,13 +1,8 @@
 package com.sstlfsj.fibra.example.host;
 
-import com.sstlfsj.fibra.Context;
-import com.sstlfsj.fibra.FibraState;
 import com.sstlfsj.fibra.ServiceKey;
-import com.sstlfsj.fibra.loader.config.FibraConfigLoader;
-import com.sstlfsj.fibra.loader.pf4j.FibraArtifactErrorStage;
-import com.sstlfsj.fibra.loader.pf4j.FibraArtifactException;
-import com.sstlfsj.fibra.loader.pf4j.FibraPluginLoader;
-import com.sstlfsj.fibra.runtime.FibraRuntime;
+import com.sstlfsj.fibra.engine.FibraDeploymentException;
+import com.sstlfsj.fibra.engine.FibraEngine;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -15,11 +10,16 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.jar.JarInputStream;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -38,30 +38,33 @@ class FibraExampleHostIT {
         "example.fibra.consumer.ConsumerEntrypoint";
 
     @Test
-    void runsFiniteHostAgainstThreeRealPluginPackages(@TempDir Path work) throws Exception {
+    void runsFiniteHostAgainstTwoRealDeployments(@TempDir Path work) throws Exception {
         var artifacts = artifacts();
+        var deploymentV1 = deployment(work.resolve("deployment-v1.zip"), "1.0.0",
+            List.of(
+                artifacts.resolve("fibra-example-consumer-1.0.0.zip"),
+                artifacts.resolve("fibra-example-contract-1.0.0.zip"),
+                artifacts.resolve("fibra-example-provider-1.0.0.zip")));
+        var deploymentV2 = deployment(work.resolve("deployment-v2.zip"), "2.0.0",
+            List.of(
+                artifacts.resolve("fibra-example-consumer-2.0.0.zip"),
+                artifacts.resolve("fibra-example-contract-2.0.0.zip"),
+                artifacts.resolve("fibra-example-provider-2.0.0.zip")));
         var plugins = Files.createDirectory(work.resolve("plugins"));
-        var config = work.resolve("fibra.yaml");
-        copyConfig(config);
+        var config = Files.writeString(work.resolve("fibra.yaml"), "[]\n");
 
         var javaExecutable = Path.of(System.getProperty("java.home"), "bin", "java");
         var host = Path.of(System.getProperty("fibra.example.host.jar"));
         var process = new ProcessBuilder(javaExecutable.toString(), "-jar", host.toString(),
-            plugins.toString(), config.toString(),
-            artifacts.resolve("fibra-example-contract-1.0.0.zip").toString(),
-            artifacts.resolve("fibra-example-provider-1.0.0.zip").toString(),
-            artifacts.resolve("fibra-example-consumer-1.0.0.zip").toString(),
-            artifacts.resolve("fibra-example-contract-2.0.0.zip").toString(),
-            artifacts.resolve("fibra-example-provider-2.0.0.zip").toString(),
-            artifacts.resolve("fibra-example-consumer-2.0.0.zip").toString())
-            .redirectErrorStream(true)
-            .start();
+            plugins.toString(), config.toString(), deploymentV1.toString(),
+            deploymentV2.toString()).redirectErrorStream(true).start();
         var finished = process.waitFor(15, TimeUnit.SECONDS);
         if (!finished) {
             process.destroyForcibly();
         }
         assertTrue(finished, "executable example host did not finish");
-        var output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        var output = new String(process.getInputStream().readAllBytes(),
+            StandardCharsets.UTF_8);
         assertEquals(0, process.exitValue(), output);
         assertTrue(output.contains("consumer->provider-1.0.0"), output);
         assertTrue(output.contains("consumer->provider-2.0.0"), output);
@@ -71,7 +74,7 @@ class FibraExampleHostIT {
     }
 
     @Test
-    void verifiesContractIsolationBatchUpgradeAndFailedApplyRollback(@TempDir Path work)
+    void verifiesIsolationJointUpgradeAndFailedDeploymentRollback(@TempDir Path work)
         throws Exception {
         assertThrows(ClassNotFoundException.class, () -> Class.forName(CONTRACT_TYPE));
         assertThrows(ClassNotFoundException.class, () -> Class.forName(PROVIDER_ENTRYPOINT));
@@ -81,55 +84,85 @@ class FibraExampleHostIT {
         var contractV1 = artifacts.resolve("fibra-example-contract-1.0.0.zip");
         var providerV1 = artifacts.resolve("fibra-example-provider-1.0.0.zip");
         var consumerV1 = artifacts.resolve("fibra-example-consumer-1.0.0.zip");
-        assertTrue(mainJarContains(contractV1,
-            "example/fibra/contract/Greeting.class"));
-        assertFalse(mainJarContains(providerV1,
-            "example/fibra/contract/Greeting.class"));
-        assertFalse(mainJarContains(consumerV1,
-            "example/fibra/contract/Greeting.class"));
+        assertTrue(mainJarContains(contractV1, "example/fibra/contract/Greeting.class"));
+        assertFalse(mainJarContains(providerV1, "example/fibra/contract/Greeting.class"));
+        assertFalse(mainJarContains(consumerV1, "example/fibra/contract/Greeting.class"));
         assertEquals("fibra-example-contract@>=1.0.0 & <2.0.0",
             descriptor(consumerV1).getProperty("plugin.dependencies"));
 
-        var plugins = Files.createDirectory(work.resolve("plugins"));
-        var configPath = work.resolve("fibra.yaml");
-        copyConfig(configPath);
-        try (Context root = FibraRuntime.create();
-             var loader = new FibraPluginLoader(root, plugins);
-             var config = FibraConfigLoader.builder(root, loader, configPath).build()) {
-            loader.loadArtifacts();
-            loader.applyArtifacts(List.of(contractV1, providerV1, consumerV1));
-            config.load();
-            assertEquals("1.0.0", root.get(PROVIDER_VERSION));
-            assertEquals("consumer->provider-1.0.0", root.get(CONSUMER_RESULT));
-
-            loader.applyArtifacts(List.of(
+        var deploymentV1 = deployment(work.resolve("deployment-v1.zip"), "1.0.0",
+            List.of(consumerV1, contractV1, providerV1));
+        var deploymentV2 = deployment(work.resolve("deployment-v2.zip"), "2.0.0",
+            List.of(
+                artifacts.resolve("fibra-example-consumer-2.0.0.zip"),
                 artifacts.resolve("fibra-example-contract-2.0.0.zip"),
-                artifacts.resolve("fibra-example-provider-2.0.0.zip"),
-                artifacts.resolve("fibra-example-consumer-2.0.0.zip")));
-            assertEquals("2.0.0", root.get(PROVIDER_VERSION));
-            assertEquals("consumer->provider-2.0.0", root.get(CONSUMER_RESULT));
+                artifacts.resolve("fibra-example-provider-2.0.0.zip")));
+        var broken = deployment(work.resolve("deployment-broken.zip"), "3.0.0",
+            List.of(artifacts.resolve("fibra-example-provider-3.0.0.zip")));
+        var plugins = Files.createDirectory(work.resolve("plugins"));
+        var config = Files.writeString(work.resolve("fibra.yaml"), "[]\n");
 
-            var failure = assertThrows(FibraArtifactException.class,
-                () -> loader.applyArtifacts(List.of(
-                    artifacts.resolve("fibra-example-provider-3.0.0.zip"))));
-            assertEquals(FibraArtifactErrorStage.APPLY, failure.stage());
-            assertEquals("2.0.0", root.get(PROVIDER_VERSION));
-            assertEquals("consumer->provider-2.0.0", root.get(CONSUMER_RESULT));
-            assertEquals(List.of("fibra-example-consumer", "fibra-example-provider"),
-                loader.entryIds());
-            assertEquals(FibraState.ACTIVE,
-                config.resolve("fibra-example-provider").orElseThrow().fibra().state());
-            assertEquals(FibraState.ACTIVE,
-                config.resolve("fibra-example-consumer").orElseThrow().fibra().state());
+        try (var engine = FibraEngine.builder(plugins, config).build()) {
+            engine.start();
+            engine.applyDeployment(deploymentV1);
+            assertEquals("1.0.0", engine.root().get(PROVIDER_VERSION));
+            assertEquals("consumer->provider-1.0.0", engine.root().get(CONSUMER_RESULT));
+
+            engine.applyDeployment(deploymentV2);
+            assertEquals("2.0.0", engine.root().get(PROVIDER_VERSION));
+            assertEquals("consumer->provider-2.0.0", engine.root().get(CONSUMER_RESULT));
+
+            engine.applyDeployment(deploymentV1);
+            assertEquals("1.0.0", engine.root().get(PROVIDER_VERSION));
+            assertEquals("consumer->provider-1.0.0", engine.root().get(CONSUMER_RESULT));
+
+            engine.applyDeployment(deploymentV2);
+            assertEquals("2.0.0", engine.root().get(PROVIDER_VERSION));
+            assertEquals("consumer->provider-2.0.0", engine.root().get(CONSUMER_RESULT));
+
+            assertThrows(FibraDeploymentException.class,
+                () -> engine.applyDeployment(broken));
+            assertEquals("2.0.0", engine.root().get(PROVIDER_VERSION));
+            assertEquals("consumer->provider-2.0.0", engine.root().get(CONSUMER_RESULT));
+            assertEquals("2.0.0",
+                installedVersion(plugins.resolve("fibra-example-provider")));
         }
+    }
+
+    private static Path deployment(Path target, String version, List<Path> plugins)
+        throws Exception {
+        var entries = new LinkedHashMap<String, byte[]>();
+        var descriptor = new StringBuilder("deployment.id=fibra-example\n")
+            .append("deployment.version=").append(version).append('\n')
+            .append("config.path=config/fibra.yaml\n");
+        var sorted = plugins.stream().sorted().toList();
+        for (int index = 0; index < sorted.size(); index++) {
+            var name = "plugins/" + sorted.get(index).getFileName();
+            descriptor.append("plugin.").append(index).append('=').append(name).append('\n');
+            entries.put(name, Files.readAllBytes(sorted.get(index)));
+        }
+        entries.put("config/fibra.yaml",
+            Files.readAllBytes(Path.of(System.getProperty("fibra.example.config"))));
+        entries.put("deployment.properties", descriptor.toString()
+            .getBytes(StandardCharsets.ISO_8859_1));
+        var checksums = new StringBuilder();
+        entries.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry ->
+            checksums.append(sha(entry.getValue())).append("  ")
+                .append(entry.getKey()).append('\n'));
+        entries.put("checksums.sha256", checksums.toString()
+            .getBytes(StandardCharsets.UTF_8));
+        try (var output = new ZipOutputStream(Files.newOutputStream(target))) {
+            for (var entry : entries.entrySet()) {
+                output.putNextEntry(new ZipEntry(entry.getKey()));
+                output.write(entry.getValue());
+                output.closeEntry();
+            }
+        }
+        return target;
     }
 
     private static Path artifacts() {
         return Path.of(System.getProperty("fibra.example.artifacts"));
-    }
-
-    private static void copyConfig(Path target) throws Exception {
-        Files.copy(Path.of(System.getProperty("fibra.example.config")), target);
     }
 
     private static String installedVersion(Path packageRoot) throws Exception {
@@ -151,12 +184,14 @@ class FibraExampleHostIT {
         }
     }
 
-    private static boolean mainJarContains(Path pluginZip, String classEntry) throws Exception {
+    private static boolean mainJarContains(Path pluginZip, String classEntry)
+        throws Exception {
         try (var zip = new ZipFile(pluginZip.toFile())) {
             var entries = zip.entries();
             while (entries.hasMoreElements()) {
                 var entry = entries.nextElement();
-                if (!entry.getName().contains("/lib/") || !entry.getName().endsWith(".jar")) {
+                if (!entry.getName().contains("/lib/")
+                    || !entry.getName().endsWith(".jar")) {
                     continue;
                 }
                 var bytes = zip.getInputStream(entry).readAllBytes();
@@ -170,6 +205,15 @@ class FibraExampleHostIT {
                 }
             }
             return false;
+        }
+    }
+
+    private static String sha(byte[] bytes) {
+        try {
+            return java.util.HexFormat.of().formatHex(
+                MessageDigest.getInstance("SHA-256").digest(bytes));
+        } catch (Exception exception) {
+            throw new AssertionError(exception);
         }
     }
 }

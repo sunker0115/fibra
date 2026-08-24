@@ -11,54 +11,37 @@
   </parent>
   <artifactId>fibra-spring-boot-starter</artifactId>
   <name>Fibra Spring Boot Starter</name>
-  <description>Optional Spring Boot adapter for the Fibra dynamic plugin runtime.</description>
+  <description>Fibra Spring Boot 的无源码依赖入口。</description>
   <properties>
-    <spring-boot.version>4.1.0</spring-boot.version>
-    <!-- 第 6 个可发布制品：可选 Spring 适配制品，与 5 个中立内核/loader 制品同等发布待遇。 -->
     <maven.deploy.skip>false</maven.deploy.skip>
     <maven.source.skip>false</maven.source.skip>
     <maven.javadoc.skip>false</maven.javadoc.skip>
   </properties>
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-dependencies</artifactId>
-        <version>${spring-boot.version}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>io.projectreactor</groupId>
-        <artifactId>reactor-core</artifactId>
-        <version>3.8.6</version>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
   <dependencies>
     <dependency>
       <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-loader-pf4j</artifactId>
-      <version>${revision}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-loader-config</artifactId>
-      <version>${revision}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-autoconfigure</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-configuration-processor</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-test</artifactId>
-      <scope>test</scope>
+      <artifactId>fibra-spring-boot-autoconfigure</artifactId>
     </dependency>
   </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>attach-empty-javadocs</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>javadoc</classifier>
+              <classesDirectory>${project.build.directory}/empty-javadocs</classesDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>

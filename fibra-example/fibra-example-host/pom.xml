@@ -17,7 +17,7 @@
   <dependencies>
     <dependency>
       <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-loader-config</artifactId>
+      <artifactId>fibra-engine</artifactId>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>

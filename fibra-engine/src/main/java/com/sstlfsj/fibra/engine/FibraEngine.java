@@ -46,7 +46,7 @@ public final class FibraEngine implements AutoCloseable {
     private FibraEngineState state = FibraEngineState.NEW;
     private String desiredRevision;
     private String appliedRevision;
-    private FibraReconcileController controller;
+    private ReconcileCoordinator reconcileCoordinator;
     private ArtifactDirectorySource artifactSource;
     private ConfigFileSource configSource;
 
@@ -66,6 +66,7 @@ public final class FibraEngine implements AutoCloseable {
         validateLayout();
         try {
             Files.createDirectories(installedRoot.resolve(".fibra-engine"));
+            new EngineCrashRecovery(installedRoot, configLocation).recover();
         } catch (IOException exception) {
             throw new IllegalStateException("cannot create Fibra engine state root", exception);
         }
@@ -113,19 +114,19 @@ public final class FibraEngine implements AutoCloseable {
             stage = FibraEngineFailureStage.READINESS;
             awaitRequiredEntries();
             stage = FibraEngineFailureStage.STARTUP;
-            controller = new FibraReconcileController(this::reconcile, resyncInterval,
+            reconcileCoordinator = new ReconcileCoordinator(this::reconcile, resyncInterval,
                 retryInitial, retryMaximum,
                 failure -> recordFailure(FibraEngineFailureStage.CONFIG_RECONCILE,
                     failure));
             if (artifactSourceRoot != null) {
                 artifactSource = new ArtifactDirectorySource(artifactSourceRoot,
-                    artifactDebounce, controller::request);
+                    artifactDebounce, reconcileCoordinator::request);
             }
             if (configSourceEnabled) {
                 configSource = new ConfigFileSource(config::sourcePaths, configDebounce,
-                    controller::request);
+                    reconcileCoordinator::request);
             }
-            controller.start();
+            reconcileCoordinator.start();
             if (artifactSource != null) {
                 artifactSource.start();
             }
@@ -137,51 +138,62 @@ public final class FibraEngine implements AutoCloseable {
             }
         } catch (RuntimeException failure) {
             recordFailure(stage, failure);
-            terminateAfterStartFailure();
+            try {
+                terminateAfterStartFailure();
+            } catch (RuntimeException closeFailure) {
+                failure.addSuppressed(closeFailure);
+            }
             throw failure;
         }
     }
 
     public void requestReconcile() {
-        FibraReconcileController current;
+        ReconcileCoordinator current;
         synchronized (stateMonitor) {
             if (state != FibraEngineState.RUNNING
                 && state != FibraEngineState.DEGRADED) {
                 throw new IllegalStateException("FibraEngine is not running");
             }
-            current = controller;
+            current = reconcileCoordinator;
         }
         current.request();
     }
 
     public FibraDeploymentResult applyDeployment(Path packagePath) {
         Objects.requireNonNull(packagePath, "packagePath");
+        ReconcileCoordinator current;
         synchronized (stateMonitor) {
             if (state != FibraEngineState.RUNNING
                 && state != FibraEngineState.DEGRADED) {
                 throw new IllegalStateException("FibraEngine is not running");
             }
+            current = reconcileCoordinator;
         }
+        return current.execute(() -> applyDeploymentSerialized(packagePath));
+    }
+
+    private FibraDeploymentResult applyDeploymentSerialized(Path packagePath) {
+        var transactionId = java.util.UUID.randomUUID().toString();
         var transactionRoot = installedRoot.resolve(".fibra-engine/transactions")
-            .resolve(java.util.UUID.randomUUID().toString());
+            .resolve(transactionId);
         try {
             Files.createDirectories(transactionRoot);
+            EngineTransactionJournal.preparing(transactionId).write(transactionRoot);
             var inspected = new DeploymentPackageInspector().inspect(packagePath,
                 transactionRoot.resolve("input"));
             var result = artifacts.runExclusive(() -> applyDeployment(inspected,
                 transactionRoot));
             clearFailure(FibraEngineFailureStage.DEPLOYMENT);
-            deleteTree(transactionRoot);
             return result;
         } catch (FibraDeploymentException failure) {
             recordFailure(FibraEngineFailureStage.DEPLOYMENT, failure);
-            deleteTreeOnFailure(transactionRoot, failure);
+            cleanUnpreparedTransaction(transactionRoot, failure);
             throw failure;
         } catch (RuntimeException | IOException failure) {
             var wrapped = new FibraDeploymentException(FibraDeploymentErrorStage.COMMIT,
                 packagePath, "cannot apply Fibra deployment", failure);
             recordFailure(FibraEngineFailureStage.DEPLOYMENT, wrapped);
-            deleteTreeOnFailure(transactionRoot, wrapped);
+            cleanUnpreparedTransaction(transactionRoot, wrapped);
             throw wrapped;
         }
     }
@@ -190,6 +202,7 @@ public final class FibraEngine implements AutoCloseable {
                                                   Path transactionRoot) {
         com.sstlfsj.fibra.loader.pf4j.FibraArtifactChange artifactChange = null;
         com.sstlfsj.fibra.loader.config.FibraConfigChange configChange = null;
+        EngineTransactionJournal journal = null;
         try {
             var artifactWorkspace = Files.createDirectory(
                 transactionRoot.resolve("artifacts"));
@@ -199,10 +212,24 @@ public final class FibraEngine implements AutoCloseable {
             configChange = config.prepareReplacement(deployment.configPath(), artifactChange,
                 configWorkspace);
             var changed = artifactChange.changedArtifactIds();
+            journal = EngineTransactionJournal.read(transactionRoot)
+                .prepared(deployment.id(), deployment.version(), deployment.sha256(),
+                    artifactJournal(changed, artifactWorkspace),
+                    configJournal(configWorkspace));
+            journal.write(transactionRoot);
+            journal = journal.advance(EngineTransactionState.COMMITTING_ARTIFACTS);
+            journal.write(transactionRoot);
             artifactChange.commit();
+            journal = journal.advance(EngineTransactionState.COMMITTING_CONFIG);
+            journal.write(transactionRoot);
             configChange.commit();
+            journal = journal.advance(EngineTransactionState.VERIFYING);
+            journal.write(transactionRoot);
             awaitRequiredEntries();
             var revision = currentRevision();
+            journal = journal.committed(revision);
+            journal.write(transactionRoot);
+            AppliedRevisionStore.write(installedRoot, journal);
             synchronized (stateMonitor) {
                 desiredRevision = revision;
                 appliedRevision = revision;
@@ -210,6 +237,7 @@ public final class FibraEngine implements AutoCloseable {
             }
             configChange.complete();
             artifactChange.complete();
+            deleteTree(transactionRoot);
             return new FibraDeploymentResult(deployment.id(), deployment.version(), revision,
                 changed);
         } catch (RuntimeException | IOException failure) {
@@ -217,11 +245,24 @@ public final class FibraEngine implements AutoCloseable {
                 ? deploymentFailure
                 : new FibraDeploymentException(FibraDeploymentErrorStage.COMMIT,
                     deployment.workspace(), "deployment transaction failed", failure);
+            if (journal != null && journal.state() == EngineTransactionState.COMMITTED) {
+                throw primary;
+            }
+            var rollbackSucceeded = true;
+            if (journal != null && journal.state() != EngineTransactionState.PREPARING) {
+                try {
+                    journal.rollingBack().write(transactionRoot);
+                } catch (RuntimeException | IOException rollbackFailure) {
+                    primary.addSuppressed(rollbackFailure);
+                    rollbackSucceeded = false;
+                }
+            }
             if (configChange != null) {
                 try {
                     configChange.rollback();
                 } catch (RuntimeException rollbackFailure) {
                     primary.addSuppressed(rollbackFailure);
+                    rollbackSucceeded = false;
                 }
             }
             if (artifactChange != null) {
@@ -229,6 +270,14 @@ public final class FibraEngine implements AutoCloseable {
                     artifactChange.rollback();
                 } catch (RuntimeException rollbackFailure) {
                     primary.addSuppressed(rollbackFailure);
+                    rollbackSucceeded = false;
+                }
+            }
+            if (rollbackSucceeded) {
+                try {
+                    deleteTree(transactionRoot);
+                } catch (IOException cleanupFailure) {
+                    primary.addSuppressed(cleanupFailure);
                 }
             }
             throw primary;
@@ -353,10 +402,17 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private void awaitRequiredEntries() {
+        var startedAt = System.nanoTime();
         for (var entryId : requiredEntries) {
             var entry = config.resolve(entryId).orElseThrow(() ->
                 new IllegalStateException("required entry is missing: " + entryId));
-            entry.fibra().ready().block(readinessTimeout);
+            var elapsed = Duration.ofNanos(Math.max(0, System.nanoTime() - startedAt));
+            var remaining = readinessTimeout.minus(elapsed);
+            if (remaining.isZero() || remaining.isNegative()) {
+                throw new IllegalStateException(
+                    "required entries exceeded readiness timeout: " + readinessTimeout);
+            }
+            entry.fibra().ready().block(remaining);
             if (entry.fibra().state() != FibraState.ACTIVE) {
                 throw new IllegalStateException("required entry is not ACTIVE: " + entryId
                     + ", state=" + entry.fibra().state());
@@ -420,7 +476,7 @@ public final class FibraEngine implements AutoCloseable {
         var failures = new ArrayList<Throwable>();
         close(artifactSource, failures);
         close(configSource, failures);
-        close(controller, failures);
+        close(reconcileCoordinator, failures);
         close(config, failures);
         close(artifacts, failures);
         try {
@@ -446,6 +502,42 @@ public final class FibraEngine implements AutoCloseable {
         }
     }
 
+    private List<EngineTransactionJournal.Artifact> artifactJournal(
+        List<String> artifactIds, Path workspace) throws IOException {
+        var result = new ArrayList<EngineTransactionJournal.Artifact>();
+        for (var artifactId : artifactIds.stream().sorted().toList()) {
+            var previous = installedRoot.resolve(artifactId);
+            var next = workspace.resolve("next").resolve(artifactId);
+            var oldExists = Files.isDirectory(previous, LinkOption.NOFOLLOW_LINKS);
+            result.add(new EngineTransactionJournal.Artifact(artifactId, oldExists,
+                oldExists ? EngineTransactionJournal.digest(previous) : null,
+                EngineTransactionJournal.digest(next)));
+        }
+        return List.copyOf(result);
+    }
+
+    private List<EngineTransactionJournal.ConfigFile> configJournal(Path workspace)
+        throws IOException {
+        var nextRoot = workspace.resolve("next");
+        if (!Files.isDirectory(nextRoot, LinkOption.NOFOLLOW_LINKS)) {
+            return List.of();
+        }
+        var result = new ArrayList<EngineTransactionJournal.ConfigFile>();
+        try (var paths = Files.walk(nextRoot)) {
+            for (var next : paths.filter(path -> Files.isRegularFile(path,
+                LinkOption.NOFOLLOW_LINKS)).sorted().toList()) {
+                var relative = nextRoot.relativize(next);
+                var relativeName = relative.toString().replace('\\', '/');
+                var previous = workspace.resolve("previous").resolve(relative);
+                var oldExists = Files.isRegularFile(previous, LinkOption.NOFOLLOW_LINKS);
+                result.add(new EngineTransactionJournal.ConfigFile(relativeName, oldExists,
+                    oldExists ? EngineTransactionJournal.digest(previous) : null,
+                    EngineTransactionJournal.digest(next)));
+            }
+        }
+        return List.copyOf(result);
+    }
+
     private static void deleteTree(Path root) throws IOException {
         if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) {
             return;
@@ -457,10 +549,18 @@ public final class FibraEngine implements AutoCloseable {
         }
     }
 
-    private static void deleteTreeOnFailure(Path root, RuntimeException primary) {
+    private static void cleanUnpreparedTransaction(Path root, RuntimeException primary) {
+        if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) {
+            return;
+        }
         try {
-            deleteTree(root);
-        } catch (IOException cleanupFailure) {
+            var journalPath = root.resolve(EngineTransactionJournal.FILE_NAME);
+            if (!Files.isRegularFile(journalPath, LinkOption.NOFOLLOW_LINKS)
+                || EngineTransactionJournal.read(root).state()
+                == EngineTransactionState.PREPARING) {
+                deleteTree(root);
+            }
+        } catch (IOException | RuntimeException cleanupFailure) {
             primary.addSuppressed(cleanupFailure);
         }
     }

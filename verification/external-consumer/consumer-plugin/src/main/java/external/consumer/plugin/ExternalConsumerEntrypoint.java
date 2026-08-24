@@ -9,15 +9,14 @@ import reactor.core.publisher.Mono;
 
 @Extension
 public final class ExternalConsumerEntrypoint implements VoidFibraPluginEntrypoint {
-    private static final ServiceKey<String> RESULT =
-        ServiceKey.of("external.consumer.plugin.result", String.class);
-
     @Override
     public Plugin<Void> create(String entryId) {
         return (context, config) -> {
             assertProviderPrivateDependencyIsHidden();
             var greeting = context.get(Greeting.KEY);
-            return Mono.just(context.provide(RESULT, "consumer->" + greeting.greeting()));
+            var result = ServiceKey.of("external.consumer.plugin.result." + entryId,
+                String.class);
+            return Mono.just(context.provide(result, "consumer->" + greeting.greeting()));
         };
     }
 

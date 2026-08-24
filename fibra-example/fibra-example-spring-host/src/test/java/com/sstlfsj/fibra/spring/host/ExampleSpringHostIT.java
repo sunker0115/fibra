@@ -1,5 +1,6 @@
 package com.sstlfsj.fibra.spring.host;
 
+import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.spring.host.app.ExampleSpringHostApplication;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,23 +15,22 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
+import java.security.MessageDigest;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * fibra-spring-boot-starter 的端到端黑盒：上传（仅暂存）→ 请求驱动热装 → mount →
- * URL 调用插件贡献的 Greeting → 热卸。
- */
+/** starter 的真实 engine 黑盒：上传 deployment、联合提交并调用插件服务。 */
 @SpringBootTest(classes = ExampleSpringHostApplication.class,
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
@@ -41,72 +41,96 @@ class ExampleSpringHostIT {
     @Autowired
     private TestRestTemplate rest;
 
+    @Autowired
+    private FibraEngine engine;
+
     @DynamicPropertySource
     static void fibraProperties(DynamicPropertyRegistry registry) throws IOException {
-        Path work = Files.createTempDirectory("spring-host-it");
-        Path plugins = Files.createDirectory(work.resolve("plugins"));
-        Path staging = Files.createDirectory(work.resolve("staging"));
-        Path config = work.resolve("fibra.yaml");
-        Files.writeString(config, "[]\n");
-        registry.add("fibra.plugins-root", plugins::toString);
-        registry.add("fibra.staging-root", staging::toString);
-        registry.add("fibra.config-location", config::toString);
-        registry.add("fibra.watcher.enabled", () -> "false");
+        var work = Files.createTempDirectory("spring-host-it");
+        var plugins = Files.createDirectory(work.resolve("plugins"));
+        var staging = Files.createDirectory(work.resolve("staging"));
+        var config = Files.writeString(work.resolve("fibra.yaml"), "[]\n");
+        registry.add("fibra.artifacts.installed-root", plugins::toString);
+        registry.add("fibra.config.location", config::toString);
+        registry.add("fibra.artifacts.watch.enabled", () -> "false");
+        registry.add("fibra.config.watch.enabled", () -> "false");
+        registry.add("fibra.example.staging-root", staging::toString);
     }
 
     @Test
-    void uploadStagesThenApplyMountsGreetingAndUnloadRemovesIt() throws Exception {
-        Path zip = Path.of(System.getProperty("fibra.springhost.artifacts")).resolve(PLUGIN_ZIP);
-        assertTrue(Files.isRegularFile(zip), "缺少插件 fixture ZIP: " + zip);
+    void uploadStagesThenDeploymentActivatesGreeting() throws Exception {
+        var plugin = Path.of(System.getProperty("fibra.springhost.artifacts"))
+            .resolve(PLUGIN_ZIP);
+        assertTrue(Files.isRegularFile(plugin), "缺少插件 fixture ZIP: " + plugin);
+        var deployment = deployment(plugin);
 
-        // 1. 上传：仅暂存，不生效。
         var uploadBody = new LinkedMultiValueMap<String, Object>();
-        uploadBody.add("file", new FileSystemResource(zip));
+        uploadBody.add("file", new FileSystemResource(deployment));
         var uploadHeaders = new HttpHeaders();
         uploadHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
-        var upload = rest.postForEntity("/plugins/upload",
+        var upload = rest.postForEntity("/deployments/upload",
             new HttpEntity<>(uploadBody, uploadHeaders), Map.class);
         assertEquals(HttpStatus.OK, upload.getStatusCode());
-        assertEquals(PLUGIN_ZIP, upload.getBody().get("staged"));
+        assertEquals(deployment.getFileName().toString(), upload.getBody().get("staged"));
 
-        // 2. 未 apply：greet 无活跃 provider，不生效。
-        var beforeApply = rest.getForEntity("/greet?name=Ada", String.class);
-        assertEquals(HttpStatus.NOT_FOUND, beforeApply.getStatusCode(),
-            "未 apply 时 greet 不应有结果");
-
-        // 3. apply + mount。
-        var applyHeaders = new HttpHeaders();
-        applyHeaders.setContentType(MediaType.APPLICATION_JSON);
-        var apply = rest.postForEntity("/plugins/apply",
-            new HttpEntity<>(List.of(PLUGIN_ZIP), applyHeaders), Map.class);
-        assertEquals(HttpStatus.OK, apply.getStatusCode());
-        assertTrue(((List<?>) apply.getBody().get("applied")).contains(PLUGIN_ID),
-            "apply 应装入 " + PLUGIN_ID);
-        assertTrue(((List<?>) apply.getBody().get("mounted")).contains(PLUGIN_ID),
-            "apply 应 mount " + PLUGIN_ID);
-
-        // 4. URL 调插件贡献的 Greeting。
-        var afterApply = rest.getForEntity("/greet?name=Ada", String.class);
-        assertEquals(HttpStatus.OK, afterApply.getStatusCode());
-        assertNotNull(afterApply.getBody());
-        assertTrue(afterApply.getBody().contains("Hello, Ada"),
-            "greet 应返回插件问候，实际=" + afterApply.getBody());
-
-        // 5. 列表含入口。
-        var listed = rest.getForEntity("/plugins", Map.class);
-        assertTrue(((List<?>) listed.getBody().get("entries")).contains(PLUGIN_ID));
-
-        // 6. 热卸。
-        var unload = rest.exchange("/plugins/" + PLUGIN_ID,
-            org.springframework.http.HttpMethod.DELETE, null, Map.class);
-        assertEquals(HttpStatus.OK, unload.getStatusCode());
-        assertEquals(Boolean.TRUE, unload.getBody().get("unloaded"));
-
-        // 7. 卸载后入口消失，greet 再次失效。
-        var afterUnload = rest.getForEntity("/plugins", Map.class);
-        assertFalse(((List<?>) afterUnload.getBody().get("entries")).contains(PLUGIN_ID),
-            "热卸后不应再有该入口");
         assertEquals(HttpStatus.NOT_FOUND,
             rest.getForEntity("/greet?name=Ada", String.class).getStatusCode());
+
+        var applyHeaders = new HttpHeaders();
+        applyHeaders.setContentType(MediaType.APPLICATION_JSON);
+        var apply = rest.postForEntity("/deployments/apply",
+            new HttpEntity<>(Map.of("package", deployment.getFileName().toString()),
+                applyHeaders), Map.class);
+        assertEquals(HttpStatus.OK, apply.getStatusCode());
+        assertEquals("spring-host", apply.getBody().get("deploymentId"));
+        assertTrue(((java.util.List<?>) apply.getBody().get("changedArtifactIds"))
+            .contains(PLUGIN_ID));
+        assertTrue(engine.isRunning());
+
+        var greeting = rest.getForEntity("/greet?name=Ada", String.class);
+        assertEquals(HttpStatus.OK, greeting.getStatusCode());
+        assertNotNull(greeting.getBody());
+        assertTrue(greeting.getBody().contains("Hello, Ada"), greeting.getBody());
+
+        var status = rest.getForEntity("/deployments", Map.class);
+        assertEquals(HttpStatus.OK, status.getStatusCode());
+        assertTrue(((java.util.List<?>) status.getBody().get("staged"))
+            .contains(deployment.getFileName().toString()));
+    }
+
+    private static Path deployment(Path plugin) throws Exception {
+        var entries = new LinkedHashMap<String, byte[]>();
+        entries.put("config/fibra.yaml", ("- id: " + PLUGIN_ID + "\n"
+            + "  name: " + PLUGIN_ID + "\n").getBytes(StandardCharsets.UTF_8));
+        entries.put("deployment.properties", ("deployment.id=spring-host\n"
+            + "deployment.version=1.0.0\n"
+            + "config.path=config/fibra.yaml\n"
+            + "plugin.0=plugins/" + PLUGIN_ZIP + "\n")
+            .getBytes(StandardCharsets.ISO_8859_1));
+        entries.put("plugins/" + PLUGIN_ZIP, Files.readAllBytes(plugin));
+        var checksums = new StringBuilder();
+        entries.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry ->
+            checksums.append(sha(entry.getValue())).append("  ")
+                .append(entry.getKey()).append('\n'));
+        entries.put("checksums.sha256", checksums.toString()
+            .getBytes(StandardCharsets.UTF_8));
+        var target = Files.createTempFile("spring-host-deployment-", ".zip");
+        try (var output = new ZipOutputStream(Files.newOutputStream(target))) {
+            for (var entry : entries.entrySet()) {
+                output.putNextEntry(new ZipEntry(entry.getKey()));
+                output.write(entry.getValue());
+                output.closeEntry();
+            }
+        }
+        return target;
+    }
+
+    private static String sha(byte[] bytes) {
+        try {
+            return java.util.HexFormat.of().formatHex(
+                MessageDigest.getInstance("SHA-256").digest(bytes));
+        } catch (Exception exception) {
+            throw new AssertionError(exception);
+        }
     }
 }

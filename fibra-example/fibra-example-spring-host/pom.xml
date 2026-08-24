@@ -12,7 +12,7 @@
   </parent>
 
   <artifactId>fibra-example-spring-host</artifactId>
-  <description>用 fibra-spring-boot-starter 演示上传→热装→mount→URL 调用→热卸的 Spring Boot Web 宿主示例。</description>
+  <description>用 fibra-spring-boot-starter 演示 deployment 上传、联合提交和 URL 调用的 Spring Boot Web 宿主示例。</description>
 
   <properties>
     <spring-boot.version>4.1.0</spring-boot.version>

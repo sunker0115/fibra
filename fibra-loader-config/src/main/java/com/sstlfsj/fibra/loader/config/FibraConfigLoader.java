@@ -18,7 +18,6 @@ import java.nio.file.StandardOpenOption;
 import java.nio.channels.FileChannel;
 import java.nio.ByteBuffer;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -43,8 +42,6 @@ public final class FibraConfigLoader implements AutoCloseable {
     private final Map<SharedIsolate, Object> sharedIsolates = new LinkedHashMap<>();
 
     private FibraConfigSnapshot snapshot;
-    private FibraConfigWatcher watcher;
-    private FibraConfigWatcher closingWatcher;
     private boolean loaded;
     private volatile boolean closing;
     private volatile boolean closed;
@@ -154,25 +151,6 @@ public final class FibraConfigLoader implements AutoCloseable {
         });
     }
 
-    public FibraConfigWatcher watch(Duration debounce,
-                                    Consumer<FibraConfigReloadFailure> failureSink) {
-        Objects.requireNonNull(debounce, "debounce");
-        Objects.requireNonNull(failureSink, "failureSink");
-        if (debounce.isNegative()) {
-            throw new IllegalArgumentException("debounce must not be negative");
-        }
-        return plugins.runExclusive(() -> {
-            synchronized (this) {
-                requireLoaded();
-                if (watcher != null) {
-                    throw new IllegalStateException("Fibra config watcher is already running");
-                }
-                watcher = new FibraConfigWatcher(this, debounce, failureSink);
-                return watcher;
-            }
-        });
-    }
-
     public String create(String parentEntryId, int position, Map<String, ?> entry) {
         Objects.requireNonNull(entry, "entry");
         return plugins.runExclusive(() -> {
@@ -244,12 +222,8 @@ public final class FibraConfigLoader implements AutoCloseable {
 
     @Override
     public void close() {
-        FibraConfigWatcher currentWatcher;
         synchronized (this) {
             while (closing && !closed) {
-                if (closingWatcher != null && closingWatcher.isWorkerThread()) {
-                    return;
-                }
                 try {
                     wait();
                 } catch (InterruptedException exception) {
@@ -262,15 +236,9 @@ public final class FibraConfigLoader implements AutoCloseable {
                 return;
             }
             closing = true;
-            currentWatcher = watcher;
-            watcher = null;
-            closingWatcher = currentWatcher;
         }
         var succeeded = false;
         try {
-            if (currentWatcher != null) {
-                currentWatcher.close();
-            }
             plugins.runExclusive(() -> {
                 var entries = new ArrayList<>(runtime.values());
                 for (int index = entries.size() - 1; index >= 0; index--) {
@@ -284,7 +252,6 @@ public final class FibraConfigLoader implements AutoCloseable {
             synchronized (this) {
                 closed = succeeded;
                 closing = false;
-                closingWatcher = null;
                 notifyAll();
             }
         }
@@ -292,23 +259,6 @@ public final class FibraConfigLoader implements AutoCloseable {
 
     Path configPath() {
         return configPath;
-    }
-
-    Set<Path> watchedPaths() {
-        return plugins.runExclusive(() -> {
-            requireLoaded();
-            var result = new LinkedHashSet<Path>();
-            result.add(snapshot.rootPath());
-            snapshot.allEntries().forEach(entry -> result.add(entry.source()));
-            result.addAll(resolver.attemptedPaths());
-            return Set.copyOf(result);
-        });
-    }
-
-    synchronized void watcherClosed(FibraConfigWatcher candidate) {
-        if (watcher == candidate) {
-            watcher = null;
-        }
     }
 
     private void validateConfigs(FibraConfigSnapshot candidate) {

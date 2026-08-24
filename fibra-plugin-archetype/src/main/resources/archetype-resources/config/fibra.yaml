@@ -1,0 +1,4 @@
+- id: ${pluginId}
+  name: ${pluginId}
+  config:
+    prefix: Hello

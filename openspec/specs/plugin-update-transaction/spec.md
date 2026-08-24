@@ -26,15 +26,12 @@ TBD - created by archiving change standardize-plugin-packages. Update Purpose af
 - **THEN** 系统按当前完整安装图重新校验并装载该制品，不需要旧单包 load API
 
 ### Requirement: 管理操作共享逻辑事务门
-制品 load/apply/stop/unload、entry mount/update/unmount 和配置 reconcile SHALL 使用同一个 loader 可重入逻辑事务门；事务门 MUST NOT 在文件操作、PF4J 调用、插件回调或等待 Fibra lifecycle 时持有物理锁。
+
+制品 load/apply/stop/unload、entry mount/update/unmount 和配置 reconcile SHALL 使用同一个 loader 可重入逻辑事务门；事务门 MUST NOT 在文件操作、PF4J 调用、插件回调或等待 Fibra lifecycle 时持有物理锁。自动 source 与重试已迁入 Engine，loader 不再定义 watcher 竞争语义。
 
 #### Scenario: 配置刷新与制品更新并发
 - **WHEN** 一个线程正在 reconcile 配置，另一个线程调用 apply
 - **THEN** 后到的同步操作立即收到 `FibraPluginLoaderBusyException`，两个操作不观察或提交交叉中间态
-
-#### Scenario: Watcher 遇到活动事务
-- **WHEN** 配置或制品 watcher 在另一个事务活动期间触发
-- **THEN** watcher 保留 dirty 状态并在事务释放后重新执行，不把报忙当作最终 reload failure
 
 #### Scenario: Lifecycle 回调反向管理 loader
 - **WHEN** Fibra lifecycle 或其他 Reactor non-blocking 线程调用同步 loader 管理 API
@@ -83,15 +80,16 @@ TBD - created by archiving change standardize-plugin-packages. Update Purpose af
 - **THEN** 调用方提供的 ZIP路径和字节均不被移动、删除或改写
 
 ### Requirement: 运行中失败恢复旧状态
-正式 apply 任一步失败时，系统 SHALL 卸载新运行态、逆向恢复旧目录、旧 PF4J started 状态和全部旧 entries；恢复失败 MUST 形成 `ROLLBACK`。
 
-#### Scenario: 新业务入口启动失败
-- **WHEN** prospective 结构图有效但新入口在正式 mount 时失败
-- **THEN** 旧目录版本、旧服务值、旧 entry 集合和旧 started 状态全部恢复，调用方收到 `APPLY` 异常
+制品更新 SHALL 由唯一 artifact change 实现 plan、prepare、commit、complete 和 rollback。单 artifact 调用由 loader 建立单参与者 journal；engine 联合部署时使用同一 change 作为参与者并由 engine journal 统一协调。无论哪种入口，更新后运行态 apply 或 readiness 失败时，系统 MUST 恢复原版本包、原 entry 配置工厂、原依赖图和原可运行状态，不得留下部分新版本、重复 entry 或孤儿 ClassLoader。
 
-#### Scenario: 恢复自身失败
-- **WHEN** 原 apply 失败且一个或多个恢复动作也失败
-- **THEN** 最终异常 stage 为 `ROLLBACK`，原 apply 异常为 cause，恢复失败按发生顺序位于 suppressed，事务目录保留
+#### Scenario: 单资源更新失败
+- **WHEN** 调用 loader 单资源便捷 API且新版本运行态 apply 失败
+- **THEN** 便捷 API通过同一 change rollback 恢复旧状态，不存在另一套兼容实现
+
+#### Scenario: 联合部署中的 artifact 参与者失败
+- **WHEN** artifact change 已 commit 但 config 或 readiness 随后失败
+- **THEN** engine 调用该 change rollback，previous 数据在 engine complete 前一直可用于恢复
 
 ### Requirement: 启动前恢复未完成事务
 构造 loader 时 SHALL 在创建活动 PF4J manager 前扫描事务目录；未提交事务恢复旧图，已提交事务保留新图并完成清理，无法闭合的 journal MUST 阻止启动。
@@ -143,25 +141,9 @@ TBD - created by archiving change standardize-plugin-packages. Update Purpose af
 - **WHEN** 旧配置不能同时物化为新类型且部署不接受 apply 回滚
 - **THEN** 宿主必须先用 config reconcile 禁用或移除受影响 entry，再 apply 制品，最后写入新配置并重新启用；系统不得把配置文件隐式并入制品事务
 
-### Requirement: Watcher 只执行确定的单包自动升级
-Watcher SHALL 只对已安装 ID的严格更高版本 ZIP执行单包 apply；相同/更低版本忽略，多插件事务必须由部署协调器显式提交。
-
-#### Scenario: 自动严格升级
-- **WHEN** 去抖窗口内同 ID出现多个更高版本候选
-- **THEN** Watcher 选择最高版本并调用一次单包 apply
-
-#### Scenario: 自动候选需要关联升级
-- **WHEN** 单包升级会破坏现有 dependent 范围
-- **THEN** Watcher 暴露失败并保持旧状态，不等待或猜测其他文件组成批次
-
-#### Scenario: 相同或更低版本
-- **WHEN** Watcher看到版本不高于当前安装版本的候选
-- **THEN** 它忽略候选且不创建事务
-
 ### Requirement: 稳定阶段错误
-系统 SHALL 使用设计文档第 3.3 节定义的 `FibraArtifactException` 和阶段枚举报告跨阶段失败；异步 Watcher SHALL 同时通过 SLF4J 和 `lastFailure()` 暴露。
 
-`FibraPluginLoaderBusyException` SHALL 只表达同步管理 API 的事务竞争或 Reactor non-blocking 线程误用，不得包装为某个制品阶段失败，也不得写入 watcher 的 `lastFailure()`。
+系统 SHALL 使用 `FibraArtifactException` 和阶段枚举报告跨阶段失败。`FibraPluginLoaderBusyException` SHALL 只表达同步管理 API 的事务竞争或 Reactor non-blocking 线程误用，不得包装为某个制品阶段失败。
 
 #### Scenario: 结构预检失败
 - **WHEN** 候选包结构无效

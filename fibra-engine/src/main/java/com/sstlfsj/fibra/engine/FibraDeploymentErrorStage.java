@@ -6,6 +6,5 @@ public enum FibraDeploymentErrorStage {
     PREPARE,
     COMMIT,
     READINESS,
-    ROLLBACK,
-    RECOVERY
+    ROLLBACK
 }

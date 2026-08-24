@@ -3,7 +3,6 @@
   inject: [external.consumer.provider.greeting]
   isolate:
     external.consumer.provider.greeting: one
-    external.consumer.plugin.result: one
 - id: provider-one
   name: external-provider-plugin
   isolate:
@@ -14,7 +13,6 @@
   inject: [external.consumer.provider.greeting]
   isolate:
     external.consumer.provider.greeting: two
-    external.consumer.plugin.result: two
 - id: provider-two
   name: external-provider-plugin
   isolate:

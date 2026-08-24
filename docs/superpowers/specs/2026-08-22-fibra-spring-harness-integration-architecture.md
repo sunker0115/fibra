@@ -1,7 +1,9 @@
 # Fibra、Spring 与 Java DeepSeek Harness 集成架构
 
 日期：2026-08-22
-状态：已接受
+状态：`0.2.0` 历史集成基线，当前 Spring 运行时设计已取代本文
+
+> 本文只用于追溯早期 Harness 集成边界。其中 loader watcher、宿主启动关闭和模块结构不是 `0.4.0` 当前契约，不得据此实现。当前权威源是 [Spring 运行时集成设计](./2026-08-23-fibra-spring-boot-starter-design.md) 与 [Fibra Engine 架构](./2026-08-24-fibra-engine-architecture.md)。
 
 本文固定 Fibra `0.2.0` 接入 Spring 宿主以及后续 Java DeepSeek Harness 的边界；Spring AI 对照基线为源码提交 `db45fc548`。后续实现不得用 Spring 的容器、事件、工具循环或模型类型替换 Harness/Fibra 已定义的语义。
 

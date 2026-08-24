@@ -35,11 +35,14 @@
       <artifactId>fibra-engine</artifactId>
       <scope>test</scope>
     </dependency>
-    <!-- 仅供 API/发布基线门禁校验可选 Spring 适配制品；test scope 不进任何发布产物。 -->
     <dependency>
       <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-spring-boot-starter</artifactId>
-      <version>${revision}</version>
+      <artifactId>fibra-spring</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-spring-boot-autoconfigure</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

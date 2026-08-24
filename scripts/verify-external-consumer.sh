@@ -7,8 +7,21 @@ readonly production_modules=(
   fibra-pf4j-api
   fibra-loader-pf4j
   fibra-loader-config
+  fibra-engine
+  fibra-spring
+  fibra-spring-boot-autoconfigure
+  fibra-spring-boot-starter
+  fibra-plugin-archetype
 )
-readonly module_list="fibra-api,fibra-core,fibra-pf4j-api,fibra-loader-pf4j,fibra-loader-config"
+readonly consumer_modules=(
+  fibra-api
+  fibra-core
+  fibra-pf4j-api
+  fibra-loader-pf4j
+  fibra-loader-config
+  fibra-engine
+)
+readonly module_list="fibra-api,fibra-core,fibra-pf4j-api,fibra-loader-pf4j,fibra-loader-config,fibra-engine,fibra-spring,fibra-spring-boot-autoconfigure,fibra-spring-boot-starter,fibra-plugin-archetype"
 readonly maven_executable="${MVN:-mvn}"
 readonly repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly fixture_directory="$repository_root/verification/external-consumer"
@@ -67,6 +80,7 @@ cd "$repository_root"
   --batch-mode --no-transfer-progress \
   -Dmaven.repo.local="$producer_repository" \
   -pl "$module_list" -am clean deploy -DskipTests \
+  -Darchetype.test.skip=true \
   -DaltDeploymentRepository="fibra-verification::file://$remote_repository"
 
 actual_modules="$(
@@ -75,7 +89,7 @@ actual_modules="$(
 )"
 expected_modules="$(printf '%s\n' "${production_modules[@]}" | LC_ALL=C sort)"
 if [[ "$actual_modules" != "$expected_modules" ]]; then
-  echo "临时仓库中的 Fibra 模块不是约定的五个生产制品" >&2
+  echo "临时仓库中的 Fibra 模块不是约定的生产制品集合" >&2
   printf '实际模块：\n%s\n' "$actual_modules" >&2
   exit 1
 fi
@@ -142,7 +156,7 @@ fi
   -Dmaven-surefire-plugin.version="$maven_surefire_plugin_version" \
   -f "$consumer_worktree/pom.xml" package
 
-for module in "${production_modules[@]}"; do
+for module in "${consumer_modules[@]}"; do
   local_artifact_directory="$local_repository/com/sstlfsj/$module/$revision"
   tracking_file="$local_artifact_directory/_remote.repositories"
   if [[ ! -f "$tracking_file" ]]; then
@@ -340,6 +354,8 @@ if ! grep -q 'EXTERNAL_CORE_CONSUMER_OK' "$temporary_root/core-app.log"; then
 fi
 
 readonly config_file="$temporary_root/fibra.yaml"
+readonly deployment_root="$temporary_root/deployment-v2"
+readonly deployment_zip="$temporary_root/external-deployment-2.0.0.zip"
 for package_zip in "$contract_v1_zip" "$provider_v1_zip" "$consumer_v1_zip"; do
   (
     cd "$plugins_directory"
@@ -347,13 +363,45 @@ for package_zip in "$contract_v1_zip" "$provider_v1_zip" "$consumer_v1_zip"; do
   )
 done
 cp "$consumer_worktree/host/config/fibra.yaml" "$config_file"
+mkdir -p "$deployment_root/config" "$deployment_root/plugins"
+cp "$config_file" "$deployment_root/config/fibra.yaml"
+cp "$consumer_v2_zip" "$deployment_root/plugins/$(basename "$consumer_v2_zip")"
+cp "$contract_v2_zip" "$deployment_root/plugins/$(basename "$contract_v2_zip")"
+cp "$provider_v2_zip" "$deployment_root/plugins/$(basename "$provider_v2_zip")"
+printf '%s\n' \
+  'deployment.id=external-consumer' \
+  'deployment.version=2.0.0' \
+  'config.path=config/fibra.yaml' \
+  'plugin.0=plugins/external-consumer-plugin-2.0.0.zip' \
+  'plugin.1=plugins/external-contract-plugin-2.0.0.zip' \
+  'plugin.2=plugins/external-provider-plugin-2.0.0.zip' \
+  > "$deployment_root/deployment.properties"
+readonly deployment_files=(
+  config/fibra.yaml
+  deployment.properties
+  plugins/external-consumer-plugin-2.0.0.zip
+  plugins/external-contract-plugin-2.0.0.zip
+  plugins/external-provider-plugin-2.0.0.zip
+)
+for deployment_file in "${deployment_files[@]}"; do
+  deployment_digest="$(shasum -a 256 "$deployment_root/$deployment_file" | awk '{print $1}')"
+  printf '%s  %s\n' "$deployment_digest" "$deployment_file" \
+    >> "$deployment_root/checksums.sha256"
+done
+"$jar_executable" --create --file "$deployment_zip" --no-manifest \
+  -C "$deployment_root" config/fibra.yaml \
+  -C "$deployment_root" deployment.properties \
+  -C "$deployment_root" plugins/external-consumer-plugin-2.0.0.zip \
+  -C "$deployment_root" plugins/external-contract-plugin-2.0.0.zip \
+  -C "$deployment_root" plugins/external-provider-plugin-2.0.0.zip \
+  -C "$deployment_root" checksums.sha256
 (
   cd "$temporary_root"
   "$java_executable" -jar "$host_jar" "$plugins_directory" "$config_file" \
-    "$contract_v2_zip" "$provider_v2_zip" "$consumer_v2_zip" 2>&1 | tee host.log
+    "$deployment_zip" 2>&1 | tee host.log
 )
-if ! grep -q 'EXTERNAL_CONFIG_LOADER_CONSUMER_OK' "$temporary_root/host.log"; then
-  echo "fibra-loader-config 仓库外配置事务验收未输出成功标记" >&2
+if ! grep -q 'EXTERNAL_ENGINE_CONSUMER_OK' "$temporary_root/host.log"; then
+  echo "fibra-engine 仓库外联合部署验收未输出成功标记" >&2
   exit 1
 fi
 

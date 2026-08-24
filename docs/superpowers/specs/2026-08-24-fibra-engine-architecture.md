@@ -13,7 +13,7 @@ Fibra 最终由框架中立内核、机制型 loader、托管 engine 和框架�
 - `fibra-api`、`fibra-core` 和 Cordis 对等语义不因 engine 改变；
 - loader 只负责各自资源的读取、校验、计划和事务执行，不负责宿主监听策略；
 - 文件 watcher 只产生 dirty signal，不直接调用 loader 变更方法；
-- 所有自动变更由一个 level-triggered reconcile controller 串行收敛；
+- 所有自动变更由一个 level-triggered `ReconcileCoordinator` 串行收敛；
 - plugin 与 config 强耦合升级通过显式 deployment package 建立事务边界，不按文件事件时间猜测批次；
 - Spring 只管理 engine 的容器生命周期，不成为 engine 的实现依赖；
 - 开发阶段直接删除错误 watcher API 和一步式内部实现，不提供兼容转发。
@@ -147,7 +147,7 @@ incoming 候选目录按插件 ID 分组并选择唯一最高 SemVer；低于已
 
 `ArtifactDirectorySource` 监听候选 ZIP目录，`ConfigFileSource` 监听当前配置快照解析出的根文件和 include 文件集合。两者只依赖 JDK `WatchService`，构造失败必须关闭已分配资源；source 关闭后不得再入队。
 
-source 与 controller 是 engine 内部实现，不进入公共 API签名。底层 loader 不再持有 watch thread、scheduler 或 debounce 状态。
+source 与 `ReconcileCoordinator` 是 engine 内部实现，不进入公共 API签名。底层 loader 不再持有 watch thread、scheduler 或 debounce 状态。命名使用 coordinator 而不是 controller，避免与 Spring MVC/Web controller 混淆。
 
 ## 5. Deployment Package
 
@@ -208,7 +208,7 @@ generated-plugin/
 
 生成项目必须直接执行 `mvn verify`，产出标准 plugin ZIP 和包含该插件的 deployment ZIP。模板使用 Maven Assembly，不手写 ZIP组件；依赖版本集中在生成项目根 properties/dependencyManagement，内部模块使用 `${project.version}`。
 
-archetype 自身使用 Maven 官方 `archetype:integration-test` 在构建期生成并验证项目。额外的仓库外验证使用隔离本地仓库安装十个制品，再生成、构建并由 `fibra-engine` 装载产物。
+archetype 自身使用 Maven 官方 `archetype:integration-test` 在构建期生成并验证项目；随后同一模块的 Failsafe 集成测试由真实 `fibra-engine` 装载生成的 deployment。仓库外消费脚本另行验证十个发布制品和六个框架中立制品的独立坐标消费，不重复实现 archetype 生成流程。
 
 ## 8. 测试与发布
 

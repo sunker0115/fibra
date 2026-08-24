@@ -22,6 +22,7 @@ class EngineDependencyBoundaryTest {
             "com.sstlfsj:fibra-loader-pf4j",
             "com.sstlfsj:fibra-loader-config",
             "org.pf4j:pf4j",
+            "org.apache.commons:commons-compress",
             "org.slf4j:slf4j-api"
         ), dependencies);
         assertFalse(dependencies.stream().anyMatch(value -> value.contains("spring")));

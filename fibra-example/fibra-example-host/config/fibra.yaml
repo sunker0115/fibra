@@ -5,5 +5,7 @@
     example.provider.greeting: example
 - id: fibra-example-provider
   name: fibra-example-provider
+  config:
+    prefix: provider
   isolate:
     example.provider.greeting: example

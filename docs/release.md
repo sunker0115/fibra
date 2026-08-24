@@ -1,155 +1,163 @@
 # Fibra 发布与构建基线
 
+## 版本状态
+
+`v0.3.1` 是上一正式版本基线。当前 `0.4.0-SNAPSHOT` 只在 `codex/0.4.0-development` 分支开发，尚不是 release，也不得在 `main` 直接开发或创建正式 tag。只有本文件全部门禁通过、公开发布元数据和仓库能力就绪后，才能另行决定非 `SNAPSHOT` 版本、合并 `main` 与创建 tag。
+
+文档不得把 Git tag、内部仓库部署和 Maven Central 发布混为一件事。当前仓库没有足够证据声明任何坐标已存在于 Maven Central；使用开发快照前必须先从当前分支本地安装或部署到明确的内部仓库。
+
 ## 发布边界
 
-远程 Maven 仓库接收以下六个可发布制品，分两类：
+远程 Maven 仓库接收十个制品。
 
-五个中立内核/loader 制品（仅依赖 Reactor + SLF4J，父 POM 保持 Spring-free）：
+六个框架中立运行时制品：
 
 - `com.sstlfsj:fibra-api`；
 - `com.sstlfsj:fibra-core`；
 - `com.sstlfsj:fibra-pf4j-api`；
 - `com.sstlfsj:fibra-loader-pf4j`；
-- `com.sstlfsj:fibra-loader-config`。
+- `com.sstlfsj:fibra-loader-config`；
+- `com.sstlfsj:fibra-engine`。
 
-一个可选 Spring 适配制品（自管 Spring Boot BOM，Spring 只在该模块内部，不进内核也不进父 POM）：
+三个可选 Spring 运行时制品：
 
+- `com.sstlfsj:fibra-spring`；
+- `com.sstlfsj:fibra-spring-boot-autoconfigure`；
 - `com.sstlfsj:fibra-spring-boot-starter`。
 
-根 `fibra` 只负责聚合、版本和构建策略；contract/provider/consumer 三个插件示例、示例宿主及 `fibra-parity-tests` 只负责验证。它们允许安装到本地 Maven 仓库以支持 reactor 开发，但统一跳过远程 deploy，不形成可消费产品坐标。
+一个开发工具制品：
 
-六个可发布模块使用 Flatten Maven Plugin 的 `oss` 模式生成自包含发布 POM。发布 POM不保留未发布的根 parent，不包含 `${revision}` 或 `${project.version}`，所有消费依赖都展开为明确版本。因此消费者不需要 `com.sstlfsj:fibra` 父 POM。
+- `com.sstlfsj:fibra-plugin-archetype`。
+
+因此是九个运行时制品加一个开发工具制品。根 `fibra`、`fibra-example`、`fibra-parity-tests`、`fibra-benchmarks` 和 `verification` 不远程发布。starter 是无生产 class 的依赖入口；archetype 主 JAR 保存生成模板，不是运行时库。
+
+十个模块都使用 Flatten Maven Plugin 的 `oss` 模式生成自包含 POM。发布 POM 不保留根 parent、`${revision}` 或未展开的内部依赖版本，消费者不需要继承 `com.sstlfsj:fibra` 父 POM。版本仍只在根 `<revision>` 和统一 properties/dependencyManagement 中维护。
 
 ## 权威构建
 
-构建环境固定为 Java 21 和 Maven 3.9.9：
+环境固定为 Java 21 和 Maven 3.9.9：
 
 ```bash
 mvn clean verify
 ```
 
-Maven Enforcer 在每个模块检查：
+Maven Enforcer 检查 Java/Maven 版本、依赖收敛和插件版本。完整 reactor 同时执行：
 
-- 构建 JDK必须为 Java 21；
-- Maven 版本必须为 `3.9.9`；
-- 依赖图必须收敛；
-- clean、verify、install、deploy 生命周期使用的插件必须有明确版本。
+- Cordis Core 71 项逐条 Java 等价测试；
+- 八个含 Java API 制品的 `javap -protected` 签名基线；
+- PF4J 3.15.0 行为、插件包、依赖图、ClassLoader 和事务恢复；
+- 配置树、typed config、文件写入和回滚；
+- Engine source、reconcile、deployment、readiness、崩溃恢复和终止关闭；
+- Spring 生命周期、属性、自动配置整体退让和示例黑盒；
+- Maven Archetype 生成、生成项目 `verify`、标准包检查及真实 Engine 装载；
+- 十个发布制品的主 JAR、sources JAR、Javadoc JAR和展开 POM门禁。
 
-六个可发布模块每次 `package` 都附加 sources JAR 与 Javadoc JAR。`ReleaseArtifactBaselineTest` 检查主 JAR、sources JAR、Javadoc JAR、自包含 POM、Java 21 class major version、测试 class 隔离和 deploy 模块边界。公开 API 由 `ApiSignatureBaselineTest` 与六份 `javap -protected` 基线冻结（含 `fibra-spring-boot-starter`）。
+starter 与 archetype 没有 Java 公共类时仍附加空 Javadoc JAR，以保持仓库发布附件集合一致；发布门禁同时确认 starter 没有 `.class`，并确认 archetype 包含 `META-INF/maven/archetype-metadata.xml`。
 
 ## 可复现构建
 
-根 POM固定 `project.build.outputTimestamp`，Javadoc 固定编码、locale 并移除生成时间。验证脚本先保存已通过完整 `verify` 的六个可发布制品（五个中立内核/loader + `fibra-spring-boot-starter`）产物，再只重建这些依赖图，并逐字节比较主 JAR、sources JAR、Javadoc JAR 和发布 POM：
+完整 `mvn clean verify` 成功后执行：
 
 ```bash
 scripts/verify-reproducible-release.sh
 ```
 
-脚本中的 `-DskipTests` 只用于第二次产物重建；第一次权威构建必须先完整执行 `mvn clean verify`，不得用它替代测试门禁。CI按同一顺序执行。
+脚本保存十个模块当前主 JAR、sources JAR、Javadoc JAR和展开 POM，再以相同版本和构建时间戳重建并逐字节比较。脚本第二次构建使用 `-DskipTests` 只为比较产物，不能替代前面的完整测试。
 
 ## 仓库外消费验收
-
-`verification/external-consumer` 是纳入版本控制的独立 Maven 工程模板，不是 Fibra reactor 模块，也不继承 `com.sstlfsj:fibra`。不得把它加入根 POM 的 `<modules>`。它同时是唯一用户插件模板和黑盒验收输入，固定包含五个模块：
-
-- `core-app` 只依赖 `fibra-core`，验证普通 Java 坐标消费；
-- `contract-plugin` 以 provided scope 依赖 `fibra-api`，拥有 `Greeting`，生成无入口索引的 contract-only v1/v2 标准 ZIP；
-- `provider-plugin` 以 provided scope 依赖 contract、`fibra-pf4j-api` 和 PF4J，生成 executable v1/v2 标准 ZIP，并把 Commons Text 作为私有 runtime JAR 放入自身 `lib/`；
-- `consumer-plugin` 只以 provided scope 依赖 contract、`fibra-pf4j-api` 和 PF4J，不依赖 provider；运行时通过 Fibra 服务读取 `Greeting`，并确认 provider 私有 Commons Text 不可见；
-- `host` 只依赖 `fibra-loader-config` 和 runtime `slf4j-simple`，不依赖任何插件或 contract 类型，仅用于开发端到端验证。
-
-provider/consumer 都在 PF4J 图依赖 contract，consumer 在 Fibra 配置图等待 provider 服务；两张图互不替代。Host 与三份插件包之间没有 Maven 依赖，只有目录装载和候选 ZIP 提交关系。完整关系图见[仓库外多插件依赖验收设计](superpowers/specs/2026-08-22-fibra-external-multi-plugin-verification-design.md)。
-
-唯一入口是：
 
 ```bash
 scripts/verify-external-consumer.sh
 ```
 
-模板 POM 具有 0.3.1 正式版、Maven Central、Java 21、PF4J 3.15.0 和固定 Maven 插件版本，0.3.1 发布后用户可在模板根直接执行 `mvn verify`。开发期脚本从根 POM 读取当前 `revision` 与统一工具版本，只在临时副本上通过 Maven `-D` 覆盖开发版本和临时仓库 URL，不修改模板源文件。
+脚本使用独立临时 Maven 本地仓库完成以下边界：
 
-脚本完整执行以下黑盒边界：
+1. 把十个发布制品 deploy 到临时文件仓库，并检查每个制品恰好具有 POM、主 JAR、sources JAR 和 Javadoc JAR；
+2. 复制 `verification/external-consumer` 到仓库外临时目录，拒绝符号链接、Fibra 仓库绝对路径、reactor `target/classes` 和 `systemPath`；
+3. 独立项目只从临时仓库解析它实际使用的六个框架中立制品，并核对 Maven 来源记录和制品字节；
+4. 构建 `core-app`、contract/provider/consumer 标准插件包和只依赖 `fibra-engine` 的 Host；
+5. 检查 contract 类型唯一、provider 私有依赖隔离、`Plugin-Class` 禁止、Host 不含插件或 contract 类型；
+6. 以独立 `java -jar` 进程验证真实 YAML、多个 entry、等待依赖、isolate、配置更新回滚和三包关联升级。
 
-1. 使用空的用户与全局 Maven settings 和独立临时本地仓库，只构建五个生产模块，并把它们 deploy 到临时文件仓库；
-2. 检查临时仓库只有五个约定模块，且每个模块都具有发布 POM、主 JAR、sources JAR 和 Javadoc JAR；
-3. 把模板复制到系统临时目录，拒绝符号链接、仓库绝对路径、`target/classes`、`target/test-classes` 和 `systemPath`；
-4. 使用第二个从空目录开始的 Maven 本地仓库构建独立项目，分别检查五个 Fibra 坐标的主 JAR 和 POM 都来源于临时仓库，并逐字节比较本地解析制品与临时远端制品；
-5. 检查 contract/provider/consumer 的 v1/v2 ZIP 都只有一个顶层目录、根 properties 与固定命名主 JAR；contract 只包含 `Greeting` 且没有入口，provider/consumer 各有唯一自身入口且不复制 contract；
-6. 检查三份主 JAR 不内嵌 Fibra、PF4J、Reactor 或 SLF4J；provider/consumer 的 properties 只声明 contract 范围；provider 包必须携带一份 Commons Text 私有依赖，consumer 包和 Host classpath 都不得包含它；
-7. 检查 Host JAR 不包含 contract、provider 或 consumer 类，证明 Host 未通过 shade 或编译依赖获得插件实现与契约；
-8. 以两个独立 `java -jar` 进程运行内核应用和插件宿主，不通过 Maven `exec:java` 或 Fibra 仓库 classpath 运行；
-9. Host 从三份 v1 ZIP 解压出的目录装载完整图，读取真实 YAML 创建 `provider-one/provider-two` 与 `consumer-one/consumer-two`，验证等待、isolate、config-only 身份保持和失败配置更新回滚；
-10. Host 以一次显式 `applyArtifacts(List.of(contractV2, providerV2, consumerV2))` 完成版本范围发生变化的关联升级，确认三个安装目录成为 v2、四个 entry 重建并保持最后成功服务值；全部成立后才输出 `EXTERNAL_CONFIG_LOADER_CONSUMER_OK`。
+这个 fixture 是仓库外黑盒验收，不再承担“唯一用户模板”责任；用户插件项目由 `fibra-plugin-archetype` 生成。脚本通过只证明当前工作树制品可以从 Maven 坐标独立消费，不表示坐标已发布到公共仓库。
 
-该门禁通过只证明“当前工作树生成的五个发布制品，可由另一个 Java 21 Maven 项目仅通过坐标直接编译和运行”。它不表示这些坐标已经存在于 Maven Central 或任何公共仓库，也不替代公开发布前置条件。两个空本地仓库需要从 Maven Central 下载第三方依赖和构建插件，因此首次执行必须具备网络访问能力。
+## 插件 Archetype 发布与使用
 
-CI 固定按以下顺序执行：完整 `mvn clean verify`、可复现制品比较、仓库外消费验收。仓库外脚本生产制品时使用的 `-DskipTests` 不能替代前面的完整测试门禁。
+当前快照开发时先执行 `mvn install`，再以 `com.sstlfsj:fibra-plugin-archetype:0.4.0-SNAPSHOT` 生成项目。正式发布后，`archetypeVersion` 与生成项目的 `fibraVersion` 必须使用同一个已发布版本。
 
-## 部署
+生成项目固定为独立四模块结构：
 
-发布仓库由调用方通过 Maven settings、`distributionManagement` 或 `altDeploymentRepository` 提供。执行全 reactor deploy 时，根与验证模块会明确跳过，只有六个可发布模块（五个中立内核/loader + `fibra-spring-boot-starter`）上传：
+```text
+generated-plugin/
+  pom.xml
+  plugin-api/       # contract-only 标准包
+  plugin-impl/      # 唯一 Fibra 入口与 typed config
+  config/           # fibra.yaml
+  deployment/       # 插件 ZIP + 配置 + SHA-256
+```
+
+生成项目不继承 Fibra parent，不引用 `${revision}`、reactor 输出或仓库脚本。直接执行 `mvn verify` 即生成标准 plugin ZIP 和 deployment ZIP。archetype 自身的 `verify` 使用官方 integration-test 生成并构建样例，并由 `FibraEngine` 实际安装该 deployment。
+
+## 运行时部署布局
+
+标准插件安装目录：
+
+```text
+<installed-root>/
+  <plugin.id>/
+    plugin.properties
+    lib/
+      <plugin.id>-<version>.jar
+      [私有 runtime 依赖.jar]
+  .fibra-engine/                 # Engine journal、revision 和事务数据
+```
+
+插件候选 ZIP 顶层必须是唯一 `<plugin.id>/`，安装目录与 ZIP 内结构同构。contract-only 包只保存共享类型且没有 Fibra 入口；executable 包恰好包含一个 `FibraPluginEntrypoint`。Fibra、PF4J、Reactor、SLF4J 和共享 contract 不得复制进插件私有 `lib/`。
+
+纯 Java 宿主的典型布局：
+
+```text
+<deploy-root>/
+  app.jar
+  config/fibra.yaml
+  run/plugins/                   # installed-root
+  run/incoming/                  # 可选 artifact source
+  deployments/                  # 宿主接收的显式 deployment 包
+```
+
+Spring Boot Web 示例的布局：
+
+```text
+<deploy-root>/
+  app.jar
+  application.yml
+  run/plugins/                   # fibra.artifacts.installed-root
+  run/incoming/                  # fibra.artifacts.incoming-root
+  run/fibra.yaml                 # fibra.config.location
+  run/staging/                   # example.fibra.staging-root，仅示例上传策略
+```
+
+`staging-root` 不属于通用 Fibra 属性。上传、下载、鉴权、签名和市场是宿主策略；Engine 只接受本地候选目录与显式 deployment 路径。纯 Java 与 Spring 宿主都由同一个 `FibraEngine` 管理插件、配置、source、reconcile、事务和关闭。
+
+## 部署命令
+
+发布仓库由调用方通过 Maven settings、`distributionManagement` 或 `altDeploymentRepository` 提供：
 
 ```bash
 mvn deploy -DaltDeploymentRepository=release::https://repo.example.invalid/maven
 ```
 
-示例地址仅说明 Maven 参数形态，不是项目默认仓库。仓库中不保存凭据，也不提供静默回退目标。
-
-## 运行时部署布局
-
-发布制品与插件标准包落到磁盘后，可运行部署由三部分组成：主程序 JAR、一个 `plugins` 安装根（PF4J 根）和一份配置。宿主不编译也不含插件类，插件标准包不内嵌 Fibra、PF4J、Reactor 或 SLF4J，框架只存在于宿主 classpath。
-
-### 标准插件包结构
-
-每个标准包的 ZIP 顶层是唯一的 `plugin.id` 目录，解压后即安装目录，二者同构：
-
-```text
-<plugin.id>/
-  plugin.properties            # id、version，可选 dependencies
-  lib/
-    <plugin.id>-<version>.jar  # 固定命名主 JAR（自身 classes 与入口）
-    [私有 runtime 依赖.jar]      # 仅需要的包携带，隔离在本包 lib/
-```
-
-三种角色共享该骨架，内容不同：contract 只有 `id`/`version`，`lib/` 仅含契约类型且无入口；provider 声明对 contract 的版本范围依赖，`lib/` 含自身入口 JAR 与私有 runtime 依赖；consumer 声明对 contract 的依赖，`lib/` 仅含自身入口 JAR，不含 provider 私有依赖。
-
-### 纯 Java 宿主
-
-主程序是 `maven-shade` 生成的自包含 fat JAR（示例为 `fibra-example-host-all.jar`），含 `fibra-loader-config` 全链与 Reactor/SLF4J，不含任何插件类。安装根与配置文件位置由命令行传入，一次 `applyArtifacts` 批量装载候选标准包：
-
-```text
-<部署根>/
-  <host>-all.jar               # shade fat JAR
-  config/fibra.yaml            # 插件树声明（id / inject / isolate）
-  plugins/                     # PF4J 安装根，applyArtifacts 填充
-    <plugin.id>/plugin.properties
-    <plugin.id>/lib/*.jar
-```
-
-### Spring Boot 宿主
-
-主程序是 `spring-boot` 重打包的可执行 JAR（示例为 `fibra-example-spring-host.jar`），内嵌 Web 容器、`fibra-spring-boot-starter` 与两个 loader，同样不含插件类。安装根、上传暂存与配置位置由 `fibra.*` 属性指定：
-
-```text
-<部署根>/
-  <host>.jar                   # spring-boot 可执行 JAR
-  application.yml              # fibra.plugins-root / staging-root / config-location / watcher.enabled
-  run/
-    plugins/                   # = fibra.plugins-root，结构同上
-    staging/                   # = fibra.staging-root，上传 ZIP 在 apply 前的暂存区
-    fibra.yaml                 # = fibra.config-location
-```
-
-两种宿主的运行时骨架一致：主程序装载 `plugins` 安装根中的标准包，插件包结构逐字节同构，ClassLoader 隔离、contract 二进制类型全图唯一共享、批量事务升级与回滚行为相同。差异仅在于主程序 JAR 的打包形态（shade fat JAR 对 spring-boot 可执行 JAR），以及 `fibra-spring-boot-starter` 通过 `FibraProperties` 额外提供的 `staging-root` 上传暂存与 `watcher` 文件监听开关；`config/`、`run/` 等目录命名由各宿主自定，非框架约定。
+示例 URL 只展示命令形态，不是项目默认仓库。仓库中不保存凭据，也不静默回退到其他目标。
 
 ## 对外公开发布前置条件
 
-当前基线可以发布到已授权的内部 Maven 仓库，但不能把尚未确认的信息写成占位元数据。公开发布前必须由项目所有者确定并提交：
+公开发布前必须由项目所有者确认并提交：
 
-- Fibra 自身许可证及根 `LICENSE`；
-- 实际项目 URL、Git remote、SCM 和 issue tracker；
-- 开发者或组织信息；
-- `com.sstlfsj` namespace 的发布所有权；
-- 目标仓库、制品签名和发布凭据策略；
-- 非 `SNAPSHOT` 的 `revision`。
+- Fibra 许可证和根 `LICENSE`；
+- 实际项目 URL、SCM、issue tracker 与开发者/组织信息；
+- `com.sstlfsj` namespace 发布所有权；
+- 目标仓库、签名、凭据和回滚策略；
+- 非 `SNAPSHOT` 的 `revision`；
+- 完整门禁通过后的 `main` 合并和正式 tag 决策。
 
-这些信息确定后统一写入根 POM，由六个可发布模块的扁平 POM保留；不得使用虚假 URL、临时开发者或推测的许可证通过公共仓库校验。
+未确认的信息不得用虚假占位元数据绕过公共仓库校验。

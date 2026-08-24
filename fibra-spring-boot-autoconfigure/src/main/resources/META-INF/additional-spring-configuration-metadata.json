@@ -1,0 +1,57 @@
+{
+  "properties": [
+    {
+      "name": "fibra.artifacts.incoming-root",
+      "description": "候选插件 ZIP 目录；fibra.artifacts.watch.enabled=true 时必须在启动前存在。"
+    },
+    {
+      "name": "fibra.artifacts.installed-root",
+      "description": "已安装标准插件目录；必须在启动前存在。"
+    },
+    {
+      "name": "fibra.artifacts.watch.debounce",
+      "description": "合并连续制品目录事件的去抖时间。"
+    },
+    {
+      "name": "fibra.artifacts.watch.enabled",
+      "description": "是否监听候选插件目录并触发 Engine reconcile。"
+    },
+    {
+      "name": "fibra.config.location",
+      "description": "YAML 或 JSON 配置根文件；必须在启动前存在。"
+    },
+    {
+      "name": "fibra.config.watch.debounce",
+      "description": "合并连续配置文件事件的去抖时间。"
+    },
+    {
+      "name": "fibra.config.watch.enabled",
+      "description": "是否监听配置根及 include 文件并触发 Engine reconcile。"
+    },
+    {
+      "name": "fibra.engine.resync-interval",
+      "description": "周期完整重读间隔，用于修复丢失的文件事件。"
+    },
+    {
+      "name": "fibra.engine.retry-initial-backoff",
+      "description": "Reconcile 失败后的首次重试退避。"
+    },
+    {
+      "name": "fibra.engine.retry-max-backoff",
+      "description": "Reconcile 指数退避上限，不得小于首次退避。"
+    },
+    {
+      "name": "fibra.shutdown.root-close-timeout",
+      "description": "等待 Fibra root 异步关闭完成的最长时间。"
+    },
+    {
+      "name": "fibra.startup.readiness-timeout",
+      "description": "全部 required entry 共享的总就绪时间预算。"
+    },
+    {
+      "name": "fibra.startup.required-entries",
+      "description": "启动时必须处于 ACTIVE 的 Fibra entryId 列表，不是 PF4J pluginId。",
+      "defaultValue": []
+    }
+  ]
+}

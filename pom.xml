@@ -17,7 +17,10 @@
     <module>fibra-loader-pf4j</module>
     <module>fibra-loader-config</module>
     <module>fibra-engine</module>
+    <module>fibra-spring</module>
+    <module>fibra-spring-boot-autoconfigure</module>
     <module>fibra-spring-boot-starter</module>
+    <module>fibra-plugin-archetype</module>
     <module>fibra-example</module>
     <module>fibra-parity-tests</module>
   </modules>
@@ -40,6 +43,8 @@
     <junit.version>6.1.3</junit.version>
     <awaitility.version>4.3.0</awaitility.version>
     <pf4j.version>3.15.0</pf4j.version>
+    <spring-framework.version>7.0.8</spring-framework.version>
+    <spring-boot.version>4.1.0</spring-boot.version>
     <commons-compress.version>1.28.0</commons-compress.version>
     <commons-codec.version>1.19.0</commons-codec.version>
     <commons-io.version>2.20.0</commons-io.version>
@@ -63,6 +68,7 @@
     <maven-jar-plugin.version>3.5.1</maven-jar-plugin.version>
     <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
     <maven-assembly-plugin.version>3.8.0</maven-assembly-plugin.version>
+    <maven-archetype-plugin.version>3.4.1</maven-archetype-plugin.version>
     <maven-resources-plugin.version>3.5.0</maven-resources-plugin.version>
     <maven-shade-plugin.version>3.6.2</maven-shade-plugin.version>
     <maven-site-plugin.version>3.22.0</maven-site-plugin.version>
@@ -177,6 +183,26 @@
       </dependency>
       <dependency>
         <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-spring</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-spring-boot-autoconfigure</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-spring-boot-starter</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-plugin-archetype</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
         <artifactId>fibra-example-provider-plugin</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -195,6 +221,11 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-assembly-plugin</artifactId>
           <version>${maven-assembly-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-archetype-plugin</artifactId>
+          <version>${maven-archetype-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>

@@ -1,7 +1,9 @@
 # Fibra `0.3.0` 插件包与事务更新实施计划
 
 日期：2026-08-23  
-状态：已确认，作为 `standardize-plugin-packages` 的唯一实施细节权威源；尚未开始生产代码实现
+状态：`0.3.0` 历史实施计划，已完成且已被 `0.4.0` Engine 计划取代
+
+> 本文不得作为当前待办执行。其中 watcher 任务、命令和提交边界只描述 `0.3.0` 历史过程；`0.4.0` 实施以 [Fibra Engine 计划](./2026-08-24-fibra-engine.md)为准。
 
 架构真源：[Fibra 插件制品与事务更新设计](../specs/2026-08-23-fibra-plugin-package-transaction-design.md)。形式化行为真源：[`standardize-plugin-packages`](../../../openspec/changes/standardize-plugin-packages/)。若本计划与架构或 OpenSpec 规格冲突，先修正文档使三者一致，再继续代码；不得在实现中自行选择第三种语义。
 

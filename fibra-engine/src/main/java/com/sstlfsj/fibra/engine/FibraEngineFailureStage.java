@@ -6,6 +6,5 @@ public enum FibraEngineFailureStage {
     CONFIG_RECONCILE,
     DEPLOYMENT,
     READINESS,
-    RECOVERY,
     CLOSE
 }

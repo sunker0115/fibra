@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype-descriptor xmlns="https://maven.apache.org/plugins/maven-archetype-plugin/archetype-descriptor/1.2.0"
+                      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                      xsi:schemaLocation="https://maven.apache.org/plugins/maven-archetype-plugin/archetype-descriptor/1.2.0 https://maven.apache.org/xsd/archetype-descriptor-1.2.0.xsd"
+                      name="fibra-plugin">
+  <requiredProperties>
+    <requiredProperty key="pluginId"/>
+    <requiredProperty key="fibraVersion"/>
+  </requiredProperties>
+  <fileSets>
+    <fileSet filtered="true" packaged="false">
+      <directory></directory>
+      <includes>
+        <include>pom.xml</include>
+        <include>README.md</include>
+        <include>build/**</include>
+        <include>plugin-api/pom.xml</include>
+        <include>plugin-api/src/main/plugin/**</include>
+        <include>plugin-impl/pom.xml</include>
+        <include>plugin-impl/src/main/plugin/**</include>
+        <include>config/**</include>
+        <include>deployment/**</include>
+      </includes>
+    </fileSet>
+    <fileSet filtered="true" packaged="true">
+      <directory>plugin-api/src/main/java</directory>
+      <includes><include>**/*.java</include></includes>
+    </fileSet>
+    <fileSet filtered="true" packaged="true">
+      <directory>plugin-impl/src/main/java</directory>
+      <includes><include>**/*.java</include></includes>
+    </fileSet>
+  </fileSets>
+</archetype-descriptor>
