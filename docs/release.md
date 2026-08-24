@@ -94,6 +94,53 @@ mvn deploy -DaltDeploymentRepository=release::https://repo.example.invalid/maven
 
 示例地址仅说明 Maven 参数形态，不是项目默认仓库。仓库中不保存凭据，也不提供静默回退目标。
 
+## 运行时部署布局
+
+发布制品与插件标准包落到磁盘后，可运行部署由三部分组成：主程序 JAR、一个 `plugins` 安装根（PF4J 根）和一份配置。宿主不编译也不含插件类，插件标准包不内嵌 Fibra、PF4J、Reactor 或 SLF4J，框架只存在于宿主 classpath。
+
+### 标准插件包结构
+
+每个标准包的 ZIP 顶层是唯一的 `plugin.id` 目录，解压后即安装目录，二者同构：
+
+```text
+<plugin.id>/
+  plugin.properties            # id、version，可选 dependencies
+  lib/
+    <plugin.id>-<version>.jar  # 固定命名主 JAR（自身 classes 与入口）
+    [私有 runtime 依赖.jar]      # 仅需要的包携带，隔离在本包 lib/
+```
+
+三种角色共享该骨架，内容不同：contract 只有 `id`/`version`，`lib/` 仅含契约类型且无入口；provider 声明对 contract 的版本范围依赖，`lib/` 含自身入口 JAR 与私有 runtime 依赖；consumer 声明对 contract 的依赖，`lib/` 仅含自身入口 JAR，不含 provider 私有依赖。
+
+### 纯 Java 宿主
+
+主程序是 `maven-shade` 生成的自包含 fat JAR（示例为 `fibra-example-host-all.jar`），含 `fibra-loader-config` 全链与 Reactor/SLF4J，不含任何插件类。安装根与配置文件位置由命令行传入，一次 `applyArtifacts` 批量装载候选标准包：
+
+```text
+<部署根>/
+  <host>-all.jar               # shade fat JAR
+  config/fibra.yaml            # 插件树声明（id / inject / isolate）
+  plugins/                     # PF4J 安装根，applyArtifacts 填充
+    <plugin.id>/plugin.properties
+    <plugin.id>/lib/*.jar
+```
+
+### Spring Boot 宿主
+
+主程序是 `spring-boot` 重打包的可执行 JAR（示例为 `fibra-example-spring-host.jar`），内嵌 Web 容器、`fibra-spring-boot-starter` 与两个 loader，同样不含插件类。安装根、上传暂存与配置位置由 `fibra.*` 属性指定：
+
+```text
+<部署根>/
+  <host>.jar                   # spring-boot 可执行 JAR
+  application.yml              # fibra.plugins-root / staging-root / config-location / watcher.enabled
+  run/
+    plugins/                   # = fibra.plugins-root，结构同上
+    staging/                   # = fibra.staging-root，上传 ZIP 在 apply 前的暂存区
+    fibra.yaml                 # = fibra.config-location
+```
+
+两种宿主的运行时骨架一致：主程序装载 `plugins` 安装根中的标准包，插件包结构逐字节同构，ClassLoader 隔离、contract 二进制类型全图唯一共享、批量事务升级与回滚行为相同。差异仅在于主程序 JAR 的打包形态（shade fat JAR 对 spring-boot 可执行 JAR），以及 `fibra-spring-boot-starter` 通过 `FibraProperties` 额外提供的 `staging-root` 上传暂存与 `watcher` 文件监听开关；`config/`、`run/` 等目录命名由各宿主自定，非框架约定。
+
 ## 对外公开发布前置条件
 
 当前基线可以发布到已授权的内部 Maven 仓库，但不能把尚未确认的信息写成占位元数据。公开发布前必须由项目所有者确定并提交：
