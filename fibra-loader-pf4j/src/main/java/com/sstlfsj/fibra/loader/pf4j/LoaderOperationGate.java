@@ -80,6 +80,12 @@ final class LoaderOperationGate {
         return closed;
     }
 
+    boolean isOwnedByCurrentThread() {
+        synchronized (stateLock) {
+            return owner == Thread.currentThread() && depth > 0 && !closing;
+        }
+    }
+
     private boolean acquire() {
         var current = Thread.currentThread();
         synchronized (stateLock) {

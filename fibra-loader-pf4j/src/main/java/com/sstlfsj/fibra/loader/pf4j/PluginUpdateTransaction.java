@@ -4,11 +4,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -20,7 +18,6 @@ final class PluginUpdateTransaction {
     private final Path pluginsRoot;
     private final PluginPackageInspector inspector;
     private final PluginGraphPreflight preflight;
-    private final PluginCrashRecovery recovery;
 
     PluginUpdateTransaction(FibraPluginLoader loader, Path pluginsRoot,
                             PluginPackageInspector inspector,
@@ -29,196 +26,98 @@ final class PluginUpdateTransaction {
         this.pluginsRoot = Objects.requireNonNull(pluginsRoot, "pluginsRoot");
         this.inspector = Objects.requireNonNull(inspector, "inspector");
         this.preflight = Objects.requireNonNull(preflight, "preflight");
-        this.recovery = new PluginCrashRecovery(pluginsRoot);
     }
 
     List<String> apply(List<Path> candidatePaths) {
-        var candidates = normalizeCandidates(candidatePaths);
+        var candidates = PreparedArtifactChange.normalizeCandidates(candidatePaths);
+        if (candidates.isEmpty()) {
+            throw new IllegalArgumentException("candidatePaths must not be empty");
+        }
         var transactionId = UUID.randomUUID().toString();
         var preflightRoot = pluginsRoot.resolve(PluginCrashRecovery.PREFLIGHT_DIRECTORY)
             .resolve(transactionId);
-        Path transactionRoot = null;
-        PluginTransactionJournal journal = null;
-        FibraPluginLoader.RuntimeSnapshot runtime = null;
+        var transactionRoot = pluginsRoot.resolve(PluginCrashRecovery.TRANSACTIONS_DIRECTORY)
+            .resolve(transactionId);
+        PreparedArtifactChange change = null;
+        var journal = new PluginTransactionJournal[1];
         var formalStarted = false;
         try {
-            var inspectedCandidates = new ArrayList<InspectedPluginPackage>(candidates.size());
-            for (var candidate : candidates) {
-                inspectedCandidates.add(inspector.inspectCandidate(candidate, preflightRoot));
-            }
-            var current = loader.installedPackages();
-            var result = preflight.validate(current, inspectedCandidates);
-            validateSameVersionContents(current, inspectedCandidates);
-            if (isNoOp(current, inspectedCandidates)) {
-                deletePreflight(preflightRoot);
-                return result.candidateArtifactIds().stream().sorted().toList();
+            Files.createDirectories(preflightRoot);
+            change = PreparedArtifactChange.prepare(loader, pluginsRoot, inspector, preflight,
+                candidates, preflightRoot);
+            var changedIds = change.changedArtifactIds();
+            if (change.isNoOp()) {
+                change.commit();
+                change.complete();
+                return changedIds;
             }
 
-            runtime = loader.snapshotRuntime(result.affectedArtifactIds());
-            journal = createJournal(transactionId, current, inspectedCandidates);
-            transactionRoot = pluginsRoot.resolve(
-                PluginCrashRecovery.TRANSACTIONS_DIRECTORY).resolve(transactionId);
             Files.createDirectories(transactionRoot);
-            journal.write(transactionRoot);
+            journal[0] = change.journal(transactionId);
+            journal[0].write(transactionRoot);
             formalStarted = true;
-            movePreflightPayload(preflightRoot, transactionRoot);
+            change.relocate(transactionRoot);
+            change.commit(new PreparedArtifactChange.CommitObserver() {
+                @Override
+                public void installing() {
+                    advanceAndWrite(journal, transactionRoot,
+                        PluginTransactionState.INSTALLING);
+                }
 
-            loader.disposeAffected(runtime.affectedArtifactIds());
-            journal = journal.advance(PluginTransactionState.INSTALLING);
-            journal.write(transactionRoot);
-            installCandidates(transactionRoot, journal);
-
-            journal = journal.advance(PluginTransactionState.APPLYING);
-            journal.write(transactionRoot);
-            loader.loadInstalledAffected(runtime.affectedArtifactIds());
-            loader.restoreRuntime(runtime);
-
-            journal = journal.advance(PluginTransactionState.COMMITTED);
-            journal.write(transactionRoot);
+                @Override
+                public void applying() {
+                    advanceAndWrite(journal, transactionRoot,
+                        PluginTransactionState.APPLYING);
+                }
+            });
+            advanceAndWrite(journal, transactionRoot, PluginTransactionState.COMMITTED);
             try {
-                recovery.cleanupTransaction(transactionRoot);
-            } catch (IOException cleanupFailure) {
+                change.complete();
+            } catch (RuntimeException cleanupFailure) {
                 LOGGER.warn("Cannot finish committed Fibra plugin transaction cleanup: {}",
                     transactionRoot, cleanupFailure);
             }
-            return journal.artifacts().stream()
-                .map(PluginTransactionJournal.Artifact::id).toList();
+            return changedIds;
         } catch (RuntimeException | IOException failure) {
-            if (!formalStarted) {
-                deletePreflight(preflightRoot);
-                throw asArtifactFailure(failure, FibraArtifactErrorStage.INSTALL, candidates);
+            var original = asArtifactFailure(failure,
+                formalStarted ? stage(journal[0]) : FibraArtifactErrorStage.INSTALL,
+                candidates);
+            if (change == null) {
+                deletePreflight(preflightRoot, original);
+                throw original;
             }
-            var original = asArtifactFailure(failure, stage(journal), candidates);
-            throw rollBack(transactionRoot, journal, runtime, original);
+            try {
+                if (formalStarted) {
+                    change.rollback(() -> {
+                        journal[0] = journal[0].markRollbackCleanup();
+                        write(journal[0], transactionRoot);
+                    });
+                } else {
+                    change.rollback();
+                }
+            } catch (FibraArtifactException rollbackFailure) {
+                var rollback = new FibraArtifactException(FibraArtifactErrorStage.ROLLBACK,
+                    original.packages(), original.artifactIds(),
+                    "cannot roll back plugin artifact transaction", original);
+                rollback.addSuppressed(rollbackFailure);
+                throw rollback;
+            }
+            throw original;
         }
     }
 
-    private RuntimeException rollBack(Path transactionRoot,
-                                      PluginTransactionJournal journal,
-                                      FibraPluginLoader.RuntimeSnapshot runtime,
-                                      FibraArtifactException original) {
-        var failures = new ArrayList<Throwable>();
-        if (runtime != null) {
-            try {
-                loader.disposeAffected(runtime.affectedArtifactIds());
-            } catch (RuntimeException failure) {
-                failures.add(failure);
-            }
-        }
+    private static void advanceAndWrite(PluginTransactionJournal[] holder, Path root,
+                                        PluginTransactionState state) {
+        holder[0] = holder[0].advance(state);
+        write(holder[0], root);
+    }
+
+    private static void write(PluginTransactionJournal journal, Path root) {
         try {
-            recovery.restoreUncommitted(transactionRoot, journal);
-        } catch (RuntimeException | IOException failure) {
-            failures.add(failure);
+            journal.write(root);
+        } catch (IOException exception) {
+            throw new UncheckedIOException("cannot write plugin transaction journal", exception);
         }
-        if (runtime != null && failures.isEmpty()) {
-            try {
-                loader.loadInstalledAffected(runtime.affectedArtifactIds());
-                loader.restoreRuntime(runtime);
-            } catch (RuntimeException failure) {
-                failures.add(failure);
-            }
-        }
-        if (failures.isEmpty()) {
-            try {
-                journal.markRollbackCleanup().write(transactionRoot);
-                recovery.cleanupTransaction(transactionRoot);
-            } catch (RuntimeException | IOException failure) {
-                failures.add(failure);
-            }
-        }
-        if (failures.isEmpty()) {
-            return original;
-        }
-        var rollback = new FibraArtifactException(FibraArtifactErrorStage.ROLLBACK,
-            original.packages(), original.artifactIds(),
-            "cannot roll back plugin artifact transaction", original);
-        failures.forEach(rollback::addSuppressed);
-        return rollback;
-    }
-
-    private void installCandidates(Path transactionRoot,
-                                   PluginTransactionJournal journal) throws IOException {
-        var previousRoot = transactionRoot.resolve("previous");
-        for (var artifact : journal.artifacts()) {
-            var installed = pluginsRoot.resolve(artifact.id());
-            if (artifact.oldExists()) {
-                PluginTransactionJournal.moveDurably(installed,
-                    previousRoot.resolve(artifact.id()));
-            }
-            PluginTransactionJournal.moveDurably(
-                transactionRoot.resolve("next").resolve(artifact.id()), installed);
-        }
-    }
-
-    private static PluginTransactionJournal createJournal(
-        String transactionId, List<InspectedPluginPackage> current,
-        List<InspectedPluginPackage> candidates) {
-        var currentById = new LinkedHashMap<String, InspectedPluginPackage>();
-        current.forEach(plugin -> currentById.put(plugin.descriptor().getPluginId(), plugin));
-        var artifacts = candidates.stream()
-            .sorted(java.util.Comparator.comparing(
-                plugin -> plugin.descriptor().getPluginId()))
-            .map(candidate -> {
-                var id = candidate.descriptor().getPluginId();
-                var previous = currentById.get(id);
-                return new PluginTransactionJournal.Artifact(id, previous != null,
-                    previous == null ? null : previous.digest(), candidate.digest());
-            })
-            .toList();
-        return PluginTransactionJournal.prepared(transactionId, artifacts);
-    }
-
-    private static void movePreflightPayload(Path preflightRoot, Path transactionRoot)
-        throws IOException {
-        PluginTransactionJournal.moveDurably(preflightRoot.resolve("input"),
-            transactionRoot.resolve("input"));
-        PluginTransactionJournal.moveDurably(preflightRoot.resolve("next"),
-            transactionRoot.resolve("next"));
-        Files.delete(preflightRoot);
-        PluginTransactionJournal.forceDirectory(preflightRoot.getParent());
-    }
-
-    private static List<Path> normalizeCandidates(List<Path> candidatePaths) {
-        Objects.requireNonNull(candidatePaths, "candidatePaths");
-        if (candidatePaths.isEmpty()) {
-            throw new IllegalArgumentException("candidatePaths must not be empty");
-        }
-        var unique = new LinkedHashSet<Path>();
-        for (var candidate : candidatePaths) {
-            var normalized = Objects.requireNonNull(candidate, "candidatePath")
-                .toAbsolutePath().normalize();
-            if (!unique.add(normalized)) {
-                throw new IllegalArgumentException("duplicate candidate path " + normalized);
-            }
-        }
-        return List.copyOf(unique);
-    }
-
-    private static void validateSameVersionContents(
-        List<InspectedPluginPackage> current, List<InspectedPluginPackage> candidates) {
-        var currentById = new LinkedHashMap<String, InspectedPluginPackage>();
-        current.forEach(plugin -> currentById.put(plugin.descriptor().getPluginId(), plugin));
-        for (var candidate : candidates) {
-            var installed = currentById.get(candidate.descriptor().getPluginId());
-            if (installed != null
-                && installed.descriptor().getVersion().equals(
-                    candidate.descriptor().getVersion())
-                && !installed.digest().equals(candidate.digest())) {
-                throw new FibraArtifactException(FibraArtifactErrorStage.VALIDATE,
-                    List.of(candidate.packageRoot()),
-                    List.of(candidate.descriptor().getPluginId()),
-                    "same plugin version has different package content", null);
-            }
-        }
-    }
-
-    private static boolean isNoOp(List<InspectedPluginPackage> current,
-                                  List<InspectedPluginPackage> candidates) {
-        var digests = new LinkedHashMap<String, String>();
-        current.forEach(plugin -> digests.put(plugin.descriptor().getPluginId(),
-            plugin.digest()));
-        return candidates.stream().allMatch(candidate -> Objects.equals(
-            digests.get(candidate.descriptor().getPluginId()), candidate.digest()));
     }
 
     private static FibraArtifactErrorStage stage(PluginTransactionJournal journal) {
@@ -238,12 +137,11 @@ final class PluginUpdateTransaction {
             "plugin artifact transaction failed during " + stage, failure);
     }
 
-    private static void deletePreflight(Path preflightRoot) {
+    private static void deletePreflight(Path preflightRoot, RuntimeException original) {
         try {
             PluginCrashRecovery.deleteTree(preflightRoot);
-        } catch (IOException exception) {
-            throw new FibraArtifactException(FibraArtifactErrorStage.ROLLBACK,
-                List.of(preflightRoot), List.of(), "cannot clean plugin preflight", exception);
+        } catch (IOException cleanupFailure) {
+            original.addSuppressed(cleanupFailure);
         }
     }
 }

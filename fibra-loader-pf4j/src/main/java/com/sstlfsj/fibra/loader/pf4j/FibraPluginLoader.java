@@ -78,6 +78,30 @@ public final class FibraPluginLoader implements AutoCloseable {
             inspector, preflight).apply(candidatePaths));
     }
 
+    public FibraArtifactDescriptor inspectArtifact(Path candidatePath) {
+        Objects.requireNonNull(candidatePath, "candidatePath");
+        return runExclusive(() -> inspectArtifactInternal(candidatePath));
+    }
+
+    public FibraPluginCatalog catalog() {
+        return runInitialized(() -> {
+            var installed = installedPackages();
+            var artifacts = installed.stream().map(FibraPluginLoader::descriptor).toList();
+            var executableIds = installed.stream()
+                .filter(plugin -> !plugin.entrypointClassNames().isEmpty())
+                .map(plugin -> plugin.descriptor().getPluginId())
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+            return new ActivePluginCatalog(this, artifacts, executableIds);
+        });
+    }
+
+    public FibraArtifactChange prepareArtifacts(List<Path> candidatePaths, Path workspace) {
+        requireInitialized();
+        requireOperationOwner();
+        return PreparedArtifactChange.prepare(this, pluginsRoot, inspector, preflight,
+            candidatePaths, workspace);
+    }
+
     public Class<?> configType(String pluginId) {
         Objects.requireNonNull(pluginId, "pluginId");
         return runInitialized(() -> configTypeInternal(pluginId));
@@ -165,23 +189,53 @@ public final class FibraPluginLoader implements AutoCloseable {
     }
 
     FibraPluginCandidate inspectCandidate(Path candidatePath) {
-        Objects.requireNonNull(candidatePath, "candidatePath");
+        var descriptor = inspectArtifact(candidatePath);
+        try {
+            return new FibraPluginCandidate(descriptor.id(), descriptor.version(),
+                Files.getLastModifiedTime(candidatePath));
+        } catch (IOException exception) {
+            throw new FibraArtifactException(FibraArtifactErrorStage.READ,
+                List.of(candidatePath), List.of(descriptor.id()),
+                "cannot read plugin candidate timestamp", exception);
+        }
+    }
+
+    void requireOperationOwner() {
+        if (!operationGate.isOwnedByCurrentThread()) {
+            throw new IllegalStateException(
+                "prepared artifact changes require an outer runExclusive operation");
+        }
+    }
+
+    private FibraArtifactDescriptor inspectArtifactInternal(Path candidatePath) {
         var inspectRoot = pluginsRoot.resolve(PluginCrashRecovery.PREFLIGHT_DIRECTORY)
             .resolve("inspect-" + java.util.UUID.randomUUID());
         try {
             var inspected = inspector.inspectCandidate(candidatePath, inspectRoot);
-            return new FibraPluginCandidate(inspected.descriptor().getPluginId(),
-                inspected.descriptor().getVersion(), Files.getLastModifiedTime(candidatePath));
-        } catch (IOException exception) {
-            throw new FibraArtifactException(FibraArtifactErrorStage.READ,
-                List.of(candidatePath), List.of(), "cannot inspect plugin candidate", exception);
+            return descriptor(inspected);
         } finally {
             try {
                 PluginCrashRecovery.deleteTree(inspectRoot);
+                var parent = inspectRoot.getParent();
+                if (Files.isDirectory(parent)) {
+                    boolean empty;
+                    try (var children = Files.list(parent)) {
+                        empty = children.findAny().isEmpty();
+                    }
+                    if (empty) {
+                        Files.delete(parent);
+                        PluginTransactionJournal.forceDirectory(parent.getParent());
+                    }
+                }
             } catch (IOException ignored) {
                 // 构造期会安全清理只读预检垃圾。
             }
         }
+    }
+
+    private static FibraArtifactDescriptor descriptor(InspectedPluginPackage plugin) {
+        return new FibraArtifactDescriptor(plugin.descriptor().getPluginId(),
+            plugin.descriptor().getVersion(), plugin.digest());
     }
 
     String currentPluginVersion(String pluginId) {
