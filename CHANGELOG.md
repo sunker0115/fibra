@@ -28,9 +28,38 @@
 - 内核 `fibra-core`/`fibra-api` 与父 POM 保持 Spring-free；Spring 仅存在于 `fibra-spring-boot-starter` 内部。
 - 内核性能基准结论：跨线程调度往返约 3.7µs 为「每次跨线程调用的固定税」，同线程业务逻辑约 80ns，事件分发 hook 数量影响微小；据此判断内核当前无需为性能改动（集成架构 §4.1 的读取快照触发条件未满足）。
 
-## [0.3.0]
+## [0.3.0] - 2026-08-23
 
-- 将 `fibra-loader-pf4j` 从「插件根目录直接放 JAR、单 JAR 事后回滚」重构为「标准目录安装包、ZIP 候选、完整依赖图预检、批量事务替换、崩溃恢复」。详见 openspec change `standardize-plugin-packages`（已归档）与[插件制品与事务更新设计](docs/superpowers/specs/2026-08-23-fibra-plugin-package-transaction-design.md)。
+将 `fibra-loader-pf4j` 从「插件根目录直接放 JAR、单 JAR 事后回滚」重构为标准包 + 事务更新。
+
+### 新增
+
+- 定义标准插件包协议（`plugin.properties` + `lib/` 目录，ZIP 候选）。
+- 完整 prospective 依赖图预检：缺失依赖、循环、版本范围在拆除运行态前判定。
+- 批量事务替换 + 持久 journal + 崩溃恢复；相关 contract/provider/consumer 可一次关联升级。
+- loader 逻辑事务门（`runExclusive`），在等待 Fibra lifecycle 时不持有物理锁，避免反向锁序。
+
+### 变更
+
+- PF4J 升级至 `3.15.0`。
+- 删除直接 JAR API（`loadArtifact`/`reloadArtifact`），不保留兼容转发。
+
+详见 openspec change `standardize-plugin-packages`（已归档）与[插件制品与事务更新设计](docs/superpowers/specs/2026-08-23-fibra-plugin-package-transaction-design.md)。
+
+## [0.2.0] - 2026-08-23
+
+- 新增框架中立的配置装载：配置驱动的多实例插件装载（`fibra-loader-config`），示例宿主改用配置装载装配插件树。
+
+## [0.1.1] - 2026-08-23
+
+- 新增仓库外多插件依赖链验收（独立进程黑盒验证 contract/provider/consumer 的 ClassLoader 隔离与依赖链）。
+- 固化 Fibra 与 Spring Harness 的集成边界，明确插件方案参考边界。
+
+## [0.1.0] - 2026-08-22
+
+- 首个版本：Fibra Cordis 内核（Cordis Core 的 Java 语义等价实现，含严格 parity 验收）。
+- PF4J 插件装载架构：插件原子更新与目录监听、真实 PF4J 插件依赖链黑盒验收。
+- 建立可发布制品基线。
 
 [0.3.1]: docs/superpowers/specs/2026-08-23-fibra-benchmarks-design.md
 [0.3.0]: docs/superpowers/specs/2026-08-23-fibra-plugin-package-transaction-design.md
