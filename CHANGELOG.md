@@ -60,6 +60,3 @@
 - 首个版本：Fibra Cordis 内核（Cordis Core 的 Java 语义等价实现，含严格 parity 验收）。
 - PF4J 插件装载架构：插件原子更新与目录监听、真实 PF4J 插件依赖链黑盒验收。
 - 建立可发布制品基线。
-
-[0.3.1]: docs/superpowers/specs/2026-08-23-fibra-benchmarks-design.md
-[0.3.0]: docs/superpowers/specs/2026-08-23-fibra-plugin-package-transaction-design.md
