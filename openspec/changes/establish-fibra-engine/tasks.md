@@ -8,9 +8,9 @@
 
 ## 2. Engine 生命周期与 Reconcile
 
-- [ ] 2.1 新增可发布 `fibra-engine` 及不可变 builder、状态和唯一资源所有权
-- [ ] 2.2 以 TDD 实现双 source、去重队列、执行期 dirty 和周期 resync
-- [ ] 2.3 以 TDD 实现启动初载、总 readiness、失败回滚和终止性关闭
+- [x] 2.1 新增可发布 `fibra-engine` 及不可变 builder、状态和唯一资源所有权
+- [x] 2.2 以 TDD 实现双 source、去重队列、执行期 dirty 和周期 resync
+- [x] 2.3 以 TDD 实现启动初载、总 readiness、失败回滚和终止性关闭
 - [ ] 2.4 以 TDD 实现最后成功 revision、结构化失败和有界退避重试
 
 ## 3. Deployment Package 与联合事务
