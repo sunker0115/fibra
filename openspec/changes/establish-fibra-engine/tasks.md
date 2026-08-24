@@ -11,11 +11,11 @@
 - [x] 2.1 新增可发布 `fibra-engine` 及不可变 builder、状态和唯一资源所有权
 - [x] 2.2 以 TDD 实现双 source、去重队列、执行期 dirty 和周期 resync
 - [x] 2.3 以 TDD 实现启动初载、总 readiness、失败回滚和终止性关闭
-- [ ] 2.4 以 TDD 实现最后成功 revision、结构化失败和有界退避重试
+- [x] 2.4 以 TDD 实现最后成功 revision、结构化失败和有界退避重试
 
 ## 3. Deployment Package 与联合事务
 
-- [ ] 3.1 以 TDD 实现 deployment ZIP、properties、SHA-256 和安全边界校验
+- [x] 3.1 以 TDD 实现 deployment ZIP、properties、SHA-256 和安全边界校验
 - [ ] 3.2 以 TDD 实现唯一 engine journal 与两个 loader 参与者的 prepare/commit/complete/rollback
 - [ ] 3.3 以 TDD 覆盖每个崩溃点恢复、主异常、suppressed 顺序和拒绝猜测恢复
 - [ ] 3.4 以真实多插件和 typed config 验证联合升级、降级及不兼容回滚

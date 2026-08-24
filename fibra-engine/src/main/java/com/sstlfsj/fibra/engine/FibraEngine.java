@@ -105,6 +105,11 @@ public final class FibraEngine implements AutoCloseable {
         try {
             artifacts.loadArtifacts();
             config.load();
+            var initialRevision = currentRevision();
+            synchronized (stateMonitor) {
+                desiredRevision = initialRevision;
+                appliedRevision = initialRevision;
+            }
             stage = FibraEngineFailureStage.READINESS;
             awaitRequiredEntries();
             stage = FibraEngineFailureStage.STARTUP;
@@ -151,7 +156,83 @@ public final class FibraEngine implements AutoCloseable {
 
     public FibraDeploymentResult applyDeployment(Path packagePath) {
         Objects.requireNonNull(packagePath, "packagePath");
-        throw new UnsupportedOperationException("deployment support is not initialized");
+        synchronized (stateMonitor) {
+            if (state != FibraEngineState.RUNNING
+                && state != FibraEngineState.DEGRADED) {
+                throw new IllegalStateException("FibraEngine is not running");
+            }
+        }
+        var transactionRoot = installedRoot.resolve(".fibra-engine/transactions")
+            .resolve(java.util.UUID.randomUUID().toString());
+        try {
+            Files.createDirectories(transactionRoot);
+            var inspected = new DeploymentPackageInspector().inspect(packagePath,
+                transactionRoot.resolve("input"));
+            var result = artifacts.runExclusive(() -> applyDeployment(inspected,
+                transactionRoot));
+            clearFailure(FibraEngineFailureStage.DEPLOYMENT);
+            deleteTree(transactionRoot);
+            return result;
+        } catch (FibraDeploymentException failure) {
+            recordFailure(FibraEngineFailureStage.DEPLOYMENT, failure);
+            deleteTreeOnFailure(transactionRoot, failure);
+            throw failure;
+        } catch (RuntimeException | IOException failure) {
+            var wrapped = new FibraDeploymentException(FibraDeploymentErrorStage.COMMIT,
+                packagePath, "cannot apply Fibra deployment", failure);
+            recordFailure(FibraEngineFailureStage.DEPLOYMENT, wrapped);
+            deleteTreeOnFailure(transactionRoot, wrapped);
+            throw wrapped;
+        }
+    }
+
+    private FibraDeploymentResult applyDeployment(InspectedDeploymentPackage deployment,
+                                                  Path transactionRoot) {
+        com.sstlfsj.fibra.loader.pf4j.FibraArtifactChange artifactChange = null;
+        com.sstlfsj.fibra.loader.config.FibraConfigChange configChange = null;
+        try {
+            var artifactWorkspace = Files.createDirectory(
+                transactionRoot.resolve("artifacts"));
+            var configWorkspace = Files.createDirectory(transactionRoot.resolve("config"));
+            artifactChange = artifacts.prepareArtifacts(deployment.pluginPaths(),
+                artifactWorkspace);
+            configChange = config.prepareReplacement(deployment.configPath(), artifactChange,
+                configWorkspace);
+            var changed = artifactChange.changedArtifactIds();
+            artifactChange.commit();
+            configChange.commit();
+            awaitRequiredEntries();
+            var revision = currentRevision();
+            synchronized (stateMonitor) {
+                desiredRevision = revision;
+                appliedRevision = revision;
+                state = FibraEngineState.RUNNING;
+            }
+            configChange.complete();
+            artifactChange.complete();
+            return new FibraDeploymentResult(deployment.id(), deployment.version(), revision,
+                changed);
+        } catch (RuntimeException | IOException failure) {
+            var primary = failure instanceof FibraDeploymentException deploymentFailure
+                ? deploymentFailure
+                : new FibraDeploymentException(FibraDeploymentErrorStage.COMMIT,
+                    deployment.workspace(), "deployment transaction failed", failure);
+            if (configChange != null) {
+                try {
+                    configChange.rollback();
+                } catch (RuntimeException rollbackFailure) {
+                    primary.addSuppressed(rollbackFailure);
+                }
+            }
+            if (artifactChange != null) {
+                try {
+                    artifactChange.rollback();
+                } catch (RuntimeException rollbackFailure) {
+                    primary.addSuppressed(rollbackFailure);
+                }
+            }
+            throw primary;
+        }
     }
 
     public FibraEngineStatus status() {
@@ -172,6 +253,10 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private void reconcile() {
+        var revision = currentRevision();
+        synchronized (stateMonitor) {
+            desiredRevision = revision;
+        }
         RuntimeException artifactFailure = null;
         try {
             var candidates = desiredArtifactCandidates();
@@ -191,9 +276,15 @@ public final class FibraEngine implements AutoCloseable {
             configFailure = failure;
             recordFailure(FibraEngineFailureStage.CONFIG_RECONCILE, failure);
         }
+        var convergedRevision = artifactFailure == null && configFailure == null
+            ? currentRevision() : null;
         synchronized (stateMonitor) {
             state = artifactFailure == null && configFailure == null
                 ? FibraEngineState.RUNNING : FibraEngineState.DEGRADED;
+            if (convergedRevision != null) {
+                desiredRevision = convergedRevision;
+                appliedRevision = convergedRevision;
+            }
         }
         if (artifactFailure != null) {
             throw artifactFailure;
@@ -235,6 +326,30 @@ public final class FibraEngine implements AutoCloseable {
             return comparison > 0 || comparison == 0
                 && !candidate.descriptor.sha256().equals(current.sha256());
         }).map(Candidate::path).sorted().toList();
+    }
+
+    private String currentRevision() {
+        var effective = new LinkedHashMap<String, FibraArtifactDescriptor>();
+        artifacts.catalog().artifacts().forEach(descriptor ->
+            effective.put(descriptor.id(), descriptor));
+        if (artifactSourceRoot != null) {
+            var versions = new DefaultVersionManager();
+            try (var paths = Files.list(artifactSourceRoot)) {
+                for (var path : paths.filter(Files::isRegularFile)
+                    .filter(candidate -> candidate.getFileName().toString().endsWith(".zip"))
+                    .sorted().toList()) {
+                    var candidate = artifacts.inspectArtifact(path);
+                    effective.compute(candidate.id(), (id, current) -> current == null
+                        || versions.compareVersions(candidate.version(), current.version()) > 0
+                        ? candidate : current);
+                }
+            } catch (IOException exception) {
+                throw new IllegalStateException("cannot read artifact source", exception);
+            }
+        }
+        return EngineRevision.compute(effective.values().stream()
+            .map(descriptor -> new RevisionArtifact(descriptor.id(), descriptor.version(),
+                descriptor.sha256())).toList(), config.sourcePaths());
     }
 
     private void awaitRequiredEntries() {
@@ -328,6 +443,25 @@ public final class FibraEngine implements AutoCloseable {
             resource.close();
         } catch (Exception failure) {
             failures.add(failure);
+        }
+    }
+
+    private static void deleteTree(Path root) throws IOException {
+        if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) {
+            return;
+        }
+        try (var paths = Files.walk(root)) {
+            for (var path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                Files.deleteIfExists(path);
+            }
+        }
+    }
+
+    private static void deleteTreeOnFailure(Path root, RuntimeException primary) {
+        try {
+            deleteTree(root);
+        } catch (IOException cleanupFailure) {
+            primary.addSuppressed(cleanupFailure);
         }
     }
 
