@@ -1,6 +1,6 @@
 ## 1. 版本与模块边界
 
-- [ ] 1.1 将 reactor revision 切换为 `0.4.0-SNAPSHOT`，保持 `v0.3.1` 不变
+- [ ] 1.1 验证 engine change 已将 reactor revision 切换为 `0.4.0-SNAPSHOT`，保持 `v0.3.1` 不变
 - [ ] 1.2 新增可发布 `fibra-spring` 和 `fibra-spring-boot-autoconfigure`
 - [ ] 1.3 把 starter 改为无生产代码依赖入口，统一九个运行时制品门禁
 
@@ -19,7 +19,7 @@
 ## 4. Boot 自动配置
 
 - [ ] 4.1 以 TDD 实现完整托管单元及已有 Engine/Context 时整体退让
-- [ ] 4.2 只读暴露 root、两个 loader 和 bridge，禁止 Spring destroy 重复关闭
+- [ ] 4.2 只读暴露 root 和 bridge，不注册 engine 内部 loader bean，禁止 Spring destroy 重复关闭
 - [ ] 4.3 生成准确配置元数据并验证无旧属性
 
 ## 5. 示例、API 与发布

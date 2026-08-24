@@ -133,6 +133,10 @@ Spring 宿主还需自行引入与应用形态匹配的 Boot starter。CLI 使�
 
 ```text
 FibraProperties
+├── Engine engine                               默认 Engine(30s, 250ms, 30s)
+│   ├── Duration resyncInterval                 必须大于 0
+│   ├── Duration retryInitialBackoff            必须大于 0
+│   └── Duration retryMaxBackoff                不小于 initial
 ├── Artifacts artifacts                         必填
 │   ├── Path installedRoot                      必填
 │   ├── Path incomingRoot                       artifact watch 启用时必填
@@ -157,6 +161,10 @@ Watch
 
 ```yaml
 fibra:
+  engine:
+    resync-interval: 30s
+    retry-initial-backoff: 250ms
+    retry-max-backoff: 30s
   artifacts:
     installed-root: ./run/plugins
     incoming-root: ./run/incoming
@@ -180,7 +188,7 @@ fibra:
 - `installed-root` 必须是已存在目录；starter 不创建目录，避免拼错路径后静默启动到空环境；
 - `config.location` 必须是已存在普通文件，因为初始 reconcile 是启动事务的一部分；
 - artifact watch 开启时，`incoming-root` 必须是已存在目录；关闭时允许不配置；
-- 两个 debounce、readiness timeout 和 root close timeout 必须满足前述范围；
+- resync、retry、两个 debounce、readiness timeout 和 root close timeout 必须满足前述范围；
 - required entry 去重后必须与原列表等长，任一值 trim 后为空即拒绝；
 - 校验错误必须指明完整属性键和无效值，不用底层 `NullPointerException` 代替配置诊断。
 
@@ -218,7 +226,7 @@ public final class FibraServiceBridge {
 
 ### 5.4 Engine 资源暴露
 
-自动配置创建一个 `FibraEngine` 和一个 `FibraSpringLifecycle`。root、两个 loader 的只读暴露 bean 均声明 `destroyMethod=""`，唯一关闭权属于 engine。watch source、reconcile controller 和 deployment coordinator 不是 Spring bean，也不进入 Spring 公共签名。
+自动配置创建一个 `FibraEngine` 和一个 `FibraSpringLifecycle`，只额外暴露 root 与 `FibraServiceBridge`。engine 内部两个 loader、watch source、reconcile controller 和 deployment coordinator 都不是 Spring bean，也不进入 Spring 公共签名；唯一关闭权属于 engine。
 
 ## 6. 启动、就绪与失败回滚
 
@@ -270,9 +278,9 @@ FibraSpringLifecycle.start()
 ### 7.1 运行期 reconcile 失败
 
 - engine 沿用底层严格升级和事务语义，失败保留最后成功 revision；
-- watch source 只标记 dirty，重试、退避和 `lastFailure` 由 engine 统一管理；
+- watch source 只标记 dirty，重试、退避和按 artifact/config/deployment 来源区分的结构化失败由 engine 统一管理；
 - Spring 运行时不吞异常、不自动退出应用、不猜测多插件批次；
-- 本阶段不新增 Actuator endpoint 或新的通用状态 SPI，CLI/Web 可通过日志和现有 loader 管理 API表达自己的运维面。
+- 本阶段不新增 Actuator endpoint；CLI/Web 通过 `FibraEngine.status()`、`requestReconcile()` 和 `applyDeployment(...)` 表达自己的运维面，不取得内部 loader。
 
 ### 7.2 正常关闭
 

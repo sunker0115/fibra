@@ -10,7 +10,7 @@
 
 ### D2：新增独立 `fibra-engine`
 
-engine 是有生产代码和独立公共 API 的可发布 JAR，不是聚合 POM。它依赖 config loader，由 config loader 传递依赖 PF4J loader；任何 Spring 坐标不得进入其 compile/runtime 依赖图。
+engine 是有生产代码和独立公共 API 的可发布 JAR，不是聚合 POM。它按源码真实使用关系直接依赖 `fibra-api`、`fibra-core`、`fibra-loader-pf4j`、`fibra-loader-config`、PF4J 与 SLF4J；不得依靠 config loader 的传递依赖偶然取得其它类型。任何 Spring 坐标不得进入其 compile/runtime 依赖图。
 
 ### D3：双 source 只触发 level-triggered reconcile
 
@@ -28,7 +28,10 @@ artifact/config change 是可逆参与者。engine journal 是联合部署唯一
 
 Spring adapter 只构建或委托 `FibraEngine`。删除 loader watcher API 与迁移 Spring 消费点必须在同一可编译提交边界完成，不保留临时兼容类型。
 
+### D7：托管 Engine 不公开真实 Loader
+
+`FibraEngine` 只公开 root、状态、reconcile 和 deployment 能力，不返回内部 `FibraPluginLoader`/`FibraConfigLoader`。否则调用方仍可绕过 controller 直接 apply、refresh 或 close，唯一串行域无法由类型边界保证。需要 loader 低层能力的非托管宿主自行构造并拥有 loader，不与 engine 混用。
+
 ## Open Questions
 
 无。实施细节由本 change 的 tasks 和对应 implementation plan 冻结后执行。
-

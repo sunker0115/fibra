@@ -83,6 +83,8 @@ resolve source tree
 
 候选配置计划必须能使用 `fibra-loader-pf4j` 提供的只读候选插件目录和目标 `configType`，保证 plugin/config 联合变更在拆除旧运行态前完成类型校验。
 
+config loader 额外提供不可变 `sourcePaths()` 视图，包含根配置、最后成功 include 与最后失败 resolve 尝试的路径，供外部托管 source 建立监听；该方法本身不启动 watcher 或触发 refresh。
+
 ## 4. `fibra-engine`
 
 ### 4.1 公共入口
@@ -99,8 +101,6 @@ public final class FibraEngine implements AutoCloseable {
     public FibraEngineStatus status();
 
     public Context root();
-    public FibraPluginLoader pluginLoader();
-    public FibraConfigLoader configLoader();
     public boolean isRunning();
     public void close();
 }
@@ -108,9 +108,11 @@ public final class FibraEngine implements AutoCloseable {
 
 builder 使用命名方法配置 artifact/config watch、required entries、readiness、root close 和周期 resync；不提供长位置参数构造器。所有集合在 build 时防御性复制，所有路径归一化并在创建任何 root、loader、watch service 或线程前整体校验。
 
+engine 持久状态目录固定为 `<installedRoot>/.fibra-engine/`，只存放 engine journal、revision 和预检临时数据，不作为插件包参与扫描。`build()` 的固定顺序为整体路径校验、engine 崩溃恢复、root、plugin loader、config loader；恢复必须早于 PF4J manager/ClassLoader 创建，使半提交磁盘图不会被装载。框架适配可在 lifecycle start 前取得 root；watch source 和 reconcile worker 只能在首次 `start()` 初载及 readiness 成功后创建。
+
 ### 4.2 所有权
 
-每个 engine 独占一个 root、一个 plugin loader、一个 config loader、两个可选 watch source、一个 reconcile worker 和一个 deployment journal root。用户可读取 loader 执行显式管理，但显式管理与 reconcile 仍经过同一 engine 操作门；不得绕过 engine 直接关闭 loader。
+每个 engine 独占一个 root、一个 plugin loader、一个 config loader、两个可选 watch source、一个 reconcile worker 和一个 deployment journal root。托管 engine 不公开真实 loader，所有 artifact/config 变更只能通过 engine API 进入同一协调域；需要 loader 低层 API 的非托管宿主必须自行构造并完整拥有 loader，不得把同一 loader 同时交给 engine。root 只用于显式服务桥接和 Fibra 运行查询，关闭权仍只属于 engine。
 
 正常关闭顺序固定为：
 
@@ -128,13 +130,17 @@ builder 使用命名方法配置 artifact/config watch、required entries、read
 
 artifact/config source 只把同一个 engine key 放入有界去重队列。reconcile 不消费事件差量，每次重新读取完整安装目录、候选目录和配置依赖文件，比较 `desiredRevision` 与 `appliedRevision` 后生成新计划。
 
+incoming 候选目录按插件 ID 分组并选择唯一最高 SemVer；低于已安装版本的候选忽略，同版本同摘要为 no-op，同版本不同摘要拒绝，最高版本的无效候选持续保持失败直到被替换或移除。成功提交不依赖删除 incoming 文件，后续完整重读通过已安装身份判定 no-op；松散目录只允许升级，显式 deployment 才允许受控降级。
+
+同一轮读取可以同时发现 artifact 与 config 变化，但必须作为两个独立事务固定按 artifact、config 顺序尝试，并分别记录失败；不得共享候选 catalog 让两个单独失败的松散变化联合成功。只有带 identity、version、checksums 和 journal 的显式 deployment 才使用联合预检与提交。
+
 规则：
 
 - 一个 engine 同时最多执行一个 reconcile 或 deployment；
 - 多个文件事件合并为一次 dirty 状态；
 - 执行期间再变 dirty，当前执行结束后至少再 reconcile 一次；
 - 周期 resync 修复丢失的文件事件；
-- 失败保留最后成功运行态和 `appliedRevision`，记录结构化 `lastFailure` 并按有界退避重试；
+- 失败保留最后成功运行态和 `appliedRevision`，按 artifact/config/deployment 来源分别记录结构化失败并按有界退避重试；
 - 手工 deployment 的 revision 高于松散目录信号，执行期间只累计 dirty，不交叉提交。
 
 ### 4.4 双 Source
@@ -161,6 +167,8 @@ deployment.zip
 
 `deployment.properties` 至少包含 deployment id、version、配置根相对路径和按字典序排列的插件相对路径。摘要固定使用 SHA-256；禁止 MD5。ZIP 路径、大小、条目数、重复项、符号链接、未知顶层条目和摘要全部在预检期校验。
 
+deployment 的配置根及全部 include 必须位于包内 `config/`，安装时按相对路径映射到 `configLocation` 所在配置树。事务备份保存在 engine transaction 中，提交和恢复都先在目标配置文件同目录写临时文件，再执行原子 move；配置文件与插件安装根不要求位于同一 FileStore。
+
 ### 5.1 唯一总事务
 
 engine 为联合部署创建唯一持久 journal。artifact/config loader 以参与者身份加入：
@@ -182,7 +190,7 @@ PREPARING
 
 `fibra-spring` 只提供 `FibraSpringLifecycle` 和 `FibraServiceBridge`。lifecycle 把 Spring `start/stop` 委托给同一个 `FibraEngine`，不复制 load、watch、readiness、rollback 或 close 算法。
 
-`fibra-spring-boot-autoconfigure` 只负责不可变属性、完整校验、条件退让、engine builder 映射和配置元数据。starter 是无生产 class 的依赖入口。
+`fibra-spring-boot-autoconfigure` 只负责不可变属性、完整校验、条件退让、engine builder 映射和配置元数据，并只暴露 engine、root 与 bridge，不把 engine 内部 loader 注册成 Spring bean。starter 是无生产 class 的依赖入口。
 
 ## 7. 插件 Archetype
 

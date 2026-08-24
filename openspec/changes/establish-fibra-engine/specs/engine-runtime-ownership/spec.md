@@ -12,11 +12,14 @@
 - **WHEN** 初载、配置、readiness 或 source 创建任一步失败
 - **THEN** engine 保留原异常、逆序关闭所有已取得资源并进入不可重启终止态
 
-### Requirement: Engine 提供最小只读运行视图
+### Requirement: Engine 不泄露内部 Loader 所有权
 
-Engine SHALL 提供 root、plugin loader、config loader、运行状态和结构化状态快照；调用方 MUST NOT 通过这些视图绕过 engine 关闭资源。
+Engine SHALL 提供 root、运行状态和结构化状态快照，但 MUST NOT 公开其内部 plugin loader 或 config loader。所有托管 artifact/config 变更 MUST 通过 engine API 进入同一协调域；root 的关闭权仍只属于 engine。
+
+#### Scenario: 宿主读取托管运行态
+- **WHEN** 宿主取得 engine 的 root 或状态快照
+- **THEN** 宿主可桥接服务和查询状态，但没有可绕过 controller 直接 apply、refresh 或关闭内部 loader 的引用
 
 #### Scenario: 正常关闭
 - **WHEN** 用户关闭运行中的 engine
 - **THEN** engine 停止接收工作、关闭 source、收敛 worker、关闭 config loader、plugin loader 和 root，重复关闭不重复执行资源销毁
-

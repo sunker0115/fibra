@@ -1,9 +1,10 @@
-## 1. Loader 事务边界
+## 1. 版本与 Loader 事务边界
 
-- [ ] 1.1 以 TDD 把 artifact 变更重构为 plan/prepare/commit/complete/rollback 唯一实现
-- [ ] 1.2 以 TDD 提供候选插件目录和目标 configType 的只读预检视图
-- [ ] 1.3 以 TDD 把 config 变更重构为 resolve/plan/prepare/commit/complete/rollback 唯一实现
-- [ ] 1.4 删除两个 loader 的 watcher 公共 API并同步 API签名，不提供兼容代码
+- [ ] 1.1 将 reactor revision 从已发布 `0.3.1` 切换为 `0.4.0-SNAPSHOT`
+- [ ] 1.2 以 TDD 把 artifact 变更重构为 plan/prepare/commit/complete/rollback 唯一实现
+- [ ] 1.3 以 TDD 提供候选插件目录和目标 configType 的只读预检视图
+- [ ] 1.4 以 TDD 把 config 变更重构为 resolve/plan/prepare/commit/complete/rollback 唯一实现
+- [ ] 1.5 删除两个 loader 的 watcher 公共 API并同步 API签名，不提供兼容代码
 
 ## 2. Engine 生命周期与 Reconcile
 
@@ -27,4 +28,3 @@
 - [ ] 4.4 更新架构、API、release 和 README，完成审查并归档 change
 
 精确文件、测试命令、TDD 顺序和提交边界由 `docs/superpowers/plans/2026-08-24-fibra-engine.md` 作为唯一实施细节权威源；计划通过人工闸门前不得修改生产代码。
-

@@ -6,7 +6,7 @@
 
 #### Scenario: 只提供必填属性
 - **WHEN** 宿主只配置 installed root 和 config location
-- **THEN** source 默认关闭、required entries 为空，其余参数使用权威默认值并构建一个 engine
+- **THEN** source 默认关闭、required entries 为空、resync 为 30 秒、重试从 250 毫秒有界增长到 30 秒，其余参数使用权威默认值并构建一个 engine
 
 #### Scenario: 使用旧属性
 - **WHEN** 宿主只提供 `fibra.plugins-root`、`fibra.config-location`、`fibra.watcher.*` 或其他旧键
@@ -14,7 +14,7 @@
 
 ### Requirement: Engine 创建前完整校验
 
-自动配置 SHALL 在创建 root、loader、watch service或线程前校验路径、条件必填、entry唯一性和所有 Duration范围；失败 MUST 指明完整属性键和值。
+自动配置 SHALL 在创建 root、loader、watch service或线程前校验路径、条件必填、entry唯一性和所有 Duration范围，并校验 retry max 不小于 initial；失败 MUST 指明完整属性键和值。
 
 #### Scenario: 路径或条件无效
 - **WHEN** 安装根、配置文件、启用 source所需目录或 Duration无效

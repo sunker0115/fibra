@@ -8,7 +8,7 @@
 - **BREAKING**：新增 `fibra-spring-boot-autoconfigure`，保存 Boot 属性、校验、自动配置、配置元数据和唯一 imports。
 - **BREAKING**：`fibra-spring-boot-starter` 改为空生产代码的推荐依赖入口。
 - **BREAKING**：删除旧扁平属性和公共 `FibraLifecycle`，改为 `engine/artifacts/config/startup/shutdown` 不可变配置，不提供兼容代码。
-- 自动配置只构建一个 `FibraEngine`；root、两个 loader 和 bridge 作为只读视图暴露，关闭权不转移。
+- 自动配置只构建一个 `FibraEngine`；只额外暴露 root 和 bridge，不把 engine 内部 loader 注册成 Spring bean，关闭权不转移。
 - 宿主已有 `FibraEngine` 或 Fibra `Context` 时完整托管单元整体退让，不拼接部分资源。
 - staging/upload 继续属于具体宿主，Web 示例使用独立命名空间。
 - Spring change 依赖 `establish-fibra-engine`；本 change 不实现 watcher、reconcile、readiness 或 loader 事务算法。

@@ -18,7 +18,7 @@
 
 #### Scenario: 默认自动配置
 - **WHEN** 属性合法且无用户 Engine/Context
-- **THEN** 仅创建一个 engine并由 lifecycle管理，root和两个 loader的暴露 bean不拥有关闭权
+- **THEN** 仅创建一个 engine并由 lifecycle管理，只额外暴露不拥有关闭权的 root，且不注册 engine内部 loader bean
 
 #### Scenario: 宿主已有 Engine 或 Context
 - **WHEN** 宿主定义任一类型
@@ -31,4 +31,3 @@
 #### Scenario: 普通 Spring Bean
 - **WHEN** 宿主只声明 bean而未调用 register
 - **THEN** 该对象不出现在 Fibra服务 registry
-
