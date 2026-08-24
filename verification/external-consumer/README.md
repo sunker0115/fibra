@@ -24,13 +24,13 @@ host                            仅用于本地端到端验证，不含上述三
 
 ## 构建标准 ZIP
 
-根 POM 固定了 Java 21、Fibra 0.3.0、PF4J 3.15.0 和 Maven 插件版本。Fibra 0.3.0 发布到 Maven Central 后，在本目录直接执行：
+根 POM 固定了 Java 21、Fibra 0.3.1、PF4J 3.15.0 和 Maven 插件版本。Fibra 0.3.1 发布到 Maven Central 后，在本目录直接执行：
 
 ```bash
 mvn verify
 ```
 
-在 Fibra 0.3.0 发布前，本仓库开发者必须从 Fibra 仓库根目录执行：
+在 Fibra 0.3.1 发布前，本仓库开发者必须从 Fibra 仓库根目录执行：
 
 ```bash
 scripts/verify-external-consumer.sh

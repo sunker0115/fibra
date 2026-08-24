@@ -65,7 +65,7 @@ provider/consumer 都在 PF4J 图依赖 contract，consumer 在 Fibra 配置图�
 scripts/verify-external-consumer.sh
 ```
 
-模板 POM 具有 0.3.0 正式版、Maven Central、Java 21、PF4J 3.15.0 和固定 Maven 插件版本，0.3.0 发布后用户可在模板根直接执行 `mvn verify`。开发期脚本从根 POM 读取当前 `revision` 与统一工具版本，只在临时副本上通过 Maven `-D` 覆盖开发版本和临时仓库 URL，不修改模板源文件。
+模板 POM 具有 0.3.1 正式版、Maven Central、Java 21、PF4J 3.15.0 和固定 Maven 插件版本，0.3.1 发布后用户可在模板根直接执行 `mvn verify`。开发期脚本从根 POM 读取当前 `revision` 与统一工具版本，只在临时副本上通过 Maven `-D` 覆盖开发版本和临时仓库 URL，不修改模板源文件。
 
 脚本完整执行以下黑盒边界：
 
