@@ -8,7 +8,7 @@ Fibra 是 Cordis Core 4.0.1 的 Java 21 语义等价实现，用作 Java 版 Dee
 
 目标使用场景是 Java 版 DeepSeek Harness、AI Agent 工具平台，以及需要可信进程内插件动态装载的纯 Java 或框架宿主。agent、tool、provider、session 等业务插件建立在 Fibra 之上，但不属于本仓库的内核实现；Spring、Hasor、Solon 也不进入内核。
 
-工程按职责拆成十一个模块：
+工程按职责拆成以下模块。六个可发布制品由根 reactor 直接聚合，全部示例归入 `fibra-example` 聚合目录（统一 `install`、跳过远程 deploy），另有验证与基准两个非发布模块：
 
 - `fibra-api`：稳定的内核公开契约；
 - `fibra-core`：唯一的 Context/Fibra 运行时；
@@ -16,11 +16,14 @@ Fibra 是 Cordis Core 4.0.1 的 Java 21 语义等价实现，用作 Java 版 Dee
 - `fibra-loader-pf4j`：标准 ZIP/目录包、PF4J 依赖图、ClassLoader 与持久更新事务；
 - `fibra-loader-config`：框架中立的 YAML/JSON 配置树、typed config、运行时事务和文件监听；
 - `fibra-spring-boot-starter`：可选 Spring Boot 适配制品，把 Fibra 装配与生命周期接入 Spring 容器；Spring 只在该模块内自管，不进内核；
-- `fibra-example-contract-plugin`：独立 `Greeting` 类型的 contract-only 标准包；
-- `fibra-example-provider-plugin`：依赖 contract 并提供 Fibra 服务的 executable 多版本标准包；
-- `fibra-example-consumer-plugin`：只二进制依赖 contract、运行时等待 provider 服务的 executable 标准包；
-- `fibra-example-host`：使用真实 YAML 装配插件树的纯 Java 宿主示例与真实依赖链黑盒验收；
-- `fibra-parity-tests`：Cordis 71 个逐项门禁、迁移测试和全部公开 API 冻结。
+- `fibra-example`：示例聚合目录，含：
+  - `fibra-example-contract-plugin`：独立 `Greeting` 类型的 contract-only 标准包；
+  - `fibra-example-provider-plugin`：依赖 contract 并提供 Fibra 服务的 executable 多版本标准包；
+  - `fibra-example-consumer-plugin`：只二进制依赖 contract、运行时等待 provider 服务的 executable 标准包；
+  - `fibra-example-host`：使用真实 YAML 装配插件树的纯 Java 宿主示例与真实依赖链黑盒验收；
+  - `fibra-example-spring-host-api` / `fibra-example-spring-host-plugin` / `fibra-example-spring-host`：Spring Boot 宿主示例，演示 HTTP 上传与请求驱动的插件热装载；
+- `fibra-parity-tests`：Cordis 71 个逐项门禁、迁移测试和全部公开 API 冻结；
+- `fibra-benchmarks`：JMH 内核性能基准，经根 POM `benchmarks` profile 门禁注册，不发布也不进任何生产制品。
 
 ## 构建
 
