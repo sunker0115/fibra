@@ -20,15 +20,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ReleaseArtifactBaselineTest {
     private static final int JAVA_21_CLASS_MAJOR_VERSION = 65;
-    // 5 个中立内核/loader 制品：只依赖 Reactor + SLF4J，父 POM 保持 Spring-free。
+    // 6 个框架中立运行时制品，compile/runtime 依赖图保持 Spring-free。
     private static final List<String> NEUTRAL_KERNEL_MODULES = List.of(
         "fibra-api",
         "fibra-core",
         "fibra-pf4j-api",
         "fibra-loader-pf4j",
-        "fibra-loader-config"
+        "fibra-loader-config",
+        "fibra-engine"
     );
-    // 第 6 个可发布制品：可选 Spring 适配制品，自管 Spring BOM，与中立制品分类区分。
+    // 第 7 个可发布制品：可选 Spring 适配制品，自管 Spring BOM，与中立制品分类区分。
     private static final List<String> SPRING_ADAPTER_MODULES = List.of(
         "fibra-spring-boot-starter"
     );

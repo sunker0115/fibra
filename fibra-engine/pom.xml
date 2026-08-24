@@ -10,17 +10,24 @@
     <version>${revision}</version>
   </parent>
 
-  <artifactId>fibra-parity-tests</artifactId>
-  <description>Cordis core 逐项行为验收与 Fibra 公共 API 冻结门禁。</description>
+  <artifactId>fibra-engine</artifactId>
+  <name>Fibra Engine</name>
+  <description>框架中立的 Fibra 插件、配置、期望状态和部署事务托管引擎。</description>
+
+  <properties>
+    <maven.deploy.skip>false</maven.deploy.skip>
+    <maven.source.skip>false</maven.source.skip>
+    <maven.javadoc.skip>false</maven.javadoc.skip>
+  </properties>
 
   <dependencies>
     <dependency>
       <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-core</artifactId>
+      <artifactId>fibra-api</artifactId>
     </dependency>
     <dependency>
       <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-pf4j-api</artifactId>
+      <artifactId>fibra-core</artifactId>
     </dependency>
     <dependency>
       <groupId>com.sstlfsj</groupId>
@@ -31,16 +38,12 @@
       <artifactId>fibra-loader-config</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-engine</artifactId>
-      <scope>test</scope>
+      <groupId>org.pf4j</groupId>
+      <artifactId>pf4j</artifactId>
     </dependency>
-    <!-- 仅供 API/发布基线门禁校验可选 Spring 适配制品；test scope 不进任何发布产物。 -->
     <dependency>
-      <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-spring-boot-starter</artifactId>
-      <version>${revision}</version>
-      <scope>test</scope>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
@@ -48,13 +51,13 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>io.projectreactor</groupId>
-      <artifactId>reactor-test</artifactId>
+      <groupId>org.awaitility</groupId>
+      <artifactId>awaitility</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.awaitility</groupId>
-      <artifactId>awaitility</artifactId>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

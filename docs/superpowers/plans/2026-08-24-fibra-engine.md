@@ -1,7 +1,7 @@
 # Fibra `0.4.0` Engine 实施计划
 
 日期：2026-08-24  
-状态：待人工确认；确认后作为 `establish-fibra-engine` 的唯一实施细节权威源
+状态：已确认并执行中，作为 `establish-fibra-engine` 的唯一实施细节权威源
 
 架构真源：[Fibra Engine 最终架构](../specs/2026-08-24-fibra-engine-architecture.md)。形式化行为真源：[`establish-fibra-engine`](../../../openspec/changes/establish-fibra-engine/)。本计划只规定代码落点、公共签名、TDD 顺序、验证命令和提交边界。三者冲突时先同步文档，不在实现中选择未记录的第三种语义。
 

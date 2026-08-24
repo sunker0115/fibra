@@ -16,6 +16,7 @@
     <module>fibra-pf4j-api</module>
     <module>fibra-loader-pf4j</module>
     <module>fibra-loader-config</module>
+    <module>fibra-engine</module>
     <module>fibra-spring-boot-starter</module>
     <module>fibra-example</module>
     <module>fibra-parity-tests</module>
@@ -23,14 +24,14 @@
 
   <properties>
     <!-- 唯一项目版本真源；flatten-maven-plugin 在安装/发布时展开占位符。 -->
-    <revision>0.3.1</revision>
+    <revision>0.4.0-SNAPSHOT</revision>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <project.build.outputTimestamp>2026-08-21T08:25:01Z</project.build.outputTimestamp>
     <maven.compiler.release>21</maven.compiler.release>
     <maven.runtime.version>3.9.9</maven.runtime.version>
     <maven.runtime.sha512>a555254d6b53d267965a3404ecb14e53c3827c09c3b94b5678835887ab404556bfaf78dcfe03ba76fa2508649dca8531c74bca4d5846513522404d48e8c4ac8b</maven.runtime.sha512>
-    <!-- 聚合根与验证模块不发布；五个生产模块在各自 POM 中显式开启。 -->
+    <!-- 聚合根与验证模块不发布；可发布模块在各自 POM 中显式开启。 -->
     <maven.deploy.skip>true</maven.deploy.skip>
     <maven.source.skip>true</maven.source.skip>
     <maven.javadoc.skip>true</maven.javadoc.skip>
@@ -167,6 +168,11 @@
       <dependency>
         <groupId>com.sstlfsj</groupId>
         <artifactId>fibra-loader-config</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-engine</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

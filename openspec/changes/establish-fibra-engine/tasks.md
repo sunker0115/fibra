@@ -1,6 +1,6 @@
 ## 1. 版本与 Loader 事务边界
 
-- [ ] 1.1 将 reactor revision 从已发布 `0.3.1` 切换为 `0.4.0-SNAPSHOT`
+- [x] 1.1 将 reactor revision 从已发布 `0.3.1` 切换为 `0.4.0-SNAPSHOT`
 - [ ] 1.2 以 TDD 把 artifact 变更重构为 plan/prepare/commit/complete/rollback 唯一实现
 - [ ] 1.3 以 TDD 提供候选插件目录和目标 configType 的只读预检视图
 - [ ] 1.4 以 TDD 把 config 变更重构为 resolve/plan/prepare/commit/complete/rollback 唯一实现
