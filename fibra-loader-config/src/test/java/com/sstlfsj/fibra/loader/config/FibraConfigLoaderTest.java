@@ -1125,7 +1125,7 @@ class FibraConfigLoaderTest {
             """.formatted(disabled));
     }
 
-    private static void writePluginJar(Path path, Class<?> entrypoint) throws IOException {
+    static void writePluginJar(Path path, Class<?> entrypoint) throws IOException {
         writePluginJar(path, "fixture", entrypoint);
     }
 

@@ -3,7 +3,7 @@
 - [x] 1.1 将 reactor revision 从已发布 `0.3.1` 切换为 `0.4.0-SNAPSHOT`
 - [x] 1.2 以 TDD 把 artifact 变更重构为 plan/prepare/commit/complete/rollback 唯一实现
 - [x] 1.3 以 TDD 提供候选插件目录和目标 configType 的只读预检视图
-- [ ] 1.4 以 TDD 把 config 变更重构为 resolve/plan/prepare/commit/complete/rollback 唯一实现
+- [x] 1.4 以 TDD 把 config 变更重构为 resolve/plan/prepare/commit/complete/rollback 唯一实现
 - [ ] 1.5 删除两个 loader 的 watcher 公共 API并同步 API签名，不提供兼容代码
 
 ## 2. Engine 生命周期与 Reconcile

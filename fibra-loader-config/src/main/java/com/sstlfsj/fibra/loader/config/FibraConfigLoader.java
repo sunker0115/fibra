@@ -3,6 +3,8 @@ package com.sstlfsj.fibra.loader.config;
 import com.sstlfsj.fibra.Context;
 import com.sstlfsj.fibra.Fibra;
 import com.sstlfsj.fibra.PluginDescriptor;
+import com.sstlfsj.fibra.loader.pf4j.FibraArtifactChange;
+import com.sstlfsj.fibra.loader.pf4j.FibraPluginCatalog;
 import com.sstlfsj.fibra.loader.pf4j.FibraPluginLoader;
 import com.sstlfsj.fibra.loader.pf4j.PluginConfigFactory;
 import com.sstlfsj.fibra.loader.pf4j.PluginInstanceSpec;
@@ -66,30 +68,74 @@ public final class FibraConfigLoader implements AutoCloseable {
             if (loaded) {
                 throw new IllegalStateException("FibraConfigLoader.load() may only be called once");
             }
-            var candidate = resolver.resolve(configPath, patches);
-            validateConfigs(candidate);
-            reconcile(null, candidate);
-            snapshot = candidate;
-            loaded = true;
-            return snapshot;
+            var workspace = createWorkspace("load");
+            try (var change = prepareCurrent(plugins.catalog(), workspace)) {
+                change.commit();
+                change.complete();
+                return snapshot;
+            }
         });
     }
 
     public FibraConfigSnapshot refresh() {
         return plugins.runExclusive(() -> {
             requireLoaded();
-            var candidate = resolver.resolve(configPath, patches);
-            var changed = !snapshot.entries().equals(candidate.entries());
-            if (!changed && runtimeMatches(candidate)) {
+            var workspace = createWorkspace("refresh");
+            try (var change = prepareCurrent(plugins.catalog(), workspace)) {
+                var candidate = change.targetSnapshot();
+                if (snapshot.entries().equals(candidate.entries())
+                    && runtimeMatches(candidate)) {
+                    change.rollback();
+                    return snapshot;
+                }
+                change.commit();
+                change.complete();
                 return snapshot;
             }
-            validateConfigs(candidate);
-            reconcile(snapshot, candidate);
-            if (changed) {
-                snapshot = candidate;
-            }
-            return snapshot;
         });
+    }
+
+    /** 解析当前完整配置树但不修改运行态。 */
+    public FibraConfigSnapshot resolve() {
+        return plugins.runExclusive(() -> {
+            requireOpen();
+            return resolveAgainst(plugins.catalog());
+        });
+    }
+
+    /** 当前成功 include 与最后一次解析尝试涉及的绝对归一化路径。 */
+    public Set<Path> sourcePaths() {
+        return plugins.runExclusive(() -> {
+            requireOpen();
+            var result = new LinkedHashSet<Path>();
+            result.add(configPath);
+            if (snapshot != null) {
+                snapshot.allEntries().forEach(entry -> {
+                    result.add(entry.source().toAbsolutePath().normalize());
+                    if (entry.includedPath() != null) {
+                        result.add(entry.includedPath().toAbsolutePath().normalize());
+                    }
+                });
+            }
+            result.addAll(resolver.attemptedPaths().stream()
+                .map(path -> path.toAbsolutePath().normalize()).toList());
+            return Set.copyOf(result);
+        });
+    }
+
+    public FibraConfigChange prepareCurrent(FibraPluginCatalog catalog, Path workspace) {
+        requireOpen();
+        return PreparedConfigChange.current(this,
+            Objects.requireNonNull(catalog, "catalog"), workspace);
+    }
+
+    public FibraConfigChange prepareReplacement(Path stagedConfig,
+                                                FibraArtifactChange artifacts,
+                                                Path workspace) {
+        requireLoaded();
+        Objects.requireNonNull(artifacts, "artifacts");
+        return PreparedConfigChange.replacement(this, stagedConfig,
+            artifacts.targetCatalog(), workspace);
     }
 
     public FibraConfigSnapshot snapshot() {
@@ -266,18 +312,93 @@ public final class FibraConfigLoader implements AutoCloseable {
     }
 
     private void validateConfigs(FibraConfigSnapshot candidate) {
+        validateAgainst(candidate, plugins.catalog());
+    }
+
+    void validateAgainst(FibraConfigSnapshot candidate, FibraPluginCatalog catalog) {
         for (var entry : candidate.allEntries()) {
             if (entry.kind() != FibraConfigEntry.Kind.PLUGIN) {
                 continue;
             }
             Class<?> type;
             try {
-                type = plugins.configType(entry.pluginId());
+                type = catalog.configType(entry.pluginId()).orElseThrow(() ->
+                    new IllegalArgumentException("plugin has no Fibra entrypoint"));
             } catch (RuntimeException exception) {
                 throw failure(FibraConfigErrorStage.RESOLVE, entry,
                     "cannot resolve plugin " + entry.pluginId(), exception);
             }
             convert(entry, type);
+        }
+    }
+
+    FibraConfigSnapshot resolveAgainst(FibraPluginCatalog catalog) {
+        var candidate = resolver.resolve(configPath, patches);
+        validateAgainst(candidate, catalog);
+        return candidate;
+    }
+
+    FibraConfigSnapshot resolvePath(Path path) {
+        return resolver.resolve(path, List.of());
+    }
+
+    FibraConfigSnapshot currentSnapshot() {
+        return snapshot;
+    }
+
+    void applySnapshot(FibraConfigSnapshot previous, FibraConfigSnapshot candidate) {
+        reconcile(previous, candidate == null
+            ? new FibraConfigSnapshot(configPath, List.of()) : candidate);
+    }
+
+    void publishSnapshot(FibraConfigSnapshot value) {
+        if (snapshot != null && value != null
+            && snapshot.entries().equals(value.entries())) {
+            loaded = true;
+            return;
+        }
+        snapshot = value;
+        loaded = value != null;
+    }
+
+    void replaceFile(Path prepared, Path target) {
+        Path temporary = null;
+        try {
+            Files.createDirectories(target.getParent());
+            temporary = Files.createTempFile(target.getParent(), ".fibra-config-", ".tmp");
+            try (var input = FileChannel.open(prepared, StandardOpenOption.READ);
+                 var output = FileChannel.open(temporary, StandardOpenOption.WRITE)) {
+                long position = 0;
+                while (position < input.size()) {
+                    position += input.transferTo(position, input.size() - position, output);
+                }
+                output.force(true);
+            }
+            fileMover.move(temporary, target);
+            temporary = null;
+        } catch (IOException exception) {
+            throw new FibraConfigException(FibraConfigErrorStage.WRITE,
+                "cannot atomically replace config file", target, null, null, exception);
+        } finally {
+            if (temporary != null) {
+                try {
+                    Files.deleteIfExists(temporary);
+                } catch (IOException ignored) {
+                    // 主操作保留可观察失败。
+                }
+            }
+        }
+    }
+
+    private Path createWorkspace(String operation) {
+        try {
+            var parent = configPath.getParent().resolve(".fibra-config-transactions");
+            Files.createDirectories(parent);
+            return Files.createTempDirectory(parent, operation + '-');
+        } catch (IOException exception) {
+            throw new FibraConfigException(FibraConfigErrorStage.WRITE,
+                "cannot create config transaction workspace", configPath, null, null,
+                exception);
         }
     }
 
