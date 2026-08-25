@@ -13,10 +13,6 @@
   <artifactId>fibra-benchmarks</artifactId>
   <description>fibra-core 内核热路径 JMH 性能基准（隔离，不发布，不进可复现构建集）。</description>
 
-  <properties>
-    <jmh.version>1.37</jmh.version>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>com.sstlfsj</groupId>
@@ -25,12 +21,10 @@
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-core</artifactId>
-      <version>${jmh.version}</version>
     </dependency>
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-generator-annprocess</artifactId>
-      <version>${jmh.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>

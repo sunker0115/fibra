@@ -56,7 +56,8 @@ class ReleaseArtifactBaselineTest {
         "fibra-example/fibra-example-spring-host-api",
         "fibra-example/fibra-example-spring-host-plugin",
         "fibra-example/fibra-example-spring-host",
-        "fibra-parity-tests"
+        "fibra-parity-tests",
+        "fibra-benchmarks"
     );
     private static final List<String> EXTERNAL_CONSUMER_MODULES = List.of(
         "core-app",
@@ -108,6 +109,30 @@ class ReleaseArtifactBaselineTest {
             assertFalse("false".equals(property(
                     parseProject(root.resolve(module).resolve("pom.xml")), "maven.deploy.skip")),
                 module + " 不得开启远程发布");
+        }
+    }
+
+    @Test
+    void benchmarkIsBuiltByDefaultButNeverPublished() throws Exception {
+        var root = repositoryRoot();
+        var rootProject = parseProject(root.resolve("pom.xml"));
+        var rootModules = directChild(rootProject, "modules");
+        assertNotNull(rootModules, "Fibra 根 POM 缺少 modules");
+        assertTrue(childTexts(rootModules, "module").contains("fibra-benchmarks"),
+            "benchmark 必须参加默认 reactor");
+        assertFalse(Files.readString(root.resolve("pom.xml"))
+                .contains("<id>benchmarks</id>"),
+            "benchmark 不得保留 profile 第二入口");
+        assertEquals("1.37", property(rootProject, "jmh.version"),
+            "JMH 版本必须由根 properties 统一管理");
+
+        var benchmarkPom = root.resolve("fibra-benchmarks/pom.xml");
+        assertNull(property(parseProject(benchmarkPom), "jmh.version"),
+            "benchmark 模块不得维护第二个 JMH 版本真源");
+        for (var module : RELEASABLE_MODULES) {
+            assertFalse(Files.readString(root.resolve(module).resolve("pom.xml"))
+                    .contains("<artifactId>fibra-benchmarks</artifactId>"),
+                module + " 不得依赖 benchmark");
         }
     }
 

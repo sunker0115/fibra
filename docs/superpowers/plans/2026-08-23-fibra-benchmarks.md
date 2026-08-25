@@ -1,5 +1,7 @@
 # fibra-benchmarks 内核性能基准 Implementation Plan
 
+> 历史实施计划，记录 `0.3.1` 首次引入 benchmark 时的 profile 方案，不再作为当前执行入口。`0.4.0-SNAPSHOT` 起的现行结构与命令只以[当前设计](../specs/2026-08-23-fibra-benchmarks-design.md)和 `fibra-benchmarks/README.md` 为准。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 用 JMH 1.37 为 `fibra-core` 内核热路径（服务解析、事件分发、lifecycle 调度往返）建立可信性能基线，且严格隔离不污染生产制品与可复现构建。

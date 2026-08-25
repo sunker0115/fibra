@@ -29,7 +29,7 @@
 
 - `com.sstlfsj:fibra-plugin-archetype`。
 
-因此是九个运行时制品加一个开发工具制品。根 `fibra`、`fibra-example`、`fibra-parity-tests`、`fibra-benchmarks` 和 `verification` 不远程发布。starter 是无生产 class 的依赖入口；archetype 主 JAR 保存生成模板，不是运行时库。
+因此是九个运行时制品加一个开发工具制品。根 `fibra`、`fibra-example`、`fibra-parity-tests`、`fibra-benchmarks` 和 `verification` 不远程发布。`fibra-benchmarks` 参加默认 reactor，但只用于编译、打包和人工性能测量，不进入发布或可复现构建集合。starter 是无生产 class 的依赖入口；archetype 主 JAR 保存生成模板，不是运行时库。
 
 十个模块都使用 Flatten Maven Plugin 的 `oss` 模式生成自包含 POM。发布 POM 不保留根 parent、`${revision}` 或未展开的内部依赖版本，消费者不需要继承 `com.sstlfsj:fibra` 父 POM。版本仍只在根 `<revision>` 和统一 properties/dependencyManagement 中维护。
 
@@ -50,6 +50,7 @@ Maven Enforcer 检查 Java/Maven 版本、依赖收敛和插件版本。完整 r
 - Engine source、reconcile、deployment、readiness、崩溃恢复和终止关闭；
 - Spring 生命周期、属性、自动配置整体退让和示例黑盒；
 - Maven Archetype 生成、生成项目 `verify`、标准包检查及真实 Engine 装载；
+- JMH 基准代码编译与可运行基准 JAR 打包，但不执行性能测量；
 - 十个发布制品的主 JAR、sources JAR、Javadoc JAR和展开 POM门禁。
 
 starter 与 archetype 没有 Java 公共类时仍附加空 Javadoc JAR，以保持仓库发布附件集合一致；发布门禁同时确认 starter 没有 `.class`，并确认 archetype 包含 `META-INF/maven/archetype-metadata.xml`。

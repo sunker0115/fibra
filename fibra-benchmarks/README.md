@@ -1,11 +1,11 @@
 # fibra-benchmarks
 
-fibra-core 内核热路径 JMH 性能基准。本模块严格隔离：不发布、不进可复现构建集、不被任何生产模块依赖，仅通过根 pom 的 `benchmarks` profile 进入 reactor。
+fibra-core 内核热路径 JMH 性能基准。本模块参加默认 reactor，确保每次完整构建都能发现基准代码与内核 API 的漂移；它仍严格隔离：不发布、不进可复现发布集、不被任何生产模块依赖。默认 Maven 生命周期只编译并打包基准，不执行 JMH 测量。
 
 ## 构建
 
 ```bash
-mvn -Pbenchmarks -pl fibra-benchmarks -am -DskipTests clean package
+mvn -pl fibra-benchmarks -am -DskipTests clean package
 ```
 
 ## 运行
@@ -45,4 +45,3 @@ java -jar fibra-benchmarks/target/fibra-benchmarks.jar ServiceResolution -rf jso
 - 同线程直调 `resolveInside` 仅 ~80ns，比跨线程快约 47 倍；
 - 事件分发 hook 数量影响微小（每 hook ~10ns），64 hook 仅比 1 hook 慢 ~15%；
 - 结论：调度边界是「每次跨线程调用的固定税」，非随负载增长的瓶颈。优化方向（若将来需要）是减少跨线程往返次数，而非改业务逻辑。
-

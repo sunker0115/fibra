@@ -4,6 +4,12 @@
 
 内核 `fibra-api`/`fibra-core` 的公开 API 由 `ApiSignatureBaselineTest` 与六份 `javap` 基线冻结；标注「内核语义无变化」表示这些基线未变。
 
+## [未发布]
+
+### 变更
+
+- `fibra-benchmarks` 从可选 `benchmarks` profile 移入默认 reactor，使完整构建持续校验基准源码；它仍不发布、不进入可复现发布集，普通 Maven 构建也不执行 JMH 测量。
+
 ## [0.3.1] - 2026-08-24
 
 本版新增「可选 Spring Boot 宿主接入」落地路径，并用 JMH 基准把内核性能从经验判断变为可复现数据。内核语义无变化，全部增量位于外围（可选适配制品 + 基准模块）。
