@@ -53,7 +53,7 @@ Maven Enforcer 检查 Java/Maven 版本、依赖收敛和插件版本。完整 r
 - JMH 基准代码编译与可运行基准 JAR 打包，但不执行性能测量；
 - 十个发布制品的主 JAR、sources JAR、Javadoc JAR和展开 POM门禁。
 
-starter 与 archetype 没有 Java 公共类时仍附加空 Javadoc JAR，以保持仓库发布附件集合一致；发布门禁同时确认 starter 没有 `.class`，并确认 archetype 包含 `META-INF/maven/archetype-metadata.xml`。
+无源码 starter 仍附加空 sources/Javadoc JAR，archetype 没有 Java 公共类时仍附加空 Javadoc JAR，以保持仓库发布附件集合一致；发布门禁同时确认 starter 没有 `.class`，并确认 archetype 包含 `META-INF/maven/archetype-metadata.xml`。
 
 ## 可复现构建
 

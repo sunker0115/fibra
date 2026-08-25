@@ -37,7 +37,7 @@ PF4J 只管理制品发现、依赖图和 ClassLoader；Fibra 管理业务插件
 - `fibra-spring-boot-starter`：无生产代码的推荐依赖入口；
 - `fibra-plugin-archetype`：生成独立插件项目的 Maven Archetype。
 
-`fibra-example`、`fibra-parity-tests`、`fibra-benchmarks` 和 `verification` 只用于示例或验收，不远程发布。`fibra-benchmarks` 参加默认 reactor 以防基准代码腐化，但普通构建只编译和打包，不执行 JMH 测量。六个框架中立运行时制品不依赖 Spring；Spring、Spring Shell、Spring AI、Web、Hasor 和 Solon 都不进入内核。
+`fibra-example`、`fibra-parity-tests`、`fibra-benchmarks` 和 `verification` 只用于示例或验收，不远程发布。`fibra-benchmarks` 参加默认 reactor 以防基准代码腐化，但普通构建只编译和打包，不执行 JMH 测量。无源码 starter 仍按发布基线生成空 sources/Javadoc JAR。六个框架中立运行时制品不依赖 Spring；Spring、Spring Shell、Spring AI、Web、Hasor 和 Solon 都不进入内核。
 
 ## 构建与验收
 

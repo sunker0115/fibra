@@ -9,6 +9,7 @@
 ### 变更
 
 - `fibra-benchmarks` 从可选 `benchmarks` profile 移入默认 reactor，使完整构建持续校验基准源码；它仍不发布、不进入可复现发布集，普通 Maven 构建也不执行 JMH 测量。
+- 无源码 `fibra-spring-boot-starter` 使用 Maven Source Plugin 原生生成空 sources JAR，补齐每个发布制品固定的主 JAR、sources JAR、Javadoc JAR 和 POM 附件集合。
 
 ## [0.3.1] - 2026-08-24
 
