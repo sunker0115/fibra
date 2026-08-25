@@ -304,7 +304,7 @@ patch 跳过使用 `FibraConfigWarning`；文件刷新失败使用调用方显�
 9. 标准包批量更新恢复受影响制品的全部 entry，插件私有 typed config 切换到新 ClassLoader，并与配置 refresh 不交叉。
 10. 真实 contract/provider/consumer ZIP 的多实例、依赖 ClassLoader、配置更新和失败恢复黑盒测试。
 
-远程发布面从四个扩展为五个正式制品：`fibra-api`、`fibra-core`、`fibra-pf4j-api`、`fibra-loader-pf4j`、`fibra-loader-config`。必须同步根 POM、dependencyManagement、发布基线、五份 `javap` API 基线、可复现脚本、仓库外消费脚本、README、发布文档和第三方依赖声明。仓库外验收必须由独立 host 通过 Maven 坐标读取真实 YAML、创建同制品多 entry，并验证更新与回滚；仓内 parser 单测不能代替该门禁。
+远程发布面从四个扩展为五个正式制品：`fibra-api`、`fibra-core`、`fibra-pf4j-api`、`fibra-loader-pf4j`、`fibra-loader-config`。必须同步根 POM、dependencyManagement、发布基线、五份 `javap` API 基线、可复现脚本、仓库外消费脚本、README、发布文档和第三方依赖声明。仓库外验收必须由独立 Engine application 通过 Maven 坐标读取真实 YAML、创建同制品多 entry，并验证更新与回滚；仓内 parser 单测不能代替该门禁。
 
 ## 13. 明确非目标
 

@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.sstlfsj</groupId>
+    <artifactId>fibra</artifactId>
+    <version>${revision}</version>
+    <relativePath>../../../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>fibra-example-spring-boot-application</artifactId>
+  <description>用 fibra-spring-boot-starter 演示 deployment 上传、联合提交和 URL 调用的 Spring Boot Web application。</description>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring-boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <!-- Fibra 侧使用的 Reactor 版本优先于 Spring BOM，保证与内核制品一致。 -->
+      <dependency>
+        <groupId>io.projectreactor</groupId>
+        <artifactId>reactor-core</artifactId>
+        <version>${reactor.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-spring-boot-starter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-example-spring-boot-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <!-- 仅用于把插件 ZIP 拉进 reactor 构建顺序并复制到 target；不进测试类路径。 -->
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-example-spring-boot-plugin</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- Spring Boot 4 将 TestRestTemplate 拆到独立模块，starter-test 不再引入。 -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-resttestclient</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- TestRestTemplate 依赖 RestTemplateBuilder（Boot 4 拆入 spring-boot-restclient）。 -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-restclient</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>fibra-example-spring-boot-application</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-spring-boot-example-plugin-artifacts</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}/plugin-artifacts</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${maven.multiModuleProjectDirectory}/fibra-example/spring-boot/provider-plugin/target</directory>
+                  <includes><include>fibra-example-spring-boot-provider-*.zip</include></includes>
+                  <filtering>false</filtering>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <configuration>
+          <classpathDependencyExcludes>
+            <classpathDependencyExclude>com.sstlfsj:fibra-example-spring-boot-plugin</classpathDependencyExclude>
+          </classpathDependencyExcludes>
+          <systemPropertyVariables>
+            <fibra.example.springboot.artifacts>${project.build.directory}/plugin-artifacts</fibra.example.springboot.artifacts>
+          </systemPropertyVariables>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

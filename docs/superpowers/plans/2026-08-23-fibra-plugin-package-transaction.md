@@ -187,29 +187,29 @@ mvn -pl fibra-loader-pf4j,fibra-loader-config -am -Dtest=FibraPluginWatcherTest,
 
 仓内模块与构建修改：
 
-- 根 `pom.xml` 新增非发布模块 `fibra-example-contract-plugin`，放在 provider/consumer 之前；增加 contract/provider/consumer 示例版本 properties。
-- 新增 `fibra-example-contract-plugin/pom.xml`、`src/main/java/example/fibra/contract/Greeting.java`、`src/main/plugin/plugin.properties`，无扩展索引，生成 contract-only 标准 ZIP。
+- 根 `pom.xml` 新增非发布模块 `fibra-example/engine/contract-plugin`，放在 provider/consumer 之前；增加 contract/provider/consumer 示例版本 properties。
+- 新增 `fibra-example/engine/contract-plugin/pom.xml`、`src/main/java/example/fibra/contract/Greeting.java`、`src/main/plugin/plugin.properties`，无扩展索引，生成 contract-only 标准 ZIP。
 - 修改 provider：删除 `example.fibra.provider.api.Greeting`；以 `provided` 依赖 contract 模块；properties 声明 contract 版本范围；生成 v1/v2/broken 标准 ZIP。
 - 修改 consumer：只以 `provided` 依赖 contract，不再依赖 provider JAR；properties 只声明 contract 二进制依赖，Fibra 配置继续声明运行时 provider 服务依赖。
 - 新增共享 `build/plugin-package-assembly.xml`；主包使用 Maven Assembly Plugin 把 `plugin.properties`、主 JAR和非 provided 私有依赖放入唯一顶层 `<plugin-id>/lib/`。provider 的 v2/broken 分类包使用模块内显式 assembly descriptor，不写 Java 打包器。
-- 修改 `fibra-example-host/pom.xml`、`FibraExampleHost.java`、`FibraExampleHostIT.java`、配置和 README：Host/Failsafe classpath 排除三个插件类型，只复制 ZIP，覆盖多 entry、等待服务、批量升级和失败恢复。
+- 修改 `fibra-example/engine/application/pom.xml`、`FibraEngineExampleApplication.java`、`FibraEngineExampleApplicationIT.java`、配置和 README：application/Failsafe classpath 排除三个插件类型，只复制 ZIP，覆盖多 entry、等待服务、批量升级和失败恢复。
 
 仓库外工程修改：
 
-- 新增 `verification/external-consumer/contract-plugin`，把 `Greeting` 从 provider 移入 contract-only 模块；根 POM 模块顺序改为 `core-app, contract-plugin, provider-plugin, consumer-plugin, host`。
-- provider/consumer 都以 `provided` 依赖 contract；Host classpath 不含 contract/provider/consumer 类型。
+- 新增 `verification/distribution/contract-plugin`，把 `Greeting` 从 provider 移入 contract-only 模块；当前根 POM 模块固定为 `core-application, contract-plugin, provider-plugin, consumer-plugin, engine-application, spring-boot-application`。
+- provider/consumer 都以 `provided` 依赖 contract；Engine application classpath 不含 contract/provider/consumer 类型。
 - 外部插件均生成标准 ZIP；至少一个 executable 在 `lib/` 携带私有依赖，并验证另一个插件不可见。
-- 把该独立工程从“仅脚本可用的版本哨兵夹具”收敛为唯一用户插件工程模板：给出可直接构建的默认版本和 `mvn verify`，README 分别说明最小 executable、可选 contract/consumer 与开发 Host；不另建 Maven Archetype 或第二份模板。
-- 修改 `scripts/verify-external-consumer.sh`：检查 ZIP 单顶层目录、properties、固定主 JAR、contract 类型只在 contract 包、Host 无插件类型，并从 ZIP 安装目录启动真实 Host。
+- 该独立工程只承担分发黑盒，不是用户模板；用户创建插件工程的唯一入口是 `fibra-plugin-archetype`。
+- 修改 `scripts/verify-distribution.sh`：检查 ZIP 单顶层目录、properties、固定主 JAR、contract 类型只在 contract 包、application 无插件类型，并从 ZIP 安装目录启动真实 Engine application。
 
 验证：
 
 ```bash
-mvn -pl fibra-example-host -am verify
-bash scripts/verify-external-consumer.sh
+mvn -pl fibra-example/engine/application -am verify
+bash scripts/verify-distribution.sh
 ```
 
-成功标准：Host classpath 不含任何插件/contract 类；provider 与 consumer 从同一个 contract ClassLoader 得到同一接口；私有依赖隔离；多包更新必须由一次显式批量 apply 完成；用户按模板 README 可在独立目录执行一次 `mvn verify` 产出标准 ZIP，黑盒脚本构建的就是同一份模板。
+成功标准：application classpath 不含任何插件/contract 类；provider 与 consumer 从同一个 contract ClassLoader 得到同一接口；私有依赖隔离；多包更新必须由一次显式批量 apply 完成；archetype 生成项目可独立执行 `mvn verify`，且 distribution fixture 与用户模板保持独立。
 
 提交边界：`test: verify standard plugin packages end to end`
 
@@ -229,7 +229,7 @@ bash scripts/verify-external-consumer.sh
 
 ```bash
 mvn clean verify
-bash scripts/verify-external-consumer.sh
+bash scripts/verify-distribution.sh
 bash scripts/verify-reproducible-release.sh
 openspec validate standardize-plugin-packages --strict
 git diff --check

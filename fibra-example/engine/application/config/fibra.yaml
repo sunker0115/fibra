@@ -1,0 +1,11 @@
+- id: fibra-example-engine-consumer
+  name: fibra-example-engine-consumer
+  inject: [example.provider.greeting]
+  isolate:
+    example.provider.greeting: example
+- id: fibra-example-engine-provider
+  name: fibra-example-engine-provider
+  config:
+    prefix: provider
+  isolate:
+    example.provider.greeting: example

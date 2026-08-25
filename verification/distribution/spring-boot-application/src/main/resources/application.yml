@@ -1,0 +1,11 @@
+spring:
+  main:
+    web-application-type: none
+
+fibra:
+  artifacts:
+    watch:
+      enabled: false
+  config:
+    watch:
+      enabled: false

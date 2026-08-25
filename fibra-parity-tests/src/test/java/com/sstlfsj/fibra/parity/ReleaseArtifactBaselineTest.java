@@ -49,22 +49,23 @@ class ReleaseArtifactBaselineTest {
             TEMPLATE_MODULES.stream()
         ).toList();
     private static final List<String> VERIFICATION_MODULES = List.of(
-        "fibra-example/fibra-example-contract-plugin",
-        "fibra-example/fibra-example-provider-plugin",
-        "fibra-example/fibra-example-consumer-plugin",
-        "fibra-example/fibra-example-host",
-        "fibra-example/fibra-example-spring-host-api",
-        "fibra-example/fibra-example-spring-host-plugin",
-        "fibra-example/fibra-example-spring-host",
+        "fibra-example/engine/contract-plugin",
+        "fibra-example/engine/provider-plugin",
+        "fibra-example/engine/consumer-plugin",
+        "fibra-example/engine/application",
+        "fibra-example/spring-boot/application-api",
+        "fibra-example/spring-boot/provider-plugin",
+        "fibra-example/spring-boot/application",
         "fibra-parity-tests",
         "fibra-benchmarks"
     );
-    private static final List<String> EXTERNAL_CONSUMER_MODULES = List.of(
-        "core-app",
+    private static final List<String> DISTRIBUTION_MODULES = List.of(
+        "core-application",
         "contract-plugin",
         "provider-plugin",
         "consumer-plugin",
-        "host"
+        "engine-application",
+        "spring-boot-application"
     );
 
     @Test
@@ -137,26 +138,35 @@ class ReleaseArtifactBaselineTest {
     }
 
     @Test
-    void externalConsumerFixtureIsIndependentFromFibraReactor() throws Exception {
+    void distributionFixtureIsIndependentFromFibraReactor() throws Exception {
         var root = repositoryRoot();
         var rootProject = parseProject(root.resolve("pom.xml"));
         var rootModules = directChild(rootProject, "modules");
         assertNotNull(rootModules, "Fibra 根 POM 缺少 modules");
-        assertFalse(childTexts(rootModules, "module").contains("verification/external-consumer"),
-            "外部消费验收不得加入 Fibra reactor");
+        assertFalse(childTexts(rootModules, "module").contains("verification/distribution"),
+            "分发验收不得加入 Fibra reactor");
+        assertFalse(Files.exists(root.resolve("verification/external-consumer")),
+            "不得保留旧 external-consumer 目录");
+        assertFalse(Files.exists(root.resolve("scripts/verify-external-consumer.sh")),
+            "不得保留旧 external-consumer 脚本");
+        assertTrue(Files.isRegularFile(root.resolve("scripts/verify-distribution.sh")),
+            "缺少分发验收脚本");
 
-        var fixtureDirectory = root.resolve("verification/external-consumer");
+        var fixtureDirectory = root.resolve("verification/distribution");
         var fixturePom = fixtureDirectory.resolve("pom.xml");
-        assertTrue(Files.isRegularFile(fixturePom), "缺少独立外部消费方 POM");
+        assertTrue(Files.isRegularFile(fixturePom), "缺少独立分发验收 POM");
 
         var fixtureProject = parseProject(fixturePom);
         assertNull(directChild(fixtureProject, "parent"),
-            "外部消费方根 POM 不得继承 Fibra parent");
+            "分发验收根 POM 不得继承 Fibra parent");
+        assertEquals("fibra-distribution-verification",
+            directChildText(fixtureProject, "artifactId"),
+            "分发验收必须使用明确的独立 artifactId");
         var fixtureModules = directChild(fixtureProject, "modules");
-        assertNotNull(fixtureModules, "外部消费方根 POM 缺少 modules");
-        assertEquals(EXTERNAL_CONSUMER_MODULES,
+        assertNotNull(fixtureModules, "分发验收根 POM 缺少 modules");
+        assertEquals(DISTRIBUTION_MODULES,
             childTexts(fixtureModules, "module"),
-            "外部消费方必须分别验证内核、contract、provider、consumer 和宿主装载");
+            "分发验收必须覆盖 core、插件图、Engine 和 Spring Boot 应用");
 
         var fixtureContent = Files.readString(fixturePom);
         assertFalse(fixtureContent.contains("${revision}"),
@@ -166,11 +176,11 @@ class ReleaseArtifactBaselineTest {
         assertFalse(fixtureContent.contains("systemPath"),
             "外部消费方不得通过 systemPath 引用本地文件");
 
-        for (var module : EXTERNAL_CONSUMER_MODULES) {
+        for (var module : DISTRIBUTION_MODULES) {
             var moduleProject = parseProject(fixtureDirectory.resolve(module).resolve("pom.xml"));
             var parent = directChild(moduleProject, "parent");
-            assertNotNull(parent, module + " 缺少独立消费方 parent");
-            assertEquals("external-consumer", directChildText(parent, "artifactId"),
+            assertNotNull(parent, module + " 缺少独立分发验收 parent");
+            assertEquals("fibra-distribution-verification", directChildText(parent, "artifactId"),
                 module + " 不得继承 Fibra parent");
         }
 
@@ -178,7 +188,7 @@ class ReleaseArtifactBaselineTest {
             dependencies(fixtureDirectory.resolve("contract-plugin").resolve("pom.xml")),
             "contract 只能通过 provided scope 使用 Fibra API");
         assertEquals(List.of(
-                "external-contract-plugin:provided",
+                "fibra-distribution-contract-plugin:provided",
                 "fibra-pf4j-api:provided",
                 "pf4j:provided",
                 "commons-text:compile"
@@ -186,15 +196,21 @@ class ReleaseArtifactBaselineTest {
             dependencies(fixtureDirectory.resolve("provider-plugin").resolve("pom.xml")),
             "provider 必须依赖 contract，并只把 Commons Text 作为私有运行时依赖");
         assertEquals(List.of(
-                "external-contract-plugin:provided",
+                "fibra-distribution-contract-plugin:provided",
                 "fibra-pf4j-api:provided",
                 "pf4j:provided"
             ),
             dependencies(fixtureDirectory.resolve("consumer-plugin").resolve("pom.xml")),
             "consumer 必须以 provided scope 使用 contract、Fibra PF4J API 和 PF4J");
         assertEquals(List.of("fibra-engine:compile", "slf4j-simple:runtime"),
-            dependencies(fixtureDirectory.resolve("host").resolve("pom.xml")),
-            "Host 不得声明 provider 或 consumer Maven 依赖");
+            dependencies(fixtureDirectory.resolve("engine-application").resolve("pom.xml")),
+            "Engine application 不得声明 provider 或 consumer Maven 依赖");
+        assertEquals(List.of(
+                "fibra-spring-boot-starter:compile",
+                "spring-boot-starter:compile"
+            ),
+            dependencies(fixtureDirectory.resolve("spring-boot-application").resolve("pom.xml")),
+            "Spring Boot application 只能直接依赖 starter 与 Boot 应用入口");
     }
 
     private static void assertNoClasses(Path jarPath) throws Exception {

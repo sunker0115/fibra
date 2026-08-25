@@ -127,7 +127,7 @@ java -jar fibra-benchmarks/target/fibra-benchmarks.jar ServiceResolution -rf jso
 3. `BenchmarkFixtures`（契约常量）；
 4. 三个 Benchmark 类；
 5. `simplelogger.properties` + `README.md`；
-6. 隔离验证：`mvn clean verify` 必须包含 benchmark；`bash scripts/verify-reproducible-release.sh` 和 `bash scripts/verify-external-consumer.sh` 的发布/消费模块集保持不变；再执行 benchmark 冒烟运行确认 JMH 元数据有效。
+6. 隔离验证：`mvn clean verify` 必须包含 benchmark；`bash scripts/verify-reproducible-release.sh` 和 `bash scripts/verify-distribution.sh` 的发布/消费模块集保持不变；再执行 benchmark 冒烟运行确认 JMH 元数据有效。
 
 ## 8. 风险点
 

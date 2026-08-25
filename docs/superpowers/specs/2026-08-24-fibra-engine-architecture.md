@@ -208,7 +208,7 @@ generated-plugin/
 
 生成项目必须直接执行 `mvn verify`，产出标准 plugin ZIP 和包含该插件的 deployment ZIP。模板使用 Maven Assembly，不手写 ZIP组件；依赖版本集中在生成项目根 properties/dependencyManagement，内部模块使用 `${project.version}`。
 
-archetype 自身使用 Maven 官方 `archetype:integration-test` 在构建期生成并验证项目；随后同一模块的 Failsafe 集成测试由真实 `fibra-engine` 装载生成的 deployment。仓库外消费脚本另行验证十个发布制品和六个框架中立制品的独立坐标消费，不重复实现 archetype 生成流程。
+archetype 自身使用 Maven 官方 `archetype:integration-test` 在构建期生成并验证项目；随后同一模块的 Failsafe 集成测试由真实 `fibra-engine` 装载生成的 deployment。仓库外分发脚本另行验证十个发布制品、九个运行时制品以及 archetype 生成项目的独立坐标消费；仓外 archetype smoke 不复制模块内的细节断言。
 
 ## 8. 测试与发布
 
@@ -217,7 +217,7 @@ archetype 自身使用 Maven 官方 `archetype:integration-test` 在构建期生
 - engine 覆盖事件去重、执行期 dirty、resync、失败退避、联合事务、readiness、关闭和 ClassLoader 回收；
 - Spring 只验证委托、属性、自动配置和所有权；
 - 纯 Java example 改用 `FibraEngine`，Spring example 只引入 starter；
-- external consumer 验证 core、插件、engine 和 Spring Boot 四种外部消费边界；
+- `verification/distribution` 验证 core、插件图、engine、Spring Boot 和 archetype 五种外部消费边界；目录职责与完整断言以[示例与分发验收设计](2026-08-25-fibra-examples-and-distribution-verification-design.md)为准；
 - 十个可发布制品生成主制品、发布 POM及项目要求的辅助制品，并进入可复现构建；
 - archetype 生成项目不得引用 reactor、`${revision}`、`target/classes` 或 Fibra 父 POM。
 

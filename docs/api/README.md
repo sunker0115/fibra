@@ -288,6 +288,8 @@ Engine 独占 root、两个 loader、两个可选 source、协调线程和 journ
 
 生成项目直接执行 `mvn verify`。共享 Fibra、PF4J、Reactor 和 contract 依赖使用 `provided`，不复制进插件私有 `lib/`；`Plugin-Class` 始终禁止。当前仓库的 archetype 集成测试会生成该项目、构建全部产物，再由真实 `FibraEngine` 安装并激活 deployment。
 
+仓库内的 `fibra-example` 只保存 Engine 与 Spring Boot 可运行场景，不是模板副本；`verification/distribution` 只做仓库外发布坐标黑盒。三者的唯一职责边界见[示例与分发验收设计](../superpowers/specs/2026-08-25-fibra-examples-and-distribution-verification-design.md)。
+
 ## 9. 稳定错误
 
 参数为空、名称空白、类型不匹配等调用错误使用 `IllegalArgumentException`。运行时状态错误使用 `FibraException`，通过 `code()` 判断：

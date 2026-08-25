@@ -17,12 +17,12 @@
   <description>示例聚合模块；仅聚合，不做父 POM，示例仍继承根 com.sstlfsj:fibra。所有示例跳过远程发布。</description>
 
   <modules>
-    <module>fibra-example-contract-plugin</module>
-    <module>fibra-example-provider-plugin</module>
-    <module>fibra-example-consumer-plugin</module>
-    <module>fibra-example-host</module>
-    <module>fibra-example-spring-host-api</module>
-    <module>fibra-example-spring-host-plugin</module>
-    <module>fibra-example-spring-host</module>
+    <module>engine/contract-plugin</module>
+    <module>engine/provider-plugin</module>
+    <module>engine/consumer-plugin</module>
+    <module>engine/application</module>
+    <module>spring-boot/application-api</module>
+    <module>spring-boot/provider-plugin</module>
+    <module>spring-boot/application</module>
   </modules>
 </project>

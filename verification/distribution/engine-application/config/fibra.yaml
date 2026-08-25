@@ -1,0 +1,20 @@
+- id: consumer-one
+  name: fibra-distribution-consumer
+  inject: [verification.distribution.provider.greeting]
+  isolate:
+    verification.distribution.provider.greeting: one
+- id: provider-one
+  name: fibra-distribution-provider
+  isolate:
+    verification.distribution.provider.greeting: one
+  config: provider-one
+- id: consumer-two
+  name: fibra-distribution-consumer
+  inject: [verification.distribution.provider.greeting]
+  isolate:
+    verification.distribution.provider.greeting: two
+- id: provider-two
+  name: fibra-distribution-provider
+  isolate:
+    verification.distribution.provider.greeting: two
+  config: provider-two

@@ -59,7 +59,7 @@
 
 1. 生成并审查 `fibra-loader-config` public/protected `javap` 基线，更新其余破坏性 API 基线。
 2. 把发布门禁和脚本从四个生产制品改为五个。
-3. 将仓库外 host 改为真实 YAML、多 entry、配置更新/回滚验收；host 仍不把插件放入 classpath。
+3. 将仓库外 Engine application 改为真实 YAML、多 entry、配置更新/回滚验收；application 仍不把插件放入 classpath。
 4. 更新 README、API 文档、发布说明、开源基线和已有 PF4J 架构文档，删除“一制品一 Fibra”等废弃描述。
 5. 执行 `mvn clean verify`、仓库外消费和逐字节可复现门禁；完成独立代码审查后再进入 `0.2.0` 发布判断。
 

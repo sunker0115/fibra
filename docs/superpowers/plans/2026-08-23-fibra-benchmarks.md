@@ -536,7 +536,7 @@ Expected: 脚本通过（5 个生产制品逐字节比对一致）
 
 - [ ] **Step 3: 仓库外消费门禁不受影响**
 
-Run: `bash scripts/verify-external-consumer.sh`
+Run: `bash scripts/verify-distribution.sh`
 Expected: 脚本通过（临时仓库恰好 5 个生产制品）
 
 - [ ] **Step 4: 基准可独立编译打包**

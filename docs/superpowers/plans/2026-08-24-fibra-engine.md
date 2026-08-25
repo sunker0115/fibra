@@ -14,7 +14,7 @@
 - 🟢 `fibra-loader-pf4j/src/main/java/com/sstlfsj/fibra/loader/pf4j/FibraPluginWatcher.java:27`、`fibra-loader-config/src/main/java/com/sstlfsj/fibra/loader/config/FibraConfigWatcher.java:24`：两个 watcher 是必须迁出并删除的旧公共 API，不保留 deprecated、转发或双路径。
 - 🟢 `fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/ReleaseArtifactBaselineTest.java:21-151`：发布制品、外部消费方模块及依赖边界已有自动门禁，必须与共享符号同一任务更新。
 - 🟢 实施起点的可复现构建脚本固定六个制品；engine change 先扩为七个，Spring 与 archetype change 完成后统一扩为十个。
-- 🟢 `verification/external-consumer/pom.xml`：仓库外工程不在 Fibra reactor 内，host 当前直接消费 config loader；本 change 将它改为消费 engine。
+- 🟢 `verification/distribution/pom.xml`：仓库外工程不在 Fibra reactor 内，Engine application 当前直接消费 config loader；本 change 将它改为消费 engine。
 
 执行规则：
 
@@ -32,7 +32,7 @@
 
 先修改测试：
 
-- 修改 🟢 `ReleaseArtifactBaselineTest`：框架中立运行时列表加入 `fibra-engine`，总发布制品仍暂为七个；外部 host 依赖断言留到第 9 项随消费方同一提交修改。
+- 修改 🟢 `ReleaseArtifactBaselineTest`：框架中立运行时列表加入 `fibra-engine`，总发布制品仍暂为七个；外部 Engine application 依赖断言留到第 9 项随消费方同一提交修改。
 - 新增 `fibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineDependencyBoundaryTest.java`：读取 `fibra-engine` 依赖图，断言 compile/runtime 不含 `org.springframework*`、Spring Boot、Spring Shell、Spring AI。
 - 新增 `fibra-engine/src/test/java/com/sstlfsj/fibra/engine/FibraEngineStateTest.java`：锁定 `NEW/STARTING/RUNNING/DEGRADED/STOPPING/TERMINATED` 六个终止性状态，确保首个主 JAR 包含真实公共 API class。
 
@@ -358,29 +358,29 @@ git diff --check
 
 提交边界：`feat: apply deployments as one engine transaction`
 
-## 9. 迁移纯 Java example 与仓库外 host
+## 9. 迁移纯 Java example 与仓库外 application
 
 先改测试：
 
-- 🟢 `fibra-example/fibra-example-host/src/test/java/com/sstlfsj/fibra/example/host/FibraExampleHostIT.java`：不再直接构造 Context/两个 loader；用 engine 执行初载、显式 deployment、失败回滚和关闭。
-- `verification/external-consumer/host` 增加 engine 黑盒断言；根工程仍不继承 Fibra parent、不加入 reactor、不引用 `target/classes`。
-- 🟢 `ReleaseArtifactBaselineTest` 的外部 host 依赖固定为 `fibra-engine:compile` + `slf4j-simple:runtime`，禁止直接依赖两个 loader。
+- 🟢 `fibra-example/engine/application/src/test/java/com/sstlfsj/fibra/example/engine/application/FibraEngineExampleApplicationIT.java`：不再直接构造 Context/两个 loader；用 engine 执行初载、显式 deployment、失败回滚和关闭。
+- `verification/distribution/engine-application` 增加 engine 黑盒断言；根工程仍不继承 Fibra parent、不加入 reactor、不引用 `target/classes`。
+- 🟢 `ReleaseArtifactBaselineTest` 的外部 Engine application 依赖固定为 `fibra-engine:compile` + `slf4j-simple:runtime`，禁止直接依赖两个 loader。
 
 再实现：
 
-- 修改 `fibra-example-host/pom.xml`、`FibraExampleHost.java`、配置、README 和 assembly 输入，改为只使用 `FibraEngine`。
-- 修改 `verification/external-consumer/host/pom.xml`、源码、README 与 `scripts/verify-external-consumer.sh`；外部 host 仅通过 engine 的公开只读视图做断言。
+- 修改 `fibra-example/engine/application/pom.xml`、`FibraEngineExampleApplication.java`、配置、README 和 assembly 输入，改为只使用 `FibraEngine`。
+- 修改 `verification/distribution/engine-application/pom.xml`、源码、README 与 `scripts/verify-distribution.sh`；外部 application 仅通过 engine 的公开只读视图做断言。
 - 示例插件包继续由 Maven Assembly 生成；新增 deployment assembly descriptor，只组合既有插件 ZIP 和配置，不写 Java ZIP 工具。
 
 验证：
 
 ```bash
-$MVN -pl fibra-example-host,fibra-parity-tests -am verify
-bash scripts/verify-external-consumer.sh
+$MVN -pl fibra-example/engine/application,fibra-parity-tests -am verify
+bash scripts/verify-distribution.sh
 git diff --check
 ```
 
-成功标准：纯 Java 宿主和仓库外宿主不再复制 load/watch/readiness/rollback/close 编排；真实多插件 deployment 可成功和回滚。
+成功标准：纯 Java application 和仓库外 application 不再复制 load/watch/readiness/rollback/close 编排；真实多插件 deployment 可成功和回滚。
 
 提交边界：`test: verify Fibra engine outside the reactor`
 
@@ -398,7 +398,7 @@ git diff --check
 
 ```bash
 $MVN clean verify
-bash scripts/verify-external-consumer.sh
+bash scripts/verify-distribution.sh
 bash scripts/verify-reproducible-release.sh
 openspec validate establish-fibra-engine --strict
 git diff --check

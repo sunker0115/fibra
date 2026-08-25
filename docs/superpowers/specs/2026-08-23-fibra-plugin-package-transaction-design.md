@@ -387,19 +387,19 @@ PF4J 二进制依赖和 Fibra 服务依赖继续完全分离：
 
 ## 10. 示例与验收结构
 
-仓内示例改成三类插件包，不按 provider/consumer 目录分类安装：
+仓内 Engine 场景使用三类插件包：
 
 ```text
-fibra-example-contract-plugin  # contract-only，拥有 Greeting 类型
-fibra-example-provider-plugin  # executable，依赖 contract artifact
-fibra-example-consumer-plugin  # executable，依赖 contract artifact；运行时等待 provider 服务
+fibra-example/engine/contract-plugin  # contract-only，拥有 Greeting 类型
+fibra-example/engine/provider-plugin  # executable，依赖 contract artifact
+fibra-example/engine/consumer-plugin  # executable，依赖 contract artifact；运行时等待 provider 服务
 ```
 
 provider 与 consumer 都依赖 contract，但 consumer 不因为使用服务而形成对 provider 的二进制依赖。这一结构用于证明 PF4J 图与 Fibra 服务图没有被混为一体。provider/consumer 仍只是示例中的业务角色，不是通用插件类别。
 
-仓库外验证同步增加 contract-only 模块，并生成真实 ZIP：Host classpath 不包含任何插件或 contract 类型，只从插件目录加载；同一 provider 多 entry、consumer 服务等待、私有依赖隔离、版本范围、批量升级和失败恢复都必须由独立进程黑盒验证。
+仓库外 `verification/distribution` 生成真实 ZIP：Engine application classpath 不包含任何插件或 contract 类型，只从插件目录加载；同一 provider 多 entry、consumer 服务等待、私有依赖隔离、版本范围、批量升级和失败恢复都必须由独立进程黑盒验证。
 
-`verification/external-consumer` 同时是唯一用户插件工程模板和黑盒验收输入，不再维护第二份会漂移的脚手架。`0.3.0` 收口时它必须具备可直接执行的默认版本与 `mvn verify` 路径，产出 contract-only、executable 和多依赖示例的标准 ZIP；README 必须区分最小插件必需模块、可选 contract/consumer 和仅用于本地验证的 Host。验收脚本在复制后的工程上覆盖 Fibra 版本与临时仓库地址，不修改模板源文件。该工程始终不加入 Fibra reactor、不继承 Fibra parent，也不使用 Fibra 工作树 classpath；当前开发期不可解析版本哨兵必须在模板验收阶段删除。
+用户模板与黑盒 fixture 严格分离：`fibra-plugin-archetype` 是创建用户插件工程的唯一模板，`verification/distribution` 只证明发布制品可在 reactor 外消费。最终目录、Spring Boot 与 archetype 仓外门禁以[示例与分发验收设计](2026-08-25-fibra-examples-and-distribution-verification-design.md)为准。
 
 ## 11. 验收不变量
 

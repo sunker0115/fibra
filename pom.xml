@@ -52,13 +52,13 @@
     <commons-io.version>2.20.0</commons-io.version>
     <commons-lang3.version>3.18.0</commons-lang3.version>
     <jackson.version>3.1.5</jackson.version>
-    <fibra-example-provider-v1.version>1.0.0</fibra-example-provider-v1.version>
-    <fibra-example-provider-v2.version>2.0.0</fibra-example-provider-v2.version>
-    <fibra-example-provider-broken.version>3.0.0</fibra-example-provider-broken.version>
-    <fibra-example-contract-v1.version>1.0.0</fibra-example-contract-v1.version>
-    <fibra-example-contract-v2.version>2.0.0</fibra-example-contract-v2.version>
-    <fibra-example-consumer-v1.version>1.0.0</fibra-example-consumer-v1.version>
-    <fibra-example-consumer-v2.version>2.0.0</fibra-example-consumer-v2.version>
+    <fibra-example-engine-provider-v1.version>1.0.0</fibra-example-engine-provider-v1.version>
+    <fibra-example-engine-provider-v2.version>2.0.0</fibra-example-engine-provider-v2.version>
+    <fibra-example-engine-provider-broken.version>3.0.0</fibra-example-engine-provider-broken.version>
+    <fibra-example-engine-contract-v1.version>1.0.0</fibra-example-engine-contract-v1.version>
+    <fibra-example-engine-contract-v2.version>2.0.0</fibra-example-engine-contract-v2.version>
+    <fibra-example-engine-consumer-v1.version>1.0.0</fibra-example-engine-consumer-v1.version>
+    <fibra-example-engine-consumer-v2.version>2.0.0</fibra-example-engine-consumer-v2.version>
     <flatten-maven-plugin.version>1.7.0</flatten-maven-plugin.version>
     <maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
     <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
@@ -160,7 +160,7 @@
       <!-- 内部模块统一使用当前 reactor 版本，子模块引用时不声明版本。 -->
       <dependency>
         <groupId>com.sstlfsj</groupId>
-        <artifactId>fibra-example-contract-plugin</artifactId>
+        <artifactId>fibra-example-engine-contract-plugin</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -215,12 +215,22 @@
       </dependency>
       <dependency>
         <groupId>com.sstlfsj</groupId>
-        <artifactId>fibra-example-provider-plugin</artifactId>
+        <artifactId>fibra-example-engine-provider-plugin</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>com.sstlfsj</groupId>
-        <artifactId>fibra-example-consumer-plugin</artifactId>
+        <artifactId>fibra-example-engine-consumer-plugin</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-example-spring-boot-api</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-example-spring-boot-plugin</artifactId>
         <version>${project.version}</version>
       </dependency>
     </dependencies>

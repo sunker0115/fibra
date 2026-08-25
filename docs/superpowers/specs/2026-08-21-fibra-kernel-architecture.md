@@ -181,5 +181,5 @@ SLF4J 是最终日志 backend，不替代 Cordis LoggerService 的可观测语�
 - 单元测试覆盖 effect 四态、两层错误边界、revoke 完成边界、isolate 共享 label、事件五模式、Fibra 三组 inertia 翻转。
 - 端到端测试覆盖 provider → consumer 激活 → 服务替换/撤销 → consumer unload/reload → parent dispose。
 - `mvn verify` 是交付门槛；禁止使用跳过测试、固定 sleep 或 fire-and-forget 来隐藏未完成生命周期。
-- 远程发布包含 [`docs/release.md`](../../release.md) 定义的九个运行时制品和一个插件开发工具制品；每个模块必须同时生成主 JAR、sources JAR、Javadoc JAR 和自包含 POM。根、examples、host、parity、benchmarks 与 verification 必须跳过 deploy。
+- 远程发布包含 [`docs/release.md`](../../release.md) 定义的九个运行时制品和一个插件开发工具制品；每个模块必须同时生成主 JAR、sources JAR、Javadoc JAR 和自包含 POM。根、examples、parity、benchmarks 与 verification 必须跳过 deploy。
 - Java 21、Maven 3.9.9、依赖收敛和 Maven 插件显式版本由 Enforcer 强制；十个发布制品的两次干净构建必须逐字节一致。

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.sstlfsj</groupId>
+    <artifactId>fibra</artifactId>
+    <version>${revision}</version>
+    <relativePath>../../../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>fibra-example-engine-contract-plugin</artifactId>
+  <description>不含业务入口的 Fibra contract-only 标准插件包示例。</description>
+
+  <properties>
+    <plugin.id>fibra-example-engine-contract</plugin.id>
+    <plugin.version>${fibra-example-engine-contract-v1.version}</plugin.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>fibra-example-engine-contract-plugin</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <proc>none</proc>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration><attach>false</attach></configuration>
+        <executions>
+          <execution>
+            <id>v1-package</id>
+            <phase>package</phase>
+            <goals><goal>single</goal></goals>
+            <configuration>
+              <descriptors>
+                <descriptor>${maven.multiModuleProjectDirectory}/build/plugin-package-assembly.xml</descriptor>
+              </descriptors>
+              <finalName>${plugin.id}-${plugin.version}</finalName>
+              <appendAssemblyId>false</appendAssemblyId>
+            </configuration>
+          </execution>
+          <execution>
+            <id>v2-package</id>
+            <phase>package</phase>
+            <goals><goal>single</goal></goals>
+            <configuration>
+              <descriptors>
+                <descriptor>src/assembly/plugin-v2.xml</descriptor>
+              </descriptors>
+              <finalName>${plugin.id}-${fibra-example-engine-contract-v2.version}</finalName>
+              <appendAssemblyId>false</appendAssemblyId>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>v2-jar</id>
+            <phase>prepare-package</phase>
+            <goals><goal>jar</goal></goals>
+            <configuration><classifier>v2</classifier></configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

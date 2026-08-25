@@ -68,19 +68,20 @@ scripts/verify-reproducible-release.sh
 ## 仓库外消费验收
 
 ```bash
-scripts/verify-external-consumer.sh
+scripts/verify-distribution.sh
 ```
 
 脚本使用独立临时 Maven 本地仓库完成以下边界：
 
 1. 把十个发布制品 deploy 到临时文件仓库，并检查每个制品恰好具有 POM、主 JAR、sources JAR 和 Javadoc JAR；
-2. 复制 `verification/external-consumer` 到仓库外临时目录，拒绝符号链接、Fibra 仓库绝对路径、reactor `target/classes` 和 `systemPath`；
-3. 独立项目只从临时仓库解析它实际使用的六个框架中立制品，并核对 Maven 来源记录和制品字节；
-4. 构建 `core-app`、contract/provider/consumer 标准插件包和只依赖 `fibra-engine` 的 Host；
-5. 检查 contract 类型唯一、provider 私有依赖隔离、`Plugin-Class` 禁止、Host 不含插件或 contract 类型；
-6. 以独立 `java -jar` 进程验证真实 YAML、多个 entry、等待依赖、isolate、配置更新回滚和三包关联升级。
+2. 复制 `verification/distribution` 到仓库外临时目录，拒绝符号链接、Fibra 仓库绝对路径、reactor `target/classes` 和 `systemPath`；
+3. 独立工程从临时仓库解析它实际使用的九个运行时制品，并核对 Maven 来源记录和制品字节；
+4. 构建并运行 `core-application`、contract/provider/consumer 标准插件包、只依赖 `fibra-engine` 的 `engine-application`，以及只直接依赖 starter 与 Spring Boot 的非 Web application；
+5. 检查 contract 类型唯一、provider 私有依赖隔离、`Plugin-Class` 禁止、application 不含插件或 contract 类型；
+6. 以独立 `java -jar` 进程验证 consumer-first、多个 entry、等待依赖、isolate、配置更新与失败恢复、不完整关联升级拒绝和三包完整关联升级；
+7. 从临时远端仓库调用已部署的 `fibra-plugin-archetype`，构建生成的独立项目并检查标准 plugin/deployment ZIP。
 
-这个 fixture 是仓库外黑盒验收，不再承担“唯一用户模板”责任；用户插件项目由 `fibra-plugin-archetype` 生成。脚本通过只证明当前工作树制品可以从 Maven 坐标独立消费，不表示坐标已发布到公共仓库。
+这个 fixture 是仓库外黑盒验收，不承担用户模板责任；用户插件项目只能由 `fibra-plugin-archetype` 生成。脚本通过只证明当前工作树制品可以从 Maven 坐标独立消费，不表示坐标已发布到公共仓库。目录职责和完整断言见[示例与分发验收设计](superpowers/specs/2026-08-25-fibra-examples-and-distribution-verification-design.md)。
 
 ## 插件 Archetype 发布与使用
 

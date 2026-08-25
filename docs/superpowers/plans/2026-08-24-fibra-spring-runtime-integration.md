@@ -49,9 +49,9 @@
 
 ## 4. 迁移示例与 API 门禁
 
-`fibra-example-spring-host` 只直接依赖 starter。`application.yml` 使用本计划的属性图；上传暂存目录属于 `example.fibra.staging-root`，不能进入通用 `FibraProperties`。Web controller 只负责把本地 deployment 路径交给公开 `FibraEngine.applyDeployment(...)`，不接触 loader 或内部 coordinator。
+`fibra-example-spring-boot-application` 只直接依赖 starter。`application.yml` 使用本计划的属性图；上传暂存目录属于 `example.fibra.staging-root`，不能进入通用 `FibraProperties`。Web controller 只负责把本地 deployment 路径交给公开 `FibraEngine.applyDeployment(...)`，不接触 loader 或内部 coordinator。
 
-`ExampleSpringHostIT` 必须从真实 Spring Boot 上下文验证自动配置启动、服务访问、deployment 应用、回滚和 ApplicationContext 关闭。测试不能用手工构造替代 Boot wiring。
+`FibraSpringBootExampleApplicationIT` 必须从真实 Spring Boot 上下文验证自动配置启动、服务访问、deployment 应用、回滚和 ApplicationContext 关闭。测试不能用手工构造替代 Boot wiring。
 
 API 签名分别写入：
 
@@ -67,7 +67,7 @@ API 签名分别写入：
 ```bash
 mvn clean verify
 scripts/verify-reproducible-release.sh
-scripts/verify-external-consumer.sh
+scripts/verify-distribution.sh
 ```
 
 随后严格验证并归档 `establish-fibra-engine`、`standardize-spring-runtime-integration` 和 `publish-plugin-archetype`。归档后稳定 OpenSpec 必须只描述 Engine 托管 source 与 Spring三模块结构，不得保留 loader watcher 为当前能力。

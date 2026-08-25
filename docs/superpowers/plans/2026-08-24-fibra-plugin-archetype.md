@@ -20,7 +20,7 @@
 
 ```bash
 $MVN -pl fibra-plugin-archetype -am clean verify
-scripts/verify-external-consumer.sh
+scripts/verify-distribution.sh
 scripts/verify-reproducible-release.sh
 $MVN clean verify
 ```
