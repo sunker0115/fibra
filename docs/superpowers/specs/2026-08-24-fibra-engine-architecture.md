@@ -137,6 +137,8 @@ artifact/config source 只把同一个 engine key 标记为 dirty。reconcile �
 - artifact 成功而 config 失败时，applied revision 必须推进为“新 artifact + 旧 config”的真实组合，不能保留整个旧 revision；
 - 文件系统不提供 API Server 式原子对象版本，因此 desired revision 只是最近一轮完整观察的运维摘要，不作为跳过 reconcile 或证明原子事务的依据。
 
+来源文件指纹使用 `fibra-source-files-v2` 域、归一化绝对路径、64 位文件长度和完整文件内容计算 SHA-256。内容必须通过固定缓冲区流式读取，不按候选 ZIP 或配置文件大小分配整块堆；读取前后实际字节数与声明长度不一致时本轮失败，由 level-triggered reconcile 重读，不接受部分摘要。
+
 incoming 候选目录按插件 ID 分组并选择唯一最高 SemVer；低于已安装版本的候选忽略，同版本同摘要为 no-op，同版本不同摘要拒绝，最高版本的无效候选持续保持失败直到被替换或移除。成功提交不依赖删除 incoming 文件，后续完整重读通过已安装身份判定 no-op；松散目录只允许升级，显式 deployment 才允许受控降级。
 
 同一轮读取可以同时发现 artifact 与 config 变化，但必须作为两个独立事务固定按 artifact、config 顺序尝试，并分别记录失败；不得共享候选 catalog 让两个单独失败的松散变化联合成功。只有带 identity、version、checksums 和 journal 的显式 deployment 才使用联合预检与提交。
@@ -149,6 +151,7 @@ incoming 候选目录按插件 ID 分组并选择唯一最高 SemVer；低于已
 - 周期 resync 修复丢失的文件事件；
 - 初载与 readiness 成功、source/coordinator 启动后立即提交一次 dirty，使宿主启动前已经存在的 incoming 候选也进入正常收敛；坏 incoming 进入 `DEGRADED` 和退避重试，不得使已经建立基础运行态的 `start()` 失败；
 - artifact/config 失败保留各自最后成功分量，按来源记录结构化活动失败并按有界退避重试；完整回滚的显式 deployment 失败只返回给调用方，不把健康运行态标成 `DEGRADED`；
+- 任一 artifact、config 或 deployment 事务报告 `ROLLBACK`，表示旧运行图无法证明完整恢复。Engine 必须设置关闭前不可清除的 mutation block，保留对应阶段失败并进入 `DEGRADED`；本轮立即停止后续参与者变更，公开 reconcile、公开 deployment 和已排队 deployment 的真正执行入口都必须拒绝。root 查询与 `close()` 继续可用；不得用后续成功或定时重试自动解除安全闸；
 - 手工 deployment 的 revision 高于松散目录信号，执行期间只累计 dirty，不交叉提交。
 
 ### 4.4 双 Source
@@ -162,6 +165,21 @@ source 只是低延迟提示器，周期 resync 才是正确性兜底。`WatchKe
 保留 `NEW/STARTING/RUNNING/DEGRADED/STOPPING/TERMINATED`，因为纯 Java 与 Spring 运维场景需要一个可直接序列化的综合状态。`RUNNING` 与 `DEGRADED` 都表示资源仍由 engine 持有且可自动恢复；状态必须由当前活动失败统一计算，单次成功不得在其他活动失败尚存时无条件改回 `RUNNING`。
 
 同步 deployment 的返回必须与副作用一致。等待线程被中断时，coordinator 在线程安全边界内先尝试移除尚未开始的 operation：移除成功则 operation 永不执行；worker 已取得 operation 则等待真实结果后恢复调用线程中断标志，不能让调用方收到失败后又在后台提交。
+
+### 4.6 运行诊断日志
+
+Fibra 生产代码只依赖 SLF4J API 2.x，不绑定 provider，不直接使用 Logback/Log4j API，不写 `System.out`/`System.err`，也不在库层修改 MDC。内部 logger 字段统一命名为 `LOGGER`，使用 fluent API；异常必须作为 cause 传递，不拼接为文本。事件名和关联字段必须写入消息正文，不依赖 provider 是否渲染 SLF4J 键值对；正文固定为 `event=... key=value`，使 Spring Boot 默认 Logback 与简单 provider 的检索语义一致。
+
+框架运行诊断与插件通过 `LoggerService` 输出的业务日志是两条边界：`DefaultLoggerService` 保持用户的 logger 名、级别和消息原样；框架诊断统一携带 `event`，命名为小写点分 `fibra.<layer>.<subject>.<outcome>`。字段只记录定位所需的 `entryId`、`eventName`、`pluginIds`、`transactionId`、`deploymentId`、stage、revision 和 source 路径，不记录 typed config 值、部署内容、凭据、签名材料或仓库 token。
+
+级别与唯一记录责任固定为：
+
+- `ERROR`：异步失败已被内核吞掉，或不完整 rollback 触发全局 mutation block；同一不完整 rollback 只由 Engine 记录一次；
+- `WARN`：库内吞掉但可恢复的失败，例如提交后 cleanup 延期、source 注册失败或监听线程意外退出；会原样抛给调用方的普通校验/提交异常不在底层重复记录；
+- `INFO`：Engine 启停、显式 deployment committed、失败阶段恢复等低频边界；普通 reconcile/no-op 不记录 INFO；
+- `DEBUG`：source 注册恢复等默认关闭的高频诊断。
+
+相同 source 注册失败在一个持续失败周期只记录首次，恢复后才允许下一周期再次记录。Engine 同一 failure stage 也只在 revision 或错误事实变化时重记，清除真实活动失败时记录一次 recovered，避免周期 resync 和退避重试刷屏。
 
 ## 5. Deployment Package
 
@@ -231,6 +249,7 @@ archetype 自身使用 Maven 官方 `archetype:integration-test` 在构建期生
 - Cordis 71 用例和 core API 基线保持通过；
 - 两个 loader 分别覆盖单参与者事务、崩溃恢复和候选视图；
 - engine 覆盖事件去重、执行期 dirty、resync、失败退避、联合事务、readiness、关闭和 ClassLoader 回收；
+- parity 增加生产日志架构门禁，禁止标准输出、具体日志后端 API、非 `LOGGER` 字段、依赖 provider 渲染的键值字段和消息正文缺失稳定 `event` 的框架诊断；
 - Spring 只验证委托、属性、自动配置和所有权；
 - 纯 Java example 改用 `FibraEngine`，Spring example 只引入 starter；
 - `verification/distribution` 验证 core、插件图、engine、Spring Boot 和 archetype 五种外部消费边界；目录职责与完整断言以[示例与分发验收设计](2026-08-25-fibra-examples-and-distribution-verification-design.md)为准；

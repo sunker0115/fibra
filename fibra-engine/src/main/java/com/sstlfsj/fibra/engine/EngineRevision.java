@@ -4,6 +4,7 @@ import com.sstlfsj.fibra.loader.config.FibraConfigEntry;
 import com.sstlfsj.fibra.loader.config.FibraConfigSnapshot;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -15,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 
 final class EngineRevision {
+    private static final int STREAM_BUFFER_SIZE = 8192;
+
     private EngineRevision() { }
 
     static String artifacts(Collection<RevisionArtifact> artifacts) {
@@ -38,21 +41,43 @@ final class EngineRevision {
 
     static String sourceFiles(Collection<Path> paths) {
         var digest = digest();
-        text(digest, "fibra-source-files-v1");
+        text(digest, "fibra-source-files-v2");
         for (var path : paths.stream().map(candidate -> candidate.toAbsolutePath().normalize())
             .sorted().toList()) {
             text(digest, path.toString());
             try {
                 if (Files.isRegularFile(path)) {
-                    bytes(digest, Files.readAllBytes(path));
+                    stream(digest, path);
                 } else {
                     text(digest, "<missing>");
                 }
             } catch (IOException exception) {
-                throw new IllegalStateException("cannot calculate Fibra source revision", exception);
+                throw new IllegalStateException(
+                    "cannot calculate Fibra source revision for " + path, exception);
             }
         }
         return hex(digest);
+    }
+
+    private static void stream(MessageDigest digest, Path path) throws IOException {
+        var expectedSize = Files.size(path);
+        longInteger(digest, expectedSize);
+        var actualSize = 0L;
+        var buffer = new byte[STREAM_BUFFER_SIZE];
+        try (InputStream input = Files.newInputStream(path)) {
+            int read;
+            while ((read = input.read(buffer)) >= 0) {
+                if (read == 0) {
+                    continue;
+                }
+                digest.update(buffer, 0, read);
+                actualSize += read;
+            }
+        }
+        if (actualSize != expectedSize) {
+            throw new IllegalStateException(
+                "source file changed while calculating Fibra source revision: " + path);
+        }
     }
 
     static String combine(String artifactRevision, String configRevision) {
@@ -139,6 +164,10 @@ final class EngineRevision {
 
     private static void integer(MessageDigest digest, int value) {
         digest.update(ByteBuffer.allocate(Integer.BYTES).putInt(value).array());
+    }
+
+    private static void longInteger(MessageDigest digest, long value) {
+        digest.update(ByteBuffer.allocate(Long.BYTES).putLong(value).array());
     }
 
     private static String hex(MessageDigest digest) {

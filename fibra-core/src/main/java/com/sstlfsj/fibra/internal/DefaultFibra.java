@@ -17,7 +17,7 @@ import java.util.Objects;
 import java.util.function.Supplier;
 
 final class DefaultFibra implements Fibra {
-    private static final Logger LOG = LoggerFactory.getLogger(DefaultFibra.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultFibra.class);
     private static final String INACTIVE = "__INACTIVE__";
 
     private final DefaultContext context;
@@ -431,7 +431,9 @@ final class DefaultFibra implements Fibra {
     }
 
     private void reloadFailed(Throwable failure) {
-        LOG.error("plugin <{}> failed to load", name(), failure);
+        LOGGER.atError()
+            .setCause(failure)
+            .log("event=fibra.core.entry.load_failed entryId={}", name());
         error = failure;
         epoch = INACTIVE;
         startUnload();
@@ -442,7 +444,9 @@ final class DefaultFibra implements Fibra {
         var handles = effects.drainReverse();
         var disposals = handles.stream()
             .map(handle -> handle.dispose().onErrorResume(failure -> {
-                LOG.error("effect cleanup failed in plugin <{}>", name(), failure);
+                LOGGER.atError()
+                    .setCause(failure)
+                    .log("event=fibra.core.entry.effect_cleanup_failed entryId={}", name());
                 return Mono.empty();
             }))
             .toList();
@@ -454,7 +458,9 @@ final class DefaultFibra implements Fibra {
                 ignored -> {
                 },
                 failure -> {
-                    LOG.error("unexpected unload failure in plugin <{}>", name(), failure);
+                    LOGGER.atError()
+                        .setCause(failure)
+                        .log("event=fibra.core.entry.unload_failed entryId={}", name());
                     unloadCompleted();
                 },
                 this::unloadCompleted

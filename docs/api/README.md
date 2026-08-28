@@ -173,6 +173,8 @@ int answer = session.get(ANSWER);
 
 `LoggerService.buffer()` 返回固定对象的时间顺序环形缓冲区，`bufferSize(int)` 可动态裁剪。`exporter(LogExporter)` 返回归当前 Fibra 所有的 disposer；`LogExporter.to` 可适配 Consumer 并指定最低级别。`LogMessage` 包含 sequence、timestamp、name、level、arguments 和弱引用 Fibra。最终 backend 走 SLF4J，core 不绑定 provider。
 
+Fibra 自身的运行诊断不进入 `LoggerService` 缓冲区，而是直接通过 SLF4J 输出。消息正文固定以 `event=fibra.<layer>.<subject>.<outcome>` 开头，后续关联字段采用 `key=value`，保证未配置键值渲染的 Spring Boot 默认 Logback 和其他 SLF4J provider 也能直接检索。常用关联字段为 `entryId`、`pluginIds`、`transactionId`、`deploymentId`、`stage`、`desiredRevision`、`appliedRevision` 和 `source`。宿主可按 `event` 定位类别，再用事务、部署或 revision 串联同一次问题；Fibra 不配置日志格式、不绑定日志 provider，也不会记录 typed config 值或凭据。
+
 ## 8. PF4J 标准插件包
 
 插件候选是 ZIP，安装态是 `plugins/<plugin-id>/` 目录；目录根只有 `plugin.properties` 和 `lib/`，主 JAR 固定为 `lib/<plugin-id>-<plugin-version>.jar`。身份、版本和依赖只读取 `plugin.properties`，不读取 JAR Manifest。允许键只有 `plugin.id`、`plugin.version`、`plugin.dependencies` 以及可选的 `plugin.description/provider/license`；`plugin.class`、`plugin.requires` 和其他键一律拒绝。
@@ -273,6 +275,8 @@ try (var engine = FibraEngine.builder(Path.of("plugins"), Path.of("fibra.yaml"))
 `applyDeployment(Path)` 接受含 `deployment.properties`、`checksums.sha256`、`plugins/*.zip` 和 `config/` 的标准 deployment ZIP。摘要固定使用 SHA-256；插件和配置作为一个显式事务预检、提交、readiness 和回滚。持久化 `COMMITTED` journal 是唯一提交点；此前失败回滚并返回失败，此后的 receipt 写入、参与者清理或事务目录删除失败只保留 journal 供下次启动恢复并记录 WARN，调用仍返回已经生效的成功结果。
 
 `FibraEngineStatus` 提供终止性状态、desired revision、applied revision 与按阶段结构化失败。两个公开 revision 都由内部 artifact/config 分量组合：desired 表示最近一次完整观察，applied 表示当前真实活动 catalog 与最后成功配置快照；一侧成功而另一侧失败时 applied 仍推进成功分量，不会伪装成整个旧状态。`RUNNING`/`DEGRADED` 由全部活动失败统一计算，单个阶段恢复不会遮蔽其他阶段的失败。
+
+artifact、config 或 deployment 出现 `ROLLBACK` 表示旧运行图无法证明完整恢复。Engine 会进入粘性 mutation block：保留 `DEGRADED` 和结构化失败，拒绝后续 `requestReconcile()`、`applyDeployment()` 及已排队但尚未真正执行的部署。此状态不会由重试自动解除；调用方仍可读取 `status()`、使用 `root()` 查询现状并执行 `close()`，修复磁盘状态后必须重建 Engine，由启动恢复重新证明一致性。
 
 Engine 独占 root、两个 loader、两个可选 source、协调线程和 journal；只公开 `root()` 作为服务桥接与查询视图，不公开内部 loader。`close()` 固定停止 source 与协调工作，再关闭 config loader、plugin loader 和 root，重复调用幂等。
 

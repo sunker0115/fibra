@@ -33,6 +33,7 @@ final class ConfigFileSource implements AutoCloseable {
 
     private Set<Path> files = Set.of();
     private Map<Path, Boolean> existence = Map.of();
+    private boolean registrationFailureReported;
     private Thread worker;
 
     ConfigFileSource(Supplier<Set<Path>> pathsSupplier, Duration debounce,
@@ -72,8 +73,9 @@ final class ConfigFileSource implements AutoCloseable {
             while (!closed.get()) {
                 try {
                     refreshRegistrations();
+                    registrationRecovered();
                 } catch (IOException failure) {
-                    LOGGER.warn("Cannot refresh Fibra config source registrations", failure);
+                    registrationFailed(failure);
                     Thread.sleep(POLL_MILLIS);
                     continue;
                 }
@@ -110,8 +112,29 @@ final class ConfigFileSource implements AutoCloseable {
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
         } catch (RuntimeException failure) {
-            LOGGER.warn("Fibra config source stopped unexpectedly", failure);
+            LOGGER.atWarn()
+                .setCause(failure)
+                .log("event=fibra.engine.source.stopped source=config");
         }
+    }
+
+    private void registrationFailed(IOException failure) {
+        if (registrationFailureReported) {
+            return;
+        }
+        registrationFailureReported = true;
+        LOGGER.atWarn()
+            .setCause(failure)
+            .log("event=fibra.engine.source.registration_failed source=config");
+    }
+
+    private void registrationRecovered() {
+        if (!registrationFailureReported) {
+            return;
+        }
+        LOGGER.atDebug()
+            .log("event=fibra.engine.source.registration_recovered source=config");
+        registrationFailureReported = false;
     }
 
     private boolean consume(WatchKey key) {

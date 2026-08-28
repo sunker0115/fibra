@@ -26,7 +26,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 final class EventBus {
-    private static final Logger LOG = LoggerFactory.getLogger(EventBus.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(EventBus.class);
 
     private final LifecycleDispatcher lifecycle;
     private final Map<String, Class<?>> contracts = new HashMap<>();
@@ -191,7 +191,9 @@ final class EventBus {
             try {
                 invocation.accept(hook.listener());
             } catch (RuntimeException | Error error) {
-                LOG.error("internal event <{}> listener failed", key.name(), error);
+                LOGGER.atError()
+                    .setCause(error)
+                    .log("event=fibra.core.event.listener_failed eventName={}", key.name());
             }
         }
     }

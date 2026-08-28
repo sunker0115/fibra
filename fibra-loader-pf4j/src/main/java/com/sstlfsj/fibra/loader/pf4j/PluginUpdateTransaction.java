@@ -74,8 +74,10 @@ final class PluginUpdateTransaction {
             try {
                 change.complete();
             } catch (RuntimeException cleanupFailure) {
-                LOGGER.warn("Cannot finish committed Fibra plugin transaction cleanup: {}",
-                    transactionRoot, cleanupFailure);
+                LOGGER.atWarn()
+                    .setCause(cleanupFailure)
+                    .log("event=fibra.loader.plugin.cleanup_deferred transactionId={} pluginIds={}",
+                        transactionId, changedIds);
             }
             return changedIds;
         } catch (RuntimeException | IOException failure) {

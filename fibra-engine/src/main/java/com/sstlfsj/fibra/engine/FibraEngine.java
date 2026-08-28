@@ -2,8 +2,12 @@ package com.sstlfsj.fibra.engine;
 
 import com.sstlfsj.fibra.Context;
 import com.sstlfsj.fibra.FibraState;
+import com.sstlfsj.fibra.loader.config.FibraConfigErrorStage;
+import com.sstlfsj.fibra.loader.config.FibraConfigException;
 import com.sstlfsj.fibra.loader.config.FibraConfigLoader;
 import com.sstlfsj.fibra.loader.pf4j.FibraArtifactDescriptor;
+import com.sstlfsj.fibra.loader.pf4j.FibraArtifactErrorStage;
+import com.sstlfsj.fibra.loader.pf4j.FibraArtifactException;
 import com.sstlfsj.fibra.loader.pf4j.FibraPluginLoader;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
 import org.pf4j.DefaultVersionManager;
@@ -147,6 +151,8 @@ public final class FibraEngine implements AutoCloseable {
             synchronized (stateMonitor) {
                 state = FibraEngineState.RUNNING;
             }
+            LOGGER.atInfo()
+                .log("event=fibra.engine.started appliedRevision={}", appliedRevision);
             reconcileCoordinator.request();
         } catch (RuntimeException failure) {
             recordFailure(stage, failure);
@@ -166,10 +172,7 @@ public final class FibraEngine implements AutoCloseable {
                 && state != FibraEngineState.DEGRADED) {
                 throw new IllegalStateException("FibraEngine is not running");
             }
-            if (mutationBlocked) {
-                throw new IllegalStateException(
-                    "FibraEngine mutations are blocked after an incomplete rollback");
-            }
+            requireMutationsAllowedLocked();
             current = reconcileCoordinator;
         }
         current.request();
@@ -183,12 +186,16 @@ public final class FibraEngine implements AutoCloseable {
                 && state != FibraEngineState.DEGRADED) {
                 throw new IllegalStateException("FibraEngine is not running");
             }
+            requireMutationsAllowedLocked();
             current = reconcileCoordinator;
         }
         return current.execute(() -> applyDeploymentSerialized(packagePath));
     }
 
     private FibraDeploymentResult applyDeploymentSerialized(Path packagePath) {
+        synchronized (stateMonitor) {
+            requireMutationsAllowedLocked();
+        }
         var transactionId = java.util.UUID.randomUUID().toString();
         var transactionRoot = installedRoot.resolve(".fibra-engine/transactions")
             .resolve(transactionId);
@@ -256,6 +263,10 @@ public final class FibraEngine implements AutoCloseable {
             }
             var result = new FibraDeploymentResult(deployment.id(), deployment.version(), revision,
                 changed);
+            LOGGER.atInfo()
+                .log("event=fibra.engine.deployment.committed deploymentId={} "
+                        + "deploymentVersion={} transactionId={} appliedRevision={}",
+                    deployment.id(), deployment.version(), journal.transactionId(), revision);
             completeCommittedDeployment(transactionRoot, journal, configChange,
                 artifactChange);
             return result;
@@ -299,10 +310,12 @@ public final class FibraEngine implements AutoCloseable {
                     primary.addSuppressed(cleanupFailure);
                 }
             } else {
-                synchronized (stateMonitor) {
-                    mutationBlocked = true;
-                }
-                recordFailure(FibraEngineFailureStage.DEPLOYMENT, primary);
+                var rollback = new FibraDeploymentException(
+                    FibraDeploymentErrorStage.ROLLBACK, deployment.workspace(),
+                    "cannot fully roll back Fibra deployment", primary);
+                blockMutationsAfterIncompleteRollback(
+                    FibraEngineFailureStage.DEPLOYMENT, rollback);
+                throw rollback;
             }
             throw primary;
         }
@@ -341,8 +354,11 @@ public final class FibraEngine implements AutoCloseable {
             var cleanup = new IllegalStateException(
                 "committed Fibra deployment requires recovery cleanup");
             failures.forEach(cleanup::addSuppressed);
-            LOGGER.warn("Fibra deployment committed but cleanup did not complete; "
-                + "the durable journal will be recovered on next startup", cleanup);
+            LOGGER.atWarn()
+                .setCause(cleanup)
+                .log("event=fibra.engine.deployment.cleanup_deferred deploymentId={} "
+                        + "deploymentVersion={} transactionId={}",
+                    journal.deploymentId(), journal.deploymentVersion(), journal.transactionId());
         }
     }
 
@@ -381,6 +397,13 @@ public final class FibraEngine implements AutoCloseable {
         } catch (RuntimeException failure) {
             artifactFailure = failure;
             setDesiredArtifactRevisionIfReadable();
+            if (failure instanceof FibraArtifactException artifactException
+                && artifactException.stage() == FibraArtifactErrorStage.ROLLBACK) {
+                blockMutationsAfterIncompleteRollback(
+                    FibraEngineFailureStage.ARTIFACT_RECONCILE, failure);
+                refreshOperationalState();
+                throw failure;
+            }
             recordFailure(FibraEngineFailureStage.ARTIFACT_RECONCILE, failure);
         }
         RuntimeException configFailure = null;
@@ -393,7 +416,13 @@ public final class FibraEngine implements AutoCloseable {
         } catch (RuntimeException failure) {
             configFailure = failure;
             setDesiredConfigRevisionIfReadable();
-            recordFailure(FibraEngineFailureStage.CONFIG_RECONCILE, failure);
+            if (failure instanceof FibraConfigException configException
+                && configException.stage() == FibraConfigErrorStage.ROLLBACK) {
+                blockMutationsAfterIncompleteRollback(
+                    FibraEngineFailureStage.CONFIG_RECONCILE, failure);
+            } else {
+                recordFailure(FibraEngineFailureStage.CONFIG_RECONCILE, failure);
+            }
         }
         refreshOperationalState();
         if (artifactFailure != null) {
@@ -409,20 +438,21 @@ public final class FibraEngine implements AutoCloseable {
             return new ArtifactTarget(List.of(), currentArtifactRevision());
         }
         var versions = new DefaultVersionManager();
-        var selected = new LinkedHashMap<String, Candidate>();
+        var grouped = new LinkedHashMap<String, List<Candidate>>();
         try (var paths = Files.list(artifactSourceRoot)) {
             for (var path : paths.filter(Files::isRegularFile)
                 .filter(candidate -> candidate.getFileName().toString().endsWith(".zip"))
                 .sorted().toList()) {
                 var descriptor = artifacts.inspectArtifact(path);
-                selected.compute(descriptor.id(), (id, current) -> current == null
-                    || versions.compareVersions(descriptor.version(),
-                    current.descriptor.version()) > 0
-                    ? new Candidate(path, descriptor) : current);
+                grouped.computeIfAbsent(descriptor.id(), ignored -> new ArrayList<>())
+                    .add(new Candidate(path, descriptor));
             }
         } catch (IOException exception) {
             throw new IllegalStateException("cannot read artifact source", exception);
         }
+        var selected = new LinkedHashMap<String, Candidate>();
+        grouped.forEach((id, candidates) -> selected.put(id,
+            selectHighestArtifactCandidate(id, candidates, versions)));
         var installed = artifacts.catalog().artifacts().stream()
             .collect(java.util.stream.Collectors.toMap(FibraArtifactDescriptor::id,
                 descriptor -> descriptor));
@@ -444,6 +474,22 @@ public final class FibraEngine implements AutoCloseable {
             }
         });
         return new ArtifactTarget(candidates, artifactRevision(installed.values()));
+    }
+
+    private static Candidate selectHighestArtifactCandidate(
+        String artifactId, List<Candidate> candidates, DefaultVersionManager versions) {
+        var highestVersion = candidates.stream().map(candidate -> candidate.descriptor.version())
+            .max(versions::compareVersions).orElseThrow();
+        var highest = candidates.stream().filter(candidate ->
+            versions.compareVersions(candidate.descriptor.version(), highestVersion) == 0)
+            .toList();
+        var digests = highest.stream().map(candidate -> candidate.descriptor.sha256())
+            .collect(java.util.stream.Collectors.toCollection(java.util.TreeSet::new));
+        if (digests.size() > 1) {
+            throw new IllegalStateException("conflicting artifact candidates for pluginId="
+                + artifactId + ", version=" + highestVersion + ", sha256=" + digests);
+        }
+        return highest.getFirst();
     }
 
     private String currentArtifactRevision() {
@@ -537,19 +583,70 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private void recordFailure(FibraEngineFailureStage stage, Throwable failure) {
+        FibraEngineFailure recorded;
+        boolean report;
         synchronized (stateMonitor) {
+            recorded = new FibraEngineFailure(stage,
+                Optional.ofNullable(desiredRevision), message(failure), Instant.now());
+            var previous = failures.put(stage, recorded);
+            var asynchronous = state == FibraEngineState.RUNNING
+                || state == FibraEngineState.DEGRADED;
+            report = asynchronous && (previous == null
+                || !previous.revision().equals(recorded.revision())
+                || !previous.message().equals(recorded.message()));
+            if (state == FibraEngineState.RUNNING) {
+                state = FibraEngineState.DEGRADED;
+            }
+        }
+        if (report) {
+            LOGGER.atWarn()
+                .setCause(failure)
+                .log("event=fibra.engine.reconcile.failed stage={} desiredRevision={}",
+                    stage, recorded.revision().orElse("unavailable"));
+        }
+    }
+
+    private void clearFailure(FibraEngineFailureStage stage) {
+        FibraEngineFailure recovered;
+        String revision;
+        synchronized (stateMonitor) {
+            recovered = failures.remove(stage);
+            refreshOperationalStateLocked();
+            revision = appliedRevision;
+        }
+        if (recovered != null) {
+            LOGGER.atInfo()
+                .log("event=fibra.engine.reconcile.recovered stage={} appliedRevision={}",
+                    stage, revision == null ? "unavailable" : revision);
+        }
+    }
+
+    private void requireMutationsAllowedLocked() {
+        if (mutationBlocked) {
+            throw new IllegalStateException(
+                "FibraEngine mutations are blocked after an incomplete rollback");
+        }
+    }
+
+    private void blockMutationsAfterIncompleteRollback(
+        FibraEngineFailureStage stage, Throwable failure) {
+        boolean report;
+        String revision;
+        synchronized (stateMonitor) {
+            report = !mutationBlocked;
+            mutationBlocked = true;
+            revision = desiredRevision;
             failures.put(stage, new FibraEngineFailure(stage,
                 Optional.ofNullable(desiredRevision), message(failure), Instant.now()));
             if (state == FibraEngineState.RUNNING) {
                 state = FibraEngineState.DEGRADED;
             }
         }
-    }
-
-    private void clearFailure(FibraEngineFailureStage stage) {
-        synchronized (stateMonitor) {
-            failures.remove(stage);
-            refreshOperationalStateLocked();
+        if (report) {
+            LOGGER.atError()
+                .setCause(failure)
+                .log("event=fibra.engine.mutation.blocked stage={} desiredRevision={}",
+                    stage, revision == null ? "unavailable" : revision);
         }
     }
 
@@ -580,10 +677,12 @@ public final class FibraEngine implements AutoCloseable {
 
     @Override
     public void close() {
+        boolean reportStopped;
         synchronized (stateMonitor) {
             if (state == FibraEngineState.TERMINATED) {
                 return;
             }
+            reportStopped = state != FibraEngineState.NEW;
             state = FibraEngineState.STOPPING;
         }
         RuntimeException failure = null;
@@ -595,6 +694,11 @@ public final class FibraEngine implements AutoCloseable {
         } finally {
             synchronized (stateMonitor) {
                 state = FibraEngineState.TERMINATED;
+            }
+            if (reportStopped) {
+                LOGGER.atInfo()
+                    .log("event=fibra.engine.stopped appliedRevision={}",
+                        appliedRevision == null ? "unavailable" : appliedRevision);
             }
         }
         if (failure != null) {

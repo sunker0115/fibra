@@ -24,6 +24,8 @@ final class ArtifactDirectorySource implements AutoCloseable {
     private final WatchService watchService;
     private final AtomicBoolean closed = new AtomicBoolean();
     private WatchKey registration;
+    private boolean registrationFailureReported;
+    private boolean watchLossReported;
     private Thread worker;
 
     ArtifactDirectorySource(Path root, Duration debounce, Runnable dirtyCallback) {
@@ -62,10 +64,10 @@ final class ArtifactDirectorySource implements AutoCloseable {
                     }
                     try {
                         registration = register();
+                        registrationRecovered();
                         dirtyCallback.run();
                     } catch (IOException failure) {
-                        LOGGER.warn("Cannot register Fibra artifact source root: {}", root,
-                            failure);
+                        registrationFailed(failure);
                         Thread.sleep(POLL_MILLIS);
                     }
                     continue;
@@ -76,7 +78,7 @@ final class ArtifactDirectorySource implements AutoCloseable {
                 }
                 var dirty = consume(key);
                 if (!key.reset()) {
-                    LOGGER.warn("Fibra artifact source root is no longer watchable: {}", root);
+                    watchLost();
                     registration = null;
                     dirty = true;
                 }
@@ -95,8 +97,7 @@ final class ArtifactDirectorySource implements AutoCloseable {
                     }
                     consume(next);
                     if (!next.reset()) {
-                        LOGGER.warn("Fibra artifact source root is no longer watchable: {}",
-                            root);
+                        watchLost();
                         registration = null;
                         break;
                     }
@@ -110,8 +111,39 @@ final class ArtifactDirectorySource implements AutoCloseable {
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
         } catch (RuntimeException failure) {
-            LOGGER.warn("Fibra artifact source stopped unexpectedly", failure);
+            LOGGER.atWarn()
+                .setCause(failure)
+                .log("event=fibra.engine.source.stopped source=artifact root={}", root);
         }
+    }
+
+    private void registrationFailed(IOException failure) {
+        if (registrationFailureReported) {
+            return;
+        }
+        registrationFailureReported = true;
+        LOGGER.atWarn()
+            .setCause(failure)
+            .log("event=fibra.engine.source.registration_failed source=artifact root={}", root);
+    }
+
+    private void watchLost() {
+        if (watchLossReported) {
+            return;
+        }
+        watchLossReported = true;
+        LOGGER.atWarn()
+            .log("event=fibra.engine.source.watch_lost source=artifact root={}", root);
+    }
+
+    private void registrationRecovered() {
+        if (!registrationFailureReported && !watchLossReported) {
+            return;
+        }
+        LOGGER.atDebug()
+            .log("event=fibra.engine.source.registration_recovered source=artifact root={}", root);
+        registrationFailureReported = false;
+        watchLossReported = false;
     }
 
     private WatchKey register() throws IOException {
