@@ -22,7 +22,7 @@
 - starter 不包含 Spring Shell、Spring Web、Spring AI、Actuator 或任何宿主业务；
 - 开发阶段直接删除 `0.3.1` 的错误属性和公开签名，不提供别名、转发、弃用层或双模型识别。
 
-目标版本为 `0.4.0-SNAPSHOT`。`v0.3.1` 继续指向已发布历史提交，不移动、不覆盖。
+目标版本为 `0.4.0`。`v0.3.1` 继续指向已发布历史提交，不移动、不覆盖。
 
 ## 2. 已核实参照与取舍
 
@@ -59,7 +59,7 @@ Fibra 吸收该分层和“对具体 lifecycle 类型退让”的测试思想；
 
 ### 2.4 Fibra 现有真实约束
 
-以下结论直接来自 `0.4.0-SNAPSHOT` 当前生产源码：
+以下结论直接来自 `0.4.0` 生产源码：
 
 - `FibraPluginLoader` 构造时要求安装根已经存在，并在构造期执行崩溃恢复；来源：`fibra-loader-pf4j/.../FibraPluginLoader.java`；
 - `FibraEngine.Builder.artifactSource(...)` 和 `configSource(...)` 只记录完整参数；Engine 首次 `start()` 完成初载和 readiness 后才创建并启动 source；来源：`fibra-engine/.../FibraEngine.java`；
@@ -117,7 +117,7 @@ Spring 宿主还需自行引入与应用形态匹配的 Boot starter。CLI 使�
 
 ### 3.2 版本与制品
 
-- reactor 唯一版本真源进入 `0.4.0-SNAPSHOT`；
+- reactor 唯一版本真源为 `0.4.0`；
 - 新增 `fibra-engine`、`fibra-spring`、`fibra-spring-boot-autoconfigure` 和独立开发工具 `fibra-plugin-archetype` 后，可发布制品从六个变为十个；
 - 根 `dependencyManagement` 增加新增 Fibra 内部模块坐标，只管理当前 reactor 版本，不引入 Spring BOM；
 - 三个 Spring 制品都必须生成主 JAR、sources JAR、Javadoc JAR和展开后的发布 POM，并进入可复现构建门禁；

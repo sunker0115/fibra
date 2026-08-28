@@ -6,6 +6,8 @@
 
 ## [未发布]
 
+## [0.4.0] - 2026-08-29
+
 ### 新增
 
 - 新增框架中立的 `fibra-engine`，作为插件制品、动态配置、source、串行 reconcile、readiness、部署事务和关闭顺序的唯一托管入口。
@@ -23,6 +25,8 @@
 - `fibra-benchmarks` 从可选 `benchmarks` profile 移入默认 reactor，使完整构建持续校验基准源码；它仍不发布、不进入可复现发布集，普通 Maven 构建也不执行 JMH 测量。
 - 无源码 `fibra-spring-boot-starter` 使用 Maven Source Plugin 原生生成空 sources JAR，补齐每个发布制品固定的主 JAR、sources JAR、Javadoc JAR 和 POM 附件集合。
 - 十个发布 POM 统一携带项目、许可证、开发者、SCM 和 Issue 元数据；十个主 JAR 统一携带项目许可证与第三方声明。
+- Fibra 自有运维日志统一为 `event=fibra.* key=value` 格式，关键部署、对账、source 和生命周期事件可在默认日志后端中直接检索。
+- Engine revision 使用带版本域的流式摘要计算，避免把完整制品读入内存，并明确区分摘要协议版本。
 
 ### 修复
 
@@ -30,6 +34,8 @@
 - reconcile 调用线程被中断时，已排队操作会取消，已开始操作会等待真实结果，避免调用方看到与运行态不一致的失败。
 - deployment journal 的 `COMMITTED` 成为唯一提交点；提交后的备份清理失败只记录警告，不再把已经生效的部署报告为失败。
 - config loader 发布不可变的 source path 快照，避免异步 reconcile 读取尚未提交的配置来源。
+- 不完整回滚后 Engine 会阻断所有后续变更入口，避免继续在不可信状态上提交部署。
+- 同一插件最高版本存在不同内容摘要时拒绝部署；相同内容的重复路径按确定性顺序处理。
 
 ## [0.3.1] - 2026-08-24
 

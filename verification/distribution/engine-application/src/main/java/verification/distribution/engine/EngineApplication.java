@@ -39,8 +39,8 @@ public final class EngineApplication {
 
             Files.writeString(configFile, config("provider-one-updated", "provider-two"));
             engine.requestReconcile();
-            await(() -> result(engine, "consumer-one")
-                .equals("consumer->provider-one-updated"), "config-only update did not converge");
+            await(() -> "consumer->provider-one-updated"
+                .equals(result(engine, "consumer-one")), "config-only update did not converge");
             assertResult(engine, "consumer-two", "consumer->provider-two");
 
             Files.writeString(configFile, config("fail", "provider-two"));

@@ -1,6 +1,6 @@
 # Fibra 仓库外多插件验收设计
 
-状态：已被 `0.4.0-SNAPSHOT` 的[示例与分发验收设计](2026-08-25-fibra-examples-and-distribution-verification-design.md)取代。
+状态：已被 `0.4.0` 的[示例与分发验收设计](2026-08-25-fibra-examples-and-distribution-verification-design.md)取代。
 
 当前唯一有效结论如下：
 

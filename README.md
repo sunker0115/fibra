@@ -5,7 +5,7 @@
 
 Fibra 是 Cordis Core 4.0.1 的 Java 21 语义等价实现，并在其上提供可信的进程内插件装载、配置装配、持续收敛和联合部署事务。它可以作为 Java DeepSeek Harness、AI Agent 工具平台或其他动态插件宿主的基础，但不为任何单一业务框架做特殊处理，也不是整个 DeepSeek Harness 的翻译。
 
-当前开发版本是 `0.4.0-SNAPSHOT`，只在 `codex/0.4.0-development` 分支开发；`v0.3.1` 是上一正式版本基线。开发快照不是正式发布版本。
+当前正式版本是 `v0.4.0`。该 Git 正式版本与 Maven Central 发布是两个独立状态；坐标尚未在 Central 确认可解析时，应从 `v0.4.0` 源码执行 `mvn install` 后再使用。
 
 ## 最终架构
 
@@ -126,22 +126,22 @@ starter 传递引入 autoconfigure、`fibra-spring` 和 Engine，自身没有生
 
 ## 创建插件项目
 
-开发当前快照时先在 Fibra 根执行 `mvn install`，然后运行：
+从源码使用时先在 Fibra 根执行 `mvn install`，然后运行：
 
 ```bash
 mvn archetype:generate -B \
   -DarchetypeGroupId=com.sstlfsj \
   -DarchetypeArtifactId=fibra-plugin-archetype \
-  -DarchetypeVersion=0.4.0-SNAPSHOT \
+  -DarchetypeVersion=0.4.0 \
   -DgroupId=org.example \
   -DartifactId=example-plugin \
   -Dversion=1.0.0 \
   -Dpackage=org.example.plugin \
   -DpluginId=example-plugin \
-  -DfibraVersion=0.4.0-SNAPSHOT
+  -DfibraVersion=0.4.0
 ```
 
-正式版本发布后，把 `archetypeVersion` 与 `fibraVersion` 同时替换为同一个已发布版本。生成项目不继承 Fibra 父 POM，包含 `plugin-api`、`plugin-impl`、`config` 和 `deployment` 四个模块；直接执行 `mvn verify` 即生成标准插件 ZIP 与带 SHA-256 的 deployment ZIP。IDEA 中使用同一 Archetype 坐标和六个输入即可生成，不能把本仓库模块复制成插件工程。
+`archetypeVersion` 与 `fibraVersion` 必须使用同一个正式版本。生成项目不继承 Fibra 父 POM，包含 `plugin-api`、`plugin-impl`、`config` 和 `deployment` 四个模块；直接执行 `mvn verify` 即生成标准插件 ZIP 与带 SHA-256 的 deployment ZIP。IDEA 中使用同一 Archetype 坐标和六个输入即可生成，不能把本仓库模块复制成插件工程。
 
 ## 文档入口
 

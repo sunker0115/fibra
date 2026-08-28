@@ -495,6 +495,8 @@ fi
   --settings "$distribution_worktree/settings.xml" \
   --batch-mode --no-transfer-progress \
   -Dmaven.repo.local="$local_repository" \
+  -Pfibra-archetype-verification \
+  -Dfibra.repository.url="file://$remote_repository" \
   -f "$generated_project/pom.xml" verify
 
 readonly generated_contract="$generated_project/plugin-api/target/distribution-generated-plugin-contract-1.0.0.zip"

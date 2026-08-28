@@ -2,9 +2,9 @@
 
 ## 版本状态
 
-`v0.3.1` 是上一正式版本基线。当前 `0.4.0-SNAPSHOT` 只在 `codex/0.4.0-development` 分支开发，尚不是 release，也不得在 `main` 直接开发或创建正式 tag。只有本文件全部门禁通过、公开发布元数据和仓库能力就绪后，才能另行决定非 `SNAPSHOT` 版本、合并 `main` 与创建 tag。
+`v0.4.0` 是当前 Git 正式版本，`v0.3.1` 是上一正式版本基线。正式标签必须指向 `main` 上根 POM `revision=0.4.0` 且全部门禁通过的提交，不得移动或覆盖。
 
-文档不得把 Git tag、内部仓库部署和 Maven Central 发布混为一件事。当前仓库没有足够证据声明任何坐标已存在于 Maven Central；使用开发快照前必须先从当前分支本地安装或部署到明确的内部仓库。
+文档不得把 Git tag、内部仓库部署和 Maven Central 发布混为一件事。当前仓库没有足够证据声明 `0.4.0` 坐标已存在于 Maven Central；Central 确认可解析前，使用者必须从 `v0.4.0` 源码本地安装或部署到明确的内部仓库。
 
 ## 发布边界
 
@@ -85,7 +85,7 @@ scripts/verify-distribution.sh
 
 ## 插件 Archetype 发布与使用
 
-当前快照开发时先执行 `mvn install`，再以 `com.sstlfsj:fibra-plugin-archetype:0.4.0-SNAPSHOT` 生成项目。正式发布后，`archetypeVersion` 与生成项目的 `fibraVersion` 必须使用同一个已发布版本。
+从源码使用时先在 `v0.4.0` 执行 `mvn install`，再以 `com.sstlfsj:fibra-plugin-archetype:0.4.0` 生成项目。`archetypeVersion` 与生成项目的 `fibraVersion` 必须使用同一个正式版本。
 
 生成项目固定为独立四模块结构：
 

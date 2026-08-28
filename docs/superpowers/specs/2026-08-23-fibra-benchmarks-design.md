@@ -1,7 +1,7 @@
 # Fibra 内核性能基准设计（fibra-benchmarks）
 
 日期：2026-08-23
-状态：已实施；`0.4.0-SNAPSHOT` 起进入默认 reactor
+状态：已实施；`0.4.0` 起进入默认 reactor
 
 ## 1. 目标与边界
 
