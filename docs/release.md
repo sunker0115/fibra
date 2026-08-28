@@ -143,7 +143,7 @@ Spring Boot Web 示例的布局：
 
 ## 部署命令
 
-发布仓库由调用方通过 Maven settings、`distributionManagement` 或 `altDeploymentRepository` 提供：
+内部仓库由调用方通过 Maven settings、`distributionManagement` 或 `altDeploymentRepository` 提供：
 
 ```bash
 mvn deploy -DaltDeploymentRepository=release::https://repo.example.invalid/maven
@@ -151,15 +151,46 @@ mvn deploy -DaltDeploymentRepository=release::https://repo.example.invalid/maven
 
 示例 URL 只展示命令形态，不是项目默认仓库。仓库中不保存凭据，也不静默回退到其他目标。
 
+## Maven Central 发布
+
+公开发布使用 Central Publisher Portal 和根 POM 的 `central-release` profile。该 profile 才启用 `central-publishing-maven-plugin` 与 GPG 签名；普通 `verify`、可复现构建和临时文件仓库分发验收不加载 Central 发布扩展。
+
+GitHub Actions 的 `发布到 Maven Central` 工作流只允许维护者手工输入已有正式标签。工作流先在无发布凭据的任务中验证：
+
+- 标签格式为 `v<major>.<minor>.<patch>`；
+- 标签版本与根 POM 的非 `SNAPSHOT` `revision` 完全一致；
+- 标签提交位于 `main` 历史中；
+- 全 reactor、可复现构建和仓库外分发三道门禁全部通过。
+
+验证任务输出不可变提交 SHA，发布任务只重新检出该 SHA，并绑定受保护的 GitHub Environment `central`。该环境保存四个 Secret：
+
+- `CENTRAL_USERNAME`：Central Portal user token 用户名；
+- `CENTRAL_PASSWORD`：Central Portal user token 密码；
+- `MAVEN_GPG_KEY`：ASCII armored OpenPGP 私钥；
+- `MAVEN_GPG_PASSPHRASE`：私钥口令。
+
+凭据只进入发布任务的最终 Maven 步骤，不进入 Pull Request、普通 CI 或三道验证脚本。发布任务执行：
+
+```bash
+mvn --batch-mode --no-transfer-progress clean deploy -Pcentral-release \
+  -pl fibra-api,fibra-core,fibra-pf4j-api,fibra-loader-pf4j,fibra-loader-config,fibra-engine,fibra-spring,fibra-spring-boot-autoconfigure,fibra-spring-boot-starter,fibra-plugin-archetype \
+  -am -DskipTests -Darchetype.test.skip=true
+```
+
+`central-release` 固定 `autoPublish=false`。因此工作流成功只表示签名制品已上传并通过 Portal 校验，不表示已经公开；项目所有者必须在 Central Portal 核对十个 GAV、POM 元数据、附件和签名后人工发布。Central 上的同一 GAV 不能覆盖或重传，错误版本只能通过后续修复版本处理。
+
+正式发布顺序固定为：将 `revision` 改为非 `SNAPSHOT` 版本并完成门禁，合并到 `main`，创建同版本标签，手工触发 Central 工作流，在 Portal 人工发布，确认 Central 可解析后再创建或公告 GitHub Release。发布完成后，开发分支进入下一个 `SNAPSHOT` 版本。
+
 ## 对外公开发布前置条件
 
-公开发布前必须由项目所有者确认并提交：
+仓库已经提交 Apache-2.0 根许可证、项目/开发者/SCM 元数据、贡献指南、安全策略、签名插件和 Central Portal 工作流。首次公开发布前仍必须由项目所有者完成以下外部设置：
 
-- Fibra 许可证和根 `LICENSE`；
-- 实际项目 URL、SCM、issue tracker 与开发者/组织信息；
-- `com.sstlfsj` namespace 发布所有权；
-- 目标仓库、签名、凭据和回滚策略；
+- 在 Central Portal 验证 `com.sstlfsj` namespace 发布所有权；
+- 创建并保护 GitHub Environment `central`，配置人工审批和四个发布 Secret；
+- 生成发布专用 OpenPGP 主密钥并把公钥分发到公共 key server；
+- 在 GitHub 启用私密漏洞报告、Dependabot alerts、secret scanning 和 push protection；
+- 保护 `main` 与正式版本标签，要求 CI 门禁通过；
 - 非 `SNAPSHOT` 的 `revision`；
-- 完整门禁通过后的 `main` 合并和正式 tag 决策。
+- 完整门禁通过后的 `main` 合并和正式 tag。
 
 未确认的信息不得用虚假占位元数据绕过公共仓库校验。

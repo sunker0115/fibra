@@ -1,7 +1,7 @@
 # spring-runtime-configuration Specification
 
 ## Purpose
-TBD - created by archiving change standardize-spring-runtime-integration. Update Purpose after archive.
+定义 Spring Boot 宿主的权威不可变配置模型、到 `FibraEngine.Builder` 的一对一映射、资源创建前校验和配置元数据，并明确拒绝旧键与宿主专属暂存配置进入通用模型。
 ## Requirements
 ### Requirement: Boot 属性一对一映射 Engine Builder
 

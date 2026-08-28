@@ -75,21 +75,41 @@ final class ReconcileCoordinator implements AutoCloseable {
             operations.addLast(operation);
             monitor.notifyAll();
         }
-        try {
-            return operation.result.get();
-        } catch (InterruptedException exception) {
+        var interrupted = false;
+        while (true) {
+            try {
+                var result = operation.result.get();
+                restoreInterrupt(interrupted);
+                return result;
+            } catch (InterruptedException exception) {
+                synchronized (monitor) {
+                    if (operations.remove(operation)) {
+                        var cancellation = new IllegalStateException(
+                            "interrupted before reconcile coordinator operation started",
+                            exception);
+                        operation.fail(cancellation);
+                        Thread.currentThread().interrupt();
+                        throw cancellation;
+                    }
+                }
+                interrupted = true;
+            } catch (ExecutionException exception) {
+                restoreInterrupt(interrupted);
+                var cause = exception.getCause();
+                if (cause instanceof RuntimeException runtimeException) {
+                    throw runtimeException;
+                }
+                if (cause instanceof Error error) {
+                    throw error;
+                }
+                throw new IllegalStateException("reconcile coordinator operation failed", cause);
+            }
+        }
+    }
+
+    private static void restoreInterrupt(boolean interrupted) {
+        if (interrupted) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException(
-                "interrupted while waiting for reconcile coordinator operation", exception);
-        } catch (ExecutionException exception) {
-            var cause = exception.getCause();
-            if (cause instanceof RuntimeException runtimeException) {
-                throw runtimeException;
-            }
-            if (cause instanceof Error error) {
-                throw error;
-            }
-            throw new IllegalStateException("reconcile coordinator operation failed", cause);
         }
     }
 

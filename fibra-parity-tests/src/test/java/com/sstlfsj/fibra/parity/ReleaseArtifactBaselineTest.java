@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ReleaseArtifactBaselineTest {
     private static final int JAVA_21_CLASS_MAJOR_VERSION = 65;
+    private static final String PROJECT_URL = "https://github.com/sunker0115/fibra";
     // 6 个框架中立运行时制品，compile/runtime 依赖图保持 Spring-free。
     private static final List<String> NEUTRAL_KERNEL_MODULES = List.of(
         "fibra-api",
@@ -84,6 +85,9 @@ class ReleaseArtifactBaselineTest {
                 module + " 缺少 Javadoc JAR");
 
             var mainJar = target.resolve(module + "-" + version + ".jar");
+            assertJarContains(mainJar, "META-INF/LICENSE");
+            assertJarContains(mainJar, "META-INF/THIRD_PARTY_NOTICES.md");
+            assertJarContains(mainJar, "META-INF/LICENSES/Cordis-MIT.txt");
             if (CLASS_BEARING_MODULES.contains(module)) {
                 assertJava21MainJar(mainJar);
             } else {
@@ -111,6 +115,29 @@ class ReleaseArtifactBaselineTest {
                     parseProject(root.resolve(module).resolve("pom.xml")), "maven.deploy.skip")),
                 module + " 不得开启远程发布");
         }
+    }
+
+    @Test
+    void openSourcePublicationMetadataIsComplete() throws Exception {
+        var root = repositoryRoot();
+        assertTrue(Files.isRegularFile(root.resolve("LICENSE")), "开源仓库缺少根 LICENSE");
+        assertTrue(Files.isRegularFile(root.resolve("CONTRIBUTING.md")), "开源仓库缺少贡献指南");
+        assertTrue(Files.isRegularFile(root.resolve("SECURITY.md")), "开源仓库缺少安全策略");
+        assertTrue(Files.isRegularFile(root.resolve("THIRD_PARTY_NOTICES.md")),
+            "开源仓库缺少第三方声明");
+
+        var project = parseProject(root.resolve("pom.xml"));
+        assertPublicationMetadata(project, "根 POM");
+
+        var pomContent = Files.readString(root.resolve("pom.xml"));
+        assertTrue(pomContent.contains("<id>central-release</id>"),
+            "根 POM 缺少显式 central-release profile");
+        assertTrue(pomContent.contains("<artifactId>maven-gpg-plugin</artifactId>"),
+            "release profile 缺少 GPG 签名");
+        assertTrue(pomContent.contains("<artifactId>central-publishing-maven-plugin</artifactId>"),
+            "release profile 缺少 Central Portal 发布插件");
+        assertTrue(pomContent.contains("<autoPublish>false</autoPublish>"),
+            "Central Portal 首次发布必须保留人工发布门");
     }
 
     @Test
@@ -213,6 +240,51 @@ class ReleaseArtifactBaselineTest {
             "Spring Boot application 只能直接依赖 starter 与 Boot 应用入口");
     }
 
+    @Test
+    void ciRunsTheCurrentTenArtifactReleaseVerification() throws Exception {
+        var workflow = Files.readString(repositoryRoot().resolve(".github/workflows/ci.yml"));
+
+        assertTrue(workflow.contains("验证十个发布制品可复现"),
+            "CI 的发布制品数量说明必须与当前十制品边界一致");
+        assertTrue(workflow.contains("run: scripts/verify-distribution.sh"),
+            "CI 必须执行当前仓库外分发验收脚本");
+        assertFalse(workflow.contains("verify-external-consumer.sh"),
+            "CI 不得引用已删除的旧分发验收脚本");
+        assertFalse(workflow.contains("actions/checkout@v"),
+            "CI 的 checkout action 必须固定到完整提交 SHA");
+        assertFalse(workflow.contains("actions/setup-java@v"),
+            "CI 的 setup-java action 必须固定到完整提交 SHA");
+        assertFalse(workflow.contains("secrets."), "普通 CI 不得读取发布凭据");
+    }
+
+    @Test
+    void releaseWorkflowUsesManualTrustedTagAndCentralPortal() throws Exception {
+        var workflowPath = repositoryRoot().resolve(".github/workflows/release.yml");
+        assertTrue(Files.isRegularFile(workflowPath), "缺少 Maven Central 发布工作流");
+        var workflow = Files.readString(workflowPath);
+
+        assertTrue(workflow.contains("workflow_dispatch:"), "发布必须由维护者显式触发");
+        assertTrue(workflow.contains("release_tag:"), "发布必须指定已有 release tag");
+        assertFalse(workflow.contains("pull_request:"), "发布工作流不得由 Pull Request 触发");
+        assertTrue(workflow.contains("verify-release:"), "发布前必须有无凭据验证任务");
+        assertTrue(workflow.contains("publish-central:"), "发布必须有独立 Central 任务");
+        assertTrue(workflow.contains("needs: verify-release"),
+            "Central 任务必须等待无凭据验证完成");
+        assertTrue(workflow.contains("environment: central"),
+            "Central 任务必须绑定受保护环境");
+        assertFalse(workflow.contains("actions/checkout@v"),
+            "发布工作流的 checkout action 必须固定到完整提交 SHA");
+        assertFalse(workflow.contains("actions/setup-java@v"),
+            "发布工作流的 setup-java action 必须固定到完整提交 SHA");
+        assertTrue(workflow.contains("mvn --batch-mode --no-transfer-progress clean deploy -Pcentral-release"),
+            "发布工作流必须通过 central-release profile 上传 Central Portal");
+        assertTrue(workflow.contains("secrets.CENTRAL_USERNAME")
+                && workflow.contains("secrets.CENTRAL_PASSWORD")
+                && workflow.contains("secrets.MAVEN_GPG_KEY")
+                && workflow.contains("secrets.MAVEN_GPG_PASSPHRASE"),
+            "发布工作流必须只从 GitHub Secrets 获取 Central 与签名凭据");
+    }
+
     private static void assertNoClasses(Path jarPath) throws Exception {
         try (var jar = new JarFile(jarPath.toFile())) {
             assertTrue(jar.stream().noneMatch(entry -> entry.getName().endsWith(".class")),
@@ -267,6 +339,7 @@ class ReleaseArtifactBaselineTest {
         assertNotNull(version, artifactId + " 发布 POM 缺少 version");
         assertNotNull(directChild(project, "name"), artifactId + " 发布 POM 缺少 name");
         assertNotNull(directChild(project, "description"), artifactId + " 发布 POM 缺少 description");
+        assertPublicationMetadata(project, artifactId + " 发布 POM");
 
         var dependencies = project.getElementsByTagNameNS("*", "dependency");
         for (int index = 0; index < dependencies.getLength(); index++) {
@@ -277,6 +350,41 @@ class ReleaseArtifactBaselineTest {
                 artifactId + " 发布 POM 混入测试依赖：" + directChildText(dependency, "artifactId"));
         }
         return version;
+    }
+
+    private static void assertPublicationMetadata(Element project, String label) {
+        assertEquals(PROJECT_URL, directChildText(project, "url"), label + " 项目 URL 不正确");
+
+        var licenses = directChild(project, "licenses");
+        assertNotNull(licenses, label + " 缺少 licenses");
+        var license = directChild(licenses, "license");
+        assertNotNull(license, label + " 缺少 license");
+        assertEquals("Apache License, Version 2.0", directChildText(license, "name"));
+        assertEquals("https://www.apache.org/licenses/LICENSE-2.0.txt",
+            directChildText(license, "url"));
+        assertEquals("repo", directChildText(license, "distribution"));
+
+        var developers = directChild(project, "developers");
+        assertNotNull(developers, label + " 缺少 developers");
+        var developer = directChild(developers, "developer");
+        assertNotNull(developer, label + " 缺少 developer");
+        assertEquals("sunker0115", directChildText(developer, "id"));
+        assertEquals("sunker0115", directChildText(developer, "name"));
+        assertEquals("sunker0115@163.com", directChildText(developer, "email"));
+        assertEquals("https://github.com/sunker0115", directChildText(developer, "url"));
+
+        var scm = directChild(project, "scm");
+        assertNotNull(scm, label + " 缺少 scm");
+        assertEquals("scm:git:https://github.com/sunker0115/fibra.git",
+            directChildText(scm, "connection"));
+        assertEquals("scm:git:ssh://git@github.com/sunker0115/fibra.git",
+            directChildText(scm, "developerConnection"));
+        assertEquals(PROJECT_URL, directChildText(scm, "url"));
+
+        var issueManagement = directChild(project, "issueManagement");
+        assertNotNull(issueManagement, label + " 缺少 issueManagement");
+        assertEquals("GitHub Issues", directChildText(issueManagement, "system"));
+        assertEquals(PROJECT_URL + "/issues", directChildText(issueManagement, "url"));
     }
 
     private static Element parseProject(Path pomPath) throws Exception {

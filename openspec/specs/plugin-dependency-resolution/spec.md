@@ -1,7 +1,7 @@
 # plugin-dependency-resolution Specification
 
 ## Purpose
-TBD - created by archiving change standardize-plugin-packages. Update Purpose after archive.
+定义插件候选提交前的完整依赖图解析规则，包括必需与可选依赖、单 ID 单版本、依赖顺序、ClassLoader 边界，以及二进制依赖与运行时服务依赖的职责分离。
 ## Requirements
 ### Requirement: Prospective 完整图预检
 系统 SHALL 在改变活动 ClassLoader、Fibra entry 或安装目录前，以当前全部安装包被本批次同 ID候选覆盖后的完整图执行预检。
@@ -75,4 +75,3 @@ TBD - created by archiving change standardize-plugin-packages. Update Purpose af
 #### Scenario: Consumer 等待运行时服务
 - **WHEN** consumer 只在 PF4J 图依赖 contract，而 provider Fibra entry 尚未注册服务
 - **THEN** consumer 制品可以 resolve，consumer Fibra按服务依赖保持 `PENDING`，直到服务图满足
-

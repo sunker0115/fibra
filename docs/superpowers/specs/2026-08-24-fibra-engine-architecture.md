@@ -83,7 +83,7 @@ resolve source tree
 
 候选配置计划必须能使用 `fibra-loader-pf4j` 提供的只读候选插件目录和目标 `configType`，保证 plugin/config 联合变更在拆除旧运行态前完成类型校验。
 
-config loader 额外提供不可变 `sourcePaths()` 视图，包含根配置、最后成功 include 与最后失败 resolve 尝试的路径，供外部托管 source 建立监听；该方法本身不启动 watcher 或触发 refresh。
+config loader 额外发布不可变 `sourcePaths()` 快照，包含根配置、最后成功 include 与最后失败 resolve 尝试的路径，供外部托管 source 建立监听。读取快照不得进入 loader 操作门、启动 watcher 或触发 refresh，避免 source 线程与 reconcile/deployment 竞争同一协调锁。
 
 ## 4. `fibra-engine`
 
@@ -128,7 +128,14 @@ engine 持久状态目录固定为 `<installedRoot>/.fibra-engine/`，只存放 
 
 ### 4.3 Reconcile 模型
 
-artifact/config source 只把同一个 engine key 放入有界去重队列。reconcile 不消费事件差量，每次重新读取完整安装目录、候选目录和配置依赖文件，比较 `desiredRevision` 与 `appliedRevision` 后生成新计划。
+artifact/config source 只把同一个 engine key 标记为 dirty。reconcile 不消费事件差量，每次重新读取完整安装目录、候选目录和配置依赖文件并执行幂等收敛。
+
+公共 `desiredRevision` 与 `appliedRevision` 保留为运维摘要，但内部必须分别维护 artifact/config 分量后再组合：
+
+- desired artifact 分量来自本轮唯一一次候选选择所得目标 catalog；desired config 分量来自本轮配置解析目标，解析失败时使用该次文件来源指纹；
+- applied artifact 分量只来自当前活动 catalog；applied config 分量只来自最后成功提交的不可变 `FibraConfigSnapshot`，不得重新读取已变化或已损坏的磁盘文件；
+- artifact 成功而 config 失败时，applied revision 必须推进为“新 artifact + 旧 config”的真实组合，不能保留整个旧 revision；
+- 文件系统不提供 API Server 式原子对象版本，因此 desired revision 只是最近一轮完整观察的运维摘要，不作为跳过 reconcile 或证明原子事务的依据。
 
 incoming 候选目录按插件 ID 分组并选择唯一最高 SemVer；低于已安装版本的候选忽略，同版本同摘要为 no-op，同版本不同摘要拒绝，最高版本的无效候选持续保持失败直到被替换或移除。成功提交不依赖删除 incoming 文件，后续完整重读通过已安装身份判定 no-op；松散目录只允许升级，显式 deployment 才允许受控降级。
 
@@ -140,14 +147,21 @@ incoming 候选目录按插件 ID 分组并选择唯一最高 SemVer；低于已
 - 多个文件事件合并为一次 dirty 状态；
 - 执行期间再变 dirty，当前执行结束后至少再 reconcile 一次；
 - 周期 resync 修复丢失的文件事件；
-- 失败保留最后成功运行态和 `appliedRevision`，按 artifact/config/deployment 来源分别记录结构化失败并按有界退避重试；
+- 初载与 readiness 成功、source/coordinator 启动后立即提交一次 dirty，使宿主启动前已经存在的 incoming 候选也进入正常收敛；坏 incoming 进入 `DEGRADED` 和退避重试，不得使已经建立基础运行态的 `start()` 失败；
+- artifact/config 失败保留各自最后成功分量，按来源记录结构化活动失败并按有界退避重试；完整回滚的显式 deployment 失败只返回给调用方，不把健康运行态标成 `DEGRADED`；
 - 手工 deployment 的 revision 高于松散目录信号，执行期间只累计 dirty，不交叉提交。
 
 ### 4.4 双 Source
 
 `ArtifactDirectorySource` 监听候选 ZIP目录，`ConfigFileSource` 监听当前配置快照解析出的根文件和 include 文件集合。两者只依赖 JDK `WatchService`，构造失败必须关闭已分配资源；source 关闭后不得再入队。
 
-source 与 `ReconcileCoordinator` 是 engine 内部实现，不进入公共 API签名。底层 loader 不再持有 watch thread、scheduler 或 debounce 状态。命名使用 coordinator 而不是 controller，避免与 Spring MVC/Web controller 混淆。
+source 只是低延迟提示器，周期 resync 才是正确性兜底。`WatchKey.reset()` 失效后必须移除旧注册，使目录或目标文件恢复时可以重新注册；监听循环异常至少通过 SLF4J WARN 可观察，不能静默退出。source 与 `ReconcileCoordinator` 是 engine 内部实现，不进入公共 API签名。底层 loader 不再持有 watch thread、scheduler 或 debounce 状态。命名使用 coordinator 而不是 controller，避免与 Spring MVC/Web controller 混淆。
+
+### 4.5 运行状态与同步命令结果
+
+保留 `NEW/STARTING/RUNNING/DEGRADED/STOPPING/TERMINATED`，因为纯 Java 与 Spring 运维场景需要一个可直接序列化的综合状态。`RUNNING` 与 `DEGRADED` 都表示资源仍由 engine 持有且可自动恢复；状态必须由当前活动失败统一计算，单次成功不得在其他活动失败尚存时无条件改回 `RUNNING`。
+
+同步 deployment 的返回必须与副作用一致。等待线程被中断时，coordinator 在线程安全边界内先尝试移除尚未开始的 operation：移除成功则 operation 永不执行；worker 已取得 operation 则等待真实结果后恢复调用线程中断标志，不能让调用方收到失败后又在后台提交。
 
 ## 5. Deployment Package
 
@@ -186,6 +200,8 @@ PREPARING
 
 新状态在 readiness 成功前不得成为对外 committed revision。恢复无法证明前态或后态完整时拒绝启动并报告 ROLLBACK，不猜测一个插件图继续运行。
 
+durable `COMMITTED` journal 是唯一对外提交点。写入成功前的任何失败都进入逆序 rollback；写入成功后必须发布 applied revision 并返回成功。参与者 `complete`、非权威的 last-deployment receipt 和事务目录删除只负责提交后维护，失败时保留 `COMMITTED` journal 供下次启动验证并清理，同时记录 WARN，不得把已经生效的部署返回成失败。receipt 不参与启动决策，也不替代真实 installed catalog 与配置快照。
+
 ## 6. Spring 边界
 
 `fibra-spring` 只提供 `FibraSpringLifecycle` 和 `FibraServiceBridge`。lifecycle 把 Spring `start/stop` 委托给同一个 `FibraEngine`，不复制 load、watch、readiness、rollback 或 close 算法。
@@ -221,7 +237,14 @@ archetype 自身使用 Maven 官方 `archetype:integration-test` 在构建期生
 - 十个可发布制品生成主制品、发布 POM及项目要求的辅助制品，并进入可复现构建；
 - archetype 生成项目不得引用 reactor、`${revision}`、`target/classes` 或 Fibra 父 POM。
 
-## 9. 范围外
+## 9. 成熟实现参照与本项目取舍
+
+- Kubernetes `controller-runtime` 与 `client-go` 采用 level-triggered reconcile、dirty/processing 去重和失败重入队。Fibra 保留“事件只提示、完整状态收敛”的语义，但单进程单 engine 不引入通用资源对象、持久工作队列或分布式 controller 框架。
+- Kubernetes `observedGeneration` 依赖 API Server 提供的原子对象版本。Fibra 的多文件来源没有同等快照边界，因此 revision 只用于运维观察，不参与是否执行 reconcile 的正确性判断。
+- Apache Felix FileInstall 使用初次扫描、周期全量扫描和可持续运行的目录循环。Fibra同样让启动后的首次 dirty 与周期 resync 承担正确性，`WatchService` 只降低延迟。
+- JDK `Future` 只保证成功取消的未开始任务不执行。Fibra只移除仍在队列中的 operation；已由 worker 取得的 deployment 不以线程中断破坏事务边界。
+
+## 10. 范围外
 
 - Spring Shell 命令注册、Spring AI 和具体 agent 协议；
 - 远程插件市场、自动下载依赖、签名信任策略和沙箱；
@@ -229,6 +252,6 @@ archetype 自身使用 Maven 官方 `archetype:integration-test` 在构建期生
 - 根据时间接近程度把两个松散文件事件猜成同一 deployment；
 - 对旧 watcher API、旧 Spring 属性或错误模块边界提供兼容代码。
 
-## 10. Open Questions
+## 11. Open Questions
 
 无。模块名称、依赖方向、watch source、reconcile、联合事务、Spring 接缝、archetype、测试和发布边界均已确定。

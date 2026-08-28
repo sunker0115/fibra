@@ -1,0 +1,141 @@
+name: 发布到 Maven Central
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 已存在且位于 main 历史中的正式版本标签，例如 v0.4.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fibra-central-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  verify-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      commit: ${{ steps.release-ref.outputs.commit }}
+    env:
+      TZ: UTC
+      JAVA_TOOL_OPTIONS: -Duser.timezone=UTC -Dfile.encoding=UTF-8
+    steps:
+      - name: 检出指定标签
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.release_tag }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: 验证标签、版本和 main 归属
+        id: release-ref
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "正式版本标签必须符合 v<major>.<minor>.<patch>" >&2
+            exit 1
+          fi
+          revision="$(sed -n 's/.*<revision>\([^<]*\)<\/revision>.*/\1/p' pom.xml)"
+          if [[ -z "$revision" || "$revision" == *-SNAPSHOT ]]; then
+            echo "根 POM revision 必须是非 SNAPSHOT 正式版本" >&2
+            exit 1
+          fi
+          if [[ "$RELEASE_TAG" != "v$revision" ]]; then
+            echo "标签 $RELEASE_TAG 与根 POM 版本 $revision 不一致" >&2
+            exit 1
+          fi
+          tag_commit="$(git rev-parse --verify "refs/tags/$RELEASE_TAG^{commit}")"
+          if [[ "$(git rev-parse HEAD)" != "$tag_commit" ]]; then
+            echo "检出提交与标签提交不一致" >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$tag_commit" origin/main; then
+            echo "正式版本标签必须位于 origin/main 历史中" >&2
+            exit 1
+          fi
+          echo "commit=$tag_commit" >> "$GITHUB_OUTPUT"
+
+      - name: 配置 Java 21
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: zulu
+          java-version: '21'
+          cache: maven
+
+      - name: 配置项目锁定的 Maven 版本
+        shell: bash
+        run: |
+          maven_version="$(sed -n 's/.*<maven.runtime.version>\([^<]*\)<\/maven.runtime.version>.*/\1/p' pom.xml)"
+          maven_sha512="$(sed -n 's/.*<maven.runtime.sha512>\([^<]*\)<\/maven.runtime.sha512>.*/\1/p' pom.xml)"
+          archive="$RUNNER_TEMP/apache-maven-$maven_version-bin.tar.gz"
+          curl --fail --silent --show-error --location \
+            "https://archive.apache.org/dist/maven/maven-3/$maven_version/binaries/apache-maven-$maven_version-bin.tar.gz" \
+            --output "$archive"
+          echo "$maven_sha512  $archive" | sha512sum --check -
+          tar -xzf "$archive" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-$maven_version/bin" >> "$GITHUB_PATH"
+
+      - name: 全量构建与兼容性验收
+        run: mvn --batch-mode --no-transfer-progress clean verify
+
+      - name: 验证十个发布制品可复现
+        run: scripts/verify-reproducible-release.sh
+
+      - name: 验证仓库外项目可直接消费发布制品
+        run: scripts/verify-distribution.sh
+
+  publish-central:
+    needs: verify-release
+    environment: central
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TZ: UTC
+      JAVA_TOOL_OPTIONS: -Duser.timezone=UTC -Dfile.encoding=UTF-8
+    steps:
+      - name: 检出已验证提交
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.verify-release.outputs.commit }}
+          persist-credentials: false
+
+      - name: 配置 Java 21 和 Central 凭据映射
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: zulu
+          java-version: '21'
+          server-id: central
+          server-username-env-var: CENTRAL_USERNAME
+          server-password-env-var: CENTRAL_PASSWORD
+
+      - name: 配置项目锁定的 Maven 版本
+        shell: bash
+        run: |
+          maven_version="$(sed -n 's/.*<maven.runtime.version>\([^<]*\)<\/maven.runtime.version>.*/\1/p' pom.xml)"
+          maven_sha512="$(sed -n 's/.*<maven.runtime.sha512>\([^<]*\)<\/maven.runtime.sha512>.*/\1/p' pom.xml)"
+          archive="$RUNNER_TEMP/apache-maven-$maven_version-bin.tar.gz"
+          curl --fail --silent --show-error --location \
+            "https://archive.apache.org/dist/maven/maven-3/$maven_version/binaries/apache-maven-$maven_version-bin.tar.gz" \
+            --output "$archive"
+          echo "$maven_sha512  $archive" | sha512sum --check -
+          tar -xzf "$archive" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-$maven_version/bin" >> "$GITHUB_PATH"
+
+      - name: 签名并上传 Central Portal
+        env:
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+          MAVEN_GPG_KEY: ${{ secrets.MAVEN_GPG_KEY }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        run: >-
+          mvn --batch-mode --no-transfer-progress clean deploy -Pcentral-release
+          -pl fibra-api,fibra-core,fibra-pf4j-api,fibra-loader-pf4j,fibra-loader-config,fibra-engine,fibra-spring,fibra-spring-boot-autoconfigure,fibra-spring-boot-starter,fibra-plugin-archetype
+          -am -DskipTests -Darchetype.test.skip=true

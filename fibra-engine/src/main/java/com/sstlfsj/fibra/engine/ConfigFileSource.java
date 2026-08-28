@@ -1,5 +1,8 @@
 package com.sstlfsj.fibra.engine;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.FileSystems;
@@ -19,6 +22,7 @@ import java.util.function.Supplier;
 
 final class ConfigFileSource implements AutoCloseable {
     private static final long POLL_MILLIS = 100;
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConfigFileSource.class);
 
     private final Supplier<Set<Path>> pathsSupplier;
     private final long debounceNanos;
@@ -66,6 +70,13 @@ final class ConfigFileSource implements AutoCloseable {
     private void run() {
         try {
             while (!closed.get()) {
+                try {
+                    refreshRegistrations();
+                } catch (IOException failure) {
+                    LOGGER.warn("Cannot refresh Fibra config source registrations", failure);
+                    Thread.sleep(POLL_MILLIS);
+                    continue;
+                }
                 var key = watchService.poll(POLL_MILLIS, TimeUnit.MILLISECONDS);
                 var dirty = key != null && consume(key);
                 dirty |= existenceChanged();
@@ -98,6 +109,8 @@ final class ConfigFileSource implements AutoCloseable {
             // close 的正常退出路径。
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
+        } catch (RuntimeException failure) {
+            LOGGER.warn("Fibra config source stopped unexpectedly", failure);
         }
     }
 
@@ -112,7 +125,10 @@ final class ConfigFileSource implements AutoCloseable {
                 dirty = true;
             }
         }
-        key.reset();
+        if (!key.reset()) {
+            directories.remove(directory, key);
+            dirty = true;
+        }
         return dirty;
     }
 
@@ -152,7 +168,8 @@ final class ConfigFileSource implements AutoCloseable {
         }
         files = nextFiles;
         var current = new LinkedHashMap<Path, Boolean>();
-        files.forEach(file -> current.put(file, Files.exists(file)));
+        files.forEach(file -> current.put(file,
+            existence.getOrDefault(file, Files.exists(file))));
         existence = Map.copyOf(current);
     }
 

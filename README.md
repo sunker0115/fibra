@@ -1,5 +1,8 @@
 # Fibra
 
+[![CI](https://github.com/sunker0115/fibra/actions/workflows/ci.yml/badge.svg)](https://github.com/sunker0115/fibra/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 Fibra 是 Cordis Core 4.0.1 的 Java 21 语义等价实现，并在其上提供可信的进程内插件装载、配置装配、持续收敛和联合部署事务。它可以作为 Java DeepSeek Harness、AI Agent 工具平台或其他动态插件宿主的基础，但不为任何单一业务框架做特殊处理，也不是整个 DeepSeek Harness 的翻译。
 
 当前开发版本是 `0.4.0-SNAPSHOT`，只在 `codex/0.4.0-development` 分支开发；`v0.3.1` 是上一正式版本基线。开发快照不是正式发布版本。
@@ -150,3 +153,9 @@ mvn archetype:generate -B \
 - [Cordis 71 项测试等价表](docs/superpowers/references/2026-08-21-fibra-cordis-test-parity.md)
 - [开源基线与取舍](docs/superpowers/references/2026-08-21-fibra-opensource-baselines.md)
 - [公开签名基线目录](docs/api/)
+
+## 贡献、安全与许可证
+
+贡献流程见[贡献指南](CONTRIBUTING.md)。安全漏洞请遵循[安全策略](SECURITY.md)，不要通过公开 Issue 披露。
+
+Fibra 使用 [Apache License 2.0](LICENSE)。Cordis 行为基线和其他依赖的归属信息见[第三方说明](THIRD_PARTY_NOTICES.md)；Cordis 原始 MIT 许可证随仓库和发布 JAR 一并保留。

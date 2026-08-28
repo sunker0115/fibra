@@ -1,7 +1,7 @@
 # plugin-project-archetype Specification
 
 ## Purpose
-TBD - created by archiving change publish-plugin-archetype. Update Purpose after archive.
+定义可发布的插件项目 Archetype 契约，使用户能够在 Fibra 源码仓库之外生成、构建并验证遵守标准包格式和依赖边界的多模块插件项目。
 ## Requirements
 ### Requirement: 用户可从已发布 Archetype 生成独立插件项目
 

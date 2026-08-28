@@ -11,6 +11,9 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -126,6 +129,41 @@ class FibraConfigChangeTest {
             assertTrue(loader.sourcePaths().contains(config.toAbsolutePath().normalize()));
             assertTrue(loader.sourcePaths().contains(
                 config.toRealPath().getParent().resolve("missing.yaml").normalize()));
+        }
+    }
+
+    @Test
+    void sourcePathsRemainReadableWhileArtifactTransactionOwnsTheGate(@TempDir Path work)
+        throws Exception {
+        var plugins = Files.createDirectory(work.resolve("plugins"));
+        var config = Files.writeString(work.resolve("fibra.yaml"), "[]");
+
+        try (Context root = FibraRuntime.create();
+             var artifacts = new FibraPluginLoader(root, plugins);
+             var loader = FibraConfigLoader.builder(root, artifacts, config).build()) {
+            artifacts.loadArtifacts();
+            loader.load();
+            var entered = new CountDownLatch(1);
+            var release = new CountDownLatch(1);
+            var holder = Thread.ofPlatform().start(() -> artifacts.runExclusive(() -> {
+                entered.countDown();
+                try {
+                    if (!release.await(2, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException("test operation gate was not released");
+                    }
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(exception);
+                }
+            }));
+            assertTrue(entered.await(2, TimeUnit.SECONDS));
+            try {
+                assertEquals(Set.of(config.toAbsolutePath().normalize()),
+                    loader.sourcePaths());
+            } finally {
+                release.countDown();
+                holder.join();
+            }
         }
     }
 

@@ -1,7 +1,7 @@
 # deployment-package-format Specification
 
 ## Purpose
-TBD - created by archiving change establish-fibra-engine. Update Purpose after archive.
+定义显式联合 deployment 的安全包格式、内容完整性和与松散文件事件的事务边界。
 ## Requirements
 ### Requirement: Deployment Package 显式绑定插件与配置
 

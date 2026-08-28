@@ -42,6 +42,7 @@ public final class FibraConfigLoader implements AutoCloseable {
     private final Map<SharedIsolate, Object> sharedIsolates = new LinkedHashMap<>();
 
     private FibraConfigSnapshot snapshot;
+    private volatile Set<Path> sourcePaths;
     private boolean loaded;
     private volatile boolean closing;
     private volatile boolean closed;
@@ -53,6 +54,7 @@ public final class FibraConfigLoader implements AutoCloseable {
         this.patches = List.copyOf(builder.patches);
         this.resolver = new ConfigTreeResolver(builder.limits(), builder.warningSink);
         this.fileMover = builder.fileMover;
+        this.sourcePaths = Set.of(configPath);
     }
 
     public static Builder builder(Context root, FibraPluginLoader plugins, Path configPath) {
@@ -102,22 +104,8 @@ public final class FibraConfigLoader implements AutoCloseable {
 
     /** 当前成功 include 与最后一次解析尝试涉及的绝对归一化路径。 */
     public Set<Path> sourcePaths() {
-        return plugins.runExclusive(() -> {
-            requireOpen();
-            var result = new LinkedHashSet<Path>();
-            result.add(configPath);
-            if (snapshot != null) {
-                snapshot.allEntries().forEach(entry -> {
-                    result.add(entry.source().toAbsolutePath().normalize());
-                    if (entry.includedPath() != null) {
-                        result.add(entry.includedPath().toAbsolutePath().normalize());
-                    }
-                });
-            }
-            result.addAll(resolver.attemptedPaths().stream()
-                .map(path -> path.toAbsolutePath().normalize()).toList());
-            return Set.copyOf(result);
-        });
+        requireOpen();
+        return sourcePaths;
     }
 
     public FibraConfigChange prepareCurrent(FibraPluginCatalog catalog, Path workspace) {
@@ -283,9 +271,13 @@ public final class FibraConfigLoader implements AutoCloseable {
     }
 
     FibraConfigSnapshot resolveAgainst(FibraPluginCatalog catalog) {
-        var candidate = resolver.resolve(configPath, patches);
-        validateAgainst(candidate, catalog);
-        return candidate;
+        try {
+            var candidate = resolver.resolve(configPath, patches);
+            validateAgainst(candidate, catalog);
+            return candidate;
+        } finally {
+            publishSourcePaths(snapshot, resolver.attemptedPaths());
+        }
     }
 
     FibraConfigSnapshot resolvePath(Path path) {
@@ -302,6 +294,7 @@ public final class FibraConfigLoader implements AutoCloseable {
     }
 
     void publishSnapshot(FibraConfigSnapshot value) {
+        publishSourcePaths(value, Set.of());
         if (snapshot != null && value != null
             && snapshot.entries().equals(value.entries())) {
             loaded = true;
@@ -414,7 +407,7 @@ public final class FibraConfigLoader implements AutoCloseable {
                 fileMover.move(document.temporary(), document.path());
                 replaced.add(document);
             }
-            snapshot = candidate;
+            publishSnapshot(candidate);
         } catch (IOException writeFailure) {
             var wrapped = new FibraConfigException(FibraConfigErrorStage.WRITE,
                 "cannot atomically replace config file", configPath, null, null,
@@ -869,6 +862,22 @@ public final class FibraConfigLoader implements AutoCloseable {
         if (closing || closed) {
             throw new IllegalStateException("FibraConfigLoader is closed");
         }
+    }
+
+    private void publishSourcePaths(FibraConfigSnapshot value, Set<Path> attempted) {
+        var paths = new LinkedHashSet<Path>();
+        paths.add(configPath);
+        if (value != null) {
+            value.allEntries().forEach(entry -> {
+                paths.add(entry.source().toAbsolutePath().normalize());
+                if (entry.includedPath() != null) {
+                    paths.add(entry.includedPath().toAbsolutePath().normalize());
+                }
+            });
+        }
+        attempted.stream().map(path -> path.toAbsolutePath().normalize())
+            .forEach(paths::add);
+        sourcePaths = Set.copyOf(paths);
     }
 
     private record ManagedEntry(FibraConfigEntry entry, Fibra scopeFibra) {

@@ -1,7 +1,7 @@
 # spring-adapter-packaging Specification
 
 ## Purpose
-TBD - created by archiving change standardize-spring-runtime-integration. Update Purpose after archive.
+定义 Spring Framework 适配层、Spring Boot 自动配置与 starter 的发布边界，使框架中立运行时不引入 Spring 依赖，并以最小稳定 API 提供可独立消费的 Spring 集成。
 ## Requirements
 ### Requirement: 通用 Spring、自动配置和依赖入口分离
 

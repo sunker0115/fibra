@@ -1,10 +1,14 @@
 package com.sstlfsj.fibra.engine;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.time.Duration;
 import java.util.Objects;
@@ -12,11 +16,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 final class ArtifactDirectorySource implements AutoCloseable {
+    private static final long POLL_MILLIS = 100;
+    private static final Logger LOGGER = LoggerFactory.getLogger(ArtifactDirectorySource.class);
     private final Path root;
     private final long debounceNanos;
     private final Runnable dirtyCallback;
     private final WatchService watchService;
     private final AtomicBoolean closed = new AtomicBoolean();
+    private WatchKey registration;
     private Thread worker;
 
     ArtifactDirectorySource(Path root, Duration debounce, Runnable dirtyCallback) {
@@ -29,7 +36,7 @@ final class ArtifactDirectorySource implements AutoCloseable {
         this.dirtyCallback = Objects.requireNonNull(dirtyCallback, "dirtyCallback");
         try {
             watchService = this.root.getFileSystem().newWatchService();
-            this.root.register(watchService, StandardWatchEventKinds.ENTRY_CREATE);
+            registration = register();
         } catch (IOException exception) {
             throw new IllegalStateException("cannot create artifact directory source", exception);
         }
@@ -48,10 +55,30 @@ final class ArtifactDirectorySource implements AutoCloseable {
     private void run() {
         try {
             while (!closed.get()) {
-                var key = watchService.take();
+                if (registration == null) {
+                    if (!Files.isDirectory(root)) {
+                        Thread.sleep(POLL_MILLIS);
+                        continue;
+                    }
+                    try {
+                        registration = register();
+                        dirtyCallback.run();
+                    } catch (IOException failure) {
+                        LOGGER.warn("Cannot register Fibra artifact source root: {}", root,
+                            failure);
+                        Thread.sleep(POLL_MILLIS);
+                    }
+                    continue;
+                }
+                var key = watchService.poll(POLL_MILLIS, TimeUnit.MILLISECONDS);
+                if (key == null) {
+                    continue;
+                }
                 var dirty = consume(key);
                 if (!key.reset()) {
-                    return;
+                    LOGGER.warn("Fibra artifact source root is no longer watchable: {}", root);
+                    registration = null;
+                    dirty = true;
                 }
                 if (!dirty) {
                     continue;
@@ -68,7 +95,10 @@ final class ArtifactDirectorySource implements AutoCloseable {
                     }
                     consume(next);
                     if (!next.reset()) {
-                        return;
+                        LOGGER.warn("Fibra artifact source root is no longer watchable: {}",
+                            root);
+                        registration = null;
+                        break;
                     }
                 }
                 if (!closed.get()) {
@@ -79,7 +109,13 @@ final class ArtifactDirectorySource implements AutoCloseable {
             // close 的正常退出路径。
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
+        } catch (RuntimeException failure) {
+            LOGGER.warn("Fibra artifact source stopped unexpectedly", failure);
         }
+    }
+
+    private WatchKey register() throws IOException {
+        return root.register(watchService, StandardWatchEventKinds.ENTRY_CREATE);
     }
 
     private boolean consume(java.nio.file.WatchKey key) {

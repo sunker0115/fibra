@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ArtifactDirectorySourceTest {
     @Test
@@ -32,5 +33,27 @@ class ArtifactDirectorySourceTest {
         Files.writeString(work.resolve("after-close.zip"), "zip");
         await().during(Duration.ofMillis(100)).atMost(Duration.ofSeconds(2))
             .untilAsserted(() -> assertEquals(1, calls.get()));
+    }
+
+    @Test
+    void reRegistersAfterSourceDirectoryIsDeletedAndRecreated(@TempDir Path work)
+        throws Exception {
+        var sourceRoot = Files.createDirectory(work.resolve("incoming"));
+        var calls = new AtomicInteger();
+        try (var source = new ArtifactDirectorySource(sourceRoot, Duration.ofMillis(20),
+            calls::incrementAndGet)) {
+            source.start();
+
+            Files.delete(sourceRoot);
+            await().atMost(Duration.ofSeconds(5)).until(() -> calls.get() >= 1);
+
+            Files.createDirectory(sourceRoot);
+            await().atMost(Duration.ofSeconds(5)).until(() -> calls.get() >= 2);
+            var beforePublication = calls.get();
+
+            Files.writeString(sourceRoot.resolve("plugin.zip"), "zip");
+            await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
+                assertTrue(calls.get() > beforePublication));
+        }
     }
 }

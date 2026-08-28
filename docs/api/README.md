@@ -248,7 +248,7 @@ try (var root = FibraRuntime.create();
 
 patch 分 `insert` 与 `override`，按列表顺序应用；override 的显式 `null` 删除字段。缺失目标、目标不是 group 或 expected plugin 不匹配会通过 `warningSink` 报告并跳过。配置只接受字面值，不执行 SpEL、JEXL、JavaScript、反射构造或环境表达式；宿主必须把环境/profile 解析为显式 `FibraConfigPatch`。
 
-`FibraConfigException` 的 `stage/path/entryId/pluginId` 是稳定定位字段：`READ` 为文件访问/真实路径失败，`PARSE` 为 YAML/JSON 语法失败，`VALIDATE` 为配置结构失败，`RESOLVE` 为插件制品或配置类型解析失败，`CONVERT` 为字面值到 typed config 的映射失败，`DISPOSE/APPLY` 为运行态卸载/应用失败，`WRITE` 为文件暂存或原子替换失败，`ROLLBACK` 为恢复旧状态失败。`sourcePaths()` 返回根文件、成功 include 和失败解析尝试路径的不可变集合，供 Engine 的配置 source 监听；它本身不启动线程或刷新配置。
+`FibraConfigException` 的 `stage/path/entryId/pluginId` 是稳定定位字段：`READ` 为文件访问/真实路径失败，`PARSE` 为 YAML/JSON 语法失败，`VALIDATE` 为配置结构失败，`RESOLVE` 为插件制品或配置类型解析失败，`CONVERT` 为字面值到 typed config 的映射失败，`DISPOSE/APPLY` 为运行态卸载/应用失败，`WRITE` 为文件暂存或原子替换失败，`ROLLBACK` 为恢复旧状态失败。`sourcePaths()` 返回根文件、成功 include 和最后一次失败解析尝试路径的无锁不可变快照，供 Engine 的配置 source 在 loader 事务进行期间继续维护监听；它本身不启动线程或刷新配置。
 
 ## 8.2 托管 Engine
 
@@ -268,9 +268,11 @@ try (var engine = FibraEngine.builder(Path.of("plugins"), Path.of("fibra.yaml"))
 }
 ```
 
-`start()` 依次完成崩溃恢复、安装图初载、配置装配、required entry readiness 和可选 source 启动；同一 Engine 只能启动一次。`requestReconcile()` 只标记期望状态可能变化；后台协调器重新读取完整状态并串行收敛。artifact 与 config 的松散变化分别提交，不能靠时间接近程度猜成联合事务。
+`start()` 依次完成崩溃恢复、安装图初载、配置装配、required entry readiness 和可选 source 启动；基础运行态建立后立即请求一次完整 reconcile，因此启动前已经存在的 incoming 候选也会被处理，坏候选只让已启动 Engine 进入 `DEGRADED` 并重试，不反向破坏基础启动。同一 Engine 只能启动一次。`requestReconcile()` 只标记期望状态可能变化；后台协调器重新读取完整状态并串行收敛。artifact 与 config 的松散变化分别提交，不能靠时间接近程度猜成联合事务。
 
-`applyDeployment(Path)` 接受含 `deployment.properties`、`checksums.sha256`、`plugins/*.zip` 和 `config/` 的标准 deployment ZIP。摘要固定使用 SHA-256；插件和配置作为一个显式事务预检、提交、readiness 和回滚。`FibraEngineStatus` 提供终止性状态、desired revision、最后成功 applied revision 与按阶段结构化失败。
+`applyDeployment(Path)` 接受含 `deployment.properties`、`checksums.sha256`、`plugins/*.zip` 和 `config/` 的标准 deployment ZIP。摘要固定使用 SHA-256；插件和配置作为一个显式事务预检、提交、readiness 和回滚。持久化 `COMMITTED` journal 是唯一提交点；此前失败回滚并返回失败，此后的 receipt 写入、参与者清理或事务目录删除失败只保留 journal 供下次启动恢复并记录 WARN，调用仍返回已经生效的成功结果。
+
+`FibraEngineStatus` 提供终止性状态、desired revision、applied revision 与按阶段结构化失败。两个公开 revision 都由内部 artifact/config 分量组合：desired 表示最近一次完整观察，applied 表示当前真实活动 catalog 与最后成功配置快照；一侧成功而另一侧失败时 applied 仍推进成功分量，不会伪装成整个旧状态。`RUNNING`/`DEGRADED` 由全部活动失败统一计算，单个阶段恢复不会遮蔽其他阶段的失败。
 
 Engine 独占 root、两个 loader、两个可选 source、协调线程和 journal；只公开 `root()` 作为服务桥接与查询视图，不公开内部 loader。`close()` 固定停止 source 与协调工作，再关闭 config loader、plugin loader 和 root，重复调用幂等。
 

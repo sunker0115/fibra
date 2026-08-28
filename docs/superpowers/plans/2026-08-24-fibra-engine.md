@@ -296,26 +296,26 @@ git diff --check
 
 ## 7. 把 source/coordinator 接入真实 desired state
 
-新增内部 `DesiredStateReader`、`DesiredState`、`EngineRevision`，把第 4 项的 source/coordinator 接入 engine 和两个变更参与者。reconcile 不消费事件差量，每次读取完整安装目录、incoming 候选和配置依赖树。incoming 按插件 ID 选择唯一最高 SemVer；低于已安装版本的候选忽略，同版本同摘要 no-op，同版本不同摘要失败；成功不要求删除候选文件。
+新增内部 `EngineRevision`，把第 4 项的 source/coordinator 接入 engine 和两个变更参与者。reconcile 不消费事件差量，每轮只扫描一次 incoming 并读取一次配置目标。incoming 按插件 ID 选择唯一最高 SemVer；低于已安装版本的候选忽略，同版本同摘要 no-op，同版本不同摘要失败；成功不要求删除候选文件。
 
 一轮同时发现 artifact/config 变化时，固定先执行独立 artifact 事务，再对执行后的活动 catalog 执行独立 config 事务；两个事务不共享候选 catalog、不合并 rollback。artifact 失败不阻止 config 独立尝试，二者按 `ARTIFACT_RECONCILE`、`CONFIG_RECONCILE` 分别记录或清除失败。只有 `applyDeployment` 使用第 8 项联合事务。
 
 先写失败测试：
 
-- `DesiredStateReaderTest.java`：候选目录排序、同 ID 最高 SemVer、低版本忽略、同版本摘要规则、稳定文件检查、完整配置来源摘要、相同内容相同 revision、任一插件或 include 字节变化产生新 revision。
-- 扩展 `ReconcileCoordinatorTest.java`：手工 deployment 执行期间只累计 dirty；artifact/config 独立尝试和独立失败；成功更新 desired/applied revision；失败保持最后成功 applied revision；下一次成功只清对应 stage 的 retry和失败。
-- `FibraEngineReconcileIT.java`：真实多插件目录和 typed config；先 consumer 后 provider 最终收敛；失败保留最后成功服务与 applied revision；修正后自动恢复。
+- `EngineRevisionTest.java`：artifact 顺序稳定、原始来源内容寻址、artifact/config 分量稳定组合、等价配置文本不改变运行态 revision。
+- 扩展 `ReconcileCoordinatorTest.java`：尚未执行的同步操作被中断后取消，已经执行的操作返回真实结果并恢复调用线程中断标志。
+- `FibraEngineReconcileIT.java`：启动前坏候选异步降级并可恢复；artifact 成功而 config 失败时 applied revision 准确推进成功分量。
 
 再实现：
 
-- engine `start()` 成功初载后启动 coordinator/source；`requestReconcile()` 与两个 source 进入同一信号位；`applyDeployment()` 通过同一 coordinator 的独占操作入口执行。
+- engine `start()` 成功初载后启动 coordinator/source 并立即标记一次 dirty；`requestReconcile()` 与两个 source 进入同一信号位；`applyDeployment()` 通过同一 coordinator 的独占操作入口执行。
 - 停止接收后关闭 source、丢弃尚未开始的重复信号、等待正在执行操作完成；不得持 monitor/Lock 跨 loader 调用或 Fibra await。
-- revision 为完整 desired 输入的规范 SHA-256：已安装/候选插件 descriptor+摘要、配置 snapshot literal+来源摘要；不使用时间戳作为身份。
+- revision 内部分为 artifact/config 分量。desired artifact 来自本轮候选选择的目标 catalog，applied artifact 来自活动 catalog；成功配置分量来自规范化 snapshot，解析失败时 desired 配置分量使用来源文件指纹，applied 配置分量保留最后成功 snapshot。公共 revision 只组合两个分量，不使用时间戳或文件路径作为运行态身份。
 
 验证：
 
 ```bash
-$MVN -pl fibra-engine -am -Dtest=DesiredStateReaderTest,ReconcileCoordinatorTest,FibraEngineReconcileIT -Dsurefire.failIfNoSpecifiedTests=false test
+$MVN -pl fibra-engine -am -Dtest=EngineRevisionTest,ReconcileCoordinatorTest,FibraEngineReconcileIT -Dsurefire.failIfNoSpecifiedTests=false test
 git diff --check
 ```
 
@@ -341,9 +341,9 @@ git diff --check
 4. journal PREPARED；
 5. artifact commit，config commit；
 6. required entry readiness；
-7. 原子写 `revisions/applied.properties`；
-8. journal COMMITTED；
-9. config、artifact complete，payload-first 清理。
+7. journal COMMITTED；
+8. 发布 applied revision 并返回已生效结果；
+9. best-effort 写 `revisions/applied.properties`、完成 config/artifact participant 并清理事务目录；失败保留 COMMITTED journal 供下次启动恢复。
 
 失败时 config rollback 先卸载新 runtime、恢复配置文件/snapshot；artifact rollback 再恢复旧目录/ClassLoader和 prepare 时的旧 entry specs。崩溃恢复不启动候选业务代码来猜图；不能由 journal+摘要证明时构造 engine 失败并以 `ROLLBACK` stage 报告。
 

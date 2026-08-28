@@ -1,7 +1,7 @@
 # plugin-update-transaction Specification
 
 ## Purpose
-TBD - created by archiving change standardize-plugin-packages. Update Purpose after archive.
+定义插件制品批量变更的唯一事务模型：所有候选在共享管理门内完成完整依赖图预检、按依赖顺序重建运行态，并以持久化事务日志支持崩溃恢复和提交前回滚。
 ## Requirements
 ### Requirement: 单一批量 Apply API
 系统 SHALL 以 `applyArtifacts(List<Path>)` 作为安装新包、升级、降级和关联多包更新的唯一公开候选入口，并 MUST NOT 提供旧直接 JAR API 转发。
@@ -152,4 +152,3 @@ TBD - created by archiving change standardize-plugin-packages. Update Purpose af
 #### Scenario: 同步调用失败不重复记录
 - **WHEN** `applyArtifacts` 在调用线程抛出异常
 - **THEN** loader 不在同一路径重复记录该异常，由调用方决定日志策略
-

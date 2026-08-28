@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConfigFileSourceTest {
     @Test
@@ -33,6 +34,31 @@ class ConfigFileSourceTest {
             Files.writeString(root, "[ ]");
             await().atMost(Duration.ofSeconds(2)).untilAsserted(() ->
                 assertEquals(2, calls.get()));
+        }
+    }
+
+    @Test
+    void reRegistersAfterWatchedDirectoryIsDeletedAndRecreated(@TempDir Path work)
+        throws Exception {
+        var directory = Files.createDirectory(work.resolve("config"));
+        var config = Files.writeString(directory.resolve("fibra.yaml"), "[]");
+        var calls = new AtomicInteger();
+        try (var source = new ConfigFileSource(() -> Set.of(config),
+            Duration.ofMillis(20), calls::incrementAndGet)) {
+            source.start();
+
+            Files.delete(config);
+            Files.delete(directory);
+            await().atMost(Duration.ofSeconds(2)).until(() -> calls.get() >= 1);
+
+            Files.createDirectory(directory);
+            Files.writeString(config, "[]");
+            await().atMost(Duration.ofSeconds(2)).until(() -> calls.get() >= 2);
+            var beforeModify = calls.get();
+
+            Files.writeString(config, "[ ]");
+            await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
+                assertTrue(calls.get() > beforeModify));
         }
     }
 }

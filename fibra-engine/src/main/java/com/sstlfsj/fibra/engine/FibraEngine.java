@@ -7,6 +7,8 @@ import com.sstlfsj.fibra.loader.pf4j.FibraArtifactDescriptor;
 import com.sstlfsj.fibra.loader.pf4j.FibraPluginLoader;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
 import org.pf4j.DefaultVersionManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -24,6 +26,8 @@ import java.util.Optional;
 
 /** 框架中立的插件、配置、收敛和部署事务唯一托管入口。 */
 public final class FibraEngine implements AutoCloseable {
+    private static final Logger LOGGER = LoggerFactory.getLogger(FibraEngine.class);
+
     private final Object stateMonitor = new Object();
     private final Context root;
     private final FibraPluginLoader artifacts;
@@ -44,8 +48,13 @@ public final class FibraEngine implements AutoCloseable {
         new EnumMap<>(FibraEngineFailureStage.class);
 
     private FibraEngineState state = FibraEngineState.NEW;
+    private String desiredArtifactRevision;
+    private String desiredConfigRevision;
+    private String appliedArtifactRevision;
+    private String appliedConfigRevision;
     private String desiredRevision;
     private String appliedRevision;
+    private boolean mutationBlocked;
     private ReconcileCoordinator reconcileCoordinator;
     private ArtifactDirectorySource artifactSource;
     private ConfigFileSource configSource;
@@ -105,19 +114,21 @@ public final class FibraEngine implements AutoCloseable {
         FibraEngineFailureStage stage = FibraEngineFailureStage.STARTUP;
         try {
             artifacts.loadArtifacts();
-            config.load();
-            var initialRevision = currentRevision();
+            var initialConfig = config.load();
+            var initialArtifactRevision = currentArtifactRevision();
+            var initialConfigRevision = EngineRevision.config(initialConfig);
             synchronized (stateMonitor) {
-                desiredRevision = initialRevision;
-                appliedRevision = initialRevision;
+                desiredArtifactRevision = initialArtifactRevision;
+                appliedArtifactRevision = initialArtifactRevision;
+                desiredConfigRevision = initialConfigRevision;
+                appliedConfigRevision = initialConfigRevision;
+                publishRevisions();
             }
             stage = FibraEngineFailureStage.READINESS;
             awaitRequiredEntries();
             stage = FibraEngineFailureStage.STARTUP;
             reconcileCoordinator = new ReconcileCoordinator(this::reconcile, resyncInterval,
-                retryInitial, retryMaximum,
-                failure -> recordFailure(FibraEngineFailureStage.CONFIG_RECONCILE,
-                    failure));
+                retryInitial, retryMaximum, ignored -> { });
             if (artifactSourceRoot != null) {
                 artifactSource = new ArtifactDirectorySource(artifactSourceRoot,
                     artifactDebounce, reconcileCoordinator::request);
@@ -136,6 +147,7 @@ public final class FibraEngine implements AutoCloseable {
             synchronized (stateMonitor) {
                 state = FibraEngineState.RUNNING;
             }
+            reconcileCoordinator.request();
         } catch (RuntimeException failure) {
             recordFailure(stage, failure);
             try {
@@ -153,6 +165,10 @@ public final class FibraEngine implements AutoCloseable {
             if (state != FibraEngineState.RUNNING
                 && state != FibraEngineState.DEGRADED) {
                 throw new IllegalStateException("FibraEngine is not running");
+            }
+            if (mutationBlocked) {
+                throw new IllegalStateException(
+                    "FibraEngine mutations are blocked after an incomplete rollback");
             }
             current = reconcileCoordinator;
         }
@@ -186,13 +202,11 @@ public final class FibraEngine implements AutoCloseable {
             clearFailure(FibraEngineFailureStage.DEPLOYMENT);
             return result;
         } catch (FibraDeploymentException failure) {
-            recordFailure(FibraEngineFailureStage.DEPLOYMENT, failure);
             cleanUnpreparedTransaction(transactionRoot, failure);
             throw failure;
         } catch (RuntimeException | IOException failure) {
             var wrapped = new FibraDeploymentException(FibraDeploymentErrorStage.COMMIT,
                 packagePath, "cannot apply Fibra deployment", failure);
-            recordFailure(FibraEngineFailureStage.DEPLOYMENT, wrapped);
             cleanUnpreparedTransaction(transactionRoot, wrapped);
             throw wrapped;
         }
@@ -226,20 +240,25 @@ public final class FibraEngine implements AutoCloseable {
             journal = journal.advance(EngineTransactionState.VERIFYING);
             journal.write(transactionRoot);
             awaitRequiredEntries();
-            var revision = currentRevision();
-            journal = journal.committed(revision);
-            journal.write(transactionRoot);
-            AppliedRevisionStore.write(installedRoot, journal);
+            var artifactRevision = currentArtifactRevision();
+            var configRevision = EngineRevision.config(config.snapshot());
+            var revision = EngineRevision.combine(artifactRevision, configRevision);
+            var committed = journal.committed(revision);
+            committed.write(transactionRoot);
+            journal = committed;
             synchronized (stateMonitor) {
+                desiredArtifactRevision = artifactRevision;
+                appliedArtifactRevision = artifactRevision;
+                desiredConfigRevision = configRevision;
+                appliedConfigRevision = configRevision;
                 desiredRevision = revision;
                 appliedRevision = revision;
-                state = FibraEngineState.RUNNING;
             }
-            configChange.complete();
-            artifactChange.complete();
-            deleteTree(transactionRoot);
-            return new FibraDeploymentResult(deployment.id(), deployment.version(), revision,
+            var result = new FibraDeploymentResult(deployment.id(), deployment.version(), revision,
                 changed);
+            completeCommittedDeployment(transactionRoot, journal, configChange,
+                artifactChange);
+            return result;
         } catch (RuntimeException | IOException failure) {
             var primary = failure instanceof FibraDeploymentException deploymentFailure
                 ? deploymentFailure
@@ -279,8 +298,51 @@ public final class FibraEngine implements AutoCloseable {
                 } catch (IOException cleanupFailure) {
                     primary.addSuppressed(cleanupFailure);
                 }
+            } else {
+                synchronized (stateMonitor) {
+                    mutationBlocked = true;
+                }
+                recordFailure(FibraEngineFailureStage.DEPLOYMENT, primary);
             }
             throw primary;
+        }
+    }
+
+    private void completeCommittedDeployment(Path transactionRoot,
+                                             EngineTransactionJournal journal,
+                                             com.sstlfsj.fibra.loader.config.FibraConfigChange
+                                                 configChange,
+                                             com.sstlfsj.fibra.loader.pf4j.FibraArtifactChange
+                                                 artifactChange) {
+        var failures = new ArrayList<Throwable>();
+        try {
+            AppliedRevisionStore.write(installedRoot, journal);
+        } catch (IOException | RuntimeException failure) {
+            failures.add(failure);
+        }
+        try {
+            configChange.complete();
+        } catch (RuntimeException failure) {
+            failures.add(failure);
+        }
+        try {
+            artifactChange.complete();
+        } catch (RuntimeException failure) {
+            failures.add(failure);
+        }
+        if (failures.isEmpty()) {
+            try {
+                deleteTree(transactionRoot);
+            } catch (IOException failure) {
+                failures.add(failure);
+            }
+        }
+        if (!failures.isEmpty()) {
+            var cleanup = new IllegalStateException(
+                "committed Fibra deployment requires recovery cleanup");
+            failures.forEach(cleanup::addSuppressed);
+            LOGGER.warn("Fibra deployment committed but cleanup did not complete; "
+                + "the durable journal will be recovered on next startup", cleanup);
         }
     }
 
@@ -302,39 +364,38 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private void reconcile() {
-        var revision = currentRevision();
         synchronized (stateMonitor) {
-            desiredRevision = revision;
+            if (mutationBlocked) {
+                return;
+            }
         }
         RuntimeException artifactFailure = null;
         try {
-            var candidates = desiredArtifactCandidates();
-            if (!candidates.isEmpty()) {
-                artifacts.applyArtifacts(candidates);
+            var target = desiredArtifactTarget();
+            setDesiredArtifactRevision(target.revision());
+            if (!target.candidates().isEmpty()) {
+                artifacts.applyArtifacts(target.candidates());
             }
+            setAppliedArtifactRevision(currentArtifactRevision());
             clearFailure(FibraEngineFailureStage.ARTIFACT_RECONCILE);
         } catch (RuntimeException failure) {
             artifactFailure = failure;
+            setDesiredArtifactRevisionIfReadable();
             recordFailure(FibraEngineFailureStage.ARTIFACT_RECONCILE, failure);
         }
         RuntimeException configFailure = null;
         try {
-            config.refresh();
+            var snapshot = config.refresh();
+            var revision = EngineRevision.config(snapshot);
+            setDesiredConfigRevision(revision);
+            setAppliedConfigRevision(revision);
             clearFailure(FibraEngineFailureStage.CONFIG_RECONCILE);
         } catch (RuntimeException failure) {
             configFailure = failure;
+            setDesiredConfigRevisionIfReadable();
             recordFailure(FibraEngineFailureStage.CONFIG_RECONCILE, failure);
         }
-        var convergedRevision = artifactFailure == null && configFailure == null
-            ? currentRevision() : null;
-        synchronized (stateMonitor) {
-            state = artifactFailure == null && configFailure == null
-                ? FibraEngineState.RUNNING : FibraEngineState.DEGRADED;
-            if (convergedRevision != null) {
-                desiredRevision = convergedRevision;
-                appliedRevision = convergedRevision;
-            }
-        }
+        refreshOperationalState();
         if (artifactFailure != null) {
             throw artifactFailure;
         }
@@ -343,9 +404,9 @@ public final class FibraEngine implements AutoCloseable {
         }
     }
 
-    private List<Path> desiredArtifactCandidates() {
+    private ArtifactTarget desiredArtifactTarget() {
         if (artifactSourceRoot == null) {
-            return List.of();
+            return new ArtifactTarget(List.of(), currentArtifactRevision());
         }
         var versions = new DefaultVersionManager();
         var selected = new LinkedHashMap<String, Candidate>();
@@ -365,7 +426,7 @@ public final class FibraEngine implements AutoCloseable {
         var installed = artifacts.catalog().artifacts().stream()
             .collect(java.util.stream.Collectors.toMap(FibraArtifactDescriptor::id,
                 descriptor -> descriptor));
-        return selected.values().stream().filter(candidate -> {
+        var candidates = selected.values().stream().filter(candidate -> {
             var current = installed.get(candidate.descriptor.id());
             if (current == null) {
                 return true;
@@ -375,30 +436,85 @@ public final class FibraEngine implements AutoCloseable {
             return comparison > 0 || comparison == 0
                 && !candidate.descriptor.sha256().equals(current.sha256());
         }).map(Candidate::path).sorted().toList();
+        selected.values().forEach(candidate -> {
+            var current = installed.get(candidate.descriptor.id());
+            if (current == null || versions.compareVersions(candidate.descriptor.version(),
+                current.version()) >= 0) {
+                installed.put(candidate.descriptor.id(), candidate.descriptor);
+            }
+        });
+        return new ArtifactTarget(candidates, artifactRevision(installed.values()));
     }
 
-    private String currentRevision() {
-        var effective = new LinkedHashMap<String, FibraArtifactDescriptor>();
-        artifacts.catalog().artifacts().forEach(descriptor ->
-            effective.put(descriptor.id(), descriptor));
-        if (artifactSourceRoot != null) {
-            var versions = new DefaultVersionManager();
-            try (var paths = Files.list(artifactSourceRoot)) {
-                for (var path : paths.filter(Files::isRegularFile)
-                    .filter(candidate -> candidate.getFileName().toString().endsWith(".zip"))
-                    .sorted().toList()) {
-                    var candidate = artifacts.inspectArtifact(path);
-                    effective.compute(candidate.id(), (id, current) -> current == null
-                        || versions.compareVersions(candidate.version(), current.version()) > 0
-                        ? candidate : current);
-                }
-            } catch (IOException exception) {
-                throw new IllegalStateException("cannot read artifact source", exception);
-            }
-        }
-        return EngineRevision.compute(effective.values().stream()
+    private String currentArtifactRevision() {
+        return artifactRevision(artifacts.catalog().artifacts());
+    }
+
+    private static String artifactRevision(Collection<FibraArtifactDescriptor> descriptors) {
+        return EngineRevision.artifacts(descriptors.stream()
             .map(descriptor -> new RevisionArtifact(descriptor.id(), descriptor.version(),
-                descriptor.sha256())).toList(), config.sourcePaths());
+                descriptor.sha256())).toList());
+    }
+
+    private void setDesiredArtifactRevisionIfReadable() {
+        if (artifactSourceRoot == null) {
+            return;
+        }
+        try (var paths = Files.list(artifactSourceRoot)) {
+            setDesiredArtifactRevision(EngineRevision.sourceFiles(paths
+                .filter(Files::isRegularFile)
+                .filter(path -> path.getFileName().toString().endsWith(".zip"))
+                .toList()));
+        } catch (IOException | RuntimeException ignored) {
+            // 原始 reconcile 失败保留为主诊断。
+        }
+    }
+
+    private void setDesiredConfigRevisionIfReadable() {
+        try {
+            setDesiredConfigRevision(EngineRevision.sourceFiles(config.sourcePaths()));
+        } catch (RuntimeException ignored) {
+            // 原始 reconcile 失败保留为主诊断。
+        }
+    }
+
+    private void setDesiredArtifactRevision(String revision) {
+        synchronized (stateMonitor) {
+            desiredArtifactRevision = revision;
+            publishRevisions();
+        }
+    }
+
+    private void setAppliedArtifactRevision(String revision) {
+        synchronized (stateMonitor) {
+            appliedArtifactRevision = revision;
+            publishRevisions();
+        }
+    }
+
+    private void setDesiredConfigRevision(String revision) {
+        synchronized (stateMonitor) {
+            desiredConfigRevision = revision;
+            publishRevisions();
+        }
+    }
+
+    private void setAppliedConfigRevision(String revision) {
+        synchronized (stateMonitor) {
+            appliedConfigRevision = revision;
+            publishRevisions();
+        }
+    }
+
+    private void publishRevisions() {
+        if (desiredArtifactRevision != null && desiredConfigRevision != null) {
+            desiredRevision = EngineRevision.combine(desiredArtifactRevision,
+                desiredConfigRevision);
+        }
+        if (appliedArtifactRevision != null && appliedConfigRevision != null) {
+            appliedRevision = EngineRevision.combine(appliedArtifactRevision,
+                appliedConfigRevision);
+        }
     }
 
     private void awaitRequiredEntries() {
@@ -433,6 +549,20 @@ public final class FibraEngine implements AutoCloseable {
     private void clearFailure(FibraEngineFailureStage stage) {
         synchronized (stateMonitor) {
             failures.remove(stage);
+            refreshOperationalStateLocked();
+        }
+    }
+
+    private void refreshOperationalState() {
+        synchronized (stateMonitor) {
+            refreshOperationalStateLocked();
+        }
+    }
+
+    private void refreshOperationalStateLocked() {
+        if (state == FibraEngineState.RUNNING || state == FibraEngineState.DEGRADED) {
+            state = failures.isEmpty() ? FibraEngineState.RUNNING
+                : FibraEngineState.DEGRADED;
         }
     }
 
@@ -574,6 +704,13 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private record Candidate(Path path, FibraArtifactDescriptor descriptor) { }
+
+    private record ArtifactTarget(List<Path> candidates, String revision) {
+        private ArtifactTarget {
+            candidates = List.copyOf(candidates);
+            Objects.requireNonNull(revision, "revision");
+        }
+    }
 
     public static final class Builder {
         private final Path installedRoot;

@@ -1,7 +1,7 @@
 # plugin-package-format Specification
 
 ## Purpose
-TBD - created by archiving change standardize-plugin-packages. Update Purpose after archive.
+定义插件已安装目录与候选 ZIP 的唯一包协议，以 `plugin.properties` 作为描述真源，约束 JAR、共享运行库和 entry 分类边界，并以内容摘要保证候选在事务期间不可变。
 ## Requirements
 ### Requirement: 唯一安装目录格式
 系统 SHALL 只把 `plugins/<plugin-id>/plugin.properties` 与 `plugins/<plugin-id>/lib/*.jar` 识别为已安装插件包，完整字段与路径规则见设计文档第 4 节。
@@ -101,4 +101,3 @@ TBD - created by archiving change standardize-plugin-packages. Update Purpose af
 #### Scenario: 开发版本隔离验收模板
 - **WHEN** Fibra 仓库执行仓库外验证脚本
 - **THEN** 脚本复制同一模板并只覆盖开发版本与临时仓库参数，在隔离 Maven 仓库中完成构建和运行，不修改模板源文件
-

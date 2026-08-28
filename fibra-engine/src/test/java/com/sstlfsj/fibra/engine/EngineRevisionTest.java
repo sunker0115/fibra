@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 class EngineRevisionTest {
     @Test
-    void isStableForOrderingAndChangesWithAnyInputByte(@TempDir Path work)
+    void artifactAndSourceRevisionsAreStableAndContentAddressed(@TempDir Path work)
         throws Exception {
         var first = work.resolve("first.yaml");
         var second = work.resolve("second.yaml");
@@ -21,11 +21,17 @@ class EngineRevisionTest {
         var artifacts = List.of(new RevisionArtifact("b", "1.0.0", "b".repeat(64)),
             new RevisionArtifact("a", "1.0.0", "a".repeat(64)));
 
-        var revision = EngineRevision.compute(artifacts, List.of(first, second));
+        var artifactRevision = EngineRevision.artifacts(artifacts);
+        assertEquals(artifactRevision, EngineRevision.artifacts(artifacts.reversed()));
+
+        var revision = EngineRevision.sourceFiles(List.of(first, second));
         assertEquals(revision,
-            EngineRevision.compute(artifacts.reversed(), List.of(second, first)));
+            EngineRevision.sourceFiles(List.of(second, first)));
         Files.writeString(second, "changed");
         assertNotEquals(revision,
-            EngineRevision.compute(artifacts, List.of(first, second)));
+            EngineRevision.sourceFiles(List.of(first, second)));
+
+        assertEquals(EngineRevision.combine(artifactRevision, revision),
+            EngineRevision.combine(artifactRevision, revision));
     }
 }

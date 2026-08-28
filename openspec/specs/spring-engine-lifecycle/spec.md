@@ -1,7 +1,7 @@
 # spring-engine-lifecycle Specification
 
 ## Purpose
-TBD - created by archiving change standardize-spring-runtime-integration. Update Purpose after archive.
+定义 Spring 容器与唯一 `FibraEngine` 所有者之间的生命周期边界、自动配置退让规则和显式服务桥接方式，避免 Spring 层复制 Engine 的协调与资源管理职责。
 ## Requirements
 ### Requirement: Spring Lifecycle 只委托 Engine
 
