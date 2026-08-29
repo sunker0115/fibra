@@ -16,14 +16,14 @@ scripts/verify-reproducible-release.sh
 scripts/verify-distribution.sh
 ```
 
-第一条执行全 reactor 测试和制品门禁；第二条验证十个发布制品可复现；第三条在隔离 Maven 仓库和仓库外工程中验证真实消费。局部开发可以先运行受影响模块的测试，但提交前必须完成与改动影响相称的完整门禁。
+第一条执行全 reactor 测试和 `artifact` 门禁；第二条验证十个发布 `artifact` 可复现；第三条在隔离 Maven 仓库和仓库外工程中验证真实消费。局部开发可以先运行受影响模块的测试，但提交前必须完成与改动影响相称的完整门禁。
 
 ## 架构与代码
 
 - `fibra-engine` 是插件、配置、source、reconcile、deployment 和关闭的唯一托管入口；宿主不得绕过它重新组合内部 loader。
 - `fibra-core` 只实现 Cordis 等价的 Context/Fibra 生命周期，不感知 PF4J、配置、Engine 或 Spring。
-- PF4J 只负责制品、依赖图和 ClassLoader；动态业务生命周期只由 Fibra 管理。
-- 六个框架中立运行时制品不得引入 Spring；Spring 适配不得复制 Engine 的协调算法。
+- PF4J 只负责 `artifact`、依赖图和 ClassLoader；动态业务生命周期只由 Fibra 管理。
+- 六个框架中立运行时 `artifact` 不得引入 Spring；Spring 适配不得复制 Engine 的协调算法。
 - 修复缺陷时优先增加复现测试；新逻辑必须同时包含测试。
 - 日志使用 SLF4J，不使用 `System.out` 或 `System.err`。
 - 不在同一 Pull Request 中夹带无关重构、格式化或依赖升级。

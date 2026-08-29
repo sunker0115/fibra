@@ -13,7 +13,7 @@
 - 新增标准 deployment package，把多个 plugin ZIP 和目标 config 作为显式联合事务处理，摘要固定 SHA-256。
 - engine 联合部署使用唯一持久 journal；参与 loader 不创建互相独立的顶层 journal。
 - 保持 `fibra-api`、`fibra-core`、Cordis 71 用例和 PF4J 插件入口语义不变。
-- 可发布制品在本 change 阶段从六个增加为七个；Spring 与 archetype 由后续 change 增加。
+- 可发布 `artifact` 在本 change 阶段从六个增加为七个；Spring 与 archetype 由后续 change 增加。
 
 ## Capabilities
 
@@ -30,7 +30,7 @@
 
 ## Impact
 
-- 新增：`fibra-engine` 生产模块、测试、API签名和发布制品。
+- 新增：`fibra-engine` 生产模块、测试、API签名和发布 `artifact`。
 - 重构：`fibra-loader-pf4j`、`fibra-loader-config` 的 watcher、计划、事务和公开签名。
 - 协调：当前 Spring change 必须改为依赖 `FibraEngine`，不能再直接持有 loader/watcher。
 - 示例：纯 Java host 改用 engine；loader 测试继续验证手工单资源操作。

@@ -9,7 +9,7 @@
 
 ## 1. 固定模块与依赖边界
 
-修改根 `pom.xml`，在六个框架中立运行时制品之后加入：
+修改根 `pom.xml`，在六个框架中立运行时 `artifact` 之后加入：
 
 1. `fibra-spring`：只依赖 `fibra-engine` 与 Spring Context；
 2. `fibra-spring-boot-autoconfigure`：依赖 `fibra-spring`，唯一导入 Spring Boot BOM并保存自动配置入口；
@@ -17,7 +17,7 @@
 
 父 POM只管理三个内部模块的 `${revision}` 坐标，不导入 Spring BOM、不声明 Spring依赖。`fibra-api`、`fibra-core`、`fibra-pf4j-api`、`fibra-loader-pf4j`、`fibra-loader-config`、`fibra-engine` 的 compile/runtime 依赖树必须保持 Spring-free。
 
-验证：`ReleaseArtifactBaselineTest` 检查九个运行时制品附件和 starter 空主 JAR；`EngineDependencyBoundaryTest` 检查六个中立模块依赖边界。
+验证：`ReleaseArtifactBaselineTest` 检查九个运行时 `artifact` 附件和 starter 空主 JAR；`EngineDependencyBoundaryTest` 检查六个中立模块依赖边界。
 
 ## 2. 实现 Spring Framework 接缝
 
@@ -72,6 +72,6 @@ scripts/verify-distribution.sh
 
 随后严格验证并归档 `establish-fibra-engine`、`standardize-spring-runtime-integration` 和 `publish-plugin-archetype`。归档后稳定 OpenSpec 必须只描述 Engine 托管 source 与 Spring三模块结构，不得保留 loader watcher 为当前能力。
 
-完成标准：九个运行时制品加一个 archetype 工具制品全部通过附件和可复现门禁；Spring示例真实启动；六个中立制品无 Spring；公开签名与文档一致；`main` 保持 `v0.3.1`，全部 `0.4.0-SNAPSHOT` 提交只存在于 `codex/0.4.0-development`。
+完成标准：九个运行时 `artifact` 加一个 archetype 工具 `artifact` 全部通过附件和可复现门禁；Spring示例真实启动；六个中立 `artifact` 无 Spring；公开签名与文档一致；`main` 保持 `v0.3.1`，全部 `0.4.0-SNAPSHOT` 提交只存在于 `codex/0.4.0-development`。
 
 最终提交边界：`feat: complete Fibra 0.4.0 runtime architecture`。

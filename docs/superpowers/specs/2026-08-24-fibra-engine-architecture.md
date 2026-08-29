@@ -6,7 +6,7 @@
 
 ## 1. 目标
 
-Fibra 最终由框架中立内核、机制型 loader、托管 engine 和框架适配四层组成。`fibra-engine` 把插件制品、配置树、运行实例、期望状态、持续收敛和联合部署事务组成一个长期运行的插件引擎；Spring、Spring Boot、CLI、Web、Solon 或纯 Java 宿主只能适配或消费该能力，不得重新实现运行时协调。
+Fibra 最终由框架中立内核、机制型 loader、托管 engine 和框架适配四层组成。`fibra-engine` 把插件 `artifact`、配置树、运行实例、期望状态、持续收敛和联合部署事务组成一个长期运行的插件引擎；Spring、Spring Boot、CLI、Web、Solon 或纯 Java 宿主只能适配或消费该能力，不得重新实现运行时协调。
 
 本设计冻结以下原则：
 
@@ -42,7 +42,7 @@ fibra-spring-boot-starter
 fibra-plugin-archetype  --只在生成项目中依赖已发布 fibra-pf4j-api，不进入运行时依赖链
 ```
 
-九个运行时制品加一个开发工具制品，共十个可发布制品。示例、parity、benchmark 和 verification 模块不发布。
+九个运行时 `artifact` 加一个开发工具 `artifact`，共十个可发布 `artifact`。示例、parity、benchmark 和 verification 模块不发布。
 
 ## 3. 原有模块的最终责任
 
@@ -56,7 +56,7 @@ fibra-plugin-archetype  --只在生成项目中依赖已发布 fibra-pf4j-api，
 
 ### 3.3 `fibra-loader-pf4j`
 
-保留标准插件包检查、依赖图、候选 ClassLoader、安装根、mount/unmount 和制品崩溃恢复。删除直接执行业务变更的 `FibraPluginWatcher` 公共 API。
+保留标准插件包检查、依赖图、候选 ClassLoader、安装根、mount/unmount 和 `artifact` 崩溃恢复。删除直接执行业务变更的 `FibraPluginWatcher` 公共 API。
 
 一步式 `applyArtifacts` 只作为单资源事务的便捷入口，底层唯一实现拆为：
 
@@ -183,7 +183,7 @@ Fibra 生产代码只依赖 SLF4J API 2.x，不绑定 provider，不直接使用
 
 ## 5. Deployment Package
 
-plugin package 是可复用插件制品；deployment package 是某个宿主环境的一次原子发布，两者不得混为一个格式。
+plugin package 是可复用插件 `artifact`；deployment package 是某个宿主环境的一次原子发布，两者不得混为一个格式。
 
 标准结构：
 
@@ -242,7 +242,7 @@ generated-plugin/
 
 生成项目必须直接执行 `mvn verify`，产出标准 plugin ZIP 和包含该插件的 deployment ZIP。模板使用 Maven Assembly，不手写 ZIP组件；依赖版本集中在生成项目根 properties/dependencyManagement，内部模块使用 `${project.version}`。
 
-archetype 自身使用 Maven 官方 `archetype:integration-test` 在构建期生成并验证项目；随后同一模块的 Failsafe 集成测试由真实 `fibra-engine` 装载生成的 deployment。仓库外分发脚本另行验证十个发布制品、九个运行时制品以及 archetype 生成项目的独立坐标消费；仓外 archetype smoke 不复制模块内的细节断言。
+archetype 自身使用 Maven 官方 `archetype:integration-test` 在构建期生成并验证项目；随后同一模块的 Failsafe 集成测试由真实 `fibra-engine` 装载生成的 deployment。仓库外分发脚本另行验证十个发布 `artifact`、九个运行时 `artifact` 以及 archetype 生成项目的独立坐标消费；仓外 archetype smoke 不复制模块内的细节断言。
 
 ## 8. 测试与发布
 
@@ -253,7 +253,7 @@ archetype 自身使用 Maven 官方 `archetype:integration-test` 在构建期生
 - Spring 只验证委托、属性、自动配置和所有权；
 - 纯 Java example 改用 `FibraEngine`，Spring example 只引入 starter；
 - `verification/distribution` 验证 core、插件图、engine、Spring Boot 和 archetype 五种外部消费边界；目录职责与完整断言以[示例与分发验收设计](2026-08-25-fibra-examples-and-distribution-verification-design.md)为准；
-- 十个可发布制品生成主制品、发布 POM及项目要求的辅助制品，并进入可复现构建；
+- 十个可发布 `artifact` 生成主 `artifact`、发布 POM及项目要求的辅助 `artifact`，并进入可复现构建；
 - archetype 生成项目不得引用 reactor、`${revision}`、`target/classes` 或 Fibra 父 POM。
 
 ## 9. 成熟实现参照与本项目取舍

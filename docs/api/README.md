@@ -1,8 +1,8 @@
 # Fibra 公共 API 使用手册
 
-本文覆盖六个框架中立运行时制品：`fibra-api`、`fibra-core`、`fibra-pf4j-api`、`fibra-loader-pf4j`、`fibra-loader-config` 和 `fibra-engine`。只使用内核时依赖 `fibra-core`；需要低层制品或配置机制时可直接使用对应 loader；需要长期运行、自动收敛或联合部署的宿主必须依赖 `fibra-engine`，不自行拼接 loader 和 watcher。
+本文覆盖六个框架中立运行时 `artifact`：`fibra-api`、`fibra-core`、`fibra-pf4j-api`、`fibra-loader-pf4j`、`fibra-loader-config` 和 `fibra-engine`。只使用内核时依赖 `fibra-core`；需要低层 `artifact` 或配置机制时可直接使用对应 loader；需要长期运行、自动收敛或联合部署的宿主必须依赖 `fibra-engine`，不自行拼接 loader 和 watcher。
 
-Spring Framework 接缝由 `fibra-spring` 提供，Boot 自动配置由 `fibra-spring-boot-autoconfigure` 提供，推荐依赖入口 `fibra-spring-boot-starter` 不包含生产 class。`fibra-plugin-archetype` 是第十个可发布制品，只用于生成插件项目，不进入运行时依赖链。Spring 只存在于三个可选适配制品，不进入六个框架中立制品或根父 POM。
+Spring Framework 接缝由 `fibra-spring` 提供，Boot 自动配置由 `fibra-spring-boot-autoconfigure` 提供，推荐依赖入口 `fibra-spring-boot-starter` 不包含生产 class。`fibra-plugin-archetype` 是第十个可发布 `artifact`，只用于生成插件项目，不进入运行时依赖链。Spring 只存在于三个可选适配 `artifact`，不进入六个框架中立 `artifact` 或根父 POM。
 
 ## 1. 创建与关闭
 
@@ -211,9 +211,9 @@ public final class GreetingEntrypoint implements FibraPluginEntrypoint<GreetingC
 }
 ```
 
-无配置入口可以实现 `VoidFibraPluginEntrypoint`，只需实现 `create(entryId)`。主 JAR 自身没有 `META-INF/extensions.idx` 或索引为空时是 contract-only：可以被其他插件依赖，但不能调用 `configType` 或 `mount`；executable 的自身索引必须恰好包含一个 `FibraPluginEntrypoint`。`pluginId` 是制品身份，`entryId` 是运行实例身份，一个 executable 可以创建多个 entry。
+无配置入口可以实现 `VoidFibraPluginEntrypoint`，只需实现 `create(entryId)`。主 JAR 自身没有 `META-INF/extensions.idx` 或索引为空时是 contract-only：可以被其他插件依赖，但不能调用 `configType` 或 `mount`；executable 的自身索引必须恰好包含一个 `FibraPluginEntrypoint`。`pluginId` 是 `artifact` 身份，`entryId` 是运行实例身份，一个 executable 可以创建多个 entry。
 
-首次启动只扫描已安装目录。`FibraPluginLoader` 是低层机制 API：`loadArtifacts()` 完成初载，`applyArtifacts(List<Path>)` 执行显式批量制品事务，`mount/update/unmount` 操作运行 entry。生产托管宿主通常不直接调用这些方法，而由 `FibraEngine` 统一拥有 loader。
+首次启动只扫描已安装目录。`FibraPluginLoader` 是低层机制 API：`loadArtifacts()` 完成初载，`applyArtifacts(List<Path>)` 执行显式批量 `artifact` 事务，`mount/update/unmount` 操作运行 entry。生产托管宿主通常不直接调用这些方法，而由 `FibraEngine` 统一拥有 loader。
 
 `applyArtifacts` 的候选先全部解压到预检区，完成格式、摘要、必需/optional SemVer 范围、循环、入口和 prospective 全图校验后，才允许拆除旧运行态。候选 ID 加上旧图/新图的传递依赖方构成受影响闭包；停止为 dependent-first，装载与启动为 dependency-first。任一步失败都会恢复旧目录、PF4J 状态和全部 entry。
 
@@ -221,7 +221,7 @@ public final class GreetingEntrypoint implements FibraPluginEntrypoint<GreetingC
 
 `runExclusive` 是两个 loader 共享的低层逻辑事务门。普通托管宿主不得绕过 Engine 调用它；需要低层 API 的非托管宿主必须独占 root 和两个 loader，并自行保证完整启动、回滚与关闭。loader 不包含 watcher、去抖、周期重读或失败重试。
 
-制品错误用 `FibraArtifactException` 的 `stage/packages/artifactIds` 定位：`READ` 为读取或 ZIP 问题，`VALIDATE` 为格式/摘要/入口错误，`RESOLVE` 为依赖图错误，`DISPOSE` 为旧运行态拆除失败，`INSTALL` 为目录交换失败，`APPLY` 为新运行态恢复失败，`ROLLBACK` 表示旧状态无法完整恢复。
+`artifact` 错误用 `FibraArtifactException` 的 `stage/packages/artifactIds` 定位：`READ` 为读取或 ZIP 问题，`VALIDATE` 为格式/摘要/入口错误，`RESOLVE` 为依赖图错误，`DISPOSE` 为旧运行态拆除失败，`INSTALL` 为目录交换失败，`APPLY` 为新运行态恢复失败，`ROLLBACK` 表示旧状态无法完整恢复。
 
 ## 8.1 YAML/JSON 配置机制
 
@@ -262,7 +262,7 @@ try (var root = FibraRuntime.create();
 
 patch 分 `insert` 与 `override`，按列表顺序应用；override 的显式 `null` 删除字段。缺失目标、目标不是 group 或 expected plugin 不匹配会通过 `warningSink` 报告并跳过。配置只接受字面值，不执行 SpEL、JEXL、JavaScript、反射构造或环境表达式；宿主必须把环境/profile 解析为显式 `FibraConfigPatch`。
 
-`FibraConfigException` 的 `stage/path/entryId/pluginId` 是稳定定位字段：`READ` 为文件访问/真实路径失败，`PARSE` 为 YAML/JSON 语法失败，`VALIDATE` 为配置结构失败，`RESOLVE` 为插件制品或配置类型解析失败，`CONVERT` 为字面值到 typed config 的映射失败，`DISPOSE/APPLY` 为运行态卸载/应用失败，`WRITE` 为文件暂存或原子替换失败，`ROLLBACK` 为恢复旧状态失败。`sourcePaths()` 返回根文件、成功 include 和最后一次失败解析尝试路径的无锁不可变快照，供 Engine 的配置 source 在 loader 事务进行期间继续维护监听；它本身不启动线程或刷新配置。
+`FibraConfigException` 的 `stage/path/entryId/pluginId` 是稳定定位字段：`READ` 为文件访问/真实路径失败，`PARSE` 为 YAML/JSON 语法失败，`VALIDATE` 为配置结构失败，`RESOLVE` 为插件 `artifact` 或配置类型解析失败，`CONVERT` 为字面值到 typed config 的映射失败，`DISPOSE/APPLY` 为运行态卸载/应用失败，`WRITE` 为文件暂存或原子替换失败，`ROLLBACK` 为恢复旧状态失败。`sourcePaths()` 返回根文件、成功 include 和最后一次失败解析尝试路径的无锁不可变快照，供 Engine 的配置 source 在 loader 事务进行期间继续维护监听；它本身不启动线程或刷新配置。
 
 ## 8.2 托管 Engine
 
@@ -342,7 +342,7 @@ Engine 独占 root、两个 loader、两个可选 source、协调线程和 journ
 
 `fibra-core` 只承诺 `com.sstlfsj.fibra.runtime` 包，其中当前唯一入口是 `FibraRuntime`。`com.sstlfsj.fibra.internal` 即使因实现协作需要包含 Java `public` 类型，也属于明确排除的实现细节，业务代码不得直接引用。
 
-八个含 Java 公共类型的运行时制品分别有 `*-public-signatures.txt`：五个原有 API/loader、`fibra-engine`、`fibra-spring` 和 `fibra-spring-boot-autoconfigure`。starter 无生产 class，archetype 是代码生成制品，因此两者没有 Java 签名基线。`ApiSignatureBaselineTest` 调用 JDK `javap -protected` 检查全部基线；任何新增、删除、可见性、泛型或方法签名变化都会使 `mvn verify` 失败，必须先完成 API 审核后显式更新基线。
+八个含 Java 公共类型的运行时 `artifact` 分别有 `*-public-signatures.txt`：五个原有 API/loader、`fibra-engine`、`fibra-spring` 和 `fibra-spring-boot-autoconfigure`。starter 无生产 class，archetype 是代码生成 `artifact`，因此两者没有 Java 签名基线。`ApiSignatureBaselineTest` 调用 JDK `javap -protected` 检查全部基线；任何新增、删除、可见性、泛型或方法签名变化都会使 `mvn verify` 失败，必须先完成 API 审核后显式更新基线。
 
 ### 10.1 兼容性清单
 

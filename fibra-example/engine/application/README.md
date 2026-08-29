@@ -1,6 +1,6 @@
 # Fibra Engine 部署应用示例
 
-本示例 application 只依赖 `fibra-engine`，不取得两个 loader。`Greeting` 契约、provider、consumer 和配置由一个 deployment ZIP 联合提交；制品与配置任一步失败都会回滚整个部署。
+本示例 application 只依赖 `fibra-engine`，不取得两个 loader。`Greeting` 契约、provider、consumer 和配置由一个 deployment ZIP 联合提交；`artifact` 与配置任一步失败都会回滚整个部署。
 
 三个包的关系如下：
 

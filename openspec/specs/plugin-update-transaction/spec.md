@@ -1,7 +1,7 @@
 # plugin-update-transaction Specification
 
 ## Purpose
-定义插件制品批量变更的唯一事务模型：所有候选在共享管理门内完成完整依赖图预检、按依赖顺序重建运行态，并以持久化事务日志支持崩溃恢复和提交前回滚。
+定义插件 `artifact` 批量变更的唯一事务模型：所有候选在共享管理门内完成完整依赖图预检、按依赖顺序重建运行态，并以持久化事务日志支持崩溃恢复和提交前回滚。
 ## Requirements
 ### Requirement: 单一批量 Apply API
 系统 SHALL 以 `applyArtifacts(List<Path>)` 作为安装新包、升级、降级和关联多包更新的唯一公开候选入口，并 MUST NOT 提供旧直接 JAR API 转发。
@@ -15,21 +15,21 @@
 - **THEN** 系统以 `IllegalArgumentException` 拒绝，不创建事务目录
 
 ### Requirement: 运行态先由完整安装图初始化
-构造 loader SHALL 只恢复磁盘事务；宿主 MUST 先调用可重复的 `loadArtifacts()` 校验并同步完整安装图，之后才能 apply 或操作运行实例。`unloadArtifact` MUST NOT 删除标准安装目录，后续 `loadArtifacts()` SHALL 能重新装载仍在磁盘但未活动的制品。
+构造 loader SHALL 只恢复磁盘事务；宿主 MUST 先调用可重复的 `loadArtifacts()` 校验并同步完整安装图，之后才能 apply 或操作运行实例。`unloadArtifact` MUST NOT 删除标准安装目录，后续 `loadArtifacts()` SHALL 能重新装载仍在磁盘但未活动的 `artifact`。
 
 #### Scenario: 初始化前提交候选
 - **WHEN** 构造 loader 后尚未成功调用 `loadArtifacts()` 就调用 apply 或 mount
 - **THEN** 系统以 `IllegalStateException` 拒绝，不创建事务、不创建活动 ClassLoader
 
 #### Scenario: 显式卸载后重新同步
-- **WHEN** 制品被 `unloadArtifact` 从活动 manager 卸载但标准安装目录仍存在，随后再次调用 `loadArtifacts()`
-- **THEN** 系统按当前完整安装图重新校验并装载该制品，不需要旧单包 load API
+- **WHEN** `artifact` 被 `unloadArtifact` 从活动 manager 卸载但标准安装目录仍存在，随后再次调用 `loadArtifacts()`
+- **THEN** 系统按当前完整安装图重新校验并装载该 `artifact`，不需要旧单包 load API
 
 ### Requirement: 管理操作共享逻辑事务门
 
-制品 load/apply/stop/unload、entry mount/update/unmount 和配置 reconcile SHALL 使用同一个 loader 可重入逻辑事务门；事务门 MUST NOT 在文件操作、PF4J 调用、插件回调或等待 Fibra lifecycle 时持有物理锁。自动 source 与重试已迁入 Engine，loader 不再定义 watcher 竞争语义。
+`artifact` load/apply/stop/unload、entry mount/update/unmount 和配置 reconcile SHALL 使用同一个 loader 可重入逻辑事务门；事务门 MUST NOT 在文件操作、PF4J 调用、插件回调或等待 Fibra lifecycle 时持有物理锁。自动 source 与重试已迁入 Engine，loader 不再定义 watcher 竞争语义。
 
-#### Scenario: 配置刷新与制品更新并发
+#### Scenario: 配置刷新与 `artifact` 更新并发
 - **WHEN** 一个线程正在 reconcile 配置，另一个线程调用 apply
 - **THEN** 后到的同步操作立即收到 `FibraPluginLoaderBusyException`，两个操作不观察或提交交叉中间态
 
@@ -52,8 +52,8 @@
 - **WHEN** 底层 contract 或 provider 更新影响两层 dependents
 - **THEN** 停止事件从最上游 dependent 到 dependency，启动事件从 dependency 到 dependent，全部旧 ClassLoader关闭
 
-#### Scenario: 同制品多 entry 恢复
-- **WHEN** 更新制品在多个 Context 中有多个 `entryId`
+#### Scenario: 同一 `artifact` 多 entry 恢复
+- **WHEN** 更新 `artifact` 在多个 Context 中有多个 `entryId`
 - **THEN** 每个 entry 都用原 `PluginInstanceSpec` 和当前 ClassLoader配置类型重建，不能只恢复一个实例
 
 ### Requirement: 安装目录交换具有持久 Journal
@@ -81,7 +81,7 @@
 
 ### Requirement: 运行中失败恢复旧状态
 
-制品更新 SHALL 由唯一 artifact change 实现 plan、prepare、commit、complete 和 rollback。单 artifact 调用由 loader 建立单参与者 journal；engine 联合部署时使用同一 change 作为参与者并由 engine journal 统一协调。无论哪种入口，更新后运行态 apply 或 readiness 失败时，系统 MUST 恢复原版本包、原 entry 配置工厂、原依赖图和原可运行状态，不得留下部分新版本、重复 entry 或孤儿 ClassLoader。
+`artifact` 更新 SHALL 由唯一 artifact change 实现 plan、prepare、commit、complete 和 rollback。单 artifact 调用由 loader 建立单参与者 journal；engine 联合部署时使用同一 change 作为参与者并由 engine journal 统一协调。无论哪种入口，更新后运行态 apply 或 readiness 失败时，系统 MUST 恢复原版本包、原 entry 配置工厂、原依赖图和原可运行状态，不得留下部分新版本、重复 entry 或孤儿 ClassLoader。
 
 #### Scenario: 单资源更新失败
 - **WHEN** 调用 loader 单资源便捷 API且新版本运行态 apply 失败
@@ -139,11 +139,11 @@
 
 #### Scenario: 完全不兼容的配置 Schema 变更
 - **WHEN** 旧配置不能同时物化为新类型且部署不接受 apply 回滚
-- **THEN** 宿主必须先用 config reconcile 禁用或移除受影响 entry，再 apply 制品，最后写入新配置并重新启用；系统不得把配置文件隐式并入制品事务
+- **THEN** 宿主必须先用 config reconcile 禁用或移除受影响 entry，再 apply `artifact`，最后写入新配置并重新启用；系统不得把配置文件隐式并入 `artifact` 事务
 
 ### Requirement: 稳定阶段错误
 
-系统 SHALL 使用 `FibraArtifactException` 和阶段枚举报告跨阶段失败。`FibraPluginLoaderBusyException` SHALL 只表达同步管理 API 的事务竞争或 Reactor non-blocking 线程误用，不得包装为某个制品阶段失败。
+系统 SHALL 使用 `FibraArtifactException` 和阶段枚举报告跨阶段失败。`FibraPluginLoaderBusyException` SHALL 只表达同步管理 API 的事务竞争或 Reactor non-blocking 线程误用，不得包装为某个 `artifact` 阶段失败。
 
 #### Scenario: 结构预检失败
 - **WHEN** 候选包结构无效

@@ -2,7 +2,7 @@
 
 - [x] 1.1 验证 engine change 已将 reactor revision 切换为 `0.4.0-SNAPSHOT`，保持 `v0.3.1` 不变
 - [x] 1.2 新增可发布 `fibra-spring` 和 `fibra-spring-boot-autoconfigure`
-- [x] 1.3 把 starter 改为无生产代码依赖入口，统一九个运行时制品门禁
+- [x] 1.3 把 starter 改为无生产代码依赖入口，统一九个运行时 `artifact` 门禁
 
 ## 2. 配置契约
 
@@ -27,7 +27,7 @@
 - [x] 5.1 Web 示例只引入 starter，staging 迁到示例命名空间
 - [x] 5.2 用真实 engine 黑盒验证 Boot wiring、reconcile 和 ApplicationContext 关闭
 - [x] 5.3 重建 spring/autoconfigure 签名，删除 starter 和旧 lifecycle 签名
-- [x] 5.4 执行全 reactor、九运行时制品、依赖边界、外部消费和可复现构建
+- [x] 5.4 执行全 reactor、九运行时 `artifact`、依赖边界、外部消费和可复现构建
 - [x] 5.5 更新文档、完成审查并归档 change
 
 精确实施细节由 `docs/superpowers/plans/2026-08-24-fibra-spring-runtime-integration.md` 作为唯一权威源；计划须在 engine plan 后重写并通过人工闸门。

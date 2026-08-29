@@ -10,12 +10,12 @@ PF4J 3.15.0 已提供目录 `lib/`、properties 描述、SemVer、依赖解析�
 
 **Goals:**
 
-- 直接建立不含旧模型兼容代码的 `0.3.0` 唯一制品协议。
+- 直接建立不含旧模型兼容代码的 `0.3.0` 唯一 `artifact` 协议。
 - 在当前运行态和安装目录改变前验证完整 prospective 图。
 - 让单包和多包使用同一批量事务算法。
 - 在运行中失败和目录交换期间进程崩溃后恢复确定安装图。
-- 支持 contract-only、私有依赖、SemVer 范围和一制品多 entry。
-- 保持 `fibra-core`、PF4J 制品层、Fibra 服务层和宿主框架边界清晰。
+- 支持 contract-only、私有依赖、SemVer 范围和单个 `artifact` 多 entry。
+- 保持 `fibra-core`、PF4J `artifact` 层、Fibra 服务层和宿主框架边界清晰。
 
 **Non-Goals:**
 
@@ -34,7 +34,7 @@ PF4J 3.15.0 已提供目录 `lib/`、properties 描述、SemVer、依赖解析�
 
 ### D2：`plugin.properties` 是唯一描述真源
 
-`FibraDirectoryPluginManager` 只配置 `PropertiesPluginDescriptorFinder`，主 JAR Manifest 中的 PF4J 描述不参与选择。校验期拒绝非空 `plugin.class`、任何 `plugin.requires` 和架构文档第 4.2 节未列出的键；业务配置不能混入制品描述。
+`FibraDirectoryPluginManager` 只配置 `PropertiesPluginDescriptorFinder`，主 JAR Manifest 中的 PF4J 描述不参与选择。校验期拒绝非空 `plugin.class`、任何 `plugin.requires` 和架构文档第 4.2 节未列出的键；业务配置不能混入 `artifact` 描述。
 
 原因：避免 properties、Manifest 和 PF4J Plugin 子类形成三个身份/生命周期来源；当前没有真实 system version 输入，接受 `plugin.requires` 会制造未执行的兼容承诺。
 
@@ -82,7 +82,7 @@ Watcher 对单一 `pluginId` 去抖并执行 `applyArtifacts(List.of(candidate))
 
 ### D10：loader 使用逻辑事务门，不跨 lifecycle 等待持有物理锁
 
-制品和 entry 变更、配置 reconcile 共用可重入逻辑事务门。事务门只在短临界区登记调用线程、重入深度和已提交身份快照，执行文件/PF4J/插件操作及等待 Fibra lifecycle 时不持有 Java `Lock`。同一阻塞线程可以重入；其他线程或 Reactor non-blocking 线程调用同步管理 API 时立即抛 `FibraPluginLoaderBusyException`。`artifactIds/entryIds` 读取已提交不可变快照，watcher 遇忙保留 dirty 并重试。
+`artifact` 和 entry 变更、配置 reconcile 共用可重入逻辑事务门。事务门只在短临界区登记调用线程、重入深度和已提交身份快照，执行文件/PF4J/插件操作及等待 Fibra lifecycle 时不持有 Java `Lock`。同一阻塞线程可以重入；其他线程或 Reactor non-blocking 线程调用同步管理 API 时立即抛 `FibraPluginLoaderBusyException`。`artifactIds/entryIds` 读取已提交不可变快照，watcher 遇忙保留 dirty 并重试。
 
 原因：持有 loader 锁等待单线程 lifecycle，而插件 dispose/effect 回调反向调用 loader，会形成跨线程自等。立即报忙和 lock-free 身份快照在不允许 config/apply 交叉提交的同时切断该锁环。
 
@@ -95,7 +95,7 @@ Watcher 对单一 `pluginId` 去抖并执行 `applyArtifacts(List.of(candidate))
 - [更新会重建 Fibra Java 对象] → 公开文档冻结 `entryId` 为稳定身份，禁止缓存旧 `Fibra`/入口/插件对象。
 - [严格主 JAR命名和同版本摘要拒绝提高打包要求] → 提供真实 Maven 示例和仓库外模板，换取确定性和可审计更新。
 - [同版本普通 JAR重新构建常因时间戳或条目顺序改变摘要] → 明确要求重新发布必须升版本，重现同版本必须使用可复现构建。
-- [升级或降级后的私有配置类型与当前配置不兼容] → 正式 mount 以 `APPLY` 失败并回滚整个批次；完全不兼容时由宿主先停用 entry、更新制品、再提交新配置，不在 Fibra 内增加跨版本配置兼容层或隐式配置/制品联合事务。
+- [升级或降级后的私有配置类型与当前配置不兼容] → 正式 mount 以 `APPLY` 失败并回滚整个批次；完全不兼容时由宿主先停用 entry、更新 `artifact`、再提交新配置，不在 Fibra 内增加跨版本配置兼容层或隐式配置/`artifact` 联合事务。
 
 ## Migration Plan
 

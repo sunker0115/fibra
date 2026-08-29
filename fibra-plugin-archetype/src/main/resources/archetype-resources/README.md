@@ -25,4 +25,4 @@ deployment/target/${pluginId}-deployment-${version}.zip
 
 Fibra、PF4J、Reactor 和共享 contract 均为 `provided`，不会复制进 executable 插件的 `lib/`。`plugin.properties` 不含 `Plugin-Class`；插件业务生命周期只由 Fibra 管理。
 
-deployment 的 `checksums.sha256` 用于校验内容完整性，不证明发布者身份。生产分发仍需由宿主或制品平台验证签名和来源。
+deployment 的 `checksums.sha256` 用于校验内容完整性，不证明发布者身份。生产分发仍需由宿主或 `artifact` 平台验证签名和来源。

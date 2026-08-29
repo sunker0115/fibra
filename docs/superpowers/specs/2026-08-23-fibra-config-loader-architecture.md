@@ -5,7 +5,7 @@
 
 > 本文只用于追溯 `0.3.0` 配置 loader 的历史行为。其中 watcher、宿主编排、关闭顺序和模块数量均不是 `0.4.0` 当前契约，不得据此实现或使用。当前权威源是 [Fibra Engine 架构](./2026-08-24-fibra-engine-architecture.md) 和 [`docs/api/README.md`](../../api/README.md)。
 
-> 本文是 `fibra-loader-config` 0.3.0 的历史实现契约。制品格式、`applyArtifacts(List<Path>)` 和逻辑事务门以当时的[插件制品与事务更新设计](./2026-08-23-fibra-plugin-package-transaction-design.md)为准；本文只记录历史配置树、typed config、reconcile 与制品事务的协作边界。
+> 本文是 `fibra-loader-config` 0.3.0 的历史实现契约。 `artifact` 格式、`applyArtifacts(List<Path>)` 和逻辑事务门以当时的[插件 `artifact` 与事务更新设计](./2026-08-23-fibra-plugin-package-transaction-design.md)为准；本文只记录历史配置树、typed config、reconcile 与 `artifact` 事务的协作边界。
 
 ## 1. 目标与真源
 
@@ -19,18 +19,18 @@
 
 Java 实现必须保留稳定条目身份、多实例、分组作用域、禁用继承、依赖注入、隔离、拦截、patch 顺序、串行刷新、失败回滚和最后成功快照。Node 模块缓存和 JavaScript 字节码 HMR 不属于本模块；标准插件包更新由 PF4J loader 负责。
 
-## 2. 制品/实例边界
+## 2. `artifact`/实例边界
 
-`fibra-loader-pf4j` 已把 PF4J 制品与 Fibra 运行实例拆开，不保留原“一制品一 Fibra”入口或兼容分支。
+`fibra-loader-pf4j` 已把 PF4J `artifact` 与 Fibra 运行实例拆开，不保留原“一个 `artifact` 对应一个 Fibra”入口或兼容分支。
 
 身份含义固定为：
 
 | 身份 | 唯一性 | 生命周期 |
 |---|---|---|
-| `pluginId` | 每个已装载 PF4J 制品唯一 | load/stop/unload/apply、properties 依赖、ClassLoader |
+| `pluginId` | 每个已装载 PF4J `artifact` 唯一 | load/stop/unload/apply、properties 依赖、ClassLoader |
 | `entryId` | 每棵配置树中的完整路径唯一 | mount/update/unmount、配置、Fibra、作用域 |
 
-一个 `pluginId` 可以创建任意多个 `entryId`；一个 `entryId` 在任一时刻只对应一个 `pluginId` 和一个 Fibra。`plugin.properties` 的 PF4J 依赖只描述制品和 ClassLoader，Fibra `require`/配置 `inject` 只描述运行期服务就绪，二者不得合并或在 YAML 中重复声明。
+一个 `pluginId` 可以创建任意多个 `entryId`；一个 `entryId` 在任一时刻只对应一个 `pluginId` 和一个 Fibra。`plugin.properties` 的 PF4J 依赖只描述 `artifact` 和 ClassLoader，Fibra `require`/配置 `inject` 只描述运行期服务就绪，二者不得合并或在 YAML 中重复声明。
 
 PF4J 扩展点直接改为工厂语义：
 
@@ -44,7 +44,7 @@ public interface FibraPluginEntrypoint<C> extends ExtensionPoint {
 }
 ```
 
-PF4J 的 `ExtensionWrapper` 会缓存扩展实例，因此 mount 与制品事务恢复必须只借助自身索引发现入口类，再调用其无参构造器创建一次性入口并执行 `descriptor(entryId)`、`create(entryId)`。update 同样创建一次性入口，但只读取当前 `configType`，随后更新已有 Fibra，不创建 descriptor 或插件回调。不得跨多个 entry 或同一 entry 的不同生命周期复用可变入口对象。无配置插件使用 `Void.class`，仅接受 `null`。
+PF4J 的 `ExtensionWrapper` 会缓存扩展实例，因此 mount 与 `artifact` 事务恢复必须只借助自身索引发现入口类，再调用其无参构造器创建一次性入口并执行 `descriptor(entryId)`、`create(entryId)`。update 同样创建一次性入口，但只读取当前 `configType`，随后更新已有 Fibra，不创建 descriptor 或插件回调。不得跨多个 entry 或同一 entry 的不同生命周期复用可变入口对象。无配置插件使用 `Void.class`，仅接受 `null`。
 
 `fibra-loader-pf4j` 的公开运行实例操作固定为：
 
@@ -64,11 +64,11 @@ List<String> entryIds();
 Optional<Fibra> fibra(String entryId);
 ```
 
-`PluginInstanceSpec` 使用 builder，字段为 `entryId`、`pluginId`、`parentContext`、`PluginConfigFactory` 和按服务名声明的 `requirements`。配置层工厂只捕获不可变原始配置；每次 mount、update 或制品事务恢复时，它根据当前入口的 `configType` 新建 Jackson mapper 并重新转换，绝不捕获插件 `Class<?>`、typed config 或旧 ClassLoader。`mount` 自动启动目标 PF4J 制品及其 `plugin.dependencies`，但不会为 contract-only 或其他依赖制品虚构 Fibra 实例。配置树负责创建所有 entry，Fibra 服务依赖负责把尚未满足的 consumer 稳定在 `PENDING`。
+`PluginInstanceSpec` 使用 builder，字段为 `entryId`、`pluginId`、`parentContext`、`PluginConfigFactory` 和按服务名声明的 `requirements`。配置层工厂只捕获不可变原始配置；每次 mount、update 或 `artifact` 事务恢复时，它根据当前入口的 `configType` 新建 Jackson mapper 并重新转换，绝不捕获插件 `Class<?>`、typed config 或旧 ClassLoader。`mount` 自动启动目标 PF4J `artifact` 及其 `plugin.dependencies`，但不会为 contract-only 或其他依赖 `artifact` 虚构 Fibra 实例。配置树负责创建所有 entry，Fibra 服务依赖负责把尚未满足的 consumer 稳定在 `PENDING`。
 
-公开制品操作统一为 `loadArtifacts/applyArtifacts/stopArtifact/unloadArtifact/artifactIds`。没有公开单候选安装入口，也没有公开 `startPlugin`：单包用 `applyArtifacts(List.of(candidate))`，制品启动是 mount 的内部前置动作，宿主不能创建没有配置身份的 Fibra。
+公开 `artifact` 操作统一为 `loadArtifacts/applyArtifacts/stopArtifact/unloadArtifact/artifactIds`。没有公开单候选安装入口，也没有公开 `startPlugin`：单包用 `applyArtifacts(List.of(candidate))`，`artifact` 启动是 mount 的内部前置动作，宿主不能创建没有配置身份的 Fibra。
 
-制品事务必须快照受影响制品及旧/新图依赖方的全部 `PluginInstanceSpec`，依赖方优先卸载，制品依赖顺序重新装载，再按原 entry 顺序用配置工厂重新物化 typed config 并恢复全部实例。恢复失败时依据持久 journal 回滚安装目录、PF4J 状态和全部旧实例；不能只恢复每个制品的一个 Fibra，也不能把旧 ClassLoader 创建的 typed config 传给新入口。
+`artifact` 事务必须快照受影响 `artifact` 及旧/新图依赖方的全部 `PluginInstanceSpec`，依赖方优先卸载，`artifact` 依赖顺序重新装载，再按原 entry 顺序用配置工厂重新物化 typed config 并恢复全部实例。恢复失败时依据持久 journal 回滚安装目录、PF4J 状态和全部旧实例；不能只恢复每个 `artifact` 的一个 Fibra，也不能把旧 ClassLoader 创建的 typed config 传给新入口。
 
 ## 3. Core 的声明式最小增强
 
@@ -253,7 +253,7 @@ FibraConfigWatcher watcher = loader.watch(debounce, failureSink);
 1. 在逻辑事务门内读取全部涉及文件；若解析、patch 和继承展开后的 entry 树与当前 snapshot 相等，直接返回当前 snapshot。
 2. 解析 YAML/JSON，深复制并按顺序应用 patch。
 3. 校验全部文件、include 图、节点和完整 ID；对包括 disabled 后代在内的每个插件节点解析 artifact 引用并读取入口 `configType()`，使禁用不能掩盖拼错的插件或非法配置。
-4. 对每个插件节点用一次性 Jackson mapper 把普通值转换为当前插件 ClassLoader 中的 config 类型，只做候选校验并立即释放 typed config；插件 class 不需要也不得依赖 Jackson 注解。实际 mount/update 由 `PluginConfigFactory` 再按当时的 `configType` 物化，保证制品更新后使用新 ClassLoader 类型。
+4. 对每个插件节点用一次性 Jackson mapper 把普通值转换为当前插件 ClassLoader 中的 config 类型，只做候选校验并立即释放 typed config；插件 class 不需要也不得依赖 Jackson 注解。实际 mount/update 由 `PluginConfigFactory` 再按当时的 `configType` 物化，保证 `artifact` 更新后使用新 ClassLoader 类型。
 5. 展开 disabled、父 Context、isolate、intercept 和 inject，生成不可变候选 snapshot。
 6. 与最后成功 snapshot 按完整 `entryId` 比较。
 7. `entryId/pluginId/父完整 ID/inject/isolate/intercept/节点类型` 均未变化而只有 config 变化时调用 `Fibra.update()`；其余变化执行替换。
@@ -297,14 +297,14 @@ patch 跳过使用 `FibraConfigWarning`；文件刷新失败使用调用方显�
 2. patch 深复制、root/group insert、同层后续 patch 命中、warning 和 name 防误配。
 3. group/include、完整 ID、include 环、disabled 继承、local/shared isolate 和 intercept 继承。
 4. name-only inject 不污染服务类型声明，provider 到位后 PENDING entry 自动 ACTIVE。
-5. 同一 PF4J 制品同时 mount 多个 entry，config 类型转换和实例互不共享。
+5. 同一 PF4J `artifact` 同时 mount 多个 entry，config 类型转换和实例互不共享。
 6. config-only update 保持 Fibra 身份；边界变化替换实例。
 7. 第 N 项失败完整恢复旧 snapshot、配置、服务和值；多文件第 N 次 rename 失败恢复所有可恢复文件和旧运行态；文件恢复与运行态恢复同时失败时，全部失败直接位于最终 `ROLLBACK` 的 suppressed。
 8. refresh 串行、失败后下一次可成功、外部运行态漂移可按同一 snapshot 自愈、watcher create/modify/delete/父目录不存在的缺失 include 恢复/close 等待在途回调/watch-close 并发互斥。
-9. 标准包批量更新恢复受影响制品的全部 entry，插件私有 typed config 切换到新 ClassLoader，并与配置 refresh 不交叉。
+9. 标准包批量更新恢复受影响 `artifact` 的全部 entry，插件私有 typed config 切换到新 ClassLoader，并与配置 refresh 不交叉。
 10. 真实 contract/provider/consumer ZIP 的多实例、依赖 ClassLoader、配置更新和失败恢复黑盒测试。
 
-远程发布面从四个扩展为五个正式制品：`fibra-api`、`fibra-core`、`fibra-pf4j-api`、`fibra-loader-pf4j`、`fibra-loader-config`。必须同步根 POM、dependencyManagement、发布基线、五份 `javap` API 基线、可复现脚本、仓库外消费脚本、README、发布文档和第三方依赖声明。仓库外验收必须由独立 Engine application 通过 Maven 坐标读取真实 YAML、创建同制品多 entry，并验证更新与回滚；仓内 parser 单测不能代替该门禁。
+远程发布面从四个扩展为五个正式 `artifact`：`fibra-api`、`fibra-core`、`fibra-pf4j-api`、`fibra-loader-pf4j`、`fibra-loader-config`。必须同步根 POM、dependencyManagement、发布基线、五份 `javap` API 基线、可复现脚本、仓库外消费脚本、README、发布文档和第三方依赖声明。仓库外验收必须由独立 Engine application 通过 Maven 坐标读取真实 YAML、创建同一 `artifact` 多 entry，并验证更新与回滚；仓内 parser 单测不能代替该门禁。
 
 ## 13. 明确非目标
 

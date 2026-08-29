@@ -4,7 +4,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 用 JMH 1.37 为 `fibra-core` 内核热路径（服务解析、事件分发、lifecycle 调度往返）建立可信性能基线，且严格隔离不污染生产制品与可复现构建。
+**Goal:** 用 JMH 1.37 为 `fibra-core` 内核热路径（服务解析、事件分发、lifecycle 调度往返）建立可信性能基线，且严格隔离不污染生产 `artifact` 与可复现构建。
 
 **Architecture:** 新增 `fibra-benchmarks` 模块，通过根 pom 的 `benchmarks` profile 门禁注册（默认构建不进 reactor）；JMH 版本与 depMgmt 只写在本模块，根 pom 仅加一段 profile；用 `maven-shade-plugin` 打可运行 uber jar。
 
@@ -532,12 +532,12 @@ Expected: BUILD SUCCESS，且 `fibra-benchmarks` 未参与编译（reactor 列�
 - [ ] **Step 2: 可复现构建门禁不受影响**
 
 Run: `bash scripts/verify-reproducible-release.sh`
-Expected: 脚本通过（5 个生产制品逐字节比对一致）
+Expected: 脚本通过（5 个生产 `artifact` 逐字节比对一致）
 
 - [ ] **Step 3: 仓库外消费门禁不受影响**
 
 Run: `bash scripts/verify-distribution.sh`
-Expected: 脚本通过（临时仓库恰好 5 个生产制品）
+Expected: 脚本通过（临时仓库恰好 5 个生产 `artifact`）
 
 - [ ] **Step 4: 基准可独立编译打包**
 

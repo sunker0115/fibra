@@ -23,7 +23,7 @@
 ## 4. 示例、API 与发布
 
 - [x] 4.1 把纯 Java example 和 external managed host 改为只使用 `FibraEngine`
-- [x] 4.2 冻结 engine 公共 API，更新两个 loader 签名和十制品发布门禁
+- [x] 4.2 冻结 engine 公共 API，更新两个 loader 签名和十个 `artifact` 发布门禁
 - [x] 4.3 执行 Cordis parity、loader、engine、全 reactor、外部消费和可复现构建
 - [x] 4.4 更新架构、API、release 和 README，完成审查并归档 change
 

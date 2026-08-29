@@ -8,8 +8,8 @@
 - 生成完全脱离 Fibra reactor、不继承 Fibra parent 的多模块插件项目。
 - 生成项目集中管理 Fibra 版本，使用标准 contract + implementation 分层、Maven Assembly 和标准 plugin ZIP。
 - 生成项目包含配置与 deployment package 示例，并可直接执行 `mvn verify`。
-- archetype 构建通过官方 integration-test 生成并验证项目；仓库外门禁再使用隔离仓库和已发布 Fibra 制品完成装载。
-- 可发布制品在 engine 与 Spring change 完成后的九个基础上增加为十个。
+- archetype 构建通过官方 integration-test 生成并验证项目；仓库外门禁再使用隔离仓库和已发布 Fibra `artifact` 完成装载。
+- 可发布 `artifact` 在 engine 与 Spring change 完成后的九个基础上增加为十个。
 
 ## Capabilities
 

@@ -14,20 +14,20 @@ Fibra 是 Cordis Core 4.0.1 的 Java 21 语义等价实现，并在其上提供�
                   │
           fibra-engine                 唯一托管入口
            ├── 配置 source
-           ├── 制品 source
+           ├── artifact source
            ├── 串行 reconcile
            └── deployment 联合事务
                   │
         fibra-loader-config            配置机制
                   │
-         fibra-loader-pf4j             制品与 ClassLoader 机制
+         fibra-loader-pf4j             artifact 与 ClassLoader 机制
                   │
      fibra-pf4j-api / fibra-core / fibra-api
 ```
 
-PF4J 只管理制品发现、依赖图和 ClassLoader；Fibra 管理业务插件实例、服务和资源生命周期。`Plugin-Class` 被禁止，避免 PF4J 与 Fibra 同时管理业务生命周期。loader 不再拥有 watcher；自动监听、重试、周期重读和联合事务统一属于 `fibra-engine`。
+PF4J 只管理 `artifact` 发现、依赖图和 ClassLoader；Fibra 管理业务插件实例、服务和资源生命周期。`Plugin-Class` 被禁止，避免 PF4J 与 Fibra 同时管理业务生命周期。loader 不再拥有 watcher；自动监听、重试、周期重读和联合事务统一属于 `fibra-engine`。
 
-根 reactor 有十个可发布制品：九个运行时制品和一个开发工具制品。
+根 reactor 有十个可发布 `artifact`：九个运行时 `artifact` 和一个开发工具 `artifact`。
 
 - `fibra-api`：稳定的内核公开契约；
 - `fibra-core`：唯一的 `Context`/`Fibra` 运行时；
@@ -40,7 +40,7 @@ PF4J 只管理制品发现、依赖图和 ClassLoader；Fibra 管理业务插件
 - `fibra-spring-boot-starter`：无生产代码的推荐依赖入口；
 - `fibra-plugin-archetype`：生成独立插件项目的 Maven Archetype。
 
-`fibra-example`、`fibra-parity-tests`、`fibra-benchmarks` 和 `verification` 只用于示例或验收，不远程发布。`fibra-benchmarks` 参加默认 reactor 以防基准代码腐化，但普通构建只编译和打包，不执行 JMH 测量。无源码 starter 仍按发布基线生成空 sources/Javadoc JAR。六个框架中立运行时制品不依赖 Spring；Spring、Spring Shell、Spring AI、Web、Hasor 和 Solon 都不进入内核。
+`fibra-example`、`fibra-parity-tests`、`fibra-benchmarks` 和 `verification` 只用于示例或验收，不远程发布。`fibra-benchmarks` 参加默认 reactor 以防基准代码腐化，但普通构建只编译和打包，不执行 JMH 测量。无源码 starter 仍按发布基线生成空 sources/Javadoc JAR。六个框架中立运行时 `artifact` 不依赖 Spring；Spring、Spring Shell、Spring AI、Web、Hasor 和 Solon 都不进入内核。
 
 ## 构建与验收
 
@@ -50,7 +50,7 @@ scripts/verify-reproducible-release.sh
 scripts/verify-distribution.sh
 ```
 
-第一条命令执行 Cordis 71 项逐条对等测试、公开 API、真实多插件依赖、typed config、升级/降级/回滚、Spring 自动配置、插件模板生成与真实 Engine 装载，并编译打包 JMH 基准。后两条分别验证十个发布制品的逐字节可复现性，以及仓库外 Java、Engine、Spring Boot 与 archetype 生成项目只通过发布坐标消费 Fibra 的能力。
+第一条命令执行 Cordis 71 项逐条对等测试、公开 API、真实多插件依赖、typed config、升级/降级/回滚、Spring 自动配置、插件模板生成与真实 Engine 装载，并编译打包 JMH 基准。后两条分别验证十个发布 `artifact` 的逐字节可复现性，以及仓库外 Java、Engine、Spring Boot 与 archetype 生成项目只通过发布坐标消费 Fibra 的能力。
 
 完整发布边界和前置条件见[发布与构建基线](docs/release.md)。
 

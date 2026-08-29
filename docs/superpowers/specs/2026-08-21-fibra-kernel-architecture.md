@@ -17,9 +17,9 @@ Fibra 是 DeepSeek Harness 内 Cordis 4.0.1 的 Java 21 等价内核。Java API 
 ## 2. 技术与模块
 
 - Maven 聚合父工程：`com.sstlfsj:fibra:${revision}`；`revision` 是唯一项目版本真源。根 POM不远程发布，十个发布模块由 Flatten Maven Plugin 生成不依赖根 parent 的自包含发布 POM。
-- 内核边界固定为：`fibra-api`（稳定公开契约）、`fibra-core`（唯一内核运行时实现）、`fibra-parity-tests`（Cordis 逐项门禁与 API 冻结）。框架中立运行时依赖方向为 `fibra-engine -> fibra-loader-config -> fibra-loader-pf4j -> fibra-core + fibra-pf4j-api -> fibra-api`；`fibra-core` 不依赖 PF4J、配置解析器、Engine 或 Spring，运行时实现不得反向进入 API 模块。完整十制品发布边界以 [`docs/release.md`](../../release.md) 为准；example、parity 和 verification 不属于稳定公共 API。
+- 内核边界固定为：`fibra-api`（稳定公开契约）、`fibra-core`（唯一内核运行时实现）、`fibra-parity-tests`（Cordis 逐项门禁与 API 冻结）。框架中立运行时依赖方向为 `fibra-engine -> fibra-loader-config -> fibra-loader-pf4j -> fibra-core + fibra-pf4j-api -> fibra-api`；`fibra-core` 不依赖 PF4J、配置解析器、Engine 或 Spring，运行时实现不得反向进入 API 模块。完整十个 `artifact` 发布边界以 [`docs/release.md`](../../release.md) 为准；example、parity 和 verification 不属于稳定公共 API。
 - Java 21。
-- 第三方依赖、内部模块和 Maven 插件的版本集中在父 POM `properties`，依赖版本通过 `dependencyManagement` 传递，子模块不得重复声明。显式例外：`fibra-spring-boot-autoconfigure` 在自身模块 POM 内导入 Spring Boot BOM 并管理 `spring-boot.version`；父 POM只管理内部 Spring 模块坐标，不导入 Spring BOM或声明 Spring依赖，以保持六个框架中立运行时制品 Spring-free。
+- 第三方依赖、内部模块和 Maven 插件的版本集中在父 POM `properties`，依赖版本通过 `dependencyManagement` 传递，子模块不得重复声明。显式例外：`fibra-spring-boot-autoconfigure` 在自身模块 POM 内导入 Spring Boot BOM 并管理 `spring-boot.version`；父 POM只管理内部 Spring 模块坐标，不导入 Spring BOM或声明 Spring依赖，以保持六个框架中立运行时 `artifact` Spring-free。
 - 运行时依赖：Reactor Core 3.8.6、SLF4J API 2.0.18。core 不绑定日志 provider。
 - 内核验收依赖只存在于 `fibra-parity-tests`：JUnit 6.1.3、Reactor Test 3.8.6、Awaitility 4.3.0。装载适配的真实 JAR 测试位于 `fibra-loader-pf4j`。时间相关测试使用虚拟时间或显式闩锁，禁止 `Thread.sleep` 猜时序。
 
@@ -183,5 +183,5 @@ SLF4J 是最终日志 backend，不替代 Cordis LoggerService 的可观测语�
 - 单元测试覆盖 effect 四态、两层错误边界、revoke 完成边界、isolate 共享 label、事件五模式、Fibra 三组 inertia 翻转。
 - 端到端测试覆盖 provider → consumer 激活 → 服务替换/撤销 → consumer unload/reload → parent dispose。
 - `mvn verify` 是交付门槛；禁止使用跳过测试、固定 sleep 或 fire-and-forget 来隐藏未完成生命周期。
-- 远程发布包含 [`docs/release.md`](../../release.md) 定义的九个运行时制品和一个插件开发工具制品；每个模块必须同时生成主 JAR、sources JAR、Javadoc JAR 和自包含 POM。根、examples、parity、benchmarks 与 verification 必须跳过 deploy。
-- Java 21、Maven 3.9.9、依赖收敛和 Maven 插件显式版本由 Enforcer 强制；十个发布制品的两次干净构建必须逐字节一致。
+- 远程发布包含 [`docs/release.md`](../../release.md) 定义的九个运行时 `artifact` 和一个插件开发工具 `artifact`；每个模块必须同时生成主 JAR、sources JAR、Javadoc JAR 和自包含 POM。根、examples、parity、benchmarks 与 verification 必须跳过 deploy。
+- Java 21、Maven 3.9.9、依赖收敛和 Maven 插件显式版本由 Enforcer 强制；十个发布 `artifact` 的两次干净构建必须逐字节一致。

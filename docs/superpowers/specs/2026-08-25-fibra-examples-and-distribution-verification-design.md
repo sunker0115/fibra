@@ -8,13 +8,13 @@ Fibra 固定三条互不替代的使用与验收边界：
 
 1. `fibra-plugin-archetype` 是用户创建标准插件工程的唯一模板；
 2. `fibra-example` 保存可运行的 Engine 与 Spring Boot 完整场景；
-3. `verification/distribution` 从隔离 Maven 仓库消费发布制品，证明分发结果可被仓库外项目使用。
+3. `verification/distribution` 从隔离 Maven 仓库消费发布 `artifact`，证明分发结果可被仓库外项目使用。
 
-本次只重构非发布示例、非发布验收 fixture、脚本和文档，不修改 Fibra 公开 API、运行时语义、插件包协议、deployment 协议、Spring 属性或十制品发布边界。不提供旧目录、旧 artifactId、旧类名、旧脚本名或旧成功标记的兼容入口。
+本次只重构非发布示例、非发布验收 fixture、脚本和文档，不修改 Fibra 公开 API、运行时语义、插件包协议、deployment 协议、Spring 属性或十个 `artifact` 发布边界。不提供旧目录、旧 artifactId、旧类名、旧脚本名或旧成功标记的兼容入口。
 
 ## 2. 开源参照与取舍
 
-Maven Archetype 官方使用 `archetype:integration-test` 生成并构建独立项目；PF4J 将 application、共享 API 和多个 demo plugin 作为场景示例保存；Spring Boot 将可编译、可测试的 sample 与依赖入口分开维护。Fibra 吸收三点：模板必须由官方 Archetype 流程生成，示例必须真实运行，发布制品必须在 reactor 外独立消费。
+Maven Archetype 官方使用 `archetype:integration-test` 生成并构建独立项目；PF4J 将 application、共享 API 和多个 demo plugin 作为场景示例保存；Spring Boot 将可编译、可测试的 sample 与依赖入口分开维护。Fibra 吸收三点：模板必须由官方 Archetype 流程生成，示例必须真实运行，发布 `artifact` 必须在 reactor 外独立消费。
 
 Fibra 不把三者合并。把 archetype 输出提交为 example 会产生第二个模板真源；用 archetype 生成 verification 会让模板和验收共享同一种错误；把 verification 加入 reactor 会失去仓库外坐标消费证明。
 
@@ -61,7 +61,7 @@ artifactId 固定为：
 - `fibra-example-spring-boot-plugin`；
 - `fibra-example-spring-boot-application`。
 
-模块名、Java 类名、包名、系统属性和日志成功标记中不再使用 `host`。架构 prose 可以使用“宿主应用”描述角色，但它不是制品或模块名称。
+模块名、Java 类名、包名、系统属性和日志成功标记中不再使用 `host`。架构 prose 可以使用“宿主应用”描述角色，但它不是 `artifact` 或模块名称。
 
 ### 3.3 仓库外分发验收
 
@@ -96,16 +96,16 @@ verification/
 8. Spring Boot 场景继续覆盖上传暂存、显式 apply、服务调用和状态查询；
 9. 示例插件不进入 Spring BeanFactory，Spring controller 只属于 application。
 
-示例 README 必须明确：创建用户插件只能使用 archetype；Engine 场景是多插件依赖与事务部署示例；Spring Boot 场景是应用接入示例；v2/broken 制品是验收输入，不是模板结构。
+示例 README 必须明确：创建用户插件只能使用 archetype；Engine 场景是多插件依赖与事务部署示例；Spring Boot 场景是应用接入示例；v2/broken `artifact` 是验收输入，不是模板结构。
 
 ## 5. 分发验收能力不变量
 
 `scripts/verify-distribution.sh` 必须在临时目录完成：
 
-1. 把十个生产制品部署到空的临时远端文件仓库；
-2. 检查每个制品只有一个 POM、主 JAR、sources JAR 和 Javadoc JAR；
+1. 把十个生产 `artifact` 部署到空的临时远端文件仓库；
+2. 检查每个 `artifact` 只有一个 POM、主 JAR、sources JAR 和 Javadoc JAR；
 3. 使用另一个空本地仓库构建 `verification/distribution`；
-4. 验证六个框架中立制品来自临时远端仓库且字节一致；
+4. 验证六个框架中立 `artifact` 来自临时远端仓库且字节一致；
 5. 运行 core application；
 6. 检查 contract/provider/consumer 的 v1/v2 包结构、依赖范围、共享契约和私有依赖隔离；
 7. 运行 engine application，覆盖 consumer-first、isolate、config-only 更新、失败配置恢复、完整关联升级和不完整升级拒绝；
@@ -129,14 +129,14 @@ verification/
 
 - `fibra-example` 继续参加默认 reactor，但全部模块跳过远程发布；
 - `verification/distribution` 永远不进入默认 reactor，只由分发脚本运行；
-- `fibra-plugin-archetype` 继续作为第十个发布制品；
+- `fibra-plugin-archetype` 继续作为第十个发布 `artifact`；
 - `fibra-parity-tests` 必须锁定新的 example module 集合、distribution 独立性、模块 parent 和依赖边界；
-- 可复现发布脚本的十制品集合不变；
+- 可复现发布脚本的十个 `artifact` 集合不变；
 - 完整验收顺序固定为 `mvn clean verify`、`scripts/verify-reproducible-release.sh`、`scripts/verify-distribution.sh`。
 
 ## 8. 文档真源
 
-本文是 example 与 distribution verification 的唯一专题权威源。上游 Engine 架构、根 README、发布文档和 API 文档只保存摘要与本文指针。旧文档中“`verification/external-consumer` 是用户模板”“external consumer 固定五模块”“只验证六个制品即可代表全部外部消费边界”等过时内容直接删除或整段重写，不保留历史兼容表述。
+本文是 example 与 distribution verification 的唯一专题权威源。上游 Engine 架构、根 README、发布文档和 API 文档只保存摘要与本文指针。旧文档中“`verification/external-consumer` 是用户模板”“external consumer 固定五模块”“只验证六个 `artifact` 即可代表全部外部消费边界”等过时内容直接删除或整段重写，不保留历史兼容表述。
 
 ## 9. 完成标准
 

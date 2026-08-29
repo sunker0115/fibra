@@ -12,7 +12,7 @@
 - 宿主已有 `FibraEngine` 或 Fibra `Context` 时完整托管单元整体退让，不拼接部分资源。
 - staging/upload 继续属于具体宿主，Web 示例使用独立命名空间。
 - Spring change 依赖 `establish-fibra-engine`；本 change 不实现 watcher、reconcile、readiness 或 loader 事务算法。
-- 本阶段可发布运行时制品由 engine change 完成后的七个增加为九个；archetype change 最终增加为十个。
+- 本阶段可发布运行时 `artifact` 由 engine change 完成后的七个增加为九个；archetype change 最终增加为十个。
 
 ## Capabilities
 
@@ -28,4 +28,4 @@
 - Spring Boot 4.1.0 BOM只存在于 autoconfigure；根 POM和 engine 不出现 Spring依赖。
 - Web example 改为只依赖 starter 和自己的 staging 属性。
 - 新增两个公开签名基线；删除 starter 和旧 `FibraLifecycle` 签名。
-- 九个运行时制品进入发布和可复现构建，最终十制品门禁由 archetype change 收口。
+- 九个运行时 `artifact` 进入发布和可复现构建，最终十个 `artifact` 门禁由 archetype change 收口。

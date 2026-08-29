@@ -12,25 +12,25 @@
 - **THEN** 系统以 `IllegalArgumentException` 拒绝，不创建事务目录
 
 ### Requirement: 运行态先由完整安装图初始化
-构造 loader SHALL 只恢复磁盘事务；宿主 MUST 先调用可重复的 `loadArtifacts()` 校验并同步完整安装图，之后才能 apply 或操作运行实例。`unloadArtifact` MUST NOT 删除标准安装目录，后续 `loadArtifacts()` SHALL 能重新装载仍在磁盘但未活动的制品。
+构造 loader SHALL 只恢复磁盘事务；宿主 MUST 先调用可重复的 `loadArtifacts()` 校验并同步完整安装图，之后才能 apply 或操作运行实例。`unloadArtifact` MUST NOT 删除标准安装目录，后续 `loadArtifacts()` SHALL 能重新装载仍在磁盘但未活动的 `artifact`。
 
 #### Scenario: 初始化前提交候选
 - **WHEN** 构造 loader 后尚未成功调用 `loadArtifacts()` 就调用 apply 或 mount
 - **THEN** 系统以 `IllegalStateException` 拒绝，不创建事务、不创建活动 ClassLoader
 
 #### Scenario: 显式卸载后重新同步
-- **WHEN** 制品被 `unloadArtifact` 从活动 manager 卸载但标准安装目录仍存在，随后再次调用 `loadArtifacts()`
-- **THEN** 系统按当前完整安装图重新校验并装载该制品，不需要旧单包 load API
+- **WHEN** `artifact` 被 `unloadArtifact` 从活动 manager 卸载但标准安装目录仍存在，随后再次调用 `loadArtifacts()`
+- **THEN** 系统按当前完整安装图重新校验并装载该 `artifact`，不需要旧单包 load API
 
 ### Requirement: 管理操作共享逻辑事务门
-制品 load/apply/stop/unload、entry mount/update/unmount 和配置 reconcile SHALL 使用同一个 loader 可重入逻辑事务门；事务门 MUST NOT 在文件操作、PF4J 调用、插件回调或等待 Fibra lifecycle 时持有物理锁。
+`artifact` load/apply/stop/unload、entry mount/update/unmount 和配置 reconcile SHALL 使用同一个 loader 可重入逻辑事务门；事务门 MUST NOT 在文件操作、PF4J 调用、插件回调或等待 Fibra lifecycle 时持有物理锁。
 
-#### Scenario: 配置刷新与制品更新并发
+#### Scenario: 配置刷新与 `artifact` 更新并发
 - **WHEN** 一个线程正在 reconcile 配置，另一个线程调用 apply
 - **THEN** 后到的同步操作立即收到 `FibraPluginLoaderBusyException`，两个操作不观察或提交交叉中间态
 
 #### Scenario: Watcher 遇到活动事务
-- **WHEN** 配置或制品 watcher 在另一个事务活动期间触发
+- **WHEN** 配置或 `artifact` watcher 在另一个事务活动期间触发
 - **THEN** watcher 保留 dirty 状态并在事务释放后重新执行，不把报忙当作最终 reload failure
 
 #### Scenario: Lifecycle 回调反向管理 loader
@@ -52,8 +52,8 @@
 - **WHEN** 底层 contract 或 provider 更新影响两层 dependents
 - **THEN** 停止事件从最上游 dependent 到 dependency，启动事件从 dependency 到 dependent，全部旧 ClassLoader关闭
 
-#### Scenario: 同制品多 entry 恢复
-- **WHEN** 更新制品在多个 Context 中有多个 `entryId`
+#### Scenario: 同一 `artifact` 多 entry 恢复
+- **WHEN** 更新 `artifact` 在多个 Context 中有多个 `entryId`
 - **THEN** 每个 entry 都用原 `PluginInstanceSpec` 和当前 ClassLoader配置类型重建，不能只恢复一个实例
 
 ### Requirement: 安装目录交换具有持久 Journal
@@ -138,7 +138,7 @@
 
 #### Scenario: 完全不兼容的配置 Schema 变更
 - **WHEN** 旧配置不能同时物化为新类型且部署不接受 apply 回滚
-- **THEN** 宿主必须先用 config reconcile 禁用或移除受影响 entry，再 apply 制品，最后写入新配置并重新启用；系统不得把配置文件隐式并入制品事务
+- **THEN** 宿主必须先用 config reconcile 禁用或移除受影响 entry，再 apply `artifact`，最后写入新配置并重新启用；系统不得把配置文件隐式并入 `artifact` 事务
 
 ### Requirement: Watcher 只执行确定的单包自动升级
 Watcher SHALL 只对已安装 ID的严格更高版本 ZIP执行单包 apply；相同/更低版本忽略，多插件事务必须由部署协调器显式提交。
@@ -158,7 +158,7 @@ Watcher SHALL 只对已安装 ID的严格更高版本 ZIP执行单包 apply；�
 ### Requirement: 稳定阶段错误
 系统 SHALL 使用设计文档第 3.3 节定义的 `FibraArtifactException` 和阶段枚举报告跨阶段失败；异步 Watcher SHALL 同时通过 SLF4J 和 `lastFailure()` 暴露。
 
-`FibraPluginLoaderBusyException` SHALL 只表达同步管理 API 的事务竞争或 Reactor non-blocking 线程误用，不得包装为某个制品阶段失败，也不得写入 watcher 的 `lastFailure()`。
+`FibraPluginLoaderBusyException` SHALL 只表达同步管理 API 的事务竞争或 Reactor non-blocking 线程误用，不得包装为某个 `artifact` 阶段失败，也不得写入 watcher 的 `lastFailure()`。
 
 #### Scenario: 结构预检失败
 - **WHEN** 候选包结构无效

@@ -15,7 +15,7 @@
 
 本设计冻结以下边界：
 
-- `fibra-api`、`fibra-core`、`fibra-pf4j-api`、`fibra-loader-pf4j`、`fibra-loader-config` 和 `fibra-engine` 六个框架中立制品的生产依赖图不出现 Spring；
+- `fibra-api`、`fibra-core`、`fibra-pf4j-api`、`fibra-loader-pf4j`、`fibra-loader-config` 和 `fibra-engine` 六个框架中立 `artifact` 的生产依赖图不出现 Spring；
 - 根父 POM 不导入 Spring BOM、不声明 Spring 依赖；Spring Framework 与 Spring Boot 版本只由 Boot BOM 在 autoconfigure 模块解析，`fibra-engine` 保持 Spring-free，`fibra-spring` 不建立第二个版本真源；
 - 插件对象不进入 Spring `BeanFactory`，不建立每插件 Spring `ApplicationContext`，不扫描插件内 `@Component`、`spring.factories` 或 Boot 自动配置；
 - Spring 管理静态宿主装配，Fibra 管理动态插件的创建、依赖、服务、reload、dispose 和 ClassLoader；
@@ -115,12 +115,12 @@ fibra-spring-boot-starter
 
 Spring 宿主还需自行引入与应用形态匹配的 Boot starter。CLI 使用 Spring Shell，Web 示例使用 Spring Web，Fibra starter 不替宿主做该选择。
 
-### 3.2 版本与制品
+### 3.2 版本与 `artifact`
 
 - reactor 唯一版本真源为 `0.4.0`；
-- 新增 `fibra-engine`、`fibra-spring`、`fibra-spring-boot-autoconfigure` 和独立开发工具 `fibra-plugin-archetype` 后，可发布制品从六个变为十个；
+- 新增 `fibra-engine`、`fibra-spring`、`fibra-spring-boot-autoconfigure` 和独立开发工具 `fibra-plugin-archetype` 后，可发布 `artifact` 从六个变为十个；
 - 根 `dependencyManagement` 增加新增 Fibra 内部模块坐标，只管理当前 reactor 版本，不引入 Spring BOM；
-- 三个 Spring 制品都必须生成主 JAR、sources JAR、Javadoc JAR和展开后的发布 POM，并进入可复现构建门禁；
+- 三个 Spring `artifact` 都必须生成主 JAR、sources JAR、Javadoc JAR和展开后的发布 POM，并进入可复现构建门禁；
 - `fibra-spring-boot-starter` 的主 JAR必须没有 `.class` 和 `AutoConfiguration.imports`，防止实现重新回流到入口模块。
 
 ## 4. 公共配置数据结构
@@ -313,7 +313,7 @@ FibraSpringLifecycle.stop()
 - engine 的 source、coordinator、回滚辅助类型和内部方法；
 - Spring 条件实现细节。
 
-`fibra-spring-boot-starter` 没有 Java 公共签名基线，只冻结“无生产 class 的依赖入口”制品规则。
+`fibra-spring-boot-starter` 没有 Java 公共签名基线，只冻结“无生产 class 的依赖入口”`artifact` 规则。
 
 从 `0.3.1` 删除且不兼容：
 
@@ -356,8 +356,8 @@ FibraSpringLifecycle.stop()
 - 三个 Spring 模块的 POM、sources、Javadoc、主 JAR和可复现构建；
 - starter JAR无 `.class` 和自动配置注册文件；
 - autoconfigure JAR包含唯一注册文件和配置元数据；
-- 六个框架中立制品的依赖树继续无 Spring；
-- README、API 手册、release、示例、公开签名和发布模块基线同步为十个可发布制品；
+- 六个框架中立 `artifact` 的依赖树继续无 Spring；
+- README、API 手册、release、示例、公开签名和发布模块基线同步为十个可发布 `artifact`；
 - Web 示例的 staging 配置迁到示例命名空间；
 - 旧属性和旧模块实现描述从文档中直接删除，不保留历史残渣。
 

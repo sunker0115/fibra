@@ -23,7 +23,7 @@
 - **THEN** 预检以 `RESOLVE` 失败且不改变活动状态
 
 ### Requirement: 已存在可选依赖必须兼容
-缺失 optional dependency SHALL 被允许；一旦同 ID制品存在，系统 MUST 校验其版本范围并把实际 optional edge 纳入受影响闭包。
+缺失 optional dependency SHALL 被允许；一旦同 ID`artifact` 存在，系统 MUST 校验其版本范围并把实际 optional edge 纳入受影响闭包。
 
 #### Scenario: 可选依赖缺失
 - **WHEN** 插件声明 optional dependency 且图中没有该 ID
@@ -71,5 +71,5 @@
 
 #### Scenario: Consumer 等待运行时服务
 - **WHEN** consumer 只在 PF4J 图依赖 contract，而 provider Fibra entry 尚未注册服务
-- **THEN** consumer 制品可以 resolve，consumer Fibra按服务依赖保持 `PENDING`，直到服务图满足
+- **THEN** consumer `artifact` 可以 resolve，consumer Fibra按服务依赖保持 `PENDING`，直到服务图满足
 

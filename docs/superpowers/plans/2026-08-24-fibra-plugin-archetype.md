@@ -14,7 +14,7 @@
 4. `plugin-api` 生成共享服务契约和 contract-only 标准 ZIP；`plugin-impl` 生成 typed config、entrypoint、无 `Plugin-Class` 描述符和标准 ZIP。
 5. `config` 保存可直接加载的配置；`deployment` 使用 Maven/Ant 标准任务复制两个 ZIP、生成 SHA-256 清单并打包联合 deployment，不手写 Java ZIP组件。
 6. 使用 archetype 官方 `integration-test` 生成项目并执行 `verify`；另由仓库外门禁检查独立性、包结构和 engine 装载。
-7. 更新十制品发布门禁、API/README/release/插件作者文档，执行全 reactor、外部消费与可复现构建。
+7. 更新十个 `artifact` 发布门禁、API/README/release/插件作者文档，执行全 reactor、外部消费与可复现构建。
 
 ## 验收命令
 
