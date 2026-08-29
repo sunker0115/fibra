@@ -1,20 +1,20 @@
 # Fibra `0.2.0` 配置装载实施计划
 
 日期：2026-08-23
-状态：已完成；实现、API 冻结、五制品发布门禁和仓库外验收均已落地
+状态：已完成；实现、API 冻结、五个 `artifact` 发布门禁和仓库外验收均已落地
 
-> 本文只记录 `0.2.0` 历史实施过程，不是当前待办。其 watcher 与五制品描述已被 `0.4.0` [Fibra Engine 计划](./2026-08-24-fibra-engine.md)取代，不得据此恢复旧公共 API。
+> 本文只记录 `0.2.0` 历史实施过程，不是当前待办。其 watcher 与五个 `artifact` 描述已被 `0.4.0` [Fibra Engine 计划](./2026-08-24-fibra-engine.md)取代，不得据此恢复旧公共 API。
 
 架构真源：[Fibra 配置装载架构](../specs/2026-08-23-fibra-config-loader-architecture.md)。每一阶段都以测试先行，禁止先加兼容层再补真实模型。
 
-## 阶段 1：PF4J 制品与运行实例解耦
+## 阶段 1：PF4J `artifact` 与运行实例解耦
 
 1. 在 `fibra-pf4j-api` 先写/更新 API 基线预期，把 `FibraPluginEntrypoint` 改为 `configType/descriptor/create` 工厂。
-2. 在 loader 测试夹具中让同一制品以两个 `entryId`、两个配置 mount，先得到失败测试。
+2. 在 loader 测试夹具中让同一 `artifact` 以两个 `entryId`、两个配置 mount，先得到失败测试。
 3. 新增 `PluginInstanceSpec`，把 loader 内部索引改成 `entryId -> runtime` 和 `pluginId -> entryIds`。
-4. 将公开制品方法统一改名为 artifact 语义，删除无配置 `startPlugin` 路径。
-5. 重写 stop/unload/reload，使其快照并恢复每个受影响制品的全部实例。
-6. 更新真实 provider/consumer/example/仓库外 fixture，验证依赖制品与运行实例不混淆。
+4. 将公开 `artifact` 方法统一改名为 artifact 语义，删除无配置 `startPlugin` 路径。
+5. 重写 stop/unload/reload，使其快照并恢复每个受影响 `artifact` 的全部实例。
+6. 更新真实 provider/consumer/example/仓库外 fixture，验证依赖 `artifact` 与运行实例不混淆。
 
 成功标准：同一 JAR 两个 entry 同时 ACTIVE 且配置/服务隔离；reload 后两者均恢复；失败 reload 后旧 JAR 和两个旧实例均恢复。
 
@@ -58,9 +58,9 @@
 ## 阶段 6：API、文档与发布闭环
 
 1. 生成并审查 `fibra-loader-config` public/protected `javap` 基线，更新其余破坏性 API 基线。
-2. 把发布门禁和脚本从四个生产制品改为五个。
+2. 把发布门禁和脚本从四个生产 `artifact` 改为五个。
 3. 将仓库外 Engine application 改为真实 YAML、多 entry、配置更新/回滚验收；application 仍不把插件放入 classpath。
-4. 更新 README、API 文档、发布说明、开源基线和已有 PF4J 架构文档，删除“一制品一 Fibra”等废弃描述。
+4. 更新 README、API 文档、发布说明、开源基线和已有 PF4J 架构文档，删除“一个 `artifact` 对应一个 Fibra”等废弃描述。
 5. 执行 `mvn clean verify`、仓库外消费和逐字节可复现门禁；完成独立代码审查后再进入 `0.2.0` 发布判断。
 
-成功标准：五个生产制品可独立消费，文档无“已实现/未来能力”歧义，所有发布门禁通过。
+成功标准：五个生产 `artifact` 可独立消费，文档无“已实现/未来能力”歧义，所有发布门禁通过。

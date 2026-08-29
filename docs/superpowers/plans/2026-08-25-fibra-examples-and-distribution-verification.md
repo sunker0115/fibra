@@ -2,7 +2,7 @@
 
 **Goal:** 在不减少任何现有示例与黑盒断言的前提下，分离 archetype、仓内示例和仓库外分发验收，并补齐 Spring Boot starter 与已发布 archetype 的仓外消费门禁。
 
-**Architecture:** `fibra-plugin-archetype` 保持唯一用户模板；`fibra-example` 按 Engine 和 Spring Boot 两个 application 场景分组；`verification/distribution` 作为不进 reactor 的独立 Maven 工程，从临时远端仓库消费十个制品。所有旧 `host` 模块名改为 `application`，不提供兼容路径。
+**Architecture:** `fibra-plugin-archetype` 保持唯一用户模板；`fibra-example` 按 Engine 和 Spring Boot 两个 application 场景分组；`verification/distribution` 作为不进 reactor 的独立 Maven 工程，从临时远端仓库消费十个 `artifact`。所有旧 `host` 模块名改为 `application`，不提供兼容路径。
 
 **Tech Stack:** Java 21、Maven reactor、Maven Archetype Plugin 3.4.1、Spring Boot 4.1.0、JUnit 5、Failsafe、Bash、Fibra Engine。
 
@@ -74,7 +74,7 @@
 - [x] 在基线测试中先要求新模块只直接依赖 starter 和 Spring Boot 启动依赖，运行并确认因模块缺失失败。
 - [x] 创建非 Web Spring Boot application，从容器取得 `FibraEngine`、root `Context` 和 `FibraServiceBridge`，检查运行状态并输出 `FIBRA_DISTRIBUTION_SPRING_BOOT_OK`。
 - [x] 脚本从隔离本地仓库构建并启动该 application，注入临时 installed root/config location，禁止两个 watcher。
-- [x] 检查 starter、autoconfigure 和 spring 三个制品的 Maven 来源记录及远端字节一致性。
+- [x] 检查 starter、autoconfigure 和 spring 三个 `artifact` 的 Maven 来源记录及远端字节一致性。
 
 ### Task 6: 增加已发布 archetype 仓外消费
 
@@ -108,7 +108,7 @@
 - Verify only
 
 - [x] 运行 `mvn clean verify`，确认完整 reactor 与全部 example/parity 测试通过。
-- [x] 运行 `scripts/verify-reproducible-release.sh`，确认十个发布制品逐字节可复现。
+- [x] 运行 `scripts/verify-reproducible-release.sh`，确认十个发布 `artifact` 逐字节可复现。
 - [x] 运行 `scripts/verify-distribution.sh`，确认 core、plugin graph、Engine、Spring Boot 和 archetype 五类仓外门禁通过。
 - [x] 检查 `git diff --check`、`git status` 和变更清单，确认没有构建残留、IDE 文件或无关修改。
 - [x] 提交最终实现，提交信息明确描述 example/application 命名和 distribution verification 增强。

@@ -19,21 +19,21 @@
 - **WHEN** 构建 spring 与 autoconfigure 主 JAR
 - **THEN** spring 不含 Boot 类型或 imports，autoconfigure 含唯一 imports 和配置元数据
 
-### Requirement: Spring 依赖不进入框架中立制品
+### Requirement: Spring 依赖不进入框架中立 `artifact`
 
-六个框架中立运行时制品 `fibra-api`、`fibra-core`、`fibra-pf4j-api`、`fibra-loader-pf4j`、`fibra-loader-config`、`fibra-engine` 的 compile/runtime 依赖图 MUST NOT 出现 Spring家族坐标；根父 POM MUST NOT import Spring BOM或声明 Spring依赖。
+六个框架中立运行时 `artifact` `fibra-api`、`fibra-core`、`fibra-pf4j-api`、`fibra-loader-pf4j`、`fibra-loader-config`、`fibra-engine` 的 compile/runtime 依赖图 MUST NOT 出现 Spring家族坐标；根父 POM MUST NOT import Spring BOM或声明 Spring依赖。
 
 #### Scenario: 验证依赖树和父 POM
 - **WHEN** 执行中立依赖门禁
 - **THEN** 六个模块无 Spring，根 POM只有内部 Spring模块的当前版本管理，Boot BOM只在 autoconfigure
 
-### Requirement: Spring change 完成后有九个运行时制品
+### Requirement: Spring change 完成后有九个运行时 `artifact`
 
-系统 SHALL 发布六个框架中立运行时制品、`fibra-spring`、autoconfigure 和 starter。九个模块均生成项目要求的主制品、辅助制品和展开 POM并进入可复现构建。
+系统 SHALL 发布六个框架中立运行时 `artifact`、`fibra-spring`、autoconfigure 和 starter。九个模块均生成项目要求的主 `artifact`、辅助 `artifact` 和展开 POM并进入可复现构建。
 
 #### Scenario: 完整运行时发布构建
-- **WHEN** 执行运行时制品门禁
-- **THEN** 九个模块制品完整，聚合根、示例和验证模块仍跳过 deploy
+- **WHEN** 执行运行时 `artifact` 门禁
+- **THEN** 九个模块 `artifact` 完整，聚合根、示例和验证模块仍跳过 deploy
 
 ### Requirement: 分模块冻结最小 Spring API
 

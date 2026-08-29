@@ -4,11 +4,11 @@
 
 > 本文只用于追溯 PF4J loader 的历史行为，不得把其中 watcher 或关闭顺序用于 `0.4.0` 宿主。当前低层 loader API 以 [`docs/api/README.md`](../../api/README.md) 为准，托管运行时以 [Fibra Engine 架构](./2026-08-24-fibra-engine-architecture.md)为准。
 
-本文是 `fibra-loader-pf4j` 0.3.0 的历史实现契约。格式、事务状态机和逐项不变量的历史定义见[插件制品与事务更新设计](./2026-08-23-fibra-plugin-package-transaction-design.md)；本文只说明当时的生产代码边界和使用路径，不维护当前语义。
+本文是 `fibra-loader-pf4j` 0.3.0 的历史实现契约。格式、事务状态机和逐项不变量的历史定义见[插件 `artifact` 与事务更新设计](./2026-08-23-fibra-plugin-package-transaction-design.md)；本文只说明当时的生产代码边界和使用路径，不维护当前语义。
 
 ## 1. 边界
 
-PF4J 层只管理可信进程内插件的二进制制品、依赖图和 ClassLoader；Fibra Core 仍是业务插件生命周期、服务、事件和 effect 的唯一运行时。禁止 PF4J `Plugin-Class`，不创建 PF4J 业务生命周期，也不创建 Spring 子容器。
+PF4J 层只管理可信进程内插件的二进制 `artifact`、依赖图和 ClassLoader；Fibra Core 仍是业务插件生命周期、服务、事件和 effect 的唯一运行时。禁止 PF4J `Plugin-Class`，不创建 PF4J 业务生命周期，也不创建 Spring 子容器。
 
 ```text
 标准 ZIP候选 ──预检/事务──> plugins/<plugin-id>/
@@ -19,7 +19,7 @@ PF4J 层只管理可信进程内插件的二进制制品、依赖图和 ClassLoa
                            Fibra entry 与服务依赖图
 ```
 
-`pluginId` 标识一个已安装制品、PF4J 依赖节点和 ClassLoader；`entryId` 标识一个由 executable 创建的 Fibra 运行实例。一个 `pluginId` 可以创建多个 `entryId`。PF4J `plugin.dependencies` 只描述二进制类型可见性，Fibra `require`/配置 `inject` 只描述服务就绪，两张图不互相推导。
+`pluginId` 标识一个已安装 `artifact`、PF4J 依赖节点和 ClassLoader；`entryId` 标识一个由 executable 创建的 Fibra 运行实例。一个 `pluginId` 可以创建多个 `entryId`。PF4J `plugin.dependencies` 只描述二进制类型可见性，Fibra `require`/配置 `inject` 只描述服务就绪，两张图不互相推导。
 
 ## 2. 标准包
 
@@ -66,9 +66,9 @@ try (var root = FibraRuntime.create();
 }
 ```
 
-构造器先恢复或拒绝未完成事务，再创建活动 PF4J manager。`loadArtifacts()` 只装载已安装目录并校验完整图；候选安装、升级和降级的唯一入口是 `applyArtifacts(List<Path>)`，单包也是长度为 1 的批次。`configType` 临时启动目标及依赖后恢复原启动集合；`mount` 自动启动二进制依赖并创建全新入口；`update/updateWithFactory/unmount` 只操作 entry；`stopArtifact/unloadArtifact` 处理该制品及传递依赖方的全部 entry。
+构造器先恢复或拒绝未完成事务，再创建活动 PF4J manager。`loadArtifacts()` 只装载已安装目录并校验完整图；候选安装、升级和降级的唯一入口是 `applyArtifacts(List<Path>)`，单包也是长度为 1 的批次。`configType` 临时启动目标及依赖后恢复原启动集合；`mount` 自动启动二进制依赖并创建全新入口；`update/updateWithFactory/unmount` 只操作 entry；`stopArtifact/unloadArtifact` 处理该 `artifact` 及传递依赖方的全部 entry。
 
-`PluginConfigFactory` 只能捕获父 ClassLoader 类型和不可变原始值，不能捕获插件 `Class<?>`、typed config、入口对象或旧 ClassLoader。每次 mount、更新和制品恢复都用当前入口的 `configType` 重新物化；跨版本 schema 不兼容属于 `APPLY` 失败并回滚。
+`PluginConfigFactory` 只能捕获父 ClassLoader 类型和不可变原始值，不能捕获插件 `Class<?>`、typed config、入口对象或旧 ClassLoader。每次 mount、更新和 `artifact` 恢复都用当前入口的 `configType` 重新物化；跨版本 schema 不兼容属于 `APPLY` 失败并回滚。
 
 ## 5. 批量事务与崩溃恢复
 
@@ -88,7 +88,7 @@ PREPARED -> INSTALLING -> APPLYING -> COMMITTED -> 清理
 
 ## 6. 串行门与 Watcher
 
-制品事务和 config reconcile 共用 `runExclusive` 逻辑事务门。所有者线程可重入；其他线程竞争立即抛 `FibraPluginLoaderBusyException`。门只在短临界区更新所有者/深度/最后成功身份快照，不在跨 Fibra lifecycle 阻塞等待时持有 `Lock` 或 monitor，因此生命周期回调查询 `artifactIds()/entryIds()` 不会形成反向锁序。
+`artifact` 事务和 config reconcile 共用 `runExclusive` 逻辑事务门。所有者线程可重入；其他线程竞争立即抛 `FibraPluginLoaderBusyException`。门只在短临界区更新所有者/深度/最后成功身份快照，不在跨 Fibra lifecycle 阻塞等待时持有 `Lock` 或 monitor，因此生命周期回调查询 `artifactIds()/entryIds()` 不会形成反向锁序。
 
 `FibraPluginWatcher` 只监听 incoming 根目录原子创建的 `.zip`，按 `pluginId` 去抖，窗口内选择最高 SemVer，同版本选择更新时间较新的候选；只提交严格高于已安装版本的包。busy 不写入 `lastFailure`，候选保持 dirty 并重试；格式、预检或 apply 失败写入最后失败并记录 SLF4J。Watcher 不自动解析或下载依赖，关联升级必须由调用方显式提交一次批量 `applyArtifacts`。
 

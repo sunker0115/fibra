@@ -88,7 +88,15 @@ public interface Context extends AutoCloseable {
 
     EffectHandle effect(Publisher<? extends Disposable> source, String label);
 
+    default Fibra plugin(PluginDescriptor<Void> descriptor, Plugin<Void> plugin) {
+        return plugin(descriptor, plugin, null);
+    }
+
     <C> Fibra plugin(PluginDescriptor<C> descriptor, Plugin<C> plugin, C config);
+
+    default Fibra plugin(String name, Plugin<Void> plugin) {
+        return plugin(name, plugin, null);
+    }
 
     <C> Fibra plugin(String name, Plugin<C> plugin, C config);
 

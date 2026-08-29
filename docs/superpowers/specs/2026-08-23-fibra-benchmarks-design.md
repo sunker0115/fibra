@@ -40,7 +40,7 @@
 ### 3.3 隔离不变量（红线）
 
 - 任何生产模块都**不得**在 `<dependency>` 中引用 `fibra-benchmarks`；
-- benchmark 继承根 `maven.deploy.skip/source.skip/javadoc.skip=true`，不得进入十个可发布制品清单；
+- benchmark 继承根 `maven.deploy.skip/source.skip/javadoc.skip=true`，不得进入十个可发布 `artifact` 清单；
 - 可复现发布与仓库外消费脚本继续使用显式模块列表，benchmark 不进入列表，因此发布字节与消费者依赖图不变；
 - `ReleaseArtifactBaselineTest` 必须把 benchmark 归类为默认 reactor 中的非发布验证模块，并校验没有生产模块依赖它。
 
@@ -132,7 +132,7 @@ java -jar fibra-benchmarks/target/fibra-benchmarks.jar ServiceResolution -rf jso
 ## 8. 风险点
 
 1. **发布门禁**：红线是任何生产模块都不得依赖 fibra-benchmarks，且不覆盖 `deploy.skip`；
-2. **可复现构建**：发布脚本显式选择十个可发布制品；benchmark 进入默认 reactor 不改变其选择集或产物；
+2. **可复现构建**：发布脚本显式选择十个可发布 `artifact`；benchmark 进入默认 reactor 不改变其选择集或产物；
 3. **enforcer 收敛**：JMH 传递依赖必要时在本模块 depMgmt 钉死；
 4. **shade 元数据**：漏配 `AppendingTransformer` 会导致 `java -jar` 找不到任何基准；
 5. **基准腐化**：默认 `mvn clean verify` 编译并打包 benchmark；实际性能数字仍不得放入普通 CI，避免共享 runner 噪声被误当成回归；

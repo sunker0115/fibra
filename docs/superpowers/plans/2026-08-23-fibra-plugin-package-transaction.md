@@ -5,7 +5,7 @@
 
 > 本文不得作为当前待办执行。其中 watcher 任务、命令和提交边界只描述 `0.3.0` 历史过程；`0.4.0` 实施以 [Fibra Engine 计划](./2026-08-24-fibra-engine.md)为准。
 
-架构真源：[Fibra 插件制品与事务更新设计](../specs/2026-08-23-fibra-plugin-package-transaction-design.md)。形式化行为真源：[`standardize-plugin-packages`](../../../openspec/changes/standardize-plugin-packages/)。若本计划与架构或 OpenSpec 规格冲突，先修正文档使三者一致，再继续代码；不得在实现中自行选择第三种语义。
+架构真源：[Fibra 插件 `artifact` 与事务更新设计](../specs/2026-08-23-fibra-plugin-package-transaction-design.md)。形式化行为真源：[`standardize-plugin-packages`](../../../openspec/changes/standardize-plugin-packages/)。若本计划与架构或 OpenSpec 规格冲突，先修正文档使三者一致，再继续代码；不得在实现中自行选择第三种语义。
 
 ## 0. 执行纪律
 
@@ -42,7 +42,7 @@ git diff --check
 
 - `fibra-loader-pf4j/src/test/java/com/sstlfsj/fibra/loader/pf4j/Pf4j315BehaviorTest.java`
   - `DependencyResolver` 对存在的 optional dependency 不建立 dependency/dependent edge，也不报告其错误版本；证明 Fibra 必须补检 optional 范围。
-  - `DefaultExtensionFinder` 对索引缺类和 `NoClassDefFoundError` 返回空结果而不是传播异常；证明制品类型不能使用该结果。
+  - `DefaultExtensionFinder` 对索引缺类和 `NoClassDefFoundError` 返回空结果而不是传播异常；证明 `artifact` 类型不能使用该结果。
   - `DefaultVersionManager` 对 `>=1.0.0 & <2.0.0` 的边界值、非法版本和非法约束执行真实行为断言。
 - `fibra-loader-pf4j/src/test/java/com/sstlfsj/fibra/loader/pf4j/PluginPackageInspectorTest.java`
   - 标准安装目录和单顶层目录 ZIP；ZIP slip、绝对路径、符号链接、多个顶层目录、额外层级。
@@ -120,7 +120,7 @@ mvn -pl fibra-loader-pf4j -am -Dtest=FibraDirectoryPluginManagerTest,PluginGraph
 mvn -pl fibra-loader-pf4j,fibra-loader-config -am -Dtest=LoaderOperationGateTest,FibraConfigLoaderTest -Dsurefire.failIfNoSpecifiedTests=false test
 ```
 
-成功标准：真实 root lifecycle 回调的反向管理调用在 Awaitility 规定时间内失败返回，测试线程不依赖超时中断解除死锁；配置与制品事务没有交叉中间态。
+成功标准：真实 root lifecycle 回调的反向管理调用在 Awaitility 规定时间内失败返回，测试线程不依赖超时中断解除死锁；配置与 `artifact` 事务没有交叉中间态。
 
 提交边界：`feat: coordinate loader operations without lifecycle locks`
 
@@ -138,7 +138,7 @@ mvn -pl fibra-loader-pf4j,fibra-loader-config -am -Dtest=LoaderOperationGateTest
 - 重写 `FibraPluginLoaderTest.java`
   - 构造器只恢复磁盘；首次 `loadArtifacts` 初始化；初始化前 apply/mount 拒绝；显式 unload 后再次 `loadArtifacts` 从完整磁盘图重载。
   - `applyArtifacts` 安装、升级、降级、空列表、重复路径/ID、no-op 和显式多包事务。
-  - 三层 dependent-first dispose、dependency-first load/start、同制品多 entry 稳定顺序和旧 ClassLoader关闭。
+  - 三层 dependent-first dispose、dependency-first load/start、同一 `artifact` 多 entry 稳定顺序和旧 ClassLoader关闭。
   - 新入口 mount 失败后旧目录、started 状态、entries、服务全部恢复；恢复自身失败形成 `ROLLBACK` cause/suppressed 并保留事务目录。
   - 目标版本 `configType` 不兼容时以 `APPLY` 失败并回滚，不保留旧 typed config。
 
@@ -164,8 +164,8 @@ mvn -pl fibra-loader-pf4j -am -Dtest=PluginTransactionJournalTest,PluginCrashRec
 先修改失败测试：
 
 - `FibraPluginWatcherTest.java`：只接受原子发布的 ZIP；严格升级；同 ID 去抖；多插件不隐式拼批；候选保留；close 等待。
-- `FibraConfigLoaderTest.java`：配置事务与制品事务竞争时不交叉提交，直接同步 refresh 收到 loader 报忙且旧 snapshot/运行态不变。
-- 新增 `FibraConfigWatcherTest.java`：制品事务报忙时保留 dirty 并在释放后重试；报忙不调用 failure sink；真正配置 apply 失败仍可观测。
+- `FibraConfigLoaderTest.java`：配置事务与 `artifact` 事务竞争时不交叉提交，直接同步 refresh 收到 loader 报忙且旧 snapshot/运行态不变。
+- 新增 `FibraConfigWatcherTest.java`：`artifact` 事务报忙时保留 dirty 并在释放后重试；报忙不调用 failure sink；真正配置 apply 失败仍可观测。
 
 再实现：
 

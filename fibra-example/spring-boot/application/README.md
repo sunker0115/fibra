@@ -24,4 +24,4 @@ application 只注入 `FibraEngine`、root `Context` 和显式 `FibraServiceBrid
 
 `POST /deployments/apply` 会加载并运行插件代码，**等同于任意代码执行**。本示例仅演示机制，**没有任何鉴权或签名校验**；Fibra 只校验 deployment 结构和 SHA-256 完整性，SHA-256 不证明发布者身份。
 
-生产环境必须在 `apply` 之前完成：调用方鉴权与授权、候选来源可信校验、制品签名验证、以及对上传/apply 端点的访问控制。**禁止在生产中裸开上传/apply 端点。** Fibra 的非目标明确不含不可信插件安全沙箱，候选下载与信任由 application 或外部制品系统负责。
+生产环境必须在 `apply` 之前完成：调用方鉴权与授权、候选来源可信校验、 `artifact` 签名验证、以及对上传/apply 端点的访问控制。**禁止在生产中裸开上传/apply 端点。** Fibra 的非目标明确不含不可信插件安全沙箱，候选下载与信任由 application 或外部 `artifact` 系统负责。

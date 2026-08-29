@@ -9,7 +9,7 @@
 - **THEN** 生成根、`plugin-api`、`plugin-impl`、`config`、`deployment` 和 README，项目可直接执行 `mvn verify`
 
 #### Scenario: 检查独立性
-- **WHEN** 在只包含已安装 Fibra 制品的隔离本地仓库构建生成项目
+- **WHEN** 在只包含已安装 Fibra `artifact` 的隔离本地仓库构建生成项目
 - **THEN** 构建不读取 Fibra parent、`${revision}`、reactor 输出、systemPath 或源码仓库脚本
 
 ### Requirement: 生成项目遵守标准插件边界

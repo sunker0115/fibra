@@ -6,11 +6,15 @@
 
 ## [未发布]
 
+### 新增
+
+- `Context` 和 `InvocationContext` 为 `PluginDescriptor<Void>` 增加省略配置参数的便利重载；所有入口仍委托既有插件生命周期，内核运行语义不变。
+
 ## [0.4.0] - 2026-08-29
 
 ### 新增
 
-- 新增框架中立的 `fibra-engine`，作为插件制品、动态配置、source、串行 reconcile、readiness、部署事务和关闭顺序的唯一托管入口。
+- 新增框架中立的 `fibra-engine`，作为插件 `artifact`、动态配置、source、串行 reconcile、readiness、部署事务和关闭顺序的唯一托管入口。
 - 新增带清单摘要的 deployment ZIP 协议，把多个插件候选与配置作为一个联合事务执行预检、提交、回滚和崩溃恢复。
 - 新增 `fibra-plugin-archetype`，生成可在 Fibra 源码仓库之外独立构建和验证的标准多模块插件项目。
 - 新增纯 Java Engine、Spring Boot 和仓库外分发验收工程，覆盖多插件关联升级、配置更新、失败恢复和发布坐标消费。
@@ -19,14 +23,14 @@
 ### 变更
 
 - PF4J loader 与 config loader 改为可组合的 prepare/commit/rollback 机制；watcher、自动重试和周期重读统一移入 Engine，不再由 loader 各自维护。
-- Engine 使用制品与配置的语义摘要分别跟踪 desired/applied revision，启动时立即执行首次收敛，并在单侧变化时只推进实际成功提交的分量。
+- Engine 使用 `artifact` 与配置的语义摘要分别跟踪 desired/applied revision，启动时立即执行首次收敛，并在单侧变化时只推进实际成功提交的分量。
 - Spring 集成拆分为 `fibra-spring`、`fibra-spring-boot-autoconfigure` 和无生产代码的 `fibra-spring-boot-starter`；Spring 层只负责生命周期委托、属性映射和显式服务桥接。
-- 运行时远程发布边界调整为九个运行时制品；另发布一个插件 Archetype，共十个制品。
+- 运行时远程发布边界调整为九个运行时 `artifact`；另发布一个插件 Archetype，共十个 `artifact`。
 - `fibra-benchmarks` 从可选 `benchmarks` profile 移入默认 reactor，使完整构建持续校验基准源码；它仍不发布、不进入可复现发布集，普通 Maven 构建也不执行 JMH 测量。
-- 无源码 `fibra-spring-boot-starter` 使用 Maven Source Plugin 原生生成空 sources JAR，补齐每个发布制品固定的主 JAR、sources JAR、Javadoc JAR 和 POM 附件集合。
+- 无源码 `fibra-spring-boot-starter` 使用 Maven Source Plugin 原生生成空 sources JAR，补齐每个发布 `artifact` 固定的主 JAR、sources JAR、Javadoc JAR 和 POM 附件集合。
 - 十个发布 POM 统一携带项目、许可证、开发者、SCM 和 Issue 元数据；十个主 JAR 统一携带项目许可证与第三方声明。
 - Fibra 自有运维日志统一为 `event=fibra.* key=value` 格式，关键部署、对账、source 和生命周期事件可在默认日志后端中直接检索。
-- Engine revision 使用带版本域的流式摘要计算，避免把完整制品读入内存，并明确区分摘要协议版本。
+- Engine revision 使用带版本域的流式摘要计算，避免把完整 `artifact` 读入内存，并明确区分摘要协议版本。
 
 ### 修复
 
@@ -39,11 +43,11 @@
 
 ## [0.3.1] - 2026-08-24
 
-本版新增「可选 Spring Boot 宿主接入」落地路径，并用 JMH 基准把内核性能从经验判断变为可复现数据。内核语义无变化，全部增量位于外围（可选适配制品 + 基准模块）。
+本版新增「可选 Spring Boot 宿主接入」落地路径，并用 JMH 基准把内核性能从经验判断变为可复现数据。内核语义无变化，全部增量位于外围（可选适配 `artifact` + 基准模块）。
 
 ### 新增
 
-- **`fibra-spring-boot-starter`（可选 Spring 适配制品）**：把「Spring 只在可选模块内、不进内核」落地为真实制品。
+- **`fibra-spring-boot-starter`（可选 Spring 适配 `artifact`）**：把「Spring 只在可选模块内、不进内核」落地为真实 `artifact`。
   - `FibraProperties`：按 `fibra.*` 属性绑定，必填属性 fail-fast。
   - `FibraServiceBridge`：宿主 Spring 单例经类型化 `ServiceKey` 显式桥接给插件；桥接哪个 bean 由宿主决定，不做按类型自动装配。
   - `FibraLifecycle`（`SmartLifecycle`）：启动就绪门禁 + 逆序有序关闭，就绪超时与关闭超时分离。
@@ -53,7 +57,7 @@
 
 ### 变更
 
-- 远程可发布制品由 5 个增至 **6 个**（5 个中立内核/loader 制品 + 1 个可选 `fibra-spring-boot-starter`）；`fibra-spring-boot-starter` 纳入可复现构建集、发布制品基线与公开 API 签名基线门禁。
+- 远程可发布 `artifact` 由 5 个增至 **6 个**（5 个中立内核/loader `artifact` + 1 个可选 `fibra-spring-boot-starter`）；`fibra-spring-boot-starter` 纳入可复现构建集、发布 `artifact` 基线与公开 API 签名基线门禁。
 - 示例模块归入 `fibra-example` 聚合目录。
 
 ### 说明
@@ -77,7 +81,7 @@
 - PF4J 升级至 `3.15.0`。
 - 删除直接 JAR API（`loadArtifact`/`reloadArtifact`），不保留兼容转发。
 
-详见 openspec change `standardize-plugin-packages`（已归档）与[插件制品与事务更新设计](docs/superpowers/specs/2026-08-23-fibra-plugin-package-transaction-design.md)。
+详见 openspec change `standardize-plugin-packages`（已归档）与[插件 `artifact` 与事务更新设计](docs/superpowers/specs/2026-08-23-fibra-plugin-package-transaction-design.md)。
 
 ## [0.2.0] - 2026-08-23
 
@@ -92,4 +96,4 @@
 
 - 首个版本：Fibra Cordis 内核（Cordis Core 的 Java 语义等价实现，含严格 parity 验收）。
 - PF4J 插件装载架构：插件原子更新与目录监听、真实 PF4J 插件依赖链黑盒验收。
-- 建立可发布制品基线。
+- 建立可发布 `artifact` 基线。

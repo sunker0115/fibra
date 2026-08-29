@@ -8,9 +8,9 @@
 
 ## 发布边界
 
-远程 Maven 仓库接收十个制品。
+远程 Maven 仓库接收十个 `artifact`。
 
-六个框架中立运行时制品：
+六个框架中立运行时 `artifact`：
 
 - `com.sstlfsj:fibra-api`；
 - `com.sstlfsj:fibra-core`；
@@ -19,17 +19,17 @@
 - `com.sstlfsj:fibra-loader-config`；
 - `com.sstlfsj:fibra-engine`。
 
-三个可选 Spring 运行时制品：
+三个可选 Spring 运行时 `artifact`：
 
 - `com.sstlfsj:fibra-spring`；
 - `com.sstlfsj:fibra-spring-boot-autoconfigure`；
 - `com.sstlfsj:fibra-spring-boot-starter`。
 
-一个开发工具制品：
+一个开发工具 `artifact`：
 
 - `com.sstlfsj:fibra-plugin-archetype`。
 
-因此是九个运行时制品加一个开发工具制品。根 `fibra`、`fibra-example`、`fibra-parity-tests`、`fibra-benchmarks` 和 `verification` 不远程发布。`fibra-benchmarks` 参加默认 reactor，但只用于编译、打包和人工性能测量，不进入发布或可复现构建集合。starter 是无生产 class 的依赖入口；archetype 主 JAR 保存生成模板，不是运行时库。
+因此是九个运行时 `artifact` 加一个开发工具 `artifact`。根 `fibra`、`fibra-example`、`fibra-parity-tests`、`fibra-benchmarks` 和 `verification` 不远程发布。`fibra-benchmarks` 参加默认 reactor，但只用于编译、打包和人工性能测量，不进入发布或可复现构建集合。starter 是无生产 class 的依赖入口；archetype 主 JAR 保存生成模板，不是运行时库。
 
 十个模块都使用 Flatten Maven Plugin 的 `oss` 模式生成自包含 POM。发布 POM 不保留根 parent、`${revision}` 或未展开的内部依赖版本，消费者不需要继承 `com.sstlfsj:fibra` 父 POM。版本仍只在根 `<revision>` 和统一 properties/dependencyManagement 中维护。
 
@@ -44,14 +44,14 @@ mvn clean verify
 Maven Enforcer 检查 Java/Maven 版本、依赖收敛和插件版本。完整 reactor 同时执行：
 
 - Cordis Core 71 项逐条 Java 等价测试；
-- 八个含 Java API 制品的 `javap -protected` 签名基线；
+- 八个含 Java API `artifact` 的 `javap -protected` 签名基线；
 - PF4J 3.15.0 行为、插件包、依赖图、ClassLoader 和事务恢复；
 - 配置树、typed config、文件写入和回滚；
 - Engine source、reconcile、deployment、readiness、崩溃恢复和终止关闭；
 - Spring 生命周期、属性、自动配置整体退让和示例黑盒；
 - Maven Archetype 生成、生成项目 `verify`、标准包检查及真实 Engine 装载；
 - JMH 基准代码编译与可运行基准 JAR 打包，但不执行性能测量；
-- 十个发布制品的主 JAR、sources JAR、Javadoc JAR和展开 POM门禁。
+- 十个发布 `artifact` 的主 JAR、sources JAR、Javadoc JAR和展开 POM门禁。
 
 无源码 starter 仍附加空 sources/Javadoc JAR，archetype 没有 Java 公共类时仍附加空 Javadoc JAR，以保持仓库发布附件集合一致；发布门禁同时确认 starter 没有 `.class`，并确认 archetype 包含 `META-INF/maven/archetype-metadata.xml`。
 
@@ -73,15 +73,15 @@ scripts/verify-distribution.sh
 
 脚本使用独立临时 Maven 本地仓库完成以下边界：
 
-1. 把十个发布制品 deploy 到临时文件仓库，并检查每个制品恰好具有 POM、主 JAR、sources JAR 和 Javadoc JAR；
+1. 把十个发布 `artifact` deploy 到临时文件仓库，并检查每个 `artifact` 恰好具有 POM、主 JAR、sources JAR 和 Javadoc JAR；
 2. 复制 `verification/distribution` 到仓库外临时目录，拒绝符号链接、Fibra 仓库绝对路径、reactor `target/classes` 和 `systemPath`；
-3. 独立工程从临时仓库解析它实际使用的九个运行时制品，并核对 Maven 来源记录和制品字节；
+3. 独立工程从临时仓库解析它实际使用的九个运行时 `artifact`，并核对 Maven 来源记录和 `artifact` 字节；
 4. 构建并运行 `core-application`、contract/provider/consumer 标准插件包、只依赖 `fibra-engine` 的 `engine-application`，以及只直接依赖 starter 与 Spring Boot 的非 Web application；
 5. 检查 contract 类型唯一、provider 私有依赖隔离、`Plugin-Class` 禁止、application 不含插件或 contract 类型；
 6. 以独立 `java -jar` 进程验证 consumer-first、多个 entry、等待依赖、isolate、配置更新与失败恢复、不完整关联升级拒绝和三包完整关联升级；
 7. 从临时远端仓库调用已部署的 `fibra-plugin-archetype`，构建生成的独立项目并检查标准 plugin/deployment ZIP。
 
-这个 fixture 是仓库外黑盒验收，不承担用户模板责任；用户插件项目只能由 `fibra-plugin-archetype` 生成。脚本通过只证明当前工作树制品可以从 Maven 坐标独立消费，不表示坐标已发布到公共仓库。目录职责和完整断言见[示例与分发验收设计](superpowers/specs/2026-08-25-fibra-examples-and-distribution-verification-design.md)。
+这个 fixture 是仓库外黑盒验收，不承担用户模板责任；用户插件项目只能由 `fibra-plugin-archetype` 生成。脚本通过只证明当前工作树 `artifact` 可以从 Maven 坐标独立消费，不表示坐标已发布到公共仓库。目录职责和完整断言见[示例与分发验收设计](superpowers/specs/2026-08-25-fibra-examples-and-distribution-verification-design.md)。
 
 ## 插件 Archetype 发布与使用
 
@@ -177,7 +177,7 @@ mvn --batch-mode --no-transfer-progress clean deploy -Pcentral-release \
   -am -DskipTests -Darchetype.test.skip=true
 ```
 
-`central-release` 固定 `autoPublish=false`。因此工作流成功只表示签名制品已上传并通过 Portal 校验，不表示已经公开；项目所有者必须在 Central Portal 核对十个 GAV、POM 元数据、附件和签名后人工发布。Central 上的同一 GAV 不能覆盖或重传，错误版本只能通过后续修复版本处理。
+`central-release` 固定 `autoPublish=false`。因此工作流成功只表示签名 `artifact` 已上传并通过 Portal 校验，不表示已经公开；项目所有者必须在 Central Portal 核对十个 GAV、POM 元数据、附件和签名后人工发布。Central 上的同一 GAV 不能覆盖或重传，错误版本只能通过后续修复版本处理。
 
 正式发布顺序固定为：将 `revision` 改为非 `SNAPSHOT` 版本并完成门禁，合并到 `main`，创建同版本标签，手工触发 Central 工作流，在 Portal 人工发布，确认 Central 可解析后再创建或公告 GitHub Release。发布完成后，开发分支进入下一个 `SNAPSHOT` 版本。
 

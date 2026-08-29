@@ -7,13 +7,13 @@
 
 ## 0. 已核实基线与执行纪律
 
-- 🟢 实施起点：reactor 原有五个框架中立生产模块、一个 Spring starter、example 和 parity，唯一版本真源为 `0.3.1`；本计划完成态以十个发布制品和 `0.4.0-SNAPSHOT` 为准。
-- 🟢 `fibra-loader-pf4j/src/main/java/com/sstlfsj/fibra/loader/pf4j/FibraPluginLoader.java:29-155`：当前 loader 同时拥有制品、运行 entry、一步式事务和公开 `runExclusive`。
+- 🟢 实施起点：reactor 原有五个框架中立生产模块、一个 Spring starter、example 和 parity，唯一版本真源为 `0.3.1`；本计划完成态以十个发布 `artifact` 和 `0.4.0-SNAPSHOT` 为准。
+- 🟢 `fibra-loader-pf4j/src/main/java/com/sstlfsj/fibra/loader/pf4j/FibraPluginLoader.java:29-155`：当前 loader 同时拥有 `artifact`、运行 entry、一步式事务和公开 `runExclusive`。
 - 🟢 `fibra-loader-pf4j/src/main/java/com/sstlfsj/fibra/loader/pf4j/PluginUpdateTransaction.java:16`、`PluginCrashRecovery.java:10`：现有单 loader journal/恢复实现是重构输入，不建立第二套并行算法。
 - 🟢 `fibra-loader-config/src/main/java/com/sstlfsj/fibra/loader/config/FibraConfigLoader.java:32-245`：当前 loader 混合配置解析、文件写入、运行 reconcile 和 watcher 所有权。
 - 🟢 `fibra-loader-pf4j/src/main/java/com/sstlfsj/fibra/loader/pf4j/FibraPluginWatcher.java:27`、`fibra-loader-config/src/main/java/com/sstlfsj/fibra/loader/config/FibraConfigWatcher.java:24`：两个 watcher 是必须迁出并删除的旧公共 API，不保留 deprecated、转发或双路径。
-- 🟢 `fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/ReleaseArtifactBaselineTest.java:21-151`：发布制品、外部消费方模块及依赖边界已有自动门禁，必须与共享符号同一任务更新。
-- 🟢 实施起点的可复现构建脚本固定六个制品；engine change 先扩为七个，Spring 与 archetype change 完成后统一扩为十个。
+- 🟢 `fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/ReleaseArtifactBaselineTest.java:21-151`：发布 `artifact`、外部消费方模块及依赖边界已有自动门禁，必须与共享符号同一任务更新。
+- 🟢 实施起点的可复现构建脚本固定六个 `artifact`；engine change 先扩为七个，Spring 与 archetype change 完成后统一扩为十个。
 - 🟢 `verification/distribution/pom.xml`：仓库外工程不在 Fibra reactor 内，Engine application 当前直接消费 config loader；本 change 将它改为消费 engine。
 
 执行规则：
@@ -32,7 +32,7 @@
 
 先修改测试：
 
-- 修改 🟢 `ReleaseArtifactBaselineTest`：框架中立运行时列表加入 `fibra-engine`，总发布制品仍暂为七个；外部 Engine application 依赖断言留到第 9 项随消费方同一提交修改。
+- 修改 🟢 `ReleaseArtifactBaselineTest`：框架中立运行时列表加入 `fibra-engine`，总发布 `artifact` 仍暂为七个；外部 Engine application 依赖断言留到第 9 项随消费方同一提交修改。
 - 新增 `fibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineDependencyBoundaryTest.java`：读取 `fibra-engine` 依赖图，断言 compile/runtime 不含 `org.springframework*`、Spring Boot、Spring Shell、Spring AI。
 - 新增 `fibra-engine/src/test/java/com/sstlfsj/fibra/engine/FibraEngineStateTest.java`：锁定 `NEW/STARTING/RUNNING/DEGRADED/STOPPING/TERMINATED` 六个终止性状态，确保首个主 JAR 包含真实公共 API class。
 
@@ -53,7 +53,7 @@ $MVN -pl fibra-engine,fibra-parity-tests -am -Dtest=EngineDependencyBoundaryTest
 git diff --check
 ```
 
-成功标准：版本只解析为 `0.4.0-SNAPSHOT`；engine 进入 reactor、dependencyManagement 和七制品门禁；Spring 坐标不进入 engine。
+成功标准：版本只解析为 `0.4.0-SNAPSHOT`；engine 进入 reactor、dependencyManagement 和七个 `artifact` 门禁；Spring 坐标不进入 engine。
 
 提交边界：`chore: start 0.4.0 engine development`
 
@@ -384,14 +384,14 @@ git diff --check
 
 提交边界：`test: verify Fibra engine outside the reactor`
 
-## 10. 冻结 API、文档和七制品发布门禁
+## 10. 冻结 API、文档和七个 `artifact` 发布门禁
 
 修改：
 
 - 新增 `docs/api/fibra-engine-public-signatures.txt`，重建两个 loader 签名；🟢 `ApiSignatureBaselineTest` 加入 engine。
 - 重写 `docs/api/README.md` 中 loader watcher/直接宿主编排段，新增 engine builder、reconcile、deployment、状态、失败和关闭契约。
 - 更新 `README.md`、`docs/release.md`、loader 架构文档、开源参照文档；明确 plugin package 与 deployment package、SHA-256、配置树映射、同版本不同摘要、contract 重复诊断、schema 变更失败回滚。
-- 更新 `ReleaseArtifactBaselineTest`、`verify-reproducible-release.sh` 和 THIRD_PARTY_NOTICES；本 change 只宣称七个运行时制品，九运行时/十总制品由后续 Spring/archetype changes 收口。
+- 更新 `ReleaseArtifactBaselineTest`、`verify-reproducible-release.sh` 和 THIRD_PARTY_NOTICES；本 change 只宣称七个运行时 `artifact`，九运行时/十总 `artifact` 由后续 Spring/archetype changes 收口。
 - 全仓删除现行文档和源码中的 loader watcher 语义；不删除明确标注历史的发布记录。
 
 最终验证：
@@ -405,7 +405,7 @@ git diff --check
 git status --short
 ```
 
-成功标准：Cordis 71 项、loader、engine、example、外部消费、API、十制品和可复现构建全部通过；生成物未进入 Git；文档明确区分 `v0.3.1` 正式基线与仅位于开发分支的 `0.4.0-SNAPSHOT`。
+成功标准：Cordis 71 项、loader、engine、example、外部消费、API、十个 `artifact` 和可复现构建全部通过；生成物未进入 Git；文档明确区分 `v0.3.1` 正式基线与仅位于开发分支的 `0.4.0-SNAPSHOT`。
 
 提交边界：`docs: freeze the Fibra engine API`
 

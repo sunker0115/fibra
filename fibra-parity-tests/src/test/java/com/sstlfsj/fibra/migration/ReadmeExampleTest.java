@@ -23,7 +23,7 @@ class ReadmeExampleTest {
                 observed[0] = ctx.service(greeting)
                     .invoke((invocation, service) -> service.greet("Fibra"));
                 return Mono.just(Disposables.noop());
-            }, null);
+            });
 
             consumer.ready().block();
             assertEquals("你好，Fibra", observed[0]);

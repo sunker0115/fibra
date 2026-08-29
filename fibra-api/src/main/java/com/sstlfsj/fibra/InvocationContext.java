@@ -46,6 +46,10 @@ public final class InvocationContext {
         return caller.effect(source, label);
     }
 
+    public Fibra plugin(PluginDescriptor<Void> descriptor, Plugin<Void> plugin) {
+        return caller.plugin(descriptor, plugin);
+    }
+
     public <C> Fibra plugin(PluginDescriptor<C> descriptor, Plugin<C> plugin, C config) {
         return caller.plugin(descriptor, plugin, config);
     }

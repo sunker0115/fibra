@@ -1,4 +1,4 @@
-## 1. Archetype 制品
+## 1. Archetype `artifact`
 
 - [x] 1.1 新增可发布 `fibra-plugin-archetype` 和统一 Maven Archetype Plugin 3.4.1 版本
 - [x] 1.2 定义 required properties、文件集和 contract/plugin 多模块生成结构
@@ -12,7 +12,7 @@
 
 ## 3. 发布与文档
 
-- [x] 3.1 把发布门禁和可复现构建扩展为十个可发布制品
+- [x] 3.1 把发布门禁和可复现构建扩展为十个可发布 `artifact`
 - [x] 3.2 写入 README、插件作者指南、IDEA和命令行生成方式
 - [x] 3.3 完成模板可用性审查、全量验证并归档 change
 

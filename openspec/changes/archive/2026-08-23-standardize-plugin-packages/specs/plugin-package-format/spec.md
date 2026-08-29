@@ -5,7 +5,7 @@
 
 #### Scenario: 标准目录被装载
 - **WHEN** 插件根目录直接子目录名等于 `plugin.id`，且 properties 与 `lib/` 满足协议
-- **THEN** `loadArtifacts()` 装载并解析该制品
+- **THEN** `loadArtifacts()` 装载并解析该 `artifact`
 
 #### Scenario: 直接 JAR被拒绝
 - **WHEN** 插件根目录直接包含旧模型插件 JAR
@@ -23,7 +23,7 @@
 - **THEN** apply 以 `VALIDATE` 失败，当前安装目录和运行态不变
 
 ### Requirement: Properties 是唯一描述真源
-系统 SHALL 只从根 `plugin.properties` 读取 PF4J 制品描述，只允许设计文档第 4.2 节列出的描述键，并 MUST 拒绝非空 `plugin.class`、`plugin.requires` 和任何未列出的键；主 JAR Manifest 中的 PF4J 描述不得覆盖它。
+系统 SHALL 只从根 `plugin.properties` 读取 PF4J `artifact` 描述，只允许设计文档第 4.2 节列出的描述键，并 MUST 拒绝非空 `plugin.class`、`plugin.requires` 和任何未列出的键；主 JAR Manifest 中的 PF4J 描述不得覆盖它。
 
 #### Scenario: Plugin-Class 被拒绝
 - **WHEN** properties 声明非空 `plugin.class`
@@ -44,8 +44,8 @@
 - **WHEN** 主 JAR或私有依赖 JAR包含 Fibra、PF4J、Reactive Streams、Reactor 或 SLF4J 共享类
 - **THEN** 包以 `VALIDATE` 失败
 
-### Requirement: 制品入口类型
-系统 SHALL 仅根据主 JAR自身扩展索引把制品分类为 contract-only 或 executable；完整类型规则见设计文档第 5.1 节。
+### Requirement: `artifact` 入口类型
+系统 SHALL 仅根据主 JAR自身扩展索引把 `artifact` 分类为 contract-only 或 executable；完整类型规则见设计文档第 5.1 节。
 
 #### Scenario: Contract-only 被依赖
 - **WHEN** 主 JAR没有自身 Fibra 入口且其他插件声明了对它的 PF4J 依赖
