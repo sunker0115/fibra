@@ -84,6 +84,18 @@ fibra.restart().block();
 fibra.dispose().block();
 ```
 
+无配置函数插件使用 `PluginDescriptor<Void>` 重载，不需要在调用末尾传入 `null`：
+
+```java
+Fibra consumer = root.plugin(
+    PluginDescriptor.<Void>builder("consumer").require(GREETING).build(),
+    (ctx, ignored) -> Mono.empty());
+
+Fibra named = root.plugin("named", (ctx, ignored) -> Mono.empty());
+```
+
+`InvocationContext` 同样提供 `plugin(PluginDescriptor<Void>, Plugin<Void>)`，并保持调用者所有权。类插件继续使用 `plugin(descriptor, factory, initializer, config)`；不增加省略配置的三参数重载，因为它会与现有函数插件的三参数调用在 `config == null` 时产生 Java 重载歧义。
+
 `Plugin<C>` 返回 `Publisher<? extends Disposable>`：Publisher 完成才算启动完成，0/1/N 个元素均可，每个元素都是卸载动作。类插件使用 `PluginFactory<C,P>` 与 `PluginInitializer<P>`；initializer 可异步完成并发出 0/1/N 个 `Disposable`，任何非空非 `Disposable` 元素都是错误。`PluginDescriptor.Builder.inject(type)` 把 `@InjectService` 字段/类依赖编译进 descriptor；方法注解由同一 Fibra 生命周期创建依赖子插件。
 
 状态固定为 `PENDING`、`LOADING`、`ACTIVE`、`FAILED`、`UNLOADING`、`DISPOSED`。`await()`/`ready()` 语义相同：等待当前 inertia 收敛并传播 config/startup 原异常；缺少依赖并稳定在 `PENDING` 时正常完成，不表示已经 `ACTIVE`，也不等待未来 provider。宿主启动门禁必须在等待后显式检查 `state()`。`update` 先同步校验，再经过 `CoreEvents.UPDATE` waterfall；只有执行默认 `next` 才提交 config 和 restart。root `dispose()` 等价于 restart，root uid 永远为 0；普通 Fibra dispose 后 uid 为 null。

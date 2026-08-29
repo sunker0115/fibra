@@ -97,6 +97,8 @@ Mono<Fibra> ready = fibra.ready();
 Mono<Void> disposed = fibra.dispose();
 ```
 
+无配置函数插件以 `PluginDescriptor<Void>` 表达，并通过 `Context.plugin(descriptor, plugin)`、`Context.plugin(name, plugin)` 或 `InvocationContext.plugin(descriptor, plugin)` 创建；三个便利入口只向既有配置入口传递 `null`，不得建立第二套生命周期。类插件不增加省略配置的三参数重载，因为它会与既有函数插件三参数签名在 `config == null` 时产生 Java 重载歧义；无配置类插件继续在四参数入口显式传入 `null`。
+
 `PluginDescriptor<C>` 明确包含 name、dependencies、provide、intercept 与 config validator。运行时按插件入口对象身份分组，同一插件定义可有多个 Fibra；最后一个 Fibra 移除后才删除 runtime。`Context.registry()` 提供 `size`、`has`、Fibra 快照和可等待的批量 `remove`。类插件按 `PluginFactory` 身份分组，不能按每次新建的 adapter lambda 分组。
 
 类插件使用明确的 `PluginFactory<C>` 构造器引用，不猜测构造函数。注解适配层只负责把 `@Inject`/插件元数据编译成同一个 descriptor，不建立第二套生命周期。

@@ -68,8 +68,7 @@ var consumer = root.plugin(
             .invoke((invocation, service) -> service.greet("Fibra"));
         context.logger().info(text);
         return Mono.just(Disposables.noop());
-    },
-    null);
+    });
 
 consumer.ready().block();
 registration.dispose().block();

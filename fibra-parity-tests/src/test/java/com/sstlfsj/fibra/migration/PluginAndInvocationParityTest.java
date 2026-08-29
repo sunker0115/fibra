@@ -38,7 +38,7 @@ class PluginAndInvocationParityTest {
             .build(), (pluginContext, ignored) -> {
             calls.incrementAndGet();
             return Mono.empty();
-        }, null);
+        });
 
         var provider = context.plugin(
             PluginDescriptor.<Void>builder("deferred-provider").provide(DEFERRED).build(),
@@ -60,9 +60,9 @@ class PluginAndInvocationParityTest {
         var childDisposed = new AtomicBoolean();
         var parent = context.plugin("parent", (parentContext, ignored) -> {
             parentContext.plugin("child", (childContext, childConfig) ->
-                Mono.just(Disposables.from(() -> childDisposed.set(true))), null);
+                Mono.just(Disposables.from(() -> childDisposed.set(true))));
             return Mono.empty();
-        }, null);
+        });
 
         parent.await().block();
         parent.dispose().block();

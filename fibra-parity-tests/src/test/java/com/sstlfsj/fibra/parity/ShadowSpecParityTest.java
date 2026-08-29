@@ -50,7 +50,7 @@ class ShadowSpecParityTest extends CordisSpecSupport {
                 (context, config) -> {
                     observed.set(context.metadata("caller"));
                     return Mono.empty();
-                }, null);
+                });
             await(fibra);
             return new Inspection(invocation.caller(), null);
         });
