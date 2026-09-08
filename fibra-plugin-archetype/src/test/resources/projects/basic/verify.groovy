@@ -1,44 +1,26 @@
 import java.util.zip.ZipFile
 
 def project = new File(basedir, "project/sample-fibra-plugin")
-def rootPom = new File(project, "pom.xml")
-assert rootPom.isFile()
+def pom = new File(project, "pom.xml")
+def jar = new File(project, "target/sample-fibra-plugin-1.0.0.jar")
+assert pom.isFile()
+assert jar.isFile()
 
-def pomText = rootPom.getText("UTF-8")
+def pomText = pom.getText("UTF-8")
 assert !pomText.contains("<parent>")
-assert !pomText.contains('${revision}')
-assert !pomText.contains("target/classes")
-assert !pomText.contains("systemPath")
-assert !pomText.contains('\\${')
+assert !pomText.contains("pf4j")
+assert pomText.contains("fibra-api")
 
-def contract = new File(project,
-    "plugin-api/target/sample-fibra-plugin-contract-1.0.0.zip")
-def plugin = new File(project,
-    "plugin-impl/target/sample-fibra-plugin-1.0.0.zip")
-def deployment = new File(project,
-    "deployment/target/sample-fibra-plugin-deployment-1.0.0.zip")
-assert contract.isFile()
-assert plugin.isFile()
-assert deployment.isFile()
-
-new ZipFile(plugin).withCloseable { zip ->
+new ZipFile(jar).withCloseable { zip ->
     def entries = zip.entries().toList()*.name
-    assert entries.contains("sample-fibra-plugin/plugin.properties")
-    assert entries.contains("sample-fibra-plugin/lib/sample-fibra-plugin-1.0.0.jar")
-    assert entries.findAll { it.startsWith("sample-fibra-plugin/lib/") && it.endsWith(".jar") }.size() == 1
-    assert !zip.getInputStream(zip.getEntry("sample-fibra-plugin/plugin.properties"))
-        .getText("ISO-8859-1").contains("Plugin-Class")
-}
-
-new ZipFile(deployment).withCloseable { zip ->
-    def files = zip.entries().toList().findAll { !it.directory }*.name.sort()
-    assert files == [
-        "checksums.sha256",
-        "config/fibra.yaml",
-        "deployment.properties",
-        "plugins/sample-fibra-plugin-1.0.0.zip",
-        "plugins/sample-fibra-plugin-contract-1.0.0.zip"
-    ]
+    assert entries.contains("META-INF/fibra/plugin.yaml")
+    assert entries.contains("org/example/fibra/FibraPluginEntrypoint.class")
+    assert entries.contains("org/example/fibra/PluginConfig.class")
+    assert !entries.any { it == "plugin.properties" || it.endsWith("extensions.idx") }
+    def manifest = zip.getInputStream(zip.getEntry("META-INF/fibra/plugin.yaml"))
+        .getText("UTF-8")
+    assert manifest.contains("id: sample-fibra-plugin")
+    assert manifest.contains("entrypoint: org.example.fibra.FibraPluginEntrypoint")
 }
 
 return true

@@ -5,19 +5,16 @@
   <interactiveMode>false</interactiveMode>
   <profiles>
     <profile>
-      <id>fibra-archetype-verification</id>
+      <id>fibra-verification</id>
       <repositories>
         <repository>
-          <id>archetype</id>
+          <id>fibra-verification</id>
           <url>${fibra.repository.url}</url>
-          <releases>
-            <enabled>true</enabled>
-          </releases>
-          <snapshots>
-            <enabled>true</enabled>
-          </snapshots>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>true</enabled></snapshots>
         </repository>
       </repositories>
     </profile>
   </profiles>
+  <activeProfiles><activeProfile>fibra-verification</activeProfile></activeProfiles>
 </settings>

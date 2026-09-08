@@ -32,16 +32,16 @@ public class LifecycleDispatchBenchmark {
 
     @Setup
     public void setup() {
-        ctx = FibraRuntime.create();
+        ctx = FibraRuntime.create().rootScope().context();
     }
 
     @TearDown
     public void tearDown() {
-        ctx.close();
+        ctx.scope().close();
     }
 
     @Benchmark
     public void roundTrip() {
-        ctx.emit(EMPTY, Ticker::onTick);
+        ctx.events().emit(EMPTY, Ticker::onTick);
     }
 }

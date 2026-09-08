@@ -1,45 +1,57 @@
 package com.sstlfsj.fibra.archetype;
 
-import com.sstlfsj.fibra.engine.FibraEngine;
-import com.sstlfsj.fibra.engine.FibraEngineState;
+import com.sstlfsj.fibra.PluginDefinition;
+import com.sstlfsj.fibra.PluginInstanceState;
+import com.sstlfsj.fibra.artifact.ArtifactId;
+import com.sstlfsj.fibra.artifact.ArtifactRecord;
+import com.sstlfsj.fibra.artifact.ArtifactState;
+import com.sstlfsj.fibra.engine.RuntimeChangeRequest;
+import com.sstlfsj.fibra.runtime.FibraRuntime;
+import com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FibraPluginArchetypeIT {
     @Test
-    void generatedDeploymentIsAcceptedAndActivatedByFibraEngine(@TempDir Path work)
-        throws Exception {
+    void generatedJarLoadsThroughTheJavaRuntime() {
         var generated = Path.of("target/test-classes/projects/basic/project",
             "sample-fibra-plugin");
-        var deployment = generated.resolve(
-            "deployment/target/sample-fibra-plugin-deployment-1.0.0.zip");
-        assertTrue(Files.isRegularFile(deployment),
-            () -> "generated deployment is missing: " + deployment);
+        var jar = generated.resolve("target/sample-fibra-plugin-1.0.0.jar");
+        assertTrue(Files.isRegularFile(jar),
+            () -> "generated plugin JAR is missing: " + jar);
+        var artifact = ArtifactRecord.builder()
+            .id(new ArtifactId("sample-fibra-plugin"))
+            .runtimeId(JavaPluginRuntimeAdapter.RUNTIME_ID)
+            .version("1.0.0")
+            .checksum("verified-by-archetype-it")
+            .revision("1")
+            .location(jar)
+            .state(ArtifactState.INSTALLED)
+            .updatedAt(Instant.now())
+            .build();
+        var adapter = new JavaPluginRuntimeAdapter();
+        var prepared = adapter.prepare(new RuntimeChangeRequest(
+            JavaPluginRuntimeAdapter.RUNTIME_ID, List.of(artifact), null)).block();
+        prepared.commit().block();
 
-        var installed = Files.createDirectory(work.resolve("plugins"));
-        var config = work.resolve("config/fibra.yaml");
-        Files.createDirectories(config.getParent());
-        Files.writeString(config, "[]\n");
+        try (var runtime = FibraRuntime.create()) {
+            @SuppressWarnings("unchecked")
+            var definition = (PluginDefinition<Object>) prepared.catalog()
+                .find("sample-fibra-plugin").orElseThrow().definition();
+            var instance = runtime.rootScope().context().plugins()
+                .mount("generated-plugin", definition, null);
+            instance.settled().block();
 
-        try (var engine = FibraEngine.builder(installed, config).build()) {
-            engine.start();
-            var result = engine.applyDeployment(deployment);
-
-            assertEquals("sample-fibra-plugin", result.deploymentId());
-            assertEquals("1.0.0", result.deploymentVersion());
-            assertEquals(FibraEngineState.RUNNING, engine.status().state());
-            assertEquals(1, engine.root().registry().size());
-            assertEquals(result.appliedRevision(),
-                engine.status().appliedRevision().orElseThrow());
-            assertEquals(java.util.List.of("sample-fibra-plugin",
-                    "sample-fibra-plugin-contract"),
-                result.changedArtifactIds().stream().sorted().toList());
+            assertEquals(PluginInstanceState.ACTIVE, instance.state());
         }
+        prepared.retire().block();
+        adapter.close();
     }
 }

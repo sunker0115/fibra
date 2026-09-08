@@ -1,6 +1,5 @@
 package com.sstlfsj.fibra.internal;
 
-import com.sstlfsj.fibra.Context;
 import com.sstlfsj.fibra.logging.FibraLogger;
 import com.sstlfsj.fibra.logging.LogLevel;
 
@@ -8,34 +7,35 @@ import java.util.Objects;
 
 final class DefaultFibraLogger implements FibraLogger {
     private final DefaultLoggerService service;
-    private final Context context;
     private final String name;
-    private final LogLevel level;
 
-    DefaultFibraLogger(DefaultLoggerService service, Context context, String name, LogLevel level) {
+    DefaultFibraLogger(DefaultLoggerService service, String name) {
         this.service = Objects.requireNonNull(service, "service");
-        this.context = Objects.requireNonNull(context, "context");
         this.name = Objects.requireNonNull(name, "name");
-        this.level = level;
     }
 
+    @Override
     public String name() {
         return name;
     }
 
+    @Override
     public void error(Object... arguments) {
-        service.publish(context, name, level, LogLevel.ERROR, arguments);
+        service.publish(name, LogLevel.ERROR, arguments);
     }
 
+    @Override
     public void info(Object... arguments) {
-        service.publish(context, name, level, LogLevel.INFO, arguments);
+        service.publish(name, LogLevel.INFO, arguments);
     }
 
+    @Override
     public void warn(Object... arguments) {
-        service.publish(context, name, level, LogLevel.WARN, arguments);
+        service.publish(name, LogLevel.WARN, arguments);
     }
 
+    @Override
     public void debug(Object... arguments) {
-        service.publish(context, name, level, LogLevel.DEBUG, arguments);
+        service.publish(name, LogLevel.DEBUG, arguments);
     }
 }

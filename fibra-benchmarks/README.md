@@ -1,47 +1,50 @@
 # fibra-benchmarks
 
-fibra-core 内核热路径 JMH 性能基准。本模块参加默认 reactor，确保每次完整构建都能发现基准代码与内核 API 的漂移；它仍严格隔离：不发布、不进可复现发布集、不被任何生产模块依赖。默认 Maven 生命周期只编译并打包基准，不执行 JMH 测量。
+本模块跟踪 Fibra vNext 的稳定热路径，不是展示性质的压测项目。它参加默认 reactor，因而能及时发现公开 API 漂移；默认 Maven 生命周期只编译、打包 JMH，不执行耗时测量，也不发布该模块。
 
-## 构建
+## 测量边界
+
+JMH 只测可在单 JVM 内稳定重复的路径：
+
+- `LifecycleDispatchBenchmark`：一次空事件调用，作为生命周期线程调度边界的基线。
+- `ServiceResolutionBenchmark`：服务直接解析、绑定引用调用，以及生命周期线程内批量解析。
+- `EventDispatchBenchmark`：1、8、64 个监听器下的广播和 waterfall 调用。
+- `ContributionInvocationBenchmark`：已注册本地贡献从查找、类型校验、调用到 inflight 释放的完整 `ContributionBridge.invoke` 路径。
+- `EngineTransactionBenchmark`：从 `PluginRegistry` 发起 disable/enable，经 Engine 单写通道、期望状态事务、代际发布和旧 Scope 退役的完整控制面路径。该用例使用丢弃型 journal/audit，排除存储介质差异。
+
+以下能力不放入 JMH：
+
+- 插件制品复制、校验与目录落盘；
+- Java JAR 扫描、`ClassLoader` 创建与关闭；
+- Node sidecar 进程启动、握手、JSON-RPC 和进程终止；
+- Spring Boot 启动与 HTTP 请求。
+
+这些路径受文件系统、进程调度和操作系统权限影响，微基准数字容易误导。它们由各模块集成测试、`fibra-example` 真实场景测试和分发验证负责。
+
+## 构建与运行
 
 ```bash
 mvn -pl fibra-benchmarks -am -DskipTests clean package
+java -jar fibra-benchmarks/target/fibra-benchmarks.jar
 ```
 
-## 运行
+开发时可先跑短测，确认全部基准可发现、可执行：
 
 ```bash
-# 全部基准
-java -jar fibra-benchmarks/target/fibra-benchmarks.jar
-
-# 只跑某组 + JSON 输出
-java -jar fibra-benchmarks/target/fibra-benchmarks.jar ServiceResolution -rf json -rff result.json
+java -jar fibra-benchmarks/target/fibra-benchmarks.jar \
+  -f 1 -wi 1 -i 1 -w 200ms -r 200ms
 ```
 
-## 基准含义
+只测一组并输出 JSON：
 
-- `ServiceResolutionBenchmark`：对比服务解析在 **lifecycle 线程内（直调）** vs **外部线程（跨线程往返）** 的开销。`getOutside`/`invokeOutside` 每 op 一次完整 `subscribeOn(scheduler).block()` 往返；`resolveInside` 用一次 `bail` 握手进入 lifecycle 线程后批量解析（`@OperationsPerInvocation(1000)` 摊销握手），差值即跨线程净开销。
-- `EventDispatchBenchmark`：`emit`/`waterfall` 在 1/8/64 个 hook 下的开销，如实包含每次 `resolve` 触发的 `DISPATCH` 内部事件成本。
-- `LifecycleDispatchBenchmark`：空 hook 的 `emit`，隔离出单次调度往返（park/unpark + Reactor 包装）净开销，作为前两组的成本基线；含一次空 hook 的 `DISPATCH` 常量项，可忽略。
+```bash
+java -jar fibra-benchmarks/target/fibra-benchmarks.jar \
+  ContributionInvocation -rf json -rff result.json
+```
 
-## 参考基线
+## 结果使用规则
 
-环境：Apple M1 Max（10 核）、macOS、JDK 21.0.2（Zulu 21.32.17 arm64）、JMH 1.37。测量参数 fork 2 / warmup 5×1s / measurement 8×1s，`Mode.AverageTime`。
-
-采集日期：2026-08-23。
-
-| 基准 | ns/op (±误差) |
-|---|---|
-| `LifecycleDispatch.roundTrip` | 3748 ± 85 |
-| `ServiceResolution.getOutside` | 3748 ± 25 |
-| `ServiceResolution.invokeOutside` | 3752 ± 39 |
-| `ServiceResolution.resolveInside` | 79.5 ± 6.4 |
-| `EventDispatch.emit`（hook 1/8/64） | 3769 / 3940 / 4336（±~36） |
-| `EventDispatch.waterfall`（hook 1/8/64） | 3796 / 3827 / 4507（±~41） |
-
-结论（本机量级参考，跨机器会有出入）：
-
-- 跨线程服务解析/事件分发 ≈ 3.7µs，与空往返基线一致——主导成本是 `LifecycleDispatcher.call` 对非 lifecycle 线程的 `subscribeOn(scheduler).block()` 跨线程往返（约 3668ns），而非业务逻辑；
-- 同线程直调 `resolveInside` 仅 ~80ns，比跨线程快约 47 倍；
-- 事件分发 hook 数量影响微小（每 hook ~10ns），64 hook 仅比 1 hook 慢 ~15%；
-- 结论：调度边界是「每次跨线程调用的固定税」，非随负载增长的瓶颈。优化方向（若将来需要）是减少跨线程往返次数，而非改业务逻辑。
+- 比较前后版本时固定机器、JDK、JMH 参数和电源状态，保存原始 JSON。
+- 先看误差区间和多次趋势，不依据一次运行下结论。
+- JMH 结果只用于识别回归和定位固定成本，不代表插件安装或端到端请求延迟。
+- 仓库不保存会快速失真的单机数值；需要发布性能结论时，随版本附环境、提交号、命令和原始结果。

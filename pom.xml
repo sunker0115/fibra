@@ -47,12 +47,14 @@
   <modules>
     <module>fibra-api</module>
     <module>fibra-core</module>
-    <module>fibra-pf4j-api</module>
-    <module>fibra-loader-pf4j</module>
-    <module>fibra-loader-config</module>
+    <module>fibra-config</module>
+    <module>fibra-artifact</module>
     <module>fibra-engine</module>
+    <module>fibra-bridge</module>
+    <module>fibra-runtime-java</module>
+    <module>fibra-runtime-node</module>
+    <module>fibra-registry</module>
     <module>fibra-spring</module>
-    <module>fibra-spring-boot-autoconfigure</module>
     <module>fibra-spring-boot-starter</module>
     <module>fibra-plugin-archetype</module>
     <module>fibra-example</module>
@@ -62,7 +64,7 @@
 
   <properties>
     <!-- 唯一项目版本真源；flatten-maven-plugin 在安装/发布时展开占位符。 -->
-    <revision>0.4.1-SNAPSHOT</revision>
+    <revision>0.5.0-SNAPSHOT</revision>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <project.build.outputTimestamp>2026-08-21T08:25:01Z</project.build.outputTimestamp>
@@ -78,21 +80,9 @@
     <junit.version>6.1.3</junit.version>
     <awaitility.version>4.3.0</awaitility.version>
     <jmh.version>1.37</jmh.version>
-    <pf4j.version>3.15.0</pf4j.version>
     <spring-framework.version>7.0.8</spring-framework.version>
     <spring-boot.version>4.1.0</spring-boot.version>
-    <commons-compress.version>1.28.0</commons-compress.version>
-    <commons-codec.version>1.19.0</commons-codec.version>
-    <commons-io.version>2.20.0</commons-io.version>
-    <commons-lang3.version>3.18.0</commons-lang3.version>
     <jackson.version>3.1.5</jackson.version>
-    <fibra-example-engine-provider-v1.version>1.0.0</fibra-example-engine-provider-v1.version>
-    <fibra-example-engine-provider-v2.version>2.0.0</fibra-example-engine-provider-v2.version>
-    <fibra-example-engine-provider-broken.version>3.0.0</fibra-example-engine-provider-broken.version>
-    <fibra-example-engine-contract-v1.version>1.0.0</fibra-example-engine-contract-v1.version>
-    <fibra-example-engine-contract-v2.version>2.0.0</fibra-example-engine-contract-v2.version>
-    <fibra-example-engine-consumer-v1.version>1.0.0</fibra-example-engine-consumer-v1.version>
-    <fibra-example-engine-consumer-v2.version>2.0.0</fibra-example-engine-consumer-v2.version>
     <flatten-maven-plugin.version>1.7.0</flatten-maven-plugin.version>
     <central-publishing-maven-plugin.version>0.9.0</central-publishing-maven-plugin.version>
     <maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
@@ -159,31 +149,6 @@
         <version>${jmh.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.pf4j</groupId>
-        <artifactId>pf4j</artifactId>
-        <version>${pf4j.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-compress</artifactId>
-        <version>${commons-compress.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>commons-codec</groupId>
-        <artifactId>commons-codec</artifactId>
-        <version>${commons-codec.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>commons-io</groupId>
-        <artifactId>commons-io</artifactId>
-        <version>${commons-io.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-lang3</artifactId>
-        <version>${commons-lang3.version}</version>
-      </dependency>
-      <dependency>
         <groupId>tools.jackson.core</groupId>
         <artifactId>jackson-databind</artifactId>
         <version>${jackson.version}</version>
@@ -196,11 +161,6 @@
       <!-- 内部模块统一使用当前 reactor 版本，子模块引用时不声明版本。 -->
       <dependency>
         <groupId>com.sstlfsj</groupId>
-        <artifactId>fibra-example-engine-contract-plugin</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.sstlfsj</groupId>
         <artifactId>fibra-api</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -211,17 +171,32 @@
       </dependency>
       <dependency>
         <groupId>com.sstlfsj</groupId>
-        <artifactId>fibra-pf4j-api</artifactId>
+        <artifactId>fibra-config</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>com.sstlfsj</groupId>
-        <artifactId>fibra-loader-pf4j</artifactId>
+        <artifactId>fibra-artifact</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>com.sstlfsj</groupId>
-        <artifactId>fibra-loader-config</artifactId>
+        <artifactId>fibra-runtime-java</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-bridge</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-runtime-node</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-registry</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -236,37 +211,12 @@
       </dependency>
       <dependency>
         <groupId>com.sstlfsj</groupId>
-        <artifactId>fibra-spring-boot-autoconfigure</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.sstlfsj</groupId>
         <artifactId>fibra-spring-boot-starter</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>com.sstlfsj</groupId>
         <artifactId>fibra-plugin-archetype</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.sstlfsj</groupId>
-        <artifactId>fibra-example-engine-provider-plugin</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.sstlfsj</groupId>
-        <artifactId>fibra-example-engine-consumer-plugin</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.sstlfsj</groupId>
-        <artifactId>fibra-example-spring-boot-api</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.sstlfsj</groupId>
-        <artifactId>fibra-example-spring-boot-plugin</artifactId>
         <version>${project.version}</version>
       </dependency>
     </dependencies>

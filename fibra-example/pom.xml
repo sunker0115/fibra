@@ -17,12 +17,8 @@
   <description>示例聚合模块；仅聚合，不做父 POM，示例仍继承根 com.sstlfsj:fibra。所有示例跳过远程发布。</description>
 
   <modules>
-    <module>engine/contract-plugin</module>
-    <module>engine/provider-plugin</module>
-    <module>engine/consumer-plugin</module>
-    <module>engine/application</module>
-    <module>spring-boot/application-api</module>
-    <module>spring-boot/provider-plugin</module>
-    <module>spring-boot/application</module>
+    <module>content-sanitizer-api</module>
+    <module>java-host</module>
+    <module>spring-host</module>
   </modules>
 </project>

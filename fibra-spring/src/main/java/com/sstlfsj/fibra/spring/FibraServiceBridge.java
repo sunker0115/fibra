@@ -15,7 +15,7 @@ public final class FibraServiceBridge {
     }
 
     public <T> ServiceRegistration<T> register(ServiceKey<T> key, T service) {
-        return root.provide(Objects.requireNonNull(key, "key"),
+        return root.services().provide(Objects.requireNonNull(key, "key"),
             Objects.requireNonNull(service, "service"));
     }
 }

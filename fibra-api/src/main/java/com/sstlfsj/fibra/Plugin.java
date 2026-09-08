@@ -1,8 +1,8 @@
 package com.sstlfsj.fibra;
 
-import org.reactivestreams.Publisher;
+import reactor.core.publisher.Mono;
 
 @FunctionalInterface
 public interface Plugin<C> {
-    Publisher<? extends Disposable> apply(Context context, C config);
+    Mono<Void> start(Context context, C config);
 }

@@ -1,11 +1,7 @@
 package com.sstlfsj.fibra;
 
-import org.reactivestreams.Publisher;
-
 import java.util.Objects;
-import java.util.function.Supplier;
 import com.sstlfsj.fibra.logging.FibraLogger;
-import com.sstlfsj.fibra.logging.LoggerIntercept;
 
 public final class InvocationContext {
     private final Context caller;
@@ -16,41 +12,34 @@ public final class InvocationContext {
         this.serviceName = serviceName;
     }
 
+    public static InvocationContext of(Context caller, String serviceName) {
+        if (serviceName == null || serviceName.isBlank()) {
+            throw new IllegalArgumentException("serviceName must not be blank");
+        }
+        return new InvocationContext(caller, serviceName);
+    }
+
     public Context caller() {
         return caller;
     }
 
     public FibraLogger logger() {
-        var resolvedName = serviceName;
-        for (var value : caller.interceptValues("logger")) {
-            if (value instanceof LoggerIntercept intercept && intercept.name() != null) {
-                resolvedName = intercept.name();
-            }
-        }
-        return caller.logger(resolvedName);
+        return caller.logger();
     }
 
-    public <T> BoundService<T> service(ServiceKey<T> key) {
-        return caller.service(key);
+    public String serviceName() {
+        return serviceName;
     }
 
-    public <R> Associated<R> associate(R receiver) {
-        return caller.associate(receiver);
+    public <T> ServiceRef<T> service(ServiceKey<T> key) {
+        return caller.services().reference(key);
     }
 
-    public EffectHandle effect(Supplier<? extends Disposable> source, String label) {
-        return caller.effect(source, label);
+    public Effects effects() {
+        return caller.effects();
     }
 
-    public EffectHandle effect(Publisher<? extends Disposable> source, String label) {
-        return caller.effect(source, label);
-    }
-
-    public Fibra plugin(PluginDescriptor<Void> descriptor, Plugin<Void> plugin) {
-        return caller.plugin(descriptor, plugin);
-    }
-
-    public <C> Fibra plugin(PluginDescriptor<C> descriptor, Plugin<C> plugin, C config) {
-        return caller.plugin(descriptor, plugin, config);
+    public Plugins plugins() {
+        return caller.plugins();
     }
 }

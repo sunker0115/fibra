@@ -11,12 +11,28 @@
   </parent>
 
   <artifactId>fibra-benchmarks</artifactId>
-  <description>fibra-core 内核热路径 JMH 性能基准（隔离，不发布，不进可复现构建集）。</description>
+  <description>Fibra 内核、贡献桥接与引擎事务热路径 JMH 性能基准。</description>
 
   <dependencies>
     <dependency>
       <groupId>com.sstlfsj</groupId>
       <artifactId>fibra-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-config</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-engine</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-bridge</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-registry</artifactId>
     </dependency>
     <dependency>
       <groupId>org.openjdk.jmh</groupId>

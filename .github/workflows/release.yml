@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 已存在且位于 main 历史中的正式版本标签，例如 v0.4.0
+        description: 已存在且位于 main 历史中的正式版本标签，例如 v0.5.0
         required: true
         type: string
 
@@ -86,7 +86,7 @@ jobs:
       - name: 全量构建与兼容性验收
         run: mvn --batch-mode --no-transfer-progress clean verify
 
-      - name: 验证十个发布制品可复现
+      - name: 验证十二个发布制品可复现
         run: scripts/verify-reproducible-release.sh
 
       - name: 验证仓库外项目可直接消费发布制品
@@ -137,5 +137,5 @@ jobs:
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
         run: >-
           mvn --batch-mode --no-transfer-progress clean deploy -Pcentral-release
-          -pl fibra-api,fibra-core,fibra-pf4j-api,fibra-loader-pf4j,fibra-loader-config,fibra-engine,fibra-spring,fibra-spring-boot-autoconfigure,fibra-spring-boot-starter,fibra-plugin-archetype
+          -pl fibra-api,fibra-core,fibra-config,fibra-artifact,fibra-engine,fibra-bridge,fibra-runtime-java,fibra-runtime-node,fibra-registry,fibra-spring,fibra-spring-boot-starter,fibra-plugin-archetype
           -am -DskipTests -Darchetype.test.skip=true

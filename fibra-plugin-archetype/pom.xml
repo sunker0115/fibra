@@ -13,7 +13,7 @@
   <artifactId>fibra-plugin-archetype</artifactId>
   <packaging>maven-archetype</packaging>
   <name>Fibra Plugin Archetype</name>
-  <description>生成独立 Fibra 插件、共享契约、配置和 deployment 的 Maven Archetype。</description>
+  <description>生成仅依赖 Fibra API 的独立 Java 插件 JAR。</description>
 
   <properties>
     <maven.deploy.skip>false</maven.deploy.skip>
@@ -24,17 +24,12 @@
   <dependencies>
     <dependency>
       <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-engine</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.sstlfsj</groupId>
       <artifactId>fibra-api</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-pf4j-api</artifactId>
+      <artifactId>fibra-runtime-java</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -115,23 +110,7 @@
               <artifactId>fibra-api</artifactId>
               <version>${project.version}</version>
               <packaging>jar</packaging>
-              <generatePom>true</generatePom>
-              <localRepositoryPath>${project.build.directory}/archetype-it-repository</localRepositoryPath>
-            </configuration>
-          </execution>
-          <execution>
-            <id>stage-fibra-pf4j-api-for-archetype-it</id>
-            <phase>pre-integration-test</phase>
-            <goals>
-              <goal>install-file</goal>
-            </goals>
-            <configuration>
-              <file>${project.parent.basedir}/fibra-pf4j-api/target/fibra-pf4j-api-${project.version}.jar</file>
-              <groupId>com.sstlfsj</groupId>
-              <artifactId>fibra-pf4j-api</artifactId>
-              <version>${project.version}</version>
-              <packaging>jar</packaging>
-              <generatePom>true</generatePom>
+              <pomFile>${project.parent.basedir}/fibra-api/.flattened-pom.xml</pomFile>
               <localRepositoryPath>${project.build.directory}/archetype-it-repository</localRepositoryPath>
             </configuration>
           </execution>

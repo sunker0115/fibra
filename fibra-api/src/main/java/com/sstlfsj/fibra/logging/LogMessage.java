@@ -1,6 +1,6 @@
 package com.sstlfsj.fibra.logging;
 
-import com.sstlfsj.fibra.Fibra;
+import com.sstlfsj.fibra.PluginInstance;
 
 import java.lang.ref.WeakReference;
 import java.time.Instant;
@@ -12,7 +12,7 @@ public record LogMessage(
     String name,
     LogLevel level,
     List<Object> arguments,
-    WeakReference<Fibra> fibra
+    WeakReference<PluginInstance<?>> pluginInstance
 ) {
     public LogMessage {
         arguments = List.copyOf(arguments);

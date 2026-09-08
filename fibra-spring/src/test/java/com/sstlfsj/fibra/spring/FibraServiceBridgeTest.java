@@ -5,20 +5,21 @@ import com.sstlfsj.fibra.runtime.FibraRuntime;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FibraServiceBridgeTest {
     @Test
     void registersAndRevokesAnExplicitHostService() {
         var key = ServiceKey.of("greeting", Greeting.class);
-        try (var root = FibraRuntime.create()) {
+        try (var runtime = FibraRuntime.create()) {
+            var root = runtime.rootScope().context();
             var bridge = new FibraServiceBridge(root);
             var registration = bridge.register(key, name -> "hello " + name);
 
             assertEquals("hello fibra",
-                root.service(key).invoke((invocation, service) -> service.greet("fibra")));
+                root.services().require(key).greet("fibra"));
             registration.dispose().block();
-            assertNull(root.get(key, true));
+            assertTrue(root.services().find(key).isEmpty());
         }
     }
 

@@ -1,0 +1,4 @@
+id: ${pluginId}
+version: ${version}
+entrypoint: ${package}.FibraPluginEntrypoint
+requires: []

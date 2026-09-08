@@ -11,7 +11,7 @@
   </parent>
 
   <artifactId>fibra-parity-tests</artifactId>
-  <description>Cordis core 逐项行为验收与 Fibra 公共 API 冻结门禁。</description>
+  <description>Fibra vNext 模块边界、公共入口和完整场景的整仓验收门禁。</description>
 
   <dependencies>
     <dependency>
@@ -20,29 +20,32 @@
     </dependency>
     <dependency>
       <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-pf4j-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-loader-pf4j</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-loader-config</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.sstlfsj</groupId>
       <artifactId>fibra-engine</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-spring</artifactId>
+      <artifactId>fibra-runtime-java</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-spring-boot-autoconfigure</artifactId>
+      <artifactId>fibra-runtime-node</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-bridge</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-registry</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-spring-boot-starter</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -53,11 +56,6 @@
     <dependency>
       <groupId>io.projectreactor</groupId>
       <artifactId>reactor-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.awaitility</groupId>
-      <artifactId>awaitility</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

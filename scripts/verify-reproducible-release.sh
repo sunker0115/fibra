@@ -4,16 +4,18 @@ set -euo pipefail
 readonly production_modules=(
   fibra-api
   fibra-core
-  fibra-pf4j-api
-  fibra-loader-pf4j
-  fibra-loader-config
+  fibra-config
+  fibra-artifact
   fibra-engine
+  fibra-bridge
+  fibra-runtime-java
+  fibra-runtime-node
+  fibra-registry
   fibra-spring
-  fibra-spring-boot-autoconfigure
   fibra-spring-boot-starter
   fibra-plugin-archetype
 )
-readonly module_list="fibra-api,fibra-core,fibra-pf4j-api,fibra-loader-pf4j,fibra-loader-config,fibra-engine,fibra-spring,fibra-spring-boot-autoconfigure,fibra-spring-boot-starter,fibra-plugin-archetype"
+readonly module_list="fibra-api,fibra-core,fibra-config,fibra-artifact,fibra-engine,fibra-bridge,fibra-runtime-java,fibra-runtime-node,fibra-registry,fibra-spring,fibra-spring-boot-starter,fibra-plugin-archetype"
 readonly maven_executable="${MVN:-mvn}"
 snapshot_directory="$(mktemp -d)"
 trap 'rm -rf "$snapshot_directory"' EXIT

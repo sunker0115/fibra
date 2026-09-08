@@ -1,7 +1,7 @@
 package com.sstlfsj.fibra.benchmarks;
 
-import com.sstlfsj.fibra.BoundService;
 import com.sstlfsj.fibra.Context;
+import com.sstlfsj.fibra.ServiceRef;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -34,17 +34,17 @@ public class ServiceResolutionBenchmark {
     private static final int BATCH = 1000;
 
     private Context ctx;
-    private BoundService<Echo> bound;
+    private ServiceRef<Echo> bound;
 
     @Setup
     public void setup() {
-        ctx = FibraRuntime.create();
-        ctx.provide(ECHO, () -> 42);
-        bound = ctx.service(ECHO);
-        ctx.on(RESOLVE, times -> {
+        ctx = FibraRuntime.create().rootScope().context();
+        ctx.services().provide(ECHO, () -> 42);
+        bound = ctx.services().reference(ECHO);
+        ctx.events().on(RESOLVE, times -> {
             long acc = 0;
             for (int i = 0; i < times; i++) {
-                acc += System.identityHashCode(ctx.get(ECHO));
+                acc += System.identityHashCode(ctx.services().require(ECHO));
             }
             return acc;
         });
@@ -52,12 +52,12 @@ public class ServiceResolutionBenchmark {
 
     @TearDown
     public void tearDown() {
-        ctx.close();
+        ctx.scope().close();
     }
 
     @Benchmark
     public Echo getOutside() {
-        return ctx.get(ECHO);
+        return ctx.services().require(ECHO);
     }
 
     @Benchmark
@@ -68,6 +68,6 @@ public class ServiceResolutionBenchmark {
     @Benchmark
     @OperationsPerInvocation(BATCH)
     public long resolveInside() {
-        return ctx.bail(RESOLVE, l -> l.run(BATCH));
+        return ctx.events().bail(RESOLVE, l -> l.run(BATCH));
     }
 }

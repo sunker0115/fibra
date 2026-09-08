@@ -1,888 +1,905 @@
 package com.sstlfsj.fibra.engine;
 
 import com.sstlfsj.fibra.Context;
-import com.sstlfsj.fibra.FibraState;
-import com.sstlfsj.fibra.loader.config.FibraConfigErrorStage;
-import com.sstlfsj.fibra.loader.config.FibraConfigException;
-import com.sstlfsj.fibra.loader.config.FibraConfigLoader;
-import com.sstlfsj.fibra.loader.pf4j.FibraArtifactDescriptor;
-import com.sstlfsj.fibra.loader.pf4j.FibraArtifactErrorStage;
-import com.sstlfsj.fibra.loader.pf4j.FibraArtifactException;
-import com.sstlfsj.fibra.loader.pf4j.FibraPluginLoader;
+import com.sstlfsj.fibra.PluginDefinition;
+import com.sstlfsj.fibra.PluginInstance;
+import com.sstlfsj.fibra.PluginInstanceState;
+import com.sstlfsj.fibra.Scope;
+import com.sstlfsj.fibra.ServiceKey;
+import com.sstlfsj.fibra.artifact.ArtifactId;
+import com.sstlfsj.fibra.artifact.ArtifactInstallTransaction;
+import com.sstlfsj.fibra.artifact.ArtifactRecord;
+import com.sstlfsj.fibra.artifact.ArtifactStore;
+import com.sstlfsj.fibra.artifact.RuntimeId;
+import com.sstlfsj.fibra.config.DesiredCompilation;
+import com.sstlfsj.fibra.config.DesiredEntry;
+import com.sstlfsj.fibra.config.DesiredGraph;
+import com.sstlfsj.fibra.config.DesiredSourceSnapshot;
+import com.sstlfsj.fibra.config.DesiredStateRepository;
+import com.sstlfsj.fibra.config.DesiredStateWriteTransaction;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
-import org.pf4j.DefaultVersionManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
-import java.nio.file.Path;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.EnumMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-/** 框架中立的插件、配置、收敛和部署事务唯一托管入口。 */
 public final class FibraEngine implements AutoCloseable {
-    private static final Logger LOGGER = LoggerFactory.getLogger(FibraEngine.class);
+    private final DesiredStateRepository desiredRepository;
+    private final PluginCatalog builtInCatalog;
+    private final ArtifactStore artifactStore;
+    private final Map<RuntimeId, PluginRuntimeAdapter> runtimeAdapters;
+    private final FibraRuntime runtime = FibraRuntime.create();
+    private final ChangeSetExecutor executor;
+    private final Sinks.Many<EngineSnapshot> snapshots = Sinks.many().replay().latest();
+    private final AtomicBoolean closeRequested = new AtomicBoolean();
+    private final Mono<EngineSnapshot> startSignal;
 
-    private final Object stateMonitor = new Object();
-    private final Context root;
-    private final FibraPluginLoader artifacts;
-    private final FibraConfigLoader config;
-    private final Path installedRoot;
-    private final Path configLocation;
-    private final Path artifactSourceRoot;
-    private final Duration artifactDebounce;
-    private final boolean configSourceEnabled;
-    private final Duration configDebounce;
-    private final List<String> requiredEntries;
-    private final Duration readinessTimeout;
-    private final Duration rootCloseTimeout;
-    private final Duration resyncInterval;
-    private final Duration retryInitial;
-    private final Duration retryMaximum;
-    private final EnumMap<FibraEngineFailureStage, FibraEngineFailure> failures =
-        new EnumMap<>(FibraEngineFailureStage.class);
-
-    private FibraEngineState state = FibraEngineState.NEW;
-    private String desiredArtifactRevision;
-    private String desiredConfigRevision;
-    private String appliedArtifactRevision;
-    private String appliedConfigRevision;
-    private String desiredRevision;
-    private String appliedRevision;
-    private boolean mutationBlocked;
-    private ReconcileCoordinator reconcileCoordinator;
-    private ArtifactDirectorySource artifactSource;
-    private ConfigFileSource configSource;
+    private volatile EngineSnapshot snapshot = emptySnapshot();
+    private volatile Generation generation;
+    private Map<RuntimeId, PluginCatalog> runtimeCatalogs = Map.of();
 
     private FibraEngine(Builder builder) {
-        installedRoot = builder.installedRoot;
-        configLocation = builder.configLocation;
-        artifactSourceRoot = builder.artifactSourceRoot;
-        artifactDebounce = builder.artifactDebounce;
-        configSourceEnabled = builder.configSourceEnabled;
-        configDebounce = builder.configDebounce;
-        requiredEntries = List.copyOf(builder.requiredEntries);
-        readinessTimeout = builder.readinessTimeout;
-        rootCloseTimeout = builder.rootCloseTimeout;
-        resyncInterval = builder.resyncInterval;
-        retryInitial = builder.retryInitial;
-        retryMaximum = builder.retryMaximum;
-        validateLayout();
-        try {
-            Files.createDirectories(installedRoot.resolve(".fibra-engine"));
-            new EngineCrashRecovery(installedRoot, configLocation).recover();
-        } catch (IOException exception) {
-            throw new IllegalStateException("cannot create Fibra engine state root", exception);
-        }
-        root = FibraRuntime.create();
-        FibraPluginLoader createdArtifacts = null;
-        FibraConfigLoader createdConfig = null;
-        try {
-            createdArtifacts = new FibraPluginLoader(root, installedRoot);
-            createdConfig = FibraConfigLoader.builder(root, createdArtifacts,
-                configLocation).build();
-        } catch (RuntimeException failure) {
-            if (createdConfig != null) {
-                createdConfig.close();
-            }
-            if (createdArtifacts != null) {
-                createdArtifacts.close();
-            }
-            root.close();
-            throw failure;
-        }
-        artifacts = createdArtifacts;
-        config = createdConfig;
+        desiredRepository = builder.desiredRepository;
+        builtInCatalog = builder.catalog;
+        artifactStore = builder.artifactStore;
+        runtimeAdapters = Map.copyOf(builder.runtimeAdapters);
+        executor = new ChangeSetExecutor(builder.journal);
+        snapshots.tryEmitNext(snapshot);
+        startSignal = Mono.defer(this::bootstrap).cache();
     }
 
-    public static Builder builder(Path installedRoot, Path configLocation) {
-        return new Builder(installedRoot, configLocation);
+    public static Builder builder(DesiredStateRepository desiredRepository) {
+        return new Builder(desiredRepository);
     }
 
-    public void start() {
-        synchronized (stateMonitor) {
-            if (state != FibraEngineState.NEW) {
-                throw new IllegalStateException("FibraEngine can only be started once");
-            }
-            state = FibraEngineState.STARTING;
-        }
-        FibraEngineFailureStage stage = FibraEngineFailureStage.STARTUP;
-        try {
-            artifacts.loadArtifacts();
-            var initialConfig = config.load();
-            var initialArtifactRevision = currentArtifactRevision();
-            var initialConfigRevision = EngineRevision.config(initialConfig);
-            synchronized (stateMonitor) {
-                desiredArtifactRevision = initialArtifactRevision;
-                appliedArtifactRevision = initialArtifactRevision;
-                desiredConfigRevision = initialConfigRevision;
-                appliedConfigRevision = initialConfigRevision;
-                publishRevisions();
-            }
-            stage = FibraEngineFailureStage.READINESS;
-            awaitRequiredEntries();
-            stage = FibraEngineFailureStage.STARTUP;
-            reconcileCoordinator = new ReconcileCoordinator(this::reconcile, resyncInterval,
-                retryInitial, retryMaximum, ignored -> { });
-            if (artifactSourceRoot != null) {
-                artifactSource = new ArtifactDirectorySource(artifactSourceRoot,
-                    artifactDebounce, reconcileCoordinator::request);
-            }
-            if (configSourceEnabled) {
-                configSource = new ConfigFileSource(config::sourcePaths, configDebounce,
-                    reconcileCoordinator::request);
-            }
-            reconcileCoordinator.start();
-            if (artifactSource != null) {
-                artifactSource.start();
-            }
-            if (configSource != null) {
-                configSource.start();
-            }
-            synchronized (stateMonitor) {
-                state = FibraEngineState.RUNNING;
-            }
-            LOGGER.atInfo()
-                .log("event=fibra.engine.started appliedRevision={}", appliedRevision);
-            reconcileCoordinator.request();
-        } catch (RuntimeException failure) {
-            recordFailure(stage, failure);
-            try {
-                terminateAfterStartFailure();
-            } catch (RuntimeException closeFailure) {
-                failure.addSuppressed(closeFailure);
-            }
-            throw failure;
-        }
+    public Mono<EngineSnapshot> start() {
+        return startSignal;
     }
 
-    public void requestReconcile() {
-        ReconcileCoordinator current;
-        synchronized (stateMonitor) {
-            if (state != FibraEngineState.RUNNING
-                && state != FibraEngineState.DEGRADED) {
-                throw new IllegalStateException("FibraEngine is not running");
-            }
-            requireMutationsAllowedLocked();
-            current = reconcileCoordinator;
+    public Mono<EngineCommandResult> submit(EngineCommand command) {
+        Objects.requireNonNull(command, "command");
+        if (snapshot.state() == EngineState.NEW) {
+            return Mono.error(new IllegalStateException("engine is not started"));
         }
-        current.request();
+        return Mono.defer(() -> submitInternal(command));
     }
 
-    public FibraDeploymentResult applyDeployment(Path packagePath) {
-        Objects.requireNonNull(packagePath, "packagePath");
-        ReconcileCoordinator current;
-        synchronized (stateMonitor) {
-            if (state != FibraEngineState.RUNNING
-                && state != FibraEngineState.DEGRADED) {
-                throw new IllegalStateException("FibraEngine is not running");
-            }
-            requireMutationsAllowedLocked();
-            current = reconcileCoordinator;
-        }
-        return current.execute(() -> applyDeploymentSerialized(packagePath));
+    public EngineSnapshot snapshot() {
+        return snapshot;
     }
 
-    private FibraDeploymentResult applyDeploymentSerialized(Path packagePath) {
-        synchronized (stateMonitor) {
-            requireMutationsAllowedLocked();
-        }
-        var transactionId = java.util.UUID.randomUUID().toString();
-        var transactionRoot = installedRoot.resolve(".fibra-engine/transactions")
-            .resolve(transactionId);
-        try {
-            Files.createDirectories(transactionRoot);
-            EngineTransactionJournal.preparing(transactionId).write(transactionRoot);
-            var inspected = new DeploymentPackageInspector().inspect(packagePath,
-                transactionRoot.resolve("input"));
-            var result = artifacts.runExclusive(() -> applyDeployment(inspected,
-                transactionRoot));
-            clearFailure(FibraEngineFailureStage.DEPLOYMENT);
-            return result;
-        } catch (FibraDeploymentException failure) {
-            cleanUnpreparedTransaction(transactionRoot, failure);
-            throw failure;
-        } catch (RuntimeException | IOException failure) {
-            var wrapped = new FibraDeploymentException(FibraDeploymentErrorStage.COMMIT,
-                packagePath, "cannot apply Fibra deployment", failure);
-            cleanUnpreparedTransaction(transactionRoot, wrapped);
-            throw wrapped;
-        }
+    public Flux<EngineSnapshot> snapshots() {
+        return snapshots.asFlux();
     }
 
-    private FibraDeploymentResult applyDeployment(InspectedDeploymentPackage deployment,
-                                                  Path transactionRoot) {
-        com.sstlfsj.fibra.loader.pf4j.FibraArtifactChange artifactChange = null;
-        com.sstlfsj.fibra.loader.config.FibraConfigChange configChange = null;
-        EngineTransactionJournal journal = null;
-        try {
-            var artifactWorkspace = Files.createDirectory(
-                transactionRoot.resolve("artifacts"));
-            var configWorkspace = Files.createDirectory(transactionRoot.resolve("config"));
-            artifactChange = artifacts.prepareArtifacts(deployment.pluginPaths(),
-                artifactWorkspace);
-            configChange = config.prepareReplacement(deployment.configPath(), artifactChange,
-                configWorkspace);
-            var changed = artifactChange.changedArtifactIds();
-            journal = EngineTransactionJournal.read(transactionRoot)
-                .prepared(deployment.id(), deployment.version(), deployment.sha256(),
-                    artifactJournal(changed, artifactWorkspace),
-                    configJournal(configWorkspace));
-            journal.write(transactionRoot);
-            journal = journal.advance(EngineTransactionState.COMMITTING_ARTIFACTS);
-            journal.write(transactionRoot);
-            artifactChange.commit();
-            journal = journal.advance(EngineTransactionState.COMMITTING_CONFIG);
-            journal.write(transactionRoot);
-            configChange.commit();
-            journal = journal.advance(EngineTransactionState.VERIFYING);
-            journal.write(transactionRoot);
-            awaitRequiredEntries();
-            var artifactRevision = currentArtifactRevision();
-            var configRevision = EngineRevision.config(config.snapshot());
-            var revision = EngineRevision.combine(artifactRevision, configRevision);
-            var committed = journal.committed(revision);
-            committed.write(transactionRoot);
-            journal = committed;
-            synchronized (stateMonitor) {
-                desiredArtifactRevision = artifactRevision;
-                appliedArtifactRevision = artifactRevision;
-                desiredConfigRevision = configRevision;
-                appliedConfigRevision = configRevision;
-                desiredRevision = revision;
-                appliedRevision = revision;
+    public FibraRuntime runtime() {
+        return runtime;
+    }
+
+    private Mono<EngineSnapshot> bootstrap() {
+        return Mono.defer(() -> {
+            if (closeRequested.get()) {
+                return Mono.error(new IllegalStateException("engine is closed"));
             }
-            var result = new FibraDeploymentResult(deployment.id(), deployment.version(), revision,
-                changed);
-            LOGGER.atInfo()
-                .log("event=fibra.engine.deployment.committed deploymentId={} "
-                        + "deploymentVersion={} transactionId={} appliedRevision={}",
-                    deployment.id(), deployment.version(), journal.transactionId(), revision);
-            completeCommittedDeployment(transactionRoot, journal, configChange,
-                artifactChange);
-            return result;
-        } catch (RuntimeException | IOException failure) {
-            var primary = failure instanceof FibraDeploymentException deploymentFailure
-                ? deploymentFailure
-                : new FibraDeploymentException(FibraDeploymentErrorStage.COMMIT,
-                    deployment.workspace(), "deployment transaction failed", failure);
-            if (journal != null && journal.state() == EngineTransactionState.COMMITTED) {
-                throw primary;
+            executor.verifyRecovered();
+            var installed = artifactStore == null ? List.<ArtifactRecord>of()
+                : artifactStore.installed();
+            var artifacts = new LinkedHashMap<ArtifactId, ArtifactRecord>();
+            var grouped = new LinkedHashMap<RuntimeId, List<ArtifactRecord>>();
+            for (var artifact : installed) {
+                artifacts.put(artifact.id(), artifact);
+                grouped.computeIfAbsent(artifact.runtimeId(), ignored -> new ArrayList<>())
+                    .add(artifact);
             }
-            var rollbackSucceeded = true;
-            if (journal != null && journal.state() != EngineTransactionState.PREPARING) {
-                try {
-                    journal.rollingBack().write(transactionRoot);
-                } catch (RuntimeException | IOException rollbackFailure) {
-                    primary.addSuppressed(rollbackFailure);
-                    rollbackSucceeded = false;
+            var catalogs = new LinkedHashMap<RuntimeId, PluginCatalog>();
+            var runtimeSnapshots =
+                new LinkedHashMap<RuntimeId, RuntimeGenerationSnapshot>();
+            var compilation = new Holder<DesiredCompilation>();
+            var candidate = new Holder<Generation>();
+            var previous = new Holder<Generation>();
+            var builder = ChangeSet.builder(UUID.randomUUID().toString());
+            for (var entry : grouped.entrySet()) {
+                var adapter = runtimeAdapters.get(entry.getKey());
+                if (adapter == null) {
+                    return Mono.error(new UnknownRuntimeException(entry.getKey()));
                 }
+                builder.participant(bootstrapRuntimeParticipant(adapter, entry.getValue(),
+                    catalogs, runtimeSnapshots));
             }
-            if (configChange != null) {
-                try {
-                    configChange.rollback();
-                } catch (RuntimeException rollbackFailure) {
-                    primary.addSuppressed(rollbackFailure);
-                    rollbackSucceeded = false;
-                }
-            }
-            if (artifactChange != null) {
-                try {
-                    artifactChange.rollback();
-                } catch (RuntimeException rollbackFailure) {
-                    primary.addSuppressed(rollbackFailure);
-                    rollbackSucceeded = false;
-                }
-            }
-            if (rollbackSucceeded) {
-                try {
-                    deleteTree(transactionRoot);
-                } catch (IOException cleanupFailure) {
-                    primary.addSuppressed(cleanupFailure);
-                }
-            } else {
-                var rollback = new FibraDeploymentException(
-                    FibraDeploymentErrorStage.ROLLBACK, deployment.workspace(),
-                    "cannot fully roll back Fibra deployment", primary);
-                blockMutationsAfterIncompleteRollback(
-                    FibraEngineFailureStage.DEPLOYMENT, rollback);
-                throw rollback;
-            }
-            throw primary;
-        }
+            var command = new RefreshDesired(null);
+            builder.participant(desiredReadParticipant(command, compilation,
+                    () -> combinedCatalog(catalogs)))
+                .participant(coreParticipant(compilation, candidate, previous,
+                    () -> combinedCatalog(catalogs)))
+                .verify(() -> verify(candidate.value))
+                .publish(() -> publish(compilation.value, candidate.value,
+                    artifacts, runtimeSnapshots, catalogs));
+            return executor.execute(builder.build())
+                .then(Mono.fromSupplier(() -> snapshot));
+        });
     }
 
-    private void completeCommittedDeployment(Path transactionRoot,
-                                             EngineTransactionJournal journal,
-                                             com.sstlfsj.fibra.loader.config.FibraConfigChange
-                                                 configChange,
-                                             com.sstlfsj.fibra.loader.pf4j.FibraArtifactChange
-                                                 artifactChange) {
+    private ChangeParticipant bootstrapRuntimeParticipant(
+        PluginRuntimeAdapter adapter, List<ArtifactRecord> artifacts,
+        Map<RuntimeId, PluginCatalog> catalogs,
+        Map<RuntimeId, RuntimeGenerationSnapshot> runtimeSnapshots) {
+        return new ChangeParticipant() {
+            @Override
+            public String name() {
+                return "runtime:" + adapter.id().value();
+            }
+
+            @Override
+            public Mono<PreparedChange> prepare() {
+                return Flux.fromIterable(artifacts)
+                    .concatMap(adapter::inspect)
+                    .then(adapter.prepare(new RuntimeChangeRequest(
+                        adapter.id(), artifacts, null)))
+                    .doOnNext(prepared -> {
+                        catalogs.put(adapter.id(), prepared.catalog());
+                        runtimeSnapshots.put(adapter.id(), prepared.snapshot());
+                    })
+                    .map(prepared -> prepared);
+            }
+        };
+    }
+
+    private Mono<EngineCommandResult> submitInternal(EngineCommand command) {
+        if (command instanceof ApplyDeployment deployment) {
+            return submitDeployment(deployment);
+        }
+        if (command instanceof InstallArtifact install) {
+            return submitArtifactChange(install, false);
+        }
+        if (command instanceof UninstallArtifact uninstall) {
+            return submitArtifactChange(uninstall, true);
+        }
+        var compilation = new Holder<DesiredCompilation>();
+        var desiredWrite = new Holder<DesiredStateWriteTransaction>();
+        var candidate = new Holder<Generation>();
+        var previous = new Holder<Generation>();
+        var id = UUID.randomUUID().toString();
+        var effectiveCatalog = combinedCatalog(runtimeCatalogs);
+        var builder = ChangeSet.builder(id);
+        if (command instanceof ReplaceDesiredGraph replace) {
+            builder.participant(desiredWriteParticipant(replace.expectedRevision(),
+                replace.expectedDesiredRevision(), replace.graph(), compilation,
+                desiredWrite));
+        } else {
+            builder.participant(desiredReadParticipant(command, compilation,
+                () -> effectiveCatalog));
+        }
+        builder.participant(coreParticipant(compilation, candidate, previous,
+                () -> effectiveCatalog))
+            .verify(() -> verify(candidate.value))
+            .publish(() -> publish(compilation.value, candidate.value,
+                snapshot.artifacts(), snapshot.runtimes(), runtimeCatalogs));
+        return executor.execute(builder.build())
+            .map(result -> new EngineCommandResult(snapshot, result.warnings()));
+    }
+
+    private Mono<EngineCommandResult> submitDeployment(ApplyDeployment command) {
+        var transactions = new Holder<List<ArtifactInstallTransaction>>();
+        var previousArtifacts = new Holder<Map<ArtifactId, ArtifactRecord>>();
+        var candidateArtifacts = new Holder<Map<ArtifactId, ArtifactRecord>>();
+        var candidateCatalogs = new Holder<Map<RuntimeId, PluginCatalog>>();
+        var candidateRuntimeSnapshots =
+            new Holder<Map<RuntimeId, RuntimeGenerationSnapshot>>();
+        var compilation = new Holder<DesiredCompilation>();
+        var desiredWrite = new Holder<DesiredStateWriteTransaction>();
+        var candidate = new Holder<Generation>();
+        var previous = new Holder<Generation>();
+        candidateCatalogs.value = new LinkedHashMap<>(runtimeCatalogs);
+        candidateRuntimeSnapshots.value = new LinkedHashMap<>(snapshot.runtimes());
+
+        var changeSet = ChangeSet.builder(UUID.randomUUID().toString())
+            .participant(deploymentArtifactParticipant(command, transactions,
+                previousArtifacts, candidateArtifacts));
+        var runtimeIds = new LinkedHashSet<RuntimeId>();
+        command.artifacts().forEach(artifact -> runtimeIds.add(artifact.runtimeId()));
+        for (var runtimeId : runtimeIds) {
+            var adapter = runtimeAdapters.get(runtimeId);
+            if (adapter == null) {
+                return Mono.error(new UnknownRuntimeException(runtimeId));
+            }
+            changeSet.participant(deploymentRuntimeParticipant(command, runtimeId,
+                adapter, candidateArtifacts, candidateCatalogs,
+                candidateRuntimeSnapshots));
+        }
+        changeSet.participant(desiredWriteParticipant(command.expectedRevision(),
+                command.expectedDesiredRevision(), command.graph(), compilation,
+                desiredWrite))
+            .participant(coreParticipant(compilation, candidate, previous,
+                () -> combinedCatalog(candidateCatalogs.value)))
+            .verify(() -> verify(candidate.value))
+            .publish(() -> publish(compilation.value, candidate.value,
+                candidateArtifacts.value, candidateRuntimeSnapshots.value,
+                candidateCatalogs.value));
+        return executor.execute(changeSet.build())
+            .map(result -> new EngineCommandResult(snapshot, result.warnings()));
+    }
+
+    private ChangeParticipant deploymentArtifactParticipant(
+        ApplyDeployment command, Holder<List<ArtifactInstallTransaction>> transactions,
+        Holder<Map<ArtifactId, ArtifactRecord>> previous,
+        Holder<Map<ArtifactId, ArtifactRecord>> output) {
+        return new ChangeParticipant() {
+            @Override
+            public String name() {
+                return "artifact";
+            }
+
+            @Override
+            public Mono<PreparedChange> prepare() {
+                checkRevision(command.expectedRevision());
+                if (artifactStore == null) {
+                    return Mono.error(new IllegalStateException(
+                        "engine has no artifact store"));
+                }
+                var ids = new java.util.HashSet<ArtifactId>();
+                var candidates = new LinkedHashMap<>(snapshot.artifacts());
+                var replaced = new LinkedHashMap<ArtifactId, ArtifactRecord>();
+                var prepared = new ArrayList<ArtifactInstallTransaction>();
+                try {
+                    for (var artifact : command.artifacts()) {
+                        if (!ids.add(artifact.artifactId())) {
+                            throw new IllegalArgumentException("duplicate deployment artifact "
+                                + artifact.artifactId().value());
+                        }
+                        var old = candidates.get(artifact.artifactId());
+                        if (old != null && !old.runtimeId().equals(artifact.runtimeId())) {
+                            throw new IllegalArgumentException(
+                                "deployment cannot change artifact runtime id");
+                        }
+                        var transaction = artifactStore.prepareInstall(
+                            artifact.artifactId(), artifact.runtimeId(), artifact.version(),
+                            artifact.source());
+                        prepared.add(transaction);
+                        if (old != null && !old.revision().equals(
+                            transaction.candidate().revision())) {
+                            replaced.put(artifact.artifactId(), old);
+                        }
+                        candidates.put(artifact.artifactId(), transaction.candidate());
+                    }
+                } catch (RuntimeException | Error failure) {
+                    try {
+                        rollbackArtifacts(prepared).block();
+                    } catch (RuntimeException rollbackFailure) {
+                        failure.addSuppressed(rollbackFailure);
+                        throw new RecoveryUncertainException(
+                            "cannot clean a partially prepared deployment", failure);
+                    }
+                    throw failure;
+                }
+                transactions.value = List.copyOf(prepared);
+                previous.value = Map.copyOf(replaced);
+                output.value = Map.copyOf(candidates);
+                return Mono.just(new PreparedChange() {
+                    @Override public String name() { return "artifact"; }
+
+                    @Override
+                    public Mono<Void> commit() {
+                        return Flux.fromIterable(transactions.value)
+                            .concatMap(transaction -> Mono.fromRunnable(() ->
+                                output.value = replaceArtifact(output.value,
+                                    transaction.commit()))).then();
+                    }
+
+                    @Override
+                    public Mono<Void> rollback() {
+                        return rollbackArtifacts(transactions.value);
+                    }
+
+                    @Override
+                    public Mono<Void> retire() {
+                        return Flux.fromIterable(previous.value.values())
+                            .concatMap(artifact -> Mono.fromRunnable(() ->
+                                artifactStore.retire(artifact))).then();
+                    }
+                });
+            }
+        };
+    }
+
+    private ChangeParticipant deploymentRuntimeParticipant(
+        ApplyDeployment command, RuntimeId runtimeId, PluginRuntimeAdapter adapter,
+        Holder<Map<ArtifactId, ArtifactRecord>> artifacts,
+        Holder<Map<RuntimeId, PluginCatalog>> catalogs,
+        Holder<Map<RuntimeId, RuntimeGenerationSnapshot>> snapshotsOutput) {
+        return new ChangeParticipant() {
+            @Override public String name() { return "runtime:" + runtimeId.value(); }
+
+            @Override
+            public Mono<PreparedChange> prepare() {
+                var candidates = artifacts.value.values().stream()
+                    .filter(value -> value.runtimeId().equals(runtimeId)).toList();
+                var changed = command.artifacts().stream()
+                    .filter(value -> value.runtimeId().equals(runtimeId))
+                    .map(value -> artifacts.value.get(value.artifactId())).toList();
+                return Flux.fromIterable(changed).concatMap(adapter::inspect).then(
+                        adapter.prepare(new RuntimeChangeRequest(runtimeId, candidates,
+                            snapshot.runtimes().get(runtimeId))))
+                    .doOnNext(prepared -> {
+                        if (!prepared.snapshot().runtimeId().equals(runtimeId)) {
+                            throw new IllegalArgumentException(
+                                "runtime generation identity mismatch");
+                        }
+                        var nextCatalogs = new LinkedHashMap<>(catalogs.value);
+                        var nextSnapshots = new LinkedHashMap<>(snapshotsOutput.value);
+                        nextCatalogs.put(runtimeId, prepared.catalog());
+                        nextSnapshots.put(runtimeId, prepared.snapshot());
+                        catalogs.value = Map.copyOf(nextCatalogs);
+                        snapshotsOutput.value = Map.copyOf(nextSnapshots);
+                    }).map(value -> value);
+            }
+        };
+    }
+
+    private static Mono<Void> rollbackArtifacts(
+        List<ArtifactInstallTransaction> transactions) {
+        var reverse = new ArrayList<>(transactions);
+        java.util.Collections.reverse(reverse);
         var failures = new ArrayList<Throwable>();
-        try {
-            AppliedRevisionStore.write(installedRoot, journal);
-        } catch (IOException | RuntimeException failure) {
-            failures.add(failure);
+        return Flux.fromIterable(reverse)
+            .concatMap(transaction -> Mono.fromRunnable(transaction::rollback)
+                .onErrorResume(failure -> {
+                    failures.add(failure);
+                    return Mono.empty();
+                }))
+            .then(Mono.defer(() -> {
+                if (failures.isEmpty()) {
+                    return Mono.empty();
+                }
+                var failure = new IllegalStateException(
+                    "failed to roll back deployment artifacts");
+                failures.forEach(failure::addSuppressed);
+                return Mono.error(failure);
+            }));
+    }
+
+    private Mono<EngineCommandResult> submitArtifactChange(EngineCommand command,
+                                                           boolean uninstall) {
+        var artifactTransaction = new Holder<ArtifactInstallTransaction>();
+        var previousArtifact = new Holder<ArtifactRecord>();
+        var candidateArtifacts = new Holder<Map<ArtifactId, ArtifactRecord>>();
+        var runtimePrepared = new Holder<PreparedRuntimeGeneration>();
+        var candidateCatalog = new Holder<PluginCatalog>();
+        var candidateRuntimeCatalogs = new Holder<Map<RuntimeId, PluginCatalog>>();
+        var candidateRuntimeSnapshots =
+            new Holder<Map<RuntimeId, RuntimeGenerationSnapshot>>();
+        var compilation = new Holder<DesiredCompilation>();
+        var candidate = new Holder<Generation>();
+        var previous = new Holder<Generation>();
+        var runtimeId = uninstall
+            ? runtimeFor(((UninstallArtifact) command).artifactId())
+            : ((InstallArtifact) command).runtimeId();
+        var adapter = runtimeAdapters.get(runtimeId);
+        if (adapter == null) {
+            return Mono.error(new UnknownRuntimeException(runtimeId));
         }
-        try {
-            configChange.complete();
-        } catch (RuntimeException failure) {
-            failures.add(failure);
+
+        var changeSet = ChangeSet.builder(UUID.randomUUID().toString())
+            .participant(artifactParticipant(command, uninstall, artifactTransaction,
+                previousArtifact, candidateArtifacts))
+            .participant(runtimeParticipant(command, runtimeId, adapter, candidateArtifacts,
+                runtimePrepared, candidateCatalog, candidateRuntimeCatalogs,
+                candidateRuntimeSnapshots))
+            .participant(desiredReadParticipant(command, compilation,
+                () -> candidateCatalog.value))
+            .participant(coreParticipant(compilation, candidate, previous,
+                () -> candidateCatalog.value))
+            .verify(() -> verify(candidate.value))
+            .publish(() -> publish(compilation.value, candidate.value,
+                candidateArtifacts.value, candidateRuntimeSnapshots.value,
+                candidateRuntimeCatalogs.value))
+            .build();
+        return executor.execute(changeSet)
+            .map(result -> new EngineCommandResult(snapshot, result.warnings()));
+    }
+
+    private ChangeParticipant artifactParticipant(EngineCommand command, boolean uninstall,
+                                                  Holder<ArtifactInstallTransaction> transaction,
+                                                  Holder<ArtifactRecord> previous,
+                                                  Holder<Map<ArtifactId, ArtifactRecord>> output) {
+        return new ChangeParticipant() {
+            @Override
+            public String name() {
+                return "artifact";
+            }
+
+            @Override
+            public Mono<PreparedChange> prepare() {
+                checkRevision(command.expectedRevision());
+                if (artifactStore == null) {
+                    return Mono.error(new IllegalStateException(
+                        "engine has no artifact store"));
+                }
+                var artifacts = new LinkedHashMap<>(snapshot.artifacts());
+                if (uninstall) {
+                    var artifactId = ((UninstallArtifact) command).artifactId();
+                    previous.value = artifacts.remove(artifactId);
+                    if (previous.value == null) {
+                        return Mono.error(new IllegalArgumentException(
+                            "artifact is not installed: " + artifactId.value()));
+                    }
+                } else {
+                    var install = (InstallArtifact) command;
+                    previous.value = artifacts.get(install.artifactId());
+                    transaction.value = artifactStore.prepareInstall(install.artifactId(),
+                        install.runtimeId(), install.version(), install.source());
+                    artifacts.put(install.artifactId(), transaction.value.candidate());
+                }
+                output.value = artifacts;
+                return Mono.just(new PreparedChange() {
+                    @Override
+                    public String name() {
+                        return "artifact";
+                    }
+
+                    @Override
+                    public Mono<Void> commit() {
+                        if (uninstall) {
+                            return Mono.empty();
+                        }
+                        return Mono.fromRunnable(() -> output.value = replaceArtifact(
+                            output.value, transaction.value.commit()));
+                    }
+
+                    @Override
+                    public Mono<Void> rollback() {
+                        return uninstall ? Mono.empty()
+                            : Mono.fromRunnable(transaction.value::rollback);
+                    }
+
+                    @Override
+                    public Mono<Void> retire() {
+                        if (previous.value == null
+                            || (!uninstall && previous.value.revision().equals(
+                                transaction.value.candidate().revision()))) {
+                            return Mono.empty();
+                        }
+                        return Mono.fromRunnable(() -> artifactStore.retire(previous.value));
+                    }
+                });
+            }
+        };
+    }
+
+    private ChangeParticipant runtimeParticipant(EngineCommand command, RuntimeId runtimeId,
+                                                 PluginRuntimeAdapter adapter,
+                                                 Holder<Map<ArtifactId, ArtifactRecord>> artifacts,
+                                                 Holder<PreparedRuntimeGeneration> prepared,
+                                                 Holder<PluginCatalog> catalogOutput,
+                                                 Holder<Map<RuntimeId, PluginCatalog>> catalogs,
+                                                 Holder<Map<RuntimeId,
+                                                     RuntimeGenerationSnapshot>> snapshotsOutput) {
+        return new ChangeParticipant() {
+            @Override
+            public String name() {
+                return "runtime:" + runtimeId.value();
+            }
+
+            @Override
+            public Mono<PreparedChange> prepare() {
+                var candidates = artifacts.value.values().stream()
+                    .filter(value -> value.runtimeId().equals(runtimeId)).toList();
+                Mono<Void> inspection = Mono.empty();
+                if (command instanceof InstallArtifact install) {
+                    var candidate = artifacts.value.get(install.artifactId());
+                    inspection = adapter.inspect(candidate).flatMap(result -> {
+                        if (!result.runtimeId().equals(runtimeId)
+                            || !result.artifactId().equals(install.artifactId())) {
+                            return Mono.error(new IllegalArgumentException(
+                                "runtime inspection identity mismatch"));
+                        }
+                        return Mono.empty();
+                    });
+                }
+                return inspection.then(adapter.prepare(new RuntimeChangeRequest(runtimeId,
+                        candidates, snapshot.runtimes().get(runtimeId))))
+                    .doOnNext(value -> {
+                        if (!value.snapshot().runtimeId().equals(runtimeId)) {
+                            throw new IllegalArgumentException(
+                                "runtime generation identity mismatch");
+                        }
+                        prepared.value = value;
+                        var nextCatalogs = new LinkedHashMap<>(runtimeCatalogs);
+                        var nextSnapshots = new LinkedHashMap<>(snapshot.runtimes());
+                        if (candidates.isEmpty() && value.catalog().entries().isEmpty()) {
+                            nextCatalogs.remove(runtimeId);
+                            nextSnapshots.remove(runtimeId);
+                        } else {
+                            nextCatalogs.put(runtimeId, value.catalog());
+                            nextSnapshots.put(runtimeId, value.snapshot());
+                        }
+                        catalogs.value = nextCatalogs;
+                        snapshotsOutput.value = nextSnapshots;
+                        catalogOutput.value = combinedCatalog(nextCatalogs);
+                    })
+                    .map(value -> value);
+            }
+        };
+    }
+
+    private RuntimeId runtimeFor(ArtifactId artifactId) {
+        var artifact = snapshot.artifacts().get(artifactId);
+        if (artifact == null) {
+            throw new IllegalArgumentException(
+                "artifact is not installed: " + artifactId.value());
         }
-        try {
-            artifactChange.complete();
-        } catch (RuntimeException failure) {
-            failures.add(failure);
-        }
-        if (failures.isEmpty()) {
+        return artifact.runtimeId();
+    }
+
+    private PluginCatalog combinedCatalog(Map<RuntimeId, PluginCatalog> catalogs) {
+        var all = new ArrayList<PluginCatalog>(catalogs.size() + 1);
+        all.add(builtInCatalog);
+        all.addAll(catalogs.values());
+        return PluginCatalog.combine(all);
+    }
+
+    private static Map<ArtifactId, ArtifactRecord> replaceArtifact(
+        Map<ArtifactId, ArtifactRecord> artifacts, ArtifactRecord replacement) {
+        var result = new LinkedHashMap<>(artifacts);
+        result.put(replacement.id(), replacement);
+        return Map.copyOf(result);
+    }
+
+    private ChangeParticipant desiredReadParticipant(EngineCommand command,
+                                                     Holder<DesiredCompilation> output,
+                                                     java.util.function.Supplier<PluginCatalog>
+                                                         effectiveCatalog) {
+        return new ChangeParticipant() {
+            @Override
+            public String name() {
+                return "desired";
+            }
+
+            @Override
+            public Mono<PreparedChange> prepare() {
+                checkRevision(command.expectedRevision());
+                output.value = desiredRepository.load(effectiveCatalog.get().resolver());
+                return Mono.just(noop("desired"));
+            }
+        };
+    }
+
+    private ChangeParticipant desiredWriteParticipant(String expectedRevision,
+                                                      String expectedDesiredRevision,
+                                                      DesiredGraph graph,
+                                                      Holder<DesiredCompilation> output,
+                                                      Holder<DesiredStateWriteTransaction> write) {
+        return new ChangeParticipant() {
+            @Override
+            public String name() {
+                return "desired";
+            }
+
+            @Override
+            public Mono<PreparedChange> prepare() {
+                checkRevision(expectedRevision);
+                if (!desiredRepository.writable()) {
+                    return Mono.error(new UnsupportedOperationException(
+                        "desired state repository is read-only"));
+                }
+                write.value = desiredRepository.prepareReplace(
+                    expectedDesiredRevision, graph);
+                output.value = write.value.candidate();
+                return Mono.just(new PreparedChange() {
+                    @Override
+                    public String name() {
+                        return "desired";
+                    }
+
+                    @Override
+                    public Mono<Void> commit() {
+                        return Mono.fromRunnable(write.value::commit);
+                    }
+
+                    @Override
+                    public Mono<Void> rollback() {
+                        return Mono.fromRunnable(write.value::rollback);
+                    }
+
+                    @Override
+                    public Mono<Void> retire() {
+                        return Mono.empty();
+                    }
+                });
+            }
+        };
+    }
+
+    private ChangeParticipant coreParticipant(Holder<DesiredCompilation> compilation,
+                                              Holder<Generation> candidate,
+                                              Holder<Generation> previous,
+                                              java.util.function.Supplier<PluginCatalog>
+                                                  effectiveCatalog) {
+        return new ChangeParticipant() {
+            @Override
+            public String name() {
+                return "core";
+            }
+
+            @Override
+            public Mono<PreparedChange> prepare() {
+                previous.value = generation;
+                return prepareGeneration(compilation.value, effectiveCatalog.get())
+                    .doOnNext(value -> candidate.value = value)
+                    .map(value -> new PreparedChange() {
+                        @Override
+                        public String name() {
+                            return "core";
+                        }
+
+                        @Override
+                        public Mono<Void> commit() {
+                            return Mono.empty();
+                        }
+
+                        @Override
+                        public Mono<Void> rollback() {
+                            return value.scope().closeAsync();
+                        }
+
+                        @Override
+                        public Mono<Void> retire() {
+                            return previous.value == null ? Mono.empty()
+                                : previous.value.retire();
+                        }
+                    });
+            }
+        };
+    }
+
+    private Mono<Generation> prepareGeneration(DesiredCompilation compilation,
+                                               PluginCatalog effectiveCatalog) {
+        return Mono.defer(() -> {
+            var name = "engine-generation-" + (Long.parseLong(snapshot.revision()) + 1);
+            var scope = runtime.rootScope().openChild(name);
+            var mounted = new LinkedHashMap<String, PluginInstance<?>>();
             try {
-                deleteTree(transactionRoot);
-            } catch (IOException failure) {
-                failures.add(failure);
+                for (var entry : compilation.graph().entries()) {
+                    if (!entry.enabled()) {
+                        continue;
+                    }
+                    var catalogEntry = effectiveCatalog.find(entry.definitionName())
+                        .orElseThrow(() ->
+                        new IllegalArgumentException("unknown plugin definition "
+                            + entry.definitionName()));
+                    mounted.put(entry.instanceId(), mount(scope, entry, catalogEntry, name));
+                }
+            } catch (RuntimeException | Error failure) {
+                return scope.closeAsync().then(Mono.error(failure));
             }
-        }
-        if (!failures.isEmpty()) {
-            var cleanup = new IllegalStateException(
-                "committed Fibra deployment requires recovery cleanup");
-            failures.forEach(cleanup::addSuppressed);
-            LOGGER.atWarn()
-                .setCause(cleanup)
-                .log("event=fibra.engine.deployment.cleanup_deferred deploymentId={} "
-                        + "deploymentVersion={} transactionId={}",
-                    journal.deploymentId(), journal.deploymentVersion(), journal.transactionId());
-        }
+            return Flux.fromIterable(mounted.values())
+                .flatMap(PluginInstance::settled)
+                .then(Mono.fromCallable(() -> new Generation(scope, compilation, mounted)))
+                .onErrorResume(failure -> scope.closeAsync().then(Mono.error(failure)));
+        });
     }
 
-    public FibraEngineStatus status() {
-        synchronized (stateMonitor) {
-            return new FibraEngineStatus(state, Optional.ofNullable(desiredRevision),
-                Optional.ofNullable(appliedRevision), List.copyOf(failures.values()));
-        }
+    private static PluginInstance<?> mount(Scope scope, DesiredEntry entry,
+                                           PluginCatalogEntry<?> catalogEntry,
+                                           String generation) {
+        var context = context(scope.context(), entry, catalogEntry.definition(), generation);
+        return mountTyped(context, entry.instanceId(), catalogEntry, entry.config());
     }
 
-    public Context root() {
-        return root;
+    private static Context context(Context initial, DesiredEntry entry,
+                                   PluginDefinition<?> definition, String generation) {
+        var result = initial;
+        var keys = new LinkedHashSet<ServiceKey<?>>();
+        keys.addAll(definition.requires().keySet());
+        keys.addAll(definition.provides());
+        for (var key : keys) {
+            result = result.withRealm(key, new GenerationRealm(generation,
+                entry.realms().get(key.name())));
+            if (entry.intercepts().containsKey(key.name())) {
+                result = result.withIntercept(key, entry.intercepts().get(key.name()));
+            }
+        }
+        return result;
     }
 
-    public boolean isRunning() {
-        synchronized (stateMonitor) {
-            return state == FibraEngineState.RUNNING || state == FibraEngineState.DEGRADED;
-        }
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static PluginInstance<?> mountTyped(Context context, String instanceId,
+                                                PluginCatalogEntry catalogEntry,
+                                                Object config) {
+        return context.plugins().mount(instanceId, catalogEntry.definition(), config);
     }
 
-    private void reconcile() {
-        synchronized (stateMonitor) {
-            if (mutationBlocked) {
-                return;
-            }
-        }
-        RuntimeException artifactFailure = null;
-        try {
-            var target = desiredArtifactTarget();
-            setDesiredArtifactRevision(target.revision());
-            if (!target.candidates().isEmpty()) {
-                artifacts.applyArtifacts(target.candidates());
-            }
-            setAppliedArtifactRevision(currentArtifactRevision());
-            clearFailure(FibraEngineFailureStage.ARTIFACT_RECONCILE);
-        } catch (RuntimeException failure) {
-            artifactFailure = failure;
-            setDesiredArtifactRevisionIfReadable();
-            if (failure instanceof FibraArtifactException artifactException
-                && artifactException.stage() == FibraArtifactErrorStage.ROLLBACK) {
-                blockMutationsAfterIncompleteRollback(
-                    FibraEngineFailureStage.ARTIFACT_RECONCILE, failure);
-                refreshOperationalState();
-                throw failure;
-            }
-            recordFailure(FibraEngineFailureStage.ARTIFACT_RECONCILE, failure);
-        }
-        RuntimeException configFailure = null;
-        try {
-            var snapshot = config.refresh();
-            var revision = EngineRevision.config(snapshot);
-            setDesiredConfigRevision(revision);
-            setAppliedConfigRevision(revision);
-            clearFailure(FibraEngineFailureStage.CONFIG_RECONCILE);
-        } catch (RuntimeException failure) {
-            configFailure = failure;
-            setDesiredConfigRevisionIfReadable();
-            if (failure instanceof FibraConfigException configException
-                && configException.stage() == FibraConfigErrorStage.ROLLBACK) {
-                blockMutationsAfterIncompleteRollback(
-                    FibraEngineFailureStage.CONFIG_RECONCILE, failure);
-            } else {
-                recordFailure(FibraEngineFailureStage.CONFIG_RECONCILE, failure);
-            }
-        }
-        refreshOperationalState();
-        if (artifactFailure != null) {
-            throw artifactFailure;
-        }
-        if (configFailure != null) {
-            throw configFailure;
-        }
-    }
-
-    private ArtifactTarget desiredArtifactTarget() {
-        if (artifactSourceRoot == null) {
-            return new ArtifactTarget(List.of(), currentArtifactRevision());
-        }
-        var versions = new DefaultVersionManager();
-        var grouped = new LinkedHashMap<String, List<Candidate>>();
-        try (var paths = Files.list(artifactSourceRoot)) {
-            for (var path : paths.filter(Files::isRegularFile)
-                .filter(candidate -> candidate.getFileName().toString().endsWith(".zip"))
-                .sorted().toList()) {
-                var descriptor = artifacts.inspectArtifact(path);
-                grouped.computeIfAbsent(descriptor.id(), ignored -> new ArrayList<>())
-                    .add(new Candidate(path, descriptor));
-            }
-        } catch (IOException exception) {
-            throw new IllegalStateException("cannot read artifact source", exception);
-        }
-        var selected = new LinkedHashMap<String, Candidate>();
-        grouped.forEach((id, candidates) -> selected.put(id,
-            selectHighestArtifactCandidate(id, candidates, versions)));
-        var installed = artifacts.catalog().artifacts().stream()
-            .collect(java.util.stream.Collectors.toMap(FibraArtifactDescriptor::id,
-                descriptor -> descriptor));
-        var candidates = selected.values().stream().filter(candidate -> {
-            var current = installed.get(candidate.descriptor.id());
-            if (current == null) {
-                return true;
-            }
-            var comparison = versions.compareVersions(candidate.descriptor.version(),
-                current.version());
-            return comparison > 0 || comparison == 0
-                && !candidate.descriptor.sha256().equals(current.sha256());
-        }).map(Candidate::path).sorted().toList();
-        selected.values().forEach(candidate -> {
-            var current = installed.get(candidate.descriptor.id());
-            if (current == null || versions.compareVersions(candidate.descriptor.version(),
-                current.version()) >= 0) {
-                installed.put(candidate.descriptor.id(), candidate.descriptor);
+    private Mono<Void> verify(Generation candidate) {
+        return Mono.fromRunnable(() -> {
+            for (var instance : candidate.instances().values()) {
+                if (instance.state() != PluginInstanceState.ACTIVE) {
+                    throw new IllegalStateException("required plugin instance " + instance.id()
+                        + " settled as " + instance.state());
+                }
             }
         });
-        return new ArtifactTarget(candidates, artifactRevision(installed.values()));
     }
 
-    private static Candidate selectHighestArtifactCandidate(
-        String artifactId, List<Candidate> candidates, DefaultVersionManager versions) {
-        var highestVersion = candidates.stream().map(candidate -> candidate.descriptor.version())
-            .max(versions::compareVersions).orElseThrow();
-        var highest = candidates.stream().filter(candidate ->
-            versions.compareVersions(candidate.descriptor.version(), highestVersion) == 0)
-            .toList();
-        var digests = highest.stream().map(candidate -> candidate.descriptor.sha256())
-            .collect(java.util.stream.Collectors.toCollection(java.util.TreeSet::new));
-        if (digests.size() > 1) {
-            throw new IllegalStateException("conflicting artifact candidates for pluginId="
-                + artifactId + ", version=" + highestVersion + ", sha256=" + digests);
-        }
-        return highest.getFirst();
+    private Mono<Void> publish(DesiredCompilation compilation, Generation candidate,
+                               Map<ArtifactId, ArtifactRecord> artifacts,
+                               Map<RuntimeId, RuntimeGenerationSnapshot> runtimes,
+                               Map<RuntimeId, PluginCatalog> nextRuntimeCatalogs) {
+        return Mono.fromRunnable(() -> {
+            generation = candidate;
+            var nextRevision = Long.toString(Long.parseLong(snapshot.revision()) + 1);
+            var observed = observe(candidate);
+            snapshot = new EngineSnapshot(nextRevision, EngineState.RUNNING,
+                compilation.snapshot(), compilation.graph(), observed,
+                artifacts, normalizeRuntimeSnapshots(runtimes, artifacts), null);
+            runtimeCatalogs = Map.copyOf(nextRuntimeCatalogs);
+            snapshots.tryEmitNext(snapshot);
+            candidate.observation(Flux.merge(candidate.instances().values().stream()
+                    .map(PluginInstance::states).toList())
+                .subscribe(ignored -> executor.observe(() -> refresh(candidate))));
+        });
     }
 
-    private String currentArtifactRevision() {
-        return artifactRevision(artifacts.catalog().artifacts());
-    }
-
-    private static String artifactRevision(Collection<FibraArtifactDescriptor> descriptors) {
-        return EngineRevision.artifacts(descriptors.stream()
-            .map(descriptor -> new RevisionArtifact(descriptor.id(), descriptor.version(),
-                descriptor.sha256())).toList());
-    }
-
-    private void setDesiredArtifactRevisionIfReadable() {
-        if (artifactSourceRoot == null) {
+    private void refresh(Generation expected) {
+        if (generation != expected || closeRequested.get()) {
             return;
         }
-        try (var paths = Files.list(artifactSourceRoot)) {
-            setDesiredArtifactRevision(EngineRevision.sourceFiles(paths
-                .filter(Files::isRegularFile)
-                .filter(path -> path.getFileName().toString().endsWith(".zip"))
-                .toList()));
-        } catch (IOException | RuntimeException ignored) {
-            // 原始 reconcile 失败保留为主诊断。
+        var observed = observe(expected);
+        if (observed.equals(snapshot.instances())) {
+            return;
+        }
+        var failures = observed.values().stream()
+            .filter(value -> value.state() == PluginInstanceState.FAILED)
+            .map(value -> value.instanceId() + ": " + value.failure())
+            .toList();
+        var nextRevision = Long.toString(Long.parseLong(snapshot.revision()) + 1);
+        snapshot = new EngineSnapshot(nextRevision,
+            failures.isEmpty() ? EngineState.RUNNING : EngineState.FAILED,
+            snapshot.desiredSource(), snapshot.desiredGraph(), observed,
+            snapshot.artifacts(), snapshot.runtimes(),
+            failures.isEmpty() ? null : String.join("; ", failures));
+        snapshots.tryEmitNext(snapshot);
+    }
+
+    private static Map<String, PluginInstanceSnapshot> observe(Generation generation) {
+        var observed = new LinkedHashMap<String, PluginInstanceSnapshot>();
+        generation.instances().forEach((id, instance) -> observed.put(id,
+            new PluginInstanceSnapshot(id, instance.definition().name(), instance.config(),
+                instance.state(), instance.failure().map(Throwable::toString).orElse(null))));
+        return Map.copyOf(observed);
+    }
+
+    private static Map<RuntimeId, RuntimeGenerationSnapshot> normalizeRuntimeSnapshots(
+        Map<RuntimeId, RuntimeGenerationSnapshot> runtimes,
+        Map<ArtifactId, ArtifactRecord> artifacts) {
+        var result = new LinkedHashMap<RuntimeId, RuntimeGenerationSnapshot>();
+        runtimes.forEach((runtimeId, runtimeSnapshot) -> {
+            var normalized = new LinkedHashMap<ArtifactId, ArtifactRecord>();
+            runtimeSnapshot.artifacts().keySet().forEach(id -> {
+                var artifact = artifacts.get(id);
+                if (artifact != null) {
+                    normalized.put(id, artifact);
+                }
+            });
+            result.put(runtimeId, new RuntimeGenerationSnapshot(runtimeId,
+                runtimeSnapshot.revision(), normalized, runtimeSnapshot.definitions()));
+        });
+        return Map.copyOf(result);
+    }
+
+    private void checkRevision(String expected) {
+        if (expected != null && !expected.equals(snapshot.revision())) {
+            throw new EngineConflictException(expected, snapshot.revision());
         }
     }
 
-    private void setDesiredConfigRevisionIfReadable() {
-        try {
-            setDesiredConfigRevision(EngineRevision.sourceFiles(config.sourcePaths()));
-        } catch (RuntimeException ignored) {
-            // 原始 reconcile 失败保留为主诊断。
-        }
-    }
-
-    private void setDesiredArtifactRevision(String revision) {
-        synchronized (stateMonitor) {
-            desiredArtifactRevision = revision;
-            publishRevisions();
-        }
-    }
-
-    private void setAppliedArtifactRevision(String revision) {
-        synchronized (stateMonitor) {
-            appliedArtifactRevision = revision;
-            publishRevisions();
-        }
-    }
-
-    private void setDesiredConfigRevision(String revision) {
-        synchronized (stateMonitor) {
-            desiredConfigRevision = revision;
-            publishRevisions();
-        }
-    }
-
-    private void setAppliedConfigRevision(String revision) {
-        synchronized (stateMonitor) {
-            appliedConfigRevision = revision;
-            publishRevisions();
-        }
-    }
-
-    private void publishRevisions() {
-        if (desiredArtifactRevision != null && desiredConfigRevision != null) {
-            desiredRevision = EngineRevision.combine(desiredArtifactRevision,
-                desiredConfigRevision);
-        }
-        if (appliedArtifactRevision != null && appliedConfigRevision != null) {
-            appliedRevision = EngineRevision.combine(appliedArtifactRevision,
-                appliedConfigRevision);
-        }
-    }
-
-    private void awaitRequiredEntries() {
-        var startedAt = System.nanoTime();
-        for (var entryId : requiredEntries) {
-            var entry = config.resolve(entryId).orElseThrow(() ->
-                new IllegalStateException("required entry is missing: " + entryId));
-            var elapsed = Duration.ofNanos(Math.max(0, System.nanoTime() - startedAt));
-            var remaining = readinessTimeout.minus(elapsed);
-            if (remaining.isZero() || remaining.isNegative()) {
-                throw new IllegalStateException(
-                    "required entries exceeded readiness timeout: " + readinessTimeout);
+    private static PreparedChange noop(String name) {
+        return new PreparedChange() {
+            @Override
+            public String name() {
+                return name;
             }
-            entry.fibra().ready().block(remaining);
-            if (entry.fibra().state() != FibraState.ACTIVE) {
-                throw new IllegalStateException("required entry is not ACTIVE: " + entryId
-                    + ", state=" + entry.fibra().state());
+
+            @Override
+            public Mono<Void> commit() {
+                return Mono.empty();
             }
-        }
-    }
 
-    private void recordFailure(FibraEngineFailureStage stage, Throwable failure) {
-        FibraEngineFailure recorded;
-        boolean report;
-        synchronized (stateMonitor) {
-            recorded = new FibraEngineFailure(stage,
-                Optional.ofNullable(desiredRevision), message(failure), Instant.now());
-            var previous = failures.put(stage, recorded);
-            var asynchronous = state == FibraEngineState.RUNNING
-                || state == FibraEngineState.DEGRADED;
-            report = asynchronous && (previous == null
-                || !previous.revision().equals(recorded.revision())
-                || !previous.message().equals(recorded.message()));
-            if (state == FibraEngineState.RUNNING) {
-                state = FibraEngineState.DEGRADED;
+            @Override
+            public Mono<Void> rollback() {
+                return Mono.empty();
             }
-        }
-        if (report) {
-            LOGGER.atWarn()
-                .setCause(failure)
-                .log("event=fibra.engine.reconcile.failed stage={} desiredRevision={}",
-                    stage, recorded.revision().orElse("unavailable"));
-        }
-    }
 
-    private void clearFailure(FibraEngineFailureStage stage) {
-        FibraEngineFailure recovered;
-        String revision;
-        synchronized (stateMonitor) {
-            recovered = failures.remove(stage);
-            refreshOperationalStateLocked();
-            revision = appliedRevision;
-        }
-        if (recovered != null) {
-            LOGGER.atInfo()
-                .log("event=fibra.engine.reconcile.recovered stage={} appliedRevision={}",
-                    stage, revision == null ? "unavailable" : revision);
-        }
-    }
-
-    private void requireMutationsAllowedLocked() {
-        if (mutationBlocked) {
-            throw new IllegalStateException(
-                "FibraEngine mutations are blocked after an incomplete rollback");
-        }
-    }
-
-    private void blockMutationsAfterIncompleteRollback(
-        FibraEngineFailureStage stage, Throwable failure) {
-        boolean report;
-        String revision;
-        synchronized (stateMonitor) {
-            report = !mutationBlocked;
-            mutationBlocked = true;
-            revision = desiredRevision;
-            failures.put(stage, new FibraEngineFailure(stage,
-                Optional.ofNullable(desiredRevision), message(failure), Instant.now()));
-            if (state == FibraEngineState.RUNNING) {
-                state = FibraEngineState.DEGRADED;
+            @Override
+            public Mono<Void> retire() {
+                return Mono.empty();
             }
-        }
-        if (report) {
-            LOGGER.atError()
-                .setCause(failure)
-                .log("event=fibra.engine.mutation.blocked stage={} desiredRevision={}",
-                    stage, revision == null ? "unavailable" : revision);
-        }
-    }
-
-    private void refreshOperationalState() {
-        synchronized (stateMonitor) {
-            refreshOperationalStateLocked();
-        }
-    }
-
-    private void refreshOperationalStateLocked() {
-        if (state == FibraEngineState.RUNNING || state == FibraEngineState.DEGRADED) {
-            state = failures.isEmpty() ? FibraEngineState.RUNNING
-                : FibraEngineState.DEGRADED;
-        }
-    }
-
-    private static String message(Throwable failure) {
-        return failure.getMessage() == null ? failure.getClass().getName()
-            : failure.getMessage();
-    }
-
-    private void terminateAfterStartFailure() {
-        closeResources();
-        synchronized (stateMonitor) {
-            state = FibraEngineState.TERMINATED;
-        }
+        };
     }
 
     @Override
     public void close() {
-        boolean reportStopped;
-        synchronized (stateMonitor) {
-            if (state == FibraEngineState.TERMINATED) {
-                return;
-            }
-            reportStopped = state != FibraEngineState.NEW;
-            state = FibraEngineState.STOPPING;
-        }
-        RuntimeException failure = null;
-        try {
-            closeResources();
-        } catch (RuntimeException closeFailure) {
-            failure = closeFailure;
-            recordFailure(FibraEngineFailureStage.CLOSE, closeFailure);
-        } finally {
-            synchronized (stateMonitor) {
-                state = FibraEngineState.TERMINATED;
-            }
-            if (reportStopped) {
-                LOGGER.atInfo()
-                    .log("event=fibra.engine.stopped appliedRevision={}",
-                        appliedRevision == null ? "unavailable" : appliedRevision);
-            }
-        }
-        if (failure != null) {
-            throw failure;
-        }
-    }
-
-    private void closeResources() {
-        var failures = new ArrayList<Throwable>();
-        close(artifactSource, failures);
-        close(configSource, failures);
-        close(reconcileCoordinator, failures);
-        close(config, failures);
-        close(artifacts, failures);
-        try {
-            root.closeAsync().block(rootCloseTimeout);
-        } catch (RuntimeException failure) {
-            failures.add(failure);
-        }
-        if (!failures.isEmpty()) {
-            var close = new IllegalStateException("cannot close FibraEngine");
-            failures.forEach(close::addSuppressed);
-            throw close;
-        }
-    }
-
-    private static void close(AutoCloseable resource, List<Throwable> failures) {
-        if (resource == null) {
+        if (!closeRequested.compareAndSet(false, true)) {
             return;
         }
-        try {
-            resource.close();
-        } catch (Exception failure) {
-            failures.add(failure);
+        var active = generation;
+        if (active != null) {
+            active.retire().block();
         }
-    }
-
-    private List<EngineTransactionJournal.Artifact> artifactJournal(
-        List<String> artifactIds, Path workspace) throws IOException {
-        var result = new ArrayList<EngineTransactionJournal.Artifact>();
-        for (var artifactId : artifactIds.stream().sorted().toList()) {
-            var previous = installedRoot.resolve(artifactId);
-            var next = workspace.resolve("next").resolve(artifactId);
-            var oldExists = Files.isDirectory(previous, LinkOption.NOFOLLOW_LINKS);
-            result.add(new EngineTransactionJournal.Artifact(artifactId, oldExists,
-                oldExists ? EngineTransactionJournal.digest(previous) : null,
-                EngineTransactionJournal.digest(next)));
-        }
-        return List.copyOf(result);
-    }
-
-    private List<EngineTransactionJournal.ConfigFile> configJournal(Path workspace)
-        throws IOException {
-        var nextRoot = workspace.resolve("next");
-        if (!Files.isDirectory(nextRoot, LinkOption.NOFOLLOW_LINKS)) {
-            return List.of();
-        }
-        var result = new ArrayList<EngineTransactionJournal.ConfigFile>();
-        try (var paths = Files.walk(nextRoot)) {
-            for (var next : paths.filter(path -> Files.isRegularFile(path,
-                LinkOption.NOFOLLOW_LINKS)).sorted().toList()) {
-                var relative = nextRoot.relativize(next);
-                var relativeName = relative.toString().replace('\\', '/');
-                var previous = workspace.resolve("previous").resolve(relative);
-                var oldExists = Files.isRegularFile(previous, LinkOption.NOFOLLOW_LINKS);
-                result.add(new EngineTransactionJournal.ConfigFile(relativeName, oldExists,
-                    oldExists ? EngineTransactionJournal.digest(previous) : null,
-                    EngineTransactionJournal.digest(next)));
+        RuntimeException closeFailure = null;
+        for (var adapter : runtimeAdapters.values()) {
+            try {
+                adapter.close();
+            } catch (RuntimeException failure) {
+                if (closeFailure == null) {
+                    closeFailure = new IllegalStateException(
+                        "failed to close runtime adapters");
+                }
+                closeFailure.addSuppressed(failure);
             }
         }
-        return List.copyOf(result);
-    }
-
-    private static void deleteTree(Path root) throws IOException {
-        if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) {
-            return;
+        runtime.close();
+        snapshot = new EngineSnapshot(snapshot.revision(), EngineState.CLOSED,
+            snapshot.desiredSource(), snapshot.desiredGraph(), Map.of(),
+            snapshot.artifacts(), snapshot.runtimes(), snapshot.failure());
+        snapshots.tryEmitNext(snapshot);
+        snapshots.tryEmitComplete();
+        executor.close();
+        if (artifactStore != null) {
+            artifactStore.close();
         }
-        try (var paths = Files.walk(root)) {
-            for (var path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
-                Files.deleteIfExists(path);
-            }
-        }
-    }
-
-    private static void cleanUnpreparedTransaction(Path root, RuntimeException primary) {
-        if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) {
-            return;
-        }
-        try {
-            var journalPath = root.resolve(EngineTransactionJournal.FILE_NAME);
-            if (!Files.isRegularFile(journalPath, LinkOption.NOFOLLOW_LINKS)
-                || EngineTransactionJournal.read(root).state()
-                == EngineTransactionState.PREPARING) {
-                deleteTree(root);
-            }
-        } catch (IOException | RuntimeException cleanupFailure) {
-            primary.addSuppressed(cleanupFailure);
+        if (closeFailure != null) {
+            throw closeFailure;
         }
     }
 
-    private void validateLayout() {
-        if (artifactSourceRoot != null && (artifactSourceRoot.startsWith(installedRoot)
-            || installedRoot.startsWith(artifactSourceRoot))) {
-            throw new IllegalArgumentException(
-                "artifact source and installed root must not contain each other");
-        }
-    }
-
-    private record Candidate(Path path, FibraArtifactDescriptor descriptor) { }
-
-    private record ArtifactTarget(List<Path> candidates, String revision) {
-        private ArtifactTarget {
-            candidates = List.copyOf(candidates);
-            Objects.requireNonNull(revision, "revision");
-        }
+    private static EngineSnapshot emptySnapshot() {
+        return new EngineSnapshot("0", EngineState.NEW,
+            new DesiredSourceSnapshot("unstarted", "0", Set.of()),
+            new DesiredGraph(List.of()), Map.of(), Map.of(), Map.of(), null);
     }
 
     public static final class Builder {
-        private final Path installedRoot;
-        private final Path configLocation;
-        private Path artifactSourceRoot;
-        private Duration artifactDebounce = Duration.ofSeconds(1);
-        private boolean configSourceEnabled;
-        private Duration configDebounce = Duration.ofSeconds(1);
-        private List<String> requiredEntries = List.of();
-        private Duration readinessTimeout = Duration.ofSeconds(60);
-        private Duration rootCloseTimeout = Duration.ofSeconds(30);
-        private Duration resyncInterval = Duration.ofSeconds(30);
-        private Duration retryInitial = Duration.ofMillis(250);
-        private Duration retryMaximum = Duration.ofSeconds(30);
+        private final DesiredStateRepository desiredRepository;
+        private PluginCatalog catalog = PluginCatalog.empty();
+        private TransactionJournal journal = new InMemoryTransactionJournal();
+        private ArtifactStore artifactStore;
+        private final Map<RuntimeId, PluginRuntimeAdapter> runtimeAdapters =
+            new LinkedHashMap<>();
 
-        private Builder(Path installedRoot, Path configLocation) {
-            this.installedRoot = existingDirectory(installedRoot, "installedRoot");
-            this.configLocation = existingFile(configLocation, "configLocation");
+        private Builder(DesiredStateRepository desiredRepository) {
+            this.desiredRepository = Objects.requireNonNull(
+                desiredRepository, "desiredRepository");
         }
 
-        public Builder artifactSource(Path root, Duration debounce) {
-            artifactSourceRoot = existingDirectory(root, "artifactSource");
-            artifactDebounce = positive(debounce, "artifactDebounce");
+        public Builder catalog(PluginCatalog value) {
+            catalog = Objects.requireNonNull(value, "catalog");
             return this;
         }
 
-        public Builder configSource(Duration debounce) {
-            configSourceEnabled = true;
-            configDebounce = positive(debounce, "configDebounce");
+        public Builder journal(TransactionJournal value) {
+            journal = Objects.requireNonNull(value, "journal");
             return this;
         }
 
-        public Builder requiredEntries(Collection<String> entries) {
-            Objects.requireNonNull(entries, "entries");
-            var unique = new java.util.LinkedHashSet<String>();
-            for (var entry : entries) {
-                if (entry == null || entry.isBlank()) {
-                    throw new IllegalArgumentException("required entry must not be blank");
-                }
-                if (!unique.add(entry)) {
-                    throw new IllegalArgumentException("duplicate required entry " + entry);
-                }
-            }
-            requiredEntries = List.copyOf(unique);
+        public Builder artifactStore(ArtifactStore value) {
+            artifactStore = Objects.requireNonNull(value, "artifactStore");
             return this;
         }
 
-        public Builder readinessTimeout(Duration value) {
-            readinessTimeout = positive(value, "readinessTimeout");
-            return this;
-        }
-
-        public Builder rootCloseTimeout(Duration value) {
-            rootCloseTimeout = positive(value, "rootCloseTimeout");
-            return this;
-        }
-
-        public Builder resyncInterval(Duration value) {
-            resyncInterval = positive(value, "resyncInterval");
-            return this;
-        }
-
-        public Builder retryBackoff(Duration initial, Duration maximum) {
-            retryInitial = positive(initial, "retryInitial");
-            retryMaximum = positive(maximum, "retryMaximum");
-            if (retryMaximum.compareTo(retryInitial) < 0) {
+        public Builder runtimeAdapter(PluginRuntimeAdapter value) {
+            Objects.requireNonNull(value, "runtimeAdapter");
+            var previous = runtimeAdapters.putIfAbsent(value.id(), value);
+            if (previous != null) {
                 throw new IllegalArgumentException(
-                    "retryMaximum must not be less than retryInitial");
+                    "duplicate runtime adapter " + value.id().value());
             }
             return this;
         }
@@ -890,31 +907,49 @@ public final class FibraEngine implements AutoCloseable {
         public FibraEngine build() {
             return new FibraEngine(this);
         }
+    }
 
-        private static Path existingDirectory(Path path, String name) {
-            var normalized = Objects.requireNonNull(path, name).toAbsolutePath().normalize();
-            if (!Files.isDirectory(normalized, LinkOption.NOFOLLOW_LINKS)) {
-                throw new IllegalArgumentException(name + " must be an existing directory: "
-                    + normalized);
-            }
-            return normalized;
+    private static final class Generation {
+        private final Scope scope;
+        private final DesiredCompilation compilation;
+        private final Map<String, PluginInstance<?>> instances;
+        private reactor.core.Disposable observation;
+
+        private Generation(Scope scope, DesiredCompilation compilation,
+                           Map<String, PluginInstance<?>> instances) {
+            this.scope = scope;
+            this.compilation = compilation;
+            this.instances = Map.copyOf(instances);
         }
 
-        private static Path existingFile(Path path, String name) {
-            var normalized = Objects.requireNonNull(path, name).toAbsolutePath().normalize();
-            if (!Files.isRegularFile(normalized, LinkOption.NOFOLLOW_LINKS)) {
-                throw new IllegalArgumentException(name + " must be an existing file: "
-                    + normalized);
-            }
-            return normalized;
+        private Scope scope() {
+            return scope;
         }
 
-        private static Duration positive(Duration value, String name) {
-            Objects.requireNonNull(value, name);
-            if (value.isZero() || value.isNegative()) {
-                throw new IllegalArgumentException(name + " must be positive");
-            }
-            return value;
+        private DesiredCompilation compilation() {
+            return compilation;
         }
+
+        private Map<String, PluginInstance<?>> instances() {
+            return instances;
+        }
+
+        private void observation(reactor.core.Disposable value) {
+            observation = value;
+        }
+
+        private Mono<Void> retire() {
+            if (observation != null) {
+                observation.dispose();
+            }
+            return scope.closeAsync();
+        }
+    }
+
+    private record GenerationRealm(String generation, Object configured) {
+    }
+
+    private static final class Holder<T> {
+        private T value;
     }
 }

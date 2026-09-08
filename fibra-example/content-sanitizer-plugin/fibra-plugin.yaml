@@ -1,0 +1,15 @@
+id: content-sanitizer
+version: 1.0.0
+protocol: 1
+entrypoint: index.mjs
+contributions:
+  - name: sanitize
+    kind: content-sanitizer
+    schemaVersion: 1
+    method: sanitize
+    descriptor:
+      title: Sensitive content sanitizer
+      supportedRules:
+        - email
+        - bearer-token
+        - api-key

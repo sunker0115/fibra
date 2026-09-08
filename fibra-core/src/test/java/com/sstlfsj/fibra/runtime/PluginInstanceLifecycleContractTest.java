@@ -1,0 +1,178 @@
+package com.sstlfsj.fibra.runtime;
+
+import com.sstlfsj.fibra.Disposables;
+import com.sstlfsj.fibra.PluginDefinition;
+import com.sstlfsj.fibra.PluginInstanceState;
+import com.sstlfsj.fibra.ServiceKey;
+import org.junit.jupiter.api.Test;
+
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class PluginInstanceLifecycleContractTest {
+    private static final Duration TIMEOUT = Duration.ofSeconds(5);
+    private static final ServiceKey<Counter> COUNTER = ServiceKey.of("counter", Counter.class);
+
+    @Test
+    void missingDependencyIsSettledPendingAndProviderActivatesConsumer() {
+        try (var runtime = FibraRuntime.create()) {
+            var consumerStarts = new AtomicInteger();
+            var consumerStops = new AtomicInteger();
+            var consumerDefinition = PluginDefinition.builder(
+                    "consumer", Void.class,
+                    () -> (context, config) -> {
+                        consumerStarts.incrementAndGet();
+                        context.effects().add(Disposables.from(consumerStops::incrementAndGet));
+                        return reactor.core.publisher.Mono.empty();
+                    })
+                .require(COUNTER)
+                .build();
+            var providerDefinition = PluginDefinition.builder(
+                    "provider", Void.class,
+                    () -> (context, config) -> {
+                        context.services().provide(COUNTER, new Counter());
+                        return reactor.core.publisher.Mono.empty();
+                    })
+                .provide(COUNTER)
+                .build();
+
+            var consumer = runtime.rootScope().context().plugins()
+                .mount("consumer-1", consumerDefinition, null);
+            assertSame(consumer, consumer.settled().block(TIMEOUT));
+            assertEquals(PluginInstanceState.PENDING, consumer.state());
+
+            var provider = runtime.rootScope().context().plugins()
+                .mount("provider-1", providerDefinition, null);
+            provider.settled().block(TIMEOUT);
+            consumer.settled().block(TIMEOUT);
+            assertEquals(PluginInstanceState.ACTIVE, provider.state());
+            assertEquals(PluginInstanceState.ACTIVE, consumer.state());
+            assertEquals(1, consumerStarts.get());
+
+            provider.dispose().block(TIMEOUT);
+            consumer.settled().block(TIMEOUT);
+            assertEquals(PluginInstanceState.PENDING, consumer.state());
+            assertEquals(1, consumerStops.get());
+        }
+    }
+
+    @Test
+    void failedInstanceRecoversOnlyAfterExplicitUpdate() {
+        try (var runtime = FibraRuntime.create()) {
+            var starts = new AtomicInteger();
+            var definition = PluginDefinition.builder(
+                    "recoverable", String.class,
+                    () -> (context, config) -> {
+                        starts.incrementAndGet();
+                        if ("bad".equals(config)) {
+                            return reactor.core.publisher.Mono.error(new IllegalStateException("bad config"));
+                        }
+                        return reactor.core.publisher.Mono.empty();
+                    })
+                .build();
+            var instance = runtime.rootScope().context().plugins()
+                .mount("recoverable-1", definition, "bad");
+
+            instance.settled().onErrorResume(error -> reactor.core.publisher.Mono.just(instance))
+                .block(TIMEOUT);
+            assertEquals(PluginInstanceState.FAILED, instance.state());
+
+            instance.update("good").block(TIMEOUT);
+            assertEquals(PluginInstanceState.ACTIVE, instance.state());
+            assertEquals(2, starts.get());
+        }
+    }
+
+    @Test
+    void pluginContextExposesItsCurrentInstanceIdentity() {
+        try (var runtime = FibraRuntime.create()) {
+            var current = new AtomicReference<String>();
+            var definition = PluginDefinition.builder("identity", Void.class,
+                () -> (context, config) -> {
+                    current.set(context.plugins().current().orElseThrow().id());
+                    return reactor.core.publisher.Mono.empty();
+                }).build();
+
+            runtime.rootScope().context().plugins().mount("identity-1", definition, null)
+                .settled().block(TIMEOUT);
+
+            assertEquals("identity-1", current.get());
+            assertTrue(runtime.rootScope().context().plugins().current().isEmpty());
+        }
+    }
+
+    @Test
+    void supervisedResourceFailureRevokesSiblingResourcesAndFailsTheInstance() {
+        try (var runtime = FibraRuntime.create()) {
+            var stopped = new AtomicInteger();
+            var failure = reactor.core.publisher.Sinks.<Void>one();
+            var definition = PluginDefinition.builder("supervised", Void.class,
+                () -> (context, config) -> {
+                    context.effects().add(Disposables.from(stopped::incrementAndGet));
+                    context.effects().supervise(failure.asMono(), "sidecar");
+                    return reactor.core.publisher.Mono.empty();
+                }).build();
+            var instance = runtime.rootScope().context().plugins()
+                .mount("supervised-1", definition, null);
+            instance.settled().block(TIMEOUT);
+
+            failure.tryEmitError(new IllegalStateException("sidecar exited"));
+
+            instance.settled().onErrorResume(error ->
+                reactor.core.publisher.Mono.just(instance)).block(TIMEOUT);
+            assertEquals(PluginInstanceState.FAILED, instance.state());
+            assertEquals("sidecar exited", instance.failure().orElseThrow().getMessage());
+            assertEquals(1, stopped.get());
+        }
+    }
+
+    @Test
+    void callerInterceptOverridesTheDefinitionDefault() {
+        try (var runtime = FibraRuntime.create()) {
+            runtime.rootScope().context().services().provide(COUNTER, new Counter());
+            var seen = new AtomicReference<Object>();
+            var definition = PluginDefinition.builder("intercepted", Void.class,
+                    () -> (context, config) -> {
+                        seen.set(context.intercept(COUNTER));
+                        return reactor.core.publisher.Mono.empty();
+                    })
+                .require(COUNTER, "definition-default")
+                .build();
+
+            runtime.rootScope().context().withIntercept(COUNTER, "desired-value")
+                .plugins().mount("intercepted-1", definition, null)
+                .settled().block(TIMEOUT);
+
+            assertEquals("desired-value", seen.get());
+        }
+    }
+
+    @Test
+    void pluginCannotPublishAnUndeclaredService() {
+        try (var runtime = FibraRuntime.create()) {
+            var definition = PluginDefinition.builder("invalid-provider", Void.class,
+                () -> (context, config) -> {
+                    context.services().provide(COUNTER, new Counter());
+                    return reactor.core.publisher.Mono.empty();
+                }).build();
+            var instance = runtime.rootScope().context().plugins()
+                .mount("invalid-provider-1", definition, null);
+
+            instance.settled().onErrorResume(error ->
+                reactor.core.publisher.Mono.just(instance)).block(TIMEOUT);
+
+            assertEquals(PluginInstanceState.FAILED, instance.state());
+            assertEquals(com.sstlfsj.fibra.FibraException.PLUGIN_UNDECLARED_SERVICE,
+                ((com.sstlfsj.fibra.FibraException)
+                    instance.failure().orElseThrow()).code());
+        }
+    }
+
+    private static final class Counter {
+    }
+}

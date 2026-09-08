@@ -8,7 +8,20 @@
 
 ### 新增
 
-- `Context` 和 `InvocationContext` 为 `PluginDescriptor<Void>` 增加省略配置参数的便利重载；所有入口仍委托既有插件生命周期，内核运行语义不变。
+- 新增运行时中立的 `fibra-artifact`、`fibra-config`、`fibra-bridge`、`fibra-registry`。
+- 新增 Java JAR/ClassSpace 与 Node sidecar/JSON-RPC 两个一等 runtime adapter。
+- 新增统一 `ChangeSet`、持久化事务 journal、不可变 Engine snapshot 与异步失败投影。
+
+### 变更
+
+- 将内核重构为 `FibraRuntime`、`Scope`、`Context`、`PluginInstance` 四层所有权模型。
+- Java 插件改为单一 `META-INF/fibra/plugin.yaml` 入口，不再扫描扩展类。
+- Spring Boot starter 直接组合 Engine、Registry、Java runtime 和持久化存储。
+
+### 移除
+
+- 移除 PF4J、`fibra-pf4j-api`、`fibra-loader-pf4j`、`fibra-loader-config` 和旧 autoconfigure 模块。
+- 移除全部旧 API 与兼容转发；vNext 是破坏性升级。
 
 ## [0.4.0] - 2026-08-29
 

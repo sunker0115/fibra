@@ -37,27 +37,27 @@ public class EventDispatchBenchmark {
 
     @Setup
     public void setup() {
-        ctx = FibraRuntime.create();
+        ctx = FibraRuntime.create().rootScope().context();
         for (int i = 0; i < hooks; i++) {
-            ctx.on(TICK, () -> counter++);
-            ctx.on(WF, (in, next) -> next.call() + 1);
+            ctx.events().on(TICK, () -> counter++);
+            ctx.events().on(WF, (in, next) -> next.call() + 1);
         }
     }
 
     @TearDown
     public void tearDown() {
-        ctx.close();
+        ctx.scope().close();
     }
 
     @Benchmark
     public long emit() {
         counter = 0;
-        ctx.emit(TICK, Ticker::onTick);
+        ctx.events().emit(TICK, Ticker::onTick);
         return counter;
     }
 
     @Benchmark
     public int waterfall() {
-        return ctx.waterfall(WF, (l, next) -> l.step(0, next), () -> 0);
+        return ctx.events().waterfall(WF, (l, next) -> l.step(0, next), () -> 0);
     }
 }
