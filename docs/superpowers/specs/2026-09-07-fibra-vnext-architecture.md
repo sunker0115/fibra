@@ -4,10 +4,9 @@
 
 状态：已确认并完成交付（2026-09-11）
 
-本文定义 Fibra vNext 的最终系统边界、运行模型、模块职责和验收标准，不记录旧版本迁移过程，也不按
-参考项目组织正文。运行代发布、排空与故障恢复的细化规则见
-[运行代发布设计](./2026-09-10-fibra-generation-publication.md)；两文冲突时，以该细化设计为准。外部
-实现的源码对拍统一收录在[源码参考目录](../references/README.md)。
+本文是 Fibra vNext 唯一权威设计，定义最终系统边界、运行模型、模块职责和验收标准；不记录旧版本
+迁移过程，也不按参考项目组织正文。外部实现的源码对拍统一收录在
+[源码参考目录](../references/README.md)。
 
 ## 1. 目标与边界
 
@@ -235,8 +234,14 @@ public record PublishedView(
 `viewRevision` 标识任意已发布事实变化；`generationRevision` 只在整代切换时变化。同一 generation 内的
 PENDING 恢复、provider 变化或贡献增删只增加 view revision。
 
-宿主调用必须携带选择贡献时观察到的 expected view revision。Engine 在一次发布临界区内切换路由、
-关闭旧代准入并发布新 view；旧 revision 返回明确的 stale-revision 结果，不能悄悄路由到新代。
+宿主调用必须携带选择贡献时观察到的 expected view revision。调用先读取当前 published state 并校验
+revision，再取得该 generation 的 lease，随后复读原子引用；只有两次读取仍指向同一 state 才能解析
+贡献并执行，否则释放 lease 后重试或返回明确的 stale-revision 结果，不能悄悄路由到新代。
+
+一次调用在目标 domain 内创建临时调用 Scope。成功、失败或取消后都必须等待该 Scope 的异步清理完成，
+再释放 generation lease。发布通过一次原子交换同时切换 generation、状态、路由和诊断，随后立即关闭
+旧代准入：已经完成二次复核的旧代调用在线性化点前成立并计入排空，其余调用只能进入新代或报告
+revision 过期，不存在未计数的旧代调用。
 
 ### 4.3 诊断投影
 
@@ -269,7 +274,17 @@ observe -> validate -> prepare -> verify -> journal -> commit
 - durable decision 前的 participant commit 必须可补偿；无法证明完整恢复时关闭 mutation gate。
 - `COMMITTING` 状态下崩溃属于结果不确定，恢复不能猜测成功或失败，必须关闭 mutation gate 等待处理。
 
-完整状态机、发布顺序、lease 排空和崩溃矩阵见[运行代发布设计](./2026-09-10-fibra-generation-publication.md)。
+恢复规则固定如下：
+
+| 故障点 | 恢复结果 |
+|---|---|
+| durable `COMMITTED` 前失败，且 participant 结果可确定 | 补偿已提交 participant，关闭候选代，旧代继续服务 |
+| participant commit 与 durable `COMMITTED` 之间崩溃，结果无法确定 | 保持 `COMMITTING`，关闭 mutation gate，等待人工或参与者幂等查询完成裁决 |
+| durable `COMMITTED` 后、内存发布前崩溃 | 以 journal 和已提交输入重建并发布目标代，不根据目录现状猜测，也不回退到旧 desired state |
+| 新代发布后 drain、cleanup 或 retire 失败 | 保持新代已发布，记录失败并继续恢复；不得把路由切回已进入排空的旧代 |
+
+需要参与事务的制品、desired state 和审计存储必须支持幂等事务标识以及可查询的
+prepare/commit/rollback 结果；不能证明结果时必须停写，不能用 best-effort 伪造成功。
 
 ### 4.5 一致性保证与非承诺
 

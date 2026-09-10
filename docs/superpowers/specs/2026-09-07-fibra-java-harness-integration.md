@@ -6,9 +6,8 @@
 一种 Agent Harness，不决定 Fibra 的产品方向、模块边界或发布优先级，也不把草图中的类名、状态名或
 包名视为既有实现。
 
-上游权威设计：[`2026-09-07-fibra-vnext-architecture.md`](./2026-09-07-fibra-vnext-architecture.md)；运行代、
-已发布视图和外层宿主边界以
-[`2026-09-10-fibra-generation-publication.md`](./2026-09-10-fibra-generation-publication.md) 为准。
+上游唯一权威设计：[`2026-09-07-fibra-vnext-architecture.md`](./2026-09-07-fibra-vnext-architecture.md)；
+运行代、已发布视图和外层宿主边界以该文第 4 节为准。
 
 ## 1. 结论
 
