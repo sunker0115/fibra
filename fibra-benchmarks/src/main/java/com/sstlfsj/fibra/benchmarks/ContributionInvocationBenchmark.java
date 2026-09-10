@@ -1,7 +1,7 @@
 package com.sstlfsj.fibra.benchmarks;
 
 import com.sstlfsj.fibra.Context;
-import com.sstlfsj.fibra.bridge.ContributionBridge;
+import com.sstlfsj.fibra.bridge.ContributionDirectory;
 import com.sstlfsj.fibra.bridge.ContributionId;
 import com.sstlfsj.fibra.bridge.ContributionKind;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
@@ -34,25 +34,25 @@ public class ContributionInvocationBenchmark {
 
     private FibraRuntime runtime;
     private Context context;
-    private ContributionBridge bridge;
+    private ContributionDirectory directory;
 
     @Setup
     public void setup() {
         runtime = FibraRuntime.create();
         context = runtime.rootScope().context();
-        bridge = new ContributionBridge();
-        bridge.register(context, KIND, ID.providerInstanceId(), ID.localName(),
+        directory = new ContributionDirectory();
+        directory.register(context, KIND, ID.providerInstanceId(), ID.localName(),
             "Add one", (invocation, input) -> Mono.just(input + 1)).block();
     }
 
     @TearDown
     public void tearDown() {
         runtime.close();
-        bridge.close();
+        directory.close();
     }
 
     @Benchmark
     public Integer invokeLocalContribution() {
-        return bridge.invoke(context, KIND, ID, 41).block();
+        return directory.current().routes().invoke(context, KIND, ID, 41).block();
     }
 }

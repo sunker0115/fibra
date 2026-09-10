@@ -17,7 +17,15 @@ import com.sstlfsj.fibra.config.DesiredGraph;
 import com.sstlfsj.fibra.config.DesiredSourceSnapshot;
 import com.sstlfsj.fibra.config.DesiredStateRepository;
 import com.sstlfsj.fibra.config.DesiredStateWriteTransaction;
+import com.sstlfsj.fibra.config.PublicationRequirement;
+import com.sstlfsj.fibra.bridge.ContributionDirectory;
+import com.sstlfsj.fibra.bridge.ContributionId;
+import com.sstlfsj.fibra.bridge.ContributionKind;
+import com.sstlfsj.fibra.bridge.ContributionRoutes;
+import com.sstlfsj.fibra.bridge.ContributionServices;
+import com.sstlfsj.fibra.bridge.ContributionSnapshot;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
+import com.sstlfsj.fibra.runtime.RuntimeDomain;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
@@ -31,29 +39,57 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 public final class FibraEngine implements AutoCloseable {
     private final DesiredStateRepository desiredRepository;
     private final PluginCatalog builtInCatalog;
     private final ArtifactStore artifactStore;
     private final Map<RuntimeId, PluginRuntimeAdapter> runtimeAdapters;
+    private final HostServiceRegistry hostServices;
     private final FibraRuntime runtime = FibraRuntime.create();
     private final ChangeSetExecutor executor;
-    private final Sinks.Many<EngineSnapshot> snapshots = Sinks.many().replay().latest();
-    private final AtomicBoolean closeRequested = new AtomicBoolean();
-    private final Mono<EngineSnapshot> startSignal;
+    private final Sinks.Many<PublishedView> views = Sinks.many().replay().latest();
+    private final AtomicReference<PublishedState> publishedState;
+    private final PublishedRuntime published = new PublishedRuntime() {
+        @Override
+        public PublishedView current() {
+            return publishedState.get().view();
+        }
 
-    private volatile EngineSnapshot snapshot = emptySnapshot();
-    private volatile Generation generation;
+        @Override
+        public Flux<PublishedView> views() {
+            return views.asFlux();
+        }
+
+        @Override
+        public <D, I, O> Mono<O> invoke(String expectedViewRevision,
+                                        ContributionKind<D, I, O> kind,
+                                        ContributionId id, I input) {
+            return invokePublished(expectedViewRevision, kind, id, input);
+        }
+    };
+    private final AtomicBoolean closeRequested = new AtomicBoolean();
+    private final Mono<PublishedView> startSignal;
+
     private Map<RuntimeId, PluginCatalog> runtimeCatalogs = Map.of();
+    private List<HostServiceRegistry.Binding<?>> hostBindings = List.of();
 
     private FibraEngine(Builder builder) {
         desiredRepository = builder.desiredRepository;
         builtInCatalog = builder.catalog;
         artifactStore = builder.artifactStore;
         runtimeAdapters = Map.copyOf(builder.runtimeAdapters);
+        hostServices = builder.hostServices;
         executor = new ChangeSetExecutor(builder.journal);
-        snapshots.tryEmitNext(snapshot);
+        var initialEngine = emptySnapshot();
+        var initialView = new PublishedView("0", "0", initialEngine,
+            new ContributionSnapshot(0, List.of()),
+            runtimeDiagnostics("0", null, null),
+            engineDiagnostics("0", null, null, null));
+        publishedState = new AtomicReference<>(
+            new PublishedState(initialView, null, null, null, null));
+        views.tryEmitNext(initialView);
         startSignal = Mono.defer(this::bootstrap).cache();
     }
 
@@ -61,35 +97,36 @@ public final class FibraEngine implements AutoCloseable {
         return new Builder(desiredRepository);
     }
 
-    public Mono<EngineSnapshot> start() {
+    public Mono<PublishedView> start() {
         return startSignal;
     }
 
     public Mono<EngineCommandResult> submit(EngineCommand command) {
         Objects.requireNonNull(command, "command");
-        if (snapshot.state() == EngineState.NEW) {
+        if (currentEngine().state() == EngineState.NEW) {
             return Mono.error(new IllegalStateException("engine is not started"));
         }
         return Mono.defer(() -> submitInternal(command));
     }
 
-    public EngineSnapshot snapshot() {
-        return snapshot;
+    public PublishedRuntime published() {
+        return published;
     }
 
-    public Flux<EngineSnapshot> snapshots() {
-        return snapshots.asFlux();
+    private EngineSnapshot currentEngine() {
+        return publishedState.get().view().engine();
     }
 
-    public FibraRuntime runtime() {
-        return runtime;
+    private Generation currentGeneration() {
+        return publishedState.get().generation();
     }
 
-    private Mono<EngineSnapshot> bootstrap() {
+    private Mono<PublishedView> bootstrap() {
         return Mono.defer(() -> {
             if (closeRequested.get()) {
                 return Mono.error(new IllegalStateException("engine is closed"));
             }
+            hostBindings = hostServices.freeze();
             executor.verifyRecovered();
             var installed = artifactStore == null ? List.<ArtifactRecord>of()
                 : artifactStore.installed();
@@ -124,7 +161,10 @@ public final class FibraEngine implements AutoCloseable {
                 .publish(() -> publish(compilation.value, candidate.value,
                     artifacts, runtimeSnapshots, catalogs));
             return executor.execute(builder.build())
-                .then(Mono.fromSupplier(() -> snapshot));
+                .then(Mono.fromSupplier(() -> {
+                    refreshDiagnostics();
+                    return publishedState.get().view();
+                }));
         });
     }
 
@@ -182,9 +222,9 @@ public final class FibraEngine implements AutoCloseable {
                 () -> effectiveCatalog))
             .verify(() -> verify(candidate.value))
             .publish(() -> publish(compilation.value, candidate.value,
-                snapshot.artifacts(), snapshot.runtimes(), runtimeCatalogs));
+                currentEngine().artifacts(), currentEngine().runtimes(), runtimeCatalogs));
         return executor.execute(builder.build())
-            .map(result -> new EngineCommandResult(snapshot, result.warnings()));
+            .map(result -> commandResult(result));
     }
 
     private Mono<EngineCommandResult> submitDeployment(ApplyDeployment command) {
@@ -199,7 +239,7 @@ public final class FibraEngine implements AutoCloseable {
         var candidate = new Holder<Generation>();
         var previous = new Holder<Generation>();
         candidateCatalogs.value = new LinkedHashMap<>(runtimeCatalogs);
-        candidateRuntimeSnapshots.value = new LinkedHashMap<>(snapshot.runtimes());
+        candidateRuntimeSnapshots.value = new LinkedHashMap<>(currentEngine().runtimes());
 
         var changeSet = ChangeSet.builder(UUID.randomUUID().toString())
             .participant(deploymentArtifactParticipant(command, transactions,
@@ -225,7 +265,7 @@ public final class FibraEngine implements AutoCloseable {
                 candidateArtifacts.value, candidateRuntimeSnapshots.value,
                 candidateCatalogs.value));
         return executor.execute(changeSet.build())
-            .map(result -> new EngineCommandResult(snapshot, result.warnings()));
+            .map(result -> commandResult(result));
     }
 
     private ChangeParticipant deploymentArtifactParticipant(
@@ -246,7 +286,7 @@ public final class FibraEngine implements AutoCloseable {
                         "engine has no artifact store"));
                 }
                 var ids = new java.util.HashSet<ArtifactId>();
-                var candidates = new LinkedHashMap<>(snapshot.artifacts());
+                var candidates = new LinkedHashMap<>(currentEngine().artifacts());
                 var replaced = new LinkedHashMap<ArtifactId, ArtifactRecord>();
                 var prepared = new ArrayList<ArtifactInstallTransaction>();
                 try {
@@ -327,7 +367,7 @@ public final class FibraEngine implements AutoCloseable {
                     .map(value -> artifacts.value.get(value.artifactId())).toList();
                 return Flux.fromIterable(changed).concatMap(adapter::inspect).then(
                         adapter.prepare(new RuntimeChangeRequest(runtimeId, candidates,
-                            snapshot.runtimes().get(runtimeId))))
+                            currentEngine().runtimes().get(runtimeId))))
                     .doOnNext(prepared -> {
                         if (!prepared.snapshot().runtimeId().equals(runtimeId)) {
                             throw new IllegalArgumentException(
@@ -403,7 +443,7 @@ public final class FibraEngine implements AutoCloseable {
                 candidateRuntimeCatalogs.value))
             .build();
         return executor.execute(changeSet)
-            .map(result -> new EngineCommandResult(snapshot, result.warnings()));
+            .map(result -> commandResult(result));
     }
 
     private ChangeParticipant artifactParticipant(EngineCommand command, boolean uninstall,
@@ -423,7 +463,7 @@ public final class FibraEngine implements AutoCloseable {
                     return Mono.error(new IllegalStateException(
                         "engine has no artifact store"));
                 }
-                var artifacts = new LinkedHashMap<>(snapshot.artifacts());
+                var artifacts = new LinkedHashMap<>(currentEngine().artifacts());
                 if (uninstall) {
                     var artifactId = ((UninstallArtifact) command).artifactId();
                     previous.value = artifacts.remove(artifactId);
@@ -505,7 +545,7 @@ public final class FibraEngine implements AutoCloseable {
                     });
                 }
                 return inspection.then(adapter.prepare(new RuntimeChangeRequest(runtimeId,
-                        candidates, snapshot.runtimes().get(runtimeId))))
+                        candidates, currentEngine().runtimes().get(runtimeId))))
                     .doOnNext(value -> {
                         if (!value.snapshot().runtimeId().equals(runtimeId)) {
                             throw new IllegalArgumentException(
@@ -513,7 +553,7 @@ public final class FibraEngine implements AutoCloseable {
                         }
                         prepared.value = value;
                         var nextCatalogs = new LinkedHashMap<>(runtimeCatalogs);
-                        var nextSnapshots = new LinkedHashMap<>(snapshot.runtimes());
+                        var nextSnapshots = new LinkedHashMap<>(currentEngine().runtimes());
                         if (candidates.isEmpty() && value.catalog().entries().isEmpty()) {
                             nextCatalogs.remove(runtimeId);
                             nextSnapshots.remove(runtimeId);
@@ -531,7 +571,7 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private RuntimeId runtimeFor(ArtifactId artifactId) {
-        var artifact = snapshot.artifacts().get(artifactId);
+        var artifact = currentEngine().artifacts().get(artifactId);
         if (artifact == null) {
             throw new IllegalArgumentException(
                 "artifact is not installed: " + artifactId.value());
@@ -631,9 +671,12 @@ public final class FibraEngine implements AutoCloseable {
 
             @Override
             public Mono<PreparedChange> prepare() {
-                previous.value = generation;
+                previous.value = currentGeneration();
                 return prepareGeneration(compilation.value, effectiveCatalog.get())
-                    .doOnNext(value -> candidate.value = value)
+                    .doOnNext(value -> {
+                        candidate.value = value;
+                        publishCandidateDiagnostics(value);
+                    })
                     .map(value -> new PreparedChange() {
                         @Override
                         public String name() {
@@ -647,13 +690,17 @@ public final class FibraEngine implements AutoCloseable {
 
                         @Override
                         public Mono<Void> rollback() {
-                            return value.scope().closeAsync();
+                            return value.close().then(Mono.fromRunnable(() ->
+                                clearCandidate(value)));
                         }
 
                         @Override
                         public Mono<Void> retire() {
-                            return previous.value == null ? Mono.empty()
-                                : previous.value.retire();
+                            if (previous.value == null) {
+                                return Mono.empty();
+                            }
+                            return previous.value.retire().then(Mono.fromRunnable(() ->
+                                finishDraining(previous.value)));
                         }
                     });
             }
@@ -663,10 +710,17 @@ public final class FibraEngine implements AutoCloseable {
     private Mono<Generation> prepareGeneration(DesiredCompilation compilation,
                                                PluginCatalog effectiveCatalog) {
         return Mono.defer(() -> {
-            var name = "engine-generation-" + (Long.parseLong(snapshot.revision()) + 1);
-            var scope = runtime.rootScope().openChild(name);
+            var name = "engine-generation-"
+                + (Long.parseLong(publishedState.get().view().generationRevision()) + 1);
+            var domain = runtime.openDomain(name);
+            var scope = domain.rootScope();
+            var directory = new ContributionDirectory();
             var mounted = new LinkedHashMap<String, PluginInstance<?>>();
             try {
+                hostBindings.forEach(binding -> provideHostBinding(
+                    scope.context(), binding));
+                scope.context().services().provide(
+                    ContributionServices.REGISTRAR, directory);
                 for (var entry : compilation.graph().entries()) {
                     if (!entry.enabled()) {
                         continue;
@@ -675,34 +729,52 @@ public final class FibraEngine implements AutoCloseable {
                         .orElseThrow(() ->
                         new IllegalArgumentException("unknown plugin definition "
                             + entry.definitionName()));
-                    mounted.put(entry.instanceId(), mount(scope, entry, catalogEntry, name));
+                    mounted.put(entry.instanceId(), mount(scope, entry, catalogEntry));
                 }
             } catch (RuntimeException | Error failure) {
-                return scope.closeAsync().then(Mono.error(failure));
+                return domain.closeAsync().then(directory.closeAsync())
+                    .then(Mono.error(failure));
             }
-            return Flux.fromIterable(mounted.values())
-                .flatMap(PluginInstance::settled)
-                .then(Mono.fromCallable(() -> new Generation(scope, compilation, mounted)))
-                .onErrorResume(failure -> scope.closeAsync().then(Mono.error(failure)));
+            return awaitSettled(mounted.values())
+                .then(Mono.fromCallable(() -> new Generation(
+                    domain, directory, compilation, mounted)))
+                .onErrorResume(failure -> domain.closeAsync().then(directory.closeAsync())
+                    .then(Mono.error(failure)));
         });
     }
 
+    private static Mono<Void> awaitSettled(
+        java.util.Collection<PluginInstance<?>> instances) {
+        return Flux.fromIterable(instances)
+            .flatMap(PluginInstance::settled)
+            .then(Mono.defer(() -> instances.stream().anyMatch(instance ->
+                    instance.state() == PluginInstanceState.STARTING
+                        || instance.state() == PluginInstanceState.STOPPING)
+                ? awaitSettled(instances) : Mono.empty()));
+    }
+
     private static PluginInstance<?> mount(Scope scope, DesiredEntry entry,
-                                           PluginCatalogEntry<?> catalogEntry,
-                                           String generation) {
-        var context = context(scope.context(), entry, catalogEntry.definition(), generation);
+                                           PluginCatalogEntry<?> catalogEntry) {
+        var context = context(scope.context(), entry, catalogEntry.definition());
         return mountTyped(context, entry.instanceId(), catalogEntry, entry.config());
     }
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static void provideHostBinding(
+        Context context, HostServiceRegistry.Binding binding) {
+        context.services().provide(binding.key(), binding.value());
+    }
+
     private static Context context(Context initial, DesiredEntry entry,
-                                   PluginDefinition<?> definition, String generation) {
+                                   PluginDefinition<?> definition) {
         var result = initial;
         var keys = new LinkedHashSet<ServiceKey<?>>();
         keys.addAll(definition.requires().keySet());
         keys.addAll(definition.provides());
         for (var key : keys) {
-            result = result.withRealm(key, new GenerationRealm(generation,
-                entry.realms().get(key.name())));
+            if (entry.realms().containsKey(key.name())) {
+                result = result.withRealm(key, entry.realms().get(key.name()));
+            }
             if (entry.intercepts().containsKey(key.name())) {
                 result = result.withIntercept(key, entry.intercepts().get(key.name()));
             }
@@ -719,10 +791,20 @@ public final class FibraEngine implements AutoCloseable {
 
     private Mono<Void> verify(Generation candidate) {
         return Mono.fromRunnable(() -> {
-            for (var instance : candidate.instances().values()) {
-                if (instance.state() != PluginInstanceState.ACTIVE) {
+            for (var entry : candidate.compilation().graph().entries()) {
+                if (!entry.enabled()) {
+                    continue;
+                }
+                var instance = candidate.instances().get(entry.instanceId());
+                var state = instance.state();
+                var accepted = state == PluginInstanceState.ACTIVE
+                    || state == PluginInstanceState.PENDING
+                    && entry.publicationRequirement()
+                        == PublicationRequirement.PENDING_ALLOWED;
+                if (!accepted) {
                     throw new IllegalStateException("required plugin instance " + instance.id()
-                        + " settled as " + instance.state());
+                        + " settled as " + state + " for "
+                        + entry.publicationRequirement());
                 }
             }
         });
@@ -733,39 +815,64 @@ public final class FibraEngine implements AutoCloseable {
                                Map<RuntimeId, RuntimeGenerationSnapshot> runtimes,
                                Map<RuntimeId, PluginCatalog> nextRuntimeCatalogs) {
         return Mono.fromRunnable(() -> {
-            generation = candidate;
-            var nextRevision = Long.toString(Long.parseLong(snapshot.revision()) + 1);
+            var previous = publishedState.get();
+            var nextRevision = nextRevision(previous.view().viewRevision());
             var observed = observe(candidate);
-            snapshot = new EngineSnapshot(nextRevision, EngineState.RUNNING,
+            var engine = new EngineSnapshot(EngineState.RUNNING,
                 compilation.snapshot(), compilation.graph(), observed,
                 artifacts, normalizeRuntimeSnapshots(runtimes, artifacts), null);
+            var contributions = candidate.directory().current();
+            var view = new PublishedView(nextRevision, candidate.revision(), engine,
+                contributions.snapshot(),
+                runtimeDiagnostics(candidate.revision(), candidate, null),
+                engineDiagnostics(candidate.revision(), null,
+                    previous.generation(), null));
             runtimeCatalogs = Map.copyOf(nextRuntimeCatalogs);
-            snapshots.tryEmitNext(snapshot);
-            candidate.observation(Flux.merge(candidate.instances().values().stream()
-                    .map(PluginInstance::states).toList())
+            publishedState.set(new PublishedState(
+                view, candidate, contributions.routes(), null, previous.generation()));
+            if (previous.generation() != null) {
+                previous.generation().closeAdmission();
+            }
+            views.tryEmitNext(view);
+            var observations = new ArrayList<Flux<?>>();
+            observations.addAll(candidate.instances().values().stream()
+                .map(PluginInstance::states).toList());
+            observations.add(candidate.directory().views());
+            candidate.observation(Flux.merge(observations)
                 .subscribe(ignored -> executor.observe(() -> refresh(candidate))));
         });
     }
 
     private void refresh(Generation expected) {
-        if (generation != expected || closeRequested.get()) {
+        var current = publishedState.get();
+        if (current.generation() != expected || closeRequested.get()) {
             return;
         }
         var observed = observe(expected);
-        if (observed.equals(snapshot.instances())) {
+        var contributions = expected.directory().current();
+        if (observed.equals(current.view().engine().instances())
+            && contributions.snapshot().equals(current.view().contributions())) {
             return;
         }
         var failures = observed.values().stream()
             .filter(value -> value.state() == PluginInstanceState.FAILED)
             .map(value -> value.instanceId() + ": " + value.failure())
             .toList();
-        var nextRevision = Long.toString(Long.parseLong(snapshot.revision()) + 1);
-        snapshot = new EngineSnapshot(nextRevision,
-            failures.isEmpty() ? EngineState.RUNNING : EngineState.FAILED,
-            snapshot.desiredSource(), snapshot.desiredGraph(), observed,
-            snapshot.artifacts(), snapshot.runtimes(),
+        var nextRevision = nextRevision(current.view().viewRevision());
+        var previousEngine = current.view().engine();
+        var engine = new EngineSnapshot(EngineState.RUNNING,
+            previousEngine.desiredSource(), previousEngine.desiredGraph(), observed,
+            previousEngine.artifacts(), previousEngine.runtimes(),
             failures.isEmpty() ? null : String.join("; ", failures));
-        snapshots.tryEmitNext(snapshot);
+        var view = new PublishedView(nextRevision, expected.revision(), engine,
+            contributions.snapshot(),
+            runtimeDiagnostics(expected.revision(), expected, engine.failure()),
+            engineDiagnostics(expected.revision(), current.candidate(),
+                current.draining(), engine.failure()));
+        publishedState.set(new PublishedState(
+            view, expected, contributions.routes(), current.candidate(),
+            current.draining()));
+        views.tryEmitNext(view);
     }
 
     private static Map<String, PluginInstanceSnapshot> observe(Generation generation) {
@@ -795,9 +902,147 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private void checkRevision(String expected) {
-        if (expected != null && !expected.equals(snapshot.revision())) {
-            throw new EngineConflictException(expected, snapshot.revision());
+        var actual = publishedState.get().view().viewRevision();
+        if (expected != null && !expected.equals(actual)) {
+            throw new PublishedRevisionConflictException(expected, actual);
         }
+    }
+
+    private <D, I, O> Mono<O> invokePublished(
+        String expectedViewRevision, ContributionKind<D, I, O> kind,
+        ContributionId id, I input) {
+        Objects.requireNonNull(expectedViewRevision, "expectedViewRevision");
+        Objects.requireNonNull(kind, "kind");
+        Objects.requireNonNull(id, "id");
+        return Mono.defer(() -> {
+            var state = publishedState.get();
+            if (!expectedViewRevision.equals(state.view().viewRevision())) {
+                return Mono.error(new PublishedRevisionConflictException(
+                    expectedViewRevision, state.view().viewRevision()));
+            }
+            if (state.generation() == null || state.routes() == null) {
+                return Mono.error(new IllegalStateException("engine is not running"));
+            }
+            var lease = state.generation().tryAcquire();
+            if (lease == null) {
+                return invokePublished(expectedViewRevision, kind, id, input);
+            }
+            if (publishedState.get() != state) {
+                lease.close();
+                return invokePublished(expectedViewRevision, kind, id, input);
+            }
+            final Scope invocationScope;
+            try {
+                invocationScope = state.generation().domain().rootScope()
+                    .openChild("invocation:" + kind.name());
+            } catch (RuntimeException | Error failure) {
+                lease.close();
+                return Mono.error(failure);
+            }
+            return Mono.usingWhen(Mono.just(invocationScope),
+                scope -> state.routes().invoke(scope.context(), kind, id, input),
+                scope -> closeInvocation(scope, lease),
+                (scope, failure) -> closeInvocation(scope, lease),
+                scope -> closeInvocation(scope, lease));
+        });
+    }
+
+    private static Mono<Void> closeInvocation(Scope scope, GenerationLease lease) {
+        return scope.closeAsync().doFinally(ignored -> lease.close());
+    }
+
+    private static RuntimeDiagnostics runtimeDiagnostics(String generationRevision,
+                                                         Generation generation,
+                                                         String failure) {
+        if (generation == null) {
+            return new RuntimeDiagnostics(generationRevision, null,
+                List.of(), List.of(), List.of(), failure);
+        }
+        var domain = generation.domain().snapshot();
+        var entries = generation.compilation().graph().entries().stream()
+            .collect(java.util.stream.Collectors.toMap(
+                DesiredEntry::instanceId, value -> value));
+        var plugins = domain.plugins().stream().map(plugin -> {
+            var requirement = entries.get(plugin.instanceId()).publicationRequirement();
+            var impact = plugin.state() == PluginInstanceState.PENDING
+                && requirement == PublicationRequirement.ACTIVE_REQUIRED
+                ? RuntimeDiagnostics.PublicationImpact.BLOCKING
+                : RuntimeDiagnostics.PublicationImpact.NONE;
+            return new RuntimeDiagnostics.Plugin(plugin.instanceId(), plugin.pluginId(),
+                plugin.state(), requirement, impact, plugin.dependencies(), plugin.failure());
+        }).toList();
+        return new RuntimeDiagnostics(generationRevision, domain.name(), plugins,
+            domain.services(), domain.events(), failure);
+    }
+
+    private EngineDiagnostics engineDiagnostics(String generationRevision,
+                                                Generation candidate,
+                                                Generation draining,
+                                                String failure) {
+        return new EngineDiagnostics(generationRevision,
+            candidate == null ? null : candidate.revision(),
+            draining == null ? List.of() : List.of(draining.revision()),
+            executor.transactionState(), executor.acceptsMutations(),
+            executor.records(), failure);
+    }
+
+    private EngineCommandResult commandResult(ChangeSetResult result) {
+        refreshDiagnostics();
+        return new EngineCommandResult(publishedState.get().view(), result.warnings());
+    }
+
+    private void finishDraining(Generation retired) {
+        var current = publishedState.get();
+        if (current.draining() == retired) {
+            publishDiagnosticRefresh(current, current.candidate(), null);
+        }
+    }
+
+    private void refreshDiagnostics() {
+        var current = publishedState.get();
+        var runtime = runtimeDiagnostics(current.view().generationRevision(),
+            current.generation(), current.view().engine().failure());
+        var engine = engineDiagnostics(current.view().generationRevision(),
+            current.candidate(), current.draining(), current.view().engine().failure());
+        if (!runtime.equals(current.view().diagnostics())
+            || !engine.equals(current.view().engineDiagnostics())) {
+            publishDiagnosticRefresh(current, current.candidate(), current.draining());
+        }
+    }
+
+    private void publishCandidateDiagnostics(Generation candidate) {
+        var current = publishedState.get();
+        publishDiagnosticRefresh(current, candidate, current.draining());
+    }
+
+    private void clearCandidate(Generation candidate) {
+        var current = publishedState.get();
+        if (current.candidate() == candidate) {
+            publishDiagnosticRefresh(current, null, current.draining());
+        }
+    }
+
+    private void publishDiagnosticRefresh(PublishedState current, Generation candidate,
+                                          Generation draining) {
+        var revision = nextRevision(current.view().viewRevision());
+        var previousEngine = current.view().engine();
+        var engine = new EngineSnapshot(previousEngine.state(),
+            previousEngine.desiredSource(), previousEngine.desiredGraph(),
+            previousEngine.instances(), previousEngine.artifacts(),
+            previousEngine.runtimes(), previousEngine.failure());
+        var view = new PublishedView(revision, current.view().generationRevision(), engine,
+            current.view().contributions(), runtimeDiagnostics(
+                current.view().generationRevision(), current.generation(),
+                previousEngine.failure()), engineDiagnostics(
+                current.view().generationRevision(), candidate, draining,
+                previousEngine.failure()));
+        publishedState.set(new PublishedState(
+            view, current.generation(), current.routes(), candidate, draining));
+        views.tryEmitNext(view);
+    }
+
+    private static String nextRevision(String current) {
+        return Long.toString(Long.parseLong(current) + 1);
     }
 
     private static PreparedChange noop(String name) {
@@ -829,9 +1074,9 @@ public final class FibraEngine implements AutoCloseable {
         if (!closeRequested.compareAndSet(false, true)) {
             return;
         }
-        var active = generation;
+        var active = currentGeneration();
         if (active != null) {
-            active.retire().block();
+            active.close().block();
         }
         RuntimeException closeFailure = null;
         for (var adapter : runtimeAdapters.values()) {
@@ -846,11 +1091,21 @@ public final class FibraEngine implements AutoCloseable {
             }
         }
         runtime.close();
-        snapshot = new EngineSnapshot(snapshot.revision(), EngineState.CLOSED,
-            snapshot.desiredSource(), snapshot.desiredGraph(), Map.of(),
-            snapshot.artifacts(), snapshot.runtimes(), snapshot.failure());
-        snapshots.tryEmitNext(snapshot);
-        snapshots.tryEmitComplete();
+        var current = publishedState.get();
+        var engine = current.view().engine();
+        var revision = nextRevision(current.view().viewRevision());
+        var closedEngine = new EngineSnapshot(EngineState.CLOSED,
+            engine.desiredSource(), engine.desiredGraph(), Map.of(),
+            engine.artifacts(), engine.runtimes(), engine.failure());
+        var closedView = new PublishedView(revision,
+            current.view().generationRevision(), closedEngine,
+            new ContributionSnapshot(0, List.of()),
+            runtimeDiagnostics(current.view().generationRevision(), null, engine.failure()),
+            engineDiagnostics(current.view().generationRevision(), null, null,
+                engine.failure()));
+        publishedState.set(new PublishedState(closedView, null, null, null, null));
+        views.tryEmitNext(closedView);
+        views.tryEmitComplete();
         executor.close();
         if (artifactStore != null) {
             artifactStore.close();
@@ -861,7 +1116,7 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private static EngineSnapshot emptySnapshot() {
-        return new EngineSnapshot("0", EngineState.NEW,
+        return new EngineSnapshot(EngineState.NEW,
             new DesiredSourceSnapshot("unstarted", "0", Set.of()),
             new DesiredGraph(List.of()), Map.of(), Map.of(), Map.of(), null);
     }
@@ -871,6 +1126,7 @@ public final class FibraEngine implements AutoCloseable {
         private PluginCatalog catalog = PluginCatalog.empty();
         private TransactionJournal journal = new InMemoryTransactionJournal();
         private ArtifactStore artifactStore;
+        private HostServiceRegistry hostServices = new HostServiceRegistry();
         private final Map<RuntimeId, PluginRuntimeAdapter> runtimeAdapters =
             new LinkedHashMap<>();
 
@@ -894,6 +1150,11 @@ public final class FibraEngine implements AutoCloseable {
             return this;
         }
 
+        public Builder hostServices(HostServiceRegistry value) {
+            hostServices = Objects.requireNonNull(value, "hostServices");
+            return this;
+        }
+
         public Builder runtimeAdapter(PluginRuntimeAdapter value) {
             Objects.requireNonNull(value, "runtimeAdapter");
             var previous = runtimeAdapters.putIfAbsent(value.id(), value);
@@ -910,20 +1171,36 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private static final class Generation {
-        private final Scope scope;
+        private final Object monitor = new Object();
+        private final RuntimeDomain domain;
+        private final ContributionDirectory directory;
         private final DesiredCompilation compilation;
         private final Map<String, PluginInstance<?>> instances;
+        private final Sinks.One<Void> drained = Sinks.one();
+        private boolean accepting = true;
+        private boolean closed;
+        private int inflight;
         private reactor.core.Disposable observation;
 
-        private Generation(Scope scope, DesiredCompilation compilation,
+        private Generation(RuntimeDomain domain, ContributionDirectory directory,
+                           DesiredCompilation compilation,
                            Map<String, PluginInstance<?>> instances) {
-            this.scope = scope;
+            this.domain = domain;
+            this.directory = directory;
             this.compilation = compilation;
             this.instances = Map.copyOf(instances);
         }
 
-        private Scope scope() {
-            return scope;
+        private String revision() {
+            return domain.name().substring("engine-generation-".length());
+        }
+
+        private RuntimeDomain domain() {
+            return domain;
+        }
+
+        private ContributionDirectory directory() {
+            return directory;
         }
 
         private DesiredCompilation compilation() {
@@ -938,15 +1215,76 @@ public final class FibraEngine implements AutoCloseable {
             observation = value;
         }
 
-        private Mono<Void> retire() {
-            if (observation != null) {
-                observation.dispose();
+        private GenerationLease tryAcquire() {
+            synchronized (monitor) {
+                if (!accepting) {
+                    return null;
+                }
+                inflight++;
+                return new GenerationLease(this);
             }
-            return scope.closeAsync();
+        }
+
+        private void release() {
+            synchronized (monitor) {
+                inflight--;
+                if (!accepting && inflight == 0) {
+                    drained.tryEmitEmpty();
+                }
+            }
+        }
+
+        private Mono<Void> closeAdmission() {
+            synchronized (monitor) {
+                if (accepting) {
+                    accepting = false;
+                    if (inflight == 0) {
+                        drained.tryEmitEmpty();
+                    }
+                }
+                return drained.asMono();
+            }
+        }
+
+        private Mono<Void> retire() {
+            return close();
+        }
+
+        private Mono<Void> close() {
+            synchronized (monitor) {
+                if (closed) {
+                    return closeAdmission();
+                }
+                closed = true;
+            }
+            return closeAdmission().then(Mono.defer(() -> {
+                if (observation != null) {
+                    observation.dispose();
+                }
+                return domain.closeAsync().then(directory.closeAsync());
+            }));
         }
     }
 
-    private record GenerationRealm(String generation, Object configured) {
+    private static final class GenerationLease implements AutoCloseable {
+        private final Generation generation;
+        private final AtomicBoolean closed = new AtomicBoolean();
+
+        private GenerationLease(Generation generation) {
+            this.generation = generation;
+        }
+
+        @Override
+        public void close() {
+            if (closed.compareAndSet(false, true)) {
+                generation.release();
+            }
+        }
+    }
+
+    private record PublishedState(PublishedView view, Generation generation,
+                                  ContributionRoutes routes, Generation candidate,
+                                  Generation draining) {
     }
 
     private static final class Holder<T> {

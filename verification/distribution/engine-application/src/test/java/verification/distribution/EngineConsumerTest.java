@@ -22,12 +22,13 @@ class EngineConsumerTest {
         try (engine) {
             var started = engine.start().block();
             var installed = engine.submit(InstallArtifact.builder()
-                .expectedRevision(started.revision())
+                .expectedRevision(started.viewRevision())
                 .artifactId(new ArtifactId("external"))
                 .runtimeId(JavaPluginRuntimeAdapter.RUNTIME_ID)
                 .version("1.0.0").source(Path.of(System.getProperty("plugin.jar")))
-                .build()).block().snapshot();
-            assertTrue(installed.artifacts().containsKey(new ArtifactId("external")));
+                .build()).block().view();
+            assertTrue(installed.engine().artifacts().containsKey(
+                new ArtifactId("external")));
         }
     }
 }

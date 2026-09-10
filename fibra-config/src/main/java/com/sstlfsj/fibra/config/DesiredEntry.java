@@ -11,6 +11,7 @@ public final class DesiredEntry {
     private final String instanceId;
     private final String definitionName;
     private final boolean enabled;
+    private final PublicationRequirement publicationRequirement;
     private final Object config;
     private final Map<String, Object> realms;
     private final Map<String, Object> intercepts;
@@ -22,6 +23,8 @@ public final class DesiredEntry {
         instanceId = requireName(builder.instanceId, "instance id");
         definitionName = requireName(builder.definitionName, "definition name");
         enabled = builder.enabled;
+        publicationRequirement = Objects.requireNonNull(builder.publicationRequirement,
+            "publicationRequirement");
         config = builder.config;
         realms = Map.copyOf(builder.realms);
         intercepts = Map.copyOf(builder.intercepts);
@@ -35,7 +38,8 @@ public final class DesiredEntry {
     }
 
     public Builder toBuilder() {
-        return new Builder(instanceId, definitionName).enabled(enabled).config(config)
+        return new Builder(instanceId, definitionName).enabled(enabled)
+            .publicationRequirement(publicationRequirement).config(config)
             .realms(realms).intercepts(intercepts).requires(requires).provides(provides)
             .source(source);
     }
@@ -43,6 +47,9 @@ public final class DesiredEntry {
     public String instanceId() { return instanceId; }
     public String definitionName() { return definitionName; }
     public boolean enabled() { return enabled; }
+    public PublicationRequirement publicationRequirement() {
+        return publicationRequirement;
+    }
     public Object config() { return config; }
     public Map<String, Object> realms() { return realms; }
     public Map<String, Object> intercepts() { return intercepts; }
@@ -54,7 +61,9 @@ public final class DesiredEntry {
     public boolean equals(Object candidate) {
         if (this == candidate) return true;
         if (!(candidate instanceof DesiredEntry other)) return false;
-        return enabled == other.enabled && instanceId.equals(other.instanceId)
+        return enabled == other.enabled
+            && publicationRequirement == other.publicationRequirement
+            && instanceId.equals(other.instanceId)
             && definitionName.equals(other.definitionName)
             && Objects.equals(config, other.config) && realms.equals(other.realms)
             && intercepts.equals(other.intercepts) && requires.equals(other.requires)
@@ -63,14 +72,15 @@ public final class DesiredEntry {
 
     @Override
     public int hashCode() {
-        return Objects.hash(instanceId, definitionName, enabled, config, realms,
-            intercepts, requires, provides, source);
+        return Objects.hash(instanceId, definitionName, enabled, publicationRequirement,
+            config, realms, intercepts, requires, provides, source);
     }
 
     @Override
     public String toString() {
         return "DesiredEntry[instanceId=" + instanceId + ", definitionName="
-            + definitionName + ", enabled=" + enabled + ", config=" + config
+            + definitionName + ", enabled=" + enabled + ", publicationRequirement="
+            + publicationRequirement + ", config=" + config
             + ", realms=" + realms + ", intercepts=" + intercepts + ", requires="
             + requires + ", provides=" + provides + ", source=" + source + ']';
     }
@@ -86,6 +96,8 @@ public final class DesiredEntry {
         private final String instanceId;
         private final String definitionName;
         private boolean enabled = true;
+        private PublicationRequirement publicationRequirement =
+            PublicationRequirement.ACTIVE_REQUIRED;
         private Object config;
         private Map<String, Object> realms = Map.of();
         private Map<String, Object> intercepts = Map.of();
@@ -99,6 +111,11 @@ public final class DesiredEntry {
         }
 
         public Builder enabled(boolean value) { enabled = value; return this; }
+        public Builder publicationRequirement(PublicationRequirement value) {
+            publicationRequirement = Objects.requireNonNull(value,
+                "publicationRequirement");
+            return this;
+        }
         public Builder config(Object value) { config = value; return this; }
         public Builder realms(Map<String, Object> value) {
             realms = Objects.requireNonNull(value, "realms"); return this;

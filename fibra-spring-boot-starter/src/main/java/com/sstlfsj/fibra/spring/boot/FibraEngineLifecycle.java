@@ -25,11 +25,11 @@ final class FibraEngineLifecycle implements SmartLifecycle {
 
     @Override
     public boolean isRunning() {
-        return engine.snapshot().state() == EngineState.RUNNING;
+        return engine.published().current().engine().state() == EngineState.RUNNING;
     }
 
     @Override
     public int getPhase() {
-        return Integer.MIN_VALUE;
+        return Integer.MAX_VALUE;
     }
 }

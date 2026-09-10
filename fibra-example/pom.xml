@@ -17,8 +17,7 @@
   <description>示例聚合模块；仅聚合，不做父 POM，示例仍继承根 com.sstlfsj:fibra。所有示例跳过远程发布。</description>
 
   <modules>
-    <module>content-sanitizer-api</module>
-    <module>java-host</module>
-    <module>spring-host</module>
+    <module>content-sanitizer</module>
+    <module>plugin-dependency</module>
   </modules>
 </project>

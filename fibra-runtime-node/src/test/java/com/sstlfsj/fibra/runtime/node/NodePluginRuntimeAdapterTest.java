@@ -3,10 +3,11 @@ package com.sstlfsj.fibra.runtime.node;
 import com.sstlfsj.fibra.artifact.ArtifactId;
 import com.sstlfsj.fibra.artifact.ArtifactRecord;
 import com.sstlfsj.fibra.artifact.ArtifactState;
-import com.sstlfsj.fibra.bridge.ContributionBridge;
+import com.sstlfsj.fibra.bridge.ContributionDirectory;
 import com.sstlfsj.fibra.bridge.ContributionCodec;
 import com.sstlfsj.fibra.bridge.ContributionId;
 import com.sstlfsj.fibra.bridge.ContributionKind;
+import com.sstlfsj.fibra.bridge.ContributionServices;
 import com.sstlfsj.fibra.engine.RuntimeChangeRequest;
 import com.sstlfsj.fibra.PluginInstanceState;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
@@ -32,7 +33,7 @@ class NodePluginRuntimeAdapterTest {
             String.class, new EchoCodec());
 
     @Test
-    void mountsRemoteContributionsThroughTheSharedBridgeAndDrainsBeforeStop(
+    void mountsRemoteContributionsThroughTheDomainDirectoryAndDrainsBeforeStop(
         @TempDir Path work) throws Exception {
         var artifactRoot = work.resolve("echo-node");
         Files.createDirectories(artifactRoot);
@@ -60,15 +61,17 @@ class NodePluginRuntimeAdapterTest {
             .state(ArtifactState.INSTALLED)
             .updatedAt(Instant.now())
             .build();
-        var bridge = new ContributionBridge();
+        var directory = new ContributionDirectory();
         var options = NodeRuntimeOptions.defaults(node(), work.resolve("sessions"));
-        var adapter = new NodePluginRuntimeAdapter(bridge,
+        var adapter = new NodePluginRuntimeAdapter(
             name -> "echo".equals(name) ? Optional.of(ECHO) : Optional.empty(), options);
         var prepared = adapter.prepare(new RuntimeChangeRequest(
             NodePluginRuntimeAdapter.RUNTIME_ID, List.of(artifact), null)).block();
         prepared.commit().block();
 
         try (var runtime = FibraRuntime.create()) {
+            runtime.rootScope().context().services().provide(
+                ContributionServices.REGISTRAR, directory);
             var entry = prepared.catalog().find("echo-node").orElseThrow();
             @SuppressWarnings("unchecked")
             var definition = (com.sstlfsj.fibra.PluginDefinition<Object>)
@@ -77,14 +80,15 @@ class NodePluginRuntimeAdapterTest {
                 .mount("echo-instance", definition, Map.of());
             instance.settled().block(Duration.ofSeconds(3));
 
-            assertEquals("Echo", ((EchoDescriptor) bridge.snapshot().entries()
+            assertEquals("Echo", ((EchoDescriptor) directory.current().snapshot().entries()
                 .getFirst().descriptor()).title());
-            assertEquals("hello", bridge.invoke(runtime.rootScope().context(), ECHO,
+            assertEquals("hello", directory.current().routes().invoke(
+                runtime.rootScope().context(), ECHO,
                 new ContributionId("echo-instance", "say"), "hello")
                 .block(Duration.ofSeconds(2)));
 
             instance.dispose().block(Duration.ofSeconds(3));
-            assertTrue(bridge.snapshot().entries().isEmpty());
+            assertTrue(directory.current().snapshot().entries().isEmpty());
         }
     }
 
@@ -117,14 +121,16 @@ class NodePluginRuntimeAdapterTest {
             .state(ArtifactState.INSTALLED)
             .updatedAt(Instant.now())
             .build();
-        var bridge = new ContributionBridge();
-        var adapter = new NodePluginRuntimeAdapter(bridge,
+        var directory = new ContributionDirectory();
+        var adapter = new NodePluginRuntimeAdapter(
             name -> "echo".equals(name) ? Optional.of(ECHO) : Optional.empty(),
             NodeRuntimeOptions.defaults(node(), work.resolve("sessions")));
         var prepared = adapter.prepare(new RuntimeChangeRequest(
             NodePluginRuntimeAdapter.RUNTIME_ID, List.of(artifact), null)).block();
 
         try (var runtime = FibraRuntime.create()) {
+            runtime.rootScope().context().services().provide(
+                ContributionServices.REGISTRAR, directory);
             @SuppressWarnings("unchecked")
             var definition = (com.sstlfsj.fibra.PluginDefinition<Object>)
                 prepared.catalog().find("failing-node").orElseThrow().definition();
@@ -139,7 +145,7 @@ class NodePluginRuntimeAdapterTest {
             assertEquals(PluginInstanceState.FAILED, instance.state());
             assertTrue(instance.failure().orElseThrow().getMessage()
                 .contains("exited unexpectedly"));
-            assertTrue(bridge.snapshot().entries().isEmpty());
+            assertTrue(directory.current().snapshot().entries().isEmpty());
         }
     }
 
@@ -164,8 +170,7 @@ class NodePluginRuntimeAdapterTest {
             .runtimeId(NodePluginRuntimeAdapter.RUNTIME_ID).version("1.0.0")
             .checksum("checksum").revision("revision").location(artifactRoot)
             .state(ArtifactState.INSTALLED).updatedAt(Instant.now()).build();
-        var adapter = new NodePluginRuntimeAdapter(new ContributionBridge(),
-            name -> Optional.of(ECHO),
+        var adapter = new NodePluginRuntimeAdapter(name -> Optional.of(ECHO),
             NodeRuntimeOptions.defaults(node(), work.resolve("sessions")));
 
         assertThrows(NodeRuntimeException.class, () -> adapter.inspect(artifact).block());

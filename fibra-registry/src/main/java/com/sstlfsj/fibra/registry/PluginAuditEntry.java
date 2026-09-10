@@ -5,7 +5,7 @@ import java.util.Objects;
 
 public record PluginAuditEntry(long sequence, Instant timestamp, String operation,
                                String target, boolean succeeded,
-                               String engineRevision, String detail) {
+                               String viewRevision, String detail) {
     public PluginAuditEntry {
         if (sequence <= 0) {
             throw new IllegalArgumentException("sequence must be positive");

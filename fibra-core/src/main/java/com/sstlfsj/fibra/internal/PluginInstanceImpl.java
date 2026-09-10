@@ -6,6 +6,9 @@ import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.PluginInstance;
 import com.sstlfsj.fibra.PluginInstanceState;
 import com.sstlfsj.fibra.ServiceKey;
+import com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
@@ -16,10 +19,12 @@ import java.util.Objects;
 import java.util.Optional;
 
 final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
+    private static final Logger LOGGER = LoggerFactory.getLogger(PluginInstanceImpl.class);
     private static final String INACTIVE = "__INACTIVE__";
     private static final String DISPOSED = "__DISPOSED__";
 
     private final DefaultFibraRuntime runtime;
+    private final DefaultRuntimeDomain domain;
     private final DefaultScope scope;
     private final String id;
     private final PluginDefinition<C> definition;
@@ -32,7 +37,7 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
     private final Sinks.Many<PluginInstanceState> states = Sinks.many().replay().latest();
 
     private volatile PluginInstanceState state = PluginInstanceState.PENDING;
-    private C rawConfig;
+    private C validatedConfig;
     private volatile C config;
     private Map<String, ServiceRegistry.Binding<?>> serviceSnapshot = Map.of();
     private String currentEpoch = INACTIVE;
@@ -46,13 +51,14 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
     PluginInstanceImpl(DefaultContext parentContext, String id,
                        PluginDefinition<C> definition, C config) {
         runtime = parentContext.runtime();
+        domain = parentContext.domain();
         scope = parentContext.scopeImpl();
         if (id == null || id.isBlank()) {
             throw new IllegalArgumentException("plugin instance id must not be blank");
         }
         this.id = id;
         this.definition = Objects.requireNonNull(definition, "definition");
-        rawConfig = config;
+        validatedConfig = definition.validate(config);
         plugin = Objects.requireNonNull(definition.factory().create(),
             "plugin factory returned null");
         definition.requires().keySet().forEach(key -> requirements.put(key.name(), key));
@@ -61,7 +67,7 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
     }
 
     void initialize() {
-        runtime.addInstance(this);
+        domain.addInstance(this);
         refreshDependencies();
     }
 
@@ -128,7 +134,8 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
                     FibraException.PLUGIN_DISPOSED,
                     "plugin instance \"" + id + "\" is disposed"));
             }
-            rawConfig = nextConfig;
+            var validated = definition.validate(nextConfig);
+            validatedConfig = validated;
             configRevision++;
             error = null;
             if (state == PluginInstanceState.FAILED) {
@@ -228,6 +235,20 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
         return serviceSnapshot.get(serviceName);
     }
 
+    RuntimeDomainSnapshot.Plugin diagnosticSnapshot() {
+        var dependencies = new java.util.ArrayList<RuntimeDomainSnapshot.Dependency>();
+        requirements.forEach((name, key) -> {
+            var binding = domain.services().lookupActive(context, key);
+            dependencies.add(new RuntimeDomainSnapshot.Dependency(
+                new RuntimeDomainSnapshot.ServiceIdentity(
+                    name, key.type().getName(), String.valueOf(context.realm(name))),
+                binding == null ? null
+                    : DefaultRuntimeDomain.ownerIdentity(binding.owner())));
+        });
+        return new RuntimeDomainSnapshot.Plugin(id, definition.name(), state,
+            dependencies, error == null ? null : error.toString());
+    }
+
     void dependencyChanged(String serviceName) {
         if (dependsOn(serviceName)) {
             refreshDependencies();
@@ -241,7 +262,7 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
             candidates.clear();
             var epoch = new StringBuilder();
             for (var requirement : requirements.values()) {
-                var binding = runtime.services().lookupActive(context, requirement);
+                var binding = domain.services().lookupActive(context, requirement);
                 if (binding == null) {
                     targetEpoch = INACTIVE;
                     scheduleConvergence();
@@ -281,7 +302,8 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
         setState(PluginInstanceState.STARTING);
         serviceSnapshot = Map.copyOf(candidates);
         try {
-            config = definition.validate(rawConfig);
+            config = validatedConfig;
+            InjectProcessor.prepare(plugin, context, definition.injectionType());
         } catch (RuntimeException | Error failure) {
             startFailed(failure);
             return;
@@ -295,6 +317,15 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
 
     private void startCompleted(String loadingEpoch) {
         if (state != PluginInstanceState.STARTING) {
+            return;
+        }
+        if (!INACTIVE.equals(targetEpoch) && !DISPOSED.equals(targetEpoch)) {
+            serviceSnapshot = Map.copyOf(candidates);
+            currentEpoch = targetEpoch;
+            error = null;
+            transitioning = false;
+            setState(PluginInstanceState.ACTIVE);
+            stable.tryEmitValue(this);
             return;
         }
         if (Objects.equals(targetEpoch, loadingEpoch)) {
@@ -346,7 +377,8 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
         serviceSnapshot = Map.of();
         currentEpoch = INACTIVE;
         if (disposeRequested) {
-            finishDisposed(failure);
+            LOGGER.warn("plugin instance \"{}\" cleanup failed during disposal", id, failure);
+            finishDisposed(null);
         } else {
             finishFailed(failure);
         }
@@ -364,7 +396,7 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
         state = PluginInstanceState.FAILED;
         states.tryEmitNext(state);
         transitioning = false;
-        runtime.services().ownerStateChanged(this);
+        domain.services().ownerStateChanged(this);
         stable.tryEmitError(failure);
     }
 
@@ -373,8 +405,8 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
         states.tryEmitNext(state);
         transitioning = false;
         scope.removePlugin(this);
-        runtime.removeInstance(this);
-        runtime.services().ownerStateChanged(this);
+        domain.removeInstance(this);
+        domain.services().ownerStateChanged(this);
         if (failure == null) {
             stable.tryEmitValue(this);
             disposed.tryEmitEmpty();
@@ -391,7 +423,7 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
         }
         state = nextState;
         states.tryEmitNext(nextState);
-        runtime.services().ownerStateChanged(this);
+        domain.services().ownerStateChanged(this);
     }
 
     private Sinks.One<PluginInstance<C>> completedSignal() {

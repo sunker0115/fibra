@@ -70,7 +70,7 @@ public class EngineTransactionBenchmark {
     public String disableAndEnable() {
         registry.disable(INSTANCE_ID).block();
         registry.enable(ENABLE).block();
-        return registry.snapshot().engineRevision();
+        return registry.snapshot().viewRevision();
     }
 
     private static final class DiscardingJournal implements TransactionJournal {
@@ -87,10 +87,10 @@ public class EngineTransactionBenchmark {
     private static final class DiscardingAudit implements PluginAuditRepository {
         @Override
         public PluginAuditEntry append(String operation, String target,
-                                       boolean succeeded, String engineRevision,
+                                       boolean succeeded, String viewRevision,
                                        String detail) {
             return new PluginAuditEntry(1, Instant.EPOCH, operation, target,
-                succeeded, engineRevision, detail);
+                succeeded, viewRevision, detail);
         }
 
         @Override

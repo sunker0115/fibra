@@ -80,7 +80,7 @@ public final class FibraServiceExporter
 
     @Override
     public int getPhase() {
-        return Integer.MAX_VALUE;
+        return Integer.MIN_VALUE;
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})

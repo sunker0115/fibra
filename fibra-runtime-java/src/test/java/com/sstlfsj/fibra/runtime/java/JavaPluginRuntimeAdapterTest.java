@@ -61,6 +61,31 @@ class JavaPluginRuntimeAdapterTest {
     }
 
     @Test
+    void loadsAContractOnlyArtifactWithoutInventingAnEntrypoint(@TempDir Path work)
+        throws Exception {
+        var jar = work.resolve("contract.jar");
+        try (var output = new JarOutputStream(Files.newOutputStream(jar))) {
+            output.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml"));
+            output.write(("id: contract-artifact\n"
+                + "version: 1.0.0\n"
+                + "requires: []\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            output.closeEntry();
+        }
+        var record = ArtifactRecord.builder()
+            .id(new ArtifactId("contract-artifact"))
+            .runtimeId(JavaPluginRuntimeAdapter.RUNTIME_ID)
+            .version("1.0.0").checksum("checksum").revision("revision")
+            .location(jar).state(ArtifactState.STAGED).updatedAt(Instant.now()).build();
+        var adapter = new JavaPluginRuntimeAdapter();
+
+        var prepared = adapter.prepare(new RuntimeChangeRequest(
+            JavaPluginRuntimeAdapter.RUNTIME_ID, List.of(record), null)).block();
+
+        assertTrue(prepared.catalog().entries().isEmpty());
+        prepared.rollback().block();
+    }
+
+    @Test
     void retiredClassSpaceReleasesItsClassLoader(@TempDir Path work) throws Exception {
         var loader = loadAndRetire(work);
 

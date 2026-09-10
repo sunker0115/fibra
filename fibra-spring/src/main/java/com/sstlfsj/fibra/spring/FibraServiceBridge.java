@@ -1,21 +1,21 @@
 package com.sstlfsj.fibra.spring;
 
-import com.sstlfsj.fibra.Context;
 import com.sstlfsj.fibra.ServiceKey;
 import com.sstlfsj.fibra.ServiceRegistration;
+import com.sstlfsj.fibra.engine.HostServiceRegistry;
 
 import java.util.Objects;
 
-/** 把宿主对象通过显式 ServiceKey 注册到 Fibra root。 */
+/** 在 Engine 启动前把宿主对象登记为显式 host binding。 */
 public final class FibraServiceBridge {
-    private final Context root;
+    private final HostServiceRegistry hostServices;
 
-    public FibraServiceBridge(Context root) {
-        this.root = Objects.requireNonNull(root, "root");
+    public FibraServiceBridge(HostServiceRegistry hostServices) {
+        this.hostServices = Objects.requireNonNull(hostServices, "hostServices");
     }
 
     public <T> ServiceRegistration<T> register(ServiceKey<T> key, T service) {
-        return root.services().provide(Objects.requireNonNull(key, "key"),
+        return hostServices.register(Objects.requireNonNull(key, "key"),
             Objects.requireNonNull(service, "service"));
     }
 }

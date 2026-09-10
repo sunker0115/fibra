@@ -25,6 +25,14 @@ final class DefaultPlugins implements Plugins {
             var instance = new PluginInstanceImpl<>(context, instanceId, definition, config);
             context.scopeImpl().addPlugin(instance);
             instance.initialize();
+            if (context.owner() instanceof PluginInstanceImpl<?>) {
+                try {
+                    context.effects().add(instance);
+                } catch (RuntimeException | Error failure) {
+                    instance.dispose().subscribe();
+                    throw failure;
+                }
+            }
             return instance;
         });
     }

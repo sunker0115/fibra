@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.jar.JarFile;
 
@@ -44,7 +45,8 @@ final class JavaManifestReader {
             rejectUnknown(values, FIELDS, artifact.id());
             var id = new ArtifactId(text(values.get("id"), "id", artifact.id()));
             var version = text(values.get("version"), "version", artifact.id());
-            var entrypoint = text(values.get("entrypoint"), "entrypoint", artifact.id());
+            var entrypoint = optionalText(values.get("entrypoint"), "entrypoint",
+                artifact.id());
             if (!id.equals(artifact.id())) {
                 throw error(artifact.id(), "manifest id does not match artifact id", null);
             }
@@ -106,6 +108,12 @@ final class JavaManifestReader {
             throw error(owner, field + " must be a non-blank string", null);
         }
         return text;
+    }
+
+    private static Optional<String> optionalText(Object value, String field,
+                                                 ArtifactId owner) {
+        return value == null ? Optional.empty()
+            : Optional.of(text(value, field, owner));
     }
 
     private static JavaRuntimeException error(ArtifactId id, String message,

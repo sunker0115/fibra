@@ -4,10 +4,10 @@ import com.sstlfsj.fibra.FibraException;
 import com.sstlfsj.fibra.PluginInstanceState;
 import com.sstlfsj.fibra.ServiceKey;
 import com.sstlfsj.fibra.ServiceRegistration;
+import com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,12 +19,11 @@ final class ServiceRegistry {
 
     static final Object DEFAULT_REALM = DefaultRealm.INSTANCE;
 
-    private final DefaultFibraRuntime runtime;
+    private final DefaultRuntimeDomain domain;
     private final Map<Slot, Binding<?>> bindings = new LinkedHashMap<>();
-    private final Map<String, Class<?>> declaredTypes = new HashMap<>();
 
-    ServiceRegistry(DefaultFibraRuntime runtime) {
-        this.runtime = runtime;
+    ServiceRegistry(DefaultRuntimeDomain domain) {
+        this.domain = domain;
     }
 
     <T> ServiceRegistration<T> provide(DefaultContext context, ServiceKey<T> key, T value) {
@@ -34,7 +33,7 @@ final class ServiceRegistry {
         if (!key.type().isInstance(value)) {
             throw new IllegalArgumentException("service value is not a " + key.type().getName());
         }
-        return runtime.lifecycle().call(() -> {
+        return domain.runtime().lifecycle().call(() -> {
             var owner = context.owner();
             if (!owner.acceptsResources()) {
                 throw new FibraException(FibraException.SCOPE_CLOSED,
@@ -46,7 +45,6 @@ final class ServiceRegistry {
                     "plugin instance \"" + instance.id()
                         + "\" did not declare service \"" + key.name() + "\"");
             }
-            declare(key);
             var slot = new Slot(key.name(), context.realm(key.name()));
             var existing = bindings.get(slot);
             if (existing != null) {
@@ -54,7 +52,7 @@ final class ServiceRegistry {
                     "service \"" + key.name() + "\" is already registered by "
                         + existing.owner().ownerName());
             }
-            var binding = new Binding<>(runtime.nextSequence(), slot, key, value, owner);
+            var binding = new Binding<>(domain.runtime().nextSequence(), slot, key, value, owner);
             bindings.put(slot, binding);
             OwnedResource resource;
             try {
@@ -72,8 +70,7 @@ final class ServiceRegistry {
     <T> Optional<T> find(DefaultContext context, ServiceKey<T> key) {
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(key, "key");
-        return runtime.lifecycle().call(() -> {
-            declare(key);
+        return domain.runtime().lifecycle().call(() -> {
             var binding = activeBinding(context, key);
             return binding == null ? Optional.empty() : Optional.of(key.type().cast(binding.value()));
         });
@@ -86,7 +83,6 @@ final class ServiceRegistry {
     }
 
     Binding<?> activeBinding(DefaultContext context, ServiceKey<?> key) {
-        declare(key);
         if (context.owner() instanceof PluginInstanceImpl<?> instance && instance.dependsOn(key.name())) {
             return instance.serviceSnapshot(key.name());
         }
@@ -94,8 +90,13 @@ final class ServiceRegistry {
     }
 
     Binding<?> lookupActive(DefaultContext context, ServiceKey<?> key) {
-        declare(key);
-        var binding = bindings.get(new Slot(key.name(), context.realm(key.name())));
+        var slot = new Slot(key.name(), context.realm(key.name()));
+        var binding = bindings.get(slot);
+        if (binding != null && binding.key().type() != key.type()) {
+            throw new IllegalArgumentException("service \"" + key.name()
+                + "\" in realm \"" + slot.realm() + "\" was declared as both "
+                + binding.key().type().getName() + " and " + key.type().getName());
+        }
         return binding != null && isActive(binding.owner()) ? binding : null;
     }
 
@@ -107,16 +108,22 @@ final class ServiceRegistry {
             .forEach(this::notifyChanged);
     }
 
+    List<RuntimeDomainSnapshot.Service> diagnosticSnapshot() {
+        return bindings.values().stream()
+            .map(binding -> new RuntimeDomainSnapshot.Service(
+                new RuntimeDomainSnapshot.ServiceIdentity(binding.slot().name(),
+                    binding.key().type().getName(),
+                    String.valueOf(binding.slot().realm())),
+                DefaultRuntimeDomain.ownerIdentity(binding.owner()), List.of()))
+            .toList();
+    }
+
     private Mono<Void> revoke(Binding<?> binding) {
-        return runtime.lifecycle().mono(() -> {
+        return domain.runtime().lifecycle().mono(() -> {
                 if (!bindings.remove(binding.slot(), binding)) {
                     return List.<PluginInstanceImpl<?>>of();
                 }
                 var affected = notifyChanged(binding.slot());
-                if (bindings.values().stream()
-                    .noneMatch(candidate -> candidate.key().name().equals(binding.key().name()))) {
-                    declaredTypes.remove(binding.key().name(), binding.key().type());
-                }
                 return affected;
             })
             .flatMapMany(Flux::fromIterable)
@@ -126,7 +133,7 @@ final class ServiceRegistry {
     }
 
     private List<PluginInstanceImpl<?>> notifyChanged(Slot slot) {
-        var affected = runtime.instancesSnapshot().stream()
+        var affected = domain.instancesSnapshot().stream()
             .filter(instance -> instance.dependsOn(slot.name()))
             .filter(instance -> Objects.equals(instance.contextImpl().realm(slot.name()), slot.realm()))
             .toList();
@@ -139,14 +146,6 @@ final class ServiceRegistry {
             return instance.stateUnsafe() == PluginInstanceState.ACTIVE;
         }
         return owner.acceptsResources();
-    }
-
-    private void declare(ServiceKey<?> key) {
-        var previous = declaredTypes.putIfAbsent(key.name(), key.type());
-        if (previous != null && previous != key.type()) {
-            throw new IllegalArgumentException("service \"" + key.name()
-                + "\" was declared as both " + previous.getName() + " and " + key.type().getName());
-        }
     }
 
     record Slot(String name, Object realm) {

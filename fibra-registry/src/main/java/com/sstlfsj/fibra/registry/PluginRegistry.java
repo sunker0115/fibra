@@ -7,11 +7,11 @@ import com.sstlfsj.fibra.engine.EngineCommand;
 import com.sstlfsj.fibra.engine.ApplyDeployment;
 import com.sstlfsj.fibra.engine.DeploymentArtifact;
 import com.sstlfsj.fibra.engine.EngineCommandResult;
-import com.sstlfsj.fibra.engine.EngineSnapshot;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.InstallArtifact;
 import com.sstlfsj.fibra.engine.ReplaceDesiredGraph;
 import com.sstlfsj.fibra.engine.UninstallArtifact;
+import com.sstlfsj.fibra.engine.PublishedView;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -35,7 +35,7 @@ public final class PluginRegistry {
     public Mono<RegistrySnapshot> install(PluginInstallRequest request) {
         Objects.requireNonNull(request, "request");
         return mutate("install", request.artifactId().value(), snapshot -> {
-            if (snapshot.artifacts().containsKey(request.artifactId())) {
+            if (snapshot.engine().artifacts().containsKey(request.artifactId())) {
                 throw new IllegalArgumentException("artifact is already installed: "
                     + request.artifactId().value());
             }
@@ -46,7 +46,7 @@ public final class PluginRegistry {
     public Mono<RegistrySnapshot> upgrade(PluginInstallRequest request) {
         Objects.requireNonNull(request, "request");
         return mutate("upgrade", request.artifactId().value(), snapshot -> {
-            var current = snapshot.artifacts().get(request.artifactId());
+            var current = snapshot.engine().artifacts().get(request.artifactId());
             if (current == null) {
                 throw new IllegalArgumentException("artifact is not installed: "
                     + request.artifactId().value());
@@ -62,8 +62,8 @@ public final class PluginRegistry {
         Objects.requireNonNull(request, "request");
         return mutate("deploy", "deployment", snapshot -> ApplyDeployment.builder(
                 request.graph())
-            .expectedRevision(snapshot.revision())
-            .expectedDesiredRevision(snapshot.desiredSource().revision())
+            .expectedRevision(snapshot.viewRevision())
+            .expectedDesiredRevision(snapshot.engine().desiredSource().revision())
             .artifacts(request.artifacts().stream().map(artifact ->
                 DeploymentArtifact.builder().artifactId(artifact.artifactId())
                     .runtimeId(artifact.runtimeId()).version(artifact.version())
@@ -78,27 +78,27 @@ public final class PluginRegistry {
                 .config(request.config()).realms(request.realms())
                 .intercepts(request.intercepts())
                 .source(Path.of("registry", request.instanceId())).build();
-            return replace(snapshot, snapshot.desiredGraph().upsert(entry));
+            return replace(snapshot, snapshot.engine().desiredGraph().upsert(entry));
         });
     }
 
     public Mono<RegistrySnapshot> disable(String instanceId) {
         requireName(instanceId, "instanceId");
         return mutate("disable", instanceId, snapshot -> {
-            var current = snapshot.desiredGraph().require(instanceId);
+            var current = snapshot.engine().desiredGraph().require(instanceId);
             var disabled = current.toBuilder().enabled(false).build();
-            return replace(snapshot, snapshot.desiredGraph().upsert(disabled));
+            return replace(snapshot, snapshot.engine().desiredGraph().upsert(disabled));
         });
     }
 
     public Mono<RegistrySnapshot> uninstall(ArtifactId artifactId) {
         Objects.requireNonNull(artifactId, "artifactId");
         return mutate("uninstall", artifactId.value(), snapshot ->
-            new UninstallArtifact(snapshot.revision(), artifactId));
+            new UninstallArtifact(snapshot.viewRevision(), artifactId));
     }
 
     public RegistrySnapshot snapshot() {
-        return project(engine.snapshot());
+        return project(engine.published().current());
     }
 
     public Optional<RegistryPluginState> get(String instanceId) {
@@ -120,7 +120,7 @@ public final class PluginRegistry {
     }
 
     public Flux<RegistrySnapshot> watch() {
-        return engine.snapshots().map(PluginRegistry::project);
+        return engine.published().views().map(PluginRegistry::project);
     }
 
     public List<PluginAuditEntry> history() {
@@ -128,34 +128,35 @@ public final class PluginRegistry {
     }
 
     private Mono<RegistrySnapshot> mutate(String operation, String target,
-                                          Function<EngineSnapshot, EngineCommand> command) {
+                                          Function<PublishedView, EngineCommand> command) {
         return Mono.defer(() -> {
             final EngineCommand prepared;
             try {
-                prepared = command.apply(engine.snapshot());
+                prepared = command.apply(engine.published().current());
             } catch (RuntimeException failure) {
-                append(operation, target, false, engine.snapshot().revision(), failure);
+                append(operation, target, false,
+                    engine.published().current().viewRevision(), failure);
                 return Mono.error(failure);
             }
             return engine.submit(prepared)
                 .doOnSuccess(result -> append(operation, target, true,
-                    result.snapshot().revision(), null))
+                    result.view().viewRevision(), null))
                 .doOnError(failure -> append(operation, target, false,
-                    engine.snapshot().revision(), failure))
-                .map(EngineCommandResult::snapshot)
+                    engine.published().current().viewRevision(), failure))
+                .map(EngineCommandResult::view)
                 .map(PluginRegistry::project);
         });
     }
 
-    private static ReplaceDesiredGraph replace(EngineSnapshot snapshot,
+    private static ReplaceDesiredGraph replace(PublishedView snapshot,
                                                DesiredGraph graph) {
-        return new ReplaceDesiredGraph(snapshot.revision(),
-            snapshot.desiredSource().revision(), graph);
+        return new ReplaceDesiredGraph(snapshot.viewRevision(),
+            snapshot.engine().desiredSource().revision(), graph);
     }
 
-    private static InstallArtifact installCommand(EngineSnapshot snapshot,
+    private static InstallArtifact installCommand(PublishedView snapshot,
                                                   PluginInstallRequest request) {
-        return InstallArtifact.builder().expectedRevision(snapshot.revision())
+        return InstallArtifact.builder().expectedRevision(snapshot.viewRevision())
             .artifactId(request.artifactId()).runtimeId(request.runtimeId())
             .version(request.version()).source(request.source()).build();
     }
@@ -166,11 +167,12 @@ public final class PluginRegistry {
             failure == null ? "accepted" : failure.toString());
     }
 
-    private static RegistrySnapshot project(EngineSnapshot snapshot) {
+    private static RegistrySnapshot project(PublishedView view) {
+        var snapshot = view.engine();
         var desired = new LinkedHashMap<String, DesiredEntry>();
         snapshot.desiredGraph().entries().forEach(entry ->
             desired.put(entry.instanceId(), entry));
-        return new RegistrySnapshot(snapshot.revision(), snapshot.artifacts(), desired,
+        return new RegistrySnapshot(view.viewRevision(), snapshot.artifacts(), desired,
             snapshot.instances());
     }
 

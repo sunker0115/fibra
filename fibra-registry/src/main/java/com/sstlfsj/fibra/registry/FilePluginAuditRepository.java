@@ -47,9 +47,9 @@ public final class FilePluginAuditRepository implements PluginAuditRepository {
     @Override
     public synchronized PluginAuditEntry append(String operation, String target,
                                                 boolean succeeded,
-                                                String engineRevision, String detail) {
+                                                String viewRevision, String detail) {
         var entry = new PluginAuditEntry(entries.size() + 1L, Instant.now(), operation,
-            target, succeeded, engineRevision, detail);
+            target, succeeded, viewRevision, detail);
         var bytes = encode(entry).getBytes(StandardCharsets.UTF_8);
         try {
             channel.write(ByteBuffer.wrap(bytes));
@@ -107,7 +107,7 @@ public final class FilePluginAuditRepository implements PluginAuditRepository {
     private static String encode(PluginAuditEntry entry) {
         return entry.sequence() + "\t" + entry.timestamp() + "\t"
             + encode(entry.operation()) + "\t" + encode(entry.target()) + "\t"
-            + entry.succeeded() + "\t" + encode(entry.engineRevision()) + "\t"
+            + entry.succeeded() + "\t" + encode(entry.viewRevision()) + "\t"
             + encode(entry.detail()) + "\n";
     }
 

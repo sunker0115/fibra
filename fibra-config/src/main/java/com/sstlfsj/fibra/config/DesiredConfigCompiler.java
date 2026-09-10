@@ -15,7 +15,7 @@ import java.util.Set;
 
 public final class DesiredConfigCompiler {
     private static final Set<String> PLUGIN_FIELDS = Set.of(
-        "id", "plugin", "enabled", "config", "realm", "intercept");
+        "id", "plugin", "enabled", "publication", "config", "realm", "intercept");
     private static final Set<String> GROUP_FIELDS = Set.of(
         "id", "group", "enabled", "entries", "realm", "intercept");
     private static final Set<String> INCLUDE_FIELDS = Set.of(
@@ -136,6 +136,8 @@ public final class DesiredConfigCompiler {
                     "cannot bind config for " + definitionName, source, entryId, exception);
             }
             entries.add(DesiredEntry.builder(entryId, definitionName).enabled(enabled)
+                .publicationRequirement(publicationRequirement(value.get("publication"),
+                    source, entryId))
                 .config(config).realms(realms).intercepts(intercepts)
                 .requires(contract.requires()).provides(contract.provides())
                 .source(source).build());
@@ -234,6 +236,19 @@ public final class DesiredConfigCompiler {
                 field + " must be boolean", source, entryId, null);
         }
         return result;
+    }
+
+    private static PublicationRequirement publicationRequirement(
+        Object value, Path source, String entryId) {
+        if (value == null || "active-required".equals(value)) {
+            return PublicationRequirement.ACTIVE_REQUIRED;
+        }
+        if ("pending-allowed".equals(value)) {
+            return PublicationRequirement.PENDING_ALLOWED;
+        }
+        throw error(ConfigStage.VALIDATE, "PUBLICATION_REQUIREMENT_INVALID",
+            "publication must be active-required or pending-allowed",
+            source, entryId, null);
     }
 
     private static String complete(String parent, String id) {

@@ -1,0 +1,6 @@
+id: shipping-rate-provider
+version: 1.1.0
+entrypoint: example.fibra.shipping.ShippingRateEntrypoint
+requires:
+  - id: shipping-rate-contract
+    version: ^1.0.0

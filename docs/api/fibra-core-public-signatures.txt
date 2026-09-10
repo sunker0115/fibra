@@ -4,7 +4,110 @@ Compiled from "FibraRuntime.java"
 public final class com.sstlfsj.fibra.runtime.FibraRuntime implements java.lang.AutoCloseable {
   public static com.sstlfsj.fibra.runtime.FibraRuntime create();
   public com.sstlfsj.fibra.Scope rootScope();
+  public com.sstlfsj.fibra.runtime.RuntimeDomain openDomain(java.lang.String);
   public boolean isClosed();
   public reactor.core.publisher.Mono<java.lang.Void> closeAsync();
   public void close();
+}
+## com.sstlfsj.fibra.runtime.RuntimeDomain
+Compiled from "RuntimeDomain.java"
+public final class com.sstlfsj.fibra.runtime.RuntimeDomain implements java.lang.AutoCloseable {
+  public java.lang.String name();
+  public com.sstlfsj.fibra.Scope rootScope();
+  public boolean isClosed();
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot snapshot();
+  public reactor.core.publisher.Mono<java.lang.Void> closeAsync();
+  public void close();
+}
+## com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot
+Compiled from "RuntimeDomainSnapshot.java"
+public final class com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot extends java.lang.Record {
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot(java.lang.String, java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Plugin>, java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Service>, java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Event>);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String name();
+  public java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Plugin> plugins();
+  public java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Service> services();
+  public java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Event> events();
+}
+## com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Dependency
+Compiled from "RuntimeDomainSnapshot.java"
+public final class com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Dependency extends java.lang.Record {
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Dependency(com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$ServiceIdentity, com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$OwnerIdentity);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$ServiceIdentity service();
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$OwnerIdentity provider();
+}
+## com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Event
+Compiled from "RuntimeDomainSnapshot.java"
+public final class com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Event extends java.lang.Record {
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Event(java.lang.String, com.sstlfsj.fibra.event.EventMode, java.lang.String, java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Listener>);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String name();
+  public com.sstlfsj.fibra.event.EventMode mode();
+  public java.lang.String listenerType();
+  public java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Listener> listeners();
+}
+## com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Listener
+Compiled from "RuntimeDomainSnapshot.java"
+public final class com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Listener extends java.lang.Record {
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Listener(com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$OwnerIdentity, int, boolean, boolean);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$OwnerIdentity owner();
+  public int order();
+  public boolean once();
+  public boolean global();
+}
+## com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$OwnerIdentity
+Compiled from "RuntimeDomainSnapshot.java"
+public final class com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$OwnerIdentity extends java.lang.Record {
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$OwnerIdentity(java.lang.String, java.lang.String);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String kind();
+  public java.lang.String id();
+}
+## com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Plugin
+Compiled from "RuntimeDomainSnapshot.java"
+public final class com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Plugin extends java.lang.Record {
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Plugin(java.lang.String, java.lang.String, com.sstlfsj.fibra.PluginInstanceState, java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Dependency>, java.lang.String);
+  public java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$ServiceIdentity> waitingFor();
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String instanceId();
+  public java.lang.String pluginId();
+  public com.sstlfsj.fibra.PluginInstanceState state();
+  public java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Dependency> dependencies();
+  public java.lang.String failure();
+}
+## com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Service
+Compiled from "RuntimeDomainSnapshot.java"
+public final class com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Service extends java.lang.Record {
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Service(com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$ServiceIdentity, com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$OwnerIdentity, java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$OwnerIdentity>);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$ServiceIdentity service();
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$OwnerIdentity effectiveProvider();
+  public java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$OwnerIdentity> shadowedProviders();
+}
+## com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$ServiceIdentity
+Compiled from "RuntimeDomainSnapshot.java"
+public final class com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$ServiceIdentity extends java.lang.Record {
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$ServiceIdentity(java.lang.String, java.lang.String, java.lang.String);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String name();
+  public java.lang.String type();
+  public java.lang.String realm();
 }

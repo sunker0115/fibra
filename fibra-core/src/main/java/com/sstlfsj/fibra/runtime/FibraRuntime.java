@@ -20,6 +20,10 @@ public final class FibraRuntime implements AutoCloseable {
         return delegate.rootScope();
     }
 
+    public RuntimeDomain openDomain(String name) {
+        return new RuntimeDomain(delegate.openDomain(name));
+    }
+
     public boolean isClosed() {
         return delegate.isClosed();
     }

@@ -16,17 +16,19 @@ final class DefaultServices implements Services {
 
     @Override
     public <T> ServiceRegistration<T> provide(ServiceKey<T> key, T value) {
-        return context.runtime().services().provide(context, key, value);
+        return context.domain().services().provide(context, key, value);
     }
 
     @Override
     public <T> Optional<T> find(ServiceKey<T> key) {
-        return context.runtime().services().find(context, key);
+        context.assertReadable();
+        return context.domain().services().find(context, key);
     }
 
     @Override
     public <T> T require(ServiceKey<T> key) {
-        return context.runtime().services().require(context, key);
+        context.assertReadable();
+        return context.domain().services().require(context, key);
     }
 
     @Override

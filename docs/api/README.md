@@ -19,13 +19,13 @@
 ```java
 start()
 submit(EngineCommand)
-snapshot()
-snapshots()
-runtime()
+published()
 close()
 ```
 
-`PluginRuntimeAdapter` 把 Java、Node 或未来运行时接入同一 ChangeSet。adapter 的 `prepare` 返回候选 `PluginCatalog`、运行时 snapshot 以及 `commit/rollback/retire`。Engine snapshot 不暴露 `ClassLoader`、`Process` 或 RPC channel。
+`start()` 返回初始 `PublishedView`。`PublishedRuntime.current()` / `views()` 是状态、诊断和贡献的唯一已发布事实源；`invoke(expectedViewRevision, kind, id, input)` 保证目录选择与调用不跨 revision。托管宿主不能取得 `FibraRuntime`、`Context` 或 `Scope`。
+
+`PluginRuntimeAdapter` 把 Java、Node 或未来运行时接入同一 ChangeSet。adapter 的 `prepare` 返回候选 `PluginCatalog`、运行时 snapshot 以及 `commit/rollback/retire`。`PublishedView.engine()` 不暴露 `ClassLoader`、`Process` 或 RPC channel。
 
 `FileTransactionJournal` 是托管场景的默认持久化 journal。启动时可证明尚未提交的事务回滚，可证明已提交的事务前向完成；停在不确定提交区间或恢复失败时关闭 mutation gate。
 
@@ -33,7 +33,7 @@ close()
 
 `PluginRegistry` 提供 `install`、`upgrade`、`deploy`、`enable`、`disable`、`uninstall`、`get`、`list`、`watch` 和 `history`。其中 `deploy` 在一个 ChangeSet 内联合提交多个 artifact 与完整 desired graph。Registry 只把请求翻译成 Engine command，并投影 artifact、desired、observed 三类事实。
 
-`ContributionBridge` 使用 `ContributionKind` 描述 descriptor、输入、输出和 codec。Java handler 与 Node remote endpoint 注册到同一目录，名字由场景 adapter 渲染；group dispose 会先撤销可见性，再等待在途调用排空。
+`ContributionKind` 描述 descriptor、输入、输出和 codec。Java handler 与 Node remote endpoint 登记到所属 `RuntimeDomain` 的 `ContributionDirectory`，名字由场景 adapter 渲染；只有 Engine 当前发布代的不可变 route table 对宿主可见。旧代会先关闭调用准入，再等待在途调用排空。
 
 ## Java 插件入口
 
@@ -43,7 +43,7 @@ close()
 META-INF/fibra/plugin.yaml
 ```
 
-manifest 字段为 `id`、`version`、`entrypoint` 和 `requires`。每个 artifact 只有一个入口，依赖按 SemVer 范围解析，ClassSpace 按 dependency-first 打开并按 dependent-first 关闭。
+manifest 字段为 `id`、`version`、可选的 `entrypoint` 和 `requires`。可运行 artifact 只有一个入口；只承载共享类型的 contract-only artifact 省略入口，但仍参与 SemVer 依赖解析和 ClassSpace。ClassSpace 按 dependency-first 打开并按 dependent-first 关闭。
 
 ## Node 插件入口
 

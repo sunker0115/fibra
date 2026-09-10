@@ -9,7 +9,7 @@ JMH 只测可在单 JVM 内稳定重复的路径：
 - `LifecycleDispatchBenchmark`：一次空事件调用，作为生命周期线程调度边界的基线。
 - `ServiceResolutionBenchmark`：服务直接解析、绑定引用调用，以及生命周期线程内批量解析。
 - `EventDispatchBenchmark`：1、8、64 个监听器下的广播和 waterfall 调用。
-- `ContributionInvocationBenchmark`：已注册本地贡献从查找、类型校验、调用到 inflight 释放的完整 `ContributionBridge.invoke` 路径。
+- `ContributionInvocationBenchmark`：已注册本地贡献从冻结路由查找、类型校验、调用到 inflight 释放的完整 `ContributionRoutes.invoke` 路径。
 - `EngineTransactionBenchmark`：从 `PluginRegistry` 发起 disable/enable，经 Engine 单写通道、期望状态事务、代际发布和旧 Scope 退役的完整控制面路径。该用例使用丢弃型 journal/audit，排除存储介质差异。
 
 以下能力不放入 JMH：

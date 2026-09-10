@@ -8,7 +8,7 @@ public interface com.sstlfsj.fibra.spring.FibraService extends java.lang.annotat
 ## com.sstlfsj.fibra.spring.FibraServiceBridge
 Compiled from "FibraServiceBridge.java"
 public final class com.sstlfsj.fibra.spring.FibraServiceBridge {
-  public com.sstlfsj.fibra.spring.FibraServiceBridge(com.sstlfsj.fibra.Context);
+  public com.sstlfsj.fibra.spring.FibraServiceBridge(com.sstlfsj.fibra.engine.HostServiceRegistry);
   public <T> com.sstlfsj.fibra.ServiceRegistration<T> register(com.sstlfsj.fibra.ServiceKey<T>, T);
 }
 ## com.sstlfsj.fibra.spring.FibraServiceExporter

@@ -34,7 +34,7 @@ public final class com.sstlfsj.fibra.runtime.node.NodePluginManifest extends jav
 Compiled from "NodePluginRuntimeAdapter.java"
 public final class com.sstlfsj.fibra.runtime.node.NodePluginRuntimeAdapter implements com.sstlfsj.fibra.engine.PluginRuntimeAdapter {
   public static final com.sstlfsj.fibra.artifact.RuntimeId RUNTIME_ID;
-  public com.sstlfsj.fibra.runtime.node.NodePluginRuntimeAdapter(com.sstlfsj.fibra.bridge.ContributionBridge, com.sstlfsj.fibra.runtime.node.NodeContributionKindResolver, com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions);
+  public com.sstlfsj.fibra.runtime.node.NodePluginRuntimeAdapter(com.sstlfsj.fibra.runtime.node.NodeContributionKindResolver, com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions);
   public com.sstlfsj.fibra.artifact.RuntimeId id();
   public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.RuntimeArtifactInspection> inspect(com.sstlfsj.fibra.artifact.ArtifactRecord);
   public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.PreparedRuntimeGeneration> prepare(com.sstlfsj.fibra.engine.RuntimeChangeRequest);

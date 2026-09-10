@@ -24,6 +24,7 @@ class DesiredConfigCompilerTest {
         Files.writeString(included, """
             - id: provider
               plugin: provider
+              publication: pending-allowed
               config:
                 value: original
             """);
@@ -68,6 +69,10 @@ class DesiredConfigCompilerTest {
         assertEquals(Map.of("message", "tenant-a"), consumer.realms());
         assertEquals(Map.of("message", Map.of("trace", true)), consumer.intercepts());
         assertEquals(new ProviderConfig("patched"), provider.config());
+        assertEquals(PublicationRequirement.PENDING_ALLOWED,
+            provider.publicationRequirement());
+        assertEquals(PublicationRequirement.ACTIVE_REQUIRED,
+            consumer.publicationRequirement());
         assertFalse(second.enabled());
         assertEquals(Set.of(root.toRealPath(), included.toRealPath()), result.snapshot().sources());
         assertEquals(64, result.snapshot().revision().length());

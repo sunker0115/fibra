@@ -13,6 +13,7 @@ import reactor.core.publisher.Sinks;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 final class OwnedResource implements OwnedEffect, Subscriber<Disposable> {
     private final ResourceOwner owner;
@@ -30,7 +31,7 @@ final class OwnedResource implements OwnedEffect, Subscriber<Disposable> {
     private boolean teardownStarted;
     private Throwable sourceError;
 
-    OwnedResource(ResourceOwner owner, Publisher<? extends Disposable> source, String label) {
+    private OwnedResource(ResourceOwner owner, String label) {
         this.owner = Objects.requireNonNull(owner, "owner");
         lifecycle = owner.lifecycle();
         this.label = label;
@@ -45,6 +46,24 @@ final class OwnedResource implements OwnedEffect, Subscriber<Disposable> {
             owner.addResource(this);
             return null;
         });
+    }
+
+    OwnedResource(ResourceOwner owner, Supplier<? extends Disposable> source, String label) {
+        this(owner, label);
+        lifecycle.call(() -> {
+            try {
+                collect(Objects.requireNonNull(source.get(), "effect source returned null"));
+                settleSource(null);
+            } catch (RuntimeException | Error failure) {
+                settleSource(failure);
+                throw failure;
+            }
+            return null;
+        });
+    }
+
+    OwnedResource(ResourceOwner owner, Publisher<? extends Disposable> source, String label) {
+        this(owner, label);
         try {
             Objects.requireNonNull(source, "source").subscribe(this);
         } catch (RuntimeException | Error failure) {
@@ -174,8 +193,12 @@ final class OwnedResource implements OwnedEffect, Subscriber<Disposable> {
     private void finishWithCleanupError(Throwable cleanupError) {
         owner.removeResource(this);
         if (sourceError != null) {
-            cleanupError.addSuppressed(sourceError);
+            if (cleanupError != sourceError) {
+                cleanupError.addSuppressed(sourceError);
+            }
             ready.tryEmitError(sourceError);
+        } else {
+            ready.tryEmitError(cleanupError);
         }
         disposed.tryEmitError(cleanupError);
     }

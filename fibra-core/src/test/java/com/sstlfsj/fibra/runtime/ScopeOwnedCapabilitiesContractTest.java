@@ -5,6 +5,7 @@ import com.sstlfsj.fibra.Disposables;
 import com.sstlfsj.fibra.InvocationContext;
 import com.sstlfsj.fibra.ServiceKey;
 import com.sstlfsj.fibra.event.EventKey;
+import com.sstlfsj.fibra.event.EventMode;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 
@@ -15,12 +16,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ScopeOwnedCapabilitiesContractTest {
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
     private static final ServiceKey<String> MESSAGE = ServiceKey.of("message", String.class);
     private static final ServiceKey<Factory> FACTORY = ServiceKey.of("factory", Factory.class);
-    private static final EventKey<Signal> SIGNAL = EventKey.of("signal", Signal.class);
+    private static final EventKey<Signal> SIGNAL = EventKey.of(
+        "signal", Signal.class, EventMode.EMIT);
 
     @Test
     void equalRealmLabelsResolveTheSameBindingWithoutLeakingToTheDefaultRealm() {
@@ -35,6 +38,24 @@ class ScopeOwnedCapabilitiesContractTest {
 
             assertEquals("isolated", sameTenant.services().require(MESSAGE));
             assertEquals("default", root.services().require(MESSAGE));
+        }
+    }
+
+    @Test
+    void serviceTypesAreIsolatedByRealm() {
+        var text = ServiceKey.of("generation-service", String.class);
+        var number = ServiceKey.of("generation-service", Integer.class);
+        try (var runtime = FibraRuntime.create()) {
+            var first = runtime.rootScope().context().withRealm(text, "generation-1");
+            var second = runtime.rootScope().context().withRealm(number, "generation-2");
+
+            first.services().provide(text, "first");
+            second.services().provide(number, 2);
+
+            assertEquals("first", first.services().require(text));
+            assertEquals(2, second.services().require(number));
+            assertThrows(IllegalArgumentException.class,
+                () -> first.services().require(number));
         }
     }
 

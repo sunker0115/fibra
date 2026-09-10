@@ -52,10 +52,12 @@ public final class JavaPluginRuntimeAdapter implements PluginRuntimeAdapter {
         return Mono.fromCallable(() -> {
             requireRuntime(artifact);
             var manifest = manifests.read(artifact);
-            return new RuntimeArtifactInspection(RUNTIME_ID, artifact.id(), Map.of(
-                "entrypoint", manifest.entrypoint(),
-                "requires", manifest.requires().stream()
-                    .map(requirement -> requirement.artifactId().value()).toList()));
+            var attributes = new LinkedHashMap<String, Object>();
+            manifest.entrypoint().ifPresent(value ->
+                attributes.put("entrypoint", value));
+            attributes.put("requires", manifest.requires().stream()
+                .map(requirement -> requirement.artifactId().value()).toList());
+            return new RuntimeArtifactInspection(RUNTIME_ID, artifact.id(), attributes);
         });
     }
 

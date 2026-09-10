@@ -29,6 +29,7 @@ final class ChangeSetExecutor implements AutoCloseable {
     private final Disposable subscription;
     private volatile boolean acceptsMutations = true;
     private volatile boolean closed;
+    private volatile TransactionState transactionState;
 
     ChangeSetExecutor(TransactionJournal journal) {
         this.journal = Objects.requireNonNull(journal, "journal");
@@ -73,6 +74,14 @@ final class ChangeSetExecutor implements AutoCloseable {
         return acceptsMutations && !closed;
     }
 
+    TransactionState transactionState() {
+        return transactionState;
+    }
+
+    List<TransactionRecord> records() {
+        return List.copyOf(journal.records());
+    }
+
     void observe(Runnable action) {
         Objects.requireNonNull(action, "action");
         if (!closed) {
@@ -100,11 +109,11 @@ final class ChangeSetExecutor implements AutoCloseable {
                 .switchIfEmpty(Mono.error(new IllegalStateException(
                     "participant returned no prepared change: " + participant.name())))
                 .doOnNext(prepared::add))
+            .then(Mono.defer(changeSet::verify))
             .then(record(changeSet, participantNames, TransactionState.PREPARED, null))
             .then(record(changeSet, participantNames, TransactionState.COMMITTING, null))
             .thenMany(Flux.defer(() -> Flux.fromIterable(prepared))
                 .concatMap(change -> Mono.defer(change::commit)))
-            .then(Mono.defer(changeSet::verify))
             .then(record(changeSet, participantNames, TransactionState.COMMITTED, null))
             .doOnSuccess(ignored -> committed[0] = true)
             .then(Mono.defer(changeSet::publish))
@@ -173,8 +182,11 @@ final class ChangeSetExecutor implements AutoCloseable {
 
     private Mono<Void> record(ChangeSet changeSet, List<String> participants,
                               TransactionState state, String detail) {
-        return Mono.fromRunnable(() -> journal.append(new TransactionRecord(
-            changeSet.id(), state, participants, detail, Instant.now())));
+        return Mono.fromRunnable(() -> {
+            journal.append(new TransactionRecord(
+                changeSet.id(), state, participants, detail, Instant.now()));
+            transactionState = state;
+        });
     }
 
     @Override

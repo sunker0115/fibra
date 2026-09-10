@@ -23,7 +23,8 @@ class SpringConsumerTest {
             .run(context -> {
                 assertNotNull(context.getBean(PluginRegistry.class));
                 assertEquals(EngineState.RUNNING,
-                    context.getBean(FibraEngine.class).snapshot().state());
+                    context.getBean(FibraEngine.class).published().current()
+                        .engine().state());
             });
     }
 }

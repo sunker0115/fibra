@@ -1,25 +1,36 @@
 package com.sstlfsj.fibra.spring;
 
 import com.sstlfsj.fibra.ServiceKey;
-import com.sstlfsj.fibra.runtime.FibraRuntime;
+import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
+import com.sstlfsj.fibra.engine.FibraEngine;
+import com.sstlfsj.fibra.engine.HostServiceRegistry;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class FibraServiceBridgeTest {
     @Test
-    void registersAndRevokesAnExplicitHostService() {
+    void collectsAnExplicitHostServiceAndFreezesItAtEngineStart() {
         var key = ServiceKey.of("greeting", Greeting.class);
-        try (var runtime = FibraRuntime.create()) {
-            var root = runtime.rootScope().context();
-            var bridge = new FibraServiceBridge(root);
+        var hostServices = new HostServiceRegistry();
+        try (var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty())
+            .hostServices(hostServices).build()) {
+            var bridge = new FibraServiceBridge(hostServices);
             var registration = bridge.register(key, name -> "hello " + name);
 
             assertEquals("hello fibra",
-                root.services().require(key).greet("fibra"));
+                registration.value().greet("fibra"));
+            var started = engine.start().block();
+            assertTrue(started.diagnostics().services().stream()
+                .anyMatch(service -> service.service().name().equals(key.name())));
+            assertThrows(IllegalStateException.class, () ->
+                bridge.register(ServiceKey.of("late", String.class), "late"));
+
             registration.dispose().block();
-            assertTrue(root.services().find(key).isEmpty());
+            assertTrue(engine.published().current().diagnostics().services().stream()
+                .anyMatch(service -> service.service().name().equals(key.name())));
         }
     }
 

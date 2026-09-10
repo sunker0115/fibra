@@ -45,7 +45,7 @@ public final class InMemoryDesiredStateRepository implements DesiredStateReposit
             if (!current.snapshot().revision().equals(expectedRevision)) {
                 throw conflict(expectedRevision, current.snapshot().revision());
             }
-            return new Transaction(expectedRevision, compilation(candidate));
+            return new Transaction(current, compilation(candidate));
         } finally {
             lock.unlock();
         }
@@ -63,12 +63,12 @@ public final class InMemoryDesiredStateRepository implements DesiredStateReposit
     }
 
     private final class Transaction implements DesiredStateWriteTransaction {
-        private final String expectedRevision;
+        private final DesiredCompilation previous;
         private final DesiredCompilation candidate;
         private State state = State.PREPARED;
 
-        private Transaction(String expectedRevision, DesiredCompilation candidate) {
-            this.expectedRevision = expectedRevision;
+        private Transaction(DesiredCompilation previous, DesiredCompilation candidate) {
+            this.previous = previous;
             this.candidate = candidate;
         }
 
@@ -87,8 +87,9 @@ public final class InMemoryDesiredStateRepository implements DesiredStateReposit
                 if (state == State.ROLLED_BACK) {
                     throw new IllegalStateException("desired state transaction is rolled back");
                 }
-                if (!current.snapshot().revision().equals(expectedRevision)) {
-                    throw conflict(expectedRevision, current.snapshot().revision());
+                if (!current.snapshot().revision().equals(previous.snapshot().revision())) {
+                    throw conflict(previous.snapshot().revision(),
+                        current.snapshot().revision());
                 }
                 current = candidate;
                 state = State.COMMITTED;
@@ -100,8 +101,34 @@ public final class InMemoryDesiredStateRepository implements DesiredStateReposit
 
         @Override
         public void rollback() {
-            if (state == State.PREPARED) {
+            lock.lock();
+            try {
+                if (state == State.ROLLED_BACK) {
+                    return;
+                }
+                if (state == State.COMMITTED) {
+                    if (!current.snapshot().revision().equals(
+                        candidate.snapshot().revision())) {
+                        throw conflict(candidate.snapshot().revision(),
+                            current.snapshot().revision());
+                    }
+                    current = previous;
+                }
                 state = State.ROLLED_BACK;
+            } finally {
+                lock.unlock();
+            }
+        }
+
+        @Override
+        public void close() {
+            lock.lock();
+            try {
+                if (state == State.PREPARED) {
+                    state = State.ROLLED_BACK;
+                }
+            } finally {
+                lock.unlock();
             }
         }
     }

@@ -3,6 +3,7 @@ package com.sstlfsj.fibra.internal;
 import com.sstlfsj.fibra.Scope;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
+import reactor.core.publisher.Flux;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -15,14 +16,31 @@ public final class DefaultFibraRuntime {
     private final AtomicBoolean closed = new AtomicBoolean();
     private final AtomicLong sequence = new AtomicLong();
     private final Sinks.One<Void> closedSignal = Sinks.one();
-    private final List<PluginInstanceImpl<?>> instances = new ArrayList<>();
-    private final ServiceRegistry services = new ServiceRegistry(this);
-    private final EventBus events = new EventBus(this);
     private final DefaultLoggerService logging = new DefaultLoggerService();
-    private final DefaultScope rootScope = new DefaultScope(this, null, "root");
+    private final List<DefaultRuntimeDomain> domains = new ArrayList<>();
+    private final DefaultRuntimeDomain rootDomain;
+
+    public DefaultFibraRuntime() {
+        rootDomain = new DefaultRuntimeDomain(this, "root", true);
+        domains.add(rootDomain);
+    }
 
     public Scope rootScope() {
-        return rootScope;
+        return rootDomain.rootScope();
+    }
+
+    public DefaultRuntimeDomain openDomain(String name) {
+        if (closeRequested()) {
+            throw new IllegalStateException("runtime is closed");
+        }
+        return lifecycle.call(() -> {
+            if (closeRequested()) {
+                throw new IllegalStateException("runtime is closed");
+            }
+            var domain = new DefaultRuntimeDomain(this, name, false);
+            domains.add(domain);
+            return domain;
+        });
     }
 
     public boolean isClosed() {
@@ -31,7 +49,11 @@ public final class DefaultFibraRuntime {
 
     public Mono<Void> closeAsync() {
         if (closeRequested.compareAndSet(false, true)) {
-            rootScope.closeFromRuntime()
+            var snapshot = new ArrayList<>(domains);
+            java.util.Collections.reverse(snapshot);
+            Flux.fromIterable(snapshot)
+                .concatMap(DefaultRuntimeDomain::closeFromRuntime, 1)
+                .then()
                 .subscribe(ignored -> { }, this::finishCloseWithError, this::finishClose);
         }
         return closedSignal.asMono();
@@ -39,14 +61,6 @@ public final class DefaultFibraRuntime {
 
     LifecycleDispatcher lifecycle() {
         return lifecycle;
-    }
-
-    ServiceRegistry services() {
-        return services;
-    }
-
-    EventBus events() {
-        return events;
     }
 
     DefaultLoggerService logging() {
@@ -61,16 +75,8 @@ public final class DefaultFibraRuntime {
         return closeRequested.get();
     }
 
-    void addInstance(PluginInstanceImpl<?> instance) {
-        instances.add(instance);
-    }
-
-    void removeInstance(PluginInstanceImpl<?> instance) {
-        instances.remove(instance);
-    }
-
-    List<PluginInstanceImpl<?>> instancesSnapshot() {
-        return List.copyOf(instances);
+    void removeDomain(DefaultRuntimeDomain domain) {
+        domains.remove(domain);
     }
 
     private void finishClose() {

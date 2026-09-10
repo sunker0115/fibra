@@ -342,27 +342,37 @@ public final class NodeSidecar implements AutoCloseable {
                 failure);
         }
         descendants.reversed().forEach(ProcessHandle::destroy);
+        descendants.reversed().forEach(handle ->
+            awaitOrForceExit(handle, options.terminateTimeout()));
         process.destroy();
-        waitForExit(process.toHandle(), options.terminateTimeout());
-        descendants.stream().filter(ProcessHandle::isAlive)
-            .forEach(ProcessHandle::destroyForcibly);
-        if (process.isAlive()) {
-            process.destroyForcibly();
-        }
-        descendants.forEach(handle -> waitForExit(handle, options.terminateTimeout()));
-        waitForExit(process.toHandle(), options.terminateTimeout());
+        awaitOrForceExit(process.toHandle(), options.terminateTimeout());
     }
 
-    private static void waitForExit(ProcessHandle handle, Duration timeout) {
+    private static void awaitOrForceExit(ProcessHandle handle, Duration timeout) {
         if (!handle.isAlive()) {
             return;
         }
+        if (waitForExit(handle, timeout)) {
+            return;
+        }
+        handle.destroyForcibly();
+        if (!waitForExit(handle, timeout)) {
+            LOGGER.warn("Process {} did not terminate within {}", handle.pid(), timeout);
+        }
+    }
+
+    private static boolean waitForExit(ProcessHandle handle, Duration timeout) {
+        if (!handle.isAlive()) {
+            return true;
+        }
         try {
             handle.onExit().get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            return true;
+        } catch (InterruptedException failure) {
+            Thread.currentThread().interrupt();
+            return !handle.isAlive();
         } catch (Exception failure) {
-            if (handle.isAlive()) {
-                handle.destroyForcibly();
-            }
+            return !handle.isAlive();
         }
     }
 

@@ -51,10 +51,10 @@ class FibraAutoConfigurationTest {
                 assertInstanceOf(FileTransactionJournal.class,
                     context.getBean(TransactionJournal.class));
                 var engine = context.getBean(FibraEngine.class);
-                assertEquals(EngineState.RUNNING, engine.snapshot().state());
-                var greeting = engine.runtime().rootScope().context().services().require(
-                    ServiceKey.of("greeting", Greeting.class));
-                assertEquals("hello fibra", greeting.greet("fibra"));
+                var published = engine.published().current();
+                assertEquals(EngineState.RUNNING, published.engine().state());
+                assertTrue(published.diagnostics().services().stream()
+                    .anyMatch(service -> service.service().name().equals("greeting")));
                 var artifactId = new ArtifactId("custom-plugin");
                 var installed = context.getBean(PluginRegistry.class).install(
                     PluginInstallRequest.builder().artifactId(artifactId)

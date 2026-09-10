@@ -40,23 +40,23 @@ class FibraEngineRuntimeAdapterTest {
             .artifactStore(store).runtimeAdapter(adapter).build()) {
             var started = engine.start().block();
             var installed = engine.submit(InstallArtifact.builder()
-                .expectedRevision(started.revision()).artifactId(artifact)
+                .expectedRevision(started.viewRevision()).artifactId(artifact)
                 .runtimeId(runtimeId).version("1.0.0").source(source).build())
-                .block().snapshot();
+                .block().view();
 
-            assertTrue(installed.artifacts().containsKey(artifact));
+            assertTrue(installed.engine().artifacts().containsKey(artifact));
             assertEquals(java.util.Set.of("sample"),
-                installed.runtimes().get(runtimeId).definitions());
+                installed.engine().runtimes().get(runtimeId).definitions());
             assertEquals(com.sstlfsj.fibra.artifact.ArtifactState.INSTALLED,
-                installed.runtimes().get(runtimeId).artifacts().get(artifact).state());
+                installed.engine().runtimes().get(runtimeId).artifacts().get(artifact).state());
             assertEquals(1, adapter.commits.get());
             assertEquals(1, adapter.retires.get());
 
-            var removed = engine.submit(new UninstallArtifact(installed.revision(), artifact))
-                .block().snapshot();
+            var removed = engine.submit(new UninstallArtifact(
+                installed.viewRevision(), artifact)).block().view();
 
-            assertFalse(removed.artifacts().containsKey(artifact));
-            assertFalse(removed.runtimes().containsKey(runtimeId));
+            assertFalse(removed.engine().artifacts().containsKey(artifact));
+            assertFalse(removed.engine().runtimes().containsKey(runtimeId));
             assertEquals(2, adapter.commits.get());
             assertEquals(2, adapter.retires.get());
         }
@@ -76,9 +76,9 @@ class FibraEngineRuntimeAdapterTest {
         var engine = FibraEngine.builder(repository).artifactStore(store)
             .runtimeAdapter(adapter).build();
 
-        assertEquals(EngineState.NEW, engine.snapshot().state());
+        assertEquals(EngineState.NEW, engine.published().current().engine().state());
         assertEquals(0, adapter.commits.get());
-        var started = engine.start().block();
+        var started = engine.start().block().engine();
         assertTrue(started.artifacts().containsKey(artifact));
         assertTrue(started.runtimes().containsKey(runtimeId));
 
@@ -97,12 +97,12 @@ class FibraEngineRuntimeAdapterTest {
             var started = engine.start().block();
 
             assertThrows(UnknownRuntimeException.class, () -> engine.submit(
-                InstallArtifact.builder().expectedRevision(started.revision())
+                InstallArtifact.builder().expectedRevision(started.viewRevision())
                     .artifactId(new ArtifactId("sample"))
                     .runtimeId(new RuntimeId("missing")).version("1.0.0")
                     .source(source).build()).block());
 
-            assertEquals(started, engine.snapshot());
+            assertEquals(started, engine.published().current());
             assertTrue(store.find(new ArtifactId("sample")).isEmpty());
         }
     }
@@ -123,13 +123,13 @@ class FibraEngineRuntimeAdapterTest {
             var graph = new DesiredGraph(List.of(
                 DesiredEntry.builder("sample-one", "sample").build()));
             var command = ApplyDeployment.builder(graph)
-                .expectedRevision(started.revision())
-                .expectedDesiredRevision(started.desiredSource().revision())
+                .expectedRevision(started.viewRevision())
+                .expectedDesiredRevision(started.engine().desiredSource().revision())
                 .artifacts(List.of(DeploymentArtifact.builder().artifactId(artifactId)
                     .runtimeId(runtimeId).version("1.0.0").source(source).build()))
                 .build();
 
-            var deployed = engine.submit(command).block().snapshot();
+            var deployed = engine.submit(command).block().view().engine();
 
             assertTrue(deployed.artifacts().containsKey(artifactId));
             assertEquals(com.sstlfsj.fibra.PluginInstanceState.ACTIVE,
@@ -162,7 +162,7 @@ class FibraEngineRuntimeAdapterTest {
             .artifactStore(new ArtifactStore(artifactRoot))
             .runtimeAdapter(new FakeRuntimeAdapter(runtimeId))
             .journal(recoveredJournal).build()) {
-            var recovered = engine.start().block();
+            var recovered = engine.start().block().engine();
 
             assertTrue(recovered.artifacts().containsKey(artifactId));
             assertTrue(recovered.runtimes().containsKey(runtimeId));

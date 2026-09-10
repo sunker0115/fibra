@@ -38,6 +38,41 @@ class DesiredStateRepositoryTest {
     }
 
     @Test
+    void memoryRepositoryCompensatesACommittedParticipantBeforeGlobalCommit() {
+        var repository = InMemoryDesiredStateRepository.empty();
+        var initial = repository.load(name -> java.util.Optional.empty());
+        var graph = new DesiredGraph(List.of(entry("sample")));
+        var transaction = repository.prepareReplace(initial.snapshot().revision(), graph);
+
+        transaction.commit();
+        transaction.rollback();
+        transaction.rollback();
+
+        var restored = repository.load(name -> java.util.Optional.empty());
+        assertEquals(initial.snapshot().revision(), restored.snapshot().revision());
+        assertEquals(List.of(), restored.graph().entries());
+    }
+
+    @Test
+    void compensationRejectsALaterWriteAndCloseKeepsCommittedState() {
+        var repository = InMemoryDesiredStateRepository.empty();
+        var initial = repository.load(name -> java.util.Optional.empty());
+        var first = repository.prepareReplace(initial.snapshot().revision(),
+            new DesiredGraph(List.of(entry("first"))));
+        var firstResult = first.commit();
+        first.close();
+        assertEquals(firstResult, repository.load(name -> java.util.Optional.empty()));
+
+        var second = repository.prepareReplace(firstResult.snapshot().revision(),
+            new DesiredGraph(List.of(entry("second"))));
+        var secondResult = second.commit();
+        assertThrows(ConfigException.class, first::rollback);
+        assertEquals(secondResult, repository.load(name -> java.util.Optional.empty()));
+        second.close();
+        assertEquals(secondResult, repository.load(name -> java.util.Optional.empty()));
+    }
+
+    @Test
     void fileRepositoryIsAnExplicitReadOnlySource(@TempDir Path work) throws Exception {
         var root = work.resolve("fibra.yaml");
         Files.writeString(root, "- id: sample\n  plugin: sample\n");

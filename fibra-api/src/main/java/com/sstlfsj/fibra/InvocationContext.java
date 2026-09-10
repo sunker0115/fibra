@@ -24,7 +24,7 @@ public final class InvocationContext {
     }
 
     public FibraLogger logger() {
-        return caller.logger();
+        return caller.loggerForService(serviceName);
     }
 
     public String serviceName() {

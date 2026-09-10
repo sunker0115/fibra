@@ -16,18 +16,6 @@ public final class com.sstlfsj.fibra.bridge.ContributionBinding<D, I, O> extends
   public D descriptor();
   public com.sstlfsj.fibra.bridge.ContributionHandler<I, O> handler();
 }
-## com.sstlfsj.fibra.bridge.ContributionBridge
-Compiled from "ContributionBridge.java"
-public final class com.sstlfsj.fibra.bridge.ContributionBridge implements java.lang.AutoCloseable {
-  public com.sstlfsj.fibra.bridge.ContributionBridge();
-  public <D, I, O> reactor.core.publisher.Mono<com.sstlfsj.fibra.bridge.ContributionRegistration> register(com.sstlfsj.fibra.Context, com.sstlfsj.fibra.bridge.ContributionKind<D, I, O>, java.lang.String, java.lang.String, D, com.sstlfsj.fibra.bridge.ContributionHandler<I, O>);
-  public reactor.core.publisher.Mono<java.util.List<com.sstlfsj.fibra.bridge.ContributionRegistration>> registerAll(com.sstlfsj.fibra.Context, java.lang.String, java.util.List<com.sstlfsj.fibra.bridge.ContributionBinding<?, ?, ?>>, com.sstlfsj.fibra.Disposable);
-  public <D, I, O> reactor.core.publisher.Mono<O> invoke(com.sstlfsj.fibra.Context, com.sstlfsj.fibra.bridge.ContributionKind<D, I, O>, com.sstlfsj.fibra.bridge.ContributionId, I);
-  public com.sstlfsj.fibra.bridge.ContributionSnapshot snapshot();
-  public reactor.core.publisher.Flux<com.sstlfsj.fibra.bridge.ContributionSnapshot> snapshots();
-  public reactor.core.publisher.Mono<java.lang.Void> closeAsync();
-  public void close();
-}
 ## com.sstlfsj.fibra.bridge.ContributionCodec
 Compiled from "ContributionCodec.java"
 public interface com.sstlfsj.fibra.bridge.ContributionCodec<D, I, O> {
@@ -37,6 +25,27 @@ public interface com.sstlfsj.fibra.bridge.ContributionCodec<D, I, O> {
   public abstract I decodeInput(java.lang.Object);
   public abstract java.lang.Object encodeOutput(O);
   public abstract O decodeOutput(java.lang.Object);
+}
+## com.sstlfsj.fibra.bridge.ContributionDirectory
+Compiled from "ContributionDirectory.java"
+public final class com.sstlfsj.fibra.bridge.ContributionDirectory implements com.sstlfsj.fibra.bridge.ContributionRegistrar,java.lang.AutoCloseable {
+  public com.sstlfsj.fibra.bridge.ContributionDirectory();
+  public <D, I, O> reactor.core.publisher.Mono<com.sstlfsj.fibra.bridge.ContributionRegistration> register(com.sstlfsj.fibra.Context, com.sstlfsj.fibra.bridge.ContributionKind<D, I, O>, java.lang.String, java.lang.String, D, com.sstlfsj.fibra.bridge.ContributionHandler<I, O>);
+  public reactor.core.publisher.Mono<java.util.List<com.sstlfsj.fibra.bridge.ContributionRegistration>> registerAll(com.sstlfsj.fibra.Context, java.lang.String, java.util.List<com.sstlfsj.fibra.bridge.ContributionBinding<?, ?, ?>>, com.sstlfsj.fibra.Disposable);
+  public com.sstlfsj.fibra.bridge.ContributionDirectoryView current();
+  public reactor.core.publisher.Flux<com.sstlfsj.fibra.bridge.ContributionDirectoryView> views();
+  public reactor.core.publisher.Mono<java.lang.Void> closeAsync();
+  public void close();
+}
+## com.sstlfsj.fibra.bridge.ContributionDirectoryView
+Compiled from "ContributionDirectoryView.java"
+public final class com.sstlfsj.fibra.bridge.ContributionDirectoryView extends java.lang.Record {
+  public com.sstlfsj.fibra.bridge.ContributionDirectoryView(com.sstlfsj.fibra.bridge.ContributionSnapshot, com.sstlfsj.fibra.bridge.ContributionRoutes);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public com.sstlfsj.fibra.bridge.ContributionSnapshot snapshot();
+  public com.sstlfsj.fibra.bridge.ContributionRoutes routes();
 }
 ## com.sstlfsj.fibra.bridge.ContributionHandler
 Compiled from "ContributionHandler.java"
@@ -64,10 +73,26 @@ public final class com.sstlfsj.fibra.bridge.ContributionKind<D, I, O> {
   public java.lang.Class<O> outputType();
   public java.util.Optional<com.sstlfsj.fibra.bridge.ContributionCodec<D, I, O>> codec();
 }
+## com.sstlfsj.fibra.bridge.ContributionRegistrar
+Compiled from "ContributionRegistrar.java"
+public interface com.sstlfsj.fibra.bridge.ContributionRegistrar {
+  public abstract <D, I, O> reactor.core.publisher.Mono<com.sstlfsj.fibra.bridge.ContributionRegistration> register(com.sstlfsj.fibra.Context, com.sstlfsj.fibra.bridge.ContributionKind<D, I, O>, java.lang.String, java.lang.String, D, com.sstlfsj.fibra.bridge.ContributionHandler<I, O>);
+  public abstract reactor.core.publisher.Mono<java.util.List<com.sstlfsj.fibra.bridge.ContributionRegistration>> registerAll(com.sstlfsj.fibra.Context, java.lang.String, java.util.List<com.sstlfsj.fibra.bridge.ContributionBinding<?, ?, ?>>, com.sstlfsj.fibra.Disposable);
+}
 ## com.sstlfsj.fibra.bridge.ContributionRegistration
 Compiled from "ContributionRegistration.java"
 public interface com.sstlfsj.fibra.bridge.ContributionRegistration extends com.sstlfsj.fibra.Disposable {
   public abstract com.sstlfsj.fibra.bridge.ContributionId id();
+}
+## com.sstlfsj.fibra.bridge.ContributionRoutes
+Compiled from "ContributionRoutes.java"
+public final class com.sstlfsj.fibra.bridge.ContributionRoutes {
+  public <D, I, O> reactor.core.publisher.Mono<O> invoke(com.sstlfsj.fibra.Context, com.sstlfsj.fibra.bridge.ContributionKind<D, I, O>, com.sstlfsj.fibra.bridge.ContributionId, I);
+}
+## com.sstlfsj.fibra.bridge.ContributionServices
+Compiled from "ContributionServices.java"
+public final class com.sstlfsj.fibra.bridge.ContributionServices {
+  public static final com.sstlfsj.fibra.ServiceKey<com.sstlfsj.fibra.bridge.ContributionRegistrar> REGISTRAR;
 }
 ## com.sstlfsj.fibra.bridge.ContributionSnapshot
 Compiled from "ContributionSnapshot.java"

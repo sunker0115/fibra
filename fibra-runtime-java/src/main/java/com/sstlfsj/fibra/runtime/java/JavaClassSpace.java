@@ -49,7 +49,11 @@ final class JavaClassSpace implements AutoCloseable {
             var entries = new ArrayList<PluginCatalogEntry<?>>();
             for (var id : graph.dependencyFirst()) {
                 var manifest = graph.manifest(id);
-                var type = Class.forName(manifest.entrypoint(), true, loaders.get(id));
+                if (manifest.entrypoint().isEmpty()) {
+                    continue;
+                }
+                var type = Class.forName(manifest.entrypoint().orElseThrow(), true,
+                    loaders.get(id));
                 var entrypoint = type.getDeclaredConstructor().newInstance();
                 if (!(entrypoint instanceof PluginEntrypoint<?> pluginEntrypoint)) {
                     throw error(id, "entrypoint does not implement PluginEntrypoint", null);

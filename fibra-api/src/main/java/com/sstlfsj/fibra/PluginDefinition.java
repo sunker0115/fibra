@@ -6,6 +6,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import com.sstlfsj.fibra.annotation.InjectService;
 
 public final class PluginDefinition<C> {
     private final String name;
@@ -14,6 +15,7 @@ public final class PluginDefinition<C> {
     private final Map<ServiceKey<?>, Object> requires;
     private final Set<ServiceKey<?>> provides;
     private final PluginFactory<C> factory;
+    private final Class<?> injectionType;
 
     private PluginDefinition(Builder<C> builder) {
         name = builder.name;
@@ -22,6 +24,7 @@ public final class PluginDefinition<C> {
         requires = Collections.unmodifiableMap(new LinkedHashMap<>(builder.requires));
         provides = Collections.unmodifiableSet(new LinkedHashSet<>(builder.provides));
         factory = builder.factory;
+        injectionType = builder.injectionType;
     }
 
     public static <C> Builder<C> builder(String name, Class<C> configType,
@@ -49,6 +52,10 @@ public final class PluginDefinition<C> {
         return factory;
     }
 
+    public Class<?> injectionType() {
+        return injectionType;
+    }
+
     public C validate(C config) {
         if (config != null && !configType.isInstance(config)) {
             throw new IllegalArgumentException("plugin config is not a " + configType.getName());
@@ -63,6 +70,7 @@ public final class PluginDefinition<C> {
         private final Map<ServiceKey<?>, Object> requires = new LinkedHashMap<>();
         private final Set<ServiceKey<?>> provides = new LinkedHashSet<>();
         private ConfigValidator<C> validator;
+        private Class<?> injectionType;
 
         private Builder(String name, Class<C> configType, PluginFactory<C> factory) {
             if (name == null || name.isBlank()) {
@@ -85,6 +93,35 @@ public final class PluginDefinition<C> {
         public Builder<C> provide(ServiceKey<?> key) {
             provides.add(Objects.requireNonNull(key, "key"));
             return this;
+        }
+
+        public Builder<C> inject(Class<?> type) {
+            injectionType = Objects.requireNonNull(type, "type");
+            for (var current = type; current != null && current != Object.class;
+                 current = current.getSuperclass()) {
+                for (var annotation : current.getAnnotationsByType(InjectService.class)) {
+                    require(injectionKey(annotation, null));
+                }
+                for (var field : current.getDeclaredFields()) {
+                    var annotation = field.getAnnotation(InjectService.class);
+                    if (annotation != null) {
+                        require(injectionKey(annotation, field.getType()));
+                    }
+                }
+            }
+            return this;
+        }
+
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        private static ServiceKey<?> injectionKey(InjectService annotation,
+                                                   Class<?> inferredType) {
+            var type = annotation.type() == Void.class
+                ? inferredType : annotation.type();
+            if (type == null) {
+                throw new IllegalArgumentException(
+                    "@InjectService on a type must declare type");
+            }
+            return ServiceKey.of(annotation.value(), (Class) type);
         }
 
         public Builder<C> validator(ConfigValidator<C> validator) {

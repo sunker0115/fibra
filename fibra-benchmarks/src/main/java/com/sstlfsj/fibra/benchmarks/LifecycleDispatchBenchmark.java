@@ -3,6 +3,7 @@ package com.sstlfsj.fibra.benchmarks;
 import com.sstlfsj.fibra.Context;
 import com.sstlfsj.fibra.benchmarks.BenchmarkFixtures.Ticker;
 import com.sstlfsj.fibra.event.EventKey;
+import com.sstlfsj.fibra.event.EventMode;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -26,7 +27,8 @@ import java.util.concurrent.TimeUnit;
 @Fork(2)
 public class LifecycleDispatchBenchmark {
 
-    private static final EventKey<Ticker> EMPTY = EventKey.of("bench/empty", Ticker.class);
+    private static final EventKey<Ticker> EMPTY = EventKey.of(
+        "bench/empty", Ticker.class, EventMode.EMIT);
 
     private Context ctx;
 

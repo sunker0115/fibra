@@ -125,6 +125,7 @@ final class SupervisedResource implements OwnedEffect, Subscriber<Object> {
 
     private void finishDispose() {
         owner.removeResource(this);
+        ready.tryEmitValue(this);
         disposed.tryEmitEmpty();
     }
 }

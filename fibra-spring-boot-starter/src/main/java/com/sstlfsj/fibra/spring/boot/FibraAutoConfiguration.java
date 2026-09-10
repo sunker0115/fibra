@@ -4,8 +4,10 @@ import com.sstlfsj.fibra.artifact.ArtifactStore;
 import com.sstlfsj.fibra.config.DesiredStateRepository;
 import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
 import com.sstlfsj.fibra.engine.FibraEngine;
+import com.sstlfsj.fibra.engine.HostServiceRegistry;
 import com.sstlfsj.fibra.engine.FileTransactionJournal;
 import com.sstlfsj.fibra.engine.PluginRuntimeAdapter;
+import com.sstlfsj.fibra.engine.PublishedRuntime;
 import com.sstlfsj.fibra.engine.TransactionJournal;
 import com.sstlfsj.fibra.registry.FilePluginAuditRepository;
 import com.sstlfsj.fibra.registry.PluginAuditRepository;
@@ -51,11 +53,18 @@ public class FibraAutoConfiguration {
     FibraEngine fibraEngine(DesiredStateRepository desired,
                             ArtifactStore artifacts,
                             ObjectProvider<PluginRuntimeAdapter> runtimes,
-                            TransactionJournal journal) {
+                            TransactionJournal journal,
+                            HostServiceRegistry hostServices) {
         var builder = FibraEngine.builder(desired).artifactStore(artifacts)
-            .journal(journal);
+            .journal(journal).hostServices(hostServices);
         runtimes.orderedStream().forEach(builder::runtimeAdapter);
         return builder.build();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    HostServiceRegistry fibraHostServiceRegistry() {
+        return new HostServiceRegistry();
     }
 
     @Bean
@@ -78,8 +87,14 @@ public class FibraAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    FibraServiceBridge fibraServiceBridge(FibraEngine engine) {
-        return new FibraServiceBridge(engine.runtime().rootScope().context());
+    PublishedRuntime fibraPublishedRuntime(FibraEngine engine) {
+        return engine.published();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    FibraServiceBridge fibraServiceBridge(HostServiceRegistry hostServices) {
+        return new FibraServiceBridge(hostServices);
     }
 
     @Bean

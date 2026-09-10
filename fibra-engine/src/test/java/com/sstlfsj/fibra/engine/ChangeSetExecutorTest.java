@@ -26,13 +26,33 @@ class ChangeSetExecutorTest {
 
             assertEquals(List.of(
                 "prepare:first", "prepare:second",
-                "commit:first", "commit:second",
-                "verify", "publish", "retire:second", "retire:first"), calls);
+                "verify", "commit:first", "commit:second",
+                "publish", "retire:second", "retire:first"), calls);
             assertEquals(List.of(TransactionState.PREPARED, TransactionState.COMMITTING,
                 TransactionState.COMMITTED, TransactionState.PUBLISHED,
                 TransactionState.RETIRED), journal.records().stream()
                 .map(TransactionRecord::state).toList());
             assertEquals(List.of(), result.warnings());
+            assertTrue(executor.acceptsMutations());
+        }
+    }
+
+    @Test
+    void verificationFailureRollsBackPreparedResourcesWithoutCommitting() {
+        var calls = new ArrayList<String>();
+        var journal = new InMemoryTransactionJournal();
+        try (var executor = new ChangeSetExecutor(journal)) {
+            assertThrows(ChangeSetException.class, () -> executor.execute(
+                ChangeSet.builder("rejected-candidate")
+                    .participant(participant("candidate", calls))
+                    .verify(() -> action(calls, "verify")
+                        .then(Mono.error(new IllegalStateException("not publishable"))))
+                    .build()).block());
+
+            assertEquals(List.of("prepare:candidate", "verify", "rollback:candidate"),
+                calls);
+            assertEquals(List.of(TransactionState.ROLLED_BACK), journal.records().stream()
+                .map(TransactionRecord::state).toList());
             assertTrue(executor.acceptsMutations());
         }
     }

@@ -26,7 +26,7 @@ public final class com.sstlfsj.fibra.registry.PluginAuditEntry extends java.lang
   public java.lang.String operation();
   public java.lang.String target();
   public boolean succeeded();
-  public java.lang.String engineRevision();
+  public java.lang.String viewRevision();
   public java.lang.String detail();
 }
 ## com.sstlfsj.fibra.registry.PluginAuditRepository
@@ -118,7 +118,7 @@ public final class com.sstlfsj.fibra.registry.RegistrySnapshot extends java.lang
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
-  public java.lang.String engineRevision();
+  public java.lang.String viewRevision();
   public java.util.Map<com.sstlfsj.fibra.artifact.ArtifactId, com.sstlfsj.fibra.artifact.ArtifactRecord> artifacts();
   public java.util.Map<java.lang.String, com.sstlfsj.fibra.config.DesiredEntry> desired();
   public java.util.Map<java.lang.String, com.sstlfsj.fibra.engine.PluginInstanceSnapshot> observed();

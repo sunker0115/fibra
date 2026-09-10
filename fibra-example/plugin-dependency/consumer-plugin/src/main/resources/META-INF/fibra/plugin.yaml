@@ -1,0 +1,6 @@
+id: checkout-quote-consumer
+version: 1.0.0
+entrypoint: example.fibra.checkout.CheckoutQuoteEntrypoint
+requires:
+  - id: shipping-rate-contract
+    version: ^1.0.0

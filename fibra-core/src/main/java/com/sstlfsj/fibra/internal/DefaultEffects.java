@@ -29,9 +29,7 @@ final class DefaultEffects implements Effects {
     @Override
     public EffectHandle effect(Supplier<? extends Disposable> source, String label) {
         Objects.requireNonNull(source, "source");
-        return new OwnedResource(owner,
-            Mono.fromSupplier(() -> Objects.requireNonNull(source.get(), "effect source returned null")),
-            label);
+        return new OwnedResource(owner, source, label);
     }
 
     @Override

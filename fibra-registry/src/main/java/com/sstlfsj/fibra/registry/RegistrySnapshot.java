@@ -7,7 +7,7 @@ import com.sstlfsj.fibra.engine.PluginInstanceSnapshot;
 
 import java.util.Map;
 
-public record RegistrySnapshot(String engineRevision,
+public record RegistrySnapshot(String viewRevision,
                                Map<ArtifactId, ArtifactRecord> artifacts,
                                Map<String, DesiredEntry> desired,
                                Map<String, PluginInstanceSnapshot> observed) {

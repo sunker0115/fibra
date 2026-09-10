@@ -6,7 +6,9 @@
 一种 Agent Harness，不决定 Fibra 的产品方向、模块边界或发布优先级，也不把草图中的类名、状态名或
 包名视为既有实现。
 
-上游权威设计：[`2026-09-07-fibra-vnext-architecture.md`](./2026-09-07-fibra-vnext-architecture.md)。
+上游权威设计：[`2026-09-07-fibra-vnext-architecture.md`](./2026-09-07-fibra-vnext-architecture.md)；运行代、
+已发布视图和外层宿主边界以
+[`2026-09-10-fibra-generation-publication.md`](./2026-09-10-fibra-generation-publication.md) 为准。
 
 ## 1. 结论
 
@@ -21,9 +23,10 @@
    ACTIVE/PENDING/FAILED、依赖重载、Scope 所有权和完成边界。
 3. Fibra `PluginRegistry` 提供安装、版本、期望状态、制品记录、审计和实际状态投影的通用控制面；
    Harness 只在其上增加权限、租户、运营策略和对外接口，不能再维护第二套 ACTIVE 真源。
-4. 工具、模型、skill 和 hook 是 Harness 业务能力，不进入 `fibra-api`。Fibra `ContributionBridge`
-   提供通用贡献身份、Scope 注册、撤销、快照与调用适配；Harness 定义具体 contribution kind、命名渲染
-   和能力目录。
+4. 工具、模型、skill 和 hook 是 Harness 业务能力，不进入 `fibra-api`。运行域内的内建 Harness 插件
+   继续以 Service/Event/Effect 协作；代内 `ContributionDirectory` 只负责通用 contribution 的注册、撤销
+   与路由快照，Engine 将不可变路由纳入唯一 `PublishedView`，宿主只经 `PublishedRuntime` 调用。Harness
+   定义具体 kind、命名渲染和能力目录。
 5. Spring 只负责启动与基础设施装配。任何长期运行资源只能由 Spring 或 Fibra 一方拥有，禁止两个
    容器同时调用其关闭生命周期。
 
@@ -34,41 +37,32 @@ Spring 模块均不得出现 Harness、Agent、Tool、Skill 或本项目包名�
 ## 2. 整体分层
 
 ```text
-HTTP / CLI / SDK / preset
-            |
-            v
-Harness plugin use case（权限、租户、运营策略）
-            |
-            v
-Fibra PluginRegistry（安装、版本、期望状态、审计、状态投影）
-            |
-            | EngineCommand / EngineSnapshot
-            v
-Fibra Engine（唯一运行态写入口、Scope、恢复、ChangeSet）
-            |
-      +-----+---------------------+
-      |                           |
-      v                           v
-fibra-runtime-java          fibra-runtime-node
-ClassLoader + JAR           sidecar + JSON-RPC
-      |                           |
-      +------------+--------------+
-                   v
-Fibra ContributionBridge（身份、Scope 注册、撤销、调用边界）
-                   |
-                   v
-Harness contribution adapter（Tool 命名与协议映射）
-                   |
-                   v
-ToolCatalog / ModelCatalog / SkillCatalog / HookRegistry
-                   |
-                   v
-Agent / Session / Workflow 等业务消费者
+HTTP / CLI / SDK / preset                         外层宿主壳
+        | EngineCommand              | PublishedView + invoke(expectedViewRevision)
+        v                            v
+PluginRegistry                  PublishedRuntime
+        |                            ^
+        +----------> Fibra Engine ---+                唯一事务与发布所有者
+                         |
+                         v
+                 PublishedGeneration
+                   ├─ RuntimeDomain
+                   │    ├─ built-in Agent / Session / ToolCatalog
+                   │    ├─ Java plugin instances
+                   │    ├─ Node proxy plugin instances -> sidecar / JSON-RPC
+                   │    └─ Service / Event / Effect
+                   └─ generation-local ContributionDirectory
 ```
 
-图中上半段是控制面，下半段是贡献面，二者只通过 Engine 的实例身份和 revision 对齐。Agent 只消费
-能力目录；能力目录不知道 Java/Node 来源；插件 bridge 不反向调用 Agent；Node 协议和 ClassLoader
-不进入 domain。
+外层宿主壳只负责协议入口、管理用例和基础设施装配，不取得 Engine 托管的 Context。需要生命周期的
+Agent、Session、ToolCatalog 等作为 built-in plugin 位于 RuntimeDomain 内，与外部插件共享 Cordis
+语义。对外能力目录不知道 Java/Node 来源；Bridge 不反向调用 Agent；Node 协议和 ClassLoader 不进入
+core domain 契约。
+
+上图只展开当前已发布的一个 `PublishedGeneration`。candidate、current 和 draining generation 之间是
+时间角色与隔离关系，不是依赖树；插件的制品 DAG、domain 内 Service graph 和 Scope ownership tree
+必须分开理解。完整关系与场景覆盖见
+[vNext 最终架构 2.1 节](./2026-09-07-fibra-vnext-architecture.md#21-运行代关系与域内依赖)。
 
 ### 2.1 本期交付边界
 
@@ -127,7 +121,8 @@ Fibra vNext 本期必须形成可运行纵向闭环，而不是只预留接口�
 Harness 的静态模块与外部 JAR 使用同一 `PluginDefinition` 契约，区别只在 definition 来源：
 
 - 内置 definition 由 `deepseek-harness-java-app` 直接注册到 built-in catalog，不经过 ClassLoader；
-- Java Native definition 由 `fibra-runtime-java` 从已安装 JAR 的显式 entrypoint 得到；
+- Java Native definition 由 `fibra-runtime-java` 从已安装可运行 JAR 的显式 entrypoint 得到；
+  contract-only JAR 没有 definition，只提供依赖图与 ClassSpace 中的共享类型；
 - Node definition 由 `fibra-runtime-node` 从已安装 Node 包和 JSON-RPC 握手结果得到。
 
 Engine 合并 built-in catalog 与 artifact catalog 后解析一棵 desired graph。建议的内置条目示例：
@@ -186,8 +181,7 @@ Engine 对宿主提供单一命令入口：
 
 ```java
 Mono<EngineResult> submit(EngineCommand command);
-EngineSnapshot snapshot();
-Flux<EngineSnapshot> snapshots();
+PublishedRuntime published();
 ```
 
 `EngineCommand` 表达 install artifact、upsert/remove desired entry、uninstall artifact 和 apply deployment
@@ -199,18 +193,20 @@ Flux<EngineSnapshot> snapshots();
 
 ### 5.3 状态订阅而不是轮询内部对象
 
-Fibra `PluginRegistry` 投影安装记录、期望状态、审计和 `EngineSnapshot`；Harness 插件聚合只关联权限、
-租户与运营策略。actual revision、实例状态和失败始终来自 `EngineSnapshot`，任何投影都不能再写回
-Engine 当事实。
+Fibra `PluginRegistry` 投影安装记录、期望状态、审计和 `PublishedView.engine()`；Harness 插件聚合只
+关联权限、租户与运营策略。actual revision、实例状态和失败始终来自同一 PublishedView，任何投影都
+不能再写回 Engine 当事实。
 
-`snapshots()` 只在 revision 变化时发布不可变快照。Harness 不需要取得可变 loader、遍历 ClassLoader
-或持有内部 PluginInstance 才能判断 readiness。
+`PublishedRuntime.views()` 只在 view revision 变化时发布状态、贡献与诊断一致的不可变视图。Harness
+不需要取得可变 loader、遍历 ClassLoader 或持有内部 PluginInstance 才能判断 readiness；从贡献视图
+选择能力后，调用携带同一个 expected view revision，过期时刷新而不是落到另一代。
 
 ### 5.4 启动前宿主服务
 
 ToolCatalog、CredentialBroker、SandboxProvider 等 Harness 宿主服务必须在动态插件激活前可见。优先
 把它们作为 built-in definitions 放进同一 desired graph；确实由 Spring/外部容器拥有的对象通过
-`FibraServiceBridge` 在 Engine start 前显式导出。
+`FibraServiceBridge` 在 Engine start 前收集为不可变 host binding snapshot，再由 Engine 导入每个候选
+RuntimeDomain。Bridge 不直接取得或修改 Engine root Context；binding 变化通过 Engine command 产生新代。
 
 Scope 始终拥有 service binding 的撤销，但不会猜测 service 对象的关闭方式：Spring 拥有的对象只导出
 binding；Fibra 拥有的对象必须显式提供 disposer，并与 binding 一起登记到 Scope。禁止因为对象实现了
@@ -297,9 +293,13 @@ RPC framing，stderr 独立进入结构化日志；消息大小、调用超时�
 
 ## 8. 能力目录与 Agent 的关系
 
-插件 bridge 负责把不同来源转换成相同的 `ToolDefinition/ModelProvider/SkillDefinition/Hook`。一次能力
-发布必须在 lifecycle lane 内完成“校验 + 唯一身份 + 注册 + Scope 归属”，不能先启动插件再异步补
-ToolRegistry。
+运行域内的 ToolCatalog、ModelCatalog、SkillCatalog 与 Agent 是 built-in plugin/service；Java 插件可
+直接通过这些稳定 ServiceKey 注册能力并用 Event 参与 Agent Loop。Node endpoint 或必须穿越运行域边界的
+能力先进入 generation-local contribution directory，再由域内 adapter 转成相同的
+`ToolDefinition/ModelProvider/SkillDefinition/Hook`。Contribution 不是内部 Service/Event 的替代品。
+
+一次域内注册必须在 lifecycle lane 内完成“校验 + 唯一身份 + 注册 + Scope 归属”；对外可见变更还要
+通过 PublishedRuntime 换成新的不可变 view revision，不能先发布状态再异步补 ToolCatalog 或路由。
 
 SystemPrompt 不保存另一份可变工具说明。Agent 每轮从同一 `ToolCatalogSnapshot` 生成模型可见工具描述，
 工具选择和真实调用也使用该 snapshot 的 revision，从而避免“提示词里有工具但 registry 已撤销”的
@@ -314,8 +314,10 @@ Agent -> ToolCatalog snapshot -> ToolInvoker
                               -> Node JSON-RPC proxy
 ```
 
-调用过程继续携带 Fibra `InvocationContext/ServiceRef`，使插件为调用方创建的资源归属于正确的 session、
-agent 或 task Scope。
+域内调用继续携带 Fibra `InvocationContext/ServiceRef`，使插件为调用方创建的资源归属于正确的 session、
+agent 或 task Scope。外层 published 调用不接收宿主提供的 Context；Engine 在目标 generation 内创建一次
+调用 Scope，Publisher 成功、失败或取消后先完成异步 Scope 清理，再释放 generation lease。需要跨调用
+生存的 session/agent/task Scope 由域内服务按业务 ID 显式拥有。
 
 ## 9. 安装、激活与卸载协议
 
@@ -344,18 +346,20 @@ Activate use case
   -> prepare ClassLoader 或 sidecar
   -> start Fibra PluginInstance
   -> capability registrations settled
-  -> publish EngineSnapshot(ACTIVE)
+  -> verify per-entry PublicationRequirement
+  -> publish PublishedView
 ```
 
-任何一步失败都撤销本次产生的注册和运行资源。FAILED 保存 phase、revision、cause 和 desired state，不能
-成为永久终态；修正制品、配置或依赖后仍可重新收敛。
+`ACTIVE_REQUIRED` entry 必须 ACTIVE；`PENDING_ALLOWED` 可保持 PENDING 并在 PublishedView 诊断中列出
+`waitingFor`；候选 FAILED 默认拒绝发布。任何失败都撤销本次产生的注册和运行资源。FAILED 保存 phase、
+revision、cause 和 desired state，不能成为永久终态；修正制品、配置或依赖后仍可重新收敛。
 
 ### 9.3 disable 与 uninstall
 
-`PluginRegistry.disable` 先修改 desired state；Engine 收敛时先从能力目录撤销入口，拒绝新调用，再排空
-在途调用、dispose Scope、停止 sidecar/关闭 ClassLoader，最后发布 observed snapshot。uninstall 只能
-作用于已经不被 desired graph 引用且没有活动实例的制品；文件删除应使用可恢复的 quarantine/retire
-流程。
+`PluginRegistry.disable` 先修改 desired state；Engine 发布不含该能力的新 `PublishedView` 并关闭旧代
+准入，再排空旧代在途调用、dispose Scope、停止 sidecar/关闭 ClassLoader。排空和退役进展以同一
+generation revision 下的新 view revision 更新诊断。uninstall 只能作用于已经不被 desired graph 引用且
+没有活动实例的制品；文件删除应使用可恢复的 quarantine/retire 流程。
 
 ## 10. Spring Boot 集成
 
@@ -363,10 +367,10 @@ Activate use case
 
 1. Spring 创建数据库、凭据、安全策略等基础设施对象；
 2. Harness 提供 `FibraEngineCustomizer`，注册 built-in definitions、Node runtime 与 contribution
-   adapters；外部服务只导出 binding，明确由
-   Spring 保留对象关闭权；
+   adapters，并把外部服务收集成不可变 host binding snapshot，明确由 Spring 保留对象关闭权；
 3. starter 创建并启动唯一 Engine；
-4. trigger/case 只取得 Harness port，不直接注入低层 loader；
+4. trigger/case 只取得 Harness port、PluginRegistry 或 PublishedRuntime，不直接注入低层 loader、Context
+   或 Scope；
 5. 关闭时先停止入口流量和 Agent，再关闭 Engine，最后由 Spring 关闭其拥有的基础设施。
 
 Spring stereotype 扫描不能发现动态插件，动态插件也不能向 Spring ApplicationContext 注入 Bean。需要
@@ -375,16 +379,17 @@ Bean 的插件只能通过稳定 ServiceKey 消费显式导出的宿主能力。
 ## 11. Harness 场景验收
 
 - 不打 JAR 即可注册和组合内置 PluginDefinition；内置与外部实例具有相同状态和 Scope 语义。
-- Harness 常规用例只持有 PluginRegistry 和自己的 capability API；高级运维才读取 EngineSnapshot，均不
-  接触 loader、Process 或 RPC channel。
+- Harness 外层常规用例只持有 PluginRegistry、PublishedRuntime 和自己的 capability API；高级运维从
+  PublishedView 读取 Engine/诊断事实，均不接触 Context、loader、Process 或 RPC channel。
 - install/activate/disable/uninstall 均可从程序化命令完成，不依赖编辑文件或等待 watcher。
 - 一个 session Scope 关闭后，其 Agent、临时工具、终端和任务资源全部释放，全局插件保持运行。
-- Java 插件项目不依赖 artifact/Spring/Engine；只使用 Fibra manifest 和一个 entrypoint。
+- Java 插件项目不依赖 artifact/Spring/Engine；可运行制品只使用 Fibra manifest 和一个 entrypoint，
+  contract-only 制品省略 entrypoint。
 - Java 和 Node 使用同一个 Registry API 完成 install/upgrade/enable/disable/uninstall。
 - Node sidecar 退出、超时、协议错误和部分注册失败不会留下可调用工具或孤儿进程。
-- ToolCatalog 与模型提示词使用同一 snapshot revision。
+- ToolCatalog 与模型提示词使用同一 view revision，真实调用携带该 expected revision。
 - Spring 与 Fibra 的 binding/resource 所有权逐项显式，关闭测试能证明每个资源只关闭一次。
-- PluginRegistry 分开展示 artifact、desired 与 observed，observed 唯一来自 EngineSnapshot。
+- PluginRegistry 分开展示 artifact、desired 与 observed，observed 唯一来自 `PublishedView.engine()`。
 
 这些测试放在 Harness 项目或独立集成验证中，不进入 Fibra parity test。Fibra 自身还必须以纯 Java
 嵌入、Spring Boot、测试临时作用域等非 Harness 场景验证同一 API，防止为了本场景形成特殊分支。

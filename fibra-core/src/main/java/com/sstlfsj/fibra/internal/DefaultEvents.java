@@ -28,7 +28,7 @@ final class DefaultEvents implements Events {
 
     @Override
     public <L> Disposable on(EventKey<L> key, L listener, EventOptions options) {
-        return context.runtime().events().on(context, key, listener, options, false);
+        return context.domain().events().on(context, key, listener, options, false);
     }
 
     @Override
@@ -38,7 +38,7 @@ final class DefaultEvents implements Events {
 
     @Override
     public <L> Disposable once(EventKey<L> key, L listener, EventOptions options) {
-        return context.runtime().events().on(context, key, listener, options, true);
+        return context.domain().events().on(context, key, listener, options, true);
     }
 
     @Override
@@ -48,7 +48,7 @@ final class DefaultEvents implements Events {
 
     @Override
     public <L> void emit(EventTarget target, EventKey<L> key, Consumer<? super L> invocation) {
-        context.runtime().events().emit(target, key, invocation);
+        context.domain().events().emit(target, key, invocation);
     }
 
     @Override
@@ -60,7 +60,7 @@ final class DefaultEvents implements Events {
     @Override
     public <L> Mono<Void> parallel(EventTarget target, EventKey<L> key,
                                    Function<? super L, ? extends Publisher<?>> invocation) {
-        return context.runtime().events().parallel(target, key, invocation);
+        return context.domain().events().parallel(target, key, invocation);
     }
 
     @Override
@@ -72,7 +72,7 @@ final class DefaultEvents implements Events {
     @Override
     public <L, R> Mono<R> serial(EventTarget target, EventKey<L> key,
                                  Function<? super L, ? extends Publisher<R>> invocation) {
-        return context.runtime().events().serial(target, key, invocation);
+        return context.domain().events().serial(target, key, invocation);
     }
 
     @Override
@@ -83,7 +83,7 @@ final class DefaultEvents implements Events {
     @Override
     public <L, R> R bail(EventTarget target, EventKey<L> key,
                          Function<? super L, ? extends R> invocation) {
-        return context.runtime().events().bail(target, key, invocation);
+        return context.domain().events().bail(target, key, invocation);
     }
 
     @Override
@@ -97,6 +97,6 @@ final class DefaultEvents implements Events {
     public <L, R> R waterfall(EventTarget target, EventKey<L> key,
                               BiFunction<? super L, Next<R>, ? extends R> invocation,
                               Supplier<? extends R> inner) {
-        return context.runtime().events().waterfall(target, key, invocation, inner);
+        return context.domain().events().waterfall(target, key, invocation, inner);
     }
 }

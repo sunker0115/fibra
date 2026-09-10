@@ -19,13 +19,13 @@ public final class com.sstlfsj.fibra.runtime.java.JavaArtifactRequirement extend
 ## com.sstlfsj.fibra.runtime.java.JavaPluginManifest
 Compiled from "JavaPluginManifest.java"
 public final class com.sstlfsj.fibra.runtime.java.JavaPluginManifest extends java.lang.Record {
-  public com.sstlfsj.fibra.runtime.java.JavaPluginManifest(com.sstlfsj.fibra.artifact.ArtifactId, java.lang.String, java.lang.String, java.util.List<com.sstlfsj.fibra.runtime.java.JavaArtifactRequirement>);
+  public com.sstlfsj.fibra.runtime.java.JavaPluginManifest(com.sstlfsj.fibra.artifact.ArtifactId, java.lang.String, java.util.Optional<java.lang.String>, java.util.List<com.sstlfsj.fibra.runtime.java.JavaArtifactRequirement>);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public com.sstlfsj.fibra.artifact.ArtifactId artifactId();
   public java.lang.String version();
-  public java.lang.String entrypoint();
+  public java.util.Optional<java.lang.String> entrypoint();
   public java.util.List<com.sstlfsj.fibra.runtime.java.JavaArtifactRequirement> requires();
 }
 ## com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter

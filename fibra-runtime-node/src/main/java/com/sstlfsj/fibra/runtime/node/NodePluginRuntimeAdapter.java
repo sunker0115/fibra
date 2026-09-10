@@ -6,9 +6,9 @@ import com.sstlfsj.fibra.artifact.ArtifactId;
 import com.sstlfsj.fibra.artifact.ArtifactRecord;
 import com.sstlfsj.fibra.artifact.RuntimeId;
 import com.sstlfsj.fibra.bridge.ContributionBinding;
-import com.sstlfsj.fibra.bridge.ContributionBridge;
 import com.sstlfsj.fibra.bridge.ContributionCodec;
 import com.sstlfsj.fibra.bridge.ContributionKind;
+import com.sstlfsj.fibra.bridge.ContributionServices;
 import com.sstlfsj.fibra.engine.PluginCatalog;
 import com.sstlfsj.fibra.engine.PluginCatalogEntry;
 import com.sstlfsj.fibra.engine.PluginRuntimeAdapter;
@@ -34,16 +34,13 @@ import java.util.stream.Collectors;
 public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
     public static final RuntimeId RUNTIME_ID = new RuntimeId("node");
 
-    private final ContributionBridge bridge;
     private final NodeContributionKindResolver kinds;
     private final NodeRuntimeOptions options;
     private final NodeManifestReader manifests = new NodeManifestReader();
     private RuntimeGenerationSnapshot currentSnapshot;
 
-    public NodePluginRuntimeAdapter(ContributionBridge bridge,
-                                    NodeContributionKindResolver kinds,
+    public NodePluginRuntimeAdapter(NodeContributionKindResolver kinds,
                                     NodeRuntimeOptions options) {
-        this.bridge = Objects.requireNonNull(bridge, "bridge");
         this.kinds = Objects.requireNonNull(kinds, "kinds");
         this.options = Objects.requireNonNull(options, "options");
     }
@@ -99,13 +96,15 @@ public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
             Object.class, () -> (context, config) -> {
                 var provider = context.plugins().current().orElseThrow(() ->
                     new IllegalStateException("Node plugin requires a plugin instance"));
+                var registrar = context.services().require(
+                    ContributionServices.REGISTRAR);
                 return NodeSidecar.start(
                         artifact.location().resolve(manifest.entrypoint()), options)
                     .flatMap(sidecar -> sidecar.request("fibra.start", Map.of(
                             "protocol", manifest.protocol(),
                             "config", config == null ? Map.of() : config),
                             options.defaultRequestTimeout())
-                        .then(bridge.registerAll(context, provider.id(),
+                        .then(registrar.registerAll(context, provider.id(),
                             bindings(manifest, sidecar), closeAfterDrain(sidecar)))
                         .then(Mono.fromRunnable(() -> context.effects().supervise(
                             sidecar.termination(), "node-sidecar:" + provider.id())))
@@ -114,7 +113,7 @@ public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
                             sidecar.close();
                             return Mono.error(failure);
                         }));
-            }).build();
+            }).require(ContributionServices.REGISTRAR).build();
         return new PluginCatalogEntry<>(definition, value -> value);
     }
 

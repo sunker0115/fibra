@@ -4,6 +4,7 @@ import com.sstlfsj.fibra.artifact.ArtifactId;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -39,7 +40,7 @@ class JavaArtifactGraphTest {
 
     private static JavaPluginManifest manifest(String id, String version,
                                                JavaArtifactRequirement... requirements) {
-        return new JavaPluginManifest(new ArtifactId(id), version, "example.Entrypoint",
-            List.of(requirements));
+        return new JavaPluginManifest(new ArtifactId(id), version,
+            Optional.of("example.Entrypoint"), List.of(requirements));
     }
 }

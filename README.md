@@ -11,17 +11,22 @@ Fibra 是 Java 21 的通用插件底座。它把生命周期与资源所有权�
 
 ```text
 业务场景 / Harness / Spring Boot
-              │
-       PluginRegistry          安装、升级、启停、审计
-              │
-         FibraEngine           唯一托管变更入口与 ChangeSet 事务
-        ↙            ↘
-Java runtime               Node runtime
-JAR + ClassSpace           sidecar + JSON-RPC
-        ↘            ↙
-     ContributionBridge     统一贡献注册、调用与排空
-              │
-        FibraRuntime         Scope、插件、服务、事件、effect 生命周期
+        │                         │
+ PluginRegistry             PublishedRuntime
+ 安装、升级、启停、审计        单一 PublishedView 与带 revision 调用
+        └──────────┬──────────────┘
+               FibraEngine        唯一托管变更入口与 ChangeSet 事务
+                    │
+       AtomicReference<PublishedState>
+                    │
+          ┌─────────┴─────────┐
+     RuntimeDomain        RuntimeDomain
+       published           candidate / draining
+    Scope、服务、事件       Scope、服务、事件
+    generation-local       generation-local
+ ContributionDirectory  ContributionDirectory
+          │                   │
+   Java / Node runtime   Java / Node runtime
 ```
 
 模块职责：
@@ -30,8 +35,8 @@ JAR + ClassSpace           sidecar + JSON-RPC
 - `fibra-core`：唯一 lifecycle lane 与资源所有权实现；
 - `fibra-config`：期望状态解析、校验、编译和写回事务；
 - `fibra-artifact`：运行时中立的制品存储、摘要、隔离和磁盘事务；
-- `fibra-engine`：runtime port、命令、ChangeSet、持久化 journal 和不可变 snapshot；
-- `fibra-runtime-java`：单入口 manifest、依赖图和隔离 ClassSpace；
+- `fibra-engine`：runtime port、命令、ChangeSet、持久化 journal 和原子 `PublishedView`；
+- `fibra-runtime-java`：单一 manifest、依赖图和隔离 ClassSpace；
 - `fibra-runtime-node`：受限 Node 入口、sidecar、JSON-RPC、心跳和进程树治理；
 - `fibra-bridge`：本地与远程贡献的统一目录、调用适配和 drain；
 - `fibra-registry`：面向管理面的安装、升级、启停、查询、watch 和审计；
@@ -68,7 +73,8 @@ runtime.close();
 
 ## Java 插件 JAR
 
-插件实现 `PluginEntrypoint<C>`，JAR 中只声明一个 `META-INF/fibra/plugin.yaml`：
+Java 制品 JAR 中只声明一个 `META-INF/fibra/plugin.yaml`。可运行插件实现
+`PluginEntrypoint<C>` 并声明唯一 `entrypoint`：
 
 ```yaml
 id: greeting
@@ -77,7 +83,7 @@ entrypoint: org.example.GreetingEntrypoint
 requires: []
 ```
 
-插件工程仅以 `provided` 方式依赖 `fibra-api`。`fibra-runtime-java` 校验 manifest、解析 SemVer 依赖图，为每个制品建立隔离 `URLClassLoader`，并在旧 generation 排空后关闭 ClassSpace。不需要 `plugin.properties`、注解扫描或扩展索引。
+只承载共享 SPI/DTO 的 contract-only JAR 省略 `entrypoint`，仍参与 SemVer 依赖图和 ClassSpace，但不会生成可挂载的 `PluginDefinition`。插件工程仅以 `provided` 方式依赖 `fibra-api` 及其契约制品。`fibra-runtime-java` 校验 manifest、解析 SemVer 依赖图，为每个制品建立隔离 `URLClassLoader`，并在旧 generation 排空后关闭 ClassSpace。不需要 `plugin.properties`、注解扫描或扩展索引。
 
 ## Node 插件
 
@@ -96,11 +102,11 @@ contributions:
     descriptor: { title: Echo }
 ```
 
-宿主使用参数数组启动 `node <entrypoint>`，不经过 Shell。运行时限制消息大小，提供请求超时、取消、心跳、异常退出诊断、进程树终止和会话目录清理。Node 贡献和 Java 本地贡献通过同一个 `ContributionBridge` 暴露给具体场景。
+宿主使用参数数组启动 `node <entrypoint>`，不经过 Shell。运行时限制消息大小，提供请求超时、取消、心跳、异常退出诊断、进程树终止和会话目录清理。Node 贡献和 Java 本地贡献登记到所属运行代的 `ContributionDirectory`，只由 Engine 当前发布的 `PublishedRuntime` 对外调用。
 
 ## 托管与 Spring Boot
 
-需要动态安装和管理时依赖 `fibra-engine` 或 `fibra-registry`；宿主只通过 `start()`、`submit(EngineCommand)`、`snapshot()` 和 `snapshots()` 观察事实。所有外部变更经过同一个 ChangeSet command loop，未完成的持久事务会在启动时恢复或关闭 mutation gate。
+需要动态安装和管理时依赖 `fibra-engine` 或 `fibra-registry`；宿主只通过 `start()`、`submit(EngineCommand)` 和稳定的 `published()` 门面工作。`PublishedRuntime.current()` / `views()` 返回状态、诊断和贡献一致的不可变视图，能力调用必须携带选择能力时看到的 `viewRevision`。所有外部变更经过同一个 ChangeSet command loop，未完成的持久事务会在启动时恢复或关闭 mutation gate。
 
 Spring Boot 只需引入：
 
