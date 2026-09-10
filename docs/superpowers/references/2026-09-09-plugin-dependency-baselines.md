@@ -8,7 +8,8 @@
 |---|---|---|
 | PF4J | `org.pf4j:pf4j:3.15.0:sources`；SHA-256 `7b8333b0d59a9cbe6bdc31771f7bb250b6d21fe99275539a855135593a311597` | `org/pf4j/DependencyResolver.java`、`org/pf4j/PluginClassLoader.java` |
 | IntelliJ Platform | 官方 SDK 文档与 2026-09-09 访问的 `master` 源码；未取得固定提交，不能当作发布版行为承诺 | 下方官方链接 |
-| DeepSeek Harness | 原始设计基线 `b0a7d2ce3b4c19d7452e364b2d7acbfa87e707ed`；当前文章对拍 `a66e4702047846cdaa10c66c9d3df3951f5ea70d` | `vendor/loader/src`、`packages/boot/app-boot`、`packages/client/modules/src`、`packages/client/hmr/src/client/index.ts`、`packages/extensions/cordis-client-runner` |
+| DeepSeek Harness | 原始设计基线 `b0a7d2ce3b4c19d7452e364b2d7acbfa87e707ed`；文章对拍 `a66e4702047846cdaa10c66c9d3df3951f5ea70d`；进程单元复核 `c291e7961a515f6d7af9304e7fd1d257929aef26` | 原有插件路径及 `packages/subprocess` |
+| OpenAI Codex | `b9852fe6f7c73c98277da38cccb238083c843d4e` | `codex-rs/utils/pty/src/process_group.rs`、`codex-rs/utils/pty/src/win/job.rs`、`codex-rs/core/src/exec.rs` |
 | cordis4j | `6cfd56e684fb403ded952afc09eddb49a5228494` | 独立的[设计对拍与采用边界](2026-09-11-cordis4j-design-evidence.md)；本文件不再代管其内核语义 |
 
 本地 DeepSeek Harness 是 TypeScript 项目。用户提供的 `deepseek-harness-java` 截图和 JAR/Node Bridge 流程是另一份设计材料，尚无对应 Java 源码可复核，不能混为已实现行为。
@@ -39,6 +40,23 @@ Fibra 采用每制品加载器、显式依赖和共享类型单一归属。Java 
 `vendor/loader/src/config/entry.ts` 对替换入口先 import，应用失败则恢复旧配置/插件；`packages/boot/app-boot/tests/config-reload.spec.ts` 覆盖失败后恢复、下一次有效修改和树级回滚。它会在部分路径重建旧实例，因此不能描述为所有失败都保留旧对象身份。
 
 浏览器插件与 Node sidecar 分属不同运行位置。Host 发布客户端图，浏览器运行自己的插件树，HMR 负责旧实例和样式清理。Fibra 本期的 Java/Node 运行时不能据此宣称已实现浏览器插件平台。
+
+## 进程单元与回收
+
+JDK `ProcessHandle.children()` / `descendants()` 返回的是调用时快照，进程状态又会异步变化，因此它适合
+诊断而不是所有权。NuProcess 的 POSIX `destroy` 对单个 PID 调 `kill`，Windows 路径对单个 handle 调
+`TerminateProcess`，也不提供完整进程单元。`tree-kill` 在 Linux/macOS 通过 `ps`/`pgrep` 递归发现后代，
+仍有父进程先退出导致链路丢失的窗口。[JDK ProcessHandle](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/ProcessHandle.html)、[NuProcess POSIX](https://github.com/brettwooldridge/NuProcess/blob/master/src/main/java/com/zaxxer/nuprocess/internal/BasePosixProcess.java)、[NuProcess Windows](https://github.com/brettwooldridge/NuProcess/blob/master/src/main/java/com/zaxxer/nuprocess/windows/WindowsProcess.java)、[tree-kill](https://github.com/pkrumins/node-tree-kill)
+
+Codex 在 POSIX 创建独立进程组，以 `SIGTERM`、等待、`SIGKILL` 作用于同一 PGID；Windows 使用 Job
+Object，并在需要消除启动竞态的路径中先挂起创建、加入 Job、再恢复。DSH 把同一思想抽成
+provider-managed range，同时公开 systemd scope、Windows Job 与较弱 PGID/taskkill fallback 的能力边界。
+[Codex process group](https://github.com/openai/codex/blob/b9852fe6f7c73c98277da38cccb238083c843d4e/codex-rs/utils/pty/src/process_group.rs)、[Codex Windows Job](https://github.com/openai/codex/blob/b9852fe6f7c73c98277da38cccb238083c843d4e/codex-rs/utils/pty/src/win/job.rs)、[DSH subprocess](https://github.com/deepseek-ai/deepseek-harness/tree/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/subprocess)
+
+Fibra 采用相同的所有权模型，但不直接依赖 Codex 的 Rust workspace，也不把 DSH 的 RC、Node/Cordis
+组合引入 Java 核心。`fibra-runtime-node` 内部以 `NodeProcessUnit` 隔离协议和进程生命周期：监督器是
+RuntimeDomain 等待的 participant，payload 在 POSIX 独立进程组内运行；Windows 明确使用较弱的系统树
+终止后端。只有受管范围静默才完成 retire，主动逃离该范围的非可信代码必须进入更强的外部 sandbox。
 
 ### 当前发布策略对拍
 

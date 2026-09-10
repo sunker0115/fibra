@@ -105,7 +105,7 @@ class NodeSidecarTest {
         return """
             import readline from 'node:readline';
             import { spawn } from 'node:child_process';
-            const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)']);
+            const child = spawn(process.execPath, ['-e', "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000)"]);
             let cancelled = false;
             const reply = (id, result) => process.stdout.write(JSON.stringify({jsonrpc:'2.0', id, result}) + '\\n');
             readline.createInterface({input: process.stdin}).on('line', line => {

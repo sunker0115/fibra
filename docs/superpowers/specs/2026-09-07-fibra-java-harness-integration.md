@@ -279,16 +279,20 @@ entrypoint、runtime、版本和摘要；权限仍由 Harness 绑定到 artifact
 
 每个 Node 包由 `fibra-runtime-node` 适配成普通 Fibra PluginInstance：
 
-1. start effect 通过参数数组启动 sidecar，不经过 shell；
+1. start effect 通过参数数组启动 `NodeProcessUnit` 监督器，再由监督器启动 sidecar payload，不经过 shell；
 2. canonical entrypoint 必须位于不可变安装目录内，并限制为允许的扩展名；
 3. JSON-RPC 握手校验协议版本、插件 identity、能力和权限；
 4. 把远程 endpoint 发布为通用 contribution，Harness adapter 再生成 ToolCatalog registration；两次
    registration 与进程会话归属同一 Scope；
 5. 进程异常退出时先撤销能力，再使实例进入可诊断 FAILED，并按 Engine 策略重试；
-6. dispose 停止接收新调用、等待或取消在途调用、关闭 RPC、终止完整进程树并清理临时资源。
+6. dispose 停止接收新调用、等待或取消在途调用、关闭 RPC stdin，并等待监督器按
+   EOF、软终止、强终止的顺序确认整个受管范围静默后清理临时资源。
 
 凭据只能通过受限 `CredentialBroker` 按声明权限取得，不能复制宿主全部环境变量。stdout 只承载有边界的
 RPC framing，stderr 独立进入结构化日志；消息大小、调用超时、取消、心跳和进程退出必须有契约测试。
+POSIX 以独立进程组作为范围所有者；Windows 的系统进程树终止是较弱后端。插件主动逃离进程组、
+Windows breakaway 或宿主不可执行清理时，必须由 container、Job Object 或外部 sandbox 提供更强所有权；
+`ProcessHandle.descendants()` 的瞬时快照不能替代该边界。
 
 ## 8. 能力目录与 Agent 的关系
 

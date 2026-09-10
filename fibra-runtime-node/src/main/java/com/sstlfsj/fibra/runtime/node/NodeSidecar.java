@@ -12,12 +12,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,8 +31,7 @@ public final class NodeSidecar implements AutoCloseable {
         new TypeReference<>() { };
 
     private final NodeRuntimeOptions options;
-    private final Path sessionDirectory;
-    private final Process process;
+    private final NodeProcessUnit processUnit;
     private final BufferedWriter writer;
     private final JsonMapper json = JsonMapper.builder().build();
     private final AtomicLong requestIds = new AtomicLong();
@@ -45,17 +41,15 @@ public final class NodeSidecar implements AutoCloseable {
     private final AtomicBoolean failed = new AtomicBoolean();
     private final ScheduledExecutorService heartbeats;
 
-    private NodeSidecar(NodeRuntimeOptions options, Path sessionDirectory,
-                        Process process) {
+    private NodeSidecar(NodeRuntimeOptions options, NodeProcessUnit processUnit) {
         this.options = options;
-        this.sessionDirectory = sessionDirectory;
-        this.process = process;
+        this.processUnit = processUnit;
         this.writer = new BufferedWriter(new OutputStreamWriter(
-            process.getOutputStream(), StandardCharsets.UTF_8));
+            processUnit.input(), StandardCharsets.UTF_8));
         this.heartbeats = Executors.newSingleThreadScheduledExecutor(runnable ->
             Thread.ofPlatform().daemon().name("fibra-node-heartbeat").unstarted(runnable));
         startReaders();
-        process.onExit().thenAccept(ignored -> onExit(process.exitValue()));
+        processUnit.onExit().thenAccept(ignored -> onExit(processUnit.exitValue()));
     }
 
     public static Mono<NodeSidecar> start(Path entrypoint, NodeRuntimeOptions options) {
@@ -115,7 +109,7 @@ public final class NodeSidecar implements AutoCloseable {
     }
 
     public boolean isAlive() {
-        return process.isAlive() && !failed.get();
+        return processUnit.isAlive() && !failed.get();
     }
 
     @Override
@@ -133,33 +127,12 @@ public final class NodeSidecar implements AutoCloseable {
         } catch (IOException failure) {
             LOGGER.debug("Failed to close Node sidecar input", failure);
         }
-        terminateProcessTree();
+        processUnit.close();
         termination.tryEmitEmpty();
-        deleteSessionDirectory();
     }
 
     private static NodeSidecar launch(Path entrypoint, NodeRuntimeOptions options) {
-        try {
-            var canonicalEntrypoint = entrypoint.toRealPath();
-            if (!Files.isRegularFile(canonicalEntrypoint)
-                || Files.isSymbolicLink(entrypoint)) {
-                throw new NodeRpcException(NodeRpcPhase.START,
-                    "Node entrypoint must be a regular non-symbolic file");
-            }
-            Files.createDirectories(options.sessionRoot());
-            var session = Files.createTempDirectory(options.sessionRoot(), "node-");
-            var process = new ProcessBuilder(List.of(options.nodeExecutable().toString(),
-                canonicalEntrypoint.toString()))
-                .directory(session.toFile())
-                .redirectErrorStream(false)
-                .start();
-            return new NodeSidecar(options, session, process);
-        } catch (NodeRpcException failure) {
-            throw failure;
-        } catch (IOException failure) {
-            throw new NodeRpcException(NodeRpcPhase.START,
-                "Failed to start Node sidecar", failure);
-        }
+        return new NodeSidecar(options, NodeProcessUnit.launch(entrypoint, options));
     }
 
     private Mono<Void> handshake() {
@@ -194,7 +167,7 @@ public final class NodeSidecar implements AutoCloseable {
     }
 
     private void readStdout() {
-        try (var input = process.getInputStream()) {
+        try (var input = processUnit.output()) {
             var frame = new ByteArrayOutputStream();
             int next;
             while ((next = input.read()) >= 0) {
@@ -224,7 +197,8 @@ public final class NodeSidecar implements AutoCloseable {
     }
 
     private void readStderr() {
-        try (var reader = process.errorReader(StandardCharsets.UTF_8)) {
+        try (var reader = new java.io.BufferedReader(new java.io.InputStreamReader(
+            processUnit.error(), StandardCharsets.UTF_8))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 LOGGER.warn("Node sidecar stderr: {}", abbreviate(line, 2048));
@@ -329,65 +303,6 @@ public final class NodeSidecar implements AutoCloseable {
         if (!closing.get()) {
             fail(new NodeRpcException(NodeRpcPhase.EXIT,
                 "Node sidecar exited unexpectedly with code " + exitCode));
-        }
-    }
-
-    private void terminateProcessTree() {
-        List<ProcessHandle> descendants;
-        try {
-            descendants = new ArrayList<>(process.descendants().toList());
-        } catch (RuntimeException failure) {
-            descendants = List.of();
-            LOGGER.warn("Cannot enumerate Node sidecar descendants; terminating parent only",
-                failure);
-        }
-        descendants.reversed().forEach(ProcessHandle::destroy);
-        descendants.reversed().forEach(handle ->
-            awaitOrForceExit(handle, options.terminateTimeout()));
-        process.destroy();
-        awaitOrForceExit(process.toHandle(), options.terminateTimeout());
-    }
-
-    private static void awaitOrForceExit(ProcessHandle handle, Duration timeout) {
-        if (!handle.isAlive()) {
-            return;
-        }
-        if (waitForExit(handle, timeout)) {
-            return;
-        }
-        handle.destroyForcibly();
-        if (!waitForExit(handle, timeout)) {
-            LOGGER.warn("Process {} did not terminate within {}", handle.pid(), timeout);
-        }
-    }
-
-    private static boolean waitForExit(ProcessHandle handle, Duration timeout) {
-        if (!handle.isAlive()) {
-            return true;
-        }
-        try {
-            handle.onExit().get(timeout.toMillis(), TimeUnit.MILLISECONDS);
-            return true;
-        } catch (InterruptedException failure) {
-            Thread.currentThread().interrupt();
-            return !handle.isAlive();
-        } catch (Exception failure) {
-            return !handle.isAlive();
-        }
-    }
-
-    private void deleteSessionDirectory() {
-        try (var paths = Files.walk(sessionDirectory)) {
-            paths.sorted(java.util.Comparator.reverseOrder()).forEach(path -> {
-                try {
-                    Files.deleteIfExists(path);
-                } catch (IOException failure) {
-                    LOGGER.debug("Failed to remove Node session path {}", path, failure);
-                }
-            });
-        } catch (IOException failure) {
-            LOGGER.debug("Failed to clean Node session directory {}",
-                sessionDirectory, failure);
         }
     }
 

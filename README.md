@@ -102,7 +102,11 @@ contributions:
     descriptor: { title: Echo }
 ```
 
-宿主使用参数数组启动 `node <entrypoint>`，不经过 Shell。运行时限制消息大小，提供请求超时、取消、心跳、异常退出诊断、进程树终止和会话目录清理。Node 贡献和 Java 本地贡献登记到所属运行代的 `ContributionDirectory`，只由 Engine 当前发布的 `PublishedRuntime` 对外调用。
+宿主使用参数数组启动随模块发布的进程监督器，再由监督器启动 canonical entrypoint，全程不经过 Shell。
+`NodeSidecar` 只处理有界 JSON-RPC、请求超时、取消、心跳和异常退出；`NodeProcessUnit` 负责一个可等待的
+受管进程范围，按“stdin EOF、软终止、强终止、范围静默、目录清理”收口。POSIX 使用独立进程组，
+Windows 使用系统进程树终止后端；主动逃离受管范围不属于本地 sidecar 的安全保证。Node 贡献和 Java
+本地贡献登记到所属运行代的 `ContributionDirectory`，只由 Engine 当前发布的 `PublishedRuntime` 对外调用。
 
 ## 托管与 Spring Boot
 

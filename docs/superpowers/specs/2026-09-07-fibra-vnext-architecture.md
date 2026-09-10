@@ -372,8 +372,18 @@ Node 插件作为受管 sidecar，通过版本化 JSON-RPC 协议参与同一 `P
 - prepare 完成包校验、进程启动、握手、能力与 schema 协商；
 - endpoint 先适配为通用 contribution，再进入代内目录；
 - 超时、取消、心跳、stderr、异常退出和消息边界必须结构化上报；
-- retire 必须结束完整进程树，不能只关闭父进程或遗留孤儿；
+- RPC 与进程所有权分离：`NodeSidecar` 只处理协议，内部 `NodeProcessUnit` 启动监督器并持有一个可等待的
+  受管进程范围；RuntimeDomain 只等待该范围静默，不枚举或缓存瞬时后代 PID；
+- retire 固定执行“停止接入、关闭 RPC stdin、等待协作退出、软终止、强终止、确认范围静默、清理会话目录”；
+  只有整个受管范围静默后 runtime participant 才算结束；
+- POSIX payload 在独立进程组中运行，按 PGID 发信号并检查进程组消失；Windows 使用
+  `taskkill /PID <pid> /T /F` 作为公开的较弱后端。后代主动离开进程组、Windows breakaway、监督器不可执行
+  清理或机器失效不在本地 sidecar 的保证内，非可信插件必须交给 container、Job Object 或外部 sandbox；
 - Engine snapshot 不暴露 Process、channel 或协议对象。
+
+`ProcessHandle.descendants()` 只能用于诊断快照，不能成为生命周期所有权来源。该边界借鉴 Codex 的
+POSIX process group / Windows Job Object 和 DSH 的 provider-managed range，但 Fibra 不引入它们的运行时；
+当前 Node 模块只携带最小监督器，不新增 npm/Cordis 依赖。
 
 ### 6.4 Registry、Bridge 与 Spring
 
