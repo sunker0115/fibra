@@ -61,20 +61,22 @@ public final class FibraEngine implements AutoCloseable {
 
         @Override
         public Flux<PublishedView> views() {
-            return views.asFlux();
+            return views.asFlux().publishOn(reactor.core.scheduler.Schedulers.boundedElastic());
         }
 
         @Override
         public <D, I, O> Mono<O> invoke(String expectedViewRevision,
                                         ContributionKind<D, I, O> kind,
                                         ContributionId id, I input) {
-            return invokePublished(expectedViewRevision, kind, id, input);
+            return invokePublished(expectedViewRevision, kind, id, input)
+                .publishOn(reactor.core.scheduler.Schedulers.boundedElastic());
         }
     };
     private final AtomicBoolean closeRequested = new AtomicBoolean();
     private final Mono<PublishedView> startSignal;
+    private final Mono<Void> closeSignal = Mono.defer(this::quiesce)
+        .then(Mono.defer(this::closeInternal)).cache();
 
-    private Map<RuntimeId, PluginCatalog> runtimeCatalogs = Map.of();
     private List<HostServiceRegistry.Binding<?>> hostBindings = List.of();
 
     private FibraEngine(Builder builder) {
@@ -83,7 +85,7 @@ public final class FibraEngine implements AutoCloseable {
         artifactStore = builder.artifactStore;
         runtimeAdapters = Map.copyOf(builder.runtimeAdapters);
         hostServices = builder.hostServices;
-        executor = new ChangeSetExecutor(builder.journal);
+        executor = new ChangeSetExecutor(builder.journal, this::refreshDiagnostics);
         var initialEngine = emptySnapshot();
         var initialView = new PublishedView("0", "0", initialEngine,
             new ContributionSnapshot(0, List.of()),
@@ -130,68 +132,18 @@ public final class FibraEngine implements AutoCloseable {
             }
             hostBindings = hostServices.freeze();
             executor.verifyRecovered();
-            var installed = artifactStore == null ? List.<ArtifactRecord>of()
-                : artifactStore.installed();
+            var installed = artifactStore == null ? List.<ArtifactRecord>of() : artifactStore.installed();
             var artifacts = new LinkedHashMap<ArtifactId, ArtifactRecord>();
-            var grouped = new LinkedHashMap<RuntimeId, List<ArtifactRecord>>();
-            for (var artifact : installed) {
-                artifacts.put(artifact.id(), artifact);
-                grouped.computeIfAbsent(artifact.runtimeId(), ignored -> new ArrayList<>())
-                    .add(artifact);
-            }
-            var catalogs = new LinkedHashMap<RuntimeId, PluginCatalog>();
-            var runtimeSnapshots =
-                new LinkedHashMap<RuntimeId, RuntimeGenerationSnapshot>();
+            installed.forEach(artifact -> artifacts.put(artifact.id(), artifact));
             var compilation = new Holder<DesiredCompilation>();
             var candidate = new Holder<Generation>();
-            var previous = new Holder<Generation>();
-            var builder = ChangeSet.builder(UUID.randomUUID().toString());
-            for (var entry : grouped.entrySet()) {
-                var adapter = runtimeAdapters.get(entry.getKey());
-                if (adapter == null) {
-                    return Mono.error(new UnknownRuntimeException(entry.getKey()));
-                }
-                builder.participant(bootstrapRuntimeParticipant(adapter, entry.getValue(),
-                    catalogs, runtimeSnapshots));
-            }
-            var command = new RefreshDesired(null);
-            builder.participant(desiredReadParticipant(command, compilation))
-                .participant(coreParticipant(compilation, candidate, previous,
-                    () -> combinedCatalog(catalogs)))
+            var changeSet = ChangeSet.builder(UUID.randomUUID().toString())
+                .participant(desiredReadParticipant(new RefreshDesired(null), compilation))
+                .participant(generationParticipant(compilation, candidate, () -> artifacts))
                 .verify(() -> verify(candidate.value))
-                .publish(() -> publish(compilation.value, candidate.value,
-                    artifacts, runtimeSnapshots, catalogs));
-            return executor.execute(builder.build())
-                .then(Mono.fromSupplier(() -> {
-                    refreshDiagnostics();
-                    return publishedState.get().view();
-                }));
+                .publish(() -> publish(compilation.value, candidate.value, artifacts)).build();
+            return executor.execute(changeSet, result -> commandResult(result).view());
         });
-    }
-
-    private ChangeParticipant bootstrapRuntimeParticipant(
-        PluginRuntimeAdapter adapter, List<ArtifactRecord> artifacts,
-        Map<RuntimeId, PluginCatalog> catalogs,
-        Map<RuntimeId, RuntimeGenerationSnapshot> runtimeSnapshots) {
-        return new ChangeParticipant() {
-            @Override
-            public String name() {
-                return "runtime:" + adapter.id().value();
-            }
-
-            @Override
-            public Mono<PreparedChange> prepare() {
-                return Flux.fromIterable(artifacts)
-                    .concatMap(adapter::inspect)
-                    .then(adapter.prepare(new RuntimeChangeRequest(
-                        adapter.id(), artifacts, null)))
-                    .doOnNext(prepared -> {
-                        catalogs.put(adapter.id(), prepared.catalog());
-                        runtimeSnapshots.put(adapter.id(), prepared.snapshot());
-                    })
-                    .map(prepared -> prepared);
-            }
-        };
     }
 
     private Mono<EngineCommandResult> submitInternal(EngineCommand command) {
@@ -207,65 +159,42 @@ public final class FibraEngine implements AutoCloseable {
         var compilation = new Holder<DesiredCompilation>();
         var desiredWrite = new Holder<DesiredStateWriteTransaction>();
         var candidate = new Holder<Generation>();
-        var previous = new Holder<Generation>();
-        var id = UUID.randomUUID().toString();
-        var effectiveCatalog = combinedCatalog(runtimeCatalogs);
-        var builder = ChangeSet.builder(id);
+        var builder = ChangeSet.builder(UUID.randomUUID().toString());
         if (command instanceof ReplaceDesiredGraph replace) {
             builder.participant(desiredWriteParticipant(replace.expectedRevision(),
-                replace.expectedDesiredRevision(), replace.graph(), compilation,
-                desiredWrite));
+                replace.expectedDesiredRevision(), replace.graph(), compilation, desiredWrite));
         } else {
             builder.participant(desiredReadParticipant(command, compilation));
         }
-        builder.participant(coreParticipant(compilation, candidate, previous,
-                () -> effectiveCatalog))
+        builder.participant(generationParticipant(compilation, candidate,
+                () -> currentEngine().artifacts()))
             .verify(() -> verify(candidate.value))
-            .publish(() -> publish(compilation.value, candidate.value,
-                currentEngine().artifacts(), currentEngine().runtimes(), runtimeCatalogs));
-        return executor.execute(builder.build())
-            .map(result -> commandResult(result));
+            .publish(() -> publish(compilation.value, candidate.value, currentEngine().artifacts()));
+        return executor.execute(builder.build(), this::commandResult);
     }
 
     private Mono<EngineCommandResult> submitDeployment(ApplyDeployment command) {
         var transactions = new Holder<List<ArtifactInstallTransaction>>();
         var previousArtifacts = new Holder<Map<ArtifactId, ArtifactRecord>>();
         var candidateArtifacts = new Holder<Map<ArtifactId, ArtifactRecord>>();
-        var candidateCatalogs = new Holder<Map<RuntimeId, PluginCatalog>>();
-        var candidateRuntimeSnapshots =
-            new Holder<Map<RuntimeId, RuntimeGenerationSnapshot>>();
         var compilation = new Holder<DesiredCompilation>();
         var desiredWrite = new Holder<DesiredStateWriteTransaction>();
         var candidate = new Holder<Generation>();
-        var previous = new Holder<Generation>();
-        candidateCatalogs.value = new LinkedHashMap<>(runtimeCatalogs);
-        candidateRuntimeSnapshots.value = new LinkedHashMap<>(currentEngine().runtimes());
-
+        for (var artifact : command.artifacts()) {
+            if (!runtimeAdapters.containsKey(artifact.runtimeId())) {
+                return Mono.error(new UnknownRuntimeException(artifact.runtimeId()));
+            }
+        }
         var changeSet = ChangeSet.builder(UUID.randomUUID().toString())
             .participant(deploymentArtifactParticipant(command, transactions,
-                previousArtifacts, candidateArtifacts));
-        var runtimeIds = new LinkedHashSet<RuntimeId>();
-        command.artifacts().forEach(artifact -> runtimeIds.add(artifact.runtimeId()));
-        for (var runtimeId : runtimeIds) {
-            var adapter = runtimeAdapters.get(runtimeId);
-            if (adapter == null) {
-                return Mono.error(new UnknownRuntimeException(runtimeId));
-            }
-            changeSet.participant(deploymentRuntimeParticipant(command, runtimeId,
-                adapter, candidateArtifacts, candidateCatalogs,
-                candidateRuntimeSnapshots));
-        }
-        changeSet.participant(desiredWriteParticipant(command.expectedRevision(),
-                command.expectedDesiredRevision(), command.graph(), compilation,
-                desiredWrite))
-            .participant(coreParticipant(compilation, candidate, previous,
-                () -> combinedCatalog(candidateCatalogs.value)))
+                previousArtifacts, candidateArtifacts))
+            .participant(desiredWriteParticipant(command.expectedRevision(),
+                command.expectedDesiredRevision(), command.graph(), compilation, desiredWrite))
+            .participant(generationParticipant(compilation, candidate, () -> candidateArtifacts.value))
             .verify(() -> verify(candidate.value))
-            .publish(() -> publish(compilation.value, candidate.value,
-                candidateArtifacts.value, candidateRuntimeSnapshots.value,
-                candidateCatalogs.value));
-        return executor.execute(changeSet.build())
-            .map(result -> commandResult(result));
+            .publish(() -> publish(compilation.value, candidate.value, candidateArtifacts.value))
+            .build();
+        return executor.execute(changeSet, this::commandResult);
     }
 
     private ChangeParticipant deploymentArtifactParticipant(
@@ -350,40 +279,6 @@ public final class FibraEngine implements AutoCloseable {
         };
     }
 
-    private ChangeParticipant deploymentRuntimeParticipant(
-        ApplyDeployment command, RuntimeId runtimeId, PluginRuntimeAdapter adapter,
-        Holder<Map<ArtifactId, ArtifactRecord>> artifacts,
-        Holder<Map<RuntimeId, PluginCatalog>> catalogs,
-        Holder<Map<RuntimeId, RuntimeGenerationSnapshot>> snapshotsOutput) {
-        return new ChangeParticipant() {
-            @Override public String name() { return "runtime:" + runtimeId.value(); }
-
-            @Override
-            public Mono<PreparedChange> prepare() {
-                var candidates = artifacts.value.values().stream()
-                    .filter(value -> value.runtimeId().equals(runtimeId)).toList();
-                var changed = command.artifacts().stream()
-                    .filter(value -> value.runtimeId().equals(runtimeId))
-                    .map(value -> artifacts.value.get(value.artifactId())).toList();
-                return Flux.fromIterable(changed).concatMap(adapter::inspect).then(
-                        adapter.prepare(new RuntimeChangeRequest(runtimeId, candidates,
-                            currentEngine().runtimes().get(runtimeId))))
-                    .doOnNext(prepared -> {
-                        if (!prepared.snapshot().runtimeId().equals(runtimeId)) {
-                            throw new IllegalArgumentException(
-                                "runtime generation identity mismatch");
-                        }
-                        var nextCatalogs = new LinkedHashMap<>(catalogs.value);
-                        var nextSnapshots = new LinkedHashMap<>(snapshotsOutput.value);
-                        nextCatalogs.put(runtimeId, prepared.catalog());
-                        nextSnapshots.put(runtimeId, prepared.snapshot());
-                        catalogs.value = Map.copyOf(nextCatalogs);
-                        snapshotsOutput.value = Map.copyOf(nextSnapshots);
-                    }).map(value -> value);
-            }
-        };
-    }
-
     private static Mono<Void> rollbackArtifacts(
         List<ArtifactInstallTransaction> transactions) {
         var reverse = new ArrayList<>(transactions);
@@ -411,38 +306,21 @@ public final class FibraEngine implements AutoCloseable {
         var artifactTransaction = new Holder<ArtifactInstallTransaction>();
         var previousArtifact = new Holder<ArtifactRecord>();
         var candidateArtifacts = new Holder<Map<ArtifactId, ArtifactRecord>>();
-        var runtimePrepared = new Holder<PreparedRuntimeGeneration>();
-        var candidateCatalog = new Holder<PluginCatalog>();
-        var candidateRuntimeCatalogs = new Holder<Map<RuntimeId, PluginCatalog>>();
-        var candidateRuntimeSnapshots =
-            new Holder<Map<RuntimeId, RuntimeGenerationSnapshot>>();
         var compilation = new Holder<DesiredCompilation>();
         var candidate = new Holder<Generation>();
-        var previous = new Holder<Generation>();
-        var runtimeId = uninstall
-            ? runtimeFor(((UninstallArtifact) command).artifactId())
-            : ((InstallArtifact) command).runtimeId();
-        var adapter = runtimeAdapters.get(runtimeId);
-        if (adapter == null) {
-            return Mono.error(new UnknownRuntimeException(runtimeId));
+        if (command instanceof InstallArtifact install
+            && !runtimeAdapters.containsKey(install.runtimeId())) {
+            return Mono.error(new UnknownRuntimeException(install.runtimeId()));
         }
-
         var changeSet = ChangeSet.builder(UUID.randomUUID().toString())
             .participant(artifactParticipant(command, uninstall, artifactTransaction,
                 previousArtifact, candidateArtifacts))
-            .participant(runtimeParticipant(command, runtimeId, adapter, candidateArtifacts,
-                runtimePrepared, candidateCatalog, candidateRuntimeCatalogs,
-                candidateRuntimeSnapshots))
             .participant(desiredReadParticipant(command, compilation))
-            .participant(coreParticipant(compilation, candidate, previous,
-                () -> candidateCatalog.value))
+            .participant(generationParticipant(compilation, candidate, () -> candidateArtifacts.value))
             .verify(() -> verify(candidate.value))
-            .publish(() -> publish(compilation.value, candidate.value,
-                candidateArtifacts.value, candidateRuntimeSnapshots.value,
-                candidateRuntimeCatalogs.value))
+            .publish(() -> publish(compilation.value, candidate.value, candidateArtifacts.value))
             .build();
-        return executor.execute(changeSet)
-            .map(result -> commandResult(result));
+        return executor.execute(changeSet, this::commandResult);
     }
 
     private ChangeParticipant artifactParticipant(EngineCommand command, boolean uninstall,
@@ -511,78 +389,6 @@ public final class FibraEngine implements AutoCloseable {
                 });
             }
         };
-    }
-
-    private ChangeParticipant runtimeParticipant(EngineCommand command, RuntimeId runtimeId,
-                                                 PluginRuntimeAdapter adapter,
-                                                 Holder<Map<ArtifactId, ArtifactRecord>> artifacts,
-                                                 Holder<PreparedRuntimeGeneration> prepared,
-                                                 Holder<PluginCatalog> catalogOutput,
-                                                 Holder<Map<RuntimeId, PluginCatalog>> catalogs,
-                                                 Holder<Map<RuntimeId,
-                                                     RuntimeGenerationSnapshot>> snapshotsOutput) {
-        return new ChangeParticipant() {
-            @Override
-            public String name() {
-                return "runtime:" + runtimeId.value();
-            }
-
-            @Override
-            public Mono<PreparedChange> prepare() {
-                var candidates = artifacts.value.values().stream()
-                    .filter(value -> value.runtimeId().equals(runtimeId)).toList();
-                Mono<Void> inspection = Mono.empty();
-                if (command instanceof InstallArtifact install) {
-                    var candidate = artifacts.value.get(install.artifactId());
-                    inspection = adapter.inspect(candidate).flatMap(result -> {
-                        if (!result.runtimeId().equals(runtimeId)
-                            || !result.artifactId().equals(install.artifactId())) {
-                            return Mono.error(new IllegalArgumentException(
-                                "runtime inspection identity mismatch"));
-                        }
-                        return Mono.empty();
-                    });
-                }
-                return inspection.then(adapter.prepare(new RuntimeChangeRequest(runtimeId,
-                        candidates, currentEngine().runtimes().get(runtimeId))))
-                    .doOnNext(value -> {
-                        if (!value.snapshot().runtimeId().equals(runtimeId)) {
-                            throw new IllegalArgumentException(
-                                "runtime generation identity mismatch");
-                        }
-                        prepared.value = value;
-                        var nextCatalogs = new LinkedHashMap<>(runtimeCatalogs);
-                        var nextSnapshots = new LinkedHashMap<>(currentEngine().runtimes());
-                        if (candidates.isEmpty() && value.catalog().entries().isEmpty()) {
-                            nextCatalogs.remove(runtimeId);
-                            nextSnapshots.remove(runtimeId);
-                        } else {
-                            nextCatalogs.put(runtimeId, value.catalog());
-                            nextSnapshots.put(runtimeId, value.snapshot());
-                        }
-                        catalogs.value = nextCatalogs;
-                        snapshotsOutput.value = nextSnapshots;
-                        catalogOutput.value = combinedCatalog(nextCatalogs);
-                    })
-                    .map(value -> value);
-            }
-        };
-    }
-
-    private RuntimeId runtimeFor(ArtifactId artifactId) {
-        var artifact = currentEngine().artifacts().get(artifactId);
-        if (artifact == null) {
-            throw new IllegalArgumentException(
-                "artifact is not installed: " + artifactId.value());
-        }
-        return artifact.runtimeId();
-    }
-
-    private PluginCatalog combinedCatalog(Map<RuntimeId, PluginCatalog> catalogs) {
-        var all = new ArrayList<PluginCatalog>(catalogs.size() + 1);
-        all.add(builtInCatalog);
-        all.addAll(catalogs.values());
-        return PluginCatalog.combine(all);
     }
 
     private static Map<ArtifactId, ArtifactRecord> replaceArtifact(
@@ -655,83 +461,62 @@ public final class FibraEngine implements AutoCloseable {
         };
     }
 
-    private ChangeParticipant coreParticipant(Holder<DesiredCompilation> compilation,
-                                              Holder<Generation> candidate,
-                                              Holder<Generation> previous,
-                                              java.util.function.Supplier<PluginCatalog>
-                                                  effectiveCatalog) {
+    private ChangeParticipant generationParticipant(Holder<DesiredCompilation> compilation,
+                                                     Holder<Generation> candidate,
+                                                     java.util.function.Supplier<Map<ArtifactId,
+                                                         ArtifactRecord>> artifacts) {
         return new ChangeParticipant() {
-            @Override
-            public String name() {
-                return "core";
-            }
+            @Override public String name() { return "generation"; }
 
             @Override
             public Mono<PreparedChange> prepare() {
-                previous.value = currentGeneration();
-                return prepareGeneration(compilation.value, effectiveCatalog.get())
-                    .doOnNext(value -> {
-                        candidate.value = value;
-                        publishCandidateDiagnostics(value);
+                var previous = currentGeneration();
+                var name = "engine-generation-"
+                    + (Long.parseLong(publishedState.get().view().generationRevision()) + 1);
+                var value = new Generation(name, compilation.value);
+                candidate.value = value;
+                return Mono.fromRunnable(() -> publishCandidateDiagnostics(value))
+                    .then(Mono.defer(() -> prepareGeneration(value, artifacts.get())))
+                    .thenReturn((PreparedChange) new PreparedChange() {
+                        @Override public String name() { return "generation"; }
+                        @Override public Mono<Void> commit() { return Mono.empty(); }
+                        @Override public Mono<Void> rollback() {
+                            return value.close().then(Mono.fromRunnable(() -> clearCandidate(value)));
+                        }
+                        @Override public Mono<Void> retire() {
+                            return previous == null ? Mono.empty()
+                                : previous.close().then(Mono.fromRunnable(() -> finishDraining(previous)));
+                        }
                     })
-                    .map(value -> new PreparedChange() {
-                        @Override
-                        public String name() {
-                            return "core";
-                        }
-
-                        @Override
-                        public Mono<Void> commit() {
-                            return Mono.empty();
-                        }
-
-                        @Override
-                        public Mono<Void> rollback() {
-                            return value.close().then(Mono.fromRunnable(() ->
-                                clearCandidate(value)));
-                        }
-
-                        @Override
-                        public Mono<Void> retire() {
-                            if (previous.value == null) {
-                                return Mono.empty();
-                            }
-                            return previous.value.retire().then(Mono.fromRunnable(() ->
-                                finishDraining(previous.value)));
-                        }
-                    });
+                    .onErrorResume(failure -> failAfterClose(value.close()
+                        .then(Mono.fromRunnable(() -> clearCandidate(value))), failure));
             }
         };
     }
 
-    private Mono<Generation> prepareGeneration(DesiredCompilation compilation,
-                                               PluginCatalog effectiveCatalog) {
-        return Mono.defer(() -> {
-            var bound = bind(compilation, effectiveCatalog);
-            var name = "engine-generation-"
-                + (Long.parseLong(publishedState.get().view().generationRevision()) + 1);
-            var domain = runtime.openDomain(name);
-            var scope = domain.rootScope();
-            var directory = new ContributionDirectory();
-            var mounted = new LinkedHashMap<String, PluginInstance<?>>();
-            try {
-                hostBindings.forEach(binding -> provideHostBinding(
-                    scope.context(), binding));
-                scope.context().services().provide(
-                    ContributionServices.REGISTRAR, directory);
+    private Mono<Void> prepareGeneration(Generation candidate, Map<ArtifactId, ArtifactRecord> artifacts) {
+        return candidate.resources.prepare(artifacts, runtimeAdapters, builtInCatalog)
+            .then(Mono.defer(() -> {
+                var bound = bind(candidate.compilation(), candidate.resources.catalog());
+                candidate.domain = runtime.openDomain(candidate.name);
+                candidate.directory = new ContributionDirectory();
+                var scope = candidate.domain.rootScope();
+                hostBindings.forEach(binding -> provideHostBinding(scope.context(), binding));
+                scope.context().services().provide(ContributionServices.REGISTRAR, candidate.directory);
+                var mounted = new LinkedHashMap<String, PluginInstance<?>>();
                 for (var entry : bound) {
                     mounted.put(entry.input().instanceId(), mount(scope, entry));
                 }
-            } catch (RuntimeException | Error failure) {
-                return domain.closeAsync().then(directory.closeAsync())
-                    .then(Mono.error(failure));
-            }
-            return awaitSettled(mounted.values())
-                .then(Mono.fromCallable(() -> new Generation(
-                    domain, directory, compilation, mounted)))
-                .onErrorResume(failure -> domain.closeAsync().then(directory.closeAsync())
-                    .then(Mono.error(failure)));
-        });
+                candidate.instances = Map.copyOf(mounted);
+                return awaitSettled(mounted.values());
+            }));
+    }
+
+    private static <T> Mono<T> failAfterClose(Mono<Void> cleanup, Throwable failure) {
+        return cleanup.onErrorMap(closeFailure -> {
+            if (failure != closeFailure) failure.addSuppressed(closeFailure);
+            return new RecoveryUncertainException("cannot close candidate generation", failure);
+        }).then(Mono.error(failure));
     }
 
     private static Mono<Void> awaitSettled(
@@ -823,23 +608,20 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private Mono<Void> publish(DesiredCompilation compilation, Generation candidate,
-                               Map<ArtifactId, ArtifactRecord> artifacts,
-                               Map<RuntimeId, RuntimeGenerationSnapshot> runtimes,
-                               Map<RuntimeId, PluginCatalog> nextRuntimeCatalogs) {
+                               Map<ArtifactId, ArtifactRecord> artifacts) {
         return Mono.fromRunnable(() -> {
             var previous = publishedState.get();
             var nextRevision = nextRevision(previous.view().viewRevision());
             var observed = observe(candidate);
             var engine = new EngineSnapshot(EngineState.RUNNING,
                 compilation.snapshot(), compilation.graph(), observed,
-                artifacts, normalizeRuntimeSnapshots(runtimes, artifacts), null);
+                artifacts, normalizeRuntimeSnapshots(candidate.resources.snapshots(), artifacts), null);
             var contributions = candidate.directory().current();
             var view = new PublishedView(nextRevision, candidate.revision(), engine,
                 contributions.snapshot(),
                 runtimeDiagnostics(candidate.revision(), candidate, null),
                 engineDiagnostics(candidate.revision(), null,
                     previous.generation(), null));
-            runtimeCatalogs = Map.copyOf(nextRuntimeCatalogs);
             publishedState.set(new PublishedState(
                 view, candidate, contributions.routes(), null, previous.generation()));
             if (previous.generation() != null) {
@@ -928,6 +710,9 @@ public final class FibraEngine implements AutoCloseable {
         Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(id, "id");
         return Mono.defer(() -> {
+            if (closeRequested.get()) {
+                return Mono.error(new IllegalStateException("engine is closing"));
+            }
             var state = publishedState.get();
             if (!expectedViewRevision.equals(state.view().viewRevision())) {
                 return Mono.error(new PublishedRevisionConflictException(
@@ -938,7 +723,9 @@ public final class FibraEngine implements AutoCloseable {
             }
             var lease = state.generation().tryAcquire();
             if (lease == null) {
-                return invokePublished(expectedViewRevision, kind, id, input);
+                return publishedState.get() != state
+                    ? invokePublished(expectedViewRevision, kind, id, input)
+                    : Mono.error(new IllegalStateException("generation is not accepting invocations"));
             }
             if (publishedState.get() != state) {
                 lease.close();
@@ -961,7 +748,10 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private static Mono<Void> closeInvocation(Scope scope, GenerationLease lease) {
-        return scope.closeAsync().doFinally(ignored -> lease.close());
+        return Mono.defer(scope::closeAsync)
+            .doOnSuccess(ignored -> lease.close())
+            .doOnError(ignored -> lease.close())
+            .cache();
     }
 
     private static RuntimeDiagnostics runtimeDiagnostics(String generationRevision,
@@ -995,7 +785,7 @@ public final class FibraEngine implements AutoCloseable {
         return new EngineDiagnostics(generationRevision,
             candidate == null ? null : candidate.revision(),
             draining == null ? List.of() : List.of(draining.revision()),
-            executor.transactionState(), executor.acceptsMutations(),
+            executor.transactionState(), !closeRequested.get() && executor.acceptsMutations(),
             executor.records(), failure);
     }
 
@@ -1084,26 +874,40 @@ public final class FibraEngine implements AutoCloseable {
 
     @Override
     public void close() {
-        if (!closeRequested.compareAndSet(false, true)) {
-            return;
-        }
-        var active = currentGeneration();
-        if (active != null) {
-            active.close().block();
-        }
-        RuntimeException closeFailure = null;
-        for (var adapter : runtimeAdapters.values()) {
-            try {
-                adapter.close();
-            } catch (RuntimeException failure) {
-                if (closeFailure == null) {
-                    closeFailure = new IllegalStateException(
-                        "failed to close runtime adapters");
-                }
-                closeFailure.addSuppressed(failure);
-            }
-        }
-        runtime.close();
+        closeSignal.block();
+    }
+
+    private Mono<Void> quiesce() {
+        closeRequested.set(true);
+        return executor.quiesce();
+    }
+
+    private Mono<Void> closeInternal() {
+        var failures = new ArrayList<Throwable>();
+        java.util.function.Function<Throwable, Mono<Void>> recordFailure = failure -> {
+            failures.add(failure);
+            return Mono.empty();
+        };
+        var state = publishedState.get();
+        var generations = java.util.stream.Stream.of(state.candidate(), state.generation(), state.draining())
+            .filter(Objects::nonNull).distinct().toList();
+        return Flux.fromIterable(generations)
+            .concatMap(generation -> Mono.defer(generation::close).onErrorResume(recordFailure))
+            .then(Mono.defer(runtime::closeAsync).onErrorResume(recordFailure))
+            .then(Mono.fromRunnable(this::publishClosedView))
+            .then(Mono.defer(executor::closeAsync).onErrorResume(recordFailure))
+            .then(Mono.<Void>fromRunnable(() -> {
+                if (artifactStore != null) artifactStore.close();
+            }).onErrorResume(recordFailure))
+            .then(Mono.defer(() -> {
+                if (failures.isEmpty()) return Mono.empty();
+                var failure = new IllegalStateException("failed to close engine resources");
+                failures.forEach(failure::addSuppressed);
+                return Mono.error(failure);
+            }));
+    }
+
+    private void publishClosedView() {
         var current = publishedState.get();
         var engine = current.view().engine();
         var revision = nextRevision(current.view().viewRevision());
@@ -1119,13 +923,6 @@ public final class FibraEngine implements AutoCloseable {
         publishedState.set(new PublishedState(closedView, null, null, null, null));
         views.tryEmitNext(closedView);
         views.tryEmitComplete();
-        executor.close();
-        if (artifactStore != null) {
-            artifactStore.close();
-        }
-        if (closeFailure != null) {
-            throw closeFailure;
-        }
     }
 
     private static EngineSnapshot emptySnapshot() {
@@ -1185,27 +982,31 @@ public final class FibraEngine implements AutoCloseable {
 
     private static final class Generation {
         private final Object monitor = new Object();
-        private final RuntimeDomain domain;
-        private final ContributionDirectory directory;
+        private final String name;
+        private RuntimeDomain domain;
+        private ContributionDirectory directory;
         private final DesiredCompilation compilation;
-        private final Map<String, PluginInstance<?>> instances;
+        private Map<String, PluginInstance<?>> instances = Map.of();
         private final Sinks.One<Void> drained = Sinks.one();
         private boolean accepting = true;
-        private boolean closed;
+        private final RuntimeResources resources = new RuntimeResources();
+        private final Mono<Void> close;
         private int inflight;
         private reactor.core.Disposable observation;
 
-        private Generation(RuntimeDomain domain, ContributionDirectory directory,
-                           DesiredCompilation compilation,
-                           Map<String, PluginInstance<?>> instances) {
-            this.domain = domain;
-            this.directory = directory;
+        private Generation(String name, DesiredCompilation compilation) {
+            this.name = name;
             this.compilation = compilation;
-            this.instances = Map.copyOf(instances);
+            close = Mono.defer(() -> closeAdmission().then(Mono.defer(() -> {
+                if (observation != null) observation.dispose();
+                return (domain == null ? Mono.<Void>empty() : Mono.defer(domain::closeAsync))
+                    .then(Mono.defer(() -> directory == null ? Mono.empty() : directory.closeAsync()))
+                    .then(Mono.defer(resources::closeAsync));
+            }))).cache();
         }
 
         private String revision() {
-            return domain.name().substring("engine-generation-".length());
+            return name.substring("engine-generation-".length());
         }
 
         private RuntimeDomain domain() {
@@ -1259,23 +1060,8 @@ public final class FibraEngine implements AutoCloseable {
             }
         }
 
-        private Mono<Void> retire() {
-            return close();
-        }
-
         private Mono<Void> close() {
-            synchronized (monitor) {
-                if (closed) {
-                    return closeAdmission();
-                }
-                closed = true;
-            }
-            return closeAdmission().then(Mono.defer(() -> {
-                if (observation != null) {
-                    observation.dispose();
-                }
-                return domain.closeAsync().then(directory.closeAsync());
-            }));
+            return close;
         }
     }
 

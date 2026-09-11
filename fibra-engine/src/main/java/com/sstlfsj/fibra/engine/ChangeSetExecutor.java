@@ -2,7 +2,6 @@ package com.sstlfsj.fibra.engine;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
@@ -21,22 +20,27 @@ import java.util.concurrent.Executors;
 final class ChangeSetExecutor implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(ChangeSetExecutor.class);
     private final TransactionJournal journal;
+    private final Runnable settledObserver;
     private final ExecutorService laneExecutor = Executors.newSingleThreadExecutor(
         Thread.ofPlatform().name("fibra-engine-", 0).factory());
     private final Scheduler lane = Schedulers.fromExecutorService(laneExecutor);
     private final Sinks.Many<Operation> requests = Sinks.many().unicast()
         .onBackpressureBuffer();
-    private final Disposable subscription;
+    private final Sinks.One<Void> quiescent = Sinks.one();
+    private final Mono<Void> closeSignal = Mono.defer(this::quiesce)
+        .then(Mono.<Void>fromRunnable(this::closeInternal)).cache();
     private volatile boolean acceptsMutations = true;
+    private volatile boolean stopping;
     private volatile boolean closed;
     private volatile TransactionState transactionState;
 
-    ChangeSetExecutor(TransactionJournal journal) {
+    ChangeSetExecutor(TransactionJournal journal, Runnable settledObserver) {
         this.journal = Objects.requireNonNull(journal, "journal");
+        this.settledObserver = Objects.requireNonNull(settledObserver, "settledObserver");
         recoverCompletedDecisions();
         var unresolved = unresolved(journal.records());
         acceptsMutations = unresolved.isEmpty();
-        subscription = requests.asFlux().publishOn(lane).concatMap(operation -> {
+        requests.asFlux().publishOn(lane).concatMap(operation -> {
             if (operation instanceof Observation observation) {
                 return Mono.fromRunnable(observation.action())
                     .onErrorResume(failure -> {
@@ -44,34 +48,53 @@ final class ChangeSetExecutor implements AutoCloseable {
                         return Mono.empty();
                     });
             }
-            var request = (Request) operation;
-            return executeNow(request.changeSet())
-                .doOnSuccess(request.result()::tryEmitValue)
-                .doOnError(request.result()::tryEmitError)
-                .onErrorResume(ignored -> Mono.empty());
+            return executeRequest((Request<?>) operation);
         })
-            .subscribe();
+            .subscribe(ignored -> { }, quiescent::tryEmitError, quiescent::tryEmitEmpty);
+    }
+
+    private <R> Mono<Void> executeRequest(Request<R> request) {
+        return executeNow(request.changeSet())
+                .doOnEach(signal -> {
+                    if (signal.isOnNext() || signal.isOnError()) {
+                        try {
+                            settledObserver.run();
+                        } catch (RuntimeException failure) {
+                            log.error("Engine settled observation failed", failure);
+                        }
+                    }
+                })
+                .map(request.projection())
+                .doOnNext(request.result()::tryEmitValue)
+                .doOnError(request.result()::tryEmitError)
+                .onErrorResume(ignored -> Mono.empty()).then();
     }
 
     Mono<ChangeSetResult> execute(ChangeSet changeSet) {
+        return execute(changeSet, java.util.function.Function.identity());
+    }
+
+    synchronized <R> Mono<R> execute(ChangeSet changeSet,
+                                    java.util.function.Function<ChangeSetResult, R> projection) {
         Objects.requireNonNull(changeSet, "changeSet");
-        if (closed) {
+        Objects.requireNonNull(projection, "projection");
+        if (stopping || closed) {
             return Mono.error(new IllegalStateException("change set executor is closed"));
         }
         if (!acceptsMutations) {
             return Mono.error(new MutationGateClosedException());
         }
-        var result = Sinks.<ChangeSetResult>one();
-        var emitted = requests.tryEmitNext(new Request(changeSet, result));
+        var result = Sinks.<R>one();
+        var emitted = requests.tryEmitNext(new Request<>(changeSet, projection, result));
         if (emitted.isFailure()) {
             return Mono.error(new IllegalStateException(
                 "cannot enqueue change set: " + emitted));
         }
-        return result.asMono();
+        return result.asMono().publishOn(Schedulers.boundedElastic());
     }
 
     boolean acceptsMutations() {
-        return acceptsMutations && !closed;
+        return acceptsMutations && !stopping && !closed;
     }
 
     TransactionState transactionState() {
@@ -82,9 +105,9 @@ final class ChangeSetExecutor implements AutoCloseable {
         return List.copyOf(journal.records());
     }
 
-    void observe(Runnable action) {
+    synchronized void observe(Runnable action) {
         Objects.requireNonNull(action, "action");
-        if (!closed) {
+        if (!stopping && !closed) {
             requests.tryEmitNext(new Observation(action));
         }
     }
@@ -126,18 +149,18 @@ final class ChangeSetExecutor implements AutoCloseable {
 
     private Mono<ChangeSetResult> retire(ChangeSet changeSet, List<String> names,
                                          List<PreparedChange> prepared) {
-        var warnings = new ArrayList<String>();
         var reverse = new ArrayList<>(prepared);
         Collections.reverse(reverse);
         return Flux.fromIterable(reverse)
-            .concatMap(change -> Mono.defer(change::retire)
-                .onErrorResume(failure -> {
-                    warnings.add(change.name() + ": " + failure.getMessage());
-                    return Mono.empty();
-                }))
-            .then(record(changeSet, names, TransactionState.RETIRED,
-                warnings.isEmpty() ? null : String.join("; ", warnings)))
-            .thenReturn(new ChangeSetResult(changeSet.id(), warnings));
+            .concatMap(change -> Mono.defer(change::retire))
+            .then(record(changeSet, names, TransactionState.RETIRED, null))
+            .thenReturn(new ChangeSetResult(changeSet.id(), List.of()))
+            .onErrorResume(failure -> {
+                acceptsMutations = false;
+                var warning = "retirement incomplete: " + failure.getMessage();
+                return record(changeSet, names, TransactionState.RECOVERY_FAILED, warning)
+                    .thenReturn(new ChangeSetResult(changeSet.id(), List.of(warning)));
+            });
     }
 
     private Mono<ChangeSetResult> rollback(ChangeSet changeSet, List<String> names,
@@ -146,20 +169,23 @@ final class ChangeSetExecutor implements AutoCloseable {
         var rollbackFailures = new ArrayList<Throwable>();
         var reverse = new ArrayList<>(prepared);
         Collections.reverse(reverse);
-        return Flux.fromIterable(reverse)
-            .concatMap(change -> Mono.defer(change::rollback)
-                .onErrorResume(rollbackFailure -> {
-                    rollbackFailures.add(rollbackFailure);
-                    return Mono.empty();
-                }))
+        var uncertain = failure instanceof RecoveryUncertainException;
+        if (uncertain) acceptsMutations = false;
+        return (uncertain ? Mono.<Void>empty() : Flux.fromIterable(reverse)
+            .concatMap(change -> Mono.defer(change::rollback)).then())
+            .onErrorResume(rollbackFailure -> {
+                acceptsMutations = false;
+                rollbackFailures.add(rollbackFailure);
+                return Mono.empty();
+            })
             .then(Mono.defer(() -> {
                 if (rollbackFailures.isEmpty()
-                    && !(failure instanceof RecoveryUncertainException)) {
+                    && !uncertain) {
                     return record(changeSet, names, TransactionState.ROLLED_BACK,
                         failure.getMessage());
                 }
                 acceptsMutations = false;
-                rollbackFailures.forEach(failure::addSuppressed);
+                rollbackFailures.stream().filter(value -> value != failure).forEach(failure::addSuppressed);
                 return record(changeSet, names, TransactionState.RECOVERY_FAILED,
                     failure.getMessage());
             }))
@@ -191,15 +217,28 @@ final class ChangeSetExecutor implements AutoCloseable {
 
     @Override
     public void close() {
-        if (closed) {
-            return;
+        closeSignal.block();
+    }
+
+    Mono<Void> closeAsync() {
+        return closeSignal;
+    }
+
+    synchronized Mono<Void> quiesce() {
+        if (!stopping) {
+            stopping = true;
+            requests.tryEmitComplete();
         }
+        return quiescent.asMono();
+    }
+
+    private void closeInternal() {
         closed = true;
-        requests.tryEmitComplete();
-        subscription.dispose();
-        lane.dispose();
-        laneExecutor.shutdown();
-        journal.close();
+        try {
+            journal.close();
+        } finally {
+            laneExecutor.shutdown();
+        }
     }
 
     private static List<TransactionRecord> unresolved(List<TransactionRecord> records) {
@@ -231,7 +270,9 @@ final class ChangeSetExecutor implements AutoCloseable {
     private sealed interface Operation permits Request, Observation {
     }
 
-    private record Request(ChangeSet changeSet, Sinks.One<ChangeSetResult> result)
+    private record Request<R>(ChangeSet changeSet,
+                              java.util.function.Function<ChangeSetResult, R> projection,
+                              Sinks.One<R> result)
         implements Operation {
     }
 

@@ -212,10 +212,23 @@ PENDING -> STARTING -> ACTIVE -> STOPPING -> DISPOSED
 ### 4.1 运行代
 
 一个 `PublishedGeneration` 包含一个 `RuntimeDomain`、各 runtime 的候选资源、代内贡献目录和诊断事实。
-其中 runtime 资源以 `Map<RuntimeId, RuntimeGeneration>` 由该代独占。`PluginRuntimeAdapter.prepare`
-只创建并交出资源句柄，不保留 `current/previous`，也不执行第二次发布。每次创建候选代都为完整制品集合
+其中 runtime 资源以 `Map<RuntimeId, RuntimeGeneration>` 由该代独占。`PluginRuntimeAdapter.create`
+同步交出尚未取得外部资源的句柄，不保留 `current/previous`，也不执行第二次发布。Engine 立即登记句柄，
+再调用其 `prepareAsync()`；ClassLoader 等资源在取得后、执行后续可失败动作前登记进句柄。每次创建候选代都为完整制品集合
 物化新的 runtime generation，包括只改变配置的情况。关闭顺序为停止接入、等待调用、关闭 domain、
 关闭贡献目录、关闭各 runtime generation，最后释放制品引用；失败候选只关闭自身资源。
+`RuntimeGenerationRequest` 只携带 runtime identity 与该 runtime 的完整目标制品集合；不携带旧代。
+`RuntimeGeneration` 暴露 `prepareAsync()`、catalog、snapshot 和 `closeAsync()`，不是事务参与者。
+catalog 和 snapshot 仅准备成功后可读；准备失败仍由 Engine 关闭已登记句柄，不能由 adapter 丢弃部分资源。
+准备和关闭均缓存完整终态。NEW 状态可直接关闭，PREPARING 状态关闭必须等待准备结束后清理；关闭后
+不得再次准备或取得资源。无制品的 runtime 不创建
+空句柄。代内同级 runtime 句柄按取得顺序逆序关闭并聚合失败；domain、目录、runtime 和制品这几层
+之间则严格串行，前一层失败不得继续释放下一层。关闭信号缓存完整终态，重复关闭不会掩盖首次失败。
+候选代从准备开始即由 Engine 持有；runtime 句柄取得后立即登记到该代，再验证 identity、绑定配置和
+挂载插件。准备失败不使资源失去所有者；只有清理成功才清除候选引用，失败终态必须进入 Engine 关闭结果。
+
+Node 的进程属于插件实例贡献注册的 after-drain 资源，在 domain 关闭时随实例撤销并排空；Node runtime
+句柄持有代内 catalog 与 snapshot，不另设进程所有者或发布状态。Java runtime 句柄独占 ClassSpace。
 一个 Engine 同时最多存在：
 
 - 一个 current：接收新的宿主调用；
@@ -224,6 +237,15 @@ PENDING -> STARTING -> ACTIVE -> STOPPING -> DISPOSED
 
 会发布新代的下一条 `ChangeSet` 必须等待 draining 正常完成或强制关闭结果落地，防止 ClassSpace、
 sidecar 和其他代际资源无界增长。
+
+Engine 关闭先在线性化的命令准入边界停止接收新请求，等待所有已接受命令及其结果终态落地，再关闭
+candidate/current/draining 和持久存储。不能直接取消 command loop 的订阅，也不能在 inspect 或准备
+尚未结束时关闭候选并缓存一个不包含后续资源的成功结果。正常关闭不取消已接受命令。
+关闭操作独立持有排空与清理链，调用方中断只终止自身等待，不取消关闭、不跳过排空，也不污染共享关闭终态。
+内部关闭采用可组合的异步完成链，不阻塞等待另一条关闭任务；清理推进不依赖宿主通知线程池。
+命令结果投影在 command loop 内完成并冻结，结果与 `PublishedRuntime.views()` 的宿主通知异步交付，
+不占用命令完成或关闭完成的调用栈；通知回调中关闭 Engine 或重复关闭不能形成自等待。订阅者取消
+结果通知不取消 Engine 已接受并持有的命令。
 
 ### 4.2 PublishedRuntime 与 PublishedView
 
@@ -247,7 +269,9 @@ revision，再取得该 generation 的 lease，随后复读原子引用；只有
 贡献并执行，否则释放 lease 后重试或返回明确的 stale-revision 结果，不能悄悄路由到新代。
 
 一次调用在目标 domain 内创建临时调用 Scope。成功、失败或取消后都必须等待该 Scope 的异步清理完成，
-再释放 generation lease。发布通过一次原子交换同时切换 generation、状态、路由和诊断，随后立即关闭
+再释放 generation lease，最后异步向宿主交付结果；宿主回调不能占用生命周期线程或未释放的调用租约。
+取消订阅不取消已经启动的清理。Engine 开始关闭后拒绝新调用；准入已关闭而 published state 未变化时
+明确拒绝，不重试同一个运行代。发布通过一次原子交换同时切换 generation、状态、路由和诊断，随后立即关闭
 旧代准入：已经完成二次复核的旧代调用在线性化点前成立并计入排空，其余调用只能进入新代或报告
 revision 过期，不存在未计数的旧代调用。
 
@@ -280,6 +304,8 @@ observe -> validate -> prepare -> verify -> journal -> commit
 - commit 只消费准备结果，不重新读取不稳定来源。
 - durable `COMMITTED` journal 是唯一提交点；其后 cleanup 失败只告警并由恢复流程继续。
 - durable decision 前的 participant commit 必须可补偿；无法证明完整恢复时关闭 mutation gate。
+- participant 是依赖先决资源的准备序列，回滚也按逆序逐层确认；某层清理失败或准备阶段已不确定时，
+  保留尚未补偿的先决资源并停写，不继续删除其制品。单层内部的独立资源仍全部尝试清理并聚合失败。
 - `COMMITTING` 状态下崩溃属于结果不确定，恢复不能猜测成功或失败，必须关闭 mutation gate 等待处理。
 
 恢复规则固定如下：
@@ -289,7 +315,7 @@ observe -> validate -> prepare -> verify -> journal -> commit
 | durable `COMMITTED` 前失败，且 participant 结果可确定 | 补偿已提交 participant，关闭候选代，旧代继续服务 |
 | participant commit 与 durable `COMMITTED` 之间崩溃，结果无法确定 | 保持 `COMMITTING`，关闭 mutation gate，等待人工或参与者幂等查询完成裁决 |
 | durable `COMMITTED` 后、内存发布前崩溃 | 以 journal 和已提交输入重建并发布目标代，不根据目录现状猜测，也不回退到旧 desired state |
-| 新代发布后 drain、cleanup 或 retire 失败 | 保持新代已发布，记录失败并继续恢复；不得把路由切回已进入排空的旧代 |
+| 新代发布后 drain、cleanup 或 retire 失败 | 保持新代已发布，保留未关闭的 draining 代、关闭 mutation gate 并记录恢复故障；停止后续制品回收，不回滚路由 |
 
 参与事务的持久内容存储必须支持幂等事务标识以及可查询的 prepare/commit/rollback 结果；不能证明
 结果时必须停写，不能用 best-effort 伪造成功。期望输入与操作审计归同一 Engine 持久决策，不另设双写提交点。

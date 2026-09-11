@@ -26,6 +26,29 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FibraEngineRuntimeAdapterTest {
     @Test
+    void desiredOnlyChangePreparesANewRuntimeGeneration(@TempDir Path work) throws Exception {
+        var id = new RuntimeId("fake");
+        var source = work.resolve("sample.bin");
+        Files.writeString(source, "plugin");
+        var adapter = new FakeRuntimeAdapter(id);
+        try (var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty())
+            .artifactStore(new ArtifactStore(work.resolve("store")))
+            .runtimeAdapter(adapter).build()) {
+            var initial = engine.start().block();
+            var installed = engine.submit(InstallArtifact.builder()
+                .expectedRevision(initial.viewRevision()).artifactId(new ArtifactId("sample"))
+                .runtimeId(id).version("1.0.0").source(source).build()).block().view();
+            var before = adapter.prepares.get();
+            engine.submit(new ReplaceDesiredGraph(installed.viewRevision(),
+                installed.engine().desiredSource().revision(),
+                new DesiredInputGraph(List.of(DesiredInputEntry.builder("p", "sample").build()))))
+                .block();
+
+            assertEquals(before + 1, adapter.prepares.get());
+        }
+    }
+
+    @Test
     void installsThroughAnExplicitRuntimeAndRetiresOnlyAfterPublication(@TempDir Path work)
         throws Exception {
         var artifact = new ArtifactId("sample");
@@ -49,21 +72,21 @@ class FibraEngineRuntimeAdapterTest {
                 installed.engine().runtimes().get(runtimeId).definitions());
             assertEquals(com.sstlfsj.fibra.artifact.ArtifactState.INSTALLED,
                 installed.engine().runtimes().get(runtimeId).artifacts().get(artifact).state());
-            assertEquals(1, adapter.commits.get());
-            assertEquals(1, adapter.retires.get());
+            assertEquals(1, adapter.prepares.get());
+            assertEquals(0, adapter.closes.get());
 
             var removed = engine.submit(new UninstallArtifact(
                 installed.viewRevision(), artifact)).block().view();
 
             assertFalse(removed.engine().artifacts().containsKey(artifact));
             assertFalse(removed.engine().runtimes().containsKey(runtimeId));
-            assertEquals(2, adapter.commits.get());
-            assertEquals(2, adapter.retires.get());
+            assertEquals(1, adapter.prepares.get());
+            assertEquals(1, adapter.closes.get());
         }
     }
 
     @Test
-    void startIsLazyRecoversInstalledArtifactsAndCloseOwnsRuntimeAdapters(
+    void startIsLazyRecoversInstalledArtifactsAndCloseOwnsRuntimeGenerations(
         @TempDir Path work) throws Exception {
         var artifact = new ArtifactId("sample");
         var runtimeId = new RuntimeId("fake");
@@ -77,7 +100,7 @@ class FibraEngineRuntimeAdapterTest {
             .runtimeAdapter(adapter).build();
 
         assertEquals(EngineState.NEW, engine.published().current().engine().state());
-        assertEquals(0, adapter.commits.get());
+        assertEquals(0, adapter.prepares.get());
         var started = engine.start().block().engine();
         assertTrue(started.artifacts().containsKey(artifact));
         assertTrue(started.runtimes().containsKey(runtimeId));
@@ -173,8 +196,7 @@ class FibraEngineRuntimeAdapterTest {
 
     private static final class FakeRuntimeAdapter implements PluginRuntimeAdapter {
         private final RuntimeId id;
-        private final AtomicInteger commits = new AtomicInteger();
-        private final AtomicInteger retires = new AtomicInteger();
+        private final AtomicInteger prepares = new AtomicInteger();
         private final AtomicInteger closes = new AtomicInteger();
 
         private FakeRuntimeAdapter(RuntimeId id) {
@@ -192,18 +214,20 @@ class FibraEngineRuntimeAdapterTest {
         }
 
         @Override
-        public Mono<PreparedRuntimeGeneration> prepare(RuntimeChangeRequest request) {
+        public RuntimeGeneration create(RuntimeGenerationRequest request) {
+            prepares.incrementAndGet();
             var definition = PluginDefinition.builder("sample", Void.class,
                 () -> (context, config) -> Mono.empty()).build();
             var catalog = request.artifacts().isEmpty() ? PluginCatalog.empty()
                 : PluginCatalog.of(new PluginCatalogEntry<>(definition, value -> null));
             var snapshot = new RuntimeGenerationSnapshot(id,
-                Integer.toString(commits.get() + 1),
+                Integer.toString(prepares.get()),
                 request.artifacts().stream().collect(java.util.stream.Collectors.toMap(
                     ArtifactRecord::id, value -> value)),
                 catalog.entries().stream().map(value -> value.definition().name())
                     .collect(java.util.stream.Collectors.toSet()));
-            return Mono.just(new PreparedRuntimeGeneration() {
+            return new RuntimeGeneration() {
+                @Override public Mono<Void> prepareAsync() { return Mono.empty(); }
                 @Override
                 public RuntimeGenerationSnapshot snapshot() {
                     return snapshot;
@@ -214,26 +238,12 @@ class FibraEngineRuntimeAdapterTest {
                     return catalog;
                 }
 
-                @Override
-                public Mono<Void> commit() {
-                    return Mono.fromRunnable(commits::incrementAndGet);
-                }
+                private final Mono<Void> close = Mono.<Void>fromRunnable(closes::incrementAndGet).cache();
 
                 @Override
-                public Mono<Void> rollback() {
-                    return Mono.empty();
-                }
-
-                @Override
-                public Mono<Void> retire() {
-                    return Mono.fromRunnable(retires::incrementAndGet);
-                }
-            });
+                public Mono<Void> closeAsync() { return close; }
+            };
         }
 
-        @Override
-        public void close() {
-            closes.incrementAndGet();
-        }
     }
 }

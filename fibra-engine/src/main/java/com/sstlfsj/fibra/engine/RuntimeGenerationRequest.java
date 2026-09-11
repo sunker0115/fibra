@@ -6,9 +6,8 @@ import com.sstlfsj.fibra.artifact.RuntimeId;
 import java.util.List;
 import java.util.Objects;
 
-public record RuntimeChangeRequest(RuntimeId runtimeId, List<ArtifactRecord> artifacts,
-                                   RuntimeGenerationSnapshot current) {
-    public RuntimeChangeRequest {
+public record RuntimeGenerationRequest(RuntimeId runtimeId, List<ArtifactRecord> artifacts) {
+    public RuntimeGenerationRequest {
         Objects.requireNonNull(runtimeId, "runtimeId");
         artifacts = List.copyOf(artifacts);
     }

@@ -15,26 +15,17 @@ import java.util.List;
 import java.util.Map;
 
 final class JavaClassSpace implements AutoCloseable {
-    private final JavaArtifactGraph graph;
-    private final Map<ArtifactId, PluginClassLoader> loaders;
-    private final PluginCatalog catalog;
+    private final Map<ArtifactId, PluginClassLoader> loaders = new LinkedHashMap<>();
+    private PluginCatalog catalog;
     private boolean closed;
 
-    private JavaClassSpace(JavaArtifactGraph graph,
-                           Map<ArtifactId, PluginClassLoader> loaders,
-                           PluginCatalog catalog) {
-        this.graph = graph;
-        this.loaders = Map.copyOf(loaders);
-        this.catalog = catalog;
-    }
-
-    static JavaClassSpace open(List<ArtifactRecord> artifacts,
+    void prepare(List<ArtifactRecord> artifacts,
                                Map<ArtifactId, JavaPluginManifest> manifests,
                                ClassLoader parent, List<String> parentPackages) {
         var graph = JavaArtifactGraph.resolve(manifests.values());
         var records = new LinkedHashMap<ArtifactId, ArtifactRecord>();
         artifacts.forEach(record -> records.put(record.id(), record));
-        var loaders = new LinkedHashMap<ArtifactId, PluginClassLoader>();
+        if (closed) throw new IllegalStateException("Java class space is closed");
         try {
             for (var id : graph.dependencyFirst()) {
                 var record = records.get(id);
@@ -60,18 +51,14 @@ final class JavaClassSpace implements AutoCloseable {
                 }
                 entries.add(entry(pluginEntrypoint));
             }
-            return new JavaClassSpace(graph, loaders,
-                PluginCatalog.of(entries.toArray(PluginCatalogEntry[]::new)));
-        } catch (JavaRuntimeException exception) {
-            close(loaders, graph.dependencyFirst());
-            throw exception;
+            catalog = PluginCatalog.of(entries.toArray(PluginCatalogEntry[]::new));
         } catch (ReflectiveOperationException | IOException | LinkageError exception) {
-            close(loaders, graph.dependencyFirst());
             throw error(null, "cannot load Java plugin class space", exception);
         }
     }
 
     PluginCatalog catalog() {
+        if (catalog == null) throw new IllegalStateException("Java class space is not prepared");
         return catalog;
     }
 
@@ -97,7 +84,7 @@ final class JavaClassSpace implements AutoCloseable {
             return;
         }
         closed = true;
-        close(loaders, graph.dependencyFirst());
+        close(loaders, List.copyOf(loaders.keySet()));
     }
 
     private static void close(Map<ArtifactId, PluginClassLoader> loaders,

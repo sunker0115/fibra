@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FibraEngineDesiredStateTest {
     @Test
@@ -131,7 +132,16 @@ class FibraEngineDesiredStateTest {
                 new ReplaceDesiredGraph("stale", started.engine().desiredSource().revision(),
                     new DesiredInputGraph(List.of(entry("two"))))).block());
 
-            assertEquals(started, engine.published().current());
+            var rejected = engine.published().current();
+            assertEquals(started.generationRevision(), rejected.generationRevision());
+            assertEquals(started.engine(), rejected.engine());
+            assertEquals(started.contributions(), rejected.contributions());
+            assertEquals(started.diagnostics(), rejected.diagnostics());
+            assertNotEquals(started.viewRevision(), rejected.viewRevision());
+            assertEquals(TransactionState.ROLLED_BACK, rejected.engineDiagnostics().transactionState());
+            assertEquals(started.engineDiagnostics().transactions().size() + 1,
+                rejected.engineDiagnostics().transactions().size());
+            assertTrue(rejected.engineDiagnostics().transactions().getLast().detail().contains("revision conflict"));
             assertEquals(LiteralValue.of("one"), repository.load()
                 .graph().require("sample").config());
         }

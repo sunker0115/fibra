@@ -25,7 +25,7 @@ close()
 
 `start()` 返回初始 `PublishedView`。`PublishedRuntime.current()` / `views()` 是状态、诊断和贡献的唯一已发布事实源；`invoke(expectedViewRevision, kind, id, input)` 保证目录选择与调用不跨 revision。托管宿主不能取得 `FibraRuntime`、`Context` 或 `Scope`。
 
-`PluginRuntimeAdapter` 把 Java、Node 或未来运行时接入同一 ChangeSet。adapter 的 `prepare` 返回候选 `PluginCatalog`、运行时 snapshot 以及 `commit/rollback/retire`。`PublishedView.engine()` 不暴露 `ClassLoader`、`Process` 或 RPC channel。
+`PluginRuntimeAdapter.create(RuntimeGenerationRequest)` 接收该 runtime 的完整目标制品集合，同步返回尚未分配代际资源的 `RuntimeGeneration`。Engine 先登记所有权，再调用 `prepareAsync()`；准备成功后才能读取 `catalog()`、`snapshot()`，准备失败也由 Engine 调用 `closeAsync()`。准备与关闭共享各自完整终态，关闭后不能重新准备。adapter 不保留 current/previous，不参与第二次发布，也不拥有句柄的关闭权。配置变更同样创建新的 runtime generation；Engine 在旧代调用排空、domain 和贡献目录关闭后释放旧句柄。`PublishedView.engine()` 不暴露 `ClassLoader`、`Process` 或 RPC channel。
 
 `FileTransactionJournal` 是托管场景的默认持久化 journal。启动时可证明尚未提交的事务回滚，可证明已提交的事务前向完成；停在不确定提交区间或恢复失败时关闭 mutation gate。
 

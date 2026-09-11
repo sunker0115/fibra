@@ -8,7 +8,7 @@ import com.sstlfsj.fibra.bridge.ContributionCodec;
 import com.sstlfsj.fibra.bridge.ContributionId;
 import com.sstlfsj.fibra.bridge.ContributionKind;
 import com.sstlfsj.fibra.bridge.ContributionServices;
-import com.sstlfsj.fibra.engine.RuntimeChangeRequest;
+import com.sstlfsj.fibra.engine.RuntimeGenerationRequest;
 import com.sstlfsj.fibra.PluginInstanceState;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
 import org.junit.jupiter.api.Test;
@@ -28,6 +28,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class NodePluginRuntimeAdapterTest {
+    @Test
+    void creatingAndClosingANewHandleDoesNotReadTheArtifact(@TempDir Path work) {
+        var missing = ArtifactRecord.builder().id(new ArtifactId("missing"))
+            .runtimeId(NodePluginRuntimeAdapter.RUNTIME_ID).version("1").checksum("digest")
+            .revision("1").location(work.resolve("absent")).state(ArtifactState.STAGED)
+            .updatedAt(Instant.EPOCH).build();
+        var adapter = new NodePluginRuntimeAdapter(name -> Optional.empty(),
+            NodeRuntimeOptions.defaults(node(), work.resolve("sessions")));
+        var generation = adapter.create(new RuntimeGenerationRequest(NodePluginRuntimeAdapter.RUNTIME_ID,
+            List.of(missing)));
+        assertThrows(IllegalStateException.class, generation::snapshot);
+        assertThrows(IllegalStateException.class, generation::catalog);
+        generation.closeAsync().block();
+        assertThrows(IllegalStateException.class, () -> generation.prepareAsync().block());
+        generation.closeAsync().block();
+        assertTrue(Files.notExists(work.resolve("sessions")));
+    }
+
     private static final ContributionKind<EchoDescriptor, String, String> ECHO =
         ContributionKind.remote("echo", EchoDescriptor.class, String.class,
             String.class, new EchoCodec());
@@ -65,9 +83,9 @@ class NodePluginRuntimeAdapterTest {
         var options = NodeRuntimeOptions.defaults(node(), work.resolve("sessions"));
         var adapter = new NodePluginRuntimeAdapter(
             name -> "echo".equals(name) ? Optional.of(ECHO) : Optional.empty(), options);
-        var prepared = adapter.prepare(new RuntimeChangeRequest(
-            NodePluginRuntimeAdapter.RUNTIME_ID, List.of(artifact), null)).block();
-        prepared.commit().block();
+        var prepared = adapter.create(new RuntimeGenerationRequest(
+            NodePluginRuntimeAdapter.RUNTIME_ID, List.of(artifact)));
+        prepared.prepareAsync().block();
 
         try (var runtime = FibraRuntime.create()) {
             runtime.rootScope().context().services().provide(
@@ -90,6 +108,7 @@ class NodePluginRuntimeAdapterTest {
             instance.dispose().block(Duration.ofSeconds(3));
             assertTrue(directory.current().snapshot().entries().isEmpty());
         }
+        prepared.closeAsync().block();
     }
 
     @Test
@@ -125,8 +144,9 @@ class NodePluginRuntimeAdapterTest {
         var adapter = new NodePluginRuntimeAdapter(
             name -> "echo".equals(name) ? Optional.of(ECHO) : Optional.empty(),
             NodeRuntimeOptions.defaults(node(), work.resolve("sessions")));
-        var prepared = adapter.prepare(new RuntimeChangeRequest(
-            NodePluginRuntimeAdapter.RUNTIME_ID, List.of(artifact), null)).block();
+        var prepared = adapter.create(new RuntimeGenerationRequest(
+            NodePluginRuntimeAdapter.RUNTIME_ID, List.of(artifact)));
+        prepared.prepareAsync().block();
 
         try (var runtime = FibraRuntime.create()) {
             runtime.rootScope().context().services().provide(

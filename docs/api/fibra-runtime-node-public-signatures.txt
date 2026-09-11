@@ -37,7 +37,7 @@ public final class com.sstlfsj.fibra.runtime.node.NodePluginRuntimeAdapter imple
   public com.sstlfsj.fibra.runtime.node.NodePluginRuntimeAdapter(com.sstlfsj.fibra.runtime.node.NodeContributionKindResolver, com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions);
   public com.sstlfsj.fibra.artifact.RuntimeId id();
   public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.RuntimeArtifactInspection> inspect(com.sstlfsj.fibra.artifact.ArtifactRecord);
-  public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.PreparedRuntimeGeneration> prepare(com.sstlfsj.fibra.engine.RuntimeChangeRequest);
+  public com.sstlfsj.fibra.engine.RuntimeGeneration create(com.sstlfsj.fibra.engine.RuntimeGenerationRequest);
 }
 ## com.sstlfsj.fibra.runtime.node.NodeRpcException
 Compiled from "NodeRpcException.java"

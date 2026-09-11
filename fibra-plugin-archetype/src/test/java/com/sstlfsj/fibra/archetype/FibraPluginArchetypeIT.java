@@ -5,7 +5,7 @@ import com.sstlfsj.fibra.PluginInstanceState;
 import com.sstlfsj.fibra.artifact.ArtifactId;
 import com.sstlfsj.fibra.artifact.ArtifactRecord;
 import com.sstlfsj.fibra.artifact.ArtifactState;
-import com.sstlfsj.fibra.engine.RuntimeChangeRequest;
+import com.sstlfsj.fibra.engine.RuntimeGenerationRequest;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
 import com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter;
 import org.junit.jupiter.api.Test;
@@ -37,9 +37,9 @@ class FibraPluginArchetypeIT {
             .updatedAt(Instant.now())
             .build();
         var adapter = new JavaPluginRuntimeAdapter();
-        var prepared = adapter.prepare(new RuntimeChangeRequest(
-            JavaPluginRuntimeAdapter.RUNTIME_ID, List.of(artifact), null)).block();
-        prepared.commit().block();
+        var prepared = adapter.create(new RuntimeGenerationRequest(
+            JavaPluginRuntimeAdapter.RUNTIME_ID, List.of(artifact)));
+        prepared.prepareAsync().block();
 
         try (var runtime = FibraRuntime.create()) {
             @SuppressWarnings("unchecked")
@@ -51,7 +51,6 @@ class FibraPluginArchetypeIT {
 
             assertEquals(PluginInstanceState.ACTIVE, instance.state());
         }
-        prepared.retire().block();
-        adapter.close();
+        prepared.closeAsync().block();
     }
 }

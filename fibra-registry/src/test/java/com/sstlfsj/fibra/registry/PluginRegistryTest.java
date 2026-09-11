@@ -12,9 +12,9 @@ import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.PluginCatalog;
 import com.sstlfsj.fibra.engine.PluginCatalogEntry;
 import com.sstlfsj.fibra.engine.PluginRuntimeAdapter;
-import com.sstlfsj.fibra.engine.PreparedRuntimeGeneration;
+import com.sstlfsj.fibra.engine.RuntimeGeneration;
 import com.sstlfsj.fibra.engine.RuntimeArtifactInspection;
-import com.sstlfsj.fibra.engine.RuntimeChangeRequest;
+import com.sstlfsj.fibra.engine.RuntimeGenerationRequest;
 import com.sstlfsj.fibra.engine.RuntimeGenerationSnapshot;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -139,7 +139,7 @@ class PluginRegistryTest {
         }
 
         @Override
-        public Mono<PreparedRuntimeGeneration> prepare(RuntimeChangeRequest request) {
+        public RuntimeGeneration create(RuntimeGenerationRequest request) {
             var catalog = request.artifacts().isEmpty() ? PluginCatalog.empty()
                 : PluginCatalog.of(new PluginCatalogEntry<>(
                     PluginDefinition.builder("sample", Object.class,
@@ -150,7 +150,8 @@ class PluginRegistryTest {
                     ArtifactRecord::id, value -> value)),
                 catalog.entries().stream().map(entry -> entry.definition().name())
                     .collect(java.util.stream.Collectors.toSet()));
-            return Mono.just(new PreparedRuntimeGeneration() {
+            return new RuntimeGeneration() {
+                @Override public Mono<Void> prepareAsync() { return Mono.empty(); }
                 @Override
                 public RuntimeGenerationSnapshot snapshot() {
                     return snapshot;
@@ -162,20 +163,8 @@ class PluginRegistryTest {
                 }
 
                 @Override
-                public Mono<Void> commit() {
-                    return Mono.empty();
-                }
-
-                @Override
-                public Mono<Void> rollback() {
-                    return Mono.empty();
-                }
-
-                @Override
-                public Mono<Void> retire() {
-                    return Mono.empty();
-                }
-            });
+                public Mono<Void> closeAsync() { return Mono.empty(); }
+            };
         }
     }
 }

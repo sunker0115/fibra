@@ -12,9 +12,9 @@ import com.sstlfsj.fibra.bridge.ContributionServices;
 import com.sstlfsj.fibra.engine.PluginCatalog;
 import com.sstlfsj.fibra.engine.PluginCatalogEntry;
 import com.sstlfsj.fibra.engine.PluginRuntimeAdapter;
-import com.sstlfsj.fibra.engine.PreparedRuntimeGeneration;
+import com.sstlfsj.fibra.engine.RuntimeGeneration;
 import com.sstlfsj.fibra.engine.RuntimeArtifactInspection;
-import com.sstlfsj.fibra.engine.RuntimeChangeRequest;
+import com.sstlfsj.fibra.engine.RuntimeGenerationRequest;
 import com.sstlfsj.fibra.engine.RuntimeGenerationSnapshot;
 import reactor.core.publisher.Mono;
 
@@ -37,7 +37,6 @@ public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
     private final NodeContributionKindResolver kinds;
     private final NodeRuntimeOptions options;
     private final NodeManifestReader manifests = new NodeManifestReader();
-    private RuntimeGenerationSnapshot currentSnapshot;
 
     public NodePluginRuntimeAdapter(NodeContributionKindResolver kinds,
                                     NodeRuntimeOptions options) {
@@ -65,29 +64,11 @@ public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
     }
 
     @Override
-    public Mono<PreparedRuntimeGeneration> prepare(RuntimeChangeRequest request) {
-        return Mono.fromCallable(() -> {
-            if (!request.runtimeId().equals(RUNTIME_ID)) {
-                throw new IllegalArgumentException("runtime request is not for Node");
-            }
-            var entries = new ArrayList<PluginCatalogEntry<?>>();
-            for (var artifact : request.artifacts()) {
-                requireRuntime(artifact);
-                var manifest = manifests.read(artifact);
-                validateKinds(manifest);
-                entries.add(catalogEntry(artifact, manifest));
-            }
-            var catalog = PluginCatalog.combine(entries.stream()
-                .map(PluginCatalog::of).toList());
-            var artifactMap = request.artifacts().stream().collect(Collectors.toMap(
-                ArtifactRecord::id, value -> value, (left, right) -> right,
-                LinkedHashMap::new));
-            var snapshot = new RuntimeGenerationSnapshot(RUNTIME_ID,
-                revision(request.artifacts()), artifactMap,
-                entries.stream().map(value -> value.definition().name())
-                    .collect(Collectors.toSet()));
-            return new Prepared(catalog, snapshot, currentSnapshot);
-        });
+    public RuntimeGeneration create(RuntimeGenerationRequest request) {
+        if (!request.runtimeId().equals(RUNTIME_ID)) {
+            throw new IllegalArgumentException("runtime request is not for Node");
+        }
+        return new Generation(request);
     }
 
     private PluginCatalogEntry<Object> catalogEntry(ArtifactRecord artifact,
@@ -192,79 +173,57 @@ public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
         }
     }
 
-    private final class Prepared implements PreparedRuntimeGeneration {
-        private final PluginCatalog catalog;
-        private final RuntimeGenerationSnapshot snapshot;
-        private final RuntimeGenerationSnapshot previous;
-        private State state = State.PREPARED;
+    private final class Generation implements RuntimeGeneration {
+        private final RuntimeGenerationRequest request;
+        private final Mono<Void> preparation = Mono.<Void>fromRunnable(this::initialize).cache();
+        private final Mono<Void> close = Mono.<Void>fromRunnable(this::release).cache();
+        private PluginCatalog catalog;
+        private RuntimeGenerationSnapshot snapshot;
+        private boolean closed;
 
-        private Prepared(PluginCatalog catalog, RuntimeGenerationSnapshot snapshot,
-                         RuntimeGenerationSnapshot previous) {
-            this.catalog = catalog;
-            this.snapshot = snapshot;
-            this.previous = previous;
+        private Generation(RuntimeGenerationRequest request) { this.request = request; }
+
+        private synchronized void initialize() {
+            if (closed) throw new IllegalStateException("Node runtime generation is closed");
+            var entries = new ArrayList<PluginCatalogEntry<?>>();
+            for (var artifact : request.artifacts()) {
+                requireRuntime(artifact);
+                var manifest = manifests.read(artifact);
+                validateKinds(manifest);
+                entries.add(catalogEntry(artifact, manifest));
+            }
+            catalog = PluginCatalog.combine(entries.stream()
+                .map(PluginCatalog::of).toList());
+            var artifactMap = request.artifacts().stream().collect(Collectors.toMap(
+                ArtifactRecord::id, value -> value, (left, right) -> right,
+                LinkedHashMap::new));
+            snapshot = new RuntimeGenerationSnapshot(RUNTIME_ID,
+                revision(request.artifacts()), artifactMap,
+                entries.stream().map(value -> value.definition().name())
+                    .collect(Collectors.toSet()));
         }
 
-        @Override
-        public RuntimeGenerationSnapshot snapshot() {
+        private synchronized void release() {
+            // sidecar 属于插件实例的贡献注册；domain 先关闭它们。
+            closed = true;
+        }
+
+        @Override public Mono<Void> prepareAsync() {
+            return Mono.defer(() -> {
+                synchronized (this) {
+                    if (closed) return Mono.error(new IllegalStateException("Node runtime generation is closed"));
+                }
+                return preparation;
+            });
+        }
+        @Override public synchronized RuntimeGenerationSnapshot snapshot() {
+            if (snapshot == null) throw new IllegalStateException("Node runtime generation is not prepared");
             return snapshot;
         }
-
-        @Override
-        public PluginCatalog catalog() {
+        @Override public synchronized PluginCatalog catalog() {
+            snapshot();
             return catalog;
         }
-
-        @Override
-        public Mono<Void> commit() {
-            return Mono.fromRunnable(() -> {
-                synchronized (NodePluginRuntimeAdapter.this) {
-                    ensure(State.PREPARED);
-                    currentSnapshot = snapshot;
-                    state = State.COMMITTED;
-                }
-            });
-        }
-
-        @Override
-        public Mono<Void> rollback() {
-            return Mono.fromRunnable(() -> {
-                synchronized (NodePluginRuntimeAdapter.this) {
-                    if (state == State.ROLLED_BACK) {
-                        return;
-                    }
-                    if (state == State.RETIRED) {
-                        throw new IllegalStateException("Node generation is retired");
-                    }
-                    if (state == State.COMMITTED) {
-                        currentSnapshot = previous;
-                    }
-                    state = State.ROLLED_BACK;
-                }
-            });
-        }
-
-        @Override
-        public Mono<Void> retire() {
-            return Mono.fromRunnable(() -> {
-                synchronized (NodePluginRuntimeAdapter.this) {
-                    ensure(State.COMMITTED);
-                    state = State.RETIRED;
-                }
-            });
-        }
-
-        private void ensure(State expected) {
-            if (state != expected) {
-                throw new IllegalStateException("Node generation is " + state);
-            }
-        }
-    }
-
-    private enum State {
-        PREPARED,
-        COMMITTED,
-        ROLLED_BACK,
-        RETIRED
+        @Override public Mono<Void> closeAsync() { return close; }
     }
 }

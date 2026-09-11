@@ -38,7 +38,7 @@ class FileTransactionJournalTest {
         }
 
         var journal = new FileTransactionJournal(work);
-        try (var executor = new ChangeSetExecutor(journal)) {
+        try (var executor = new ChangeSetExecutor(journal, () -> { })) {
             executor.verifyRecovered();
             assertEquals(TransactionState.RETIRED,
                 journal.records().getLast().state());
@@ -53,7 +53,7 @@ class FileTransactionJournalTest {
         }
 
         var journal = new FileTransactionJournal(work);
-        try (var executor = new ChangeSetExecutor(journal)) {
+        try (var executor = new ChangeSetExecutor(journal, () -> { })) {
             assertThrows(UnresolvedTransactionException.class, executor::verifyRecovered);
             assertThrows(MutationGateClosedException.class, () -> executor.execute(
                 ChangeSet.builder("change-2").build()).block());

@@ -14,17 +14,100 @@ import reactor.core.publisher.Sinks;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PublishedRuntimeLeaseTest {
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
     private static final ContributionKind<Descriptor, String, String> COMMAND =
         ContributionKind.local("command", Descriptor.class, String.class, String.class);
     private static final ContributionId ID = new ContributionId("command", "run");
+
+    @Test
+    void resultCallbackCanWaitForEngineShutdown() throws Exception {
+        assertCallbackCanWaitForShutdown(false);
+    }
+
+    @Test
+    void failureCallbackCanWaitForEngineShutdown() throws Exception {
+        assertCallbackCanWaitForShutdown(true);
+    }
+
+    private void assertCallbackCanWaitForShutdown(boolean fail) throws Exception {
+        var response = Sinks.<String>one();
+        var failure = new IllegalStateException("invocation failed");
+        var repository = new InMemoryDesiredStateRepository(graph("old-"));
+        try (var closer = Executors.newSingleThreadExecutor();
+             var engine = engine(repository, response, null)) {
+            var first = engine.start().block(TIMEOUT);
+            var shutdown = new CompletableFuture<Void>();
+            var invocation = engine.published().invoke(
+                first.viewRevision(), COMMAND, ID, "value")
+                .materialize().doOnNext(signal -> {
+                    closer.submit(() -> {
+                        try {
+                            engine.close();
+                            shutdown.complete(null);
+                        } catch (Throwable closeFailure) {
+                            shutdown.completeExceptionally(closeFailure);
+                        }
+                    });
+                    shutdown.orTimeout(500, TimeUnit.MILLISECONDS).join();
+                }).toFuture();
+
+            if (fail) {
+                response.tryEmitError(failure);
+            } else {
+                response.tryEmitValue("release");
+            }
+
+            var result = invocation.get(5, TimeUnit.SECONDS);
+            if (fail) {
+                assertSame(failure, result.getThrowable());
+            } else {
+                assertEquals("old-value", result.get());
+            }
+            assertEquals(EngineState.CLOSED, engine.published().current().engine().state());
+        }
+    }
+
+    @Test
+    void cancelledInvocationKeepsItsLeaseUntilCleanupAndRejectsNewCallsDuringShutdown()
+        throws Exception {
+        var cleanup = Sinks.<Void>one();
+        var repository = new InMemoryDesiredStateRepository(graph("old-"));
+        try (var engine = engine(repository, null, cleanup)) {
+            var first = engine.start().block(TIMEOUT);
+            var invocation = engine.published().invoke(
+                first.viewRevision(), COMMAND, ID, "value").subscribe();
+            assertEquals(1, cleanup.currentSubscriberCount());
+            invocation.dispose();
+            var entered = new java.util.concurrent.CountDownLatch(1);
+            var closing = CompletableFuture.runAsync(() -> {
+                entered.countDown();
+                engine.close();
+            });
+            try {
+                assertTrue(entered.await(5, TimeUnit.SECONDS));
+                assertThrows(java.util.concurrent.TimeoutException.class,
+                    () -> closing.get(100, TimeUnit.MILLISECONDS));
+                var rejected = assertThrows(IllegalStateException.class, () ->
+                    engine.published().invoke(first.viewRevision(), COMMAND, ID, "late")
+                        .block(TIMEOUT));
+                assertEquals("engine is closing", rejected.getMessage());
+            } finally {
+                cleanup.tryEmitEmpty();
+                closing.get(5, TimeUnit.SECONDS);
+            }
+        }
+    }
 
     @Test
     void publishesReplacementBeforeWaitingForOldInvocationToDrain() throws Exception {

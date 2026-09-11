@@ -226,26 +226,15 @@ public final class com.sstlfsj.fibra.engine.PluginInstanceSnapshot extends java.
 }
 ## com.sstlfsj.fibra.engine.PluginRuntimeAdapter
 Compiled from "PluginRuntimeAdapter.java"
-public interface com.sstlfsj.fibra.engine.PluginRuntimeAdapter extends java.lang.AutoCloseable {
+public interface com.sstlfsj.fibra.engine.PluginRuntimeAdapter {
   public abstract com.sstlfsj.fibra.artifact.RuntimeId id();
   public abstract reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.RuntimeArtifactInspection> inspect(com.sstlfsj.fibra.artifact.ArtifactRecord);
-  public abstract reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.PreparedRuntimeGeneration> prepare(com.sstlfsj.fibra.engine.RuntimeChangeRequest);
-  public default void close();
+  public abstract com.sstlfsj.fibra.engine.RuntimeGeneration create(com.sstlfsj.fibra.engine.RuntimeGenerationRequest);
 }
 ## com.sstlfsj.fibra.engine.PreparedChange
 Compiled from "PreparedChange.java"
 public interface com.sstlfsj.fibra.engine.PreparedChange {
   public abstract java.lang.String name();
-  public abstract reactor.core.publisher.Mono<java.lang.Void> commit();
-  public abstract reactor.core.publisher.Mono<java.lang.Void> rollback();
-  public abstract reactor.core.publisher.Mono<java.lang.Void> retire();
-}
-## com.sstlfsj.fibra.engine.PreparedRuntimeGeneration
-Compiled from "PreparedRuntimeGeneration.java"
-public interface com.sstlfsj.fibra.engine.PreparedRuntimeGeneration extends com.sstlfsj.fibra.engine.PreparedChange {
-  public abstract com.sstlfsj.fibra.engine.RuntimeGenerationSnapshot snapshot();
-  public abstract com.sstlfsj.fibra.engine.PluginCatalog catalog();
-  public default java.lang.String name();
   public abstract reactor.core.publisher.Mono<java.lang.Void> commit();
   public abstract reactor.core.publisher.Mono<java.lang.Void> rollback();
   public abstract reactor.core.publisher.Mono<java.lang.Void> retire();
@@ -309,17 +298,6 @@ public final class com.sstlfsj.fibra.engine.RuntimeArtifactInspection extends ja
   public com.sstlfsj.fibra.artifact.ArtifactId artifactId();
   public java.util.Map<java.lang.String, java.lang.Object> metadata();
 }
-## com.sstlfsj.fibra.engine.RuntimeChangeRequest
-Compiled from "RuntimeChangeRequest.java"
-public final class com.sstlfsj.fibra.engine.RuntimeChangeRequest extends java.lang.Record {
-  public com.sstlfsj.fibra.engine.RuntimeChangeRequest(com.sstlfsj.fibra.artifact.RuntimeId, java.util.List<com.sstlfsj.fibra.artifact.ArtifactRecord>, com.sstlfsj.fibra.engine.RuntimeGenerationSnapshot);
-  public final java.lang.String toString();
-  public final int hashCode();
-  public final boolean equals(java.lang.Object);
-  public com.sstlfsj.fibra.artifact.RuntimeId runtimeId();
-  public java.util.List<com.sstlfsj.fibra.artifact.ArtifactRecord> artifacts();
-  public com.sstlfsj.fibra.engine.RuntimeGenerationSnapshot current();
-}
 ## com.sstlfsj.fibra.engine.RuntimeDiagnostics
 Compiled from "RuntimeDiagnostics.java"
 public final class com.sstlfsj.fibra.engine.RuntimeDiagnostics extends java.lang.Record {
@@ -357,6 +335,24 @@ public final class com.sstlfsj.fibra.engine.RuntimeDiagnostics$PublicationImpact
   public static final com.sstlfsj.fibra.engine.RuntimeDiagnostics$PublicationImpact BLOCKING;
   public static com.sstlfsj.fibra.engine.RuntimeDiagnostics$PublicationImpact[] values();
   public static com.sstlfsj.fibra.engine.RuntimeDiagnostics$PublicationImpact valueOf(java.lang.String);
+}
+## com.sstlfsj.fibra.engine.RuntimeGeneration
+Compiled from "RuntimeGeneration.java"
+public interface com.sstlfsj.fibra.engine.RuntimeGeneration {
+  public abstract reactor.core.publisher.Mono<java.lang.Void> prepareAsync();
+  public abstract com.sstlfsj.fibra.engine.RuntimeGenerationSnapshot snapshot();
+  public abstract com.sstlfsj.fibra.engine.PluginCatalog catalog();
+  public abstract reactor.core.publisher.Mono<java.lang.Void> closeAsync();
+}
+## com.sstlfsj.fibra.engine.RuntimeGenerationRequest
+Compiled from "RuntimeGenerationRequest.java"
+public final class com.sstlfsj.fibra.engine.RuntimeGenerationRequest extends java.lang.Record {
+  public com.sstlfsj.fibra.engine.RuntimeGenerationRequest(com.sstlfsj.fibra.artifact.RuntimeId, java.util.List<com.sstlfsj.fibra.artifact.ArtifactRecord>);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public com.sstlfsj.fibra.artifact.RuntimeId runtimeId();
+  public java.util.List<com.sstlfsj.fibra.artifact.ArtifactRecord> artifacts();
 }
 ## com.sstlfsj.fibra.engine.RuntimeGenerationSnapshot
 Compiled from "RuntimeGenerationSnapshot.java"

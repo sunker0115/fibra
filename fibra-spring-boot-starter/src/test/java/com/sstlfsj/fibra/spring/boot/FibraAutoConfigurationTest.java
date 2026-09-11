@@ -8,9 +8,9 @@ import com.sstlfsj.fibra.engine.FileTransactionJournal;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.PluginCatalog;
 import com.sstlfsj.fibra.engine.PluginRuntimeAdapter;
-import com.sstlfsj.fibra.engine.PreparedRuntimeGeneration;
+import com.sstlfsj.fibra.engine.RuntimeGeneration;
 import com.sstlfsj.fibra.engine.RuntimeArtifactInspection;
-import com.sstlfsj.fibra.engine.RuntimeChangeRequest;
+import com.sstlfsj.fibra.engine.RuntimeGenerationRequest;
 import com.sstlfsj.fibra.engine.RuntimeGenerationSnapshot;
 import com.sstlfsj.fibra.registry.PluginInstallRequest;
 import com.sstlfsj.fibra.engine.TransactionJournal;
@@ -105,18 +105,17 @@ class FibraAutoConfigurationTest {
         }
 
         @Override
-        public Mono<PreparedRuntimeGeneration> prepare(RuntimeChangeRequest request) {
+        public RuntimeGeneration create(RuntimeGenerationRequest request) {
             var artifacts = request.artifacts().stream().collect(
                 java.util.stream.Collectors.toMap(value -> value.id(), value -> value));
             var snapshot = new RuntimeGenerationSnapshot(RUNTIME_ID, "custom-1",
                 artifacts, Set.of());
-            return Mono.just(new PreparedRuntimeGeneration() {
+            return new RuntimeGeneration() {
+                @Override public Mono<Void> prepareAsync() { return Mono.empty(); }
                 @Override public RuntimeGenerationSnapshot snapshot() { return snapshot; }
                 @Override public PluginCatalog catalog() { return PluginCatalog.empty(); }
-                @Override public Mono<Void> commit() { return Mono.empty(); }
-                @Override public Mono<Void> rollback() { return Mono.empty(); }
-                @Override public Mono<Void> retire() { return Mono.empty(); }
-            });
+                @Override public Mono<Void> closeAsync() { return Mono.empty(); }
+            };
         }
     }
 }

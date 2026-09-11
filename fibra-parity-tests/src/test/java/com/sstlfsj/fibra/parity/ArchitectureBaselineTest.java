@@ -57,6 +57,10 @@ class ArchitectureBaselineTest {
             assertThrows(ClassNotFoundException.class,
                 () -> Class.forName("com.sstlfsj.fibra.config." + type));
         }
+        for (var type : List.of("PreparedRuntimeGeneration", "RuntimeChangeRequest")) {
+            assertThrows(ClassNotFoundException.class,
+                () -> Class.forName("com.sstlfsj.fibra.engine." + type));
+        }
     }
 
     @Test
