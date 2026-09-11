@@ -74,7 +74,8 @@ public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
                 var registrar = context.services().require(
                     ContributionServices.REGISTRAR);
                 return NodeSidecar.start(
-                        artifact.location().resolve(manifest.entrypoint()), options)
+                        artifact.location().resolve(manifest.entrypoint()), options,
+                        context.plugins()::requestDisable)
                     .flatMap(sidecar -> sidecar.request("fibra.start", Map.of(
                             "protocol", manifest.protocol(),
                             "config", config == null ? Map.of() : config),

@@ -90,7 +90,7 @@ public final class com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions$Builder {
 ## com.sstlfsj.fibra.runtime.node.NodeSidecar
 Compiled from "NodeSidecar.java"
 public final class com.sstlfsj.fibra.runtime.node.NodeSidecar implements java.lang.AutoCloseable {
-  public static reactor.core.publisher.Mono<com.sstlfsj.fibra.runtime.node.NodeSidecar> start(java.nio.file.Path, com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions);
+  public static reactor.core.publisher.Mono<com.sstlfsj.fibra.runtime.node.NodeSidecar> start(java.nio.file.Path, com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions, java.lang.Runnable);
   public reactor.core.publisher.Mono<java.lang.Object> request(java.lang.String, java.lang.Object);
   public reactor.core.publisher.Mono<java.lang.Object> request(java.lang.String, java.lang.Object, java.time.Duration);
   public reactor.core.publisher.Mono<java.lang.Void> termination();

@@ -107,6 +107,7 @@ public final class com.sstlfsj.fibra.FibraException extends java.lang.IllegalSta
   public static final java.lang.String PLUGIN_DUPLICATE;
   public static final java.lang.String PLUGIN_DISPOSED;
   public static final java.lang.String PLUGIN_UNDECLARED_SERVICE;
+  public static final java.lang.String PLUGIN_DISABLE_UNAVAILABLE;
   public com.sstlfsj.fibra.FibraException(java.lang.String, java.lang.String);
   public com.sstlfsj.fibra.FibraException(java.lang.String, java.lang.String, java.lang.Throwable);
   public java.lang.String code();
@@ -121,6 +122,12 @@ public final class com.sstlfsj.fibra.InvocationContext {
   public <T> com.sstlfsj.fibra.ServiceRef<T> service(com.sstlfsj.fibra.ServiceKey<T>);
   public com.sstlfsj.fibra.Effects effects();
   public com.sstlfsj.fibra.Plugins plugins();
+}
+## com.sstlfsj.fibra.ManagedPluginControl
+Compiled from "ManagedPluginControl.java"
+public interface com.sstlfsj.fibra.ManagedPluginControl {
+  public static final com.sstlfsj.fibra.ServiceKey<com.sstlfsj.fibra.ManagedPluginControl> KEY;
+  public abstract void requestDisable(com.sstlfsj.fibra.PluginInstance<?>);
 }
 ## com.sstlfsj.fibra.Plugin
 Compiled from "Plugin.java"
@@ -197,6 +204,7 @@ public final class com.sstlfsj.fibra.PluginInstanceState extends java.lang.Enum<
 Compiled from "Plugins.java"
 public interface com.sstlfsj.fibra.Plugins {
   public abstract java.util.Optional<com.sstlfsj.fibra.PluginInstance<?>> current();
+  public abstract void requestDisable();
   public abstract <C> com.sstlfsj.fibra.PluginInstance<C> mount(java.lang.String, com.sstlfsj.fibra.PluginDefinition$Prepared<C>);
   public abstract java.util.Optional<com.sstlfsj.fibra.PluginInstance<?>> find(java.lang.String);
   public abstract java.util.List<com.sstlfsj.fibra.PluginInstance<?>> instances();

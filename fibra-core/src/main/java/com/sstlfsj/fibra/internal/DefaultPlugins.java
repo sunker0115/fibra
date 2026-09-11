@@ -1,7 +1,10 @@
 package com.sstlfsj.fibra.internal;
 
+import com.sstlfsj.fibra.FibraException;
+import com.sstlfsj.fibra.ManagedPluginControl;
 import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.PluginInstance;
+import com.sstlfsj.fibra.PluginInstanceState;
 import com.sstlfsj.fibra.Plugins;
 
 import java.util.List;
@@ -17,6 +20,34 @@ final class DefaultPlugins implements Plugins {
     @Override
     public Optional<PluginInstance<?>> current() {
         return Optional.ofNullable(context.owner().pluginInstance());
+    }
+
+    @Override
+    public void requestDisable() {
+        context.runtime().lifecycle().call(() -> {
+            var instance = context.owner().pluginInstance();
+            if (instance == null) {
+                throw new FibraException(FibraException.PLUGIN_DISABLE_UNAVAILABLE,
+                    "plugin disable requires a plugin-owned context");
+            }
+            var state = instance.stateUnsafe();
+            if (state == PluginInstanceState.STOPPING || state == PluginInstanceState.FAILED
+                || state == PluginInstanceState.DISPOSED) {
+                return null;
+            }
+            if (state != PluginInstanceState.STARTING && state != PluginInstanceState.ACTIVE) {
+                throw new FibraException(FibraException.PLUGIN_DISABLE_UNAVAILABLE,
+                    "plugin instance \"" + instance.id() + "\" is not active");
+            }
+            if (!instance.acceptsResources()) {
+                return null;
+            }
+            var control = context.services().find(ManagedPluginControl.KEY).orElseThrow(() ->
+                new FibraException(FibraException.PLUGIN_DISABLE_UNAVAILABLE,
+                    "managed plugin control is unavailable"));
+            control.requestDisable(instance);
+            return null;
+        });
     }
 
     @Override

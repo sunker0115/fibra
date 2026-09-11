@@ -17,6 +17,7 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -32,6 +33,7 @@ public final class NodeSidecar implements AutoCloseable {
 
     private final NodeRuntimeOptions options;
     private final NodeProcessUnit processUnit;
+    private final Runnable disableRequest;
     private final BufferedWriter writer;
     private final JsonMapper json = JsonMapper.builder().build();
     private final AtomicLong requestIds = new AtomicLong();
@@ -39,11 +41,14 @@ public final class NodeSidecar implements AutoCloseable {
     private final Sinks.One<Void> termination = Sinks.one();
     private final AtomicBoolean closing = new AtomicBoolean();
     private final AtomicBoolean failed = new AtomicBoolean();
+    private final AtomicBoolean handshakeComplete = new AtomicBoolean();
     private final ScheduledExecutorService heartbeats;
 
-    private NodeSidecar(NodeRuntimeOptions options, NodeProcessUnit processUnit) {
+    private NodeSidecar(NodeRuntimeOptions options, NodeProcessUnit processUnit,
+                        Runnable disableRequest) {
         this.options = options;
         this.processUnit = processUnit;
+        this.disableRequest = disableRequest;
         this.writer = new BufferedWriter(new OutputStreamWriter(
             processUnit.input(), StandardCharsets.UTF_8));
         this.heartbeats = Executors.newSingleThreadScheduledExecutor(runnable ->
@@ -52,10 +57,12 @@ public final class NodeSidecar implements AutoCloseable {
         processUnit.onExit().thenAccept(ignored -> onExit(processUnit.exitValue()));
     }
 
-    public static Mono<NodeSidecar> start(Path entrypoint, NodeRuntimeOptions options) {
+    public static Mono<NodeSidecar> start(Path entrypoint, NodeRuntimeOptions options,
+                                          Runnable disableRequest) {
         Objects.requireNonNull(entrypoint, "entrypoint");
         Objects.requireNonNull(options, "options");
-        return Mono.fromCallable(() -> launch(entrypoint, options))
+        Objects.requireNonNull(disableRequest, "disableRequest");
+        return Mono.fromCallable(() -> launch(entrypoint, options, disableRequest))
             .flatMap(sidecar -> sidecar.handshake()
                 .thenReturn(sidecar)
                 .doOnSuccess(ignored -> sidecar.startHeartbeat())
@@ -131,8 +138,10 @@ public final class NodeSidecar implements AutoCloseable {
         termination.tryEmitEmpty();
     }
 
-    private static NodeSidecar launch(Path entrypoint, NodeRuntimeOptions options) {
-        return new NodeSidecar(options, NodeProcessUnit.launch(entrypoint, options));
+    private static NodeSidecar launch(Path entrypoint, NodeRuntimeOptions options,
+                                      Runnable disableRequest) {
+        return new NodeSidecar(options, NodeProcessUnit.launch(entrypoint, options),
+            disableRequest);
     }
 
     private Mono<Void> handshake() {
@@ -144,6 +153,7 @@ public final class NodeSidecar implements AutoCloseable {
                     return Mono.error(new NodeRpcException(NodeRpcPhase.HANDSHAKE,
                         "Node sidecar returned an incompatible handshake"));
                 }
+                handshakeComplete.set(true);
                 return Mono.empty();
             }).onErrorMap(failure -> failure instanceof NodeRpcException
                 && ((NodeRpcException) failure).phase() == NodeRpcPhase.HANDSHAKE
@@ -217,6 +227,10 @@ public final class NodeSidecar implements AutoCloseable {
                 throw new NodeRpcException(NodeRpcPhase.PROTOCOL,
                     "Node sidecar message is not JSON-RPC 2.0");
             }
+            if ("fibra.disable".equals(message.get("method"))) {
+                acceptDisable(message);
+                return;
+            }
             var rawId = message.get("id");
             if (!(rawId instanceof Number number)) {
                 return;
@@ -240,6 +254,20 @@ public final class NodeSidecar implements AutoCloseable {
             throw new NodeRpcException(NodeRpcPhase.PROTOCOL,
                 "Invalid JSON-RPC frame from Node sidecar", failure);
         }
+    }
+
+    private void acceptDisable(Map<String, Object> message) {
+        if (!handshakeComplete.get()) {
+            throw new NodeRpcException(NodeRpcPhase.PROTOCOL,
+                "Node sidecar requested disable before handshake completed");
+        }
+        if (!message.keySet().equals(Set.of("jsonrpc", "method", "params"))
+            || !(message.get("params") instanceof Map<?, ?> parameters)
+            || !parameters.isEmpty()) {
+            throw new NodeRpcException(NodeRpcPhase.PROTOCOL,
+                "Invalid fibra.disable notification from Node sidecar");
+        }
+        disableRequest.run();
     }
 
     private synchronized void send(Map<String, Object> message) {

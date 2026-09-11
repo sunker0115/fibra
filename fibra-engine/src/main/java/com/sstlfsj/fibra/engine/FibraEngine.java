@@ -1,6 +1,7 @@
 package com.sstlfsj.fibra.engine;
 
 import com.sstlfsj.fibra.Context;
+import com.sstlfsj.fibra.ManagedPluginControl;
 import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.PluginInstance;
 import com.sstlfsj.fibra.PluginInstanceState;
@@ -171,6 +172,7 @@ public final class FibraEngine implements AutoCloseable {
         domain = runtime.openDomain("engine");
         var context = domain.rootScope().context();
         hostServices.freeze().forEach(binding -> provideHostBinding(context, binding));
+        context.services().provide(ManagedPluginControl.KEY, this::requestDisable);
         context.services().provide(ContributionServices.REGISTRAR, directory);
         observation = Flux.merge(domain.snapshots(), directory.views())
             .subscribe(ignored -> loop.observe(this::refresh));
@@ -218,6 +220,47 @@ public final class FibraEngine implements AutoCloseable {
             }
             return execute(plan);
         }).onErrorResume(error -> plan.executing ? Mono.error(error) : fail(plan, error));
+    }
+
+    private void requestDisable(PluginInstance<?> instance) {
+        Objects.requireNonNull(instance, "instance");
+        if (closeRequested.get()) return;
+        loop.submit(() -> disable(instance)).subscribe(ignored -> { }, error -> {
+            if (!closeRequested.get()) {
+                LOGGER.warn("Plugin disable request failed for {}", instance.id(), error);
+            }
+        });
+    }
+
+    private Mono<EngineCommandResult> disable(PluginInstance<?> instance) {
+        if (closeRequested.get() || !mutationGate || !evaluationCurrent()) return Mono.empty();
+        var managed = instances.get(instance.id());
+        if (managed == null || managed.instance() != instance) {
+            return Mono.empty();
+        }
+        var state = instance.state();
+        if (state == PluginInstanceState.STARTING) return retryDisableAfterSettled(instance);
+        if (state != PluginInstanceState.ACTIVE) return Mono.empty();
+        var entry = compilation.graph().plugins().get(instance.id());
+        if (entry == null || !entry.enabled() || !evaluation.require(instance.id()).effective().enabled()) {
+            return Mono.empty();
+        }
+        state = instance.state();
+        if (state == PluginInstanceState.STARTING) return retryDisableAfterSettled(instance);
+        if (state != PluginInstanceState.ACTIVE) return Mono.empty();
+        var plan = new ChangeSet(replacementCompilation(
+            compilation.graph().withEnabled(instance.id(), false)), artifacts, configContext);
+        return execute(plan);
+    }
+
+    private Mono<EngineCommandResult> retryDisableAfterSettled(PluginInstance<?> instance) {
+        instance.settled().subscribe(ignored -> requestDisable(instance), ignored -> { });
+        return Mono.empty();
+    }
+
+    private boolean evaluationCurrent() {
+        return evaluation != null && evaluation.graph().equals(compilation.graph())
+            && evaluation.context().equals(configContext);
     }
 
     private Mono<EngineCommandResult> replaceConfigContext(ReplaceConfigContext replace) {

@@ -14,6 +14,12 @@
 `RuntimeDomain.snapshot()` 在 lifecycle lane 上采集全域事实；`snapshots()` 异步通知最新不可变快照，
 慢订阅者可跳过中间状态，域关闭后流完成。快照中的实例 identity 与句柄一致，可区分不同 Scope 的同名实例。
 
+托管条目根插件可从自身 `Context` 调用 `plugins().requestDisable()` 请求持久停用。该调用只提交异步
+管理意图，不直接销毁实例，也不提供可等待的完成句柄。Engine 以精确运行身份校验请求，先保存
+`enabled=false` 的完整目标，再排空并关闭该条目；动态子插件、直接 `dispose()`、普通失败和关闭过程
+不会改变 desired。目标保存失败时实例继续运行并可再次请求；重复请求由 Engine 收敛。没有托管控制面
+的嵌入式 Runtime 调用会以 `PLUGIN_DISABLE_UNAVAILABLE` 明确拒绝。
+
 ## 配置与制品
 
 `fibra-config` 把 YAML/JSON 或程序化输入采集成不可变 `DesiredInputGraph` 条目树，不解析插件类型。

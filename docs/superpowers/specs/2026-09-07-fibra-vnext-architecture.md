@@ -530,6 +530,20 @@ Java core。当前八个操作符足以覆盖已知场景，且让采集、持�
 若真实插件需要解析字符串表达式、静态类型检查或持续扩展操作符，再以 CEL 替换内部 evaluator；
 在此之前不承担 CEL、protobuf 与缓存栈的依赖和版本治理成本。
 
+条目根插件主动停用采用显式意图，不从 `PluginInstance` 的 `DISPOSED` 或 `FAILED` 事实反推管理目标。
+插件通过自身 `Context` 的 `Plugins.requestDisable()` 提交异步请求；core 只接受 `STARTING` 或 `ACTIVE`
+实例，并把精确实例身份交给域内控制面。Engine 在唯一 command lane 上再次校验该对象仍是当前托管
+条目根、raw `enabled` 仍为 true 且当前条件有效，然后以执行时的最新 desired revision 构造
+`withEnabled(entryId, false)`，复用既有 ChangeSet 先保存完整目标、再排空并关闭该条目。请求不返回
+完成句柄，避免插件在 `start()` 内等待自身所属 Engine 命令形成死锁；重复请求和已被替换的旧实例
+按身份 CAS 静默丢弃。动态子插件、直接 `dispose()`、普通失败、配置更新导致的重挂载、祖先停用和
+Engine 关闭都不写回 desired。自停用不是 Registry 用户操作，不伪造审计历史；Registry 从
+PublishedView 观察结果。Node 仅接受 sidecar 的严格 `fibra.disable` JSON-RPC notification，且通知方
+不能提供目标 ID；Java wrapper 代其提交同一意图，sidecar 不做进程终身去重，使目标保存失败后可由
+插件再次请求，重复意图由 Engine 的身份和最新目标校验收敛。sidecar 继续服务到目标保存并收到既有
+`fibra.stop`。这保留 DSH“只有条目根主动行为才持久停用”的契约，同时满足 Fibra target-first、
+失败可见和局部排空边界。
+
 绑定使用准备后的目标 catalog 与程序内建 definition；启动时绑定全部有效启用插件，更新时只绑定
 新增或受影响的插件。有效停用声明不查找 definition、不绑定配置，允许保留尚未安装的插件。
 本次受影响输入全部绑定、校验成功后才保存目标并改变运行态，避免可预检的配置错误造成部分停启。

@@ -9,6 +9,7 @@ import com.sstlfsj.fibra.bridge.ContributionId;
 import com.sstlfsj.fibra.bridge.ContributionKind;
 import com.sstlfsj.fibra.bridge.ContributionServices;
 import com.sstlfsj.fibra.PluginInstanceState;
+import com.sstlfsj.fibra.ManagedPluginControl;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -21,6 +22,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -172,6 +174,41 @@ class NodePluginRuntimeAdapterTest {
     }
 
     @Test
+    void forwardsDisableNotificationToTheCurrentWrapperContext(@TempDir Path work)
+        throws Exception {
+        var artifactRoot = work.resolve("disable-node");
+        Files.createDirectories(artifactRoot);
+        Files.writeString(artifactRoot.resolve("fibra-plugin.yaml"), manifest("disable-node"));
+        Files.writeString(artifactRoot.resolve("index.mjs"), disablingScript());
+        var artifact = artifact(artifactRoot, "disable-node");
+        var adapter = new NodePluginRuntimeAdapter(name -> "echo".equals(name)
+            ? Optional.of(ECHO) : Optional.empty(),
+            NodeRuntimeOptions.defaults(node(), work.resolve("sessions")));
+        var owner = adapter.create();
+        var update = owner.createUpdate(List.of(artifact));
+        update.prepareAsync().block();
+        update.adopt();
+        update.closeAsync().block();
+        var disabled = new AtomicReference<String>();
+
+        try (var runtime = FibraRuntime.create()) {
+            runtime.rootScope().context().services().provide(
+                ContributionServices.REGISTRAR, new ContributionDirectory());
+            runtime.rootScope().context().services().provide(ManagedPluginControl.KEY,
+                instance -> disabled.set(instance.id()));
+            @SuppressWarnings("unchecked")
+            var definition = (com.sstlfsj.fibra.PluginDefinition<Object>) owner.catalog()
+                .plugins().find("disable-node").orElseThrow().definition();
+            var instance = runtime.rootScope().context().plugins()
+                .mount("disable-instance", definition.prepare(Map.of()));
+            instance.settled().block(Duration.ofSeconds(3));
+
+            assertEquals("disable-instance", disabled.get());
+        }
+        owner.closeAsync().block();
+    }
+
+    @Test
     void rejectsAnEntrypointThatEscapesTheArtifact(@TempDir Path work) throws Exception {
         var artifactRoot = work.resolve("escaped-node");
         Files.createDirectories(artifactRoot);
@@ -233,6 +270,46 @@ class NodePluginRuntimeAdapterTest {
               }
               else if (method === 'fibra.stop') reply(id, {ok:true});
               else if (method === 'echo') reply(id, message.params.input);
+            });
+            """;
+    }
+
+    private static ArtifactRecord artifact(Path artifactRoot, String id) {
+        return ArtifactRecord.builder().id(new ArtifactId(id))
+            .runtimeId(NodePluginRuntimeAdapter.RUNTIME_ID).version("1.0.0")
+            .checksum("checksum").revision("revision").location(artifactRoot)
+            .state(ArtifactState.INSTALLED).updatedAt(Instant.now()).build();
+    }
+
+    private static String manifest(String id) {
+        return """
+            id: %s
+            version: 1.0.0
+            protocol: 1
+            entrypoint: index.mjs
+            contributions:
+              - name: say
+                kind: echo
+                schemaVersion: 1
+                method: echo
+                descriptor:
+                  title: Echo
+            """.formatted(id);
+    }
+
+    private static String disablingScript() {
+        return """
+            import readline from 'node:readline';
+            const reply = (id, result) => process.stdout.write(JSON.stringify({jsonrpc:'2.0', id, result}) + '\\n');
+            readline.createInterface({input: process.stdin}).on('line', line => {
+              const message = JSON.parse(line);
+              if (message.method === 'fibra.handshake') reply(message.id, {protocol:1});
+              else if (message.method === 'fibra.ping') reply(message.id, {ok:true});
+              else if (message.method === 'fibra.start') {
+                process.stdout.write(JSON.stringify({jsonrpc:'2.0',method:'fibra.disable',params:{}}) + '\\n');
+                reply(message.id, {ok:true});
+              }
+              else if (message.method === 'fibra.stop') reply(message.id, {ok:true});
             });
             """;
     }
