@@ -121,9 +121,13 @@ Spring Boot 只需引入：
 ```yaml
 fibra:
   storage-root: ./.fibra
+  source:
+    refresh-interval: 1s
 ```
 
 starter 自动组合 `ArtifactStore`、持久化 `FileEngineStateStore`、Java runtime、Engine 与 Registry。宿主 bean 只有标注 `@FibraService` 才会显式进入 Fibra root，不会扫描或托管动态插件对象。
+
+`fibra.source.refresh-interval` 默认 `0s`，即不自动导入配置源；设置为正值后，文件事件只触发可合并的 dirty signal，周期 resync 负责发现丢失通知。无效源保留 last-good 目标和运行实例并公开失败诊断，修正后自动恢复。已有持久目标启动时只建立源观察基线，不会被源文件静默覆盖。
 
 默认存储由 Engine 内部持有并关闭；如提供自定义 `ArtifactStore` 或 `EngineStateStore` bean，须声明 `@Bean(destroyMethod = "")`，不能让容器再次独立关闭。
 

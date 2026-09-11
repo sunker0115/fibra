@@ -22,7 +22,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 
 @AutoConfiguration
-@EnableConfigurationProperties(FibraProperties.class)
+@EnableConfigurationProperties({FibraProperties.class, FibraSourceProperties.class})
 public class FibraAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
@@ -45,6 +45,7 @@ public class FibraAutoConfiguration {
     @ConditionalOnMissingBean
     FibraEngine fibraEngine(DesiredStateRepository desired,
                             FibraProperties properties,
+                            FibraSourceProperties sourceProperties,
                             ObjectProvider<ArtifactStore> artifactStores,
                             ObjectProvider<PluginRuntimeAdapter> runtimes,
                             ObjectProvider<EngineStateStore> stateStores,
@@ -62,6 +63,9 @@ public class FibraAutoConfiguration {
             }
             var builder = FibraEngine.builder(desired).artifactStore(artifacts)
                 .stateStore(stateStore).hostServices(hostServices);
+            if (!sourceProperties.refreshInterval().isZero()) {
+                builder.autoRefresh(sourceProperties.refreshInterval());
+            }
             runtimes.orderedStream().forEach(builder::runtimeAdapter);
             var engine = builder.build();
             artifacts = null;

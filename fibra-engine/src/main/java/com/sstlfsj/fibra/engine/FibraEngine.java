@@ -37,6 +37,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -56,17 +57,17 @@ public final class FibraEngine implements AutoCloseable {
     private final FibraRuntime runtime = FibraRuntime.create();
     private final EngineCommandLoop loop = new EngineCommandLoop();
     private final RuntimeResources resources;
+    private final DesiredSourceMonitor sourceMonitor;
     private final ContributionDirectory directory = new ContributionDirectory();
     private final Map<String, Managed<?>> instances = new LinkedHashMap<>();
     private final Sinks.Many<PublishedView> views = Sinks.many().replay().latest();
     private final AtomicReference<PublishedState> publishedState = new AtomicReference<>();
     private final AtomicBoolean closeRequested = new AtomicBoolean();
+    private final AtomicBoolean sourceRefreshQueued = new AtomicBoolean();
+    private final AtomicBoolean sourceDirty = new AtomicBoolean();
+    private final AtomicReference<Throwable> sourceMonitorFailure = new AtomicReference<>();
     private final Mono<PublishedView> startSignal;
-    private final Mono<Void> closeSignal = Mono.defer(() -> {
-        closeRequested.set(true);
-        return loop.quiesce().then(loop.call(this::closeInternal));
-    }).then(Mono.defer(loop::closeAsync))
-        .onErrorResume(error -> loop.closeAsync().then(Mono.error(error))).cache();
+    private final Mono<Void> closeSignal;
 
     private RuntimeDomain domain;
     private reactor.core.Disposable observation;
@@ -79,7 +80,10 @@ public final class FibraEngine implements AutoCloseable {
     private EngineState state = EngineState.NEW;
     private Set<String> affected = Set.of();
     private boolean mutationGate = true;
+    private boolean sourceBaselinePending;
+    private boolean sourceFailure;
     private String failure;
+    private String lastSourceRevision;
 
     private final PublishedRuntime published = new PublishedRuntime() {
         @Override public PublishedView current() { return publishedState.get().view(); }
@@ -98,6 +102,18 @@ public final class FibraEngine implements AutoCloseable {
         stateStore = builder.stateStore;
         hostServices = builder.hostServices;
         resources = new RuntimeResources(builder.runtimeAdapters, builder.catalog);
+        sourceMonitor = builder.autoRefreshInterval == null ? null
+            : new DesiredSourceMonitor(builder.autoRefreshInterval);
+        closeSignal = Mono.defer(() -> {
+            closeRequested.set(true);
+            var stopMonitor = sourceMonitor == null ? Mono.<Void>empty()
+                : sourceMonitor.closeAsync().onErrorResume(error -> {
+                    sourceMonitorFailure.compareAndSet(null, error);
+                    return Mono.empty();
+                });
+            return loop.quiesce().then(stopMonitor).then(loop.call(this::closeInternal));
+        }).then(Mono.defer(loop::closeAsync))
+            .onErrorResume(error -> loop.closeAsync().then(Mono.error(error))).cache();
         publishEmpty();
         startSignal = Mono.defer(() -> loop.submit(() -> Mono.defer(this::bootstrap)
             .onErrorResume(error -> {
@@ -155,12 +171,20 @@ public final class FibraEngine implements AutoCloseable {
         var plan = new ChangeSet(desired, target);
         plan.bootstrapping = true;
         plan.saved = saved.isPresent();
-        return execute(plan).map(EngineCommandResult::view);
+        return execute(plan).map(EngineCommandResult::view).doOnSuccess(view -> {
+            if (sourceMonitor == null) return;
+            if (saved.isEmpty()) acceptSource(desired);
+            else {
+                sourceBaselinePending = true;
+                seedSourceObservation();
+            }
+            sourceMonitor.start(this::desiredSourceDirty);
+        });
     }
 
     private Mono<EngineCommandResult> change(EngineCommand command) {
+        if (command instanceof RefreshDesired) return refreshDesired(true);
         var desired = compilation;
-        if (command instanceof RefreshDesired) desired = loadDesired();
         if (command instanceof ReplaceDesiredGraph replace) {
             checkDesiredRevision(replace.expectedDesiredRevision());
             desired = replacementCompilation(replace.graph());
@@ -188,6 +212,102 @@ public final class FibraEngine implements AutoCloseable {
         }).onErrorResume(error -> plan.executing ? Mono.error(error) : fail(plan, error));
     }
 
+    private Mono<EngineCommandResult> refreshDesired(boolean force) {
+        return Mono.defer(() -> {
+            final DesiredCompilation desired;
+            try {
+                desired = loadDesired();
+            } catch (RuntimeException | Error error) {
+                return failSourceRefresh(error);
+            }
+            sourceMonitorUpdate(desired);
+            if (sourceBaselinePending && !force) {
+                acceptSource(desired);
+                return unchangedSource(desired);
+            }
+            if (!force && desired.snapshot().revision().equals(lastSourceRevision)) {
+                return unchangedSource(desired);
+            }
+            var plan = new ChangeSet(desired, artifacts);
+            return execute(plan).doOnSuccess(ignored -> acceptSource(desired))
+                .doOnError(error -> {
+                    if (error instanceof EngineChangeException change && change.targetSaved()) {
+                        acceptSource(desired);
+                    }
+                });
+        });
+    }
+
+    private Mono<EngineCommandResult> failSourceRefresh(Throwable error) {
+        return loop.call(() -> {
+            sourceFailure = true;
+            failure = error.toString();
+            phase = ChangePhase.FAILED;
+            return capture().flatMap(captured -> {
+                publish(captured);
+                return Mono.error(error);
+            });
+        });
+    }
+
+    private Mono<EngineCommandResult> unchangedSource(DesiredCompilation desired) {
+        var warnings = desired.diagnostics().stream().map(ConfigDiagnostic::message).toList();
+        if (!sourceFailure) {
+            return Mono.just(new EngineCommandResult(publishedState.get().view(), warnings));
+        }
+        sourceFailure = false;
+        failure = null;
+        phase = ChangePhase.IDLE;
+        affected = Set.of();
+        return capture().map(captured -> {
+            publish(captured);
+            return new EngineCommandResult(publishedState.get().view(), warnings);
+        });
+    }
+
+    private void desiredSourceDirty() {
+        if (closeRequested.get()) return;
+        sourceDirty.set(true);
+        scheduleSourceRefresh();
+    }
+
+    private void scheduleSourceRefresh() {
+        if (!sourceRefreshQueued.compareAndSet(false, true)) return;
+        loop.submit(() -> {
+            if (!sourceDirty.getAndSet(false) || state != EngineState.RUNNING
+                || !mutationGate) {
+                return Mono.<Void>empty();
+            }
+            return refreshDesired(false).then();
+        }).doFinally(ignored -> {
+            sourceRefreshQueued.set(false);
+            if (sourceDirty.get() && !closeRequested.get()) scheduleSourceRefresh();
+        }).subscribe(ignored -> { }, error -> LOGGER.warn(
+            "Automatic desired source refresh failed: {}", error.toString()));
+    }
+
+    private void seedSourceObservation() {
+        try {
+            acceptSource(loadDesired());
+        } catch (RuntimeException | Error error) {
+            LOGGER.warn("Cannot establish desired source refresh baseline: {}",
+                error.toString());
+            desiredSourceDirty();
+        }
+    }
+
+    private void acceptSource(DesiredCompilation desired) {
+        sourceBaselinePending = false;
+        lastSourceRevision = desired.snapshot().revision();
+        sourceMonitorUpdate(desired);
+    }
+
+    private void sourceMonitorUpdate(DesiredCompilation desired) {
+        if (sourceMonitor != null) {
+            sourceMonitor.update(desired.snapshot().sources());
+        }
+    }
+
     private DesiredCompilation loadDesired() {
         var desired = desiredRepository.load();
         desired.diagnostics().forEach(diagnostic -> LOGGER.warn("{} source={} entry={}: {}",
@@ -206,6 +326,7 @@ public final class FibraEngine implements AutoCloseable {
     private Mono<EngineCommandResult> execute(ChangeSet plan) {
         plan.executing = true;
         return loop.call(() -> {
+            sourceFailure = false;
             phase = ChangePhase.PREPARING;
             failure = null;
             publishControl();
@@ -366,6 +487,7 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private Mono<EngineCommandResult> fail(ChangeSet plan, Throwable error) {
+        sourceFailure = false;
         boolean unconfirmed = error instanceof EngineStateStore.SaveUnconfirmedException;
         if (unconfirmed || (plan.saved && !plan.retired)) mutationGate = false;
         var cleanup = (plan.saved || unconfirmed) ? Mono.<Void>empty()
@@ -486,7 +608,8 @@ public final class FibraEngine implements AutoCloseable {
         var enabled = compilation.graph().plugins().keySet().stream()
             .filter(id -> compilation.graph().effective(id).enabled())
             .collect(java.util.stream.Collectors.toSet());
-        boolean satisfied = state == EngineState.RUNNING && phase != ChangePhase.FAILED
+        boolean satisfied = state == EngineState.RUNNING
+            && (phase != ChangePhase.FAILED || sourceFailure)
             && targetRevision != null && snapshot.desiredGraph().equals(compilation.graph())
             && snapshot.artifacts().equals(artifacts) && resources.matchesTarget(artifacts)
             && snapshot.instances().keySet().equals(enabled) && enabled.stream().allMatch(id -> {
@@ -565,6 +688,11 @@ public final class FibraEngine implements AutoCloseable {
             .then(Mono.defer(resources::closeAsync))
             .then(loop.call(() -> {
                 closeStores();
+                var monitorFailure = sourceMonitorFailure.get();
+                if (monitorFailure != null) {
+                    throw new IllegalStateException(
+                        "cannot close desired source monitor", monitorFailure);
+                }
                 instances.clear();
                 state = EngineState.CLOSED;
                 phase = ChangePhase.CLOSED;
@@ -625,12 +753,20 @@ public final class FibraEngine implements AutoCloseable {
         private EngineStateStore stateStore = EngineStateStore.inMemory();
         private ArtifactStore artifactStore;
         private HostServiceRegistry hostServices = new HostServiceRegistry();
+        private Duration autoRefreshInterval;
         private final Map<RuntimeId, PluginRuntimeAdapter> runtimeAdapters = new LinkedHashMap<>();
         private Builder(DesiredStateRepository repository) { desiredRepository = Objects.requireNonNull(repository, "repository"); }
         public Builder catalog(PluginCatalog value) { catalog = Objects.requireNonNull(value); return this; }
         public Builder stateStore(EngineStateStore value) { stateStore = Objects.requireNonNull(value); return this; }
         public Builder artifactStore(ArtifactStore value) { artifactStore = Objects.requireNonNull(value); return this; }
         public Builder hostServices(HostServiceRegistry value) { hostServices = Objects.requireNonNull(value); return this; }
+        public Builder autoRefresh(Duration interval) {
+            if (interval == null || interval.isZero() || interval.isNegative()) {
+                throw new IllegalArgumentException("auto refresh interval must be positive");
+            }
+            autoRefreshInterval = interval;
+            return this;
+        }
         public Builder runtimeAdapter(PluginRuntimeAdapter value) {
             Objects.requireNonNull(value);
             if (runtimeAdapters.putIfAbsent(value.id(), value) != null) throw new IllegalArgumentException("duplicate runtime adapter " + value.id());

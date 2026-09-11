@@ -62,6 +62,11 @@ close()
 closeAsync()
 ```
 
+构建 Engine 时可用 `FibraEngine.Builder.autoRefresh(Duration)` 显式开启 desired source 自动刷新。
+文件事件只产生可合并 dirty signal，周期 resync 执行真实重新采集，并与上一次已接受的 source revision
+比较；相同源不会覆盖 `ReplaceDesiredGraph` 等管理变更。源读取或解析失败会公开 `FAILED` 诊断，但
+last-good 目标仍可满足且 mutation gate 保持开放；恢复为相同内容时只清除源错误，不重启实例。
+
 `start()` 返回初始 `PublishedView`。`PublishedRuntime.current()` / `views()` 是状态、诊断和贡献的唯一已发布事实源；`invoke(expectedViewRevision, kind, id, input)` 保证目录选择与调用不跨 revision。托管宿主不能取得 `FibraRuntime`、`Context` 或 `Scope`。
 
 `EngineSnapshot.instances()` 只包含 Engine 持有的声明实例，其快照提供 `publicationRequirement()` 和
@@ -104,6 +109,6 @@ manifest 字段为 `id`、`version`、可选的 `entrypoint` 和 `requires`。�
 
 ## Spring
 
-`@FibraService(name, type)` 显式导出宿主 bean。`FibraServiceExporter` 在 Spring 销毁前撤销注册。starter 默认装配 Java runtime、Engine、Registry 和服务桥接。默认 `ArtifactStore`、`FileEngineStateStore` 是 Engine 内部资源，不单独注册为 Spring bean；显式提供同类型存储 bean 可以替换默认实现，但必须声明 `@Bean(destroyMethod = "")`，由 Engine 唯一负责关闭，避免容器绕过 Engine 的失败资源保留边界。
+`@FibraService(name, type)` 显式导出宿主 bean。`FibraServiceExporter` 在 Spring 销毁前撤销注册。starter 默认装配 Java runtime、Engine、Registry 和服务桥接。`fibra.source.refresh-interval` 默认为 `0s`；设置为正值时开启上述自动刷新。默认 `ArtifactStore`、`FileEngineStateStore` 是 Engine 内部资源，不单独注册为 Spring bean；显式提供同类型存储 bean 可以替换默认实现，但必须声明 `@Bean(destroyMethod = "")`，由 Engine 唯一负责关闭，避免容器绕过 Engine 的失败资源保留边界。
 
 各模块的 `*-public-signatures.txt` 由 `javap -protected` 生成，并由 `fibra-parity-tests` 冻结。

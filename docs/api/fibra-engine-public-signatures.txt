@@ -178,6 +178,7 @@ public final class com.sstlfsj.fibra.engine.FibraEngine$Builder {
   public com.sstlfsj.fibra.engine.FibraEngine$Builder stateStore(com.sstlfsj.fibra.engine.EngineStateStore);
   public com.sstlfsj.fibra.engine.FibraEngine$Builder artifactStore(com.sstlfsj.fibra.artifact.ArtifactStore);
   public com.sstlfsj.fibra.engine.FibraEngine$Builder hostServices(com.sstlfsj.fibra.engine.HostServiceRegistry);
+  public com.sstlfsj.fibra.engine.FibraEngine$Builder autoRefresh(java.time.Duration);
   public com.sstlfsj.fibra.engine.FibraEngine$Builder runtimeAdapter(com.sstlfsj.fibra.engine.PluginRuntimeAdapter);
   public com.sstlfsj.fibra.engine.FibraEngine build();
 }

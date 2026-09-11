@@ -13,3 +13,12 @@ public final class com.sstlfsj.fibra.spring.boot.FibraProperties extends java.la
   public final boolean equals(java.lang.Object);
   public java.nio.file.Path storageRoot();
 }
+## com.sstlfsj.fibra.spring.boot.FibraSourceProperties
+Compiled from "FibraSourceProperties.java"
+public final class com.sstlfsj.fibra.spring.boot.FibraSourceProperties extends java.lang.Record {
+  public com.sstlfsj.fibra.spring.boot.FibraSourceProperties(java.time.Duration);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.time.Duration refreshInterval();
+}

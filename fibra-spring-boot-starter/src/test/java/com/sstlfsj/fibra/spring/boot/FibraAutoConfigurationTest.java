@@ -5,6 +5,10 @@ import com.sstlfsj.fibra.artifact.ArtifactId;
 import com.sstlfsj.fibra.artifact.ArtifactException;
 import com.sstlfsj.fibra.artifact.ArtifactStore;
 import com.sstlfsj.fibra.artifact.RuntimeId;
+import com.sstlfsj.fibra.config.DesiredInputEntry;
+import com.sstlfsj.fibra.config.DesiredInputGraph;
+import com.sstlfsj.fibra.config.DesiredStateRepository;
+import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
 import com.sstlfsj.fibra.engine.EngineState;
 import com.sstlfsj.fibra.engine.EngineStateStore;
 import com.sstlfsj.fibra.engine.EngineStateStoreException;
@@ -33,6 +37,7 @@ import reactor.core.publisher.Mono;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -47,6 +52,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FibraAutoConfigurationTest {
+    private static final Duration TIMEOUT = Duration.ofSeconds(5);
+
     @Test
     void composesEngineRegistryJavaRuntimeAndExplicitSpringServices(
         @TempDir Path work) throws IOException {
@@ -146,6 +153,33 @@ class FibraAutoConfigurationTest {
             });
 
         assertEquals(1, observed.get().closeCalls);
+    }
+
+    @Test
+    void explicitlyConfiguredSourceRefreshImportsRepositoryChanges(@TempDir Path work) {
+        var repository = InMemoryDesiredStateRepository.empty();
+        var graph = new DesiredInputGraph(List.of(DesiredInputEntry.builder(
+            "future", "not-installed").enabled(false).build()));
+        new ApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(FibraAutoConfiguration.class))
+            .withBean(DesiredStateRepository.class, () -> repository)
+            .withPropertyValues("fibra.storage-root=" + work,
+                "fibra.source.refresh-interval=20ms")
+            .run(context -> {
+                assertEquals(Duration.ofMillis(20), context.getBean(
+                    FibraSourceProperties.class).refreshInterval());
+                var engine = context.getBean(FibraEngine.class);
+                var transaction = repository.prepareReplace(
+                    repository.load().snapshot().revision(), graph);
+                transaction.commit();
+                transaction.close();
+
+                var refreshed = engine.published().views()
+                    .filter(view -> view.engine().desiredGraph().equals(graph))
+                    .next().block(TIMEOUT);
+                assertNotNull(refreshed);
+                assertTrue(refreshed.engineDiagnostics().targetSatisfied());
+            });
     }
 
     private static void assertDefaultStoresCanReopen(Path work) {
