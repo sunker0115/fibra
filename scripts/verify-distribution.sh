@@ -115,6 +115,45 @@ main_jar() {
   printf '%s\n' "${matches[0]}"
 }
 
+main_pom() {
+  local artifact_id="$1"
+  local directory="$remote_repository/com/sstlfsj/$artifact_id/$revision"
+  local matches=("$directory/$artifact_id-"*.pom)
+  [[ "${#matches[@]}" -eq 1 ]] || {
+    echo "$artifact_id 应恰好有一个发布 POM" >&2
+    exit 1
+  }
+  printf '%s\n' "${matches[0]}"
+}
+
+verify_generated_plugin() {
+  local settings="$1"
+  local generated="$2"
+  local artifact_id="$3"
+  mkdir -p "$generated"
+  (
+    cd "$generated"
+    "$maven_executable" --settings "$settings" \
+      --batch-mode --no-transfer-progress \
+      -Dmaven.repo.local="$consumer_repository" \
+      -Dfibra.repository.url="file://$remote_repository" \
+      "org.apache.maven.plugins:maven-archetype-plugin:$archetype_plugin_version:generate" \
+      -DarchetypeGroupId=com.sstlfsj \
+      -DarchetypeArtifactId=fibra-plugin-archetype \
+      -DarchetypeVersion="$revision" \
+      -DgroupId=verification.generated -DartifactId="$artifact_id" \
+      -Dversion=1.0.0 -Dpackage=verification.generated \
+      -DpluginId="$artifact_id" -DfibraVersion="$revision" \
+      -DinteractiveMode=false
+
+    "$maven_executable" --settings "$settings" \
+      --batch-mode --no-transfer-progress \
+      -Dmaven.repo.local="$consumer_repository" \
+      -Dfibra.repository.url="file://$remote_repository" \
+      -f "$generated/$artifact_id/pom.xml" verify
+  )
+}
+
 readonly fs_local_jar="$(main_jar fibra-fs-local)"
 readonly fs_local_pom=("$remote_repository/com/sstlfsj/fibra-fs-local/$revision/fibra-fs-local-"*.pom)
 readonly fs_local_entries="$temporary_root/fibra-fs-local.entries"
@@ -182,41 +221,43 @@ fi
   -Dspring-boot.version="$spring_boot_version" \
   -f "$consumer_project/pom.xml" clean verify
 
+verify_generated_plugin "$consumer_project/settings.xml" \
+  "$temporary_root/prewarm-generated" prewarmed-plugin
+
+# 第一次构建从空本地仓库开始，正常解析外部依赖。随后只清除这个临时缓存中的
+# Fibra 坐标，并把全部仓库镜像到本次部署仓库。第二次构建因而不能回退到
+# Central 获取 Fibra，同时保留已由空仓构建证明可解析的外部依赖。
+[[ "$consumer_repository" == "$temporary_root/consumer" ]] || {
+  echo "拒绝清理非预期的消费者仓库：$consumer_repository" >&2
+  exit 1
+}
+rm -rf "$consumer_repository/com/sstlfsj"
+"$maven_executable" --settings "$consumer_project/isolated-settings.xml" \
+  --batch-mode --no-transfer-progress \
+  -Dmaven.repo.local="$consumer_repository" \
+  -Dfibra.repository.url="file://$remote_repository" \
+  -Dfibra.version="$revision" -Djunit.version="$junit_version" \
+  -Dspring-boot.version="$spring_boot_version" \
+  -f "$consumer_project/pom.xml" clean verify
+
 for module in "${production_modules[@]:12}"; do
   artifact_id="$(basename "$module")"
-  marker="$consumer_repository/com/sstlfsj/$artifact_id/$revision/_remote.repositories"
-  [[ -f "$marker" ]] || {
-    echo "空仓消费者未解析 $artifact_id" >&2
+  consumer_directory="$consumer_repository/com/sstlfsj/$artifact_id/$revision"
+  consumer_jar="$consumer_directory/$artifact_id-$revision.jar"
+  consumer_pom="$consumer_directory/$artifact_id-$revision.pom"
+  [[ -f "$consumer_jar" && -f "$consumer_pom" ]] || {
+    echo "空仓消费者未完整解析 $artifact_id 的主 JAR 和 POM" >&2
     exit 1
   }
-  grep -Fqx "$artifact_id-$revision.jar>fibra-verification=" "$marker" || {
-    echo "$artifact_id 主 JAR 不是从临时发布仓库解析" >&2
+  cmp -s "$(main_jar "$artifact_id")" "$consumer_jar" || {
+    echo "$artifact_id 主 JAR 与临时发布制品字节不一致" >&2
     exit 1
   }
-  grep -Fqx "$artifact_id-$revision.pom>fibra-verification=" "$marker" || {
-    echo "$artifact_id POM 不是从临时发布仓库解析" >&2
+  cmp -s "$(main_pom "$artifact_id")" "$consumer_pom" || {
+    echo "$artifact_id POM 与临时发布制品字节不一致" >&2
     exit 1
   }
 done
 
-readonly generated="$temporary_root/generated"
-mkdir -p "$generated"
-cd "$generated"
-"$maven_executable" --settings "$consumer_project/settings.xml" \
-  --batch-mode --no-transfer-progress \
-  -Dmaven.repo.local="$consumer_repository" \
-  -Dfibra.repository.url="file://$remote_repository" \
-  "org.apache.maven.plugins:maven-archetype-plugin:$archetype_plugin_version:generate" \
-  -DarchetypeGroupId=com.sstlfsj \
-  -DarchetypeArtifactId=fibra-plugin-archetype \
-  -DarchetypeVersion="$revision" \
-  -DgroupId=verification.generated -DartifactId=generated-plugin \
-  -Dversion=1.0.0 -Dpackage=verification.generated \
-  -DpluginId=generated-plugin -DfibraVersion="$revision" \
-  -DinteractiveMode=false
-
-"$maven_executable" --settings "$consumer_project/settings.xml" \
-  --batch-mode --no-transfer-progress \
-  -Dmaven.repo.local="$consumer_repository" \
-  -Dfibra.repository.url="file://$remote_repository" \
-  -f "$generated/generated-plugin/pom.xml" verify
+verify_generated_plugin "$consumer_project/isolated-settings.xml" \
+  "$temporary_root/generated" generated-plugin

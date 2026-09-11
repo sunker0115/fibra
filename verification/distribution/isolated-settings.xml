@@ -6,8 +6,8 @@
   <mirrors>
     <mirror>
       <id>fibra-verification-external</id>
-      <url>https://repo.maven.apache.org/maven2</url>
-      <mirrorOf>central</mirrorOf>
+      <url>${fibra.repository.url}</url>
+      <mirrorOf>*</mirrorOf>
     </mirror>
   </mirrors>
   <profiles>
