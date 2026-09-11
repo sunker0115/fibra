@@ -18,7 +18,8 @@ class ArchitectureBaselineTest {
         "fibra-engine", "fibra-bridge", "fibra-runtime-java",
         "fibra-runtime-node", "fibra-registry", "fibra-spring",
         "fibra-spring-boot-starter", "fibra-plugin-archetype",
-        "fibra-example", "fibra-parity-tests", "fibra-benchmarks");
+        "fibra-plugins", "fibra-example", "fibra-parity-tests",
+        "fibra-benchmarks");
 
     @Test
     void rootDeclaresOnlyTheVNextArchitecture() throws Exception {

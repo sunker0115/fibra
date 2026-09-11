@@ -57,6 +57,7 @@
     <module>fibra-spring</module>
     <module>fibra-spring-boot-starter</module>
     <module>fibra-plugin-archetype</module>
+    <module>fibra-plugins</module>
     <module>fibra-example</module>
     <module>fibra-parity-tests</module>
     <module>fibra-benchmarks</module>
@@ -217,6 +218,71 @@
       <dependency>
         <groupId>com.sstlfsj</groupId>
         <artifactId>fibra-plugin-archetype</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-tool-api</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-fs</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-fs-local</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-tool-fs</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-subprocess</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-subprocess-local</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-tool-fs-search</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-shell</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-shell-local</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-tool-shell</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-storage</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-storage-json</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-config-client-test-plugin</artifactId>
         <version>${project.version}</version>
       </dependency>
     </dependencies>

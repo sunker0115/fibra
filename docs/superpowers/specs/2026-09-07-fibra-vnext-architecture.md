@@ -461,8 +461,9 @@ fibra-spring-boot-starter -> fibra-spring + fibra-registry + fibra-runtime-java
 | `fibra-spring` | Spring 服务与 Scope 协议适配 | Engine 装配、制品事务、宿主业务 |
 | `fibra-spring-boot-starter` | 默认 composition root | 业务规则与场景协议 |
 
-禁止新增 `common/shared/utils` 发布模块承接边界不清的代码。跨模块且属于公开语义的类型进入
-`fibra-api`；纯实现复用不足以成为新模块。
+禁止新增 `common/shared/utils` 发布模块承接边界不清的代码。跨 Fibra 框架模块且属于公开语义的类型
+进入 `fibra-api`；业务产品的跨插件/宿主契约进入该产品已发布的 API 模块，不能反向污染框架 API。
+纯实现复用不足以成为新模块。
 
 ## 6. 输入、运行时与宿主适配
 
@@ -760,6 +761,95 @@ Java Harness 只是验证 built-in definition、EngineCommand、PublishedView、
 参考 DSH 固定提交 `a66e4702047846cdaa10c66c9d3df3951f5ea70d` 的 `packages/fs/tool-fs`、
 `packages/fs/tool-fs-search`、`packages/shell/tool-bash` 及 `packages/storage`；
 参考其插件协作方式，不将应用场景覆盖误称为整个 DSH 业务产品的等价实现。
+
+正式插件统一由根级 `fibra-plugins` 聚合，不放在 `fibra-example`；聚合 POM 不发布，正式产品子模块直接
+继承根 `com.sstlfsj:fibra`，并各自发布 main/source/javadoc；acceptance 子树及其测试 JAR 不发布，也不
+生成 source/javadoc。DSH 把 `fs`、`subprocess`、`shell`、`storage`
+契约分别发布，Fibra 也保持这四条契约边，不使用一个大 contract JAR；否则任一契约升级都会扩大 Java
+artifact 反向依赖闭包，破坏无关 ClassLoader 保留。正式模块如下：
+
+```text
+fibra-plugins
+  ├─ fibra-tool-api/
+  ├─ fibra-plugins-fs/                    （领域聚合，不发布）
+  │  ├─ fibra-fs/
+  │  ├─ fibra-fs-local/
+  │  ├─ fibra-tool-fs/
+  │  └─ fibra-tool-fs-search/
+  ├─ fibra-plugins-subprocess/            （领域聚合，不发布）
+  │  ├─ fibra-subprocess/
+  │  └─ fibra-subprocess-local/
+  ├─ fibra-plugins-shell/                 （领域聚合，不发布）
+  │  ├─ fibra-shell/
+  │  ├─ fibra-shell-local/
+  │  └─ fibra-tool-shell/
+  ├─ fibra-plugins-storage/               （领域聚合，不发布）
+  │  ├─ fibra-storage/
+  │  └─ fibra-storage-json/
+  └─ fibra-plugins-acceptance/            （真实组合验收，不发布）
+     ├─ fibra-config-client-test-plugin/
+     └─ fibra-plugins-acceptance-host/
+```
+
+领域 POM 和总聚合 POM 都只声明 `modules`，不充当子模块 parent；全部正式发布制品仍直接继承根
+`com.sstlfsj:fibra`。每个目录名与其 POM 的 artifactId 一致；目录按业务归属组织，但 artifactId 才是
+稳定的发布和 manifest 身份：例如 search 归入文件领域，同时仍只通过 subprocess 契约执行 `rg`，
+目录层级不产生运行时依赖。
+
+`fibra-tool-api` 是宿主可见的 DTO、`ContributionKind` 与可选 `ResultSpillStore` 服务契约，由父加载器
+提供；工具插件只把它作为 `provided` 依赖，JAR 不打包副本。`fibra-fs`、`fibra-subprocess`、
+`fibra-shell`、`fibra-storage` 是无 entrypoint 的
+contract-only 插件制品；provider 和 consumer 以 `provided` 构建依赖及 manifest `requires` 共享对应
+契约类型，不把 contract class 打进自身 JAR。宿主只通过 `PluginRegistry` 部署/启停插件，并通过
+`PublishedRuntime` 查看和调用贡献，不注入专用 catalog，也不取得插件 Service 或内部 `Context`。构建
+测试检查插件 JAR 的 manifest、依赖边和重复 class。配置存储的验收 client 是不发布的真实测试 JAR，
+只放在 `fibra-plugins` 的验收子树；`fibra-example` 至多组合已发布插件，不拥有正式插件源码。
+
+这里不把应用改写成 Node 插件：Fibra 的 Core Service 不做隐式跨进程注入，若为此额外建立宿主转发
+RPC，反而会绕过本节要验收的服务依赖、realm 和 Scope 所有权。Node sidecar 仍由框架级真实进程门禁验证。
+
+```text
+Artifact requires（每条边都由 manifest 声明）
+  fibra-fs-local / fibra-tool-fs ──requires──> fibra-fs
+  fibra-subprocess-local / fibra-tool-fs-search ──requires──> fibra-subprocess
+  fibra-shell-local / fibra-tool-shell ──requires──> fibra-shell
+  fibra-shell-local ──requires──> fibra-subprocess
+  fibra-storage-json / config-client-test-plugin ──requires──> fibra-storage
+
+RuntimeDomain Service graph
+  fibra-fs-local ──FileSystem──> fibra-tool-fs
+                 └─ResultSpillStore（tool-api 中的可选服务）──> fibra-tool-fs-search
+  fibra-subprocess-local ──Subprocess──> fibra-tool-fs-search
+                         └─Subprocess──> fibra-shell-local ──Shell──> fibra-tool-shell
+  shared realm:   fibra-storage-json-shared ──ConfigStore/event──> config-client-a、config-client-b
+  isolated realm: fibra-storage-json-isolated ──ConfigStore/event──> config-client-c
+
+贡献发布
+  fibra-tool-fs / fibra-tool-fs-search / fibra-tool-shell / config-client-test-plugin
+    ──ContributionRegistrar──> ContributionDirectory ──snapshot/routes──> PublishedRuntime ──调用──> host
+```
+
+采用 DSH 行为契约时只保留本节业务范围内的语义：
+
+| 能力 | 必须保留的行为 | 本次不冒充已覆盖的 DSH 能力 |
+|---|---|---|
+| 文件 | UTF-8 文本、1-based offset、正整数上限、空文件/目录/非文本边界；原子写；默认唯一字面量编辑和显式 replace-all | 图片、附件、观察策略、授权升级与 UI 渲染 |
+| 搜索 | `rg --no-config` 直接 argv；glob 搜索隐藏/忽略文件并排除 VCS 元数据，grep 保持 ripgrep 默认 ignore/hidden 语义；退出码 1 表示空结果，非法模式/超时/取消/原始输出溢出明确失败；可选 spill 缺失或失败不改变搜索成功 | 打包所有平台的 ripgrep 二进制、展示卡片和会话级 spill 所有权；示例由配置提供可执行文件并在启动时验证 |
+| Shell | 每次 fresh shell、显式 workdir、分离 stdout/stderr/exit code；非零退出是结果，超时与取消终止受管进程树 | 后台 job、审批、沙箱策略和 DSH 环境变量注入 |
+| JSON 配置 | 缺失文件视为空并延迟物化；完整文档原子持久化；损坏或版本不匹配明确失败；失败写不改变内存或发事件，后续写仍可继续；事件只在持久化成功后发出；关闭拒绝新操作并排空在途写；重启读取 | per-record、SQLite、领域 schema/migration 和跨进程事件推送 |
+
+`subprocess-local` 是搜索和 Shell 共用的唯一进程 seam；工具 consumer 不自行 `ProcessBuilder`。每次调用
+创建一个 `ProcessUnit`，并在启动前把其排空/终止动作登记到服务收到的 `InvocationContext` caller Scope。
+进程单元采用与 Node runtime supervisor 等价的平台策略：通过受管 supervisor 保持 stdin 生存租约，JVM
+异常退出时以 EOF 触发清理；POSIX 为 payload 建立独立进程组并按组 `TERM/KILL`，Windows 使用
+`taskkill /T /F`。测试平台必须验证超时、取消、父进程先退出及后代清理，不能只依赖一次
+`ProcessHandle.descendants()` 快照；未实测的平台不得声称已验证。配置事件与 `ConfigStore` 使用相同
+realm；测试必须同时证明同 realm 的两个 consumer 共享一个 provider，以及另一个 realm 的 provider 和
+consumer 对同名 key 隔离，不能把全局静态 listener 当作事件总线。
+
+`tool-fs-search` 放在 `fs/` 只是业务归属；固定 DSH 源码明确不注入 `fs`，因此它在 Fibra 也不声明
+`requires fibra-fs`。格式化结果 spill 通过父加载器唯一的 `ResultSpillStore` 做可选服务查询；缺少 provider
+或保存失败都只失去 spill 引用，不能让已经成功的搜索失败。
 
 ### 10.2 固定源码基线
 

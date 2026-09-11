@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.sstlfsj</groupId>
+    <artifactId>fibra</artifactId>
+    <version>${revision}</version>
+    <relativePath>../../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>fibra-plugins-fs</artifactId>
+  <packaging>pom</packaging>
+  <name>Fibra File System Plugins</name>
+  <description>文件访问与搜索领域的正式插件聚合；不作为子模块 parent，也不发布。</description>
+
+  <modules>
+    <module>fibra-fs</module>
+    <module>fibra-fs-local</module>
+    <module>fibra-tool-fs</module>
+    <module>fibra-tool-fs-search</module>
+  </modules>
+</project>

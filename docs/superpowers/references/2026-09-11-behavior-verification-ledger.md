@@ -25,8 +25,11 @@ mvn -o -pl fibra-parity-tests -am test \
 基线 1 项、架构基线 3 项和 vNext 场景 1 项。
 
 本次先清理构建产物再重建，并在更新 API 基线后以普通校验模式重新通过以上 120 项。
-随后执行全仓 `mvn -o verify`，28 个模块通过，包含真实 JAR、Node、Spring、archetype 与示例集成测试；
-这证明当前已实现代码通过现有门禁，不抵扣下表未完成场景。最终空依赖仓库分发尚未执行。
+随后执行全仓 `mvn -o verify`，原 28 个模块通过，包含真实 JAR、Node、Spring、archetype 与示例集成测试。
+正式插件模块边界加入 reactor 后，又在 2026-09-11 执行插件开发前全仓离线门禁：48 个模块全部通过，
+`fibra-parity-tests` 122 项为 0 failure、0 error、0 skipped。此时新插件模块仍只有 POM 边界，因而该结果
+只证明框架基线与构建模型可继续开发，不证明任何插件行为已经交付，也不抵扣下表未完成场景。最终空依赖
+仓库分发尚未执行。
 DSH 的配置组合、源文件自动刷新、真实 Java/Node 局部更新和多插件应用场景不在这 120 项中，
 必须各自提供行为证据，不能用内核门禁替代。DSH 的逐项采用边界见
 [源码基线](2026-09-09-plugin-dependency-baselines.md)。
