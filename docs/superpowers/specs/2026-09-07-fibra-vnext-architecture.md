@@ -203,11 +203,13 @@ PENDING -> STARTING -> ACTIVE -> STOPPING -> DISPOSED
 - `ServiceKey<T>` 使用稳定名称和 Java 契约类型；realm 是独立维度。同一域、同一 realm 的同名异型
   服务直接拒绝。制品替换必须清理已退休契约类型的引用；不能让长期 domain 永久钉住旧 Java `Class`。
 - `find` 返回当前可用服务，`require` 要求服务存在；不使用 boolean 参数隐藏查询语义。
-- 会产生调用方资源的服务通过 `ServiceRef` 与 `InvocationContext` 显式携带调用者 Scope，不使用
+- 会产生调用方资源的服务通过 `ServiceRef` 与 `InvocationContext` 显式携带调用者资源 `Context`，不使用
   ThreadLocal 或动态代理猜测所有权。`InvocationContext.caller()` 是能力解析语境，决定 realm、intercept、
-  logger 与当前插件；`scope()` 是本次调用的资源所有权边界。普通服务调用两者相同；宿主经贡献目录调用时，
-  前者固定为贡献注册 owner，后者固定为临时 invocation Scope，二者连同 cancellation 沿嵌套 `ServiceRef`
-  原样传播。两者必须属于同一 RuntimeDomain，公共构造入口在接纳调用前校验，禁止跨域登记资源。
+  logger 与当前插件；内部资源 `Context` 决定 `effects()` 的实际 owner，`scope()` 只报告该 owner 所在的
+  生命周期 Scope。普通服务调用的资源 `Context` 就是 caller，因此插件内调用创建的资源仍归插件实例；
+  宿主经贡献目录调用时，前者固定为贡献注册 owner，资源 `Context` 固定为临时 invocation Scope 的根
+  Context，二者连同 cancellation 沿嵌套 `ServiceRef` 原样传播。两者必须属于同一 RuntimeDomain，公共
+  构造入口在接纳调用前校验，禁止跨域登记资源。
 - `EventKey` 固定稳定名称、listener 类型和 `EventMode`。支持 `EMIT/PARALLEL/SERIAL/BAIL/WATERFALL`；
   调用方式与 key mode 不一致时直接拒绝。
 - 事件诊断的历史类型描述只保留类型名与 mode，不能永久持有退休的 listener Class。活动监听器必须
