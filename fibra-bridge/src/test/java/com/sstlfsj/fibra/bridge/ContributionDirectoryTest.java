@@ -1,17 +1,54 @@
 package com.sstlfsj.fibra.bridge;
 
+import com.sstlfsj.fibra.Disposables;
+import com.sstlfsj.fibra.ServiceKey;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Sinks;
 
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ContributionDirectoryTest {
     private static final ContributionKind<CommandDescriptor, String, String> COMMAND =
         ContributionKind.local("command", CommandDescriptor.class,
             String.class, String.class);
+    private static final ServiceKey<ScopedService> SCOPED_SERVICE =
+        ServiceKey.of("scoped-service", ScopedService.class);
+
+    @Test
+    void handlerUsesRegistrationContextWhileInvocationResourcesBelongToCallerScope() {
+        var disposed = new AtomicInteger();
+        try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
+            var ownerScope = runtime.rootScope().openChild("provider");
+            var owner = ownerScope.context().withRealm(SCOPED_SERVICE, "provider-realm");
+            owner.services().provide(SCOPED_SERVICE, invocation -> {
+                invocation.effects().add(Disposables.from(disposed::incrementAndGet));
+                return "resolved";
+            });
+            var registration = directory.register(owner, COMMAND, "p", "c",
+                new CommandDescriptor("Command"), (invocation, input) -> {
+                    assertSame(owner, invocation.caller());
+                    return reactor.core.publisher.Mono.fromSupplier(() ->
+                        invocation.service(SCOPED_SERVICE).invoke((serviceInvocation, service) ->
+                            service.call(serviceInvocation)));
+                }).block();
+            var caller = runtime.rootScope().openChild("invocation");
+
+            assertEquals("resolved", directory.current().routes().invoke(caller.context(),
+                COMMAND, registration.id(), "").block());
+            assertEquals(0, disposed.get());
+
+            caller.closeAsync().block(Duration.ofSeconds(3));
+            assertEquals(1, disposed.get());
+            assertFalse(ownerScope.isClosed());
+        }
+    }
 
     @Test
     void revokedRouteRejectsNewSubscriptionsEvenWhenTheSnapshotIsRetained() {
@@ -229,5 +266,10 @@ class ContributionDirectoryTest {
     }
 
     private record CommandDescriptor(String title) {
+    }
+
+    @FunctionalInterface
+    private interface ScopedService {
+        String call(com.sstlfsj.fibra.InvocationContext invocation);
     }
 }

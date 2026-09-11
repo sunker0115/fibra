@@ -130,11 +130,13 @@ public final class com.sstlfsj.fibra.FibraException extends java.lang.IllegalSta
 Compiled from "InvocationContext.java"
 public final class com.sstlfsj.fibra.InvocationContext {
   public static com.sstlfsj.fibra.InvocationContext of(com.sstlfsj.fibra.Context, java.lang.String);
+  public static com.sstlfsj.fibra.InvocationContext of(com.sstlfsj.fibra.Context, com.sstlfsj.fibra.Scope, java.lang.String);
   public com.sstlfsj.fibra.InvocationContext withCancellation(com.sstlfsj.fibra.CancellationToken);
   public com.sstlfsj.fibra.Context caller();
   public com.sstlfsj.fibra.logging.FibraLogger logger();
   public java.lang.String serviceName();
   public com.sstlfsj.fibra.CancellationToken cancellation();
+  public com.sstlfsj.fibra.Scope scope();
   public <T> com.sstlfsj.fibra.ServiceRef<T> service(com.sstlfsj.fibra.ServiceKey<T>);
   public com.sstlfsj.fibra.Effects effects();
   public com.sstlfsj.fibra.Plugins plugins();
@@ -258,6 +260,7 @@ public interface com.sstlfsj.fibra.Scope extends java.lang.AutoCloseable {
   public abstract java.lang.String name();
   public abstract com.sstlfsj.fibra.Context context();
   public abstract com.sstlfsj.fibra.Scope openChild(java.lang.String);
+  public default boolean sharesDomainWith(com.sstlfsj.fibra.Scope);
   public abstract boolean isClosed();
   public abstract reactor.core.publisher.Mono<java.lang.Void> closeAsync();
   public default void close();

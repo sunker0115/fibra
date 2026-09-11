@@ -58,7 +58,7 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
         return Mono.defer(() -> {
             var registrations = new AtomicReference<List<Registration>>();
             var effect = owner.effects().effect(() -> {
-                var values = registerAllNow(providerInstanceId, copy);
+                var values = registerAllNow(owner, providerInstanceId, copy);
                 registrations.set(values);
                 return new DrainingDisposable() {
                     private final Mono<Void> drained = Mono.defer(() -> revokeAll(values)).cache();
@@ -132,7 +132,8 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
     }
 
     private List<Registration> registerAllNow(
-        String providerInstanceId, List<ContributionBinding<?, ?, ?>> bindings) {
+        Context owner, String providerInstanceId,
+        List<ContributionBinding<?, ?, ?>> bindings) {
         synchronized (monitor) {
             if (closed) {
                 throw new IllegalStateException("contribution directory is closed");
@@ -145,7 +146,7 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
                     throw new IllegalArgumentException("duplicate contribution "
                         + id.providerInstanceId() + '/' + id.localName());
                 }
-                additions.add(entry(id, binding));
+                additions.add(entry(owner, id, binding));
             }
             additions.forEach(entry -> entries.put(entry.id, entry));
             liveEntries.addAll(additions);
@@ -155,8 +156,8 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
     }
 
     private static <D, I, O> Entry<D, I, O> entry(
-        ContributionId id, ContributionBinding<D, I, O> binding) {
-        return new Entry<>(id, binding.kind(), binding.descriptor(), binding.handler());
+        Context owner, ContributionId id, ContributionBinding<D, I, O> binding) {
+        return new Entry<>(owner, id, binding.kind(), binding.descriptor(), binding.handler());
     }
 
     private Mono<Void> revokeAll(List<Registration> registrations) {
@@ -247,6 +248,7 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
     }
 
     static final class Entry<D, I, O> {
+        private final Context owner;
         private final ContributionId id;
         private final ContributionKind<D, I, O> kind;
         private final D descriptor;
@@ -256,8 +258,9 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
         private int inflight;
         private String cleanupFailure;
 
-        private Entry(ContributionId id, ContributionKind<D, I, O> kind,
+        private Entry(Context owner, ContributionId id, ContributionKind<D, I, O> kind,
                       D descriptor, ContributionHandler<I, O> handler) {
+            this.owner = owner;
             this.id = id;
             this.kind = kind;
             this.descriptor = descriptor;
@@ -286,7 +289,8 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
             return Mono.defer(() -> {
                 claimInvocation();
                 return Objects.requireNonNull(entry.handler.invoke(
-                    InvocationContext.of(caller, "contribution:" + kind.name()), input),
+                    InvocationContext.of(entry.owner, caller.scope(),
+                        "contribution:" + kind.name()), input),
                     "contribution handler returned null");
             }).map(output -> {
                 if (output != null && !kind.outputType().isInstance(output)) {

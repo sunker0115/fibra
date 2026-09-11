@@ -67,6 +67,11 @@ runtime.close();
 
 注册到插件 `Context` 的服务、事件和 effect 自动归当前插件实例所有；关闭实例或 `Scope` 会按逆序撤销，不要求插件手工返回 registration 列表。
 
+`InvocationContext` 明确分开能力语境和资源所有权：`caller()` 决定 realm、intercept、logger、
+`plugins()` 与服务解析，`scope()` 决定 `effects()` 及嵌套 `ServiceRef` 创建资源的归属。普通服务调用两者
+来自同一 Scope；贡献调用的 `caller()` 是注册插件 owner，`scope()` 是宿主为该次调用创建的临时 Scope。
+两者必须位于同一 `RuntimeDomain`，调用结束会先排空临时 Scope，再释放贡献的在途计数。
+
 ## Java 插件 JAR
 
 Java 制品 JAR 中只声明一个 `META-INF/fibra/plugin.yaml`。可运行插件实现

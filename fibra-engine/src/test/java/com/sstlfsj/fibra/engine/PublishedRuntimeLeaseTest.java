@@ -42,7 +42,7 @@ class PublishedRuntimeLeaseTest {
             });
             return context.services().require(ContributionServices.REGISTRAR)
                 .register(context, COMMAND, "command", "run", new Descriptor("Run"), (invocation, input) -> {
-                    invocation.caller().scope().openChild("child").context().effects().add(cleanup::asMono);
+                    invocation.scope().openChild("child").context().effects().add(cleanup::asMono);
                     return Mono.just(input);
                 }).then();
         }).require(ContributionServices.REGISTRAR).build();

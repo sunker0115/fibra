@@ -69,6 +69,11 @@ final class DefaultScope implements Scope, ResourceOwner {
     }
 
     @Override
+    public boolean sharesDomainWith(Scope other) {
+        return other instanceof DefaultScope candidate && domain == candidate.domain;
+    }
+
+    @Override
     public boolean isClosed() {
         return state == State.CLOSED;
     }
