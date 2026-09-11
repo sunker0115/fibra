@@ -27,6 +27,17 @@
 `null` 恢复 definition 默认值。Engine 只绑定有效启用声明，停用声明不要求 definition 已安装。
 文件 repository 是只读输入源；可写 repository 通过 `prepareReplace` 提供带 revision 的事务写回。
 
+每个节点的 `when()` 是原始条件，`context()` 是向后代浅覆盖的局部上下文；`enabled()` 仍表示持久
+管理意图。`ConfigContextSnapshot` 保存宿主上下文及独立的内容 revision，禁止声明保留键 `entry`。
+`DesiredEvaluation.evaluate(graph, context)` 纯派生各节点的有效状态和插件 resolved config，不修改
+raw graph。条件为 false 的子树不会提前求值后代条件或配置；`include.enabled=false` 不采集文件，
+而 `include.when=false` 只停用已经采集的子树。
+
+表达式是 `LiteralValue` 对象，支持 `$ref`、`$defined`、`$eq`、`$not`、`$all`、`$any`、`$if` 和
+`$literal`。`$ref` 使用 RFC 6901 JSON Pointer，例如 `{"$ref":"/tenant/id"}`；`$if` 的三个元素依次
+为条件、真分支和假分支，未选分支不求值。条件必须严格返回 boolean，不执行 JavaScript，不做隐式
+类型转换。文件编译、程序化 builder 和持久清单解码都拒绝畸形或超过深度限制的表达式。
+
 include 的 `patches` 按顺序浅覆盖条目：`id` 定位当前文档中的条目，`plugin` 只作可选名称保护。
 `insert` 为列表，无 `id` 时追加根条目，有 `id` 时追加到对应分组。例如：
 
@@ -50,7 +61,8 @@ Engine 采集时记录告警，刷新结果通过 `EngineCommandResult.warnings`
 
 `DeploymentManifest` 表示完整、未绑定的部署目标：制品 ID 到精确 revision 的选择，以及完整
 `DesiredInputGraph`。其 `revision()` 是规范编码的内容摘要，保留树的顺序、分组归属、本地开关及
-include 采集状态，不携带运行资源或来源文件路径。存储格式 2 不接受旧扁平清单。
+include 采集状态，并保留 raw `when`、`context` 与配置模板，不携带运行资源或来源文件路径。当前
+存储格式为 3，不接受旧格式清单。
 
 `FibraEngine` 的公共入口只有：
 

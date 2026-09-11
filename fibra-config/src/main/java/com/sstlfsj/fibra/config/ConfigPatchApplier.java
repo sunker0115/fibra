@@ -10,7 +10,8 @@ import java.util.function.Consumer;
 
 final class ConfigPatchApplier {
     private static final Set<String> FIELDS = Set.of("id", "plugin", "insert", "enabled",
-        "publication", "config", "realm", "intercept", "group", "entries", "include", "patches");
+        "when", "context", "publication", "config", "realm", "intercept", "group", "entries",
+        "include", "patches");
 
     List<Map<String, Object>> apply(List<Map<String, Object>> source, Object rawPatches,
                                     Path path, String includeId, Consumer<ConfigDiagnostic> warnings) {

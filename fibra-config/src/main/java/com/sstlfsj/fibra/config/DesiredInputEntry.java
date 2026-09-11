@@ -9,6 +9,8 @@ public final class DesiredInputEntry implements DesiredInputNode {
     private final String id;
     private final String definitionName;
     private final boolean enabled;
+    private final LiteralValue when;
+    private final Map<String, LiteralValue> context;
     private final PublicationRequirement publicationRequirement;
     private final LiteralValue config;
     private final Map<String, LiteralValue> realms;
@@ -18,9 +20,13 @@ public final class DesiredInputEntry implements DesiredInputNode {
         id = DesiredInputNode.requireId(builder.id);
         definitionName = requireName(builder.definitionName, "definition name");
         enabled = builder.enabled;
+        when = Objects.requireNonNull(builder.when, "when");
+        ConfigExpressionEvaluator.validateCondition(when);
+        context = DesiredInputValues.context(builder.context);
         publicationRequirement = Objects.requireNonNull(builder.publicationRequirement,
             "publicationRequirement");
         config = Objects.requireNonNull(builder.config, "config");
+        ConfigExpressionEvaluator.validateTemplate(config);
         realms = PolicyValues.realms(builder.realms);
         intercepts = PolicyValues.intercepts(builder.intercepts);
     }
@@ -31,6 +37,7 @@ public final class DesiredInputEntry implements DesiredInputNode {
 
     public Builder toBuilder() {
         return new Builder(id, definitionName).enabled(enabled)
+            .when(when).context(context)
             .publicationRequirement(publicationRequirement).config(config)
             .realms(realms).intercepts(intercepts);
     }
@@ -38,6 +45,8 @@ public final class DesiredInputEntry implements DesiredInputNode {
     @Override public String id() { return id; }
     public String definitionName() { return definitionName; }
     @Override public boolean enabled() { return enabled; }
+    @Override public LiteralValue when() { return when; }
+    @Override public Map<String, LiteralValue> context() { return context; }
     public PublicationRequirement publicationRequirement() {
         return publicationRequirement;
     }
@@ -53,13 +62,14 @@ public final class DesiredInputEntry implements DesiredInputNode {
             && publicationRequirement == other.publicationRequirement
             && id.equals(other.id)
             && definitionName.equals(other.definitionName)
+            && when.equals(other.when) && context.equals(other.context)
             && Objects.equals(config, other.config) && realms.equals(other.realms)
             && intercepts.equals(other.intercepts);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, definitionName, enabled, publicationRequirement,
+        return Objects.hash(id, definitionName, enabled, when, context, publicationRequirement,
             config, realms, intercepts);
     }
 
@@ -67,7 +77,8 @@ public final class DesiredInputEntry implements DesiredInputNode {
     public String toString() {
         return "DesiredInputEntry[id=" + id + ", definitionName="
             + definitionName + ", enabled=" + enabled + ", publicationRequirement="
-            + publicationRequirement + ", config=" + config
+            + publicationRequirement + ", when=" + when + ", context=" + context
+            + ", config=" + config
             + ", realms=" + realms + ", intercepts=" + intercepts + ']';
     }
 
@@ -82,6 +93,8 @@ public final class DesiredInputEntry implements DesiredInputNode {
         private final String id;
         private final String definitionName;
         private boolean enabled = true;
+        private LiteralValue when = LiteralValue.of(true);
+        private Map<String, LiteralValue> context = Map.of();
         private PublicationRequirement publicationRequirement =
             PublicationRequirement.ACTIVE_REQUIRED;
         private LiteralValue config = LiteralValue.NullValue.INSTANCE;
@@ -94,6 +107,12 @@ public final class DesiredInputEntry implements DesiredInputNode {
         }
 
         public Builder enabled(boolean value) { enabled = value; return this; }
+        public Builder when(LiteralValue value) {
+            when = Objects.requireNonNull(value, "when"); return this;
+        }
+        public Builder context(Map<String, LiteralValue> value) {
+            context = Objects.requireNonNull(value, "context"); return this;
+        }
         public Builder publicationRequirement(PublicationRequirement value) {
             publicationRequirement = Objects.requireNonNull(value,
                 "publicationRequirement");

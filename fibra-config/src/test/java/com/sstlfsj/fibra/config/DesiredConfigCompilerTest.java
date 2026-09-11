@@ -167,4 +167,72 @@ class DesiredConfigCompilerTest {
         assertEquals("REALM_POLICY_INVALID", realmFailure.diagnostic().code());
     }
 
+    @Test
+    void appliesPatchesBeforeValidatingRawExpressionsAndKeepsIncludeCollectionIndependentOfWhen(
+        @TempDir Path work) throws Exception {
+        var included = work.resolve("included.yaml");
+        Files.writeString(included, """
+            - id: worker
+              plugin: sample
+              when: {$eq: [1]}
+              config: {value: {$ref: /value}}
+            """);
+        var root = work.resolve("root.yaml");
+        Files.writeString(root, """
+            - id: bundle
+              include: included.yaml
+              when: true
+              context: {value: include}
+              patches:
+                - id: worker
+                  plugin: sample
+                  when: {$ref: /active}
+                  context: {active: true, value: patched}
+            - id: dormant
+              include: included.yaml
+              when: false
+              patches:
+                - id: worker
+                  plugin: sample
+                  when: true
+            """);
+
+        var compilation = new DesiredConfigCompiler(ConfigLimits.defaults()).compile(root);
+        var include = (DesiredInputInclude) compilation.graph().require("bundle");
+        var dormant = (DesiredInputInclude) compilation.graph().require("dormant");
+        var worker = (DesiredInputEntry) compilation.graph().require("bundle:worker");
+
+        assertTrue(include.content() instanceof DesiredIncludeContent.Collected);
+        assertTrue(dormant.content() instanceof DesiredIncludeContent.Collected);
+        assertEquals(LiteralValue.of(false), dormant.when());
+        assertEquals(LiteralValue.of(Map.of("$ref", "/active")), worker.when());
+        assertEquals(LiteralValue.of(Map.of("value", Map.of("$ref", "/value"))), worker.config());
+        var evaluation = DesiredEvaluation.evaluate(compilation.graph(), ConfigContextSnapshot.empty());
+        assertEquals(LiteralValue.of(Map.of("value", "patched")),
+            evaluation.require("bundle:worker").resolvedConfig().orElseThrow());
+        assertFalse(evaluation.require("dormant:worker").effective().enabled());
+    }
+
+    @Test
+    void rejectsReservedLocalMetadataAndMalformedRawExpressionAfterPatch(@TempDir Path work)
+        throws Exception {
+        var reserved = work.resolve("reserved.yaml");
+        Files.writeString(reserved, "- id: x\n  plugin: sample\n  context: {entry: forged}\n");
+        var reservedFailure = assertThrows(ConfigException.class,
+            () -> new DesiredConfigCompiler(ConfigLimits.defaults()).compile(reserved));
+        assertEquals("CONTEXT_ENTRY_RESERVED", reservedFailure.diagnostic().code());
+
+        var invalid = work.resolve("invalid.yaml");
+        Files.writeString(invalid, "- id: x\n  plugin: sample\n  when: {$if: [true, false]}\n");
+        var invalidFailure = assertThrows(ConfigException.class,
+            () -> new DesiredConfigCompiler(ConfigLimits.defaults()).compile(invalid));
+        assertEquals("EXPRESSION_SHAPE_INVALID", invalidFailure.diagnostic().code());
+
+        var nonBoolean = work.resolve("non-boolean.yaml");
+        Files.writeString(nonBoolean, "- id: x\n  plugin: sample\n  when: 1\n");
+        var typeFailure = assertThrows(ConfigException.class,
+            () -> new DesiredConfigCompiler(ConfigLimits.defaults()).compile(nonBoolean));
+        assertEquals("CONDITION_NOT_BOOLEAN", typeFailure.diagnostic().code());
+    }
+
 }

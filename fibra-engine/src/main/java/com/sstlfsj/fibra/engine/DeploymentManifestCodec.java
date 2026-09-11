@@ -33,7 +33,7 @@ final class DeploymentManifestCodec {
     static byte[] encode(DeploymentManifest manifest) {
         var artifacts = new LinkedHashMap<String, LiteralValue>();
         manifest.artifacts().forEach((id, revision) -> artifacts.put(id.value(), LiteralValue.of(revision)));
-        return LiteralValue.of(Map.of("format", 2, "artifacts", new LiteralValue.ObjectValue(artifacts),
+        return LiteralValue.of(Map.of("format", 3, "artifacts", new LiteralValue.ObjectValue(artifacts),
             "desired", encodeNodes(manifest.desiredGraph().roots())))
             .canonicalJson().getBytes(StandardCharsets.UTF_8);
     }
@@ -42,7 +42,7 @@ final class DeploymentManifestCodec {
         try {
             var root = object(LiteralValue.of(JSON.readValue(content, Object.class)));
             requireFields(root, Set.of("format", "artifacts", "desired"));
-            if (!LiteralValue.of(2).equals(root.get("format"))) {
+            if (!LiteralValue.of(3).equals(root.get("format"))) {
                 throw new IllegalArgumentException("unsupported deployment manifest format");
             }
             var artifacts = new LinkedHashMap<ArtifactId, String>();
@@ -63,6 +63,8 @@ final class DeploymentManifestCodec {
         var fields = new LinkedHashMap<String, Object>();
         fields.put("id", node.id());
         fields.put("enabled", node.enabled());
+        fields.put("when", node.when());
+        fields.put("context", new LiteralValue.ObjectValue(node.context()));
         fields.put("realms", new LiteralValue.ObjectValue(node.realms()));
         fields.put("intercepts", new LiteralValue.ObjectValue(node.intercepts()));
         switch (node) {
@@ -101,26 +103,34 @@ final class DeploymentManifestCodec {
             throw new IllegalArgumentException("enabled must be a boolean");
         }
         var id = text(fields.get("id"));
+        var when = fields.get("when");
+        var context = object(fields.get("context"));
         var realms = object(fields.get("realms"));
         var intercepts = object(fields.get("intercepts"));
         return switch (text(fields.get("kind"))) {
             case "plugin" -> {
-                requireFields(fields, Set.of("kind", "id", "enabled", "realms", "intercepts",
+                requireFields(fields, Set.of("kind", "id", "enabled", "when", "context",
+                    "realms", "intercepts",
                     "definitionName", "config", "publicationRequirement"));
                 yield DesiredInputEntry.builder(id, text(fields.get("definitionName")))
-                    .enabled(enabled.value()).realms(realms).intercepts(intercepts)
+                    .enabled(enabled.value()).when(when).context(context)
+                    .realms(realms).intercepts(intercepts)
                     .config(fields.get("config"))
                     .publicationRequirement(PublicationRequirement.valueOf(
                         text(fields.get("publicationRequirement")))).build();
             }
             case "group" -> {
-                requireFields(fields, Set.of("kind", "id", "enabled", "realms", "intercepts", "children"));
-                yield DesiredInputGroup.builder(id).enabled(enabled.value()).realms(realms)
+                requireFields(fields, Set.of("kind", "id", "enabled", "when", "context",
+                    "realms", "intercepts", "children"));
+                yield DesiredInputGroup.builder(id).enabled(enabled.value()).when(when).context(context)
+                    .realms(realms)
                     .intercepts(intercepts).children(decodeNodes(fields.get("children"))).build();
             }
             case "include" -> {
-                requireFields(fields, Set.of("kind", "id", "enabled", "realms", "intercepts", "content"));
-                yield DesiredInputInclude.builder(id).enabled(enabled.value()).realms(realms)
+                requireFields(fields, Set.of("kind", "id", "enabled", "when", "context",
+                    "realms", "intercepts", "content"));
+                yield DesiredInputInclude.builder(id).enabled(enabled.value()).when(when).context(context)
+                    .realms(realms)
                     .intercepts(intercepts).content(decodeInclude(fields.get("content"))).build();
             }
             default -> throw new IllegalArgumentException("unknown desired node kind");

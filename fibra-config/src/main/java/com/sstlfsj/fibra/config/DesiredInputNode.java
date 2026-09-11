@@ -9,6 +9,8 @@ public sealed interface DesiredInputNode permits DesiredInputEntry, DesiredInput
     DesiredInputInclude {
     String id();
     boolean enabled();
+    LiteralValue when();
+    Map<String, LiteralValue> context();
     Map<String, LiteralValue> realms();
     Map<String, LiteralValue> intercepts();
 
@@ -17,5 +19,18 @@ public sealed interface DesiredInputNode permits DesiredInputEntry, DesiredInput
             throw new IllegalArgumentException("id must be non-blank and must not contain ':'");
         }
         return value;
+    }
+
+}
+
+final class DesiredInputValues {
+    private DesiredInputValues() { }
+
+    static Map<String, LiteralValue> context(Map<String, LiteralValue> values) {
+        var result = new LiteralValue.ObjectValue(values).values();
+        if (result.containsKey("entry")) {
+            throw new IllegalArgumentException("top-level context key 'entry' is reserved");
+        }
+        return result;
     }
 }

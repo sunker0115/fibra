@@ -17,11 +17,11 @@ import java.util.Set;
 
 public final class DesiredConfigCompiler {
     private static final Set<String> PLUGIN_FIELDS = Set.of(
-        "id", "plugin", "enabled", "publication", "config", "realm", "intercept");
+        "id", "plugin", "enabled", "when", "context", "publication", "config", "realm", "intercept");
     private static final Set<String> GROUP_FIELDS = Set.of(
-        "id", "group", "enabled", "entries", "realm", "intercept");
+        "id", "group", "enabled", "when", "context", "entries", "realm", "intercept");
     private static final Set<String> INCLUDE_FIELDS = Set.of(
-        "id", "include", "enabled", "patches", "realm", "intercept");
+        "id", "include", "enabled", "when", "context", "patches", "realm", "intercept");
 
     private final ConfigDocumentReader reader;
     private final ConfigPatchApplier patchApplier = new ConfigPatchApplier();
@@ -88,22 +88,30 @@ public final class DesiredConfigCompiler {
             validateFields(value, fields(kind), source, fullId);
             var localEnabled = bool(value.get("enabled"), true, "enabled", source, fullId);
             var effectiveEnabled = parentEnabled && localEnabled;
+            var when = LiteralValue.of(value.getOrDefault("when", true));
+            validateExpression(when, true, source, fullId);
+            var context = context(value.get("context"), source, fullId);
             var realms = realms(object(value.get("realm"), "realm", source, fullId), source, fullId);
             var intercepts = literals(object(value.get("intercept"), "intercept", source, fullId));
             if (kind == Kind.PLUGIN) {
+                var config = LiteralValue.of(value.get("config"));
+                validateExpression(config, false, source, fullId);
                 return DesiredInputEntry.builder(rawId, text(value.get("plugin"), "plugin", source, fullId))
-                    .enabled(localEnabled).publicationRequirement(publicationRequirement(value.get("publication"),
-                        source, fullId)).config(LiteralValue.of(value.get("config"))).realms(realms)
+                    .enabled(localEnabled).when(when).context(context)
+                    .publicationRequirement(publicationRequirement(value.get("publication"),
+                        source, fullId)).config(config).realms(realms)
                     .intercepts(intercepts).build();
             }
             if (kind == Kind.GROUP) {
-                return DesiredInputGroup.builder(rawId).enabled(localEnabled).realms(realms)
+                return DesiredInputGroup.builder(rawId).enabled(localEnabled).when(when).context(context)
+                    .realms(realms)
                     .intercepts(intercepts).children(resolveEntries(entries(value.get("entries"), "entries",
                         source, fullId), source, namespace, effectiveEnabled)).build();
             }
             var include = text(value.get("include"), "include", source, fullId);
             if (!effectiveEnabled) {
-                return DesiredInputInclude.builder(rawId).enabled(localEnabled).realms(realms)
+                return DesiredInputInclude.builder(rawId).enabled(localEnabled).when(when).context(context)
+                    .realms(realms)
                     .intercepts(intercepts).content(DesiredIncludeContent.Uncollected.INSTANCE).build();
             }
             var included = reader.read(source.getParent().resolve(include), fullId);
@@ -111,7 +119,8 @@ public final class DesiredConfigCompiler {
                 throw error(ConfigStage.RESOLVE, "INCLUDE_CYCLE", "include cycle detected at " + included.path(),
                     included.path(), fullId, null);
             }
-            return DesiredInputInclude.builder(rawId).enabled(localEnabled).realms(realms)
+            return DesiredInputInclude.builder(rawId).enabled(localEnabled).when(when).context(context)
+                .realms(realms)
                 .intercepts(intercepts).content(new DesiredIncludeContent.Collected(
                     resolveDocument(included, fullId, effectiveEnabled, value.get("patches")))).build();
         }
@@ -129,6 +138,25 @@ public final class DesiredConfigCompiler {
 
     private static Map<String, LiteralValue> literals(Map<String, Object> values) {
         return ((LiteralValue.ObjectValue) LiteralValue.of(values)).values();
+    }
+
+    private static Map<String, LiteralValue> context(Object value, Path source, String entryId) {
+        var result = literals(object(value, "context", source, entryId));
+        if (result.containsKey("entry")) throw error(ConfigStage.VALIDATE,
+            "CONTEXT_ENTRY_RESERVED", "top-level context key 'entry' is reserved",
+            source, entryId, null);
+        return result;
+    }
+
+    private static void validateExpression(LiteralValue value, boolean condition,
+                                           Path source, String entryId) {
+        try {
+            if (condition) ConfigExpressionEvaluator.validateCondition(value);
+            else ConfigExpressionEvaluator.validateTemplate(value);
+        } catch (ConfigException failure) {
+            throw error(ConfigStage.VALIDATE, failure.diagnostic().code(),
+                failure.diagnostic().message(), source, entryId, failure);
+        }
     }
 
     private static Kind kind(Map<String, Object> value, Path source, String entryId) {

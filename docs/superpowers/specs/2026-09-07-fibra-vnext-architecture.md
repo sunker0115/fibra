@@ -501,6 +501,29 @@ requires/provides，否则动态子插件会丢失继承。
 list 和字符串键 object。容器递归不可变，对象键规范排序，数字规范化；规范编码必须与插入顺序、机器
 路径和 Java 对象身份无关。配置、部署清单和公开描述快照使用同一数据边界，禁止浅拷贝冒充不可变。
 
+每个 desired 节点另保留原始 `when` 与局部 `context`。`enabled` 是持久管理意图；`when` 是在当前
+运行上下文中派生有效状态的条件，二者与祖先有效状态合取。局部 context 从根到叶浅覆盖，宿主
+`ConfigContextSnapshot` 位于最外层；Engine 注入只读的 `/entry/id` 与 `/entry/parentId`，因此配置不得
+声明顶层 `entry`。raw graph、宿主上下文和 `DesiredEvaluation` 三者分离，求值不得改写原始表达式。
+source revision 只标识采集内容，context revision 单独标识运行上下文，二者都不混入持久目标 revision。
+
+条件与配置模板使用受限 `LiteralValue` AST：`$ref` 按 RFC 6901 JSON Pointer 读取上下文，`$defined`
+判断路径是否存在，`$eq` 做字面值严格相等，`$not`、`$all`、`$any` 组合布尔条件，`$if` 惰性选择
+分支，`$literal` 转义恰好一个保留操作符键的普通对象。操作符对象必须恰有一个键；条件结果必须是
+boolean，不做 truthy 转换；数组索引只接受规范 ASCII 十进制形式。求值最大深度为 100，不允许脚本、
+反射或宿主函数。程序化 builder、文件编译和持久清单解码都先校验 AST 结构；缺失引用等依赖当前
+上下文的错误在求值时报告，并关联完整 entry ID。
+
+patch 先作用于 raw `when`、`context` 和 `config`，完整结构校验后才求值。祖先或本节点条件为 false
+时跳过后代条件及插件配置求值，避免在错误的局部上下文中提前解释叶子配置。`include.enabled` 仍控制
+是否采集文件；`include.when` 只控制已经采集并持久保存的子树是否进入运行态，不能作为延迟读取文件
+的开关。这是长期单目标与离线恢复要求下的 Fibra 执行边界。
+
+行为契约采用 DSH 的条件配置、局部上下文和惰性求值语义，但不把 DSH 的 JavaScript 执行器带入
+Java core。当前八个操作符足以覆盖已知场景，且让采集、持久化和 Engine 预检共享同一确定性模型。
+若真实插件需要解析字符串表达式、静态类型检查或持续扩展操作符，再以 CEL 替换内部 evaluator；
+在此之前不承担 CEL、protobuf 与缓存栈的依赖和版本治理成本。
+
 绑定使用准备后的目标 catalog 与程序内建 definition；启动时绑定全部有效启用插件，更新时只绑定
 新增或受影响的插件。有效停用声明不查找 definition、不绑定配置，允许保留尚未安装的插件。
 本次受影响输入全部绑定、校验成功后才保存目标并改变运行态，避免可预检的配置错误造成部分停启。

@@ -26,6 +26,8 @@ class DeploymentManifestTest {
     void roundTripsEveryDesiredFieldIncludingDisabledUnknownDefinitions() {
         var entry = DesiredInputEntry.builder("instance", "not-installed")
             .enabled(false).publicationRequirement(PublicationRequirement.PENDING_ALLOWED)
+            .when(LiteralValue.of(Map.of("$ref", "/enabled")))
+            .context(Map.of("enabled", LiteralValue.of(true)))
             .config(LiteralValue.of(Map.of("precise", new BigDecimal("12345678901234567890.123456789"),
                 "values", List.of(true, "text\u0000\ud800", LiteralValue.NullValue.INSTANCE))))
             .realms(Map.of("tenant", LiteralValue.of("one")))
@@ -66,6 +68,8 @@ class DeploymentManifestTest {
         var manifest = new DeploymentManifest(Map.of(new ArtifactId("a"), FIRST), graph(original));
         var variants = List.of(
             original.toBuilder().enabled(false).build(),
+            original.toBuilder().when(LiteralValue.of(false)).build(),
+            original.toBuilder().context(Map.of("tenant", LiteralValue.of("x"))).build(),
             original.toBuilder().publicationRequirement(PublicationRequirement.PENDING_ALLOWED).build(),
             original.toBuilder().config(LiteralValue.of("new")).build(),
             original.toBuilder().realms(Map.of("tenant", LiteralValue.of("x"))).build(),
@@ -97,10 +101,14 @@ class DeploymentManifestTest {
     void roundTripsTreeOwnershipAndCollectedAndUncollectedIncludes() {
         var plugin = entry(LiteralValue.of("input"));
         var group = DesiredInputGroup.builder("group")
+            .when(LiteralValue.of(Map.of("$defined", "/tenant")))
+            .context(Map.of("tenant", LiteralValue.of("group")))
             .realms(Map.of("message", LiteralValue.of(true)))
             .intercepts(Map.of("message", LiteralValue.of("group-policy")))
             .children(List.of(plugin)).build();
         var collected = DesiredInputInclude.builder("bundle")
+            .when(LiteralValue.of(false))
+            .context(Map.of("source", LiteralValue.of("bundle")))
             .content(new DesiredIncludeContent.Collected(List.of(group))).build();
         var uncollected = DesiredInputInclude.builder("missing")
             .enabled(false).content(new DesiredIncludeContent.Uncollected()).build();
@@ -139,28 +147,28 @@ class DeploymentManifestTest {
     void rejectsMalformedNestedNodesAndIncludeContent() {
         for (var node : List.of(
             """
-            {"kind":"other","id":"x","enabled":true,"realms":{},"intercepts":{}}
+            {"kind":"other","id":"x","enabled":true,"when":true,"context":{},"realms":{},"intercepts":{}}
             """,
             """
-            {"kind":"group","id":"x","enabled":true,"realms":{},"intercepts":{}}
+            {"kind":"group","id":"x","enabled":true,"when":true,"context":{},"realms":{},"intercepts":{}}
             """,
             """
-            {"kind":"include","id":"x","enabled":false,"realms":{},"intercepts":{},
+            {"kind":"include","id":"x","enabled":false,"when":true,"context":{},"realms":{},"intercepts":{},
              "content":{"state":"collected"}}
             """,
             """
-            {"kind":"include","id":"x","enabled":false,"realms":{},"intercepts":{},
+            {"kind":"include","id":"x","enabled":false,"when":true,"context":{},"realms":{},"intercepts":{},
              "content":{"state":"uncollected","children":[]}}
             """,
             """
-            {"kind":"include","id":"x","enabled":false,"realms":{},"intercepts":{},
+            {"kind":"include","id":"x","enabled":false,"when":true,"context":{},"realms":{},"intercepts":{},
              "content":{"state":"unknown"}}
             """,
             """
-            {"kind":"include","id":"x","enabled":true,"realms":{},"intercepts":{},
+            {"kind":"include","id":"x","enabled":true,"when":true,"context":{},"realms":{},"intercepts":{},
              "content":{"state":"uncollected"}}
             """)) {
-            var json = "{\"format\":2,\"artifacts\":{},\"desired\":[" + node + "]}";
+            var json = "{\"format\":3,\"artifacts\":{},\"desired\":[" + node + "]}";
             assertThrows(IllegalArgumentException.class, () -> DeploymentManifestCodec.decode(
                 json.getBytes(StandardCharsets.UTF_8)), json);
         }
@@ -171,15 +179,34 @@ class DeploymentManifestTest {
         for (var json : List.of(
             "{}", "null", "[]",
             "{\"format\":1,\"artifacts\":{},\"desired\":[]}",
-            "{\"format\":3,\"artifacts\":{},\"desired\":[]}",
-            "{\"format\":2,\"format\":2,\"artifacts\":{},\"desired\":[]}",
-            "{\"format\":2,\"artifacts\":{},\"desired\":[]} {}",
-            "{\"format\":2,\"artifacts\":{},\"desired\":[],\"unknown\":true}")) {
+            "{\"format\":2,\"artifacts\":{},\"desired\":[]}",
+            "{\"format\":4,\"artifacts\":{},\"desired\":[]}",
+            "{\"format\":3,\"format\":3,\"artifacts\":{},\"desired\":[]}",
+            "{\"format\":3,\"artifacts\":{},\"desired\":[]} {}",
+            "{\"format\":3,\"artifacts\":{},\"desired\":[],\"unknown\":true}")) {
             assertThrows(IllegalArgumentException.class, () -> DeploymentManifestCodec.decode(
                 json.getBytes(StandardCharsets.UTF_8)), json);
         }
         assertThrows(IllegalArgumentException.class, () -> new DeploymentManifest(
             Map.of(new ArtifactId("a"), "../not-a-revision"), new DesiredInputGraph(List.of())));
+    }
+
+    @Test
+    void rejectsPersistedMalformedConditionAndConfigExpressions() {
+        for (var node : List.of(
+            """
+            {"kind":"group","id":"x","enabled":false,"when":"yes","context":{},"realms":{},
+             "intercepts":{},"children":[]}
+            """,
+            """
+            {"kind":"plugin","id":"x","enabled":false,"when":true,"context":{},"realms":{},
+             "intercepts":{},"definitionName":"sample","config":{"$if":[true,"one"]},
+             "publicationRequirement":"ACTIVE_REQUIRED"}
+            """)) {
+            var json = "{\"format\":3,\"artifacts\":{},\"desired\":[" + node + "]}";
+            assertThrows(IllegalArgumentException.class, () -> DeploymentManifestCodec.decode(
+                json.getBytes(StandardCharsets.UTF_8)), json);
+        }
     }
 
     private static DesiredInputEntry entry(LiteralValue value) {

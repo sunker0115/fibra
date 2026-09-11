@@ -281,10 +281,12 @@ public final class DesiredInputGraph {
     private static DesiredInputNode withChildren(DesiredInputNode node,
                                                  List<DesiredInputNode> children) {
         if (node instanceof DesiredInputGroup group) return DesiredInputGroup.builder(group.id())
-            .enabled(group.enabled()).realms(group.realms()).intercepts(group.intercepts())
+            .enabled(group.enabled()).when(group.when()).context(group.context())
+            .realms(group.realms()).intercepts(group.intercepts())
             .children(children).build();
         if (node instanceof DesiredInputInclude include) return DesiredInputInclude.builder(include.id())
-            .enabled(include.enabled()).realms(include.realms()).intercepts(include.intercepts())
+            .enabled(include.enabled()).when(include.when()).context(include.context())
+            .realms(include.realms()).intercepts(include.intercepts())
             .content(new DesiredIncludeContent.Collected(children)).build();
         throw new IllegalArgumentException("plugin nodes cannot have children " + node.id());
     }
@@ -292,10 +294,12 @@ public final class DesiredInputGraph {
     private static DesiredInputNode withEnabled(DesiredInputNode node, boolean enabled) {
         if (node instanceof DesiredInputEntry entry) return entry.toBuilder().enabled(enabled).build();
         if (node instanceof DesiredInputGroup group) return DesiredInputGroup.builder(group.id())
-            .enabled(enabled).realms(group.realms()).intercepts(group.intercepts())
+            .enabled(enabled).when(group.when()).context(group.context())
+            .realms(group.realms()).intercepts(group.intercepts())
             .children(group.children()).build();
         var include = (DesiredInputInclude) node;
-        return DesiredInputInclude.builder(include.id()).enabled(enabled).realms(include.realms())
+        return DesiredInputInclude.builder(include.id()).enabled(enabled)
+            .when(include.when()).context(include.context()).realms(include.realms())
             .intercepts(include.intercepts()).content(include.content()).build();
     }
 
