@@ -34,6 +34,8 @@ final class ConfigDocumentReader {
                 .build())
             .enable(DeserializationFeature.FAIL_ON_READING_DUP_TREE_KEY)
             .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+            .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+            .enable(DeserializationFeature.USE_BIG_INTEGER_FOR_INTS)
             .build();
         yaml = YAMLMapper.builder(YAMLFactory.builder()
                 .streamReadConstraints(constraints)
@@ -41,6 +43,8 @@ final class ConfigDocumentReader {
                 .build())
             .enable(DeserializationFeature.FAIL_ON_READING_DUP_TREE_KEY)
             .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+            .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+            .enable(DeserializationFeature.USE_BIG_INTEGER_FOR_INTS)
             .build();
     }
 

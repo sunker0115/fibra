@@ -1,7 +1,8 @@
 package com.sstlfsj.fibra.config;
 
+import com.sstlfsj.fibra.value.LiteralValue;
+
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,27 +12,7 @@ final class LiteralValues {
     }
 
     static Object freeze(Object value) {
-        if (value instanceof Map<?, ?> map) {
-            var result = new LinkedHashMap<String, Object>();
-            map.forEach((key, nested) -> {
-                if (!(key instanceof String name)) {
-                    throw new IllegalArgumentException("literal object keys must be strings");
-                }
-                result.put(name, freeze(nested));
-            });
-            return Collections.unmodifiableMap(result);
-        }
-        if (value instanceof List<?> list) {
-            var result = new ArrayList<>(list.size());
-            list.forEach(nested -> result.add(freeze(nested)));
-            return Collections.unmodifiableList(result);
-        }
-        if (value == null || value instanceof String || value instanceof Number
-            || value instanceof Boolean) {
-            return value;
-        }
-        throw new IllegalArgumentException("unsupported literal value type "
-            + value.getClass().getName());
+        return LiteralValue.of(value).toJava();
     }
 
     @SuppressWarnings("unchecked")

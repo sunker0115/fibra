@@ -55,7 +55,8 @@ RuntimeDomain + ContributionDirectory -> PublishedView -> PublishedRuntime -> �
 ```text
 FibraEngine
   ├─ command loop                         托管变更的唯一写入口
-  ├─ ArtifactStore / DesiredStateRepository
+  ├─ EngineStateStore                     部署清单与提交日志的唯一持久真源
+  ├─ ArtifactStore / desired input source  不可变制品内容与候选配置采集
   ├─ PluginRuntimeAdapter[]               Java、Node 等运行时参与者
   ├─ FibraRuntime
   │    └─ lifecycle lane                  core 状态的唯一写入口
@@ -120,7 +121,7 @@ FibraRuntime（唯一 lifecycle lane）
      └─ built-in plugin scope
 ```
 
-`DesiredGraph` 保存 entry 及其 requires/provides 契约；实例挂载后，`ServiceRegistry` 为每个
+`DesiredInputGraph` 保存实例声明；requires/provides 契约由目标代的 catalog 提供。实例挂载后，`ServiceRegistry` 为每个
 `(ServiceKey, realm)` 槽位选择 effective provider，由此形成实际服务依赖图。该图支持链式依赖、共享
 provider、扇入和扇出，不要求是树。`ContributionDirectory` 是按 identity/kind 建立的路由索引，也不是
 依赖图；贡献随 owner Scope 撤销，并随整个 generation 发布。
@@ -211,6 +212,10 @@ PENDING -> STARTING -> ACTIVE -> STOPPING -> DISPOSED
 ### 4.1 运行代
 
 一个 `PublishedGeneration` 包含一个 `RuntimeDomain`、各 runtime 的候选资源、代内贡献目录和诊断事实。
+其中 runtime 资源以 `Map<RuntimeId, RuntimeGeneration>` 由该代独占。`PluginRuntimeAdapter.prepare`
+只创建并交出资源句柄，不保留 `current/previous`，也不执行第二次发布。每次创建候选代都为完整制品集合
+物化新的 runtime generation，包括只改变配置的情况。关闭顺序为停止接入、等待调用、关闭 domain、
+关闭贡献目录、关闭各 runtime generation，最后释放制品引用；失败候选只关闭自身资源。
 一个 Engine 同时最多存在：
 
 - 一个 current：接收新的宿主调用；
@@ -286,8 +291,21 @@ observe -> validate -> prepare -> verify -> journal -> commit
 | durable `COMMITTED` 后、内存发布前崩溃 | 以 journal 和已提交输入重建并发布目标代，不根据目录现状猜测，也不回退到旧 desired state |
 | 新代发布后 drain、cleanup 或 retire 失败 | 保持新代已发布，记录失败并继续恢复；不得把路由切回已进入排空的旧代 |
 
-需要参与事务的制品、desired state 和审计存储必须支持幂等事务标识以及可查询的
-prepare/commit/rollback 结果；不能证明结果时必须停写，不能用 best-effort 伪造成功。
+参与事务的持久内容存储必须支持幂等事务标识以及可查询的 prepare/commit/rollback 结果；不能证明
+结果时必须停写，不能用 best-effort 伪造成功。期望输入与操作审计归同一 Engine 持久决策，不另设双写提交点。
+
+持久目标以单个不可变 `DeploymentManifest` 为根，选择完整 artifact revision 集合和完整
+`DesiredInputGraph`。部署 revision 来自规范编码的内容摘要，独立于 source、generation 与 view revision。
+`EngineStateStore` 同时拥有清单与 journal，避免把二者配置到不一致的存储。提交记录包含 transaction ID、
+base/target deployment revision、参与者恢复凭据及审计元数据，不通过自由文本推断恢复操作。
+
+`COMMITTED(targetDeploymentRevision)` 是唯一持久决策：之前准备或补偿的不可变对象不得成为活动选择，
+之后按该清单重新建立 catalog、绑定配置、激活并发布。制品目录的 current 指针只能是可重建的索引，
+卸载在目标清单中即为缺席，不能等到旧代退休才生效。已提交对象缺失或摘要不符时恢复失败并停写，
+不能回退旧输入或重新读取现有源文件猜测目标。内存 state store 只提供进程内语义，不宣称重启恢复。
+
+操作审计由同一事务事实投影；Registry 不在已成功发布之后另行双写一份决定操作成败的日志。
+durable decision 之后的审计投影或资源退休故障不改变已经提交的操作结果。
 
 ### 4.5 一致性保证与非承诺
 
@@ -314,13 +332,13 @@ Fibra 不承诺：
 ```text
 fibra-core                -> fibra-api
 fibra-config              -> fibra-api
-fibra-artifact            -> fibra-api
+fibra-artifact            -> 无其他 Fibra 模块
 fibra-bridge              -> fibra-api
 fibra-engine              -> fibra-core + fibra-config + fibra-artifact + fibra-bridge
 fibra-runtime-java        -> fibra-engine + fibra-artifact + fibra-api
 fibra-runtime-node        -> fibra-engine + fibra-artifact + fibra-bridge + fibra-api
 fibra-registry            -> fibra-engine
-fibra-spring              -> fibra-api
+fibra-spring              -> fibra-api + fibra-engine
 fibra-spring-boot-starter -> fibra-spring + fibra-registry + fibra-runtime-java
 ```
 
@@ -348,14 +366,24 @@ fibra-spring-boot-starter -> fibra-spring + fibra-registry + fibra-runtime-java
 
 ### 6.1 Config 与 Artifact
 
-`fibra-config` 把文件、数据库或内存中的声明编译为不可变 desired graph。每个 Engine 选择一个
-`DesiredStateRepository`；程序化命令只有在 repository 可写时才能 upsert/remove，不能覆盖只读文件源。
+`fibra-config` 把文件、数据库或程序化声明展开为不可变 `DesiredInputGraph`，保留实例顺序、identity、
+enabled、publication requirement、literal config、realm 和 intercept。include、分组、patch 与继承在
+采集时全部展开；源路径与 source revision 只用于来源诊断，恢复不读取它们。程序化变更同样构造这种
+输入，不覆盖只读文件源，不把 live handle、POJO、`Class` 或绑定后的配置当成持久声明。
 
-`fibra-artifact` 只管理通用 identity、版本、摘要、安装记录、磁盘事务和审计事实。它不知道 JAR、npm、
+跨边界字面值使用 `fibra-api` 中封闭的 `LiteralValue`：null、boolean、string、有限精确 number、保序
+list 和字符串键 object。容器递归不可变，对象键规范排序，数字规范化；规范编码必须与插入顺序、机器
+路径和 Java 对象身份无关。配置、部署清单和公开描述快照使用同一数据边界，禁止浅拷贝冒充不可变。
+
+绑定在候选代内进行：按清单创建目标 runtime catalog，再将 `DesiredInputGraph` 绑定为
+`BoundDesiredGraph`。typed config 与 requires/provides 的 `ServiceKey<Class>` 仅由该代持有，不进入
+持久清单或宿主快照，也不跨 ClassSpace 复用。
+
+`fibra-artifact` 只管理通用 identity、版本、摘要、不可变内容及其准备和回收状态。它不知道 JAR、npm、
 ClassLoader 或 Process。配置与 artifact 互不依赖，由 Engine 在 ChangeSet 中对齐。
 
-程序内建 definition 与 runtime catalog 合并后，通过最小只读 `PluginDefinitionResolver` 供配置编译；
-该端口不暴露制品路径、运行时句柄或运行实例。
+程序内建 definition 与 runtime catalog 合并后供候选输入绑定；语法解析和声明展开不持有 catalog 的
+类型对象。绑定端口不向输入源暴露制品路径、运行时句柄或运行实例。
 
 ### 6.2 Java Runtime
 
