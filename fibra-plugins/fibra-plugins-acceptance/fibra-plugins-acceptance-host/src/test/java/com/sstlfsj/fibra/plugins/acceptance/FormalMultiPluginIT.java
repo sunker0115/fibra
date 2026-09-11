@@ -105,7 +105,7 @@ class FormalMultiPluginIT {
         var entered = work.resolve("search-entered");
         var pidFile = work.resolve("search.pid");
         var wrapper = hangingExecutable(work.resolve("hanging-rg"), entered, pidFile);
-        var graph = searchGraph(content, wrapper, 1_000, 50);
+        var graph = searchGraph(content, wrapper, 5_000, 50);
 
         try (var harness = PluginAcceptanceHarness.start(work.resolve("artifacts"),
             com.sstlfsj.fibra.engine.EngineStateStore.inMemory(),
