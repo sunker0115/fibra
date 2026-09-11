@@ -14,14 +14,13 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
 final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
     private static final Logger LOGGER = LoggerFactory.getLogger(PluginInstanceImpl.class);
-    private static final String INACTIVE = "__INACTIVE__";
-    private static final String DISPOSED = "__DISPOSED__";
 
     private final DefaultFibraRuntime runtime;
     private final DefaultRuntimeDomain domain;
@@ -40,8 +39,8 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
     private C validatedConfig;
     private volatile C config;
     private Map<String, ServiceRegistry.Binding<?>> serviceSnapshot = Map.of();
-    private String currentEpoch = INACTIVE;
-    private String targetEpoch = INACTIVE;
+    private ActivationEpoch currentEpoch;
+    private ActivationEpoch targetEpoch;
     private long configRevision;
     private boolean transitioning;
     private boolean disposeRequested;
@@ -140,7 +139,7 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
             error = null;
             if (state == PluginInstanceState.FAILED) {
                 state = PluginInstanceState.PENDING;
-                currentEpoch = INACTIVE;
+                currentEpoch = null;
             }
             refreshDependencies();
             return settled();
@@ -157,7 +156,7 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
                 return null;
             }
             disposeRequested = true;
-            targetEpoch = DISPOSED;
+            targetEpoch = null;
             if (!transitioning) {
                 beginTransition();
                 if (state == PluginInstanceState.ACTIVE || !resources.snapshot().isEmpty()) {
@@ -257,21 +256,21 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
 
     private void refreshDependencies() {
         if (disposeRequested) {
-            targetEpoch = DISPOSED;
+            targetEpoch = null;
         } else {
             candidates.clear();
-            var epoch = new StringBuilder();
+            var providers = new java.util.ArrayList<ResourceOwner>();
             for (var requirement : requirements.values()) {
                 var binding = domain.services().lookupActive(context, requirement);
                 if (binding == null) {
-                    targetEpoch = INACTIVE;
+                    targetEpoch = null;
                     scheduleConvergence();
                     return;
                 }
                 candidates.put(requirement.name(), binding);
-                epoch.append(':').append(binding.id());
+                providers.add(binding.owner());
             }
-            targetEpoch = epoch.append('#').append(configRevision).toString();
+            targetEpoch = new ActivationEpoch(providers, configRevision);
         }
         scheduleConvergence();
     }
@@ -284,9 +283,9 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
         beginTransition();
         if (state == PluginInstanceState.ACTIVE || !resources.snapshot().isEmpty()) {
             startStop();
-        } else if (DISPOSED.equals(targetEpoch)) {
+        } else if (disposeRequested) {
             finishDisposed(null);
-        } else if (INACTIVE.equals(targetEpoch)) {
+        } else if (targetEpoch == null) {
             finishPending();
         } else {
             startPlugin(targetEpoch);
@@ -298,7 +297,7 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
         stable = Sinks.one();
     }
 
-    private void startPlugin(String loadingEpoch) {
+    private void startPlugin(ActivationEpoch loadingEpoch) {
         setState(PluginInstanceState.STARTING);
         serviceSnapshot = Map.copyOf(candidates);
         try {
@@ -315,17 +314,8 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
             .subscribe(ignored -> { }, this::startFailed, () -> startCompleted(loadingEpoch));
     }
 
-    private void startCompleted(String loadingEpoch) {
+    private void startCompleted(ActivationEpoch loadingEpoch) {
         if (state != PluginInstanceState.STARTING) {
-            return;
-        }
-        if (!INACTIVE.equals(targetEpoch) && !DISPOSED.equals(targetEpoch)) {
-            serviceSnapshot = Map.copyOf(candidates);
-            currentEpoch = targetEpoch;
-            error = null;
-            transitioning = false;
-            setState(PluginInstanceState.ACTIVE);
-            stable.tryEmitValue(this);
             return;
         }
         if (Objects.equals(targetEpoch, loadingEpoch)) {
@@ -363,10 +353,10 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
 
     private void stopCompleted() {
         serviceSnapshot = Map.of();
-        currentEpoch = INACTIVE;
-        if (DISPOSED.equals(targetEpoch)) {
+        currentEpoch = null;
+        if (disposeRequested) {
             finishDisposed(null);
-        } else if (INACTIVE.equals(targetEpoch)) {
+        } else if (targetEpoch == null) {
             finishPending();
         } else {
             startPlugin(targetEpoch);
@@ -375,7 +365,7 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
 
     private void stopFailed(Throwable failure) {
         serviceSnapshot = Map.of();
-        currentEpoch = INACTIVE;
+        currentEpoch = null;
         if (disposeRequested) {
             LOGGER.warn("plugin instance \"{}\" cleanup failed during disposal", id, failure);
             finishDisposed(null);
@@ -430,5 +420,11 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
         var signal = Sinks.<PluginInstance<C>>one();
         signal.tryEmitValue(this);
         return signal;
+    }
+
+    private record ActivationEpoch(List<ResourceOwner> providers, long configRevision) {
+        private ActivationEpoch {
+            providers = List.copyOf(providers);
+        }
     }
 }

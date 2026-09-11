@@ -2,7 +2,7 @@
 
 日期：2026-09-07
 
-状态：已确认并完成交付（2026-09-11）
+状态：设计已确认；全项目架构验收尚未完成
 
 本文是 Fibra vNext 唯一权威设计，定义最终系统边界、运行模型、模块职责和验收标准；不记录旧版本
 迁移过程，也不按参考项目组织正文。外部实现的源码对拍统一收录在
@@ -183,6 +183,9 @@ PENDING -> STARTING -> ACTIVE -> STOPPING -> DISPOSED
 - 依赖按稳定服务名和 realm 解析；ACTIVE 时保存 provider identity 快照。
 - provider identity 变化时，dependent 使用旧激活快照完成清理，再按新 epoch 激活。
 - 同一实例最多一个状态转换在途；目标变化只更新 target，当前转换落地后继续收敛。
+- 激活 epoch 由有序的依赖提供者身份和配置修订组成，不以注册 token 代替提供者身份。启动完成只能
+  确认实际执行的 epoch；期间收到新配置或不同提供者时，先完成旧激活的清理，再执行最新目标。
+  同一提供者在启动期间短暂撤销又恢复、且配置未变时保留惯性，不伪造一次额外重启。
 - 启动和停止前各让出一个 lifecycle tick，避免同步重入改变 Cordis 可观察时序。
 - `update/restart` 可以清除启动错误；依赖自然回归本身不复活 FAILED 实例。
 - `settled()` 表示当前状态转换已经落地；稳定 PENDING 可以 settled，但不等于 ACTIVE。
@@ -394,6 +397,10 @@ desired、observed 三类状态；observed 只来自 `PublishedView.engine()`。
 `ContributionKind`；Fibra 不规定 Tool、Agent 等 kind，也不规定外部名称渲染。撤销贡献、拒绝新调用和
 排空在途调用先于 Scope 与 runtime 资源关闭。
 
+贡献路由冻结的是成员集合，不是永久调用权。每次订阅在同一接入临界区确认目录和条目仍开放，再登记
+在途调用；成功、失败和取消各释放一次。撤销后的旧路由不能重新取得调用权，未订阅的 Publisher 不占用
+资源。目录保留已撤销但尚未排空的条目，重复关闭必须共享同一个完成结果，不能提前宣告回收完成。
+
 `fibra-spring` 提供显式 key/type 的服务 bridge。Spring Bean 由容器拥有，bridge 只登记 binding；撤销
 仍走 Scope 协议。`fibra-spring-boot-starter` 收集所有 `PluginRuntimeAdapter` Bean，装配一个 Engine、
 Registry 和 PublishedRuntime；不能把 Engine 写死为 Java-only。
@@ -502,9 +509,9 @@ Java Harness 只是验证 built-in definition、EngineCommand、PublishedView、
 - 公开 API 签名、模块依赖、Spring、示例、archetype、外部消费和可复现分发门禁通过；
 - 全仓无 PF4J、旧 loader、`Engine.runtime()`、共享可变 ContributionBridge 或兼容转发残留。
 
-当前状态：上述门禁已完成；120 项行为/API/架构组合测试、无排除的 28 模块 `mvn verify` 和独立分发
-验证均于 2026-09-11 通过。逐项方法和执行结果见
-[行为验收账本](../references/2026-09-11-behavior-verification-ledger.md)。
+交付判定以这些不变量的实际覆盖为准，不能仅凭既有测试数量或历史绿色构建认定完成。逐项行为映射见
+[行为验收账本](../references/2026-09-11-behavior-verification-ledger.md)；全项目还必须通过启动期间目标变化、
+撤销后旧路由、嵌套实例、关闭与提交交错、整代类空间隔离及持久目标重建的确定性验证。
 
 设计结论使用以下固定源码基线：
 

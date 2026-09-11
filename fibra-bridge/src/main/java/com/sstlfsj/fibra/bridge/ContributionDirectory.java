@@ -11,19 +11,23 @@ import reactor.core.publisher.Sinks;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** 单个 RuntimeDomain 拥有的 contribution 注册表与调用排空边界。 */
 public final class ContributionDirectory implements ContributionRegistrar, AutoCloseable {
     private final Object monitor = new Object();
     private final Map<ContributionId, Entry<?, ?, ?>> entries = new LinkedHashMap<>();
+    private final Set<Entry<?, ?, ?>> liveEntries = new LinkedHashSet<>();
     private final Sinks.Many<ContributionDirectoryView> views =
         Sinks.many().replay().latest();
     private long revision;
     private boolean closed;
+    private Mono<Void> closing;
 
     public ContributionDirectory() {
         views.tryEmitNext(viewUnsafe());
@@ -50,12 +54,12 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
         if (copy.isEmpty()) {
             return Mono.error(new IllegalArgumentException("bindings must not be empty"));
         }
-        var registrations = new AtomicReference<List<Registration>>();
         return Mono.defer(() -> {
+            var registrations = new AtomicReference<List<Registration>>();
             var effect = owner.effects().effect(() -> {
                 var values = registerAllNow(providerInstanceId, copy);
                 registrations.set(values);
-                return () -> revokeAll(values).then(afterDrain.dispose());
+                return () -> revokeAll(values).then(Mono.defer(afterDrain::dispose));
             }, "contributions:" + providerInstanceId);
             return effect.ready().then(Mono.fromSupplier(() ->
                 List.copyOf(registrations.get())));
@@ -73,16 +77,16 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
     }
 
     public Mono<Void> closeAsync() {
-        List<Entry<?, ?, ?>> current;
         synchronized (monitor) {
-            if (closed) {
-                return Mono.empty();
+            if (closing != null) {
+                return closing;
             }
             closed = true;
-            current = List.copyOf(entries.values());
+            var current = List.copyOf(liveEntries);
+            closing = Flux.fromIterable(current).flatMap(this::revoke).then()
+                .doOnSuccess(ignored -> views.tryEmitComplete()).cache();
+            return closing;
         }
-        return Flux.fromIterable(current).flatMap(this::revoke).then()
-            .doOnSuccess(ignored -> views.tryEmitComplete());
     }
 
     @Override
@@ -100,34 +104,31 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
             return Mono.error(new IllegalArgumentException(
                 "input is not a " + kind.inputType().getName()));
         }
-        final Entry<D, I, O> entry;
-        synchronized (monitor) {
-            var raw = routes.get(id);
-            if (raw == null || raw.kind != kind) {
-                return Mono.error(new ContributionUnavailableException(id));
-            }
-            @SuppressWarnings("unchecked")
-            var typed = (Entry<D, I, O>) raw;
-            entry = typed;
-            entry.inflight++;
-        }
-        Mono<O> invocation;
-        try {
-            invocation = Objects.requireNonNull(entry.handler.invoke(
+        return Mono.using(() -> acquire(routes, kind, id), entry -> Mono.defer(() ->
+            Objects.requireNonNull(entry.handler.invoke(
                 InvocationContext.of(caller, "contribution:" + kind.name()), input),
-                "contribution handler returned null");
-        } catch (RuntimeException | Error failure) {
-            release(entry);
-            return Mono.error(failure);
-        }
-        return invocation.map(output -> {
+                "contribution handler returned null")).map(output -> {
                 if (output != null && !kind.outputType().isInstance(output)) {
                     throw new IllegalArgumentException(
                         "output is not a " + kind.outputType().getName());
                 }
                 return output;
-            })
-            .doFinally(ignored -> release(entry));
+            }), this::release, true);
+    }
+
+    private <D, I, O> Entry<D, I, O> acquire(
+        Map<ContributionId, Entry<?, ?, ?>> routes, ContributionKind<D, I, O> kind,
+        ContributionId id) {
+        synchronized (monitor) {
+            var raw = routes.get(id);
+            if (closed || raw == null || !raw.accepting || raw.kind != kind) {
+                throw new ContributionUnavailableException(id);
+            }
+            @SuppressWarnings("unchecked")
+            var entry = (Entry<D, I, O>) raw;
+            entry.inflight++;
+            return entry;
+        }
     }
 
     private List<Registration> registerAllNow(
@@ -147,6 +148,7 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
                 additions.add(entry(id, binding));
             }
             additions.forEach(entry -> entries.put(entry.id, entry));
+            liveEntries.addAll(additions);
             publishUnsafe();
             return additions.stream().map(Registration::new).toList();
         }
@@ -167,9 +169,7 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
                     entry.accepting = false;
                     entries.remove(entry.id, entry);
                     changed = true;
-                    if (entry.inflight == 0) {
-                        entry.drained.tryEmitEmpty();
-                    }
+                    completeIfDrained(entry);
                 }
             }
             if (changed) {
@@ -187,9 +187,7 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
             entry.accepting = false;
             entries.remove(entry.id, entry);
             publishUnsafe();
-            if (entry.inflight == 0) {
-                entry.drained.tryEmitEmpty();
-            }
+            completeIfDrained(entry);
             return entry.drained.asMono();
         }
     }
@@ -197,9 +195,14 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
     private void release(Entry<?, ?, ?> entry) {
         synchronized (monitor) {
             entry.inflight--;
-            if (!entry.accepting && entry.inflight == 0) {
-                entry.drained.tryEmitEmpty();
-            }
+            completeIfDrained(entry);
+        }
+    }
+
+    private void completeIfDrained(Entry<?, ?, ?> entry) {
+        if (!entry.accepting && entry.inflight == 0) {
+            liveEntries.remove(entry);
+            entry.drained.tryEmitEmpty();
         }
     }
 

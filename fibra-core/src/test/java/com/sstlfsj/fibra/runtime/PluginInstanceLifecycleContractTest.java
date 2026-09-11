@@ -19,6 +19,72 @@ class PluginInstanceLifecycleContractTest {
     private static final ServiceKey<Counter> COUNTER = ServiceKey.of("counter", Counter.class);
 
     @Test
+    void updateDuringStartupConvergesToTheLatestConfigBeforeCompleting() throws Exception {
+        var loading = reactor.core.publisher.Sinks.<Void>one();
+        try (var runtime = FibraRuntime.create()) {
+            var starts = new java.util.concurrent.CopyOnWriteArrayList<String>();
+            var stops = new java.util.concurrent.CopyOnWriteArrayList<String>();
+            var definition = PluginDefinition.builder("updating", String.class,
+                () -> (context, config) -> {
+                    starts.add(config);
+                    context.effects().add(Disposables.from(() -> stops.add(config)));
+                    return "old".equals(config) ? loading.asMono()
+                        : reactor.core.publisher.Mono.empty();
+                }).build();
+            var instance = runtime.rootScope().context().plugins()
+                .mount("updating", definition, "old");
+            try {
+                var first = instance.update("intermediate").toFuture();
+                var latest = instance.update("latest").toFuture();
+                loading.tryEmitEmpty();
+                first.get(5, java.util.concurrent.TimeUnit.SECONDS);
+                latest.get(5, java.util.concurrent.TimeUnit.SECONDS);
+
+                assertEquals(java.util.List.of("old", "latest"), starts);
+                assertEquals(java.util.List.of("old"), stops);
+                assertEquals("latest", instance.config());
+                assertEquals(PluginInstanceState.ACTIVE, instance.state());
+            } finally {
+                loading.tryEmitEmpty();
+            }
+        }
+    }
+
+    @Test
+    void replacementProviderDuringStartupCleansTheOldSnapshotBeforeReloading() throws Exception {
+        var loading = reactor.core.publisher.Sinks.<Void>one();
+        try (var runtime = FibraRuntime.create()) {
+            var key = ServiceKey.of("value", String.class);
+            var firstProvider = runtime.rootScope().openChild("first-provider");
+            var nextProvider = runtime.rootScope().openChild("next-provider");
+            var registration = firstProvider.context().services().provide(key, "old");
+            var seen = new java.util.concurrent.CopyOnWriteArrayList<String>();
+            var definition = PluginDefinition.builder("consumer", Void.class,
+                () -> (context, config) -> {
+                    var value = context.services().require(key);
+                    seen.add("start:" + value);
+                    context.effects().add(Disposables.from(() ->
+                        seen.add("stop:" + context.services().require(key))));
+                    return "old".equals(value) ? loading.asMono()
+                        : reactor.core.publisher.Mono.empty();
+                }).require(key).build();
+            var instance = runtime.rootScope().context().plugins()
+                .mount("consumer", definition, null);
+            try {
+                var removal = registration.dispose().toFuture();
+                nextProvider.context().services().provide(key, "new");
+                loading.tryEmitEmpty();
+                instance.settled().block(TIMEOUT);
+                removal.get(5, java.util.concurrent.TimeUnit.SECONDS);
+
+                assertEquals(java.util.List.of("start:old", "stop:old", "start:new"), seen);
+            } finally {
+                loading.tryEmitEmpty();
+            }
+        }
+    }
+
+    @Test
     void missingDependencyIsSettledPendingAndProviderActivatesConsumer() {
         try (var runtime = FibraRuntime.create()) {
             var consumerStarts = new AtomicInteger();
