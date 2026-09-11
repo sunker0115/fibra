@@ -107,6 +107,15 @@ class FormalPluginArtifactsIT {
                 "com/sstlfsj/fibra/plugins/fs/search/internal/jackson/")));
             assertTrue(entries.contains(
                 "com/sstlfsj/fibra/plugins/fs/search/internal/jackson/annotation/JsonSerializeAs.class"));
+            var notice = archive.getJarEntry("META-INF/NOTICE");
+            assertNotNull(notice);
+            try (var input = archive.getInputStream(notice)) {
+                var content = new String(input.readAllBytes(),
+                    java.nio.charset.StandardCharsets.UTF_8);
+                assertTrue(content.contains("Jackson JSON processor"));
+                assertTrue(content.contains("FastDoubleParser"));
+                assertTrue(content.contains("Schubfach"));
+            }
             for (var service : entries.stream().filter(name -> name.startsWith("META-INF/services/"))
                 .toList()) {
                 var entry = archive.getJarEntry(service);

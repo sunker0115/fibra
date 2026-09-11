@@ -13,14 +13,51 @@
       <version>${fibra.version}</version>
     </dependency>
     <dependency>
+      <groupId>com.sstlfsj</groupId><artifactId>fibra-registry</artifactId>
+      <version>${fibra.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId><artifactId>fibra-tool-api</artifactId>
+      <version>${fibra.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
-  <build><plugins><plugin>
-    <groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId>
-    <configuration><systemPropertyVariables>
-      <plugin.jar>${maven.multiModuleProjectDirectory}/java-plugin/target/java-plugin-1.0.0.jar</plugin.jar>
-    </systemPropertyVariables></configuration>
-  </plugin></plugins></build>
+  <build><plugins>
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-dependency-plugin</artifactId>
+      <version>3.11.0</version>
+      <executions><execution>
+        <id>stage-formal-plugins</id>
+        <phase>process-test-resources</phase>
+        <goals><goal>copy</goal></goals>
+        <configuration>
+          <outputDirectory>${project.build.directory}/plugin-artifacts</outputDirectory>
+          <artifactItems>
+            <artifactItem><groupId>com.sstlfsj</groupId><artifactId>fibra-fs</artifactId><version>${fibra.version}</version><destFileName>fibra-fs.jar</destFileName></artifactItem>
+            <artifactItem><groupId>com.sstlfsj</groupId><artifactId>fibra-fs-local</artifactId><version>${fibra.version}</version><destFileName>fibra-fs-local.jar</destFileName></artifactItem>
+            <artifactItem><groupId>com.sstlfsj</groupId><artifactId>fibra-tool-fs</artifactId><version>${fibra.version}</version><destFileName>fibra-tool-fs.jar</destFileName></artifactItem>
+            <artifactItem><groupId>com.sstlfsj</groupId><artifactId>fibra-subprocess</artifactId><version>${fibra.version}</version><destFileName>fibra-subprocess.jar</destFileName></artifactItem>
+            <artifactItem><groupId>com.sstlfsj</groupId><artifactId>fibra-subprocess-local</artifactId><version>${fibra.version}</version><destFileName>fibra-subprocess-local.jar</destFileName></artifactItem>
+            <artifactItem><groupId>com.sstlfsj</groupId><artifactId>fibra-tool-fs-search</artifactId><version>${fibra.version}</version><destFileName>fibra-tool-fs-search.jar</destFileName></artifactItem>
+            <artifactItem><groupId>com.sstlfsj</groupId><artifactId>fibra-shell</artifactId><version>${fibra.version}</version><destFileName>fibra-shell.jar</destFileName></artifactItem>
+            <artifactItem><groupId>com.sstlfsj</groupId><artifactId>fibra-shell-local</artifactId><version>${fibra.version}</version><destFileName>fibra-shell-local.jar</destFileName></artifactItem>
+            <artifactItem><groupId>com.sstlfsj</groupId><artifactId>fibra-tool-shell</artifactId><version>${fibra.version}</version><destFileName>fibra-tool-shell.jar</destFileName></artifactItem>
+            <artifactItem><groupId>com.sstlfsj</groupId><artifactId>fibra-storage</artifactId><version>${fibra.version}</version><destFileName>fibra-storage.jar</destFileName></artifactItem>
+            <artifactItem><groupId>com.sstlfsj</groupId><artifactId>fibra-storage-json</artifactId><version>${fibra.version}</version><destFileName>fibra-storage-json.jar</destFileName></artifactItem>
+          </artifactItems>
+        </configuration>
+      </execution></executions>
+    </plugin>
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId>
+      <configuration><systemPropertyVariables>
+        <plugin.jar>${maven.multiModuleProjectDirectory}/java-plugin/target/java-plugin-1.0.0.jar</plugin.jar>
+        <fibra.pluginArtifacts>${project.build.directory}/plugin-artifacts</fibra.pluginArtifacts>
+      </systemPropertyVariables></configuration>
+    </plugin>
+  </plugins></build>
 </project>
