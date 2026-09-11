@@ -10,9 +10,12 @@ public final class InMemoryPluginAuditRepository implements PluginAuditRepositor
     @Override
     public synchronized PluginAuditEntry append(String operation, String target,
                                                 boolean succeeded,
+                                                TargetSaveState targetSaveState,
                                                 String viewRevision, String detail) {
-        var entry = new PluginAuditEntry(entries.size() + 1L, Instant.now(), operation,
-            target, succeeded, viewRevision, detail);
+        var entry = PluginAuditEntry.builder().sequence(entries.size() + 1L)
+            .timestamp(Instant.now()).operation(operation).target(target)
+            .succeeded(succeeded).targetSaveState(targetSaveState)
+            .viewRevision(viewRevision).detail(detail).build();
         entries.add(entry);
         return entry;
     }

@@ -2,18 +2,22 @@ package com.sstlfsj.fibra.spring.boot;
 
 import com.sstlfsj.fibra.ServiceKey;
 import com.sstlfsj.fibra.artifact.ArtifactId;
+import com.sstlfsj.fibra.artifact.ArtifactException;
+import com.sstlfsj.fibra.artifact.ArtifactStore;
 import com.sstlfsj.fibra.artifact.RuntimeId;
 import com.sstlfsj.fibra.engine.EngineState;
-import com.sstlfsj.fibra.engine.FileTransactionJournal;
+import com.sstlfsj.fibra.engine.EngineStateStore;
+import com.sstlfsj.fibra.engine.EngineStateStoreException;
+import com.sstlfsj.fibra.engine.DeploymentManifest;
+import com.sstlfsj.fibra.engine.FileEngineStateStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
-import com.sstlfsj.fibra.engine.PluginCatalog;
 import com.sstlfsj.fibra.engine.PluginRuntimeAdapter;
-import com.sstlfsj.fibra.engine.RuntimeGeneration;
 import com.sstlfsj.fibra.engine.RuntimeArtifactInspection;
-import com.sstlfsj.fibra.engine.RuntimeGenerationRequest;
-import com.sstlfsj.fibra.engine.RuntimeGenerationSnapshot;
+import com.sstlfsj.fibra.engine.RuntimeCatalog;
+import com.sstlfsj.fibra.engine.RuntimeResourceOwner;
+import com.sstlfsj.fibra.engine.RuntimeResourceSnapshot;
+import com.sstlfsj.fibra.engine.RuntimeResourceUpdate;
 import com.sstlfsj.fibra.registry.PluginInstallRequest;
-import com.sstlfsj.fibra.engine.TransactionJournal;
 import com.sstlfsj.fibra.registry.PluginRegistry;
 import com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter;
 import com.sstlfsj.fibra.spring.FibraService;
@@ -23,17 +27,23 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FibraAutoConfigurationTest {
@@ -48,8 +58,8 @@ class FibraAutoConfigurationTest {
             .run(context -> {
                 assertNotNull(context.getBean(PluginRegistry.class));
                 assertNotNull(context.getBean(JavaPluginRuntimeAdapter.class));
-                assertInstanceOf(FileTransactionJournal.class,
-                    context.getBean(TransactionJournal.class));
+                assertFalse(context.containsBean("fibraTransactionJournal"),
+                    "旧事务 journal 门禁由完整目标 state store 取代");
                 var engine = context.getBean(FibraEngine.class);
                 var published = engine.published().current();
                 assertEquals(EngineState.RUNNING, published.engine().state());
@@ -62,6 +72,94 @@ class FibraAutoConfigurationTest {
                         .source(plugin).build()).block();
                 assertTrue(installed.artifacts().containsKey(artifactId));
             });
+    }
+
+    @Test
+    void normalContextCloseReleasesDefaultStoreLocks(@TempDir Path work) {
+        new ApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(FibraAutoConfiguration.class))
+            .withPropertyValues("fibra.storage-root=" + work)
+            .run(context -> assertNotNull(context.getBean(FibraEngine.class)));
+
+        assertDefaultStoresCanReopen(work);
+    }
+
+    @Test
+    void cleanupFailureContextCloseDoesNotReleaseEngineRetainedStoreLocks(
+        @TempDir Path work) throws IOException {
+        var source = Files.writeString(work.resolve("failing.plugin"), "fixture");
+        new ApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(FibraAutoConfiguration.class))
+            .withUserConfiguration(CleanupFailureConfiguration.class)
+            .withPropertyValues("fibra.storage-root=" + work)
+            .run(context -> {
+                var engine = context.getBean(FibraEngine.class);
+                engine.start().block();
+                context.getBean(PluginRegistry.class).install(PluginInstallRequest.builder()
+                    .artifactId(new ArtifactId("failing-close-plugin"))
+                    .runtimeId(FailingCloseRuntime.RUNTIME_ID).version("1.0.0")
+                    .source(source).build()).block();
+            });
+
+        assertThrows(ArtifactException.class,
+            () -> new ArtifactStore(work.resolve("artifacts")));
+        assertThrows(EngineStateStoreException.class,
+            () -> new FileEngineStateStore(work.resolve("state")));
+    }
+
+    @Test
+    void failedCustomStateStoreLookupReleasesUntransferredDefaultArtifactStore(
+        @TempDir Path work) {
+        FactoryFailureConfiguration.defaultArtifactLocked.set(false);
+        new ApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(FibraAutoConfiguration.class))
+            .withUserConfiguration(FactoryFailureConfiguration.class)
+            .withPropertyValues("fibra.storage-root=" + work)
+            .run(context -> assertNotNull(context.getStartupFailure()));
+
+        assertTrue(FactoryFailureConfiguration.defaultArtifactLocked.get());
+        assertDefaultArtifactStoreCanReopen(work);
+    }
+
+    @Test
+    void failedEngineBuildReleasesBothUntransferredDefaultStores(@TempDir Path work) {
+        new ApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(FibraAutoConfiguration.class))
+            .withUserConfiguration(BuildFailureConfiguration.class)
+            .withPropertyValues("fibra.storage-root=" + work)
+            .run(context -> assertNotNull(context.getStartupFailure()));
+
+        assertDefaultStoresCanReopen(work);
+    }
+
+    @Test
+    void engineUsesAndExclusivelyClosesCustomStateStore(@TempDir Path work) {
+        var observed = new AtomicReference<RecordingEngineStateStore>();
+        new ApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(FibraAutoConfiguration.class))
+            .withUserConfiguration(CustomStateStoreConfiguration.class)
+            .withPropertyValues("fibra.storage-root=" + work)
+            .run(context -> {
+                var stateStore = context.getBean(RecordingEngineStateStore.class);
+                observed.set(stateStore);
+                assertTrue(stateStore.loadCalls > 0);
+            });
+
+        assertEquals(1, observed.get().closeCalls);
+    }
+
+    private static void assertDefaultStoresCanReopen(Path work) {
+        try (var artifacts = new ArtifactStore(work.resolve("artifacts"));
+             var state = new FileEngineStateStore(work.resolve("state"))) {
+            assertNotNull(artifacts);
+            assertNotNull(state);
+        }
+    }
+
+    private static void assertDefaultArtifactStoreCanReopen(Path work) {
+        try (var artifacts = new ArtifactStore(work.resolve("artifacts"))) {
+            assertNotNull(artifacts);
+        }
     }
 
     interface Greeting {
@@ -89,6 +187,60 @@ class FibraAutoConfigurationTest {
         }
     }
 
+    @Configuration(proxyBeanMethods = false)
+    static class CleanupFailureConfiguration {
+        @Bean
+        FailingCloseRuntime failingCloseRuntime() {
+            return new FailingCloseRuntime();
+        }
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class FactoryFailureConfiguration {
+        static final AtomicBoolean defaultArtifactLocked = new AtomicBoolean();
+
+        @Bean
+        @Lazy
+        EngineStateStore failingEngineStateStore(FibraProperties properties) {
+            assertThrows(ArtifactException.class,
+                () -> new ArtifactStore(properties.storageRoot().resolve("artifacts")));
+            defaultArtifactLocked.set(true);
+            throw new IllegalStateException("factory state store fixture failure");
+        }
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class BuildFailureConfiguration {
+        @Bean
+        PluginRuntimeAdapter factoryBuildFailureRuntime() {
+            return new PluginRuntimeAdapter() {
+                @Override
+                public RuntimeId id() {
+                    throw new IllegalStateException("factory runtime fixture failure");
+                }
+
+                @Override
+                public Mono<RuntimeArtifactInspection> inspect(
+                    com.sstlfsj.fibra.artifact.ArtifactRecord artifact) {
+                    return Mono.error(new UnsupportedOperationException());
+                }
+
+                @Override
+                public RuntimeResourceOwner create() {
+                    throw new UnsupportedOperationException();
+                }
+            };
+        }
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class CustomStateStoreConfiguration {
+        @Bean(destroyMethod = "")
+        RecordingEngineStateStore customStateStore() {
+            return new RecordingEngineStateStore();
+        }
+    }
+
     static final class CustomRuntime implements PluginRuntimeAdapter {
         static final RuntimeId RUNTIME_ID = new RuntimeId("custom");
 
@@ -105,17 +257,98 @@ class FibraAutoConfigurationTest {
         }
 
         @Override
-        public RuntimeGeneration create(RuntimeGenerationRequest request) {
-            var artifacts = request.artifacts().stream().collect(
-                java.util.stream.Collectors.toMap(value -> value.id(), value -> value));
-            var snapshot = new RuntimeGenerationSnapshot(RUNTIME_ID, "custom-1",
-                artifacts, Set.of());
-            return new RuntimeGeneration() {
-                @Override public Mono<Void> prepareAsync() { return Mono.empty(); }
-                @Override public RuntimeGenerationSnapshot snapshot() { return snapshot; }
-                @Override public PluginCatalog catalog() { return PluginCatalog.empty(); }
+        public RuntimeResourceOwner create() {
+            return new RuntimeResourceOwner() {
+                @Override public RuntimeResourceUpdate createUpdate(
+                    List<com.sstlfsj.fibra.artifact.ArtifactRecord> target) {
+                    return new RuntimeResourceUpdate() {
+                        @Override public Mono<Void> prepareAsync() { return Mono.empty(); }
+                        @Override public Set<ArtifactId> affectedArtifacts() {
+                            return target.stream().map(value -> value.id())
+                                .collect(java.util.stream.Collectors.toSet());
+                        }
+                        @Override public RuntimeCatalog catalog() { return RuntimeCatalog.empty(); }
+                        @Override public RuntimeResourceSnapshot snapshot() {
+                            return new RuntimeResourceSnapshot(RUNTIME_ID, List.of());
+                        }
+                        @Override public void adopt() { }
+                        @Override public Mono<Void> closeAsync() { return Mono.empty(); }
+                    };
+                }
+                @Override public RuntimeCatalog catalog() { return RuntimeCatalog.empty(); }
+                @Override public RuntimeResourceSnapshot snapshot() {
+                    return new RuntimeResourceSnapshot(RUNTIME_ID, List.of());
+                }
                 @Override public Mono<Void> closeAsync() { return Mono.empty(); }
             };
+        }
+    }
+
+    static final class FailingCloseRuntime implements PluginRuntimeAdapter {
+        static final RuntimeId RUNTIME_ID = new RuntimeId("failing-close");
+
+        @Override
+        public RuntimeId id() {
+            return RUNTIME_ID;
+        }
+
+        @Override
+        public Mono<RuntimeArtifactInspection> inspect(
+            com.sstlfsj.fibra.artifact.ArtifactRecord artifact) {
+            return Mono.just(new RuntimeArtifactInspection(RUNTIME_ID, artifact.id(), Map.of()));
+        }
+
+        @Override
+        public RuntimeResourceOwner create() {
+            return new RuntimeResourceOwner() {
+                @Override
+                public RuntimeResourceUpdate createUpdate(
+                    List<com.sstlfsj.fibra.artifact.ArtifactRecord> target) {
+                    return new RuntimeResourceUpdate() {
+                        @Override public Mono<Void> prepareAsync() { return Mono.empty(); }
+                        @Override public Set<ArtifactId> affectedArtifacts() {
+                            return target.stream().map(value -> value.id())
+                                .collect(java.util.stream.Collectors.toSet());
+                        }
+                        @Override public RuntimeCatalog catalog() { return RuntimeCatalog.empty(); }
+                        @Override public RuntimeResourceSnapshot snapshot() {
+                            return new RuntimeResourceSnapshot(RUNTIME_ID, List.of());
+                        }
+                        @Override public void adopt() { }
+                        @Override public Mono<Void> closeAsync() { return Mono.empty(); }
+                    };
+                }
+
+                @Override public RuntimeCatalog catalog() { return RuntimeCatalog.empty(); }
+                @Override public RuntimeResourceSnapshot snapshot() {
+                    return new RuntimeResourceSnapshot(RUNTIME_ID, List.of());
+                }
+                @Override public Mono<Void> closeAsync() {
+                    return Mono.error(new IllegalStateException("runtime cleanup fixture failure"));
+                }
+            };
+        }
+    }
+
+    static final class RecordingEngineStateStore implements EngineStateStore {
+        private DeploymentManifest manifest;
+        private int loadCalls;
+        private int closeCalls;
+
+        @Override
+        public Optional<DeploymentManifest> load() {
+            loadCalls++;
+            return Optional.ofNullable(manifest);
+        }
+
+        @Override
+        public void save(DeploymentManifest value) {
+            manifest = value;
+        }
+
+        @Override
+        public void close() {
+            closeCalls++;
         }
     }
 }

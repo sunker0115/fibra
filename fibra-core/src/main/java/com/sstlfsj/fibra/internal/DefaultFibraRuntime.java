@@ -86,6 +86,10 @@ public final class DefaultFibraRuntime {
     }
 
     private void finishCloseWithError(Throwable error) {
+        if (error instanceof ResourceDrain.Failure) {
+            closedSignal.tryEmitError(error);
+            return;
+        }
         closed.set(true);
         closedSignal.tryEmitError(error);
         lifecycle.shutdown();

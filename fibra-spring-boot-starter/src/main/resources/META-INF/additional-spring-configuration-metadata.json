@@ -4,7 +4,7 @@
       "name": "fibra.storage-root",
       "type": "java.nio.file.Path",
       "defaultValue": ".fibra",
-      "description": "Fibra 制品、事务与审计数据根目录。"
+      "description": "Fibra 制品、完整部署目标与审计数据根目录。"
     }
   ]
 }

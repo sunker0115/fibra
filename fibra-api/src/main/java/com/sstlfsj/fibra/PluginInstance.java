@@ -8,6 +8,8 @@ import java.util.Optional;
 public interface PluginInstance<C> extends Disposable {
     String id();
 
+    long identity();
+
     PluginDefinition<C> definition();
 
     Context context();
@@ -23,4 +25,6 @@ public interface PluginInstance<C> extends Disposable {
     Mono<PluginInstance<C>> settled();
 
     Mono<PluginInstance<C>> update(C config);
+
+    Mono<PluginInstance<C>> updatePrepared(PluginDefinition.Prepared<C> prepared);
 }

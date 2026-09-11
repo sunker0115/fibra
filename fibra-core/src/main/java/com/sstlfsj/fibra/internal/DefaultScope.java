@@ -21,12 +21,15 @@ final class DefaultScope implements Scope, ResourceOwner {
     private final DefaultRuntimeDomain domain;
     private final DefaultScope parent;
     private final String name;
+    private final long identity;
     private final List<DefaultScope> children = new ArrayList<>();
     private final List<PluginInstanceImpl<?>> plugins = new ArrayList<>();
     private final IdentityList<OwnedEffect> resources = new IdentityList<>();
     private final DefaultContext context;
     private final Sinks.One<Void> closed = Sinks.one();
     private volatile State state = State.OPEN;
+    private ResourceDrain drain;
+    private boolean closeStarted;
 
     DefaultScope(DefaultRuntimeDomain domain, DefaultScope parent, String name) {
         this.domain = Objects.requireNonNull(domain, "domain");
@@ -35,6 +38,7 @@ final class DefaultScope implements Scope, ResourceOwner {
             throw new IllegalArgumentException("scope name must not be blank");
         }
         this.name = name;
+        identity = domain.runtime().nextSequence();
         context = DefaultContext.root(this);
     }
 
@@ -42,6 +46,9 @@ final class DefaultScope implements Scope, ResourceOwner {
     public String name() {
         return name;
     }
+
+    @Override
+    public long identity() { return identity; }
 
     @Override
     public Context context() {
@@ -79,7 +86,7 @@ final class DefaultScope implements Scope, ResourceOwner {
             return closed.asMono();
         }
         lifecycle().call(() -> {
-            if (state == State.OPEN) {
+            if (!closeStarted) {
                 beginClose();
             }
             return null;
@@ -123,8 +130,23 @@ final class DefaultScope implements Scope, ResourceOwner {
         return domain.runtime();
     }
 
-    DefaultRuntimeDomain domain() {
+    @Override
+    public DefaultRuntimeDomain domain() {
         return domain;
+    }
+
+    @Override
+    public DefaultScope scope() {
+        return this;
+    }
+
+    boolean isWithin(DefaultScope ancestor) {
+        for (var current = this; current != null; current = current.parent) {
+            if (current == ancestor) {
+                return true;
+            }
+        }
+        return false;
     }
 
     void addPlugin(PluginInstanceImpl<?> plugin) {
@@ -145,19 +167,39 @@ final class DefaultScope implements Scope, ResourceOwner {
     }
 
     private void beginClose() {
-        state = State.CLOSING;
+        closeStarted = true;
+        var consumers = domain.services().consumerCleanup(this);
+        if (drain == null) {
+            var barrier = new ResourceDrain(lifecycle());
+            freeze(barrier);
+            barrier.start();
+        }
         domain.services().ownerStateChanged(this);
         var childSnapshot = Cleanup.reversed(List.copyOf(children));
         var pluginSnapshot = Cleanup.reversed(List.copyOf(plugins));
         var resourceSnapshot = Cleanup.reversed(resources.snapshot());
 
-        Flux.fromIterable(childSnapshot)
+        drain.completion().then(consumers).thenMany(Flux.fromIterable(childSnapshot)
             .concatMap(DefaultScope::closeAsync, 1)
             .thenMany(Flux.fromIterable(pluginSnapshot)
-                .concatMap(PluginInstanceImpl::dispose, 1))
+                .concatMap(PluginInstanceImpl::dispose, 1)))
             .then(Cleanup.allSettled(resourceSnapshot))
             .publishOn(lifecycle().scheduler())
             .subscribe(ignored -> { }, this::finishWithError, this::finish);
+    }
+
+    void freeze(ResourceDrain barrier) {
+        if (drain != null) {
+            if (drain != barrier) {
+                barrier.await(drain.completion());
+            }
+            return;
+        }
+        drain = barrier;
+        state = State.CLOSING;
+        List.copyOf(children).forEach(child -> child.freeze(barrier));
+        List.copyOf(plugins).forEach(plugin -> plugin.freeze(barrier));
+        resources.snapshot().forEach(barrier::include);
     }
 
     private void finish() {
@@ -171,6 +213,10 @@ final class DefaultScope implements Scope, ResourceOwner {
     }
 
     private void finishWithError(Throwable error) {
+        if (error instanceof ResourceDrain.Failure) {
+            closed.tryEmitError(error);
+            return;
+        }
         LOGGER.warn("scope \"{}\" cleanup failed during close", name, error);
         finish();
     }

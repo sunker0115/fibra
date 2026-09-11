@@ -5,10 +5,10 @@ import com.sstlfsj.fibra.config.DesiredStateRepository;
 import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.HostServiceRegistry;
-import com.sstlfsj.fibra.engine.FileTransactionJournal;
+import com.sstlfsj.fibra.engine.EngineStateStore;
+import com.sstlfsj.fibra.engine.FileEngineStateStore;
 import com.sstlfsj.fibra.engine.PluginRuntimeAdapter;
 import com.sstlfsj.fibra.engine.PublishedRuntime;
-import com.sstlfsj.fibra.engine.TransactionJournal;
 import com.sstlfsj.fibra.registry.FilePluginAuditRepository;
 import com.sstlfsj.fibra.registry.PluginAuditRepository;
 import com.sstlfsj.fibra.registry.PluginRegistry;
@@ -32,33 +32,65 @@ public class FibraAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    ArtifactStore fibraArtifactStore(FibraProperties properties) {
-        return new ArtifactStore(properties.storageRoot().resolve("artifacts"));
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
     JavaPluginRuntimeAdapter fibraJavaRuntimeAdapter() {
         return new JavaPluginRuntimeAdapter();
     }
 
-    @Bean
-    @ConditionalOnMissingBean
-    TransactionJournal fibraTransactionJournal(FibraProperties properties) {
-        return new FileTransactionJournal(properties.storageRoot().resolve("transactions"));
-    }
-
+    /**
+     * Engine is the exclusive owner of the stores after this factory returns.
+     * A user-supplied ArtifactStore or EngineStateStore bean must declare
+     * {@code destroyMethod = ""}; Spring must not close it independently.
+     */
     @Bean(destroyMethod = "close")
     @ConditionalOnMissingBean
     FibraEngine fibraEngine(DesiredStateRepository desired,
-                            ArtifactStore artifacts,
+                            FibraProperties properties,
+                            ObjectProvider<ArtifactStore> artifactStores,
                             ObjectProvider<PluginRuntimeAdapter> runtimes,
-                            TransactionJournal journal,
+                            ObjectProvider<EngineStateStore> stateStores,
                             HostServiceRegistry hostServices) {
-        var builder = FibraEngine.builder(desired).artifactStore(artifacts)
-            .journal(journal).hostServices(hostServices);
-        runtimes.orderedStream().forEach(builder::runtimeAdapter);
-        return builder.build();
+        ArtifactStore artifacts = null;
+        EngineStateStore stateStore = null;
+        try {
+            artifacts = artifactStores.getIfAvailable();
+            if (artifacts == null) {
+                artifacts = new ArtifactStore(properties.storageRoot().resolve("artifacts"));
+            }
+            stateStore = stateStores.getIfAvailable();
+            if (stateStore == null) {
+                stateStore = new FileEngineStateStore(properties.storageRoot().resolve("state"));
+            }
+            var builder = FibraEngine.builder(desired).artifactStore(artifacts)
+                .stateStore(stateStore).hostServices(hostServices);
+            runtimes.orderedStream().forEach(builder::runtimeAdapter);
+            var engine = builder.build();
+            artifacts = null;
+            stateStore = null;
+            return engine;
+        } catch (RuntimeException | Error failure) {
+            closeUntransferred(stateStore, artifacts, failure);
+            throw failure;
+        }
+    }
+
+    private static void closeUntransferred(EngineStateStore stateStore,
+                                           ArtifactStore artifacts,
+                                           Throwable failure) {
+        closeUntransferred(stateStore, failure);
+        closeUntransferred(artifacts, failure);
+    }
+
+    private static void closeUntransferred(AutoCloseable resource, Throwable failure) {
+        if (resource == null) {
+            return;
+        }
+        try {
+            resource.close();
+        } catch (Exception closeFailure) {
+            if (closeFailure != failure) {
+                failure.addSuppressed(closeFailure);
+            }
+        }
     }
 
     @Bean

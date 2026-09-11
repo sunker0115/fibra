@@ -16,6 +16,13 @@ public final class com.sstlfsj.fibra.bridge.ContributionBinding<D, I, O> extends
   public D descriptor();
   public com.sstlfsj.fibra.bridge.ContributionHandler<I, O> handler();
 }
+## com.sstlfsj.fibra.bridge.ContributionCall
+Compiled from "ContributionCall.java"
+public interface com.sstlfsj.fibra.bridge.ContributionCall<I, O> extends java.lang.AutoCloseable {
+  public abstract reactor.core.publisher.Mono<O> invoke(com.sstlfsj.fibra.Context, I);
+  public abstract void failCleanup(java.lang.String);
+  public abstract void close();
+}
 ## com.sstlfsj.fibra.bridge.ContributionCodec
 Compiled from "ContributionCodec.java"
 public interface com.sstlfsj.fibra.bridge.ContributionCodec<D, I, O> {
@@ -46,6 +53,11 @@ public final class com.sstlfsj.fibra.bridge.ContributionDirectoryView extends ja
   public final boolean equals(java.lang.Object);
   public com.sstlfsj.fibra.bridge.ContributionSnapshot snapshot();
   public com.sstlfsj.fibra.bridge.ContributionRoutes routes();
+}
+## com.sstlfsj.fibra.bridge.ContributionDrainException
+Compiled from "ContributionDrainException.java"
+public final class com.sstlfsj.fibra.bridge.ContributionDrainException extends java.lang.IllegalStateException {
+  public java.lang.String detail();
 }
 ## com.sstlfsj.fibra.bridge.ContributionHandler
 Compiled from "ContributionHandler.java"
@@ -87,6 +99,7 @@ public interface com.sstlfsj.fibra.bridge.ContributionRegistration extends com.s
 ## com.sstlfsj.fibra.bridge.ContributionRoutes
 Compiled from "ContributionRoutes.java"
 public final class com.sstlfsj.fibra.bridge.ContributionRoutes {
+  public <D, I, O> com.sstlfsj.fibra.bridge.ContributionCall<I, O> acquire(com.sstlfsj.fibra.bridge.ContributionKind<D, I, O>, com.sstlfsj.fibra.bridge.ContributionId);
   public <D, I, O> reactor.core.publisher.Mono<O> invoke(com.sstlfsj.fibra.Context, com.sstlfsj.fibra.bridge.ContributionKind<D, I, O>, com.sstlfsj.fibra.bridge.ContributionId, I);
 }
 ## com.sstlfsj.fibra.bridge.ContributionServices

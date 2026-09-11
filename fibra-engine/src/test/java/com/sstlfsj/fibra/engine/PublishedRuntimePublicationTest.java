@@ -13,12 +13,14 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PublishedRuntimePublicationTest {
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
@@ -28,41 +30,73 @@ class PublishedRuntimePublicationTest {
     private static final ContributionId ID = new ContributionId("command", "run");
 
     @Test
+    void removingTheLastDeclarationIsNotSatisfiedWhileItsOldScopeStillExists() throws Exception {
+        var cleanupStarted = new java.util.concurrent.CountDownLatch(1);
+        var releaseCleanup = reactor.core.publisher.Sinks.<Void>one();
+        var definition = PluginDefinition.builder("sample", Void.class, () -> (context, config) -> {
+            context.effects().add(() -> {
+                cleanupStarted.countDown();
+                return releaseCleanup.asMono();
+            });
+            return Mono.empty();
+        }).build();
+        var initial = new DesiredInputGraph(List.of(DesiredInputEntry.builder("sample", "sample").build()));
+        var empty = new DesiredInputGraph(List.of());
+        var engine = FibraEngine.builder(new InMemoryDesiredStateRepository(initial))
+            .catalog(PluginCatalog.of(new PluginCatalogEntry<>(definition, ignored -> null))).build();
+        try {
+            var started = engine.start().block(TIMEOUT);
+            var savedView = engine.published().views().filter(view ->
+                targetRevision(empty).equals(view.engineDiagnostics().targetRevision())
+                    && view.engineDiagnostics().phase() == ChangePhase.RECONCILING).next().toFuture();
+            var changing = engine.submit(new ReplaceDesiredGraph(null,
+                started.engine().desiredSource().revision(), empty)).toFuture();
+            assertTrue(cleanupStarted.await(5, TimeUnit.SECONDS));
+            var transitional = savedView.get(5, TimeUnit.SECONDS);
+            assertFalse(transitional.engineDiagnostics().targetSatisfied());
+            assertFalse(changing.isDone());
+            releaseCleanup.tryEmitEmpty();
+            assertTrue(changing.get(5, TimeUnit.SECONDS).view().engineDiagnostics().targetSatisfied());
+        } finally {
+            releaseCleanup.tryEmitEmpty();
+            engine.closeAsync().block(TIMEOUT);
+        }
+    }
+
+    @Test
     void publishesStateAndRoutesAsOneViewAndRejectsAStaleRevision() throws Exception {
         var repository = new InMemoryDesiredStateRepository(graph("old-"));
         try (var engine = FibraEngine.builder(repository)
             .catalog(PluginCatalog.of(new PluginCatalogEntry<>(definition(),
                 value -> (String) value))).build()) {
             var first = engine.start().block(TIMEOUT);
+            var firstTarget = targetRevision(graph("old-"));
+            var nextTarget = targetRevision(graph("new-"));
 
             assertEquals(EngineState.RUNNING, first.engine().state());
             assertEquals(1, first.contributions().entries().size());
-            assertEquals(first.generationRevision(),
-                first.diagnostics().generationRevision());
-            assertEquals(first.generationRevision(),
-                first.engineDiagnostics().currentGenerationRevision());
+            assertEquals(firstTarget, first.engineDiagnostics().targetRevision());
+            assertEquals(ChangePhase.IDLE, first.engineDiagnostics().phase());
             assertEquals("old-value", engine.published().invoke(
                 first.viewRevision(), COMMAND, ID, "value").block(TIMEOUT));
 
-            var candidateSignal = engine.published().views()
-                .filter(view -> view.engineDiagnostics().candidateGenerationRevision()
-                    != null)
+            var reconcilingSignal = engine.published().views()
+                .filter(view -> view.engineDiagnostics().phase() == ChangePhase.RECONCILING
+                    && nextTarget.equals(view.engineDiagnostics().targetRevision()))
                 .next().toFuture();
             var second = engine.submit(new ReplaceDesiredGraph(
                 first.viewRevision(), first.engine().desiredSource().revision(),
                 graph("new-"))).block(TIMEOUT).view();
-            var candidate = candidateSignal.get(5, TimeUnit.SECONDS);
+            var reconciling = reconcilingSignal.get(5, TimeUnit.SECONDS);
 
-            assertEquals(first.generationRevision(), candidate.generationRevision());
-            assertNotEquals(candidate.generationRevision(),
-                candidate.engineDiagnostics().candidateGenerationRevision());
+            assertEquals(nextTarget, reconciling.engineDiagnostics().targetRevision());
+            assertConsistentPluginFacts(reconciling);
             assertNotEquals(first.viewRevision(), second.viewRevision());
-            assertNotEquals(first.generationRevision(), second.generationRevision());
-            assertEquals(second.generationRevision(),
-                second.diagnostics().generationRevision());
-            assertEquals(second.generationRevision(),
-                second.engineDiagnostics().currentGenerationRevision());
-            assertNull(second.engineDiagnostics().candidateGenerationRevision());
+            assertEquals(nextTarget, second.engineDiagnostics().targetRevision());
+            assertEquals(ChangePhase.IDLE, second.engineDiagnostics().phase());
+            assertEquals(graph("new-"), second.engine().desiredGraph());
+            assertEquals(second.engine().instances().get("command").identity(),
+                second.diagnostics().plugins().getFirst().identity());
             assertThrows(PublishedRevisionConflictException.class, () ->
                 engine.published().invoke(first.viewRevision(), COMMAND, ID, "value")
                     .block(TIMEOUT));
@@ -87,6 +121,18 @@ class PublishedRuntimePublicationTest {
     private static DesiredInputGraph graph(String prefix) {
         return new DesiredInputGraph(List.of(DesiredInputEntry.builder("command", "command")
             .config(LiteralValue.of(prefix)).build()));
+    }
+
+    private static String targetRevision(DesiredInputGraph graph) {
+        return new DeploymentManifest(Map.of(), graph).revision();
+    }
+
+    private static void assertConsistentPluginFacts(PublishedView view) {
+        view.engine().instances().values().forEach(instance -> {
+            var fact = view.diagnostics().plugins().stream()
+                .filter(plugin -> plugin.identity() == instance.identity()).findFirst().orElseThrow();
+            assertEquals(instance.state(), fact.state());
+        });
     }
 
     private record CommandDescriptor(String title) {

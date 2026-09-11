@@ -29,29 +29,36 @@ import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
 
 public final class ArtifactStore implements AutoCloseable {
+    private static final StorageIo FILES = path -> {
+        try (var channel = FileChannel.open(path, StandardOpenOption.READ)) {
+            channel.force(true);
+        }
+    };
+
     private final Path root;
     private final Path objects;
     private final Path records;
     private final Path transactions;
-    private final Path quarantine;
+    private final StorageIo io;
     private final ReentrantLock operationLock = new ReentrantLock();
     private final FileChannel ownershipChannel;
-    private final FileLock ownershipLock;
     private volatile boolean closed;
+    private ArtifactException closeFailure;
 
     public ArtifactStore(Path root) {
+        this(root, FILES);
+    }
+
+    ArtifactStore(Path root, StorageIo io) {
         this.root = Objects.requireNonNull(root, "root").toAbsolutePath().normalize();
         objects = this.root.resolve("objects");
         records = this.root.resolve("records");
         transactions = this.root.resolve("transactions");
-        quarantine = this.root.resolve("quarantine");
+        this.io = Objects.requireNonNull(io, "io");
         FileChannel openedChannel = null;
         FileLock acquiredLock = null;
         try {
-            Files.createDirectories(objects);
-            Files.createDirectories(records);
-            Files.createDirectories(transactions);
-            Files.createDirectories(quarantine);
+            createDirectoryChain(this.root);
             openedChannel = FileChannel.open(this.root.resolve("store.lock"),
                 StandardOpenOption.CREATE, StandardOpenOption.WRITE);
             acquiredLock = openedChannel.tryLock();
@@ -59,91 +66,101 @@ public final class ArtifactStore implements AutoCloseable {
                 throw error(ArtifactPhase.RECOVER,
                     "artifact store is already owned by another process", this.root, null);
             }
+            createDirectoryChain(objects);
+            createDirectoryChain(records);
+            createDirectoryChain(transactions);
+            forceDirectories(this.root, this.root.getRoot());
             ownershipChannel = openedChannel;
-            ownershipLock = acquiredLock;
             recoverAbandonedTransactions();
         } catch (IOException | OverlappingFileLockException exception) {
             closeQuietly(acquiredLock);
             closeQuietly(openedChannel);
             throw error(ArtifactPhase.RECOVER, "cannot initialize artifact store",
                 this.root, exception);
+        } catch (RuntimeException exception) {
+            closeQuietly(acquiredLock);
+            closeQuietly(openedChannel);
+            throw exception;
         }
     }
 
     public ArtifactInstallTransaction prepareInstall(ArtifactId id, RuntimeId runtimeId,
                                                      String version, Path source) {
-        ensureOpen();
-        Objects.requireNonNull(id, "id");
-        Objects.requireNonNull(runtimeId, "runtimeId");
-        if (version == null || version.isBlank()) {
-            throw new IllegalArgumentException("version must not be blank");
-        }
-        var candidate = validateSource(source);
-        var checksum = digest(candidate);
-        var revision = digest((id.value() + "\0" + runtimeId.value() + "\0"
-            + version + "\0" + checksum).getBytes(StandardCharsets.UTF_8));
-        var transactionPath = transactions.resolve(UUID.randomUUID().toString());
-        var staged = transactionPath.resolve("content");
-        var object = objects.resolve(checksum).resolve("content");
-        var objectCreated = false;
-        try {
-            Files.createDirectory(transactionPath);
-            copy(candidate, staged);
-            writeJournal(transactionPath, id, runtimeId, version, checksum, revision);
-            Files.createDirectories(object.getParent());
-            if (Files.exists(object)) {
-                deleteTree(staged);
-            } else {
-                atomicMove(staged, object);
-                objectCreated = true;
-            }
-        } catch (IOException exception) {
-            deleteTreeQuietly(transactionPath);
-            if (objectCreated) {
-                deleteTreeQuietly(object.getParent());
-            }
-            throw error(ArtifactPhase.STAGE, "cannot stage artifact", candidate, exception);
-        }
-        var currentRevision = find(id).map(ArtifactRecord::revision).orElse(null);
-        var record = record(id, runtimeId, version, checksum, revision, object,
-            ArtifactState.STAGED, Instant.now());
-        return new Transaction(record, transactionPath, currentRevision, objectCreated);
-    }
-
-    public Optional<ArtifactRecord> find(ArtifactId id) {
-        ensureOpen();
-        Objects.requireNonNull(id, "id");
         operationLock.lock();
         try {
-            var directory = records.resolve(encoded(id.value()));
-            var current = directory.resolve("current");
-            if (!Files.isRegularFile(current)) {
+            ensureOpen();
+            Objects.requireNonNull(id, "id");
+            Objects.requireNonNull(runtimeId, "runtimeId");
+            if (version == null || version.isBlank()) {
+                throw new IllegalArgumentException("version must not be blank");
+            }
+            var candidate = validateSource(source);
+            var transactionPath = transactions.resolve(UUID.randomUUID().toString());
+            var privateObject = transactionPath.resolve("object");
+            var staged = privateObject.resolve("content");
+            var transactionCreated = false;
+            try {
+                Files.createDirectory(transactionPath);
+                transactionCreated = true;
+                Files.createDirectory(privateObject);
+                io.copy(candidate, staged);
+                var checksum = digest(staged);
+                var revision = revision(id, runtimeId, version, checksum);
+                var object = objects.resolve(checksum).resolve("content");
+                var record = record(id, runtimeId, version, checksum, revision, object,
+                    ArtifactState.STAGED, Instant.now());
+                writeJournal(transactionPath, id, runtimeId, version, checksum, revision);
+                if (Files.exists(object.getParent())) {
+                    verifyContent(record);
+                    deleteTree(privateObject);
+                } else {
+                    Files.move(privateObject, object.getParent(), StandardCopyOption.ATOMIC_MOVE);
+                }
+                return new Transaction(record, transactionPath);
+            } catch (IOException exception) {
+                if (transactionCreated) {
+                    deleteTreeQuietly(transactionPath);
+                }
+                throw error(ArtifactPhase.STAGE, "cannot stage artifact", candidate, exception);
+            } catch (RuntimeException exception) {
+                if (transactionCreated) {
+                    deleteTreeQuietly(transactionPath);
+                }
+                throw exception;
+            }
+        } finally {
+            operationLock.unlock();
+        }
+    }
+
+    public Optional<ArtifactRecord> find(ArtifactId id, String revision) {
+        Objects.requireNonNull(id, "id");
+        requireDigest(revision, "revision");
+        operationLock.lock();
+        try {
+            ensureOpen();
+            var path = records.resolve(encoded(id.value())).resolve(revision + ".properties");
+            if (!Files.isRegularFile(path)) {
                 return Optional.empty();
             }
-            var revision = Files.readString(current, StandardCharsets.UTF_8).trim();
-            var record = readRecord(directory.resolve(revision + ".properties"));
-            return record.state() == ArtifactState.INSTALLED
-                ? Optional.of(record) : Optional.empty();
-        } catch (IOException exception) {
-            throw error(ArtifactPhase.RECOVER, "cannot read artifact record",
-                records, exception);
+            return Optional.of(readStoredRecord(id, revision, path));
         } finally {
             operationLock.unlock();
         }
     }
 
     public List<ArtifactRecord> history(ArtifactId id) {
-        ensureOpen();
         Objects.requireNonNull(id, "id");
         operationLock.lock();
         try {
+            ensureOpen();
             var directory = records.resolve(encoded(id.value()));
             if (!Files.isDirectory(directory)) {
                 return List.of();
             }
             try (var paths = Files.list(directory)) {
                 return paths.filter(path -> path.getFileName().toString().endsWith(".properties"))
-                    .map(this::readRecord)
+                    .map(path -> readStoredRecord(id, revisionFromRecordPath(path), path))
                     .sorted(Comparator.comparing(ArtifactRecord::updatedAt))
                     .toList();
             }
@@ -155,75 +172,22 @@ public final class ArtifactStore implements AutoCloseable {
         }
     }
 
-    public List<ArtifactRecord> installed() {
-        ensureOpen();
-        operationLock.lock();
-        try {
-            if (!Files.isDirectory(records)) {
-                return List.of();
-            }
-            var result = new ArrayList<ArtifactRecord>();
-            try (var directories = Files.list(records)) {
-                for (var directory : directories.filter(Files::isDirectory).toList()) {
-                    var current = directory.resolve("current");
-                    if (!Files.isRegularFile(current)) {
-                        continue;
-                    }
-                    var revision = Files.readString(current, StandardCharsets.UTF_8).trim();
-                    var record = readRecord(directory.resolve(revision + ".properties"));
-                    if (record.state() == ArtifactState.INSTALLED) {
-                        result.add(record);
-                    }
-                }
-            }
-            return result.stream().sorted(Comparator.comparing(
-                value -> value.id().value())).toList();
-        } catch (IOException exception) {
-            throw error(ArtifactPhase.RECOVER, "cannot list installed artifacts",
-                records, exception);
-        } finally {
-            operationLock.unlock();
-        }
-    }
-
-    public ArtifactRecord retire(ArtifactRecord artifact) {
-        ensureOpen();
-        Objects.requireNonNull(artifact, "artifact");
-        operationLock.lock();
-        try {
-            var directory = records.resolve(encoded(artifact.id().value()));
-            var stored = readRecord(directory.resolve(artifact.revision() + ".properties"));
-            var retired = stored.toBuilder().state(ArtifactState.RETIRED)
-                .updatedAt(Instant.now()).build();
-            writeRecord(directory, retired);
-            var current = directory.resolve("current");
-            if (Files.isRegularFile(current)
-                && Files.readString(current, StandardCharsets.UTF_8).trim()
-                .equals(retired.revision())) {
-                Files.delete(current);
-            }
-            return retired;
-        } catch (IOException exception) {
-            throw error(ArtifactPhase.RETIRE, "cannot retire artifact",
-                artifact.location(), exception);
-        } finally {
-            operationLock.unlock();
-        }
-    }
-
     @Override
     public void close() {
         operationLock.lock();
         try {
+            if (closeFailure != null) {
+                throw closeFailure;
+            }
             if (closed) {
                 return;
             }
             closed = true;
-            ownershipLock.release();
-            ownershipChannel.close();
+            io.close(ownershipChannel);
         } catch (IOException exception) {
-            throw error(ArtifactPhase.RECOVER, "cannot close artifact store",
+            closeFailure = error(ArtifactPhase.RECOVER, "cannot close artifact store",
                 root, exception);
+            throw closeFailure;
         } finally {
             operationLock.unlock();
         }
@@ -326,25 +290,14 @@ public final class ArtifactStore implements AutoCloseable {
             for (var path : paths.toList()) {
                 var journal = path.resolve("transaction.properties");
                 if (Files.isRegularFile(journal)) {
-                    var values = new Properties();
-                    try (var input = Files.newInputStream(journal)) {
-                        values.load(input);
-                    }
-                    var id = new ArtifactId(values.getProperty("id"));
-                    var revision = values.getProperty("revision");
-                    var checksum = values.getProperty("checksum");
+                    var values = readJournal(journal);
+                    var id = journalArtifactId(values, journal);
+                    var revision = journalDigest(values, "revision", journal);
+                    journalDigest(values, "checksum", journal);
                     var directory = records.resolve(encoded(id.value()));
                     var record = directory.resolve(revision + ".properties");
                     if (Files.isRegularFile(record)) {
-                        var stored = readRecord(record);
-                        if (stored.state() == ArtifactState.INSTALLED) {
-                            writeCurrent(directory, revision);
-                        }
-                    } else {
-                        var object = objects.resolve(checksum);
-                        if (!objectReferenced(object.resolve("content"))) {
-                            deleteTree(object);
-                        }
+                        readStoredRecord(id, revision, record);
                     }
                 }
                 deleteTree(path);
@@ -352,19 +305,15 @@ public final class ArtifactStore implements AutoCloseable {
         }
     }
 
-    private boolean objectReferenced(Path object) throws IOException {
-        if (!Files.isDirectory(records)) {
-            return false;
+    private void verifyContent(ArtifactRecord record) {
+        if (!Files.exists(record.location())) {
+            throw error(ArtifactPhase.COMMIT, "artifact content is missing", record.location(), null);
         }
-        try (var paths = Files.walk(records)) {
-            for (var record : paths.filter(path ->
-                path.getFileName().toString().endsWith(".properties")).toList()) {
-                if (readRecord(record).location().equals(object)) {
-                    return true;
-                }
-            }
+        var actual = digest(record.location());
+        if (!record.checksum().equals(actual)) {
+            throw error(ArtifactPhase.COMMIT,
+                "artifact content checksum does not match metadata", record.location(), null);
         }
-        return false;
     }
 
     private void writeJournal(Path directory, ArtifactId id, RuntimeId runtimeId,
@@ -383,7 +332,7 @@ public final class ArtifactStore implements AutoCloseable {
     }
 
     private void writeRecord(Path directory, ArtifactRecord record) throws IOException {
-        Files.createDirectories(directory);
+        createDirectoryChain(directory);
         var values = new Properties();
         values.setProperty("id", record.id().value());
         values.setProperty("runtime", record.runtimeId().value());
@@ -399,10 +348,56 @@ public final class ArtifactStore implements AutoCloseable {
             try (OutputStream output = Files.newOutputStream(staged)) {
                 values.store(output, null);
             }
+            io.force(staged);
             atomicMove(staged, target);
+            io.force(target);
+            forceDirectories(directory, records);
         } finally {
             Files.deleteIfExists(staged);
         }
+    }
+
+    private void createDirectoryChain(Path target) throws IOException {
+        var missing = new ArrayList<Path>();
+        for (var directory = target; !Files.exists(directory); directory = directory.getParent()) {
+            if (directory == null) {
+                throw new IOException("cannot locate existing parent for " + target);
+            }
+            missing.add(directory);
+        }
+        for (var directory : missing.reversed()) {
+            Files.createDirectory(directory);
+            io.force(directory);
+            var parent = directory.getParent();
+            if (parent != null) {
+                io.force(parent);
+            }
+        }
+        if (!Files.isDirectory(target)) {
+            throw new IOException("artifact store path is not a directory: " + target);
+        }
+    }
+
+    private void forceArtifactContent(Path content) throws IOException {
+        if (!Files.exists(content)) {
+            throw new IOException("artifact content is missing: " + content);
+        }
+        try (var paths = Files.walk(content)) {
+            for (var path : paths.sorted(Comparator.reverseOrder()).toList()) {
+                io.force(path);
+            }
+        }
+        forceDirectories(content.getParent(), objects);
+    }
+
+    private void forceDirectories(Path directory, Path boundary) throws IOException {
+        for (var current = directory; current != null; current = current.getParent()) {
+            io.force(current);
+            if (current.equals(boundary)) {
+                return;
+            }
+        }
+        throw new IOException("directory is outside store boundary: " + directory);
     }
 
     private ArtifactRecord readRecord(Path path) {
@@ -412,12 +407,102 @@ public final class ArtifactStore implements AutoCloseable {
         } catch (IOException exception) {
             throw error(ArtifactPhase.RECOVER, "cannot read artifact record", path, exception);
         }
-        return record(new ArtifactId(values.getProperty("id")),
-            new RuntimeId(values.getProperty("runtime")), values.getProperty("version"),
-            values.getProperty("checksum"), values.getProperty("revision"),
-            Path.of(values.getProperty("location")),
-            ArtifactState.valueOf(values.getProperty("state")),
-            Instant.parse(values.getProperty("updatedAt")));
+        try {
+            return record(new ArtifactId(values.getProperty("id")),
+                new RuntimeId(values.getProperty("runtime")), values.getProperty("version"),
+                values.getProperty("checksum"), values.getProperty("revision"),
+                Path.of(values.getProperty("location")),
+                ArtifactState.valueOf(values.getProperty("state")),
+                Instant.parse(values.getProperty("updatedAt")));
+        } catch (RuntimeException exception) {
+            throw error(ArtifactPhase.RECOVER, "invalid artifact record", path, exception);
+        }
+    }
+
+    private ArtifactRecord readStoredRecord(ArtifactId expectedId, String expectedRevision,
+                                            Path path) {
+        var stored = readRecord(path);
+        if (!stored.id().equals(expectedId) || !stored.revision().equals(expectedRevision)) {
+            throw error(ArtifactPhase.RECOVER, "artifact record identity does not match path",
+                path, null);
+        }
+        return verifyStoredRecord(stored, path);
+    }
+
+    private ArtifactRecord verifyStoredRecord(ArtifactRecord stored, Path path) {
+        if (stored.state() != ArtifactState.INSTALLED) {
+            throw error(ArtifactPhase.RECOVER, "artifact record is not installed", path, null);
+        }
+        if (!isDigest(stored.revision()) || !isDigest(stored.checksum())) {
+            throw error(ArtifactPhase.RECOVER, "artifact record has invalid digest", path, null);
+        }
+        if (!stored.revision().equals(revision(stored.id(), stored.runtimeId(),
+            stored.version(), stored.checksum()))) {
+            throw error(ArtifactPhase.RECOVER, "artifact metadata does not match revision", path, null);
+        }
+        var expectedLocation = objects.resolve(stored.checksum()).resolve("content")
+            .toAbsolutePath().normalize();
+        if (!stored.location().equals(expectedLocation)) {
+            throw error(ArtifactPhase.RECOVER, "artifact record location is outside object store",
+                path, null);
+        }
+        try {
+            verifyContent(stored);
+        } catch (ArtifactException exception) {
+            throw error(ArtifactPhase.RECOVER, "artifact content does not match record", path,
+                exception);
+        }
+        return stored;
+    }
+
+    private static String revisionFromRecordPath(Path path) {
+        var fileName = path.getFileName().toString();
+        if (!fileName.endsWith(".properties")) {
+            throw new IllegalArgumentException("artifact record must end in .properties");
+        }
+        var revision = fileName.substring(0, fileName.length() - ".properties".length());
+        if (!isDigest(revision)) {
+            throw error(ArtifactPhase.RECOVER, "artifact record has invalid revision path", path, null);
+        }
+        return revision;
+    }
+
+    private static boolean isDigest(String value) {
+        return value != null && value.matches("[0-9a-f]{64}");
+    }
+
+    private static void requireDigest(String value, String name) {
+        if (!isDigest(value)) {
+            throw new IllegalArgumentException(name + " must be a lowercase SHA-256 digest");
+        }
+    }
+
+    private Properties readJournal(Path path) {
+        var values = new Properties();
+        try (var input = Files.newInputStream(path)) {
+            values.load(input);
+            return values;
+        } catch (IOException | RuntimeException exception) {
+            throw error(ArtifactPhase.RECOVER, "cannot read artifact transaction journal",
+                path, exception);
+        }
+    }
+
+    private ArtifactId journalArtifactId(Properties values, Path path) {
+        try {
+            return new ArtifactId(values.getProperty("id"));
+        } catch (RuntimeException exception) {
+            throw error(ArtifactPhase.RECOVER, "invalid artifact transaction journal", path,
+                exception);
+        }
+    }
+
+    private String journalDigest(Properties values, String name, Path path) {
+        var value = values.getProperty(name);
+        if (!isDigest(value)) {
+            throw error(ArtifactPhase.RECOVER, "invalid artifact transaction journal", path, null);
+        }
+        return value;
     }
 
     private static ArtifactRecord record(ArtifactId id, RuntimeId runtimeId,
@@ -440,6 +525,12 @@ public final class ArtifactStore implements AutoCloseable {
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is unavailable", exception);
         }
+    }
+
+    private static String revision(ArtifactId id, RuntimeId runtimeId, String version,
+                                   String checksum) {
+        return digest((id.value() + "\0" + runtimeId.value() + "\0" + version + "\0"
+            + checksum).getBytes(StandardCharsets.UTF_8));
     }
 
     private static void atomicMove(Path source, Path target) throws IOException {
@@ -495,17 +586,12 @@ public final class ArtifactStore implements AutoCloseable {
     private final class Transaction implements ArtifactInstallTransaction {
         private final ArtifactRecord stagedRecord;
         private final Path transactionPath;
-        private final String expectedCurrentRevision;
-        private final boolean objectCreated;
         private ArtifactRecord result;
         private State state = State.PREPARED;
 
-        private Transaction(ArtifactRecord stagedRecord, Path transactionPath,
-                            String expectedCurrentRevision, boolean objectCreated) {
+        private Transaction(ArtifactRecord stagedRecord, Path transactionPath) {
             this.stagedRecord = stagedRecord;
             this.transactionPath = transactionPath;
-            this.expectedCurrentRevision = expectedCurrentRevision;
-            this.objectCreated = objectCreated;
         }
 
         @Override
@@ -514,94 +600,66 @@ public final class ArtifactStore implements AutoCloseable {
         }
 
         @Override
-        public ArtifactRecord commit() {
-            if (state == State.COMMITTED) {
-                return result;
-            }
-            ensurePrepared();
+        public ArtifactRecord save() {
             operationLock.lock();
             try {
-                var current = find(stagedRecord.id()).map(ArtifactRecord::revision).orElse(null);
-                if (!Objects.equals(current, expectedCurrentRevision)) {
-                    throw error(ArtifactPhase.COMMIT,
-                        "artifact changed after prepare", transactionPath, null);
+                ensureOpen();
+                if (state == State.SAVED) {
+                    return result;
                 }
-                result = stagedRecord.toBuilder()
-                    .state(ArtifactState.INSTALLED).updatedAt(Instant.now()).build();
-                var directory = records.resolve(encoded(result.id().value()));
-                writeRecord(directory, result);
-                writeCurrent(directory, result.revision());
+                ensurePrepared();
+                verifyContent(stagedRecord);
+                forceArtifactContent(stagedRecord.location());
+                var directory = records.resolve(encoded(stagedRecord.id().value()));
+                var recordPath = directory.resolve(stagedRecord.revision() + ".properties");
+                if (Files.isRegularFile(recordPath)) {
+                    var existing = readRecord(recordPath);
+                    verifyExisting(existing);
+                    result = existing;
+                    io.force(recordPath);
+                    forceDirectories(directory, records);
+                } else {
+                    result = stagedRecord.toBuilder().state(ArtifactState.INSTALLED)
+                        .updatedAt(Instant.now()).build();
+                    writeRecord(directory, result);
+                }
                 deleteTree(transactionPath);
-                state = State.COMMITTED;
+                state = State.SAVED;
                 return result;
             } catch (IOException exception) {
-                throw error(ArtifactPhase.COMMIT, "cannot commit artifact",
+                throw error(ArtifactPhase.COMMIT, "cannot save artifact",
                     transactionPath, exception);
             } finally {
                 operationLock.unlock();
             }
         }
 
-        @Override
-        public ArtifactRecord quarantine(String reason) {
-            if (reason == null || reason.isBlank()) {
-                throw new IllegalArgumentException("reason must not be blank");
+        private void verifyExisting(ArtifactRecord existing) {
+            if (!existing.id().equals(stagedRecord.id())
+                || !existing.revision().equals(stagedRecord.revision())
+                || !existing.runtimeId().equals(stagedRecord.runtimeId())
+                || !existing.version().equals(stagedRecord.version())
+                || !existing.checksum().equals(stagedRecord.checksum())
+                || !existing.location().equals(stagedRecord.location())) {
+                throw error(ArtifactPhase.COMMIT,
+                    "existing revision metadata does not match artifact", existing.location(), null);
             }
-            ensurePrepared();
-            operationLock.lock();
-            try {
-                var target = quarantine.resolve(transactionPath.getFileName());
-                atomicMove(transactionPath, target);
-                var quarantinedContent = target.resolve("content");
-                copy(stagedRecord.location(), quarantinedContent);
-                if (objectCreated) {
-                    deleteTree(stagedRecord.location().getParent());
-                }
-                result = stagedRecord.toBuilder().location(quarantinedContent)
-                    .state(ArtifactState.QUARANTINED).updatedAt(Instant.now()).build();
-                writeRecord(records.resolve(encoded(result.id().value())), result);
-                Files.writeString(target.resolve("reason.txt"), reason,
-                    StandardCharsets.UTF_8);
-                state = State.QUARANTINED;
-                return result;
-            } catch (IOException exception) {
-                throw error(ArtifactPhase.COMMIT, "cannot quarantine artifact",
-                    transactionPath, exception);
-            } finally {
-                operationLock.unlock();
+            if (existing.state() != ArtifactState.INSTALLED) {
+                throw error(ArtifactPhase.COMMIT,
+                    "existing revision is not installed", existing.location(), null);
             }
+            verifyContent(existing);
         }
 
         @Override
         public void rollback() {
-            if (state == State.ROLLED_BACK || state == State.QUARANTINED) {
-                return;
-            }
             operationLock.lock();
             try {
-                if (state == State.COMMITTED) {
-                    var directory = records.resolve(encoded(stagedRecord.id().value()));
-                    var current = directory.resolve("current");
-                    var actual = Files.isRegularFile(current)
-                        ? Files.readString(current, StandardCharsets.UTF_8).trim() : null;
-                    if (!Objects.equals(actual, stagedRecord.revision())) {
-                        throw error(ArtifactPhase.RECOVER,
-                            "cannot compensate artifact after current revision changed",
-                            current, null);
-                    }
-                    Files.deleteIfExists(directory.resolve(
-                        stagedRecord.revision() + ".properties"));
-                    if (expectedCurrentRevision == null) {
-                        Files.deleteIfExists(current);
-                    } else {
-                        writeCurrent(directory, expectedCurrentRevision);
-                    }
-                } else {
-                    deleteTree(transactionPath);
+                ensureOpen();
+                if (state == State.ROLLED_BACK || state == State.SAVED) {
+                    return;
                 }
-                if (objectCreated && !objectReferenced(stagedRecord.location())) {
-                    deleteTree(stagedRecord.location().getParent());
-                }
+                deleteTree(transactionPath);
                 state = State.ROLLED_BACK;
             } catch (IOException exception) {
                 throw error(ArtifactPhase.RECOVER,
@@ -613,9 +671,7 @@ public final class ArtifactStore implements AutoCloseable {
 
         @Override
         public void close() {
-            if (state == State.PREPARED) {
-                rollback();
-            }
+            rollback();
         }
 
         private void ensurePrepared() {
@@ -625,20 +681,21 @@ public final class ArtifactStore implements AutoCloseable {
         }
     }
 
-    private void writeCurrent(Path directory, String revision) throws IOException {
-        var staged = Files.createTempFile(directory, ".current-", ".tmp");
-        try {
-            Files.writeString(staged, revision, StandardCharsets.UTF_8);
-            atomicMove(staged, directory.resolve("current"));
-        } finally {
-            Files.deleteIfExists(staged);
+    interface StorageIo {
+        void force(Path path) throws IOException;
+
+        default void copy(Path source, Path target) throws IOException {
+            ArtifactStore.copy(source, target);
+        }
+
+        default void close(FileChannel channel) throws IOException {
+            channel.close();
         }
     }
 
     private enum State {
         PREPARED,
-        COMMITTED,
-        QUARANTINED,
+        SAVED,
         ROLLED_BACK
     }
 }

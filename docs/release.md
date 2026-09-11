@@ -21,9 +21,13 @@ scripts/verify-reproducible-release.sh
 scripts/verify-distribution.sh
 ```
 
-全量 `verify` 覆盖 Scope/插件/资源所有权、配置与制品磁盘事务、ChangeSet 部分提交和崩溃恢复、真实 Java JAR/ClassSpace、真实 Node sidecar、代内 ContributionDirectory 与 PublishedRuntime、PluginRegistry、Spring Boot、archetype、公共 API 和 JMH 编译。
+全量 `verify` 覆盖 Scope/插件/资源所有权、配置与不可变制品保存、完整部署目标与崩溃恢复、ChangeSet
+变更编排、真实 Java JAR/ClassSpace、真实 Node sidecar、运行域内 ContributionDirectory 与
+PublishedRuntime、PluginRegistry、Spring Boot、archetype、公共 API 和 JMH 编译。
 
 可复现脚本对十二个发布模块的主 JAR、sources、Javadoc 与展开 POM逐字节比较。分发脚本把这些制品部署到临时文件仓库，再从空 Maven 本地仓库构建仓库外的 core、Engine、Spring Boot 和 archetype 消费场景。
+
+日常逻辑修改使用已有依赖缓存执行 `mvn -o verify`。archetype 集成测试同样复用当前本地仓库，先暂存本次构建的 Fibra API，再生成并验证真实插件；不为每轮验证另建空依赖仓库。空仓外部消费只在最终分发门禁统一执行。
 
 ## 插件制品
 

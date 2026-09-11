@@ -7,10 +7,11 @@ import com.sstlfsj.fibra.artifact.ArtifactStore;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
-import com.sstlfsj.fibra.engine.FileTransactionJournal;
+import com.sstlfsj.fibra.engine.FileEngineStateStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.PluginCatalog;
 import com.sstlfsj.fibra.engine.PluginCatalogEntry;
+import com.sstlfsj.fibra.engine.PublishedView;
 import com.sstlfsj.fibra.registry.InMemoryPluginAuditRepository;
 import com.sstlfsj.fibra.registry.PluginDeploymentRequest;
 import com.sstlfsj.fibra.registry.PluginEnableRequest;
@@ -35,7 +36,7 @@ public final class PluginDependencyScenario implements AutoCloseable {
     private static final String PROVIDER_DEFINITION = "shipping-rate-provider";
     private static final String CONSUMER_DEFINITION = "checkout-quote-consumer";
     private static final String PROJECTION_DEFINITION = "checkout-quote-projection";
-    private static final String PROJECTION_INSTANCE = "application-checkout-quote";
+    static final String PROJECTION_INSTANCE = "application-checkout-quote";
     private static final Duration OPERATION_TIMEOUT = Duration.ofSeconds(10);
 
     private final FibraEngine engine;
@@ -60,7 +61,7 @@ public final class PluginDependencyScenario implements AutoCloseable {
             .catalog(PluginCatalog.of(new PluginCatalogEntry<>(projection,
                 value -> value == null ? null : ((java.math.BigDecimal) value).intValueExact())))
             .artifactStore(new ArtifactStore(storageRoot.resolve("artifacts")))
-            .journal(new FileTransactionJournal(storageRoot.resolve("transactions")))
+            .stateStore(new FileEngineStateStore(storageRoot.resolve("engine")))
             .runtimeAdapter(new JavaPluginRuntimeAdapter())
             .build();
         var registry = new PluginRegistry(engine,
@@ -97,6 +98,10 @@ public final class PluginDependencyScenario implements AutoCloseable {
         registry.disable(PROVIDER_INSTANCE).block(OPERATION_TIMEOUT);
     }
 
+    public void enableProvider() {
+        registry.enable(PROVIDER_INSTANCE).block(OPERATION_TIMEOUT);
+    }
+
     public void upgradeProvider(Path artifact, String version) {
         registry.upgrade(install(PROVIDER_ARTIFACT, version, artifact))
             .block(OPERATION_TIMEOUT);
@@ -129,8 +134,8 @@ public final class PluginDependencyScenario implements AutoCloseable {
             .orElse(PluginInstanceState.DISPOSED);
     }
 
-    public String generationRevision() {
-        return engine.published().current().generationRevision();
+    public PublishedView view() {
+        return engine.published().current();
     }
 
     public PluginRegistry registry() {
@@ -165,8 +170,11 @@ public final class PluginDependencyScenario implements AutoCloseable {
                 () -> (context, subtotalCents) -> {
                     var quotes = context.services().reference(
                         CheckoutQuoteServices.CHECKOUT_QUOTE);
-                    projectedQuote.set(quotes.invoke((invocation, service) ->
-                        service.quote(subtotalCents)));
+                    var quote = quotes.invoke((invocation, service) ->
+                        service.quote(subtotalCents));
+                    projectedQuote.set(quote);
+                    context.effects().add(() -> reactor.core.publisher.Mono.fromRunnable(
+                        () -> projectedQuote.compareAndSet(quote, null)));
                     return reactor.core.publisher.Mono.empty();
                 })
             .require(CheckoutQuoteServices.CHECKOUT_QUOTE)

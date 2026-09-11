@@ -18,8 +18,7 @@ public final class com.sstlfsj.fibra.artifact.ArtifactId extends java.lang.Recor
 Compiled from "ArtifactInstallTransaction.java"
 public interface com.sstlfsj.fibra.artifact.ArtifactInstallTransaction extends java.lang.AutoCloseable {
   public abstract com.sstlfsj.fibra.artifact.ArtifactRecord candidate();
-  public abstract com.sstlfsj.fibra.artifact.ArtifactRecord commit();
-  public abstract com.sstlfsj.fibra.artifact.ArtifactRecord quarantine(java.lang.String);
+  public abstract com.sstlfsj.fibra.artifact.ArtifactRecord save();
   public abstract void rollback();
   public default void close();
 }
@@ -31,7 +30,6 @@ public final class com.sstlfsj.fibra.artifact.ArtifactPhase extends java.lang.En
   public static final com.sstlfsj.fibra.artifact.ArtifactPhase STAGE;
   public static final com.sstlfsj.fibra.artifact.ArtifactPhase COMMIT;
   public static final com.sstlfsj.fibra.artifact.ArtifactPhase RECOVER;
-  public static final com.sstlfsj.fibra.artifact.ArtifactPhase RETIRE;
   public static com.sstlfsj.fibra.artifact.ArtifactPhase[] values();
   public static com.sstlfsj.fibra.artifact.ArtifactPhase valueOf(java.lang.String);
 }
@@ -70,8 +68,6 @@ Compiled from "ArtifactState.java"
 public final class com.sstlfsj.fibra.artifact.ArtifactState extends java.lang.Enum<com.sstlfsj.fibra.artifact.ArtifactState> {
   public static final com.sstlfsj.fibra.artifact.ArtifactState STAGED;
   public static final com.sstlfsj.fibra.artifact.ArtifactState INSTALLED;
-  public static final com.sstlfsj.fibra.artifact.ArtifactState QUARANTINED;
-  public static final com.sstlfsj.fibra.artifact.ArtifactState RETIRED;
   public static com.sstlfsj.fibra.artifact.ArtifactState[] values();
   public static com.sstlfsj.fibra.artifact.ArtifactState valueOf(java.lang.String);
 }
@@ -80,10 +76,8 @@ Compiled from "ArtifactStore.java"
 public final class com.sstlfsj.fibra.artifact.ArtifactStore implements java.lang.AutoCloseable {
   public com.sstlfsj.fibra.artifact.ArtifactStore(java.nio.file.Path);
   public com.sstlfsj.fibra.artifact.ArtifactInstallTransaction prepareInstall(com.sstlfsj.fibra.artifact.ArtifactId, com.sstlfsj.fibra.artifact.RuntimeId, java.lang.String, java.nio.file.Path);
-  public java.util.Optional<com.sstlfsj.fibra.artifact.ArtifactRecord> find(com.sstlfsj.fibra.artifact.ArtifactId);
+  public java.util.Optional<com.sstlfsj.fibra.artifact.ArtifactRecord> find(com.sstlfsj.fibra.artifact.ArtifactId, java.lang.String);
   public java.util.List<com.sstlfsj.fibra.artifact.ArtifactRecord> history(com.sstlfsj.fibra.artifact.ArtifactId);
-  public java.util.List<com.sstlfsj.fibra.artifact.ArtifactRecord> installed();
-  public com.sstlfsj.fibra.artifact.ArtifactRecord retire(com.sstlfsj.fibra.artifact.ArtifactRecord);
   public void close();
 }
 ## com.sstlfsj.fibra.artifact.RuntimeId

@@ -13,7 +13,7 @@ public record EngineSnapshot(EngineState state, DesiredSourceSnapshot desiredSou
                              DesiredInputGraph desiredGraph,
                              Map<String, PluginInstanceSnapshot> instances,
                              Map<ArtifactId, ArtifactRecord> artifacts,
-                             Map<RuntimeId, RuntimeGenerationSnapshot> runtimes,
+                             Map<RuntimeId, RuntimeResourceSnapshot> runtimes,
                              String failure) {
     public EngineSnapshot {
         Objects.requireNonNull(state, "state");

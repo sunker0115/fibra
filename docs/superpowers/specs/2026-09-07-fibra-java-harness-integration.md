@@ -7,7 +7,7 @@
 包名视为既有实现。
 
 上游唯一权威设计：[`2026-09-07-fibra-vnext-architecture.md`](./2026-09-07-fibra-vnext-architecture.md)；
-运行代、已发布视图和外层宿主边界以该文第 4 节为准。
+长期运行域、已发布视图和外层宿主边界以该文第 4 节为准。
 
 ## 1. 结论
 
@@ -23,7 +23,7 @@
 3. Fibra `PluginRegistry` 提供安装、版本、期望状态、制品记录、审计和实际状态投影的通用控制面；
    Harness 只在其上增加权限、租户、运营策略和对外接口，不能再维护第二套 ACTIVE 真源。
 4. 工具、模型、skill 和 hook 是 Harness 业务能力，不进入 `fibra-api`。运行域内的内建 Harness 插件
-   继续以 Service/Event/Effect 协作；代内 `ContributionDirectory` 只负责通用 contribution 的注册、撤销
+   继续以 Service/Event/Effect 协作；运行域内 `ContributionDirectory` 只负责通用 contribution 的注册、撤销
    与路由快照，Engine 将不可变路由纳入唯一 `PublishedView`，宿主只经 `PublishedRuntime` 调用。Harness
    定义具体 kind、命名渲染和能力目录。
 5. Spring 只负责启动与基础设施装配。任何长期运行资源只能由 Spring 或 Fibra 一方拥有，禁止两个
@@ -41,16 +41,15 @@ HTTP / CLI / SDK / preset                         外层宿主壳
         v                            v
 PluginRegistry                  PublishedRuntime
         |                            ^
-        +----------> Fibra Engine ---+                唯一事务与发布所有者
+        +----------> Fibra Engine ---+                唯一命令、目标与发布所有者
                          |
                          v
-                 PublishedGeneration
-                   ├─ RuntimeDomain
-                   │    ├─ built-in Agent / Session / ToolCatalog
-                   │    ├─ Java plugin instances
-                   │    ├─ Node proxy plugin instances -> sidecar / JSON-RPC
-                   │    └─ Service / Event / Effect
-                   └─ generation-local ContributionDirectory
+                 长期 RuntimeDomain
+                   ├─ built-in Agent / Session / ToolCatalog
+                   ├─ Java plugin instances
+                   ├─ Node proxy plugin instances -> sidecar / JSON-RPC
+                   ├─ Service / Event / Effect
+                   └─ ContributionDirectory
 ```
 
 外层宿主壳只负责协议入口、管理用例和基础设施装配，不取得 Engine 托管的 Context。需要生命周期的
@@ -58,16 +57,16 @@ Agent、Session、ToolCatalog 等作为 built-in plugin 位于 RuntimeDomain 内
 语义。对外能力目录不知道 Java/Node 来源；Bridge 不反向调用 Agent；Node 协议和 ClassLoader 不进入
 core domain 契约。
 
-上图只展开当前已发布的一个 `PublishedGeneration`。candidate、current 和 draining generation 之间是
-时间角色与隔离关系，不是依赖树；插件的制品 DAG、domain 内 Service graph 和 Scope ownership tree
-必须分开理解。完整关系与场景覆盖见
-[vNext 最终架构 2.1 节](./2026-09-07-fibra-vnext-architecture.md#21-运行代关系与域内依赖)。
+Engine 长期持有一个 `RuntimeDomain`。制品变更只在受影响闭包内准备 `RuntimeResourceUpdate`，并在同一
+运行域中协调实例、贡献和资源；不会创建另一整套运行域。插件的制品 DAG、domain 内 Service graph 和
+Scope ownership tree 必须分开理解。完整关系与场景覆盖见
+[vNext 最终架构 2.1 节](./2026-09-07-fibra-vnext-architecture.md#21-配置树服务图与资源归属)。
 
 ### 2.1 本期交付边界
 
 Fibra vNext 本期必须形成可运行纵向闭环，而不是只预留接口：
 
-1. Engine、Scope、失败恢复和 ChangeSet 事务；
+1. Engine、Scope、完整目标保存、失败诊断和 ChangeSet 变更编排；
 2. `fibra-runtime-java` 的真实 JAR/ClassLoader 装载、更新和回收；
 3. `fibra-runtime-node` 的真实 sidecar/JSON-RPC 启停、调用、失败和回收；
 4. `fibra-registry` 的 install/upgrade/enable/disable/uninstall 与 get/list/watch/history；
@@ -188,7 +187,8 @@ PublishedRuntime published();
 后生成的内部执行计划。禁止重新公开低层 `mount/update/unmount`。
 
 文件 watcher、周期 resync、HTTP use case 与 preset loader 都只能产生 EngineCommand 或 dirty signal，
-最终进入同一个 command loop。
+最终进入同一个 command loop。可在绑定、制品依赖校验和资源准备阶段发现的错误，必须在保存目标和改变
+运行态前返回；目标保存后发生的启动、排空或资源关闭错误则发布实际状态与诊断，不承诺恢复旧运行态。
 
 ### 5.3 状态订阅而不是轮询内部对象
 
@@ -198,14 +198,15 @@ Fibra `PluginRegistry` 投影安装记录、期望状态、审计和 `PublishedV
 
 `PublishedRuntime.views()` 只在 view revision 变化时发布状态、贡献与诊断一致的不可变视图。Harness
 不需要取得可变 loader、遍历 ClassLoader 或持有内部 PluginInstance 才能判断 readiness；从贡献视图
-选择能力后，调用携带同一个 expected view revision，过期时刷新而不是落到另一代。
+选择能力后，调用携带同一个 expected view revision，过期时刷新而不是转向同名的新注册。
 
 ### 5.4 启动前宿主服务
 
 ToolCatalog、CredentialBroker、SandboxProvider 等 Harness 宿主服务必须在动态插件激活前可见。优先
 把它们作为 built-in definitions 放进同一 desired graph；确实由 Spring/外部容器拥有的对象通过
-`FibraServiceBridge` 在 Engine start 前收集为不可变 host binding snapshot，再由 Engine 导入每个候选
-RuntimeDomain。Bridge 不直接取得或修改 Engine root Context；binding 变化通过 Engine command 产生新代。
+`FibraServiceBridge` 在 Engine start 前收集为不可变 host binding snapshot，再由 Engine 导入长期
+RuntimeDomain。Bridge 不直接取得或修改 Engine root Context；binding 变化通过 Engine command 在该域内
+协调受影响实例并发布新视图。
 
 Scope 始终拥有 service binding 的撤销，但不会猜测 service 对象的关闭方式：Spring 拥有的对象只导出
 binding；Fibra 拥有的对象必须显式提供 disposer，并与 binding 一起登记到 Scope。禁止因为对象实现了
@@ -298,7 +299,7 @@ Windows breakaway 或宿主不可执行清理时，必须由 container、Job Obj
 
 运行域内的 ToolCatalog、ModelCatalog、SkillCatalog 与 Agent 是 built-in plugin/service；Java 插件可
 直接通过这些稳定 ServiceKey 注册能力并用 Event 参与 Agent Loop。Node endpoint 或必须穿越运行域边界的
-能力先进入 generation-local contribution directory，再由域内 adapter 转成相同的
+能力先进入运行域内的 contribution directory，再由域内 adapter 转成相同的
 `ToolDefinition/ModelProvider/SkillDefinition/Hook`。Contribution 不是内部 Service/Event 的替代品。
 
 一次域内注册必须在 lifecycle lane 内完成“校验 + 唯一身份 + 注册 + Scope 归属”；对外可见变更还要
@@ -318,8 +319,8 @@ Agent -> ToolCatalog snapshot -> ToolInvoker
 ```
 
 域内调用继续携带 Fibra `InvocationContext/ServiceRef`，使插件为调用方创建的资源归属于正确的 session、
-agent 或 task Scope。外层 published 调用不接收宿主提供的 Context；Engine 在目标 generation 内创建一次
-调用 Scope，Publisher 成功、失败或取消后先完成异步 Scope 清理，再释放 generation lease。需要跨调用
+agent 或 task Scope。外层 published 调用不接收宿主提供的 Context；Engine 在长期运行域内创建一次
+调用 Scope，Publisher 成功、失败或取消后先完成异步 Scope 清理，再释放贡献条目的在途调用计数。需要跨调用
 生存的 session/agent/task Scope 由域内服务按业务 ID 显式拥有。
 
 ## 9. 安装、激活与卸载协议
@@ -331,7 +332,7 @@ HTTP / preset
   -> Harness install use case
   -> PluginRegistry.install(runtimeId, candidate, expectedRevision)
   -> 对应 runtime inspect + validate
-  -> fibra-artifact stage + commit immutable artifact
+  -> fibra-artifact prepare + save immutable artifact revision
   -> Registry 投影 artifact/desired/observed 三类事实
 ```
 
@@ -346,23 +347,23 @@ Activate use case
   -> PluginRegistry.enable / upgrade
   -> EngineCommand.UpsertDesiredEntry
   -> 按显式 runtimeId resolve definition
-  -> prepare ClassLoader 或 sidecar
-  -> start Fibra PluginInstance
-  -> capability registrations settled
-  -> verify per-entry PublicationRequirement
-  -> publish PublishedView
+  -> 校验完整目标并准备受影响 ClassLoader 或 sidecar
+  -> 保存完整部署目标
+  -> 在长期 RuntimeDomain 协调受影响 PluginInstance 与 capability registration
+  -> 发布实际 PublishedView 与逐 entry 达成结果
 ```
 
-`ACTIVE_REQUIRED` entry 必须 ACTIVE；`PENDING_ALLOWED` 可保持 PENDING 并在 PublishedView 诊断中列出
-`waitingFor`；候选 FAILED 默认拒绝发布。任何失败都撤销本次产生的注册和运行资源。FAILED 保存 phase、
-revision、cause 和 desired state，不能成为永久终态；修正制品、配置或依赖后仍可重新收敛。
+`ACTIVE_REQUIRED` entry 只有在 ACTIVE 时满足目标；`PENDING_ALLOWED` 可保持 PENDING 并在 PublishedView
+诊断中列出 `waitingFor`。保存目标前的校验或资源准备失败不改变运行态；保存后发生的启动、贡献排空或
+资源关闭失败必须发布实际状态、phase、revision、cause 和 desired state，不能宣称运行态恢复为变更前快照。修正制品、
+配置或依赖后，FAILED 实例可以重新收敛。
 
 ### 9.3 disable 与 uninstall
 
-`PluginRegistry.disable` 先修改 desired state；Engine 发布不含该能力的新 `PublishedView` 并关闭旧代
-准入，再排空旧代在途调用、dispose Scope、停止 sidecar/关闭 ClassLoader。排空和退役进展以同一
-generation revision 下的新 view revision 更新诊断。uninstall 只能作用于已经不被 desired graph 引用且
-没有活动实例的制品；文件删除应使用可恢复的 quarantine/retire 流程。
+`PluginRegistry.disable` 先修改 desired state；Engine 发布不含该能力的新 `PublishedView` 并关闭该条目
+准入，再排空其在途调用、dispose Scope、停止 sidecar 或关闭不再被引用的 ClassLoader。排空与资源回收
+进展通过后续 view revision 更新诊断。uninstall 只能作用于已经不被 desired graph 引用且没有活动实例的
+制品；物理回收必须等待运行资源释放引用，不能覆盖已保存 revision，也不承诺在 uninstall 返回时立即删除。
 
 ## 10. Spring Boot 集成
 

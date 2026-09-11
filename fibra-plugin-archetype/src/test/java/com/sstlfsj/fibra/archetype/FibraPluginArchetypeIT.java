@@ -5,7 +5,6 @@ import com.sstlfsj.fibra.PluginInstanceState;
 import com.sstlfsj.fibra.artifact.ArtifactId;
 import com.sstlfsj.fibra.artifact.ArtifactRecord;
 import com.sstlfsj.fibra.artifact.ArtifactState;
-import com.sstlfsj.fibra.engine.RuntimeGenerationRequest;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
 import com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter;
 import org.junit.jupiter.api.Test;
@@ -37,20 +36,27 @@ class FibraPluginArchetypeIT {
             .updatedAt(Instant.now())
             .build();
         var adapter = new JavaPluginRuntimeAdapter();
-        var prepared = adapter.create(new RuntimeGenerationRequest(
-            JavaPluginRuntimeAdapter.RUNTIME_ID, List.of(artifact)));
-        prepared.prepareAsync().block();
+        var owner = adapter.create();
+        var update = owner.createUpdate(List.of(artifact));
+        try {
+            update.prepareAsync().block();
+            update.adopt();
+            try (var runtime = FibraRuntime.create()) {
+                @SuppressWarnings("unchecked")
+                var definition = (PluginDefinition<Object>) update.catalog().plugins()
+                    .find("sample-fibra-plugin").orElseThrow().definition();
+                var instance = runtime.rootScope().context().plugins()
+                    .mount("generated-plugin", definition.prepare(null));
+                instance.settled().block();
 
-        try (var runtime = FibraRuntime.create()) {
-            @SuppressWarnings("unchecked")
-            var definition = (PluginDefinition<Object>) prepared.catalog()
-                .find("sample-fibra-plugin").orElseThrow().definition();
-            var instance = runtime.rootScope().context().plugins()
-                .mount("generated-plugin", definition.prepare(null));
-            instance.settled().block();
-
-            assertEquals(PluginInstanceState.ACTIVE, instance.state());
+                assertEquals(PluginInstanceState.ACTIVE, instance.state());
+            }
+        } finally {
+            try {
+                update.closeAsync().block();
+            } finally {
+                owner.closeAsync().block();
+            }
         }
-        prepared.closeAsync().block();
     }
 }

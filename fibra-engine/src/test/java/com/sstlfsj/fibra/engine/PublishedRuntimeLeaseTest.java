@@ -14,6 +14,7 @@ import reactor.core.publisher.Sinks;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -29,6 +30,49 @@ class PublishedRuntimeLeaseTest {
     private static final ContributionKind<Descriptor, String, String> COMMAND =
         ContributionKind.local("command", Descriptor.class, String.class, String.class);
     private static final ContributionId ID = new ContributionId("command", "run");
+
+    @Test
+    void failedInvocationCleanupBlocksProviderReleaseWithoutHangingTheChange() throws Exception {
+        var cleanup = Sinks.<Void>one();
+        var providerReleases = new java.util.concurrent.atomic.AtomicInteger();
+        var definition = PluginDefinition.builder("command", String.class, () -> (context, config) -> {
+            context.effects().add(() -> {
+                providerReleases.incrementAndGet();
+                return Mono.empty();
+            });
+            return context.services().require(ContributionServices.REGISTRAR)
+                .register(context, COMMAND, "command", "run", new Descriptor("Run"), (invocation, input) -> {
+                    invocation.caller().scope().openChild("child").context().effects().add(cleanup::asMono);
+                    return Mono.just(input);
+                }).then();
+        }).require(ContributionServices.REGISTRAR).build();
+        var engine = FibraEngine.builder(new InMemoryDesiredStateRepository(graph("old-")))
+            .catalog(PluginCatalog.of(new PluginCatalogEntry<>(definition, value -> (String) value))).build();
+        try {
+            var started = engine.start().block(TIMEOUT);
+            var invocation = engine.published().invoke(started.viewRevision(), COMMAND, ID, "value").toFuture();
+            assertEquals(1, cleanup.currentSubscriberCount());
+            var reconciling = engine.published().views()
+                .filter(view -> view.engineDiagnostics().phase() == ChangePhase.RECONCILING).next().toFuture();
+            var changing = engine.submit(new ReplaceDesiredGraph(null,
+                started.engine().desiredSource().revision(), graph("new-"))).toFuture();
+            reconciling.get(5, TimeUnit.SECONDS);
+            assertFalse(changing.isDone());
+
+            cleanup.tryEmitError(new IllegalStateException("invocation child could not release its resource"));
+            assertThrows(java.util.concurrent.ExecutionException.class, () -> invocation.get(5, TimeUnit.SECONDS));
+            assertThrows(java.util.concurrent.ExecutionException.class, () -> changing.get(5, TimeUnit.SECONDS));
+            assertEquals(0, providerReleases.get());
+            assertFalse(engine.published().current().engineDiagnostics().mutationGateOpen());
+            assertTrue(engine.published().current().diagnostics().cleanupFailures().stream()
+                .anyMatch(failure -> failure.failure().contains("invocation child")));
+            assertThrows(RuntimeException.class, () -> engine.closeAsync().block(TIMEOUT));
+            assertEquals(0, providerReleases.get());
+        } finally {
+            cleanup.tryEmitEmpty();
+            try { engine.closeAsync().block(TIMEOUT); } catch (RuntimeException expectedRetainedResource) { }
+        }
+    }
 
     @Test
     void resultCallbackCanWaitForEngineShutdown() throws Exception {
@@ -110,24 +154,27 @@ class PublishedRuntimeLeaseTest {
     }
 
     @Test
-    void publishesReplacementBeforeWaitingForOldInvocationToDrain() throws Exception {
+    void publishesTargetControlBeforeWaitingForAnAffectedInvocationToDrain() throws Exception {
         var response = Sinks.<String>one();
         var repository = new InMemoryDesiredStateRepository(
             graph("old-"));
         try (var engine = engine(repository, response, null)) {
             var first = engine.start().block(TIMEOUT);
+            var nextTarget = targetRevision(graph("new-"));
             var invocation = engine.published().invoke(
                 first.viewRevision(), COMMAND, ID, "value").toFuture();
             var nextView = engine.published().views()
-                .filter(view -> !view.generationRevision().equals(
-                    first.generationRevision()))
+                .filter(view -> view.engineDiagnostics().phase() == ChangePhase.RECONCILING
+                    && nextTarget.equals(view.engineDiagnostics().targetRevision()))
                 .next().toFuture();
             var replacement = engine.submit(new ReplaceDesiredGraph(
                 first.viewRevision(), first.engine().desiredSource().revision(),
                 graph("new-"))).toFuture();
 
-            var second = nextView.get(5, TimeUnit.SECONDS);
+            var reconciling = nextView.get(5, TimeUnit.SECONDS);
             assertFalse(replacement.isDone());
+            assertEquals(nextTarget, reconciling.engineDiagnostics().targetRevision());
+            assertConsistentPluginFacts(reconciling);
             assertThrows(PublishedRevisionConflictException.class, () ->
                 engine.published().invoke(first.viewRevision(), COMMAND, ID, "value")
                     .block(TIMEOUT));
@@ -135,21 +182,23 @@ class PublishedRuntimeLeaseTest {
             response.tryEmitValue("release");
             assertEquals("old-value", invocation.get(5, TimeUnit.SECONDS));
             var retired = replacement.get(5, TimeUnit.SECONDS).view();
-            assertEquals(second.generationRevision(), retired.generationRevision());
-            assertEquals(second.engine().desiredGraph(), retired.engine().desiredGraph());
+            assertEquals(graph("new-"), retired.engine().desiredGraph());
+            assertEquals(nextTarget, retired.engineDiagnostics().targetRevision());
+            assertEquals(ChangePhase.IDLE, retired.engineDiagnostics().phase());
             assertEquals("new-value", engine.published().invoke(
                 retired.viewRevision(), COMMAND, ID, "value").block(TIMEOUT));
         }
     }
 
     @Test
-    void invocationCompletionAndGenerationRetirementAwaitChildScopeCleanup()
+    void invocationCompletionAndAffectedScopeRetirementAwaitChildScopeCleanup()
         throws Exception {
         var cleanup = Sinks.<Void>one();
         var repository = new InMemoryDesiredStateRepository(
             graph("old-"));
         try (var engine = engine(repository, null, cleanup)) {
             var first = engine.start().block(TIMEOUT);
+            var nextTarget = targetRevision(graph("new-"));
             var invocation = engine.published().invoke(
                 first.viewRevision(), COMMAND, ID, "value").toFuture();
 
@@ -157,8 +206,8 @@ class PublishedRuntimeLeaseTest {
             assertFalse(invocation.isDone());
 
             var nextView = engine.published().views()
-                .filter(view -> !view.generationRevision().equals(
-                    first.generationRevision()))
+                .filter(view -> view.engineDiagnostics().phase() == ChangePhase.RECONCILING
+                    && nextTarget.equals(view.engineDiagnostics().targetRevision()))
                 .next().toFuture();
             var replacement = engine.submit(new ReplaceDesiredGraph(
                 first.viewRevision(), first.engine().desiredSource().revision(),
@@ -169,6 +218,31 @@ class PublishedRuntimeLeaseTest {
             cleanup.tryEmitEmpty();
             assertEquals("old-value", invocation.get(5, TimeUnit.SECONDS));
             replacement.get(5, TimeUnit.SECONDS);
+        }
+    }
+
+    @Test
+    void updatingAnUnrelatedEntryDoesNotWaitForAnUnchangedContributionCall() throws Exception {
+        var response = Sinks.<String>one();
+        var repository = new InMemoryDesiredStateRepository(graphWithOther("old-", "other-old-"));
+        try (var engine = engine(repository, response, null)) {
+            var first = engine.start().block(TIMEOUT);
+            var commandIdentity = first.engine().instances().get("command").identity();
+            var invocation = engine.published().invoke(
+                first.viewRevision(), COMMAND, ID, "value").toFuture();
+
+            var updated = engine.submit(new ReplaceDesiredGraph(first.viewRevision(),
+                first.engine().desiredSource().revision(),
+                graphWithOther("old-", "other-new-"))).toFuture().get(5, TimeUnit.SECONDS).view();
+
+            assertFalse(invocation.isDone());
+            assertEquals(commandIdentity, updated.engine().instances().get("command").identity());
+            assertEquals(LiteralValue.of("other-new-"),
+                updated.engine().instances().get("other").config());
+            assertEquals(ChangePhase.IDLE, updated.engineDiagnostics().phase());
+
+            response.tryEmitValue("release");
+            assertEquals("old-value", invocation.get(5, TimeUnit.SECONDS));
         }
     }
 
@@ -201,6 +275,26 @@ class PublishedRuntimeLeaseTest {
     private static DesiredInputGraph graph(String prefix) {
         return new DesiredInputGraph(List.of(DesiredInputEntry.builder("command", "command")
             .config(LiteralValue.of(prefix)).build()));
+    }
+
+    private static DesiredInputGraph graphWithOther(String commandPrefix, String otherPrefix) {
+        return new DesiredInputGraph(List.of(
+            DesiredInputEntry.builder("command", "command")
+                .config(LiteralValue.of(commandPrefix)).build(),
+            DesiredInputEntry.builder("other", "command")
+                .config(LiteralValue.of(otherPrefix)).build()));
+    }
+
+    private static String targetRevision(DesiredInputGraph graph) {
+        return new DeploymentManifest(Map.of(), graph).revision();
+    }
+
+    private static void assertConsistentPluginFacts(PublishedView view) {
+        view.engine().instances().values().forEach(instance -> {
+            var fact = view.diagnostics().plugins().stream()
+                .filter(plugin -> plugin.identity() == instance.identity()).findFirst().orElseThrow();
+            assertEquals(instance.state(), fact.state());
+        });
     }
 
     private record Descriptor(String title) {

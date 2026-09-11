@@ -24,6 +24,14 @@ final class Cleanup {
                 if (failures.isEmpty()) {
                     return Mono.empty();
                 }
+                var blocked = failures.stream()
+                    .filter(ResourceDrain.Failure.class::isInstance).findFirst();
+                if (blocked.isPresent()) {
+                    var failure = new ResourceDrain.Failure(blocked.get());
+                    failures.stream().filter(error -> error != blocked.get())
+                        .forEach(failure::addSuppressed);
+                    return Mono.error(failure);
+                }
                 var failure = new IllegalStateException("one or more resources failed to dispose");
                 failures.forEach(failure::addSuppressed);
                 return Mono.error(failure);

@@ -1,6 +1,7 @@
 package com.sstlfsj.fibra.internal;
 
 import com.sstlfsj.fibra.FibraException;
+import com.sstlfsj.fibra.DrainingDisposable;
 import com.sstlfsj.fibra.Plugin;
 import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.PluginInstance;
@@ -18,14 +19,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Supplier;
 
-final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
+final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner, DrainingDisposable {
     private static final Logger LOGGER = LoggerFactory.getLogger(PluginInstanceImpl.class);
 
     private final DefaultFibraRuntime runtime;
     private final DefaultRuntimeDomain domain;
     private final DefaultScope scope;
     private final String id;
+    private final long identity;
+    private final Long parentIdentity;
     private final PluginDefinition<C> definition;
     private final Plugin<C> plugin;
     private final DefaultContext context;
@@ -46,6 +50,9 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
     private boolean disposeRequested;
     private volatile Throwable error;
     private Sinks.One<PluginInstance<C>> stable = completedSignal();
+    private ResourceDrain drain;
+    private boolean ownershipFrozen;
+    private Sinks.One<Void> activationCleanup;
 
     PluginInstanceImpl(DefaultContext parentContext, String id,
                        PluginDefinition.Prepared<C> prepared) {
@@ -56,6 +63,9 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
             throw new IllegalArgumentException("plugin instance id must not be blank");
         }
         this.id = id;
+        identity = runtime.nextSequence();
+        var parent = parentContext.owner().pluginInstance();
+        parentIdentity = parent == null ? null : parent.identity();
         this.definition = Objects.requireNonNull(prepared, "prepared").definition();
         validatedConfig = prepared.config();
         plugin = Objects.requireNonNull(definition.factory().create(),
@@ -74,6 +84,17 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
     public String id() {
         return id;
     }
+
+    @Override
+    public long identity() {
+        return identity;
+    }
+
+    @Override
+    public DefaultRuntimeDomain domain() { return domain; }
+
+    @Override
+    public DefaultScope scope() { return scope; }
 
     @Override
     public PluginDefinition<C> definition() {
@@ -127,23 +148,39 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
 
     @Override
     public Mono<PluginInstance<C>> update(C nextConfig) {
+        return update(() -> definition.prepare(nextConfig));
+    }
+
+    @Override
+    public Mono<PluginInstance<C>> updatePrepared(PluginDefinition.Prepared<C> prepared) {
+        return update(() -> prepared);
+    }
+
+    private Mono<PluginInstance<C>> update(Supplier<PluginDefinition.Prepared<C>> prepared) {
         return lifecycle().call(() -> {
             if (disposeRequested || state == PluginInstanceState.DISPOSED) {
-                return Mono.<PluginInstance<C>>error(new FibraException(
-                    FibraException.PLUGIN_DISPOSED,
+                return Mono.error(new FibraException(FibraException.PLUGIN_DISPOSED,
                     "plugin instance \"" + id + "\" is disposed"));
             }
-            var validated = definition.validate(nextConfig);
-            validatedConfig = validated;
-            configRevision++;
-            error = null;
-            if (state == PluginInstanceState.FAILED) {
-                state = PluginInstanceState.PENDING;
-                currentEpoch = null;
-            }
-            refreshDependencies();
-            return settled();
+            return applyPrepared(prepared.get());
         });
+    }
+
+    private Mono<PluginInstance<C>> applyPrepared(PluginDefinition.Prepared<C> prepared) {
+        prepared = Objects.requireNonNull(prepared, "prepared");
+        if (prepared.definition() != definition) {
+            throw new IllegalArgumentException("prepared config belongs to another plugin definition");
+        }
+        validatedConfig = prepared.config();
+        configRevision++;
+        error = null;
+        if (state == PluginInstanceState.FAILED) {
+            state = PluginInstanceState.PENDING;
+            currentEpoch = null;
+        }
+        refreshDependencies();
+        domain.diagnosticChanged();
+        return settled();
     }
 
     @Override
@@ -177,7 +214,52 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
 
     @Override
     public boolean acceptsResources() {
-        return state == PluginInstanceState.STARTING || state == PluginInstanceState.ACTIVE;
+        return drain == null && (state == PluginInstanceState.STARTING
+            || state == PluginInstanceState.ACTIVE);
+    }
+
+    @Override
+    public Mono<Void> drain() {
+        return lifecycle().call(() -> {
+            if (drain == null) {
+                var barrier = new ResourceDrain(lifecycle());
+                freezeResources(barrier);
+                barrier.start();
+            }
+            return drain.completion();
+        });
+    }
+
+    void freeze(ResourceDrain barrier) {
+        ownershipFrozen = true;
+        targetEpoch = null;
+        freezeResources(barrier);
+    }
+
+    private void freezeResources(ResourceDrain barrier) {
+        if (drain != null) {
+            if (drain != barrier) {
+                barrier.await(drain.completion());
+            }
+            return;
+        }
+        drain = barrier;
+        resources.snapshot().forEach(barrier::include);
+    }
+
+    Mono<Void> cleanupUsing(ResourceOwner provider) {
+        if (activationCleanup == null || serviceSnapshot.values().stream()
+            .noneMatch(binding -> binding.owner() == provider)) {
+            return Mono.empty();
+        }
+        return activationCleanup.asMono();
+    }
+
+    Mono<Void> cleanupUsing(ServiceRegistry.Binding<?> binding) {
+        if (activationCleanup == null || serviceSnapshot.get(binding.key().name()) != binding) {
+            return Mono.empty();
+        }
+        return activationCleanup.asMono();
     }
 
     @Override
@@ -244,8 +326,17 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
                 binding == null ? null
                     : DefaultRuntimeDomain.ownerIdentity(binding.owner())));
         });
-        return new RuntimeDomainSnapshot.Plugin(id, definition.name(), state,
+        return new RuntimeDomainSnapshot.Plugin(identity, parentIdentity, id, definition.name(), state,
             dependencies, error == null ? null : error.toString());
+    }
+
+    boolean isSettledForDomain() {
+        return switch (state) {
+            case PENDING -> !transitioning && targetEpoch == null;
+            case ACTIVE -> !transitioning && Objects.equals(currentEpoch, targetEpoch);
+            case FAILED, DISPOSED -> !transitioning;
+            case STARTING, STOPPING -> false;
+        };
     }
 
     void dependencyChanged(String serviceName) {
@@ -255,7 +346,7 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
     }
 
     private void refreshDependencies() {
-        if (disposeRequested) {
+        if (disposeRequested || ownershipFrozen) {
             targetEpoch = null;
         } else {
             candidates.clear();
@@ -298,6 +389,8 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
     }
 
     private void startPlugin(ActivationEpoch loadingEpoch) {
+        drain = null;
+        activationCleanup = Sinks.one();
         setState(PluginInstanceState.STARTING);
         serviceSnapshot = Map.copyOf(candidates);
         try {
@@ -334,24 +427,56 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
             && state != PluginInstanceState.ACTIVE) {
             return;
         }
-        setState(PluginInstanceState.STOPPING);
-        Cleanup.allSettled(Cleanup.reversed(resources.snapshot()))
+        var consumers = domain.services().consumerCleanup(this);
+        var drained = stopDrain();
+        drained.then(consumers).then(Cleanup.allSettled(Cleanup.reversed(resources.snapshot())))
             .publishOn(lifecycle().scheduler())
             .subscribe(ignored -> { }, cleanupFailure -> {
                 failure.addSuppressed(cleanupFailure);
-                finishFailed(failure);
-            }, () -> finishFailed(failure));
+                if (disposeRequested) {
+                    stopFailed(cleanupFailure);
+                } else {
+                    activationCleanup.tryEmitError(cleanupFailure);
+                    finishFailed(failure);
+                }
+            }, () -> {
+                if (disposeRequested) {
+                    stopCompleted();
+                } else {
+                    activationCleanup.tryEmitEmpty();
+                    finishFailed(failure);
+                }
+            });
     }
 
     private void startStop() {
-        setState(PluginInstanceState.STOPPING);
+        var consumers = domain.services().consumerCleanup(this);
+        var drained = stopDrain();
         lifecycle().tick()
+            .then(drained)
+            .then(consumers)
             .then(Cleanup.allSettled(Cleanup.reversed(resources.snapshot())))
             .publishOn(lifecycle().scheduler())
             .subscribe(ignored -> { }, this::stopFailed, this::stopCompleted);
     }
 
+    private Mono<Void> stopDrain() {
+        ResourceDrain starting = null;
+        if (drain == null) {
+            starting = new ResourceDrain(lifecycle());
+            freezeResources(starting);
+        }
+        setState(PluginInstanceState.STOPPING);
+        if (starting != null) {
+            starting.start();
+        }
+        return drain.completion();
+    }
+
     private void stopCompleted() {
+        if (activationCleanup != null) {
+            activationCleanup.tryEmitEmpty();
+        }
         serviceSnapshot = Map.of();
         currentEpoch = null;
         if (disposeRequested) {
@@ -364,7 +489,16 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
     }
 
     private void stopFailed(Throwable failure) {
-        serviceSnapshot = Map.of();
+        if (activationCleanup != null) {
+            activationCleanup.tryEmitError(failure);
+        }
+        if (failure instanceof ResourceDrain.Failure) {
+            finishFailed(failure);
+            if (disposeRequested) {
+                disposed.tryEmitError(failure);
+            }
+            return;
+        }
         currentEpoch = null;
         if (disposeRequested) {
             LOGGER.warn("plugin instance \"{}\" cleanup failed during disposal", id, failure);

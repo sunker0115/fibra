@@ -1,5 +1,6 @@
 package com.sstlfsj.fibra.example.dependency;
 
+import com.sstlfsj.fibra.engine.EngineChangeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,9 +26,15 @@ public final class PluginDependencyHost {
             log.info("Initial quote: {}", scenario.projectedQuote());
             try {
                 scenario.disableProvider();
-            } catch (RuntimeException expected) {
-                log.info("Provider-only disable rejected; active generation retained");
+            } catch (EngineChangeException expected) {
+                var view = expected.view();
+                log.info("Provider target saved: {}; consumer state: {}; required target satisfied: {}",
+                    expected.targetSaved(),
+                    view.engine().instances().get(PluginDependencyScenario.CONSUMER_INSTANCE).state(),
+                    view.engineDiagnostics().targetSatisfied());
             }
+            scenario.enableProvider();
+            log.info("Quote after provider recovery: {}", scenario.projectedQuote());
             scenario.upgradeProvider(Path.of(args[2]), "1.1.0");
             log.info("Quote after compatible upgrade: {}", scenario.projectedQuote());
             scenario.stopInDependencyOrder();

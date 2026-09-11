@@ -1,17 +1,39 @@
 package com.sstlfsj.fibra.engine;
 
-import java.util.List;
+import com.sstlfsj.fibra.artifact.RuntimeId;
+import java.util.Set;
+import java.util.Map;
 
-/** Engine 对运行代与事务的不可变管理面投影。 */
-public record EngineDiagnostics(String currentGenerationRevision,
-                                String candidateGenerationRevision,
-                                List<String> drainingGenerationRevisions,
-                                TransactionState transactionState,
-                                boolean mutationGateOpen,
-                                List<TransactionRecord> transactions,
-                                String failure) {
+public record EngineDiagnostics(String targetRevision,
+    ChangePhase phase,
+    Set<String> affectedInstances,
+    Map<RuntimeId, RuntimeResourceSnapshot> resources,
+    boolean targetSatisfied,
+    boolean mutationGateOpen,
+    String failure) {
     public EngineDiagnostics {
-        drainingGenerationRevisions = List.copyOf(drainingGenerationRevisions);
-        transactions = List.copyOf(transactions);
+        affectedInstances = Set.copyOf(affectedInstances);
+        resources = Map.copyOf(resources);
+        java.util.Objects.requireNonNull(phase, "phase");
+    }
+
+    public static Builder builder() { return new Builder(); }
+
+    public static final class Builder {
+        private String targetRevision;
+        private ChangePhase phase;
+        private Set<String> affectedInstances;
+        private Map<RuntimeId, RuntimeResourceSnapshot> resources;
+        private boolean targetSatisfied;
+        private boolean mutationGateOpen;
+        private String failure;
+        public Builder targetRevision(String value) { targetRevision = value; return this; }
+        public Builder phase(ChangePhase value) { phase = value; return this; }
+        public Builder affectedInstances(Set<String> value) { affectedInstances = value; return this; }
+        public Builder resources(Map<RuntimeId, RuntimeResourceSnapshot> value) { resources = value; return this; }
+        public Builder targetSatisfied(boolean value) { targetSatisfied = value; return this; }
+        public Builder mutationGateOpen(boolean value) { mutationGateOpen = value; return this; }
+        public Builder failure(String value) { failure = value; return this; }
+        public EngineDiagnostics build() { return new EngineDiagnostics(targetRevision, phase, affectedInstances, resources, targetSatisfied, mutationGateOpen, failure); }
     }
 }

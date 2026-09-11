@@ -130,15 +130,27 @@ final class DefaultContext implements Context {
     @Override
     public Context withRealm(ServiceKey<?> key, Object label) {
         Objects.requireNonNull(key, "key");
+        return withRealm(key.name(), label);
+    }
+
+    @Override
+    public Context withRealm(String serviceName, Object label) {
+        validateName(serviceName, "service name");
         Objects.requireNonNull(label, "label");
-        return new DefaultContext(scope, owner, this, Map.of(), Map.of(key.name(), label), Map.of());
+        return new DefaultContext(scope, owner, this, Map.of(), Map.of(serviceName, label), Map.of());
     }
 
     @Override
     public Context withIntercept(ServiceKey<?> key, Object value) {
         Objects.requireNonNull(key, "key");
+        return withIntercept(key.name(), value);
+    }
+
+    @Override
+    public Context withIntercept(String serviceName, Object value) {
+        validateName(serviceName, "service name");
         Objects.requireNonNull(value, "value");
-        return new DefaultContext(scope, owner, this, Map.of(), Map.of(), Map.of(key.name(), value));
+        return new DefaultContext(scope, owner, this, Map.of(), Map.of(), Map.of(serviceName, value));
     }
 
     @Override

@@ -14,9 +14,10 @@ import reactor.core.publisher.Mono;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -26,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FibraEngineRuntimeAdapterTest {
     @Test
-    void desiredOnlyChangePreparesANewRuntimeGeneration(@TempDir Path work) throws Exception {
+    void desiredOnlyChangeDoesNotCreateAnotherRuntimeUpdate(@TempDir Path work) throws Exception {
         var id = new RuntimeId("fake");
         var source = work.resolve("sample.bin");
         Files.writeString(source, "plugin");
@@ -38,13 +39,13 @@ class FibraEngineRuntimeAdapterTest {
             var installed = engine.submit(InstallArtifact.builder()
                 .expectedRevision(initial.viewRevision()).artifactId(new ArtifactId("sample"))
                 .runtimeId(id).version("1.0.0").source(source).build()).block().view();
-            var before = adapter.prepares.get();
+            var before = adapter.updates.get();
             engine.submit(new ReplaceDesiredGraph(installed.viewRevision(),
                 installed.engine().desiredSource().revision(),
                 new DesiredInputGraph(List.of(DesiredInputEntry.builder("p", "sample").build()))))
                 .block();
 
-            assertEquals(before + 1, adapter.prepares.get());
+            assertEquals(before, adapter.updates.get());
         }
     }
 
@@ -68,45 +69,52 @@ class FibraEngineRuntimeAdapterTest {
                 .block().view();
 
             assertTrue(installed.engine().artifacts().containsKey(artifact));
-            assertEquals(java.util.Set.of("sample"),
-                installed.engine().runtimes().get(runtimeId).definitions());
-            assertEquals(com.sstlfsj.fibra.artifact.ArtifactState.INSTALLED,
-                installed.engine().runtimes().get(runtimeId).artifacts().get(artifact).state());
-            assertEquals(1, adapter.prepares.get());
-            assertEquals(0, adapter.closes.get());
+            assertEquals(Set.of(artifact), installed.engine().runtimes().get(runtimeId).resources()
+                .stream().map(resource -> resource.artifact().id()).collect(java.util.stream.Collectors.toSet()));
+            assertEquals(RuntimeResourceSnapshot.State.ACTIVE,
+                installed.engine().runtimes().get(runtimeId).resources().getFirst().state());
+            assertEquals(1, adapter.owners.get());
+            assertEquals(1, adapter.updates.get());
+            assertEquals(1, adapter.updateCloses.get());
+            assertEquals(0, adapter.ownerCloses.get());
 
             var removed = engine.submit(new UninstallArtifact(
                 installed.viewRevision(), artifact)).block().view();
 
             assertFalse(removed.engine().artifacts().containsKey(artifact));
-            assertFalse(removed.engine().runtimes().containsKey(runtimeId));
-            assertEquals(1, adapter.prepares.get());
-            assertEquals(1, adapter.closes.get());
+            assertTrue(removed.engine().runtimes().containsKey(runtimeId));
+            assertTrue(removed.engine().runtimes().get(runtimeId).resources().isEmpty());
+            assertEquals(2, adapter.updates.get());
+            assertEquals(2, adapter.updateCloses.get());
+            assertEquals(0, adapter.ownerCloses.get());
         }
     }
 
     @Test
-    void startIsLazyRecoversInstalledArtifactsAndCloseOwnsRuntimeGenerations(
+    void startIsLazyRecoversTheExactSavedTargetAndCloseOwnsRuntimeResources(
         @TempDir Path work) throws Exception {
         var artifact = new ArtifactId("sample");
         var runtimeId = new RuntimeId("fake");
         var source = work.resolve("sample.bin");
         Files.writeString(source, "plugin");
         var store = new ArtifactStore(work.resolve("artifacts"));
-        store.prepareInstall(artifact, runtimeId, "1.0.0", source).commit();
+        var saved = store.prepareInstall(artifact, runtimeId, "1.0.0", source).save();
+        var stateStore = EngineStateStore.inMemory();
+        stateStore.save(new DeploymentManifest(Map.of(artifact, saved.revision()), new DesiredInputGraph(List.of())));
         var repository = InMemoryDesiredStateRepository.empty();
         var adapter = new FakeRuntimeAdapter(runtimeId);
-        var engine = FibraEngine.builder(repository).artifactStore(store)
+        var engine = FibraEngine.builder(repository).artifactStore(store).stateStore(stateStore)
             .runtimeAdapter(adapter).build();
 
         assertEquals(EngineState.NEW, engine.published().current().engine().state());
-        assertEquals(0, adapter.prepares.get());
+        assertEquals(0, adapter.owners.get());
         var started = engine.start().block().engine();
         assertTrue(started.artifacts().containsKey(artifact));
         assertTrue(started.runtimes().containsKey(runtimeId));
 
         engine.close();
-        assertEquals(1, adapter.closes.get());
+        assertEquals(1, adapter.owners.get());
+        assertEquals(1, adapter.ownerCloses.get());
     }
 
     @Test
@@ -115,18 +123,26 @@ class FibraEngineRuntimeAdapterTest {
         var source = work.resolve("sample.bin");
         Files.writeString(source, "plugin");
         var store = new ArtifactStore(work.resolve("artifacts"));
+        var stateStore = new RecordingStateStore();
         try (var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty())
-            .artifactStore(store).build()) {
+            .artifactStore(store).stateStore(stateStore).build()) {
             var started = engine.start().block();
+            var savedTarget = stateStore.load().orElseThrow();
 
-            assertThrows(UnknownRuntimeException.class, () -> engine.submit(
+            var failure = assertThrows(EngineChangeException.class, () -> engine.submit(
                 InstallArtifact.builder().expectedRevision(started.viewRevision())
                     .artifactId(new ArtifactId("sample"))
                     .runtimeId(new RuntimeId("missing")).version("1.0.0")
                     .source(source).build()).block());
 
-            assertEquals(started, engine.published().current());
-            assertTrue(store.find(new ArtifactId("sample")).isEmpty());
+            assertFalse(failure.targetSaved());
+            assertTrue(failure.getCause() instanceof UnknownRuntimeException);
+            var current = engine.published().current();
+            assertEquals(started.engine().state(), current.engine().state());
+            assertEquals(started.engine().runtimes(), current.engine().runtimes());
+            assertEquals(started.engine().artifacts(), current.engine().artifacts());
+            assertEquals(savedTarget, stateStore.load().orElseThrow());
+            assertTrue(store.history(new ArtifactId("sample")).isEmpty());
         }
     }
 
@@ -137,11 +153,11 @@ class FibraEngineRuntimeAdapterTest {
         var artifactId = new ArtifactId("sample");
         var source = work.resolve("sample.bin");
         Files.writeString(source, "plugin");
-        var journal = new InMemoryTransactionJournal();
         var repository = InMemoryDesiredStateRepository.empty();
+        var stateStore = new RecordingStateStore();
         try (var engine = FibraEngine.builder(repository)
             .artifactStore(new ArtifactStore(work.resolve("artifacts")))
-            .runtimeAdapter(new FakeRuntimeAdapter(runtimeId)).journal(journal).build()) {
+            .runtimeAdapter(new FakeRuntimeAdapter(runtimeId)).stateStore(stateStore).build()) {
             var started = engine.start().block();
             var graph = new DesiredInputGraph(List.of(
                 DesiredInputEntry.builder("sample-one", "sample").build()));
@@ -157,47 +173,46 @@ class FibraEngineRuntimeAdapterTest {
             assertTrue(deployed.artifacts().containsKey(artifactId));
             assertEquals(com.sstlfsj.fibra.PluginInstanceState.ACTIVE,
                 deployed.instances().get("sample-one").state());
-            assertEquals(2, journal.records().stream()
-                .map(TransactionRecord::transactionId).distinct().count());
+            assertEquals(2, stateStore.saves.get());
+            assertEquals(artifactId, stateStore.load().orElseThrow().artifacts().keySet().iterator().next());
         }
     }
 
     @Test
-    void restartsFromACommittedDiskDecisionAndInstalledArtifact(@TempDir Path work)
+    void restartsFromTheSavedTargetAndInstalledArtifact(@TempDir Path work)
         throws Exception {
         var runtimeId = new RuntimeId("fake");
         var artifactId = new ArtifactId("sample");
         var source = work.resolve("sample.bin");
         var artifactRoot = work.resolve("artifacts");
-        var journalRoot = work.resolve("transactions");
+        var stateRoot = work.resolve("state");
         Files.writeString(source, "plugin");
-        try (var store = new ArtifactStore(artifactRoot)) {
-            store.prepareInstall(artifactId, runtimeId, "1.0.0", source).commit();
+        try (var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty())
+            .artifactStore(new ArtifactStore(artifactRoot))
+            .stateStore(new FileEngineStateStore(stateRoot))
+            .runtimeAdapter(new FakeRuntimeAdapter(runtimeId)).build()) {
+            var started = engine.start().block();
+            engine.submit(InstallArtifact.builder().expectedRevision(started.viewRevision())
+                .artifactId(artifactId).runtimeId(runtimeId).version("1.0.0").source(source).build())
+                .block();
         }
-        try (var journal = new FileTransactionJournal(journalRoot)) {
-            journal.append(new TransactionRecord("interrupted-deployment",
-                TransactionState.COMMITTED, List.of("artifact", "runtime:fake"),
-                null, Instant.now()));
-        }
-
-        var recoveredJournal = new FileTransactionJournal(journalRoot);
         try (var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty())
             .artifactStore(new ArtifactStore(artifactRoot))
             .runtimeAdapter(new FakeRuntimeAdapter(runtimeId))
-            .journal(recoveredJournal).build()) {
+            .stateStore(new FileEngineStateStore(stateRoot)).build()) {
             var recovered = engine.start().block().engine();
 
             assertTrue(recovered.artifacts().containsKey(artifactId));
             assertTrue(recovered.runtimes().containsKey(runtimeId));
-            assertEquals(TransactionState.RETIRED,
-                recoveredJournal.records().getLast().state());
         }
     }
 
     private static final class FakeRuntimeAdapter implements PluginRuntimeAdapter {
         private final RuntimeId id;
-        private final AtomicInteger prepares = new AtomicInteger();
-        private final AtomicInteger closes = new AtomicInteger();
+        private final AtomicInteger owners = new AtomicInteger();
+        private final AtomicInteger updates = new AtomicInteger();
+        private final AtomicInteger updateCloses = new AtomicInteger();
+        private final AtomicInteger ownerCloses = new AtomicInteger();
 
         private FakeRuntimeAdapter(RuntimeId id) {
             this.id = id;
@@ -214,36 +229,58 @@ class FibraEngineRuntimeAdapterTest {
         }
 
         @Override
-        public RuntimeGeneration create(RuntimeGenerationRequest request) {
-            prepares.incrementAndGet();
+        public RuntimeResourceOwner create() {
+            owners.incrementAndGet();
             var definition = PluginDefinition.builder("sample", Void.class,
                 () -> (context, config) -> Mono.empty()).build();
-            var catalog = request.artifacts().isEmpty() ? PluginCatalog.empty()
-                : PluginCatalog.of(new PluginCatalogEntry<>(definition, value -> null));
-            var snapshot = new RuntimeGenerationSnapshot(id,
-                Integer.toString(prepares.get()),
-                request.artifacts().stream().collect(java.util.stream.Collectors.toMap(
-                    ArtifactRecord::id, value -> value)),
-                catalog.entries().stream().map(value -> value.definition().name())
-                    .collect(java.util.stream.Collectors.toSet()));
-            return new RuntimeGeneration() {
-                @Override public Mono<Void> prepareAsync() { return Mono.empty(); }
+            return new RuntimeResourceOwner() {
+                private List<ArtifactRecord> active = List.of();
+                private RuntimeCatalog catalog = RuntimeCatalog.empty();
+                private final Mono<Void> close = Mono.<Void>fromRunnable(ownerCloses::incrementAndGet).cache();
+
                 @Override
-                public RuntimeGenerationSnapshot snapshot() {
-                    return snapshot;
+                public RuntimeResourceUpdate createUpdate(List<ArtifactRecord> target) {
+                    updates.incrementAndGet();
+                    var next = List.copyOf(target);
+                    var nextCatalog = next.isEmpty() ? RuntimeCatalog.empty()
+                        : new RuntimeCatalog(PluginCatalog.of(new PluginCatalogEntry<>(definition, value -> null)),
+                            Map.of(definition.name(), next.getFirst().id()));
+                    return new RuntimeResourceUpdate() {
+                        @Override public Mono<Void> prepareAsync() { return Mono.empty(); }
+                        @Override public Set<ArtifactId> affectedArtifacts() {
+                            return next.stream().map(ArtifactRecord::id).collect(java.util.stream.Collectors.toSet());
+                        }
+                        @Override public RuntimeCatalog catalog() { return nextCatalog; }
+                        @Override public RuntimeResourceSnapshot snapshot() {
+                            return FakeRuntimeAdapter.this.snapshot(next, RuntimeResourceSnapshot.State.PREPARED);
+                        }
+                        @Override public void adopt() { active = next; catalog = nextCatalog; }
+                        private final Mono<Void> close = Mono.<Void>fromRunnable(updateCloses::incrementAndGet).cache();
+                        @Override public Mono<Void> closeAsync() { return close; }
+                    };
                 }
 
-                @Override
-                public PluginCatalog catalog() {
-                    return catalog;
+                @Override public RuntimeCatalog catalog() { return catalog; }
+                @Override public RuntimeResourceSnapshot snapshot() {
+                    return FakeRuntimeAdapter.this.snapshot(active, RuntimeResourceSnapshot.State.ACTIVE);
                 }
-
-                private final Mono<Void> close = Mono.<Void>fromRunnable(closes::incrementAndGet).cache();
-
-                @Override
-                public Mono<Void> closeAsync() { return close; }
+                @Override public Mono<Void> closeAsync() { return close; }
             };
         }
 
+        private RuntimeResourceSnapshot snapshot(List<ArtifactRecord> artifacts,
+                                                 RuntimeResourceSnapshot.State state) {
+            return new RuntimeResourceSnapshot(id, artifacts.stream().map(artifact ->
+                RuntimeResourceSnapshot.Resource.builder().artifact(artifact).identity(artifact.revision())
+                    .state(state).build()).toList());
+        }
+
+    }
+
+    private static final class RecordingStateStore implements EngineStateStore {
+        private final AtomicInteger saves = new AtomicInteger();
+        private DeploymentManifest manifest;
+        @Override public Optional<DeploymentManifest> load() { return Optional.ofNullable(manifest); }
+        @Override public void save(DeploymentManifest value) { manifest = value; saves.incrementAndGet(); }
     }
 }

@@ -1,6 +1,7 @@
 package com.sstlfsj.fibra.internal;
 
 import com.sstlfsj.fibra.Disposable;
+import com.sstlfsj.fibra.DrainingDisposable;
 import com.sstlfsj.fibra.EffectHandle;
 import com.sstlfsj.fibra.EffectMetadata;
 import org.reactivestreams.Publisher;
@@ -15,7 +16,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-final class OwnedResource implements OwnedEffect, Subscriber<Disposable> {
+final class OwnedResource implements OwnedEffect, DrainingDisposable, Subscriber<Disposable> {
     private final ResourceOwner owner;
     private final LifecycleDispatcher lifecycle;
     private final String label;
@@ -23,12 +24,15 @@ final class OwnedResource implements OwnedEffect, Subscriber<Disposable> {
     private final List<OwnedResource> children = new ArrayList<>();
     private final Sinks.One<EffectHandle> ready = Sinks.one();
     private final Sinks.One<Void> disposed = Sinks.one();
+    private final Sinks.One<Void> sourceComplete = Sinks.one();
+    private ResourceDrain drain;
 
     private Subscription subscription;
     private boolean disposeRequested;
     private boolean explicitDispose;
     private boolean sourceSettled;
     private boolean teardownStarted;
+    private boolean drainedForTeardown;
     private Throwable sourceError;
 
     private OwnedResource(ResourceOwner owner, String label) {
@@ -92,7 +96,7 @@ final class OwnedResource implements OwnedEffect, Subscriber<Disposable> {
     public void onNext(Disposable disposable) {
         lifecycle.call(() -> {
             collect(Objects.requireNonNull(disposable, "effect source emitted null"));
-            if (disposeRequested) {
+            if (disposeRequested || drain != null) {
                 subscription.cancel();
                 settleSource(null);
             } else {
@@ -129,6 +133,46 @@ final class OwnedResource implements OwnedEffect, Subscriber<Disposable> {
     }
 
     @Override
+    public Mono<Void> drain() {
+        return lifecycle.call(() -> {
+            if (drain == null) {
+                var barrier = new ResourceDrain(lifecycle);
+                freeze(barrier);
+                barrier.start();
+            }
+            return drain.completion();
+        });
+    }
+
+    void freeze(ResourceDrain barrier) {
+        if (drain != null) {
+            if (drain != barrier) {
+                barrier.await(drain.completion());
+            }
+            return;
+        }
+        drain = barrier;
+        barrier.await(sourceComplete.asMono());
+        List.copyOf(collected).forEach(this::drainCollected);
+    }
+
+    private void drainCollected(Disposable resource) {
+        if (resource instanceof OwnedResource || resource instanceof PluginInstanceImpl<?>) {
+            drain.include(resource);
+        } else if (resource instanceof DrainingDisposable draining) {
+            drain.await(Mono.defer(draining::drain).doOnError(failure -> lifecycle.call(() -> {
+                owner.domain().cleanupFailed(this, owner, label, failure);
+                return null;
+            })));
+        }
+    }
+
+    @Override
+    public ResourceOwner owner() {
+        return owner;
+    }
+
+    @Override
     public Mono<EffectHandle> ready() {
         return ready.asMono();
     }
@@ -149,6 +193,9 @@ final class OwnedResource implements OwnedEffect, Subscriber<Disposable> {
             children.add(child);
         }
         collected.add(disposable);
+        if (drain != null) {
+            drainCollected(disposable);
+        }
     }
 
     private void settleSource(Throwable error) {
@@ -157,6 +204,7 @@ final class OwnedResource implements OwnedEffect, Subscriber<Disposable> {
         }
         sourceSettled = true;
         sourceError = error;
+        sourceComplete.tryEmitEmpty();
         if (error == null && !disposeRequested) {
             ready.tryEmitValue(this);
             return;
@@ -170,6 +218,7 @@ final class OwnedResource implements OwnedEffect, Subscriber<Disposable> {
             return;
         }
         disposeRequested = true;
+        drain();
         if (sourceSettled) {
             startTeardown();
         }
@@ -181,17 +230,23 @@ final class OwnedResource implements OwnedEffect, Subscriber<Disposable> {
         }
         teardownStarted = true;
         var reverse = Cleanup.reversed(collected);
-        collected.clear();
-        Flux.fromIterable(reverse)
+        drain().doOnSuccess(ignored -> drainedForTeardown = true)
+            .thenMany(Flux.fromIterable(reverse)
             .concatMap(disposable -> Mono.defer(() ->
-                Objects.requireNonNull(disposable.dispose(), "disposer returned null")), 1)
+                Objects.requireNonNull(disposable.dispose(), "disposer returned null"))
+                .doOnSuccess(ignored -> lifecycle.call(() -> {
+                    removeCollected(disposable);
+                    return null;
+                })), 1))
             .then()
             .publishOn(lifecycle.scheduler())
             .subscribe(ignored -> { }, this::finishWithCleanupError, this::finishSuccessfully);
     }
 
     private void finishWithCleanupError(Throwable cleanupError) {
-        owner.removeResource(this);
+        if (!(cleanupError instanceof ResourceDrain.Failure) || drainedForTeardown) {
+            owner.domain().cleanupFailed(this, owner, label, cleanupError);
+        }
         if (sourceError != null) {
             if (cleanupError != sourceError) {
                 cleanupError.addSuppressed(sourceError);
@@ -201,6 +256,15 @@ final class OwnedResource implements OwnedEffect, Subscriber<Disposable> {
             ready.tryEmitError(cleanupError);
         }
         disposed.tryEmitError(cleanupError);
+    }
+
+    private void removeCollected(Disposable disposable) {
+        for (var index = 0; index < collected.size(); index++) {
+            if (collected.get(index) == disposable) {
+                collected.remove(index);
+                return;
+            }
+        }
     }
 
     private void finishSuccessfully() {

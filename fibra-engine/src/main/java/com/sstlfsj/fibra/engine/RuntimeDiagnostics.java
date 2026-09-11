@@ -1,42 +1,36 @@
 package com.sstlfsj.fibra.engine;
 
-import com.sstlfsj.fibra.PluginInstanceState;
-import com.sstlfsj.fibra.config.PublicationRequirement;
 import com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot;
-
 import java.util.List;
 
-/** 当前已发布运行代内部的不可变事实投影。 */
-public record RuntimeDiagnostics(String generationRevision,
-                                 String domainName,
-                                 List<Plugin> plugins,
-                                 List<RuntimeDomainSnapshot.Service> services,
-                                 List<RuntimeDomainSnapshot.Event> events,
-                                 String failure) {
+public record RuntimeDiagnostics(String domainName,
+    List<RuntimeDomainSnapshot.Plugin> plugins,
+    List<RuntimeDomainSnapshot.Service> services,
+    List<RuntimeDomainSnapshot.Event> events,
+    List<RuntimeDomainSnapshot.CleanupFailure> cleanupFailures,
+    String failure) {
     public RuntimeDiagnostics {
         plugins = List.copyOf(plugins);
         services = List.copyOf(services);
         events = List.copyOf(events);
+        cleanupFailures = List.copyOf(cleanupFailures);
     }
 
-    public record Plugin(String instanceId, String pluginId,
-                         PluginInstanceState state,
-                         PublicationRequirement publicationRequirement,
-                         PublicationImpact publicationImpact,
-                         List<RuntimeDomainSnapshot.Dependency> dependencies,
-                         String failure) {
-        public Plugin {
-            dependencies = List.copyOf(dependencies);
-        }
+    public static Builder builder() { return new Builder(); }
 
-        public List<RuntimeDomainSnapshot.ServiceIdentity> waitingFor() {
-            return dependencies.stream().filter(value -> value.provider() == null)
-                .map(RuntimeDomainSnapshot.Dependency::service).toList();
-        }
-    }
-
-    public enum PublicationImpact {
-        NONE,
-        BLOCKING
+    public static final class Builder {
+        private String domainName;
+        private List<RuntimeDomainSnapshot.Plugin> plugins;
+        private List<RuntimeDomainSnapshot.Service> services;
+        private List<RuntimeDomainSnapshot.Event> events;
+        private List<RuntimeDomainSnapshot.CleanupFailure> cleanupFailures = List.of();
+        private String failure;
+        public Builder domainName(String value) { domainName = value; return this; }
+        public Builder plugins(List<RuntimeDomainSnapshot.Plugin> value) { plugins = value; return this; }
+        public Builder services(List<RuntimeDomainSnapshot.Service> value) { services = value; return this; }
+        public Builder events(List<RuntimeDomainSnapshot.Event> value) { events = value; return this; }
+        public Builder cleanupFailures(List<RuntimeDomainSnapshot.CleanupFailure> value) { cleanupFailures = value; return this; }
+        public Builder failure(String value) { failure = value; return this; }
+        public RuntimeDiagnostics build() { return new RuntimeDiagnostics(domainName, plugins, services, events, cleanupFailures, failure); }
     }
 }

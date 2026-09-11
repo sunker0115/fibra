@@ -7,8 +7,6 @@ import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.PluginCatalog;
 import com.sstlfsj.fibra.engine.PluginCatalogEntry;
-import com.sstlfsj.fibra.engine.TransactionJournal;
-import com.sstlfsj.fibra.engine.TransactionRecord;
 import com.sstlfsj.fibra.registry.PluginAuditEntry;
 import com.sstlfsj.fibra.registry.PluginAuditRepository;
 import com.sstlfsj.fibra.registry.PluginEnableRequest;
@@ -55,7 +53,7 @@ public class EngineTransactionBenchmark {
         var desired = new DesiredInputGraph(List.of(
             DesiredInputEntry.builder(INSTANCE_ID, DEFINITION_NAME).build()));
         engine = FibraEngine.builder(new InMemoryDesiredStateRepository(desired))
-            .catalog(catalog).journal(new DiscardingJournal()).build();
+            .catalog(catalog).build();
         registry = new PluginRegistry(engine, new DiscardingAudit());
         engine.start().block();
     }
@@ -73,24 +71,16 @@ public class EngineTransactionBenchmark {
         return registry.snapshot().viewRevision();
     }
 
-    private static final class DiscardingJournal implements TransactionJournal {
-        @Override
-        public void append(TransactionRecord record) {
-        }
-
-        @Override
-        public List<TransactionRecord> records() {
-            return List.of();
-        }
-    }
-
     private static final class DiscardingAudit implements PluginAuditRepository {
         @Override
         public PluginAuditEntry append(String operation, String target,
-                                       boolean succeeded, String viewRevision,
+                                       boolean succeeded,
+                                       com.sstlfsj.fibra.registry.TargetSaveState targetSaveState,
+                                       String viewRevision,
                                        String detail) {
-            return new PluginAuditEntry(1, Instant.EPOCH, operation, target,
-                succeeded, viewRevision, detail);
+            return PluginAuditEntry.builder().sequence(1).timestamp(Instant.EPOCH)
+                .operation(operation).target(target).succeeded(succeeded)
+                .targetSaveState(targetSaveState).viewRevision(viewRevision).detail(detail).build();
         }
 
         @Override

@@ -5,7 +5,6 @@ import com.sstlfsj.fibra.PluginInstanceState;
 import com.sstlfsj.fibra.ServiceKey;
 import com.sstlfsj.fibra.ServiceRegistration;
 import com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.LinkedHashMap;
@@ -101,6 +100,7 @@ final class ServiceRegistry {
     }
 
     void ownerStateChanged(ResourceOwner owner) {
+        domain.diagnosticChanged();
         bindings.values().stream()
             .filter(binding -> binding.owner() == owner)
             .map(Binding::slot)
@@ -120,19 +120,27 @@ final class ServiceRegistry {
 
     private Mono<Void> revoke(Binding<?> binding) {
         return domain.runtime().lifecycle().mono(() -> {
+                var cleanup = domain.cleanupConsumersSnapshot().stream()
+                    .map(instance -> instance.cleanupUsing(binding)).toList();
                 if (!bindings.remove(binding.slot(), binding)) {
-                    return List.<PluginInstanceImpl<?>>of();
+                    return Mono.<Void>empty();
                 }
-                var affected = notifyChanged(binding.slot());
-                return affected;
+                notifyChanged(binding.slot());
+                return Mono.whenDelayError(cleanup);
             })
-            .flatMapMany(Flux::fromIterable)
-            .flatMap(instance -> instance.settled().then()
-                .onErrorResume(error -> Mono.empty()))
-            .then();
+            .flatMap(cleanup -> cleanup);
+    }
+
+    Mono<Void> consumerCleanup(ResourceOwner provider) {
+        var cleanup = domain.cleanupConsumersSnapshot().stream()
+            .filter(instance -> instance != provider)
+            .map(instance -> instance.cleanupUsing(provider)).toList();
+        return Mono.whenDelayError(cleanup)
+            .onErrorMap(ResourceDrain.Failure::new);
     }
 
     private List<PluginInstanceImpl<?>> notifyChanged(Slot slot) {
+        domain.diagnosticChanged();
         var affected = domain.instancesSnapshot().stream()
             .filter(instance -> instance.dependsOn(slot.name()))
             .filter(instance -> Objects.equals(instance.contextImpl().realm(slot.name()), slot.realm()))

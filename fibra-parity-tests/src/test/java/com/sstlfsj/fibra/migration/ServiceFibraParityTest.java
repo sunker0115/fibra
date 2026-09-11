@@ -1,6 +1,5 @@
 package com.sstlfsj.fibra.migration;
 
-import com.sstlfsj.fibra.Context;
 import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.PluginInstance;
 import com.sstlfsj.fibra.PluginInstanceState;
@@ -47,12 +46,21 @@ class ServiceFibraParityTest {
 
     @Test
     void nameOnlyIsolationDoesNotDeclareAServiceType() {
-        assertFalse(java.util.Arrays.stream(Context.class.getMethods())
-            .anyMatch(method -> method.getName().equals("withRealm")
-                && method.getParameterTypes()[0] == String.class));
-        assertTrue(java.util.Arrays.stream(Context.class.getMethods())
-            .anyMatch(method -> method.getName().equals("withRealm")
-                && method.getParameterTypes()[0] == ServiceKey.class));
+        try (var runtime = FibraRuntime.create()) {
+            var root = runtime.rootScope().context();
+            var textRealm = root.withRealm("value", "text");
+            var numberRealm = root.withRealm("value", "number");
+            var text = ServiceKey.of("value", String.class);
+            var number = ServiceKey.of("value", Integer.class);
+
+            textRealm.services().provide(text, "value");
+            numberRealm.services().provide(number, 42);
+
+            assertEquals("value", root.withRealm("value", "text").services().require(text));
+            assertEquals(42, root.withRealm("value", "number").services().require(number));
+            assertTrue(root.services().find(text).isEmpty());
+            assertThrows(IllegalArgumentException.class, () -> textRealm.services().require(number));
+        }
     }
 
     @Test

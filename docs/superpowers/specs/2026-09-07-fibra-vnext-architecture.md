@@ -13,23 +13,33 @@
 Fibra vNext 是一套面向受信任动态插件的托管运行底座。它允许 Java 原生插件、Node sidecar 和程序内建
 插件进入同一个期望状态、生命周期、发布和诊断模型，同时保留纯内核嵌入方式。
 
+交付以满足实际场景的最小完整架构为目标，不以比参考项目更多的组件或更强的限制作为增强。
+以 DSH `0.1.2-rc.1`（`a66e4702047846cdaa10c66c9d3df3951f5ea70d`）的插件系统为固定行为基线，
+逐项覆盖插件协作、配置装配与动态管理场景，提供等价或增强的实现，不退化、不变形。Java/Node 的
+实现机制和输入语法可以不同，但不能削弱核心行为契约；等价性由源码对照和行为测试证明。
+Tool、Agent、Session 等业务插件的实现不因此进入通用底座；其所需的通用插件能力仍须完整提供。
+
+运行时安全、在线发布一致性和持久目标保存是三项独立职责。前两项不要求数据库；持久化只保存
+不可变制品与一个完整部署目标，不引入内嵌数据库或通用多参与者持久事务协调器，不将审计与部署
+绑定为原子提交。简化实现不能丢失已确认保存的目标、接受半份清单，或在恢复失败时悄悄回退。
+
 ### 1.1 核心不变量
 
 1. 单个运行域保留 Cordis 的异步 effect、依赖驱动激活、调用者所有权、事件分派和关闭语义。
-2. 不同运行代的服务、事件、Scope、插件实例和贡献完全隔离；候选代在发布前不可被宿主发现。
+2. 托管 Engine 在长期运行域内进行实例差量更新；配置树、服务依赖图和资源所有权树分别建模。
 3. core 只有一个 lifecycle lane，托管层只有一个 Engine command loop；不存在其他可变写入口。
-4. Engine 只发布整代不可变 `PublishedView`；宿主不分别拼接状态、贡献和诊断。
+4. Engine 原子发布不可变 `PublishedView`；宿主不分别拼接状态、贡献和诊断。视图一致不等于生命周期变更原子。
 5. 配置和制品只是输入事实，不能直接修改 Runtime；所有托管变更统一编译为 `ChangeSet`。
 6. Java 与 Node 通过同一个 `PluginRuntimeAdapter` 端口参与变更，Engine 不接触 ClassLoader、Process 或
    JSON-RPC 私有句柄。
 7. 所有注册都归某个 `Scope`，注册生效与逆操作登记是同一个 lane command；关闭可等待且幂等。
-8. `PENDING` 是合法运行状态，是否允许发布由逐 entry 的 `PublicationRequirement` 明确决定。
+8. `PENDING` 是合法运行状态；逐 entry 的 `PublicationRequirement` 决定目标是否达成，不允许隐瞒实际运行状态。
 9. vNext 不引入 PF4J，不保留旧公开 API、旧模块名、旧配置入口或兼容转发。
 10. Tool、Agent、Skill、Session、UI slot 等业务类型只存在于场景适配层，不进入 Fibra 通用模块。
 
 ### 1.2 两种使用方式
 
-- 纯内核嵌入：应用直接创建 `FibraRuntime`，自行管理一个运行域，不获得制品事务和整代发布能力。
+- 纯内核嵌入：应用直接创建 `FibraRuntime`，自行管理运行域，不获得持久部署目标和托管视图发布能力。
 - 托管插件宿主：应用使用 `PluginRegistry`、`EngineCommand` 和 `PublishedRuntime`，不能取得 Engine 内部
   `FibraRuntime` 或完整 `Context`。
 
@@ -55,14 +65,15 @@ RuntimeDomain + ContributionDirectory -> PublishedView -> PublishedRuntime -> �
 ```text
 FibraEngine
   ├─ command loop                         托管变更的唯一写入口
-  ├─ EngineStateStore                     部署清单与提交日志的唯一持久真源
+  ├─ EngineStateStore                     单一部署目标的保存与读取
   ├─ ArtifactStore / desired input source  不可变制品内容与候选配置采集
   ├─ PluginRuntimeAdapter[]               Java、Node 等运行时参与者
   ├─ FibraRuntime
   │    └─ lifecycle lane                  core 状态的唯一写入口
-  ├─ candidate PublishedGeneration        最多一个，宿主不可见
-  ├─ current PublishedGeneration          恰好一个已发布代
-  ├─ draining PublishedGeneration         最多一个，不再接收新调用
+  ├─ RuntimeDomain                        长期运行，局部变更实例和服务
+  │    ├─ Scope ownership tree            实例、嵌套插件与调用资源
+  │    └─ ContributionDirectory           注册、撤销与条目调用排空
+  ├─ runtime resources                    按制品依赖闭包准备和回收
   └─ PublishedRuntime                     宿主唯一能力入口
        └─ AtomicReference<PublishedView>
             ├─ EngineSnapshot
@@ -71,41 +82,32 @@ FibraEngine
             └─ EngineDiagnostics
 ```
 
-`PluginRegistry` 只管理安装、版本、期望状态和审计；`ContributionDirectory` 只管理代内贡献；runtime
-adapter 只管理自己的制品物化和资源；Engine 只管理事实、事务与发布。任何类型同时承担其中两类职责，
+`PluginRegistry` 只管理安装、版本、期望状态和审计；`ContributionDirectory` 只管理域内贡献；runtime
+adapter 只管理自己的制品物化和资源；Engine 只管理目标、变更编排与发布。任何类型同时承担其中两类职责，
 都属于边界泄漏。
 
-### 2.1 运行代关系与域内依赖
+### 2.1 配置树、服务图与资源归属
 
-多个 `RuntimeDomain` 是同一 `FibraRuntime` 下彼此隔离的同级对象，不构成父子关系，也不相互依赖。
-`candidate -> current -> draining -> closed` 表示同一个 generation 的时间角色变化，不是 domain 之间的
-调用方向。它们只共享 lifecycle lane 的调度纪律和不可变宿主输入，不共享服务表、事件表、Scope 或
-贡献目录：
-
-```text
-FibraRuntime（唯一 lifecycle lane）
-  ├─ Generation G41 [draining]
-  │    ├─ RuntimeDomain D41
-  │    ├─ ContributionDirectory C41
-  │    └─ Java ClassSpace / Node sidecars R41
-  ├─ Generation G42 [current]
-  │    ├─ RuntimeDomain D42
-  │    ├─ ContributionDirectory C42
-  │    └─ Java ClassSpace / Node sidecars R42
-  └─ Generation G43 [candidate]
-       ├─ RuntimeDomain D43
-       ├─ ContributionDirectory C43
-       └─ Java ClassSpace / Node sidecars R43
-```
-
-插件系统内部存在三种不同关系，不能合并画成一棵“插件依赖树”：
+托管变更在同一个长期 `RuntimeDomain` 内收敛，不通过创建另一整个 domain 更新配置。
+纯内核可以创建多个互相隔离的同级 domain，但它们不是配置分组，不形成跨域依赖，也不是托管更新协议。
+插件系统内部存在四种不同关系，不能合并画成一棵“插件依赖树”：
 
 ```text
-1. Java artifact DAG（候选代创建前校验）
+1. 配置条目树（声明归属、启停与隔离策略继承）
+
+   root
+     ├─ group-a [message: local]
+     │    ├─ provider-a
+     │    └─ consumer-a
+     └─ group-b [message: local]
+          ├─ provider-b
+          └─ consumer-b
+
+2. Java artifact DAG（物化和替换前校验）
 
    provider ──requires──> contract <──requires── consumer
 
-2. Service dependency graph（每个 RuntimeDomain 内动态解析）
+3. Service dependency graph（RuntimeDomain 内动态解析）
 
    agent ──requires ModelService──> model-provider
      │
@@ -113,7 +115,7 @@ FibraRuntime（唯一 lifecycle lane）
                                       │
                                       └──requires Store──> store-provider
 
-3. Scope ownership tree（只决定关闭与清理）
+4. Scope ownership tree（只决定关闭与清理）
 
    domain root
      ├─ plugin instance scope
@@ -121,24 +123,26 @@ FibraRuntime（唯一 lifecycle lane）
      └─ built-in plugin scope
 ```
 
-`DesiredInputGraph` 保存实例声明；requires/provides 契约由目标代的 catalog 提供。实例挂载后，`ServiceRegistry` 为每个
+`DesiredInputGraph` 保存配置条目树；requires/provides 契约由目标制品 catalog 提供。实例挂载后，`ServiceRegistry` 为每个
 `(ServiceKey, realm)` 槽位选择 effective provider，由此形成实际服务依赖图。该图支持链式依赖、共享
 provider、扇入和扇出，不要求是树。`ContributionDirectory` 是按 identity/kind 建立的路由索引，也不是
-依赖图；贡献随 owner Scope 撤销，并随整个 generation 发布。
+依赖图；贡献随 owner Scope 撤销，其当前事实投影到已发布视图。
+组上的局部 realm 由该组拥有并被子条目继承；不同组各有独立 realm。组不创建实例 ID 命名空间，
+include 边界才创建命名空间。改变组归属或继承策略可能影响其子树，但不会自动重启其他配置组。
 
 场景覆盖如下：
 
 | 场景 | 表达方式 | 结果 |
 |---|---|---|
-| 多级服务链、菱形依赖、多个 consumer 共享 provider | domain 内 Service graph | 支持；Engine 等待全部实例完成传递收敛后再验证候选代 |
-| provider 缺失 | 实例进入 PENDING，诊断列出 `waitingFor` | `ACTIVE_REQUIRED` 拒绝发布；`PENDING_ALLOWED` 可以发布 |
+| 多级服务链、菱形依赖、多个 consumer 共享 provider | domain 内 Service graph | 内核按实际 provider 变化传递收敛，不重建无关实例 |
+| provider 缺失 | 实例进入 PENDING，诊断列出 `waitingFor` | `ACTIVE_REQUIRED` 表示目标未达成；`PENDING_ALLOWED` 允许该状态 |
 | provider 替换或消失 | effective provider identity/epoch 变化 | dependent 先按旧快照清理，再重新解析和激活 |
 | Java 共享 contract 与多制品依赖 | Java artifact DAG | 缺失、版本冲突和环在创建活动 ClassSpace 前拒绝 |
 | session、tenant、request、嵌套插件资源 | Scope ownership tree | 父 Scope 关闭时递归关闭子树，不改变服务依赖方向 |
-| Java 与 Node 能力共同对外发布 | 同代 ContributionDirectory | 支持统一快照、revision 调用和整代排空 |
+| Java 与 Node 能力共同对外发布 | 同域 ContributionDirectory | 支持统一快照、revision 调用和受影响条目排空 |
 | 任意 Java Service 直接注入 Node 进程 | 无隐式跨进程 Service graph | 不支持；必须定义显式 contribution/RPC adapter 与 schema |
-| 跨 generation 服务或事件依赖 | 无表达入口 | 明确禁止，避免候选代和活动代相互污染 |
-| 硬服务依赖环且没有外部 provider 打破环 | 所有相关实例保持 PENDING | 不伪造拓扑序；由发布要求决定拒绝或带诊断发布 |
+| 跨 domain 服务或事件依赖 | 无表达入口 | 明确禁止；多个配置组在同域内通过 realm 控制可见性 |
+| 硬服务依赖环且没有外部 provider 打破环 | 所有相关实例保持 PENDING | 不伪造拓扑序；诊断说明缺失依赖与目标达成情况 |
 
 ## 3. Runtime 内核
 
@@ -147,7 +151,7 @@ provider、扇入和扇出，不要求是树。`ContributionDirectory` 是按 id
 | 概念 | 职责 | 不承担 |
 |---|---|---|
 | `FibraRuntime` | root 所有者、唯一 lifecycle lane、运行域创建 | 配置、制品、宿主路由 |
-| `RuntimeDomain` | 一代内的服务、事件、Scope 与插件实例可见性；代内贡献目录与它绑定发布 | 跨代共享可变状态 |
+| `RuntimeDomain` | 域内服务、事件、Scope 与插件实例可见性；支持长期动态更新 | 配置解析、制品选择与跨域依赖 |
 | `Scope` | 独立可关闭的资源所有权子树 | metadata/isolate 视图派生 |
 | `Context` | 绑定 Scope 的不可变能力视图 | 关闭 root 或拥有资源 |
 | `PluginDefinition<C>` | 名称、配置类型、校验器、requires、provides、实例工厂 | 运行实例状态 |
@@ -164,7 +168,7 @@ provider、扇入和扇出，不要求是树。`ContributionDirectory` 是按 id
 检查 Scope / PluginInstance 可接纳
   -> 建立状态与唯一 token
   -> 登记逆操作到所有者
-  -> 发布代内可见状态并通知依赖者
+  -> 发布域内可见状态并通知依赖者
 ```
 
 任一步失败都在该 command 内撤销，不能出现“状态已生效但 disposer 尚未被拥有”的窗口。用户
@@ -190,57 +194,84 @@ PENDING -> STARTING -> ACTIVE -> STOPPING -> DISPOSED
 - 启动和停止前各让出一个 lifecycle tick，避免同步重入改变 Cordis 可观察时序。
 - `update/restart` 可以清除启动错误；依赖自然回归本身不复活 FAILED 实例。
 - `settled()` 表示当前状态转换已经落地；稳定 PENDING 可以 settled，但不等于 ACTIVE。
+- `updatePrepared` 只接受当前 definition 对象的预校验配置，与 `update(config)` 共用状态机但不重复
+  校验。使用独立方法名，避免合法 null 配置与 Prepared 形成重载歧义。
 - dispose、update、关闭和注册都提供可等待、幂等的完成结果。
 
 ### 3.4 Service、Event 与 Effect
 
-- `ServiceKey<T>` 使用稳定名称和 Java 契约类型；realm 是独立维度。同一代、同一 realm 的同名异型
-  服务直接拒绝，不跨 generation 缓存 Java `Class`。
+- `ServiceKey<T>` 使用稳定名称和 Java 契约类型；realm 是独立维度。同一域、同一 realm 的同名异型
+  服务直接拒绝。制品替换必须清理已退休契约类型的引用；不能让长期 domain 永久钉住旧 Java `Class`。
 - `find` 返回当前可用服务，`require` 要求服务存在；不使用 boolean 参数隐藏查询语义。
 - 会产生调用方资源的服务通过 `ServiceRef` 与 `InvocationContext` 显式携带调用者 Scope，不使用
   ThreadLocal 或动态代理猜测所有权。
 - `EventKey` 固定稳定名称、listener 类型和 `EventMode`。支持 `EMIT/PARALLEL/SERIAL/BAIL/WATERFALL`；
   调用方式与 key mode 不一致时直接拒绝。
+- 事件诊断的历史类型描述只保留类型名与 mode，不能永久持有退休的 listener Class。活动监听器必须
+  与当前 key 的接口类型一致；最后一个监听器注销后，允许同类型名的新装载器接口接管。已捕获派发
+  快照仍只调用自己捕获的监听器，不改变捕获时机，也不转向同名新注册。
+- `once` 的调用权归监听器注册本身所有，而不是归某次派发快照所有。异步派发重叠、重复订阅或
+  同步重入时，每个注册最多开始一次调用；调用抛错或开始后取消不恢复调用权。过滤、提前截断或
+  在到达该监听器前取消不能消耗调用权；普通监听器保持既有快照行为。
 - 同一 effect 内严格逆序串行清理；实例顶层 effects 并发启动并 all-settled。
 - 异步 effect 逐项 `request(1)`。dispose 不丢弃已经请求的在途元素；元素到达后先归属，再停止请求并
   清理。
 - 服务对象不会因为实现 `AutoCloseable` 就被推测性关闭。外部容器拥有的对象只注册 binding；Fibra
   拥有的资源必须显式登记 disposer。
 
-## 4. Engine 与运行代发布
+## 4. Engine 与局部动态更新
 
-### 4.1 运行代
+### 4.1 变更协调与资源所有权
 
-一个 `PublishedGeneration` 包含一个 `RuntimeDomain`、各 runtime 的候选资源、代内贡献目录和诊断事实。
-其中 runtime 资源以 `Map<RuntimeId, RuntimeGeneration>` 由该代独占。`PluginRuntimeAdapter.create`
-同步交出尚未取得外部资源的句柄，不保留 `current/previous`，也不执行第二次发布。Engine 立即登记句柄，
-再调用其 `prepareAsync()`；ClassLoader 等资源在取得后、执行后续可失败动作前登记进句柄。每次创建候选代都为完整制品集合
-物化新的 runtime generation，包括只改变配置的情况。关闭顺序为停止接入、等待调用、关闭 domain、
-关闭贡献目录、关闭各 runtime generation，最后释放制品引用；失败候选只关闭自身资源。
-`RuntimeGenerationRequest` 只携带 runtime identity 与该 runtime 的完整目标制品集合；不携带旧代。
-`RuntimeGeneration` 暴露 `prepareAsync()`、catalog、snapshot 和 `closeAsync()`，不是事务参与者。
-catalog 和 snapshot 仅准备成功后可读；准备失败仍由 Engine 关闭已登记句柄，不能由 adapter 丢弃部分资源。
-准备和关闭均缓存完整终态。NEW 状态可直接关闭，PREPARING 状态关闭必须等待准备结束后清理；关闭后
-不得再次准备或取得资源。无制品的 runtime 不创建
-空句柄。代内同级 runtime 句柄按取得顺序逆序关闭并聚合失败；domain、目录、runtime 和制品这几层
-之间则严格串行，前一层失败不得继续释放下一层。关闭信号缓存完整终态，重复关闭不会掩盖首次失败。
-候选代从准备开始即由 Engine 持有；runtime 句柄取得后立即登记到该代，再验证 identity、绑定配置和
-挂载插件。准备失败不使资源失去所有者；只有清理成功才清除候选引用，失败终态必须进入 Engine 关闭结果。
+Engine 长期持有一个运行域、一个贡献目录和各 runtime 的资源所有者。配置变化比较稳定实例身份、
+definition、配置和有效继承策略：新增实例挂载，删除或停用实例撤销；仅配置变化使用实例更新协议；
+definition 或有效隔离归属变化重挂受影响实例。没有变化的实例、effects、ClassLoader 和 Node 进程保留。
+服务 provider 变化引起的消费者停止和重新激活由内核依赖协议驱动，Engine 不另建第二套服务调度器。
 
-Node 的进程属于插件实例贡献注册的 after-drain 资源，在 domain 关闭时随实例撤销并排空；Node runtime
-句柄持有代内 catalog 与 snapshot，不另设进程所有者或发布状态。Java runtime 句柄独占 ClassSpace。
-一个 Engine 同时最多存在：
+制品变更先校验完整目标依赖图，再按变化制品及其反向依赖闭包准备资源。Java 的已链接契约类型要求
+消费者装载器随所依赖契约一起替换；不能只更新 provider 的 ClassLoader。未受影响的装载器继续使用。
+adapter 负责计算其运行时的物化影响范围并返回 catalog 与资源身份，Engine 负责实例协调与唯一视图发布；
+adapter 不持有另一份宿主发布指针。Node 进程归插件实例的受管资源范围，目录撤销及调用排空后才能清理。
 
-- 一个 current：接收新的宿主调用；
-- 一个 candidate：执行准备、激活和验证，对宿主不可见；
-- 一个 draining：发布切换后不再接收新调用，只等待已有 lease 结束。
+adapter 创建长期 `RuntimeResourceOwner`，每次制品变更创建并登记一个有界 `RuntimeResourceUpdate`。
+update 的准备结果包含受影响制品集合、目标 catalog 及 definition 到制品的归属；目标 catalog 复用
+未受影响 definition 和装载器的原对象。Java 在旧、新制品 DAG 边的并集上计算反向依赖闭包，
+资源 identity 表示实际装载对象，不能用制品 revision 代替（依赖升级也会导致消费者装载器重建）。
 
-会发布新代的下一条 `ChangeSet` 必须等待 draining 正常完成或强制关闭结果落地，防止 ClassSpace、
-sidecar 和其他代际资源无界增长。
+预绑定期间只允许受影响闭包的新旧资源暂时共存，不创建另一整个运行域。`adopt()` 仅转移内存中的
+资源所有权：新资源交给长期 owner，被替换旧资源交给 update；不执行 I/O、插件启动或关闭。
+adopt 前关闭 update 只清理本次准备资源，adopt 后关闭只清理被替换旧资源，借用的未受影响资源
+始终归长期 owner。Engine 先登记句柄再准备，并在旧实例安全清理后才允许旧资源关闭。
+这不是通用事务参与者协议，不提供发布指针或运行态回滚。Java 预绑定可能执行入口类初始化、
+入口构造器和 definition 构建，不能承诺完全没有制品代码副作用；插件 factory/start 不属于预绑定。
+
+资源句柄在取得后、执行后续可失败动作前登记所有者；准备失败不使资源失去归属。停止与清理按以下
+先决顺序进行，实际服务消费者也必须完成对旧 provider 激活快照的清理：
+
+```text
+受影响贡献停止接入 -> 排空已接受调用 -> 清理实例及其子资源
+                 -> 关闭不再使用的 runtime 资源 -> 释放制品引用
+```
+
+同级独立资源逆序尝试关闭并聚合失败；先决层失败不得释放其仍依赖的下一层资源。保留失败资源身份、
+引用与清理结果，不得仅从活动索引删除后宣告成功。准备和关闭缓存完整终态，重复关闭不掩盖首次失败。
+尚在准备的资源关闭必须等待准备结束，已关闭资源不得再次取得资源。失败尚未处理完毕时，不接受会
+叠加替换资源的后续变更；不能靠无限积累候选资源继续运行。
+
+`DrainingDisposable` 是 owned resource 的专用排空契约，不是通用事务 hook。沿现有 Scope、插件和
+effect 所有权闭包先冻结准入，再启动排空；同步回调及迟到异步资源不能绕过该边界。全部相关排空完成
+后才启动普通清理；provider 还须等待实际消费者的旧 activation 清理，不等待其下一次激活。普通
+effect 的逆序与告警隔离语义保留，但其失败句柄及真实依赖仍被持有，不能以消费者已退出活动索引为由
+提前释放 provider。每个 runtime owner 自己保护失败资源的先决依赖，不能因一个 owner 失败跳过独立 owner。
+
+此屏障只服务于实际受管调用和资源关闭顺序，不引入全域停机、第二份依赖调度图或通用补偿协议。
+DSH 已有 effect 所有权、在途清理复用和服务撤销后的消费者等待；Fibra 直接采用这些原则，额外的
+调用排空和失败资源保留用于避免关闭仍被调用使用的 Java 装载器、Node 进程及插件资源。
+逐项源码与采用边界见[插件依赖、装载与更新的源码基线](../references/2026-09-09-plugin-dependency-baselines.md#资源调用与保存问题的采用边界)。
 
 Engine 关闭先在线性化的命令准入边界停止接收新请求，等待所有已接受命令及其结果终态落地，再关闭
-candidate/current/draining 和持久存储。不能直接取消 command loop 的订阅，也不能在 inspect 或准备
-尚未结束时关闭候选并缓存一个不包含后续资源的成功结果。正常关闭不取消已接受命令。
+运行域、贡献目录、runtime 资源及持久存储。不能直接取消 command loop 的订阅，也不能在准备
+尚未结束时缓存一个遗漏后续资源的关闭成功结果。正常关闭不取消已接受命令。
 关闭操作独立持有排空与清理链，调用方中断只终止自身等待，不取消关闭、不跳过排空，也不污染共享关闭终态。
 内部关闭采用可组合的异步完成链，不阻塞等待另一条关闭任务；清理推进不依赖宿主通知线程池。
 命令结果投影在 command loop 内完成并冻结，结果与 `PublishedRuntime.views()` 的宿主通知异步交付，
@@ -249,31 +280,26 @@ candidate/current/draining 和持久存储。不能直接取消 command loop 的
 
 ### 4.2 PublishedRuntime 与 PublishedView
 
-`PublishedRuntime` 是稳定宿主对象，内部只原子替换一个不可变 `PublishedView`：
+`PublishedRuntime` 是稳定宿主对象，内部只原子替换一个不可变 `PublishedView`，其中包含 Engine 状态、
+贡献快照、运行诊断与 Engine 诊断。`viewRevision` 标识任意已发布事实变化；保存的目标 revision
+标识声明内容。运行域 identity 不因局部更新而变化，不再使用 generation revision 表示目标或调用权。
 
-```java
-public record PublishedView(
-        String viewRevision,
-        String generationRevision,
-        EngineSnapshot engine,
-        ContributionSnapshot contributions,
-        RuntimeDiagnostics diagnostics,
-        EngineDiagnostics engineDiagnostics) {}
-```
-
-`viewRevision` 标识任意已发布事实变化；`generationRevision` 只在整代切换时变化。同一 generation 内的
-PENDING 恢复、provider 变化或贡献增删只增加 view revision。
-
-宿主调用必须携带选择贡献时观察到的 expected view revision。调用先读取当前 published state 并校验
-revision，再取得该 generation 的 lease，随后复读原子引用；只有两次读取仍指向同一 state 才能解析
-贡献并执行，否则释放 lease 后重试或返回明确的 stale-revision 结果，不能悄悄路由到新代。
+宿主调用必须携带选择贡献时观察到的 expected view revision。准入须同时确认当前视图未过期、
+目标贡献仍是该注册身份且开放，并登记在途调用。视图检查与条目准入之间的竞争必须重新复核；
+失败返回明确的 stale-revision 或已撤销结果，不能悄悄转向同名的新 handler。旧快照不是永久调用权。
 
 一次调用在目标 domain 内创建临时调用 Scope。成功、失败或取消后都必须等待该 Scope 的异步清理完成，
-再释放 generation lease，最后异步向宿主交付结果；宿主回调不能占用生命周期线程或未释放的调用租约。
-取消订阅不取消已经启动的清理。Engine 开始关闭后拒绝新调用；准入已关闭而 published state 未变化时
-明确拒绝，不重试同一个运行代。发布通过一次原子交换同时切换 generation、状态、路由和诊断，随后立即关闭
-旧代准入：已经完成二次复核的旧代调用在线性化点前成立并计入排空，其余调用只能进入新代或报告
-revision 过期，不存在未计数的旧代调用。
+再释放在途计数，最后异步向宿主交付结果；宿主回调不能占用生命周期线程或未释放的调用租约。
+取消订阅不取消已经启动的清理。Engine 关闭后拒绝新调用；局部变更仅停止受影响条目的接入，
+无关条目的已接受调用不被取消，也不因为其他插件更新而等待整个 domain 排空。
+
+调用 Scope 的“关闭流程结束”不等于“资源全部释放成功”。Engine 通过域内按真实 Scope 后代关系
+筛选的 `cleanupFailures(scope)` 核验本次调用，不能把同名 Scope 或其他并发调用的失败混入。
+清理失败须使对应贡献撤销并以明确排空失败结束，保留 provider 资源；不能正常释放租约冒充成功，
+也不能靠永久挂起租约隐藏失败。一个已取得的调用句柄只能执行一次，关闭后的延迟订阅不得启动 handler。
+
+视图是同一观测时点的事实投影，不是整个生命周期切换的原子事务。局部更新过程中的 PENDING、
+失败、贡献暂时撤销和目标未达成必须可观察，不能保留一份虚假 ACTIVE 快照冒充仍可调用。
 
 ### 4.3 诊断投影
 
@@ -281,75 +307,112 @@ revision 过期，不存在未计数的旧代调用。
 
 | 投影 | 必需事实 |
 |---|---|
-| `RuntimeDiagnostics` | domain/generation、插件 instance/definition identity、状态、依赖、`waitingFor`、failure、publication requirement/impact |
+| `EngineSnapshot.instances` | Engine 实际持有的声明实例、完整声明 ID、状态、声明的达成要求与 `requirementSatisfied` |
+| `RuntimeDiagnostics` | 整个 domain 的实例事实，包括动态子插件；instance/definition identity、owner/父实例、状态、依赖、`waitingFor`、failure |
 | `RuntimeDiagnostics.services` | `ServiceKey`、effective provider 与 shadowed providers |
 | `RuntimeDiagnostics.events` | 事件名称、mode、listener type，以及 listener owner/order/once/global |
-| `ContributionSnapshot` | 目录 revision、contribution id/kind/descriptor；provider instance 来自 `ContributionId`，generation 来自当前 `PublishedView` |
-| `EngineDiagnostics` | current/candidate/draining generation、transaction state/records、mutation gate 与 Engine failure |
+| `ContributionSnapshot` | 目录 revision、contribution id/kind/descriptor、provider/owner、注册身份及可调用状态 |
+| `EngineDiagnostics` | 已保存目标 revision、变更阶段、受影响实例/资源、排空与清理失败、目标是否达成、mutation gate 与 Engine failure |
 
 这些 DTO 只描述结果，不暴露 Fiber、Context、ClassLoader、Process、RPC channel 或 registration 句柄。
+声明的达成要求不能按 instanceId 与整个 domain 的实例列表连接：动态子插件可能没有配置声明，
+不同 Scope 中也可能使用相同局部 ID。达成规则仅应用于 Engine 持有的声明实例；全域诊断保留动态
+实例事实，不为它们虚构声明策略。快照的 `requirementSatisfied` 与运行协调的状态验证共用同一规则。
+运行实例具有 Runtime 内唯一、创建时分配且不复用的 identity；配置局部 ID 和 Scope 名称不承担
+运行身份。声明实例状态与全域诊断从同一次域采样按 identity 投影，不能分别读取句柄的可变状态。
+目录采样前后的单调 revision 必须相同，才能与该域采样组成 PublishedView；竞争时让出执行权后
+重采，不持有目录锁等待 lifecycle lane，也不以紧循环阻塞命令队列。仅刷新 Engine 变更阶段时，
+复用上一份完整运行事实，不单独替换其中的诊断或实例状态。
 
-### 4.4 ChangeSet 协议
+`RuntimeDomain.snapshots()` 提供整个域的最新不可变事实，覆盖动态子插件加入、退出、状态变化，以及
+服务和事件监听器变化；不能只订阅 Engine 声明实例的状态。服务变化即使没有改变实例的 PENDING
+状态，也必须更新依赖和 `waitingFor`。快照在 lifecycle lane 上生成，通知异步交付，允许合并中间
+状态；它是事实流而非完整生命周期审计日志。域关闭时发布最终事实并完成流。Engine 将域事实与
+贡献事实变化汇入同一个发布入口，诊断变化也推进 view revision。
 
-artifact、config 和联合 deployment 共用同一个执行器与 journal 状态机：
+### 4.4 ChangeSet 与持久目标
+
+artifact、config 和联合 deployment 共用同一个 command loop。`ChangeSet` 只是一次受管变更的内部
+执行计划，不是开放给任意资源参与者的两阶段提交或事务日志框架：
 
 ```text
-observe -> validate -> prepare -> verify -> journal -> commit
-       -> durable decision -> publish view -> drain old -> retire
-                         \-> rollback（仅 durable decision 之前）
+observe -> validate / prepare affected artifacts / bind changed inputs
+        -> save deployment target -> reconcile affected instances
+        -> observe convergence / publish views -> retire unused resources
 ```
 
-- prepare 完成读取、摘要、依赖图、配置类型、ClassSpace/sidecar 候选和实例计划，不拆旧运行态。
-- verify 等待候选服务图收敛，再按 entry 检查 `ACTIVE_REQUIRED` 或 `PENDING_ALLOWED`。
-- commit 只消费准备结果，不重新读取不稳定来源。
-- durable `COMMITTED` journal 是唯一提交点；其后 cleanup 失败只告警并由恢复流程继续。
-- durable decision 前的 participant commit 必须可补偿；无法证明完整恢复时关闭 mutation gate。
-- participant 是依赖先决资源的准备序列，回滚也按逆序逐层确认；某层清理失败或准备阶段已不确定时，
-  保留尚未补偿的先决资源并停写，不继续删除其制品。单层内部的独立资源仍全部尝试清理并聚合失败。
-- `COMMITTING` 状态下崩溃属于结果不确定，恢复不能猜测成功或失败，必须关闭 mutation gate 等待处理。
+- prepare 读取并冻结输入，完成制品摘要、依赖图和受影响声明的配置绑定；不执行插件启动，不拆旧运行态。
+- reconcile 调用实例生命周期协议，并等待实际依赖图收敛；按声明要求判断目标达成，合法 PENDING
+  不能一律当成失败。该阶段不是可回滚的预检，启动或清理失败必须报告实际状态。
+- 所需不可变制品必须先可靠保存，目标清单只引用已完整保存且校验通过的内容；制品保存本身不选择
+  活动版本。重复保存同一内容不得覆盖或删除既有对象。
+- 制品先复制到操作独占的暂存位置，完整校验后才发布稳定对象；已有对象须校验后复用。
+  准备失败、撤销或恢复只清理该操作自己的暂存资源，不删除可能被其他准备操作引用的共享对象。
+  完整但未被目标引用的对象可以保留，不为失败清理引入通用 GC 或共享对象回滚。
+- `EngineStateStore` 原子替换一份完整目标清单并确认落盘，随后 Engine 协调运行态并发布事实视图。
+  成功响应须同时满足目标已保存、要求已达成及结果视图已发布；失败结果也必须区分目标是否保存、
+  哪些实例已经改变与后续恢复条件，保存成功不是运行时已经可用的同义词。
+- 保存目标前失败只清理新准备的资源；保存后不得因启动、发布或清理错误反写旧目标。清理按资源依赖逐层进行，
+  前一层失败时保留后续先决资源；独立同级资源仍全部尝试并聚合失败。
+- 排空与回收不决定保存的目标内容。回收失败进入健康诊断并关闭后续变更准入，不伪造旧路由恢复。
 
-恢复规则固定如下：
+DSH 的配置 Entry 在应用失败时会尝试恢复旧配置；这里不自动反写已保存目标，是为了让进程内结果与
+重启后读取的目标一致，避免引入第二次可能失败的目标提交。修正配置或恢复旧版本须提交显式新目标；
+这是一项明确取舍，不表示 DSH 的恢复方案不合理，也不把 Fibra 描述为具有更强的运行态回滚能力。
 
-| 故障点 | 恢复结果 |
+`DeploymentManifest` 选择完整 artifact revision 集合和完整声明图，包括顺序、稳定实例身份、所属
+分组、启停意图、配置、隔离和发布要求。停用声明同样保存，不要求对应 definition 已安装。部署
+revision 为规范编码的内容摘要，与 source 和 view revision 分离。清单携带显式格式版本
+及内容校验，不保存 `Class`、绑定后的配置或运行对象，也不把环境中的来源路径当成部署身份。
+
+目标文件写入与替换由一个所有者执行：同目录临时文件写全并 force，原子替换后 force 目录，成功后
+才确认保存。创建所需目录的所有者负责持久化目录链。读取同时验证格式、完整性和制品引用；不支持
+原子替换或可靠同步的存储环境明确拒绝持久模式，不退回普通覆盖写。内存模式只承诺进程内行为。
+
+恢复直接读取完整目标并重新建立 catalog、绑定配置、激活和发布，不回放插件生命周期，也不读取
+多个日志或 current 指针推测活动版本。制品目录没有独立的活动选择真源；卸载先从目标集合移除，
+物理回收必须等所有运行资源释放引用后进行。首次空存储可从配置源初始化，已有目标不能被启动时的
+文件源、默认空配置或 watcher 静默覆盖；后续导入必须是显式或已启用的源刷新变更。
+
+| 故障点 | 处理与恢复 |
 |---|---|
-| durable `COMMITTED` 前失败，且 participant 结果可确定 | 补偿已提交 participant，关闭候选代，旧代继续服务 |
-| participant commit 与 durable `COMMITTED` 之间崩溃，结果无法确定 | 保持 `COMMITTING`，关闭 mutation gate，等待人工或参与者幂等查询完成裁决 |
-| durable `COMMITTED` 后、内存发布前崩溃 | 以 journal 和已提交输入重建并发布目标代，不根据目录现状猜测，也不回退到旧 desired state |
-| 新代发布后 drain、cleanup 或 retire 失败 | 保持新代已发布，保留未关闭的 draining 代、关闭 mutation gate 并记录恢复故障；停止后续制品回收，不回滚路由 |
+| 目标替换前失败 | 旧目标与旧运行态不变，清理新准备的资源；尚未引用的不可变内容不成为活动制品 |
+| 替换可能发生、但同步或确认失败 | 不报告成功、不猜测未保存；关闭变更准入，保留新旧目标所需内容，存储重新可靠读取前不继续写入 |
+| 目标已保存、协调尚未结束时崩溃 | 重启按保存的目标重建；不承诺崩溃前未完成的调用仍能收到响应 |
+| 目标已保存、启动或清理失败 | 发布实际状态及未达成要求，保留必要资源，明确失败与恢复条件；不声称整批回滚 |
+| 已达成目标后回收失败 | 报告残留资源与故障，不倒退已保存目标 |
+| 目标损坏、引用缺失或重建失败 | 启动或恢复明确失败；不自动回退旧版本、不用当前源文件猜测修复 |
 
-参与事务的持久内容存储必须支持幂等事务标识以及可查询的 prepare/commit/rollback 结果；不能证明
-结果时必须停写，不能用 best-effort 伪造成功。期望输入与操作审计归同一 Engine 持久决策，不另设双写提交点。
+运行诊断中的变更阶段不是重启恢复日志。操作审计独立记录，失败须可观察，但不能把已经成功的
+部署返回成失败，也不能反向改变目标；不保证部署结果与审计记录恰好一次或原子持久化。业务若要求
+强审计，应在宿主层另行定义协议，不能偷偷扩大 Fibra 的提交边界。
 
-持久目标以单个不可变 `DeploymentManifest` 为根，选择完整 artifact revision 集合和完整
-`DesiredInputGraph`。部署 revision 来自规范编码的内容摘要，独立于 source、generation 与 view revision。
-`EngineStateStore` 同时拥有清单与 journal，避免把二者配置到不一致的存储。提交记录包含 transaction ID、
-base/target deployment revision、参与者恢复凭据及审计元数据，不通过自由文本推断恢复操作。
-
-`COMMITTED(targetDeploymentRevision)` 是唯一持久决策：之前准备或补偿的不可变对象不得成为活动选择，
-之后按该清单重新建立 catalog、绑定配置、激活并发布。制品目录的 current 指针只能是可重建的索引，
-卸载在目标清单中即为缺席，不能等到旧代退休才生效。已提交对象缺失或摘要不符时恢复失败并停写，
-不能回退旧输入或重新读取现有源文件猜测目标。内存 state store 只提供进程内语义，不宣称重启恢复。
-
-操作审计由同一事务事实投影；Registry 不在已成功发布之后另行双写一份决定操作成败的日志。
-durable decision 之后的审计投影或资源退休故障不改变已经提交的操作结果。
+审计结果以 `TargetSaveState` 区分 `NOT_SAVED`、`SAVED`、`UNCONFIRMED`，与操作是否达成分别记录。
+成功操作只允许 `SAVED`；`SAVED` 仍可对应未达成操作。文件审计写完整条记录并同步后才确认，
+写入或同步失败后当前仓库停止追加，保留证据至关闭；重开拒绝残缺记录，不自动截断或改写。
+投递失败通过 `PluginRegistry.auditFailures()`、查询快照及操作返回快照诊断；`watch()` 仅跟随 Engine
+事实变化，不承诺为审计失败另发通知，也不把审计诊断与运行事实伪装成一次原子采样。
 
 ### 4.5 一致性保证与非承诺
 
 Fibra 保证：
 
-- candidate 对 current 不可见；失败候选不会产生部分可见代；
+- 输入预检失败不改变正在运行的实例；局部生命周期失败如实发布，不冒充原子回滚；
 - `EngineSnapshot`、贡献快照、运行域诊断和 Engine 诊断来自同一个 view revision；
-- 新调用只进入 current，旧调用持有代内 lease 直到完成或被明确终止；
-- 内部持久决策、已登记资源补偿和恢复结果可查询；
-- Java-only、Node-only 和 Java+Node 变更使用同一个发布协议。
+- 新调用只进入当前开放的贡献注册，已接受调用计入该注册的排空直到完成或被明确终止；
+- 未受影响实例、运行资源和在途调用不会因为其他插件配置变更而重建或中断；
+- 已保存部署目标、已登记资源清理和恢复结果可查询；
+- Java-only、Node-only 和 Java+Node 变更使用同一个目标保存、协调和事实发布协议。
 
 Fibra 不承诺：
 
 - 回滚插件已经发送的邮件、网络请求、数据库提交等任意外部副作用；
 - 与外部数据库、消息系统或浏览器客户端组成分布式 ACID 事务；
+- 通用多参与者持久事务、部署与审计原子提交、任意插件运行状态的序列化恢复；
+- 多实例更新的原子生效、失败后旧实例状态的无损复原、替换服务期间始终可用；
 - 远程调用 exactly-once；
 - 对非可信插件提供安全沙箱；
-- 所有在线客户端与服务端 generation 在同一瞬间切换。
+- 所有在线客户端与服务端视图在同一瞬间切换。
 
 ## 5. 模块与依赖边界
 
@@ -376,9 +439,9 @@ fibra-spring-boot-starter -> fibra-spring + fibra-registry + fibra-runtime-java
 | `fibra-api` | 稳定插件与宿主契约 | Runtime 实现、装载框架、Spring、业务类型 |
 | `fibra-core` | RuntimeDomain、Scope、插件生命周期、服务、事件、effect | 配置、制品、Engine、文件格式 |
 | `fibra-config` | desired model、repository 端口与编译 | ClassLoader、Runtime 修改、Engine 事务 |
-| `fibra-artifact` | 运行时中立制品身份、校验、安装存储与磁盘事务 | Java/Node 私有物化、config、Engine |
+| `fibra-artifact` | 运行时中立制品身份、校验、不可变内容保存与引用释放后的回收 | Java/Node 私有物化、活动部署选择、config、Engine |
 | `fibra-bridge` | 通用贡献身份、Scope 归属、撤销、快照与调用适配 | 具体贡献类型、制品安装、Engine 事务 |
-| `fibra-engine` | runtime 端口、command、ChangeSet、journal、PublishedView | 具体 runtime、Spring、宿主业务 |
+| `fibra-engine` | runtime 端口、command、ChangeSet、单一持久目标、PublishedView | 具体 runtime、Spring、宿主业务、通用事务协调器 |
 | `fibra-runtime-java` | manifest、依赖图、隔离 ClassSpace、Java 插件物化 | Node、config、宿主业务 |
 | `fibra-runtime-node` | Node package、sidecar、JSON-RPC endpoint | Java ClassLoader、config、具体业务类型 |
 | `fibra-registry` | 安装、版本、期望状态与审计控制面 | runtime 私有对象、业务贡献目录 |
@@ -392,25 +455,56 @@ fibra-spring-boot-starter -> fibra-spring + fibra-registry + fibra-runtime-java
 
 ### 6.1 Config 与 Artifact
 
-`fibra-config` 把文件、数据库或程序化声明展开为不可变 `DesiredInputGraph`，保留实例顺序、identity、
-enabled、publication requirement、literal config、realm 和 intercept。include、分组、patch 与继承在
-采集时全部展开；源路径与 source revision 只用于来源诊断，恢复不读取它们。程序化变更同样构造这种
-输入，不覆盖只读文件源，不把 live handle、POJO、`Class` 或绑定后的配置当成持久声明。
+`fibra-config` 把文件或程序化声明采集为不可变、有序的 `DesiredInputGraph` 条目树，区分插件、分组
+和 include。每个节点保留本地 identity、enabled、realm 和 intercept；插件另持 definition、literal
+config 与 publication requirement。patch 在采集时应用，但不能抹掉容器、归属和本地开关。
+源路径与 source revision 单独用于采集和诊断，恢复不读取源文件。程序化变更同样构造这种输入，
+不覆盖只读文件源，不把 live handle、POJO、`Class` 或绑定后的配置当成持久声明。
+
+include 补丁采用 DSH 的条目补丁模型：`id` 定位，`plugin` 可选且只作名称保护；其余声明字段按键
+浅覆盖，显式 `null` 保留。`insert` 接收条目列表，无 `id` 时追加到被 include 文档的根列表，
+有 `id` 时追加到对应 group 的子列表。位置移动走已有树编辑接口，不另设补丁位置语言。
+
+补丁执行前复制输入并建立当前文档的 ID 索引，索引递归分组但不跨 include；按序执行，仅显式
+insert 的新节点补入索引。普通子列表整体覆盖产生的新后代不加入本次索引，与 DSH 固定基线一致。
+覆盖缺少 ID、目标未匹配、名称保护不符或插入目标不是 group 时产生诊断并继续后续补丁；未知补丁
+字段、ID/插入列表控制形状、最终条目结构及重复 ID 仍拒绝编译。跳过的覆盖值不进入有效声明，
+不额外复制声明校验器检查这些未应用的值；匹配后的实际输入仍接受原有结构和配置绑定校验。
+诊断保留来源与补丁位置，Engine 读取输入时记录告警，
+避免启动和 Registry 只取 PublishedView 时静默丢失。移除或修改补丁必须从原始输入重新应用，
+不得污染文件解析结果。采用边界和对应源码见[配置装配证据](../references/2026-09-09-plugin-dependency-baselines.md)。
+
+本地 ID 在所在 include 命名空间内唯一，索引覆盖该空间中所有分组后代；完整 ID 由 include 父链
+派生，不再持久化一份可能失配的 parentId/完整 ID 副本。有效启用是本地开关与祖先开关的合取；
+策略取父链上最近声明者，派生结果保留声明 owner。`realm: true` 使用 owner 的局部身份，非空字符串使用
+域内命名身份，两类身份不得碰撞；`false/null` 遮蔽祖先策略并回到默认 realm。intercept 按键整体覆盖，
+不深合并；`null` 去掉该键的配置层策略，恢复 definition 的默认值。非法策略在输入阶段拒绝，不能
+等插件已开始挂载后才报错。上下文必须按服务名称完整派生策略，不能仅保留当前插件声明的
+requires/provides，否则动态子插件会丢失继承。
+
+有效停用的 include 不读取文件，未采集内容与已采集的空内容明确区分。已采集的子树停用后仍保存；
+未采集 include 若因自身启用、祖先启用或移动而变为有效启用，必须在修改运行态前拒绝并要求补齐内容。
+补齐通过显式重新采集源或提交完整子树完成，恢复不暗中读取来源，不把缺失内容当作空组。
+
+树编辑显式指定父节点：新增追加，已有同 ID 条目只允许在原父节点下替换；改变归属必须使用 move。
+移除容器会移除整棵子树。同一 include 命名空间内移动保留完整 ID，跨 include 移动则使子树完整 ID
+随命名空间改变，运行期按旧身份移除、新身份挂载处理，不承诺跨命名空间移动保留实例状态。
 
 跨边界字面值使用 `fibra-api` 中封闭的 `LiteralValue`：null、boolean、string、有限精确 number、保序
 list 和字符串键 object。容器递归不可变，对象键规范排序，数字规范化；规范编码必须与插入顺序、机器
 路径和 Java 对象身份无关。配置、部署清单和公开描述快照使用同一数据边界，禁止浅拷贝冒充不可变。
 
-绑定在候选代内进行：按清单创建目标 runtime catalog，合并程序内建 definition，然后逐个绑定
-`DesiredInputGraph` 中启用的声明。停用声明不查找 definition、不绑定配置，允许保留尚未安装的插件。
-全部启用声明绑定、校验成功后才创建 RuntimeDomain 并挂载，避免后续配置错误发生前已有插件启动。
-绑定结果是 Engine 临时持有的代内挂载声明，不引入另一份公开或持久化图。typed config 与
-requires/provides 的 `ServiceKey<Class>` 不进入持久清单或宿主快照，也不跨 ClassSpace 复用。
+绑定使用准备后的目标 catalog 与程序内建 definition；启动时绑定全部有效启用插件，更新时只绑定
+新增或受影响的插件。有效停用声明不查找 definition、不绑定配置，允许保留尚未安装的插件。
+本次受影响输入全部绑定、校验成功后才保存目标并改变运行态，避免可预检的配置错误造成部分停启。
+绑定结果由 Engine 临时持有，不引入另一份公开或持久化图。typed config 与 requires/provides 的
+`ServiceKey<Class>` 不进入持久清单或宿主快照，也不跨已替换的 ClassLoader 复用。
 
 配置校验器可以返回规范化后的值，不要求幂等。`PluginDefinition.prepare(config)` 只校验一次，
 产生构造受控的 `PluginDefinition.Prepared<C>`，不创建插件、不注册资源；`Plugins.mount(id, prepared)`
-消费该结果并创建实例，不重复校验。纯内核和 Engine 使用同一挂载协议，显式 update 对新输入重新
-校验一次。Prepared 只属于当前装载域，不是可序列化或可跨代缓存的部署输入。
+消费该结果并创建实例，不重复校验。更新同样消费与该 definition 身份匹配的 Prepared，不把已经
+规范化的 config 再交回校验器；每次新输入只 prepare 一次。Prepared 只属于产生它的 definition
+及装载器生命周期，不是可序列化的部署输入。
 
 `DesiredCompilation.entrySources` 单独保存实例的来源路径，用于绑定失败的首次诊断。路径不进入
 `DesiredInputEntry`、输入图相等性或部署内容摘要。宿主实例快照返回输入图中的 `LiteralValue`，
@@ -419,7 +513,7 @@ requires/provides 的 `ServiceKey<Class>` 不进入持久清单或宿主快照�
 `fibra-artifact` 只管理通用 identity、版本、摘要、不可变内容及其准备和回收状态。它不知道 JAR、npm、
 ClassLoader 或 Process。配置与 artifact 互不依赖，由 Engine 在 ChangeSet 中对齐。
 
-程序内建 definition 与 runtime catalog 合并后供候选输入绑定；语法解析和声明展开不持有 catalog 的
+程序内建 definition 与 runtime catalog 合并后供目标输入绑定；语法解析和声明采集不持有 catalog 的
 类型对象。绑定端口不向输入源暴露制品路径、运行时句柄或运行实例。
 
 ### 6.2 Java Runtime
@@ -430,15 +524,15 @@ ClassLoader 或 Process。配置与 artifact 互不依赖，由 Engine 在 Chang
 - contract-only 制品省略 entrypoint，只作为依赖图和 ClassSpace 节点；
 - 每制品独立 ClassLoader，按显式依赖图委派；宿主导出的公共契约由 parent 唯一定义；
 - 禁止扫描全部 class 猜入口，不生成 extension index，不维护第二套插件状态机；
-- 候选使用完整新 ClassSpace，失败时关闭候选，发布后旧 ClassSpace 随 draining generation 回收；
+- 替换变化制品及其反向依赖闭包，闭包外装载器保留；旧类型仍被实例、服务槽或调用持有时不得回收；
 - close-and-collect 必须有可观察门禁。ClassLoader 只提供类型隔离，不是安全沙箱。
 
 ### 6.3 Node Runtime
 
 Node 插件作为受管 sidecar，通过版本化 JSON-RPC 协议参与同一 `PluginRuntimeAdapter`：
 
-- prepare 完成包校验、进程启动、握手、能力与 schema 协商；
-- endpoint 先适配为通用 contribution，再进入代内目录；
+- 预检完成包与声明校验；实例激活负责进程启动、握手及能力与 schema 协商，失败属于运行收敛失败；
+- endpoint 先适配为通用 contribution，再进入域内目录；
 - 超时、取消、心跳、stderr、异常退出和消息边界必须结构化上报；
 - RPC 与进程所有权分离：`NodeSidecar` 只处理协议，内部 `NodeProcessUnit` 启动监督器并持有一个可等待的
   受管进程范围；RuntimeDomain 只等待该范围静默，不枚举或缓存瞬时后代 PID；
@@ -458,7 +552,7 @@ POSIX process group / Windows Job Object 和 DSH 的 provider-managed range，�
 `PluginRegistry` 向宿主提供 install/upgrade/enable/disable/uninstall 和查询接口，并明确区分 artifact、
 desired、observed 三类状态；observed 只来自 `PublishedView.engine()`。
 
-`ContributionDirectory` 位于 generation 内。Java handler 与 Node endpoint 由场景 adapter 转成相同
+`ContributionDirectory` 位于长期运行域内。Java handler 与 Node endpoint 由场景 adapter 转成相同
 `ContributionKind`；Fibra 不规定 Tool、Agent 等 kind，也不规定外部名称渲染。撤销贡献、拒绝新调用和
 排空在途调用先于 Scope 与 runtime 资源关闭。
 
@@ -469,6 +563,11 @@ desired、observed 三类状态；observed 只来自 `PublishedView.engine()`。
 `fibra-spring` 提供显式 key/type 的服务 bridge。Spring Bean 由容器拥有，bridge 只登记 binding；撤销
 仍走 Scope 协议。`fibra-spring-boot-starter` 收集所有 `PluginRuntimeAdapter` Bean，装配一个 Engine、
 Registry 和 PublishedRuntime；不能把 Engine 写死为 Java-only。
+
+默认 ArtifactStore 与 EngineStateStore 在 Engine 工厂内部创建，成功构造后由 Engine 唯一负责关闭，
+不另注册为容器自动销毁的 Bean。工厂失败时释放尚未移交的存储，保留原异常及各项关闭失败。
+显式提供自定义存储 Bean 时，同样将关闭所有权交给 Engine，须声明 `@Bean(destroyMethod = "")`；
+容器不能在 Engine 因清理失败保留资源后，再独立释放对应存储锁。普通宿主服务 Bean 的容器所有权不变。
 
 非 Spring 宿主遵循同一规则：外部服务在 Engine 构建或命令边界形成不可变 host binding snapshot，
 adapter 只收集 binding，不取得 Engine 托管的 root Context，也不替外部所有者关闭服务对象。
@@ -504,7 +603,9 @@ public interface Context {
     Object metadata(String name);
     Context withMetadata(String name, Object value);
     Context withRealm(ServiceKey<?> key, Object label);
+    Context withRealm(String serviceName, Object label);
     Context withIntercept(ServiceKey<?> key, Object value);
+    Context withIntercept(String serviceName, Object value);
     Context withLogger(LoggerIntercept value);
     Object intercept(ServiceKey<?> key);
 }
@@ -538,12 +639,12 @@ Spring、HTTP、CLI、SDK 和管理 UI 属于外层宿主，只使用这些入�
 
 - watcher 只产生 dirty signal；周期 resync 是发现丢失通知的正确性来源。
 - 环境兼容性按实际能力形状探测，不按 JDK、Node 或操作系统版本号猜测。
-- desired source revision、generation revision 与 view revision 分开表达，不能共用一个模糊 revision。
-- 失败必须定位到 source、validate、prepare、verify、commit、publish、drain 或 retire 阶段。
-- `PENDING` 必须公开 `waitingFor`；服务必须能追溯 provider/owner；事件和贡献必须能追溯 owner/generation。
-- mutation gate 关闭、结果不确定 journal、draining 超时和 retire 失败都属于公开健康事实。
+- desired source revision、部署目标 revision 与 view revision 分开表达，不能共用一个模糊 revision。
+- 失败必须定位到采集、校验、资源准备、目标保存、排空、实例协调、事实发布或资源回收阶段。
+- `PENDING` 必须公开 `waitingFor`；服务必须能追溯 provider/owner；事件和贡献必须能追溯 owner/domain。
+- mutation gate 关闭、目标保存未确认、受影响调用排空超时和资源回收失败都属于公开健康事实。
 
-JMH 只覆盖单 JVM 内可稳定重复的 core、贡献目录和排除持久介质后的事务编排热路径。文件复制、
+JMH 只覆盖单 JVM 内可稳定重复的 core、贡献目录和排除持久介质后的变更编排热路径。文件复制、
 ClassLoader、sidecar 启动、JSON-RPC、Spring 启动和 HTTP 请求使用真实集成或分发验证，不能用单机微基准
 代表端到端性能。
 
@@ -555,7 +656,9 @@ ClassLoader、sidecar 启动、JSON-RPC、Spring 启动和 HTTP 请求使用真�
 - OSGi/ModuleLayer 或非可信插件沙箱；
 - 浏览器/WebView runtime、client graph、HMR 与 UI slot 协议；
 - LangChain4j、Spring AI、Tool、Agent、Session 等业务模型；
-- Cordis/DSH 配置兼容层或 JavaScript 表达式执行；
+- 对 Cordis/DSH 配置文件格式的逐字兼容或在 Java core 中执行 JavaScript；配置组合与条件求值的
+  使用场景仍须有行为等价的输入机制，不得以语法不同为由删除能力；
+- 内嵌数据库和通用持久事务框架；
 - 没有独立消费者支撑的通用 timer、任务调度、多 provider 或万能 runtime driver。
 
 Java Harness 只是验证 built-in definition、EngineCommand、PublishedView、贡献适配和宿主服务所有权的
@@ -567,8 +670,13 @@ Java Harness 只是验证 built-in definition、EngineCommand、PublishedView、
 最终交付必须同时满足：
 
 - 71 项 Cordis 原始行为与 44 项 Fibra 额外回归逐项通过，不能用新增测试数量抵扣；
-- RuntimeDomain 跨代隔离、候选不可见、PublishedView 原子切换和旧代 lease 排空通过；
-- artifact/config/联合 deployment 使用同一 ChangeSet，覆盖补偿失败、mutation gate 与崩溃恢复；
+- DSH 固定基线的配置装配与动态管理逐项映射源码、场景和测试；未覆盖的能力明确列为未完成，
+  不能用上述内核测试或“接口存在”替代功能等价证明；
+- RuntimeDomain 域间隔离、长期域内差量更新、PublishedView 一致投影和受影响调用排空通过；
+  改变一个实例时，无关实例、ClassLoader、Node PID、effects 与在途调用保持；
+- artifact/config/联合 deployment 使用同一 ChangeSet，覆盖准备资源清理失败、目标保存边界、mutation gate
+  与按清单重建；验证重复内容、半份写入、替换后同步失败、成功保存后崩溃、损坏及缺失引用；
+- 审计失败不改变成功部署结果，但能被诊断；不以丢失错误实现 best-effort；
 - Java 使用真实 JAR 验证依赖图、资源委派和 ClassLoader 回收；
 - Node 使用真实进程验证握手、超时、取消、心跳、异常退出与进程树终止；
 - 公开 API 签名、模块依赖、Spring、示例、archetype、外部消费和可复现分发门禁通过；
@@ -576,7 +684,34 @@ Java Harness 只是验证 built-in definition、EngineCommand、PublishedView、
 
 交付判定以这些不变量的实际覆盖为准，不能仅凭既有测试数量或历史绿色构建认定完成。逐项行为映射见
 [行为验收账本](../references/2026-09-11-behavior-verification-ledger.md)；全项目还必须通过启动期间目标变化、
-撤销后旧路由、嵌套实例、关闭与提交交错、整代类空间隔离及持久目标重建的确定性验证。
+撤销后旧路由、嵌套实例、关闭与提交交错、局部制品替换的类型一致性及持久目标重建的确定性验证。
+
+开发阶段使用本地依赖缓存执行受影响测试，必要时运行全仓验证；空依赖仓库的外部分发验证留到
+最终交付统一执行一次，发现分发问题时才针对修复重新验证，不因每次逻辑修改重复下载依赖。
+
+### 10.1 框架交付与多插件应用验收
+
+先完成插件系统本身的行为等价、公开调用、资源生命周期、配置管理和恢复门禁，再实现应用插件。
+应用跑通不能替代框架交付，应用暴露的底座问题必须回到所属模块修复，不得通过示例专用旁路掩盖。
+应用只经公开 API 装配、管理和调用；需要真实 JAR 或 Node 进程的路径不能用内建插件替代证明。
+
+按以下顺序实现可实际运行的通用场景，其业务契约、工具协议和数据存储均留在应用层：
+
+| 场景 | 能力 | 多插件验证重点 |
+|---|---|---|
+| `tool-fs` | 文件访问后端与文件工具分离 | 多服务就绪、共享 provider、撤销与恢复、调用期间卸载 |
+| `tool-fs-search` | 文件名匹配与全文搜索 | 共享子进程服务、可选能力、超时与取消 |
+| `tool-shell` | 命令执行、输出与退出码 | 多级依赖、在途调用排空、进程及子进程清理 |
+| 配置存储 | JSON 键值保存、读取和变更通知 | 多消费者共享、事件监听回收、隔离与重启读取 |
+
+每个场景都提供宿主调用入口和失败路径验证，并记录变更前后无关插件的实例身份、资源及状态，
+用于核实生命周期影响范围，不能只断言最终结果相同。文件和 Shell 验证使用专用临时目录及受控命令，
+不依赖模型账号、外部网络服务或真实用户数据。JSON 存储属于应用插件，不引入 Engine 数据库。
+参考 DSH 固定提交 `a66e4702047846cdaa10c66c9d3df3951f5ea70d` 的 `packages/fs/tool-fs`、
+`packages/fs/tool-fs-search`、`packages/shell/tool-bash` 及 `packages/storage`；
+参考其插件协作方式，不将应用场景覆盖误称为整个 DSH 业务产品的等价实现。
+
+### 10.2 固定源码基线
 
 设计结论使用以下固定源码基线：
 
@@ -587,5 +722,5 @@ Java Harness 只是验证 built-in definition、EngineCommand、PublishedView、
 | DeepSeek Harness | `b0a7d2ce3b4c19d7452e364b2d7acbfa87e707ed`、`a66e4702047846cdaa10c66c9d3df3951f5ea70d` | [插件依赖、装载与更新基线](../references/2026-09-09-plugin-dependency-baselines.md) |
 | cordis4j | `6cfd56e684fb403ded952afc09eddb49a5228494`、设计契约 v2.13 | [cordis4j 设计证据](../references/2026-09-11-cordis4j-design-evidence.md) |
 
-这些来源只解释为什么选择当前边界，不扩大 Fibra 的实现承诺。两篇用户提供的解读文章作为问题清单
+DSH 的插件行为基线构成功能等价门禁；其他来源用于解释取舍，不自动扩大实现承诺。两篇用户提供的解读文章作为问题清单
 收录在[源码参考目录](../references/README.md)，结论仍以固定源码、测试与本设计为准。

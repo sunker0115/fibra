@@ -87,7 +87,15 @@ Fibra 自身的额外回归位于 `migration` 测试包，共 **44 项**：
 | `ctx.bail()` | `EventsSpecParityTest.ctxBail` | 空监听集、target 过滤、原异常同步传播 |
 | `ctx.waterfall()` | `EventsSpecParityTest.ctxWaterfall` | 包装顺序、结果与调用次数、截断后不进入后续监听和最终行为 |
 
-Java 表达边界：通过 `context.events()` 使用能力；`EventTarget` 显式判断注册 Context，不复制 JS 的动态属性与 `this`；`parallel/serial` 的结果通过订阅 `Mono` 执行和等待，不宣称与 JS Promise 的立即执行时机相同。上述测试验证分派结果与过滤语义，未验证所有重入、并发 `once` 或插件 ClassLoader 更新后的事件契约行为。
+Java 表达边界：通过 `context.events()` 使用能力；`EventTarget` 显式判断注册 Context，不复制 JS 的动态属性与 `this`；`parallel/serial` 的结果通过订阅 `Mono` 执行和等待，不宣称与 JS Promise 的立即执行时机相同。上述原始映射验证分派结果与过滤语义，不证明所有重入、并发或插件 ClassLoader 更新后的事件契约行为。
+
+`OnceEventContractTest` 单独验证 Fibra 的注册级至多一次调用保证：覆盖 `parallel/serial` 已捕获快照的
+异步重叠、重复订阅、失败与取消，`emit/bail` 前置监听器重入，以及 `waterfall` 重复 continuation。
+未到达的一次性监听器不因提前截断或取消而被消耗，普通监听器仍可重复派发。七个原始复现用例在
+修正前均因一次性监听器被调用两次而失败，修正共用调用准入后通过；其余用例补充错误和取消边界。
+这是 Fibra 的补充语义，不计入 71 项原始映射或 44 项历史回归，也不声称上游已有相同并发保证：
+DSH 固定提交 `a66e4702047846cdaa10c66c9d3df3951f5ea70d` 的 `vendor/cordis/src/events.ts`
+在 `once` 包装器中只执行注销再调用，注销本身不能阻止另一份已捕获快照再次执行该包装器。
 
 额外的 Reactor 回归测试不计入原始 71 项。`parallel` 必须等待监听器 Publisher 的终止而非首个元素；每次订阅的错误集合独立。两个测试曾分别复现首元素取消后续流、下一次订阅携带旧错误，修正后通过。`serial` 仍是单结果截断模型，本轮没有把它改为流式结果聚合。
 

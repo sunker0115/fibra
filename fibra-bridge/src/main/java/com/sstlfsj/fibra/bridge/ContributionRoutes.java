@@ -17,8 +17,14 @@ public final class ContributionRoutes {
         this.entries = Map.copyOf(entries);
     }
 
+    public <D, I, O> ContributionCall<I, O> acquire(
+        ContributionKind<D, I, O> kind, ContributionId id) {
+        return directory.acquire(entries, kind, id);
+    }
+
     public <D, I, O> Mono<O> invoke(Context caller, ContributionKind<D, I, O> kind,
                                     ContributionId id, I input) {
-        return directory.invoke(entries, caller, kind, id, input);
+        return Mono.using(() -> acquire(kind, id), call -> call.invoke(caller, input),
+            ContributionCall::close, true);
     }
 }

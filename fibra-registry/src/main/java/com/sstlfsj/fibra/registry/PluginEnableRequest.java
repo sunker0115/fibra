@@ -8,6 +8,7 @@ import java.util.Objects;
 public final class PluginEnableRequest {
     private final String instanceId;
     private final String definitionName;
+    private final String parentId;
     private final LiteralValue config;
     private final Map<String, LiteralValue> realms;
     private final Map<String, LiteralValue> intercepts;
@@ -15,6 +16,7 @@ public final class PluginEnableRequest {
     private PluginEnableRequest(Builder builder) {
         instanceId = requireName(builder.instanceId, "instanceId");
         definitionName = requireName(builder.definitionName, "definitionName");
+        parentId = builder.parentId;
         config = Objects.requireNonNull(builder.config, "config");
         realms = Map.copyOf(builder.realms);
         intercepts = Map.copyOf(builder.intercepts);
@@ -31,6 +33,7 @@ public final class PluginEnableRequest {
 
     public String instanceId() { return instanceId; }
     public String definitionName() { return definitionName; }
+    public String parentId() { return parentId; }
     public LiteralValue config() { return config; }
     public Map<String, LiteralValue> realms() { return realms; }
     public Map<String, LiteralValue> intercepts() { return intercepts; }
@@ -45,6 +48,7 @@ public final class PluginEnableRequest {
     public static final class Builder {
         private final String instanceId;
         private final String definitionName;
+        private String parentId;
         private LiteralValue config = LiteralValue.NullValue.INSTANCE;
         private Map<String, LiteralValue> realms = Map.of();
         private Map<String, LiteralValue> intercepts = Map.of();
@@ -55,6 +59,7 @@ public final class PluginEnableRequest {
         }
 
         public Builder config(LiteralValue value) { config = Objects.requireNonNull(value, "config"); return this; }
+        public Builder parentId(String value) { parentId = requireName(value, "parentId"); return this; }
         public Builder realms(Map<String, LiteralValue> value) {
             realms = Objects.requireNonNull(value, "realms"); return this;
         }

@@ -6,7 +6,9 @@ import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.engine.EngineCommand;
 import com.sstlfsj.fibra.engine.ApplyDeployment;
 import com.sstlfsj.fibra.engine.DeploymentArtifact;
+import com.sstlfsj.fibra.engine.EngineChangeException;
 import com.sstlfsj.fibra.engine.EngineCommandResult;
+import com.sstlfsj.fibra.engine.EngineStateStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.InstallArtifact;
 import com.sstlfsj.fibra.engine.ReplaceDesiredGraph;
@@ -15,16 +17,16 @@ import com.sstlfsj.fibra.engine.PublishedView;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 
 public final class PluginRegistry {
     private final FibraEngine engine;
     private final PluginAuditRepository audit;
+    private final List<PluginAuditDeliveryFailure> auditFailures = new CopyOnWriteArrayList<>();
 
     public PluginRegistry(FibraEngine engine, PluginAuditRepository audit) {
         this.engine = Objects.requireNonNull(engine, "engine");
@@ -77,17 +79,27 @@ public final class PluginRegistry {
                 .config(request.config()).realms(request.realms())
                 .intercepts(request.intercepts())
                 .build();
-            return replace(snapshot, snapshot.engine().desiredGraph().upsert(entry));
+            return replace(snapshot, snapshot.engine().desiredGraph()
+                .upsert(request.parentId(), entry));
         });
     }
 
-    public Mono<RegistrySnapshot> disable(String instanceId) {
-        requireName(instanceId, "instanceId");
-        return mutate("disable", instanceId, snapshot -> {
-            var current = snapshot.engine().desiredGraph().require(instanceId);
-            var disabled = current.toBuilder().enabled(false).build();
-            return replace(snapshot, snapshot.engine().desiredGraph().upsert(disabled));
-        });
+    public Mono<RegistrySnapshot> enable(String entryId) {
+        requireName(entryId, "entryId");
+        return mutate("enable", entryId, snapshot -> replace(snapshot,
+            snapshot.engine().desiredGraph().withEnabled(entryId, true)));
+    }
+
+    public Mono<RegistrySnapshot> disable(String entryId) {
+        requireName(entryId, "entryId");
+        return mutate("disable", entryId, snapshot -> replace(snapshot,
+            snapshot.engine().desiredGraph().withEnabled(entryId, false)));
+    }
+
+    public Mono<RegistrySnapshot> move(String entryId, String parentId, int position) {
+        requireName(entryId, "entryId");
+        return mutate("move", entryId, snapshot -> replace(snapshot,
+            snapshot.engine().desiredGraph().move(entryId, parentId, position)));
     }
 
     public Mono<RegistrySnapshot> uninstall(ArtifactId artifactId) {
@@ -103,7 +115,7 @@ public final class PluginRegistry {
     public Optional<RegistryPluginState> get(String instanceId) {
         requireName(instanceId, "instanceId");
         var snapshot = snapshot();
-        var desired = snapshot.desired().get(instanceId);
+        var desired = snapshot.desiredGraph().plugins().get(instanceId);
         var observed = snapshot.observed().get(instanceId);
         return desired == null && observed == null ? Optional.empty()
             : Optional.of(new RegistryPluginState(instanceId, desired, observed));
@@ -112,38 +124,44 @@ public final class PluginRegistry {
     public List<RegistryPluginState> list() {
         var snapshot = snapshot();
         var ids = new java.util.TreeSet<String>();
-        ids.addAll(snapshot.desired().keySet());
+        ids.addAll(snapshot.desiredGraph().plugins().keySet());
         ids.addAll(snapshot.observed().keySet());
         return ids.stream().map(id -> new RegistryPluginState(id,
-            snapshot.desired().get(id), snapshot.observed().get(id))).toList();
+            snapshot.desiredGraph().plugins().get(id), snapshot.observed().get(id))).toList();
     }
 
+    /** 跟随 Engine 事实变化；审计投递失败独立查询，不单独触发此流。 */
     public Flux<RegistrySnapshot> watch() {
-        return engine.published().views().map(PluginRegistry::project);
+        return engine.published().views().map(this::project);
     }
 
     public List<PluginAuditEntry> history() {
         return audit.history();
     }
 
+    public List<PluginAuditDeliveryFailure> auditFailures() {
+        return List.copyOf(auditFailures);
+    }
+
     private Mono<RegistrySnapshot> mutate(String operation, String target,
                                           Function<PublishedView, EngineCommand> command) {
         return Mono.defer(() -> {
+            var snapshot = engine.published().current();
             final EngineCommand prepared;
             try {
-                prepared = command.apply(engine.published().current());
+                prepared = command.apply(snapshot);
             } catch (RuntimeException failure) {
-                append(operation, target, false,
-                    engine.published().current().viewRevision(), failure);
+                append(operation, target, false, TargetSaveState.NOT_SAVED,
+                    snapshot.viewRevision(), failure.toString());
                 return Mono.error(failure);
             }
             return engine.submit(prepared)
-                .doOnSuccess(result -> append(operation, target, true,
-                    result.view().viewRevision(), null))
-                .doOnError(failure -> append(operation, target, false,
-                    engine.published().current().viewRevision(), failure))
+                .doOnSuccess(result -> append(operation, target, true, TargetSaveState.SAVED,
+                    result.view().viewRevision(), "accepted"))
+                .doOnError(failure -> append(operation, target, false, targetSaveState(failure),
+                    failureView(snapshot, failure).viewRevision(), failure.toString()))
                 .map(EngineCommandResult::view)
-                .map(PluginRegistry::project);
+                .map(this::project);
         });
     }
 
@@ -161,18 +179,38 @@ public final class PluginRegistry {
     }
 
     private void append(String operation, String target, boolean succeeded,
-                        String revision, Throwable failure) {
-        audit.append(operation, target, succeeded, revision,
-            failure == null ? "accepted" : failure.toString());
+                        TargetSaveState targetSaveState, String revision,
+                        String detail) {
+        try {
+            audit.append(operation, target, succeeded, targetSaveState, revision, detail);
+        } catch (RuntimeException failure) {
+            auditFailures.add(PluginAuditDeliveryFailure.builder()
+                .timestamp(java.time.Instant.now()).operation(operation).target(target)
+                .succeeded(succeeded).targetSaveState(targetSaveState)
+                .viewRevision(revision).detail(failure.toString()).build());
+        }
     }
 
-    private static RegistrySnapshot project(PublishedView view) {
+    private static PublishedView failureView(PublishedView fallback, Throwable failure) {
+        return failure instanceof EngineChangeException change ? change.view() : fallback;
+    }
+
+    private static TargetSaveState targetSaveState(Throwable failure) {
+        if (!(failure instanceof EngineChangeException change)) {
+            return TargetSaveState.NOT_SAVED;
+        }
+        if (change.targetSaved()) {
+            return TargetSaveState.SAVED;
+        }
+        return change.getCause() instanceof EngineStateStore.SaveUnconfirmedException
+            ? TargetSaveState.UNCONFIRMED : TargetSaveState.NOT_SAVED;
+    }
+
+    private RegistrySnapshot project(PublishedView view) {
         var snapshot = view.engine();
-        var desired = new LinkedHashMap<String, DesiredInputEntry>();
-        snapshot.desiredGraph().entries().forEach(entry ->
-            desired.put(entry.instanceId(), entry));
-        return new RegistrySnapshot(view.viewRevision(), snapshot.artifacts(), desired,
-            snapshot.instances());
+        return RegistrySnapshot.builder().viewRevision(view.viewRevision())
+            .artifacts(snapshot.artifacts()).desiredGraph(snapshot.desiredGraph())
+            .observed(snapshot.instances()).auditFailures(auditFailures()).build();
     }
 
     private static void requireName(String value, String name) {

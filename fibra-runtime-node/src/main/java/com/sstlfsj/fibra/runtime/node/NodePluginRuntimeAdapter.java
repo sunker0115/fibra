@@ -12,24 +12,21 @@ import com.sstlfsj.fibra.bridge.ContributionServices;
 import com.sstlfsj.fibra.engine.PluginCatalog;
 import com.sstlfsj.fibra.engine.PluginCatalogEntry;
 import com.sstlfsj.fibra.engine.PluginRuntimeAdapter;
-import com.sstlfsj.fibra.engine.RuntimeGeneration;
 import com.sstlfsj.fibra.engine.RuntimeArtifactInspection;
-import com.sstlfsj.fibra.engine.RuntimeGenerationRequest;
-import com.sstlfsj.fibra.engine.RuntimeGenerationSnapshot;
+import com.sstlfsj.fibra.engine.RuntimeCatalog;
+import com.sstlfsj.fibra.engine.RuntimeResourceOwner;
+import com.sstlfsj.fibra.engine.RuntimeResourceSnapshot;
+import com.sstlfsj.fibra.engine.RuntimeResourceUpdate;
 import reactor.core.publisher.Mono;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HexFormat;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
     public static final RuntimeId RUNTIME_ID = new RuntimeId("node");
@@ -64,11 +61,8 @@ public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
     }
 
     @Override
-    public RuntimeGeneration create(RuntimeGenerationRequest request) {
-        if (!request.runtimeId().equals(RUNTIME_ID)) {
-            throw new IllegalArgumentException("runtime request is not for Node");
-        }
-        return new Generation(request);
+    public RuntimeResourceOwner create() {
+        return new Owner();
     }
 
     private PluginCatalogEntry<Object> catalogEntry(ArtifactRecord artifact,
@@ -161,69 +155,293 @@ public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
         }
     }
 
-    private static String revision(List<ArtifactRecord> artifacts) {
-        try {
-            var digest = MessageDigest.getInstance("SHA-256");
-            artifacts.stream().sorted(Comparator.comparing(value -> value.id().value()))
-                .forEach(value -> digest.update((value.id().value() + "\0"
-                    + value.revision() + "\0").getBytes(StandardCharsets.UTF_8)));
-            return HexFormat.of().formatHex(digest.digest());
-        } catch (NoSuchAlgorithmException failure) {
-            throw new IllegalStateException("SHA-256 is unavailable", failure);
+    private final class Owner implements RuntimeResourceOwner {
+        private Map<ArtifactId, ArtifactResource> active = Map.of();
+        private RuntimeCatalog catalog = RuntimeCatalog.empty();
+        private Update pending;
+        private boolean closed;
+        private Mono<Void> close;
+
+        @Override
+        public synchronized RuntimeResourceUpdate createUpdate(List<ArtifactRecord> target) {
+            if (closed) {
+                throw new IllegalStateException("Node runtime resource owner is closed");
+            }
+            if (pending != null) {
+                throw new IllegalStateException("Node runtime resource update is not closed");
+            }
+            pending = new Update(this, target, active);
+            return pending;
+        }
+
+        @Override
+        public synchronized RuntimeCatalog catalog() {
+            return catalog;
+        }
+
+        @Override
+        public synchronized RuntimeResourceSnapshot snapshot() {
+            var resources = new ArrayList<>(active.values().stream()
+                .map(resource -> resource.snapshot(RuntimeResourceSnapshot.State.ACTIVE)).toList());
+            if (pending != null) {
+                resources.addAll(pending.resourcesUnsafe());
+            }
+            return new RuntimeResourceSnapshot(RUNTIME_ID, resources);
+        }
+
+        @Override
+        public synchronized Mono<Void> closeAsync() {
+            if (close == null) {
+                closed = true;
+                var current = pending;
+                close = Mono.defer(() -> current == null ? Mono.<Void>empty()
+                    : current.closeAsync())
+                    .then(Mono.<Void>fromRunnable(() -> {
+                        synchronized (Owner.this) {
+                            active = Map.of();
+                            catalog = RuntimeCatalog.empty();
+                        }
+                    })).cache();
+            }
+            return close;
+        }
+
+        private synchronized void adopt(Update update) {
+            if (closed) {
+                throw new IllegalStateException("Node runtime resource owner is closed");
+            }
+            if (pending != update) {
+                throw new IllegalStateException("Node runtime resource update is not active");
+            }
+            active = update.targetResourcesUnsafe();
+            catalog = update.targetCatalogUnsafe();
+        }
+
+        private synchronized void complete(Update update) {
+            if (pending == update) {
+                pending = null;
+            }
         }
     }
 
-    private final class Generation implements RuntimeGeneration {
-        private final RuntimeGenerationRequest request;
-        private final Mono<Void> preparation = Mono.<Void>fromRunnable(this::initialize).cache();
-        private final Mono<Void> close = Mono.<Void>fromRunnable(this::release).cache();
-        private PluginCatalog catalog;
-        private RuntimeGenerationSnapshot snapshot;
+    private final class Update implements RuntimeResourceUpdate {
+        private final Owner owner;
+        private final Map<ArtifactId, ArtifactRecord> target;
+        private final Map<ArtifactId, ArtifactResource> current;
+        private final Set<ArtifactId> affected;
+        private Map<ArtifactId, ArtifactResource> targetResources;
+        private Map<ArtifactId, ArtifactResource> freshResources = Map.of();
+        private Map<ArtifactId, ArtifactResource> retiredResources = Map.of();
+        private RuntimeCatalog targetCatalog;
+        private List<RuntimeResourceSnapshot.Resource> closedResources = List.of();
+        private Mono<Void> preparation;
+        private Mono<Void> close;
+        private boolean prepared;
+        private boolean adopted;
         private boolean closed;
+        private boolean released;
 
-        private Generation(RuntimeGenerationRequest request) { this.request = request; }
+        private Update(Owner owner, List<ArtifactRecord> target,
+                       Map<ArtifactId, ArtifactResource> current) {
+            this.owner = owner;
+            this.target = index(target);
+            this.current = Map.copyOf(current);
+            affected = affected(this.current, this.target);
+        }
 
-        private synchronized void initialize() {
-            if (closed) throw new IllegalStateException("Node runtime generation is closed");
-            var entries = new ArrayList<PluginCatalogEntry<?>>();
-            for (var artifact : request.artifacts()) {
+        @Override
+        public Mono<Void> prepareAsync() {
+            return Mono.defer(() -> {
+                synchronized (owner) {
+                    if (closed) {
+                        return Mono.error(new IllegalStateException(
+                            "Node runtime resource update is closed"));
+                    }
+                    if (preparation == null) {
+                        preparation = Mono.<Void>fromRunnable(this::prepare).cache();
+                    }
+                    return preparation;
+                }
+            });
+        }
+
+        @Override
+        public Set<ArtifactId> affectedArtifacts() {
+            return affected;
+        }
+
+        @Override
+        public RuntimeCatalog catalog() {
+            synchronized (owner) {
+                requirePrepared();
+                return targetCatalog;
+            }
+        }
+
+        @Override
+        public RuntimeResourceSnapshot snapshot() {
+            synchronized (owner) {
+                return new RuntimeResourceSnapshot(RUNTIME_ID, resourcesUnsafe());
+            }
+        }
+
+        @Override
+        public void adopt() {
+            synchronized (owner) {
+                if (closed) {
+                    throw new IllegalStateException("Node runtime resource update is closed");
+                }
+                requirePrepared();
+                if (adopted) {
+                    throw new IllegalStateException("Node runtime resource update is adopted");
+                }
+                retiredResources = current.entrySet().stream()
+                    .filter(entry -> affected.contains(entry.getKey()))
+                    .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey,
+                        Map.Entry::getValue, (left, right) -> right, LinkedHashMap::new));
+                owner.adopt(this);
+                adopted = true;
+            }
+        }
+
+        @Override
+        public Mono<Void> closeAsync() {
+            synchronized (owner) {
+                if (close == null) {
+                    closed = true;
+                    var started = preparation == null ? Mono.<Void>empty()
+                        : preparation.onErrorResume(ignored -> Mono.empty());
+                    close = started.then(Mono.<Void>fromRunnable(this::release)).cache();
+                }
+                return close;
+            }
+        }
+
+        private void prepare() {
+            synchronized (owner) {
+                if (closed) {
+                    throw new IllegalStateException("Node runtime resource update is closed");
+                }
+            }
+            var next = new LinkedHashMap<ArtifactId, ArtifactResource>();
+            var fresh = new LinkedHashMap<ArtifactId, ArtifactResource>();
+            for (var artifact : target.values()) {
+                var existing = current.get(artifact.id());
+                if (existing != null && !affected.contains(artifact.id())) {
+                    next.put(artifact.id(), existing);
+                    continue;
+                }
                 requireRuntime(artifact);
                 var manifest = manifests.read(artifact);
                 validateKinds(manifest);
-                entries.add(catalogEntry(artifact, manifest));
+                var resource = new ArtifactResource(artifact, catalogEntry(artifact, manifest));
+                next.put(artifact.id(), resource);
+                fresh.put(artifact.id(), resource);
             }
-            catalog = PluginCatalog.combine(entries.stream()
-                .map(PluginCatalog::of).toList());
-            var artifactMap = request.artifacts().stream().collect(Collectors.toMap(
-                ArtifactRecord::id, value -> value, (left, right) -> right,
-                LinkedHashMap::new));
-            snapshot = new RuntimeGenerationSnapshot(RUNTIME_ID,
-                revision(request.artifacts()), artifactMap,
-                entries.stream().map(value -> value.definition().name())
-                    .collect(Collectors.toSet()));
-        }
-
-        private synchronized void release() {
-            // sidecar 属于插件实例的贡献注册；domain 先关闭它们。
-            closed = true;
-        }
-
-        @Override public Mono<Void> prepareAsync() {
-            return Mono.defer(() -> {
-                synchronized (this) {
-                    if (closed) return Mono.error(new IllegalStateException("Node runtime generation is closed"));
+            var catalog = NodePluginRuntimeAdapter.catalog(next);
+            synchronized (owner) {
+                if (closed) {
+                    throw new IllegalStateException("Node runtime resource update is closed");
                 }
-                return preparation;
-            });
+                targetResources = Map.copyOf(next);
+                freshResources = Map.copyOf(fresh);
+                targetCatalog = catalog;
+                prepared = true;
+            }
         }
-        @Override public synchronized RuntimeGenerationSnapshot snapshot() {
-            if (snapshot == null) throw new IllegalStateException("Node runtime generation is not prepared");
-            return snapshot;
+
+        private void release() {
+            synchronized (owner) {
+                var owned = adopted ? retiredResources : freshResources;
+                closedResources = owned.values().stream()
+                    .map(resource -> resource.snapshot(RuntimeResourceSnapshot.State.CLOSED)).toList();
+                released = true;
+                owner.complete(this);
+            }
         }
-        @Override public synchronized PluginCatalog catalog() {
-            snapshot();
-            return catalog;
+
+        private Map<ArtifactId, ArtifactResource> targetResourcesUnsafe() {
+            requirePrepared();
+            return targetResources;
         }
-        @Override public Mono<Void> closeAsync() { return close; }
+
+        private RuntimeCatalog targetCatalogUnsafe() {
+            requirePrepared();
+            return targetCatalog;
+        }
+
+        private List<RuntimeResourceSnapshot.Resource> resourcesUnsafe() {
+            if (released) {
+                return closedResources;
+            }
+            if (adopted) {
+                return retiredResources.values().stream()
+                    .map(resource -> resource.snapshot(RuntimeResourceSnapshot.State.RETIRED)).toList();
+            }
+            return freshResources.values().stream()
+                .map(resource -> resource.snapshot(RuntimeResourceSnapshot.State.PREPARED)).toList();
+        }
+
+        private void requirePrepared() {
+            if (!prepared) {
+                throw new IllegalStateException("Node runtime resource update is not prepared");
+            }
+        }
+    }
+
+    private static Map<ArtifactId, ArtifactRecord> index(List<ArtifactRecord> artifacts) {
+        Objects.requireNonNull(artifacts, "target");
+        var result = new LinkedHashMap<ArtifactId, ArtifactRecord>();
+        for (var artifact : artifacts) {
+            Objects.requireNonNull(artifact, "artifact");
+            if (result.putIfAbsent(artifact.id(), artifact) != null) {
+                throw new IllegalArgumentException("duplicate Node artifact " + artifact.id().value());
+            }
+        }
+        return Map.copyOf(result);
+    }
+
+    private static Set<ArtifactId> affected(Map<ArtifactId, ArtifactResource> current,
+                                            Map<ArtifactId, ArtifactRecord> target) {
+        var result = new LinkedHashSet<ArtifactId>();
+        current.forEach((id, resource) -> {
+            var replacement = target.get(id);
+            if (replacement == null || !resource.artifact().revision().equals(replacement.revision())) {
+                result.add(id);
+            }
+        });
+        target.forEach((id, artifact) -> {
+            if (!current.containsKey(id)) {
+                result.add(id);
+            }
+        });
+        return Set.copyOf(result);
+    }
+
+    private static RuntimeCatalog catalog(Map<ArtifactId, ArtifactResource> resources) {
+        var entries = resources.values().stream().map(ArtifactResource::entry).toList();
+        var plugins = entries.isEmpty() ? PluginCatalog.empty()
+            : PluginCatalog.combine(entries.stream().map(PluginCatalog::of).toList());
+        var owners = new LinkedHashMap<String, ArtifactId>();
+        resources.forEach((artifactId, resource) -> {
+            var name = resource.entry().definition().name();
+            if (owners.putIfAbsent(name, artifactId) != null) {
+                throw new IllegalArgumentException("duplicate Node plugin definition " + name);
+            }
+        });
+        return new RuntimeCatalog(plugins, owners);
+    }
+
+    private record ArtifactResource(ArtifactRecord artifact, PluginCatalogEntry<?> entry) {
+        private ArtifactResource {
+            Objects.requireNonNull(artifact, "artifact");
+            Objects.requireNonNull(entry, "entry");
+        }
+
+        private RuntimeResourceSnapshot.Resource snapshot(RuntimeResourceSnapshot.State state) {
+            return RuntimeResourceSnapshot.Resource.builder().artifact(artifact)
+                .identity("node:" + artifact.id().value() + ':' + artifact.revision())
+                .state(state).build();
+        }
     }
 }

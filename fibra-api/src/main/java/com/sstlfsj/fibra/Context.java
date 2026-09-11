@@ -30,7 +30,13 @@ public interface Context {
 
     Context withMetadata(String name, Object value);
 
+    /** 按服务名称派生 realm 策略；不声明服务类型，策略由后续挂载的插件继承。 */
+    Context withRealm(String serviceName, Object label);
+
     Context withRealm(ServiceKey<?> key, Object label);
+
+    /** 按服务名称派生 intercept 策略；不声明服务类型，策略由后续挂载的插件继承。 */
+    Context withIntercept(String serviceName, Object value);
 
     Context withIntercept(ServiceKey<?> key, Object value);
 

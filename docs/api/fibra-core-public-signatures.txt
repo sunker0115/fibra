@@ -16,13 +16,17 @@ public final class com.sstlfsj.fibra.runtime.RuntimeDomain implements java.lang.
   public com.sstlfsj.fibra.Scope rootScope();
   public boolean isClosed();
   public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot snapshot();
+  public java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$CleanupFailure> cleanupFailures(com.sstlfsj.fibra.Scope);
+  public reactor.core.publisher.Flux<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot> snapshots();
+  public reactor.core.publisher.Mono<java.lang.Void> settled();
   public reactor.core.publisher.Mono<java.lang.Void> closeAsync();
   public void close();
 }
 ## com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot
 Compiled from "RuntimeDomainSnapshot.java"
 public final class com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot extends java.lang.Record {
-  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot(java.lang.String, java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Plugin>, java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Service>, java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Event>);
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot(java.lang.String, java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Plugin>, java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Service>, java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Event>, java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$CleanupFailure>);
+  public static com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Builder builder();
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
@@ -30,6 +34,29 @@ public final class com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot extends java.
   public java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Plugin> plugins();
   public java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Service> services();
   public java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Event> events();
+  public java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$CleanupFailure> cleanupFailures();
+}
+## com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Builder
+Compiled from "RuntimeDomainSnapshot.java"
+public final class com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Builder {
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Builder();
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Builder name(java.lang.String);
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Builder plugins(java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Plugin>);
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Builder services(java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Service>);
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Builder events(java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Event>);
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Builder cleanupFailures(java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$CleanupFailure>);
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot build();
+}
+## com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$CleanupFailure
+Compiled from "RuntimeDomainSnapshot.java"
+public final class com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$CleanupFailure extends java.lang.Record {
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$CleanupFailure(long, java.lang.String, java.lang.String);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public long ownerIdentity();
+  public java.lang.String resource();
+  public java.lang.String failure();
 }
 ## com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Dependency
 Compiled from "RuntimeDomainSnapshot.java"
@@ -78,11 +105,13 @@ public final class com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$OwnerIdentity
 ## com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Plugin
 Compiled from "RuntimeDomainSnapshot.java"
 public final class com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Plugin extends java.lang.Record {
-  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Plugin(java.lang.String, java.lang.String, com.sstlfsj.fibra.PluginInstanceState, java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Dependency>, java.lang.String);
+  public com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Plugin(long, java.lang.Long, java.lang.String, java.lang.String, com.sstlfsj.fibra.PluginInstanceState, java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$Dependency>, java.lang.String);
   public java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$ServiceIdentity> waitingFor();
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
+  public long identity();
+  public java.lang.Long parentIdentity();
   public java.lang.String instanceId();
   public java.lang.String pluginId();
   public com.sstlfsj.fibra.PluginInstanceState state();

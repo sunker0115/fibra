@@ -5,8 +5,8 @@ import com.sstlfsj.fibra.value.LiteralValue;
 import java.util.Map;
 import java.util.Objects;
 
-public final class DesiredInputEntry {
-    private final String instanceId;
+public final class DesiredInputEntry implements DesiredInputNode {
+    private final String id;
     private final String definitionName;
     private final boolean enabled;
     private final PublicationRequirement publicationRequirement;
@@ -15,35 +15,35 @@ public final class DesiredInputEntry {
     private final Map<String, LiteralValue> intercepts;
 
     private DesiredInputEntry(Builder builder) {
-        instanceId = requireName(builder.instanceId, "instance id");
+        id = DesiredInputNode.requireId(builder.id);
         definitionName = requireName(builder.definitionName, "definition name");
         enabled = builder.enabled;
         publicationRequirement = Objects.requireNonNull(builder.publicationRequirement,
             "publicationRequirement");
         config = Objects.requireNonNull(builder.config, "config");
-        realms = Map.copyOf(builder.realms);
-        intercepts = Map.copyOf(builder.intercepts);
+        realms = PolicyValues.realms(builder.realms);
+        intercepts = PolicyValues.intercepts(builder.intercepts);
     }
 
-    public static Builder builder(String instanceId, String definitionName) {
-        return new Builder(instanceId, definitionName);
+    public static Builder builder(String id, String definitionName) {
+        return new Builder(id, definitionName);
     }
 
     public Builder toBuilder() {
-        return new Builder(instanceId, definitionName).enabled(enabled)
+        return new Builder(id, definitionName).enabled(enabled)
             .publicationRequirement(publicationRequirement).config(config)
             .realms(realms).intercepts(intercepts);
     }
 
-    public String instanceId() { return instanceId; }
+    @Override public String id() { return id; }
     public String definitionName() { return definitionName; }
-    public boolean enabled() { return enabled; }
+    @Override public boolean enabled() { return enabled; }
     public PublicationRequirement publicationRequirement() {
         return publicationRequirement;
     }
     public LiteralValue config() { return config; }
-    public Map<String, LiteralValue> realms() { return realms; }
-    public Map<String, LiteralValue> intercepts() { return intercepts; }
+    @Override public Map<String, LiteralValue> realms() { return realms; }
+    @Override public Map<String, LiteralValue> intercepts() { return intercepts; }
 
     @Override
     public boolean equals(Object candidate) {
@@ -51,7 +51,7 @@ public final class DesiredInputEntry {
         if (!(candidate instanceof DesiredInputEntry other)) return false;
         return enabled == other.enabled
             && publicationRequirement == other.publicationRequirement
-            && instanceId.equals(other.instanceId)
+            && id.equals(other.id)
             && definitionName.equals(other.definitionName)
             && Objects.equals(config, other.config) && realms.equals(other.realms)
             && intercepts.equals(other.intercepts);
@@ -59,13 +59,13 @@ public final class DesiredInputEntry {
 
     @Override
     public int hashCode() {
-        return Objects.hash(instanceId, definitionName, enabled, publicationRequirement,
+        return Objects.hash(id, definitionName, enabled, publicationRequirement,
             config, realms, intercepts);
     }
 
     @Override
     public String toString() {
-        return "DesiredInputEntry[instanceId=" + instanceId + ", definitionName="
+        return "DesiredInputEntry[id=" + id + ", definitionName="
             + definitionName + ", enabled=" + enabled + ", publicationRequirement="
             + publicationRequirement + ", config=" + config
             + ", realms=" + realms + ", intercepts=" + intercepts + ']';
@@ -79,7 +79,7 @@ public final class DesiredInputEntry {
     }
 
     public static final class Builder {
-        private final String instanceId;
+        private final String id;
         private final String definitionName;
         private boolean enabled = true;
         private PublicationRequirement publicationRequirement =
@@ -88,8 +88,8 @@ public final class DesiredInputEntry {
         private Map<String, LiteralValue> realms = Map.of();
         private Map<String, LiteralValue> intercepts = Map.of();
 
-        private Builder(String instanceId, String definitionName) {
-            this.instanceId = instanceId;
+        private Builder(String id, String definitionName) {
+            this.id = id;
             this.definitionName = definitionName;
         }
 

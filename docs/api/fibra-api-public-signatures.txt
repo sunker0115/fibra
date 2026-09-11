@@ -28,7 +28,9 @@ public interface com.sstlfsj.fibra.Context {
   public abstract com.sstlfsj.fibra.logging.FibraLogger loggerForService(java.lang.String);
   public abstract java.lang.Object metadata(java.lang.String);
   public abstract com.sstlfsj.fibra.Context withMetadata(java.lang.String, java.lang.Object);
+  public abstract com.sstlfsj.fibra.Context withRealm(java.lang.String, java.lang.Object);
   public abstract com.sstlfsj.fibra.Context withRealm(com.sstlfsj.fibra.ServiceKey<?>, java.lang.Object);
+  public abstract com.sstlfsj.fibra.Context withIntercept(java.lang.String, java.lang.Object);
   public abstract com.sstlfsj.fibra.Context withIntercept(com.sstlfsj.fibra.ServiceKey<?>, java.lang.Object);
   public abstract com.sstlfsj.fibra.Context withLogger(com.sstlfsj.fibra.logging.LoggerIntercept);
   public abstract java.lang.Object intercept(com.sstlfsj.fibra.ServiceKey<?>);
@@ -43,6 +45,11 @@ Compiled from "Disposables.java"
 public final class com.sstlfsj.fibra.Disposables {
   public static com.sstlfsj.fibra.Disposable noop();
   public static com.sstlfsj.fibra.Disposable from(java.lang.Runnable);
+}
+## com.sstlfsj.fibra.DrainingDisposable
+Compiled from "DrainingDisposable.java"
+public interface com.sstlfsj.fibra.DrainingDisposable extends com.sstlfsj.fibra.Disposable {
+  public abstract reactor.core.publisher.Mono<java.lang.Void> drain();
 }
 ## com.sstlfsj.fibra.EffectHandle
 Compiled from "EffectHandle.java"
@@ -163,6 +170,7 @@ public interface com.sstlfsj.fibra.PluginFactory<C> {
 Compiled from "PluginInstance.java"
 public interface com.sstlfsj.fibra.PluginInstance<C> extends com.sstlfsj.fibra.Disposable {
   public abstract java.lang.String id();
+  public abstract long identity();
   public abstract com.sstlfsj.fibra.PluginDefinition<C> definition();
   public abstract com.sstlfsj.fibra.Context context();
   public abstract com.sstlfsj.fibra.PluginInstanceState state();
@@ -171,6 +179,7 @@ public interface com.sstlfsj.fibra.PluginInstance<C> extends com.sstlfsj.fibra.D
   public abstract java.util.Optional<java.lang.Throwable> failure();
   public abstract reactor.core.publisher.Mono<com.sstlfsj.fibra.PluginInstance<C>> settled();
   public abstract reactor.core.publisher.Mono<com.sstlfsj.fibra.PluginInstance<C>> update(C);
+  public abstract reactor.core.publisher.Mono<com.sstlfsj.fibra.PluginInstance<C>> updatePrepared(com.sstlfsj.fibra.PluginDefinition$Prepared<C>);
 }
 ## com.sstlfsj.fibra.PluginInstanceState
 Compiled from "PluginInstanceState.java"

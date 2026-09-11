@@ -22,17 +22,22 @@ final class DefaultPlugins implements Plugins {
     @Override
     public <C> PluginInstance<C> mount(String instanceId, PluginDefinition.Prepared<C> prepared) {
         return context.runtime().lifecycle().call(() -> {
+            if (!context.owner().acceptsResources()) {
+                throw new com.sstlfsj.fibra.FibraException(
+                    com.sstlfsj.fibra.FibraException.EFFECT_INACTIVE,
+                    "plugin owner does not accept resources");
+            }
             var instance = new PluginInstanceImpl<>(context, instanceId, prepared);
             context.scopeImpl().addPlugin(instance);
-            instance.initialize();
             if (context.owner() instanceof PluginInstanceImpl<?>) {
                 try {
                     context.effects().add(instance);
                 } catch (RuntimeException | Error failure) {
-                    instance.dispose().subscribe();
+                    context.scopeImpl().removePlugin(instance);
                     throw failure;
                 }
             }
+            instance.initialize();
             return instance;
         });
     }

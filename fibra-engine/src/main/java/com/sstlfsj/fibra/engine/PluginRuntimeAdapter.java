@@ -10,5 +10,5 @@ public interface PluginRuntimeAdapter {
     Mono<RuntimeArtifactInspection> inspect(ArtifactRecord artifact);
 
     /** 只创建所有权句柄，不打开文件、ClassLoader 或进程；资源在句柄登记后准备。 */
-    RuntimeGeneration create(RuntimeGenerationRequest request);
+    RuntimeResourceOwner create();
 }

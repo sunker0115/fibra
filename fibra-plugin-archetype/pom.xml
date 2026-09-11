@@ -111,7 +111,7 @@
               <version>${project.version}</version>
               <packaging>jar</packaging>
               <pomFile>${project.parent.basedir}/fibra-api/.flattened-pom.xml</pomFile>
-              <localRepositoryPath>${project.build.directory}/archetype-it-repository</localRepositoryPath>
+              <localRepositoryPath>${settings.localRepository}</localRepositoryPath>
             </configuration>
           </execution>
         </executions>
@@ -119,9 +119,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-archetype-plugin</artifactId>
-        <configuration>
-          <localRepositoryPath>${project.build.directory}/archetype-it-repository</localRepositoryPath>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

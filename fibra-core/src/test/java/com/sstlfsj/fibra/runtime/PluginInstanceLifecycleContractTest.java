@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PluginInstanceLifecycleContractTest {
@@ -50,7 +51,35 @@ class PluginInstanceLifecycleContractTest {
     }
 
     @Test
-    void updateDuringStartupConvergesToTheLatestConfigBeforeCompleting() throws Exception {
+    void preparedUpdateDoesNotValidateAgainAndRejectsAnotherDefinitionIdentity() {
+        var validations = new AtomicInteger();
+        var definition = PluginDefinition.builder("prepared-update", String.class,
+            () -> (context, config) -> reactor.core.publisher.Mono.empty())
+            .validator(config -> {
+                validations.incrementAndGet();
+                return config + "-normalized";
+            }).build();
+        var sameNameDifferentDefinition = PluginDefinition.builder("prepared-update", String.class,
+            () -> (context, config) -> reactor.core.publisher.Mono.empty()).build();
+
+        try (var runtime = FibraRuntime.create()) {
+            var instance = runtime.rootScope().context().plugins()
+                .mount("prepared-update", definition.prepare("initial"));
+            var prepared = definition.prepare("next");
+
+            instance.updatePrepared(prepared).block(TIMEOUT);
+
+            assertEquals(2, validations.get());
+            assertEquals("next-normalized", instance.config());
+            assertThrows(IllegalArgumentException.class,
+                () -> instance.updatePrepared(sameNameDifferentDefinition.prepare("foreign"))
+                    .block(TIMEOUT));
+            assertEquals("next-normalized", instance.config());
+        }
+    }
+
+    @Test
+    void preparedUpdateDuringStartupConvergesToTheLatestConfigBeforeCompleting() throws Exception {
         var loading = reactor.core.publisher.Sinks.<Void>one();
         try (var runtime = FibraRuntime.create()) {
             var starts = new java.util.concurrent.CopyOnWriteArrayList<String>();
@@ -65,8 +94,8 @@ class PluginInstanceLifecycleContractTest {
             var instance = runtime.rootScope().context().plugins()
                 .mount("updating", definition.prepare("old"));
             try {
-                var first = instance.update("intermediate").toFuture();
-                var latest = instance.update("latest").toFuture();
+                var first = instance.updatePrepared(definition.prepare("intermediate")).toFuture();
+                var latest = instance.updatePrepared(definition.prepare("latest")).toFuture();
                 loading.tryEmitEmpty();
                 first.get(5, java.util.concurrent.TimeUnit.SECONDS);
                 latest.get(5, java.util.concurrent.TimeUnit.SECONDS);
@@ -78,6 +107,49 @@ class PluginInstanceLifecycleContractTest {
             } finally {
                 loading.tryEmitEmpty();
             }
+        }
+    }
+
+    @Test
+    void nullConfigUpdateKeepsStringVoidAndObjectConfigSemantics() {
+        try (var runtime = FibraRuntime.create()) {
+            var stringSeen = new java.util.concurrent.CopyOnWriteArrayList<String>();
+            var stringDefinition = PluginDefinition.builder("string-null", String.class,
+                () -> (context, config) -> {
+                    stringSeen.add(config == null ? "<null>" : config);
+                    return reactor.core.publisher.Mono.empty();
+                }).build();
+            var string = runtime.rootScope().context().plugins()
+                .mount("string-null", stringDefinition.prepare("initial"));
+            string.settled().block(TIMEOUT);
+            string.update(null).block(TIMEOUT);
+            assertEquals(java.util.List.of("initial", "<null>"), stringSeen);
+            assertEquals(null, string.config());
+
+            var voidStarts = new AtomicInteger();
+            var voidDefinition = PluginDefinition.builder("void-null", Void.class,
+                () -> (context, config) -> {
+                    voidStarts.incrementAndGet();
+                    return reactor.core.publisher.Mono.empty();
+                }).build();
+            var voidInstance = runtime.rootScope().context().plugins()
+                .mount("void-null", voidDefinition.prepare(null));
+            voidInstance.settled().block(TIMEOUT);
+            voidInstance.update(null).block(TIMEOUT);
+            assertEquals(2, voidStarts.get());
+
+            var objectConfig = new AtomicReference<Object>();
+            var objectDefinition = PluginDefinition.builder("object-null", Object.class,
+                () -> (context, config) -> {
+                    objectConfig.set(config);
+                    return reactor.core.publisher.Mono.empty();
+                }).build();
+            var object = runtime.rootScope().context().plugins()
+                .mount("object-null", objectDefinition.prepare("initial"));
+            object.settled().block(TIMEOUT);
+            object.update(null).block(TIMEOUT);
+            assertEquals(null, objectConfig.get());
+            assertEquals(null, object.config());
         }
     }
 
@@ -159,7 +231,7 @@ class PluginInstanceLifecycleContractTest {
     }
 
     @Test
-    void failedInstanceRecoversOnlyAfterExplicitUpdate() {
+    void failedInstanceRecoversAfterPreparedUpdate() {
         try (var runtime = FibraRuntime.create()) {
             var starts = new AtomicInteger();
             var definition = PluginDefinition.builder(
@@ -179,9 +251,27 @@ class PluginInstanceLifecycleContractTest {
                 .block(TIMEOUT);
             assertEquals(PluginInstanceState.FAILED, instance.state());
 
-            instance.update("good").block(TIMEOUT);
+            instance.updatePrepared(definition.prepare("good")).block(TIMEOUT);
             assertEquals(PluginInstanceState.ACTIVE, instance.state());
             assertEquals(2, starts.get());
+        }
+    }
+
+    @Test
+    void disposedInstanceRejectsPreparedUpdateWithoutApplyingIt() {
+        var definition = PluginDefinition.builder("disposed-prepared", String.class,
+            () -> (context, config) -> reactor.core.publisher.Mono.empty()).build();
+        try (var runtime = FibraRuntime.create()) {
+            var instance = runtime.rootScope().context().plugins()
+                .mount("disposed-prepared", definition.prepare("initial"));
+            instance.settled().block(TIMEOUT);
+            instance.dispose().block(TIMEOUT);
+
+            var failure = assertThrows(com.sstlfsj.fibra.FibraException.class,
+                () -> instance.updatePrepared(definition.prepare("next")).block(TIMEOUT));
+
+            assertEquals(com.sstlfsj.fibra.FibraException.PLUGIN_DISPOSED, failure.code());
+            assertEquals("initial", instance.config());
         }
     }
 

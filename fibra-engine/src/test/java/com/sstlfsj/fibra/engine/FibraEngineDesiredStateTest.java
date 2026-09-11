@@ -14,13 +14,14 @@ import reactor.core.publisher.Sinks;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FibraEngineDesiredStateTest {
     @Test
@@ -77,7 +78,7 @@ class FibraEngineDesiredStateTest {
     }
 
     @Test
-    void atomicallyPublishesAWholeDesiredGenerationAndRetiresThePreviousOne() {
+    void updatesAStableInstanceAndPublishesTheNewSavedTarget() {
         var starts = new AtomicInteger();
         var stops = new AtomicInteger();
         var definition = PluginDefinition.builder("sample", String.class,
@@ -101,17 +102,25 @@ class FibraEngineDesiredStateTest {
             assertEquals(LiteralValue.of("one"), first.engine().instances().get("sample").config());
             assertEquals(1, starts.get());
             assertEquals(0, stops.get());
+            var identity = first.engine().instances().get("sample").identity();
 
-            var desiredRevision = first.engine().desiredSource().revision();
+            var sourceRevision = first.engine().desiredSource().revision();
             var second = engine.submit(new ReplaceDesiredGraph(
-                first.viewRevision(), desiredRevision,
+                first.viewRevision(), sourceRevision,
                 new DesiredInputGraph(List.of(entry("two"))))).block().view();
 
             assertNotEquals(first.viewRevision(), second.viewRevision());
             assertEquals(LiteralValue.of("two"), second.engine().instances().get("sample").config());
+            assertEquals(identity, second.engine().instances().get("sample").identity());
             assertEquals(2, starts.get());
             assertEquals(1, stops.get());
             assertEquals(second, engine.published().current());
+            assertEquals(LiteralValue.of("one"), repository.load()
+                .graph().plugins().get("sample").config());
+            assertNotEquals(repository.load().snapshot().revision(),
+                second.engine().desiredSource().revision());
+            assertEquals(targetRevision(new DesiredInputGraph(List.of(entry("two")))),
+                second.engineDiagnostics().targetRevision());
         }
         assertEquals(2, stops.get());
     }
@@ -127,23 +136,21 @@ class FibraEngineDesiredStateTest {
             .catalog(PluginCatalog.of(new PluginCatalogEntry<>(definition,
                 literal -> (String) literal))).build()) {
             var started = engine.start().block();
+            var identity = started.engine().instances().get("sample").identity();
 
             assertThrows(PublishedRevisionConflictException.class, () -> engine.submit(
                 new ReplaceDesiredGraph("stale", started.engine().desiredSource().revision(),
                     new DesiredInputGraph(List.of(entry("two"))))).block());
 
             var rejected = engine.published().current();
-            assertEquals(started.generationRevision(), rejected.generationRevision());
-            assertEquals(started.engine(), rejected.engine());
-            assertEquals(started.contributions(), rejected.contributions());
-            assertEquals(started.diagnostics(), rejected.diagnostics());
-            assertNotEquals(started.viewRevision(), rejected.viewRevision());
-            assertEquals(TransactionState.ROLLED_BACK, rejected.engineDiagnostics().transactionState());
-            assertEquals(started.engineDiagnostics().transactions().size() + 1,
-                rejected.engineDiagnostics().transactions().size());
-            assertTrue(rejected.engineDiagnostics().transactions().getLast().detail().contains("revision conflict"));
+            assertEquals(started, rejected);
+            assertEquals(identity, rejected.engine().instances().get("sample").identity());
+            assertEquals(started.engine().desiredSource().revision(),
+                rejected.engine().desiredSource().revision());
+            assertEquals(targetRevision(new DesiredInputGraph(List.of(entry("one")))),
+                rejected.engineDiagnostics().targetRevision());
             assertEquals(LiteralValue.of("one"), repository.load()
-                .graph().require("sample").config());
+                .graph().plugins().get("sample").config());
         }
     }
 
@@ -170,10 +177,16 @@ class FibraEngineDesiredStateTest {
                 .next().block(Duration.ofSeconds(5));
 
             assertNotEquals(started.viewRevision(), failed.viewRevision());
-            assertEquals(started.generationRevision(), failed.generationRevision());
             assertEquals(EngineState.RUNNING, failed.engine().state());
             assertEquals(PluginInstanceState.FAILED,
                 failed.engine().instances().get("sample").state());
+            assertEquals(started.engine().instances().get("sample").identity(),
+                failed.engine().instances().get("sample").identity());
+            assertEquals(started.engine().desiredSource().revision(),
+                failed.engine().desiredSource().revision());
+            assertEquals(targetRevision(new DesiredInputGraph(List.of(entry("one")))),
+                failed.engineDiagnostics().targetRevision());
+            assertFalse(failed.engineDiagnostics().targetSatisfied());
             assertEquals(failed, engine.published().current());
         }
     }
@@ -184,5 +197,9 @@ class FibraEngineDesiredStateTest {
 
     private static DesiredInputEntry entry(String instanceId, String definitionName) {
         return DesiredInputEntry.builder(instanceId, definitionName).build();
+    }
+
+    private static String targetRevision(DesiredInputGraph graph) {
+        return new DeploymentManifest(Map.of(), graph).revision();
     }
 }

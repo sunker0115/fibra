@@ -1,6 +1,12 @@
 package com.sstlfsj.fibra.internal;
 
 interface ResourceOwner {
+    long identity();
+
+    DefaultRuntimeDomain domain();
+
+    DefaultScope scope();
+
     LifecycleDispatcher lifecycle();
 
     boolean acceptsResources();

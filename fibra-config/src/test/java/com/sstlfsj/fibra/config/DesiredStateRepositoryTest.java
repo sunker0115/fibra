@@ -21,7 +21,7 @@ class DesiredStateRepositoryTest {
 
         try (var ignored = repository.prepareReplace(initial.snapshot().revision(), graph)) {
             assertEquals(0, repository.load()
-                .graph().entries().size());
+                .graph().plugins().size());
         }
 
         DesiredCompilation committed;
@@ -31,8 +31,7 @@ class DesiredStateRepositoryTest {
         }
 
         assertTrue(repository.writable());
-        assertEquals(List.of("sample"), committed.graph().entries().stream()
-            .map(DesiredInputEntry::instanceId).toList());
+        assertEquals(List.of("sample"), committed.graph().plugins().keySet().stream().toList());
         assertThrows(ConfigException.class,
             () -> repository.prepareReplace(initial.snapshot().revision(), graph));
     }
@@ -50,7 +49,7 @@ class DesiredStateRepositoryTest {
 
         var restored = repository.load();
         assertEquals(initial.snapshot().revision(), restored.snapshot().revision());
-        assertEquals(List.of(), restored.graph().entries());
+        assertEquals(List.of(), restored.graph().roots());
     }
 
     @Test
@@ -78,7 +77,7 @@ class DesiredStateRepositoryTest {
         Files.writeString(root, "- id: sample\n  plugin: sample\n");
         var repository = new FileDesiredStateRepository(root, ConfigLimits.defaults());
         assertFalse(repository.writable());
-        assertEquals(1, repository.load().graph().entries().size());
+        assertEquals(1, repository.load().graph().plugins().size());
         assertThrows(UnsupportedOperationException.class,
             () -> repository.prepareReplace("revision", new DesiredInputGraph(List.of())));
     }

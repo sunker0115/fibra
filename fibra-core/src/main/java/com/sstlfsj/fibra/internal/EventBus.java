@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -44,7 +45,8 @@ final class EventBus {
         }
         return domain.runtime().lifecycle().call(() -> {
             declare(key);
-            var hook = new Hook<>(context, listener, options, once);
+            var hook = new Hook<>(context, listener, options,
+                once ? new AtomicBoolean() : null);
             var eventHooks = hooks.computeIfAbsent(key.name(), ignored -> new ArrayList<>());
             if (options.isPrepend()) {
                 eventHooks.addFirst(hook);
@@ -52,9 +54,11 @@ final class EventBus {
                 eventHooks.add(hook);
             }
             try {
-                return new OwnedResource(context.owner(),
+                var resource = new OwnedResource(context.owner(),
                     Mono.just(() -> domain.runtime().lifecycle().run(() -> unregister(key, hook))),
                     "events.on(\"" + key.name() + "\")");
+                domain.diagnosticChanged();
+                return resource;
             } catch (RuntimeException | Error failure) {
                 unregister(key, hook);
                 throw failure;
@@ -66,8 +70,9 @@ final class EventBus {
         Objects.requireNonNull(invocation, "invocation");
         domain.runtime().lifecycle().call(() -> {
             for (var hook : resolve(target, key, EventMode.EMIT)) {
-                beforeInvoke(key, hook);
-                invocation.accept(hook.listener());
+                if (beforeInvoke(key, hook)) {
+                    invocation.accept(hook.listener());
+                }
             }
             return null;
         });
@@ -82,10 +87,9 @@ final class EventBus {
             var failures = new ConcurrentLinkedQueue<Throwable>();
             return Flux.fromIterable(snapshot)
                 .flatMap(hook -> Mono.defer(() -> {
-                        domain.runtime().lifecycle().call(() -> {
-                            beforeInvoke(key, hook);
-                            return null;
-                        });
+                        if (!domain.runtime().lifecycle().call(() -> beforeInvoke(key, hook))) {
+                            return Mono.empty();
+                        }
                         return Flux.from(Objects.requireNonNull(invocation.apply(hook.listener()),
                             "event invocation returned null")).then();
                     }).onErrorResume(error -> {
@@ -105,10 +109,9 @@ final class EventBus {
             resolve(target, key, EventMode.SERIAL));
         return Flux.fromIterable(snapshot)
             .concatMap(hook -> Mono.defer(() -> {
-                domain.runtime().lifecycle().call(() -> {
-                    beforeInvoke(key, hook);
-                    return null;
-                });
+                if (!domain.runtime().lifecycle().call(() -> beforeInvoke(key, hook))) {
+                    return Mono.<R>empty();
+                }
                 return Mono.from(Objects.requireNonNull(invocation.apply(hook.listener()),
                     "event invocation returned null"));
             }).filter(EventBus::isBailed), 1)
@@ -120,7 +123,9 @@ final class EventBus {
         Objects.requireNonNull(invocation, "invocation");
         return domain.runtime().lifecycle().call(() -> {
             for (var hook : resolve(target, key, EventMode.BAIL)) {
-                beforeInvoke(key, hook);
+                if (!beforeInvoke(key, hook)) {
+                    continue;
+                }
                 var result = invocation.apply(hook.listener());
                 if (isBailed(result)) {
                     return result;
@@ -146,7 +151,9 @@ final class EventBus {
             return inner.get();
         }
         var hook = snapshot.get(index);
-        beforeInvoke(key, hook);
+        if (!beforeInvoke(key, hook)) {
+            return waterfall(snapshot, key, invocation, inner, index + 1);
+        }
         return invocation.apply(hook.listener(),
             () -> waterfall(snapshot, key, invocation, inner, index + 1));
     }
@@ -173,10 +180,15 @@ final class EventBus {
             .toList();
     }
 
-    private void beforeInvoke(EventKey<?> key, Hook<?> hook) {
+    private boolean beforeInvoke(EventKey<?> key, Hook<?> hook) {
         if (hook.once()) {
+            // 已生成的派发快照仍持有 hook；注销不能代替注册级别的唯一调用认领。
+            if (!hook.onceClaim().compareAndSet(false, true)) {
+                return false;
+            }
             unregister(key, hook);
         }
+        return true;
     }
 
     private void unregister(EventKey<?> key, Hook<?> hook) {
@@ -188,15 +200,23 @@ final class EventBus {
         if (eventHooks.isEmpty()) {
             hooks.remove(key.name());
         }
+        domain.diagnosticChanged();
     }
 
     private void declare(EventKey<?> key) {
-        var contract = new Contract(key.listenerType(), key.mode());
+        var contract = new Contract(key.listenerType().getName(), key.mode());
         var previous = contracts.putIfAbsent(key.name(), contract);
         if (previous != null && !previous.equals(contract)) {
             throw new IllegalArgumentException("event \"" + key.name()
                 + "\" has conflicting contracts");
         }
+        for (var hook : hooks.getOrDefault(key.name(), List.of())) {
+            if (!key.listenerType().isInstance(hook.listener())) {
+                throw new IllegalArgumentException("event \"" + key.name()
+                    + "\" has conflicting contracts");
+            }
+        }
+        if (previous == null) domain.diagnosticChanged();
     }
 
     List<RuntimeDomainSnapshot.Event> diagnosticSnapshot() {
@@ -214,7 +234,7 @@ final class EventBus {
                         hook.once(), hook.options().isGlobal()));
                 }
                 return new RuntimeDomainSnapshot.Event(entry.getKey(), contract.mode(),
-                    contract.listenerType().getName(), observed);
+                    contract.listenerTypeName(), observed);
             })
             .toList();
     }
@@ -223,9 +243,13 @@ final class EventBus {
         return value != null && !Boolean.FALSE.equals(value);
     }
 
-    private record Hook<L>(Context context, L listener, EventOptions options, boolean once) {
+    private record Hook<L>(Context context, L listener, EventOptions options,
+                            AtomicBoolean onceClaim) {
+        private boolean once() {
+            return onceClaim != null;
+        }
     }
 
-    private record Contract(Class<?> listenerType, EventMode mode) {
+    private record Contract(String listenerTypeName, EventMode mode) {
     }
 }

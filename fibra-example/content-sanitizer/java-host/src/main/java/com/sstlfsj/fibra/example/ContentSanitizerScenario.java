@@ -6,7 +6,7 @@ import com.sstlfsj.fibra.bridge.ContributionSnapshot;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
-import com.sstlfsj.fibra.engine.FileTransactionJournal;
+import com.sstlfsj.fibra.engine.FileEngineStateStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.PublishedRuntime;
 import com.sstlfsj.fibra.example.sanitizer.ContentSanitizerContribution;
@@ -54,7 +54,7 @@ public final class ContentSanitizerScenario implements AutoCloseable {
                 storageRoot.resolve("node-sessions")));
         var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty())
             .artifactStore(new ArtifactStore(storageRoot.resolve("artifacts")))
-            .journal(new FileTransactionJournal(storageRoot.resolve("transactions")))
+            .stateStore(new FileEngineStateStore(storageRoot.resolve("engine")))
             .runtimeAdapter(nodeRuntime).build();
         var registry = new PluginRegistry(engine, new InMemoryPluginAuditRepository());
         try {

@@ -5,6 +5,5 @@ public enum ArtifactPhase {
     DIGEST,
     STAGE,
     COMMIT,
-    RECOVER,
-    RETIRE
+    RECOVER
 }

@@ -97,12 +97,34 @@ public final class com.sstlfsj.fibra.config.DesiredConfigCompiler {
   public com.sstlfsj.fibra.config.DesiredConfigCompiler(com.sstlfsj.fibra.config.ConfigLimits);
   public com.sstlfsj.fibra.config.DesiredCompilation compile(java.nio.file.Path);
 }
+## com.sstlfsj.fibra.config.DesiredIncludeContent
+Compiled from "DesiredIncludeContent.java"
+public interface com.sstlfsj.fibra.config.DesiredIncludeContent {
+}
+## com.sstlfsj.fibra.config.DesiredIncludeContent$Collected
+Compiled from "DesiredIncludeContent.java"
+public final class com.sstlfsj.fibra.config.DesiredIncludeContent$Collected extends java.lang.Record implements com.sstlfsj.fibra.config.DesiredIncludeContent {
+  public com.sstlfsj.fibra.config.DesiredIncludeContent$Collected(java.util.List<com.sstlfsj.fibra.config.DesiredInputNode>);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.util.List<com.sstlfsj.fibra.config.DesiredInputNode> children();
+}
+## com.sstlfsj.fibra.config.DesiredIncludeContent$Uncollected
+Compiled from "DesiredIncludeContent.java"
+public final class com.sstlfsj.fibra.config.DesiredIncludeContent$Uncollected extends java.lang.Record implements com.sstlfsj.fibra.config.DesiredIncludeContent {
+  public static final com.sstlfsj.fibra.config.DesiredIncludeContent$Uncollected INSTANCE;
+  public com.sstlfsj.fibra.config.DesiredIncludeContent$Uncollected();
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+}
 ## com.sstlfsj.fibra.config.DesiredInputEntry
 Compiled from "DesiredInputEntry.java"
-public final class com.sstlfsj.fibra.config.DesiredInputEntry {
+public final class com.sstlfsj.fibra.config.DesiredInputEntry implements com.sstlfsj.fibra.config.DesiredInputNode {
   public static com.sstlfsj.fibra.config.DesiredInputEntry$Builder builder(java.lang.String, java.lang.String);
   public com.sstlfsj.fibra.config.DesiredInputEntry$Builder toBuilder();
-  public java.lang.String instanceId();
+  public java.lang.String id();
   public java.lang.String definitionName();
   public boolean enabled();
   public com.sstlfsj.fibra.config.PublicationRequirement publicationRequirement();
@@ -126,13 +148,91 @@ public final class com.sstlfsj.fibra.config.DesiredInputEntry$Builder {
 ## com.sstlfsj.fibra.config.DesiredInputGraph
 Compiled from "DesiredInputGraph.java"
 public final class com.sstlfsj.fibra.config.DesiredInputGraph {
-  public com.sstlfsj.fibra.config.DesiredInputGraph(java.util.List<com.sstlfsj.fibra.config.DesiredInputEntry>);
-  public java.util.List<com.sstlfsj.fibra.config.DesiredInputEntry> entries();
-  public com.sstlfsj.fibra.config.DesiredInputEntry require(java.lang.String);
-  public com.sstlfsj.fibra.config.DesiredInputGraph upsert(com.sstlfsj.fibra.config.DesiredInputEntry);
+  public com.sstlfsj.fibra.config.DesiredInputGraph(java.util.List<? extends com.sstlfsj.fibra.config.DesiredInputNode>);
+  public java.util.List<com.sstlfsj.fibra.config.DesiredInputNode> roots();
+  public java.util.Map<java.lang.String, com.sstlfsj.fibra.config.DesiredInputEntry> plugins();
+  public com.sstlfsj.fibra.config.DesiredInputNode require(java.lang.String);
+  public com.sstlfsj.fibra.config.DesiredInputGraph$EffectiveDesiredEntry effective(java.lang.String);
+  public com.sstlfsj.fibra.config.DesiredInputGraph upsert(java.lang.String, com.sstlfsj.fibra.config.DesiredInputNode);
   public com.sstlfsj.fibra.config.DesiredInputGraph remove(java.lang.String);
+  public com.sstlfsj.fibra.config.DesiredInputGraph withEnabled(java.lang.String, boolean);
+  public com.sstlfsj.fibra.config.DesiredInputGraph move(java.lang.String, java.lang.String, int);
   public boolean equals(java.lang.Object);
   public int hashCode();
+}
+## com.sstlfsj.fibra.config.DesiredInputGraph$EffectiveDesiredEntry
+Compiled from "DesiredInputGraph.java"
+public final class com.sstlfsj.fibra.config.DesiredInputGraph$EffectiveDesiredEntry extends java.lang.Record {
+  public com.sstlfsj.fibra.config.DesiredInputGraph$EffectiveDesiredEntry(java.lang.String, java.lang.String, boolean, java.util.Map<java.lang.String, com.sstlfsj.fibra.config.DesiredInputGraph$EffectivePolicyValue>, java.util.Map<java.lang.String, com.sstlfsj.fibra.config.DesiredInputGraph$EffectivePolicyValue>);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String entryId();
+  public java.lang.String parentId();
+  public boolean enabled();
+  public java.util.Map<java.lang.String, com.sstlfsj.fibra.config.DesiredInputGraph$EffectivePolicyValue> realms();
+  public java.util.Map<java.lang.String, com.sstlfsj.fibra.config.DesiredInputGraph$EffectivePolicyValue> intercepts();
+}
+## com.sstlfsj.fibra.config.DesiredInputGraph$EffectivePolicyValue
+Compiled from "DesiredInputGraph.java"
+public final class com.sstlfsj.fibra.config.DesiredInputGraph$EffectivePolicyValue extends java.lang.Record {
+  public com.sstlfsj.fibra.config.DesiredInputGraph$EffectivePolicyValue(java.lang.String, com.sstlfsj.fibra.value.LiteralValue);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String ownerEntryId();
+  public com.sstlfsj.fibra.value.LiteralValue value();
+}
+## com.sstlfsj.fibra.config.DesiredInputGroup
+Compiled from "DesiredInputGroup.java"
+public final class com.sstlfsj.fibra.config.DesiredInputGroup implements com.sstlfsj.fibra.config.DesiredInputNode {
+  public static com.sstlfsj.fibra.config.DesiredInputGroup$Builder builder(java.lang.String);
+  public java.lang.String id();
+  public boolean enabled();
+  public java.util.Map<java.lang.String, com.sstlfsj.fibra.value.LiteralValue> realms();
+  public java.util.Map<java.lang.String, com.sstlfsj.fibra.value.LiteralValue> intercepts();
+  public java.util.List<com.sstlfsj.fibra.config.DesiredInputNode> children();
+  public boolean equals(java.lang.Object);
+  public int hashCode();
+}
+## com.sstlfsj.fibra.config.DesiredInputGroup$Builder
+Compiled from "DesiredInputGroup.java"
+public final class com.sstlfsj.fibra.config.DesiredInputGroup$Builder {
+  public com.sstlfsj.fibra.config.DesiredInputGroup$Builder enabled(boolean);
+  public com.sstlfsj.fibra.config.DesiredInputGroup$Builder realms(java.util.Map<java.lang.String, com.sstlfsj.fibra.value.LiteralValue>);
+  public com.sstlfsj.fibra.config.DesiredInputGroup$Builder intercepts(java.util.Map<java.lang.String, com.sstlfsj.fibra.value.LiteralValue>);
+  public com.sstlfsj.fibra.config.DesiredInputGroup$Builder children(java.util.List<? extends com.sstlfsj.fibra.config.DesiredInputNode>);
+  public com.sstlfsj.fibra.config.DesiredInputGroup build();
+}
+## com.sstlfsj.fibra.config.DesiredInputInclude
+Compiled from "DesiredInputInclude.java"
+public final class com.sstlfsj.fibra.config.DesiredInputInclude implements com.sstlfsj.fibra.config.DesiredInputNode {
+  public static com.sstlfsj.fibra.config.DesiredInputInclude$Builder builder(java.lang.String);
+  public java.lang.String id();
+  public boolean enabled();
+  public java.util.Map<java.lang.String, com.sstlfsj.fibra.value.LiteralValue> realms();
+  public java.util.Map<java.lang.String, com.sstlfsj.fibra.value.LiteralValue> intercepts();
+  public com.sstlfsj.fibra.config.DesiredIncludeContent content();
+  public boolean equals(java.lang.Object);
+  public int hashCode();
+}
+## com.sstlfsj.fibra.config.DesiredInputInclude$Builder
+Compiled from "DesiredInputInclude.java"
+public final class com.sstlfsj.fibra.config.DesiredInputInclude$Builder {
+  public com.sstlfsj.fibra.config.DesiredInputInclude$Builder enabled(boolean);
+  public com.sstlfsj.fibra.config.DesiredInputInclude$Builder realms(java.util.Map<java.lang.String, com.sstlfsj.fibra.value.LiteralValue>);
+  public com.sstlfsj.fibra.config.DesiredInputInclude$Builder intercepts(java.util.Map<java.lang.String, com.sstlfsj.fibra.value.LiteralValue>);
+  public com.sstlfsj.fibra.config.DesiredInputInclude$Builder content(com.sstlfsj.fibra.config.DesiredIncludeContent);
+  public com.sstlfsj.fibra.config.DesiredInputInclude build();
+}
+## com.sstlfsj.fibra.config.DesiredInputNode
+Compiled from "DesiredInputNode.java"
+public interface com.sstlfsj.fibra.config.DesiredInputNode {
+  public abstract java.lang.String id();
+  public abstract boolean enabled();
+  public abstract java.util.Map<java.lang.String, com.sstlfsj.fibra.value.LiteralValue> realms();
+  public abstract java.util.Map<java.lang.String, com.sstlfsj.fibra.value.LiteralValue> intercepts();
+  public static java.lang.String requireId(java.lang.String);
 }
 ## com.sstlfsj.fibra.config.DesiredSourceSnapshot
 Compiled from "DesiredSourceSnapshot.java"
@@ -182,4 +282,5 @@ public final class com.sstlfsj.fibra.config.PublicationRequirement extends java.
   public static final com.sstlfsj.fibra.config.PublicationRequirement PENDING_ALLOWED;
   public static com.sstlfsj.fibra.config.PublicationRequirement[] values();
   public static com.sstlfsj.fibra.config.PublicationRequirement valueOf(java.lang.String);
+  public boolean accepts(com.sstlfsj.fibra.PluginInstanceState);
 }

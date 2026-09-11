@@ -1,6 +1,6 @@
 # 行为验收账本
 
-复核日期：2026-09-11。状态：完成。
+复核日期：2026-09-11。状态：Cordis 原始行为与 Fibra 额外回归已通过；不代表整个项目交付完成。
 
 本账本把两类当前验收对象分开记录：
 
@@ -16,13 +16,20 @@
 共同执行证据：
 
 ```text
-mvn -pl fibra-parity-tests -am test \
+mvn -o -pl fibra-parity-tests -am test \
   -Dtest='*ParityTest,ApiSignatureBaselineTest,ArchitectureBaselineTest,VNextScenarioTest,ReadmeExampleTest' \
   -Dsurefire.failIfNoSpecifiedTests=false
 ```
 
 结果：120 项通过，0 failure，0 error，0 skipped；其中 Cordis 71 项、Fibra 额外回归 44 项，另有 API
 基线 1 项、架构基线 3 项和 vNext 场景 1 项。
+
+本次先清理构建产物再重建，并在更新 API 基线后以普通校验模式重新通过以上 120 项。
+随后执行全仓 `mvn -o verify`，28 个模块通过，包含真实 JAR、Node、Spring、archetype 与示例集成测试；
+这证明当前已实现代码通过现有门禁，不抵扣下表未完成场景。最终空依赖仓库分发尚未执行。
+DSH 的配置组合、源文件自动刷新、真实 Java/Node 局部更新和多插件应用场景不在这 120 项中，
+必须各自提供行为证据，不能用内核门禁替代。DSH 的逐项采用边界见
+[源码基线](2026-09-09-plugin-dependency-baselines.md)。
 
 ## 1. Cordis 原始行为：71 项
 
@@ -34,11 +41,11 @@ mvn -pl fibra-parity-tests -am test \
 | `EventsSpecParityTest` | `ctxOn`<br>`ctxOnce`<br>`ctxParallel`<br>`ctxEmit`<br>`ctxSerial`<br>`ctxBail`<br>`ctxWaterfall` | 7 项通过；`EventMode` 固化在 `EventKey`，跨域隔离另有门禁 |
 | `FibraSpecParityTest` | `inertiaLock1`<br>`inertiaLock2`<br>`inertiaLock3`<br>`pluginError`<br>`disposeError`<br>`updateConfigOnWrappedFibra`<br>`restartWrappedFibra`<br>`updateConfigWhileInjectedServiceReloads` | 8 项通过；覆盖 provider epoch、配置预校验与清理失败隔离 |
 | `InvokeSpecParityTest` | `functionalService`<br>`usesServiceShadowForCallableExtensions` | 2 项通过；PublishedRuntime lease 另有调用门禁 |
-| `IsolateSpecParityTest` | `isolatedContext`<br>`sharedLabel`<br>`isolatedEvent` | 3 项通过；业务 realm 与 generation domain 分开验证 |
+| `IsolateSpecParityTest` | `isolatedContext`<br>`sharedLabel`<br>`isolatedEvent` | 3 项通过；域内业务 realm 与独立 RuntimeDomain 隔离分开验证 |
 | `LoggerSpecParityTest` | `keepsBoundedBufferInPlaceAndChronological`<br>`disposesExporterThatRegisteredDisposer`<br>`usesFibraNameOutsideService`<br>`honoursExplicitNameArgument`<br>`honoursInterceptName`<br>`usesServiceNameInsideServiceMethod`<br>`outerCallerInterceptOverridesServiceName`<br>`usesInnermostServiceNameAndRestoresOuter`<br>`usesServiceNameInsideServiceInit` | 9 项通过 |
 | `PluginSpecParityTest` | `applyFunctionalPlugin`<br>`applyObjectPlugin`<br>`applyInvalidPlugin`<br>`inactiveContext`<br>`contextInspect`<br>`ctxRegistry`<br>`nestedPlugins`<br>`compareSnapshot`<br>`rootDispose`<br>`serviceInit` | 10 项通过 |
 | `ReflectSpecParityTest` | `contextIs`<br>`accessCheck`<br>`serviceInjection`<br>`serviceInjectLeak` | 4 项通过 |
-| `ServiceSpecParityTest` | `pendingInject`<br>`traceableEffectWithInject`<br>`traceableEffectWithoutInject`<br>`compareSnapshot`<br>`multipleInjects` | 5 项通过；跨代同键并存由 RuntimeDomain 隔离测试覆盖 |
+| `ServiceSpecParityTest` | `pendingInject`<br>`traceableEffectWithInject`<br>`traceableEffectWithoutInject`<br>`compareSnapshot`<br>`multipleInjects` | 5 项通过；独立域内同键并存由 RuntimeDomain 隔离测试覆盖 |
 | `ShadowSpecParityTest` | `keepsCallerMetadataSeparateFromServiceShadow`<br>`exposesCallerWithoutPreservingShadowForNoShadowServices`<br>`exposesCallerToCallableServices`<br>`stripsServiceShadowBeforeCreatingPlugins` | 4 项通过 |
 | 合计 | 71 | 完成 |
 
@@ -63,3 +70,21 @@ mvn -pl fibra-parity-tests -am test \
 
 当前源码按 `@Test` 注解计数：`parity` 的 12 个 Cordis 映射类为 71，`migration` 的 11 个回归类为 44。
 `ArchitectureBaselineTest`、`ApiSignatureBaselineTest` 与 `VNextScenarioTest` 单独计数，不进入上述两本账。
+
+## 4. DSH 配置与动态管理的独立门禁
+
+以下对照固定在 DSH `a66e4702047846cdaa10c66c9d3df3951f5ea70d`，记录使用场景是否被证明，
+不要求配置文本逐字兼容。表中的未完成项不影响前两组计数，也不能被前两组绿色结果抵扣。
+
+| 使用场景 | DSH 源码行为 | Fibra 当前证据与缺口 |
+|---|---|---|
+| include、分组与局部开关 | Include 挂载子树，group 保留条目层级；隔离策略从父条目继承 | `DesiredConfigCompilerTest`、`DesiredInputGraphTest` 和 `DesiredRealmIsolationTest` 覆盖树形采集、禁用 include 不读取、命名空间、局部/命名 realm 和重启重建 |
+| 配置差量与启动交错 | Entry 无变化时跳过，普通 config 更新原 Fiber；Include 将初始装配和刷新排入同一队列 | `FibraEngineIncrementalTest` 8 项通过，包含启动未完成时提交新目标，两个已接受命令串行执行；旧 Scope/effect 释放，无关实例保留 |
+| 多层补丁组合 | `applyEntryPatches` 深拷贝输入，按顺序执行，新增条目可被后续补丁匹配；根/分组追加、名称保护及未匹配告警跳过 | `DesiredConfigPatchTest` 21 项与 `DesiredConfigCompilerTest` 7 项通过；覆盖固定索引、根/分组追加、浅覆盖、字面 null、include 边界、跳过诊断及非法有效结构拒绝。Engine 启动/刷新门禁证明告警不阻止后续有效补丁，刷新返回 warnings，无变化实例不重启 |
+| 源文件无效后修正 | Include 在队列内读取、解析和更新，应用成功才接受新内容 | `DesiredInputBindingTest.invalidFileRefreshKeepsTheLastGoodTreeAndAcceptsTheNextValidEdit` 通过：真实 include 文件语法错误、空文件、非数组根均不改变目标、实例和 effects，修正后同一实例更新。自动源刷新能力仍未完成 |
+| 条件配置与运行上下文 | Loader 在叶子 Fiber 的配置钩子求值；group/include 中的子条目配置保持字面值，避免提前使用错误上下文 | 当前 literal 输入和程序化仓库不足以证明场景等价；条件/组合输入门禁未完成。不在 Java core 执行 JavaScript，不等于取消使用场景 |
+| 插件主动停用与管理意图 | Loader 只对满足过滤条件的条目根 Fiber 自行 dispose 回写 disabled，不把普通失败、子插件退出或父树关闭当作用户停用 | Fibra 区分 desired 与 observed，所有目标修改经 EngineCommand；显式管理入口已有，但主动停用场景的等价使用证明仍须补齐，不能直接引入隐式目标回写 |
+
+源码：[Include 与补丁](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/vendor/include/src/index.ts)、
+[Loader 配置钩子与 self-dispose](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/vendor/loader/src/index.ts)、
+[表达式求值](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/vendor/loader/src/config/utils.ts)。

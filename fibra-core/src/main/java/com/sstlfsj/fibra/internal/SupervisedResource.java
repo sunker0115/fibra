@@ -101,6 +101,11 @@ final class SupervisedResource implements OwnedEffect, Subscriber<Object> {
     }
 
     @Override
+    public ResourceOwner owner() {
+        return owner;
+    }
+
+    @Override
     public Mono<EffectHandle> ready() {
         return ready.asMono();
     }
