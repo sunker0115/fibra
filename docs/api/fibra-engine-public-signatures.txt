@@ -90,12 +90,13 @@ public final class com.sstlfsj.fibra.engine.EngineCommandResult extends java.lan
 ## com.sstlfsj.fibra.engine.EngineDiagnostics
 Compiled from "EngineDiagnostics.java"
 public final class com.sstlfsj.fibra.engine.EngineDiagnostics extends java.lang.Record {
-  public com.sstlfsj.fibra.engine.EngineDiagnostics(java.lang.String, com.sstlfsj.fibra.engine.ChangePhase, java.util.Set<java.lang.String>, java.util.Map<com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.RuntimeResourceSnapshot>, boolean, boolean, java.lang.String);
+  public com.sstlfsj.fibra.engine.EngineDiagnostics(java.lang.String, java.lang.String, com.sstlfsj.fibra.engine.ChangePhase, java.util.Set<java.lang.String>, java.util.Map<com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.RuntimeResourceSnapshot>, boolean, boolean, java.lang.String);
   public static com.sstlfsj.fibra.engine.EngineDiagnostics$Builder builder();
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public java.lang.String targetRevision();
+  public java.lang.String contextRevision();
   public com.sstlfsj.fibra.engine.ChangePhase phase();
   public java.util.Set<java.lang.String> affectedInstances();
   public java.util.Map<com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.RuntimeResourceSnapshot> resources();
@@ -108,6 +109,7 @@ Compiled from "EngineDiagnostics.java"
 public final class com.sstlfsj.fibra.engine.EngineDiagnostics$Builder {
   public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder();
   public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder targetRevision(java.lang.String);
+  public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder contextRevision(java.lang.String);
   public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder phase(com.sstlfsj.fibra.engine.ChangePhase);
   public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder affectedInstances(java.util.Set<java.lang.String>);
   public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder resources(java.util.Map<com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.RuntimeResourceSnapshot>);
@@ -178,6 +180,7 @@ public final class com.sstlfsj.fibra.engine.FibraEngine$Builder {
   public com.sstlfsj.fibra.engine.FibraEngine$Builder stateStore(com.sstlfsj.fibra.engine.EngineStateStore);
   public com.sstlfsj.fibra.engine.FibraEngine$Builder artifactStore(com.sstlfsj.fibra.artifact.ArtifactStore);
   public com.sstlfsj.fibra.engine.FibraEngine$Builder hostServices(com.sstlfsj.fibra.engine.HostServiceRegistry);
+  public com.sstlfsj.fibra.engine.FibraEngine$Builder configContext(com.sstlfsj.fibra.config.ConfigContextSnapshot);
   public com.sstlfsj.fibra.engine.FibraEngine$Builder autoRefresh(java.time.Duration);
   public com.sstlfsj.fibra.engine.FibraEngine$Builder runtimeAdapter(com.sstlfsj.fibra.engine.PluginRuntimeAdapter);
   public com.sstlfsj.fibra.engine.FibraEngine build();
@@ -320,6 +323,17 @@ public final class com.sstlfsj.fibra.engine.RefreshDesired extends java.lang.Rec
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public java.lang.String expectedRevision();
+}
+## com.sstlfsj.fibra.engine.ReplaceConfigContext
+Compiled from "ReplaceConfigContext.java"
+public final class com.sstlfsj.fibra.engine.ReplaceConfigContext extends java.lang.Record implements com.sstlfsj.fibra.engine.EngineCommand {
+  public com.sstlfsj.fibra.engine.ReplaceConfigContext(java.lang.String, java.lang.String, com.sstlfsj.fibra.config.ConfigContextSnapshot);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String expectedRevision();
+  public java.lang.String expectedContextRevision();
+  public com.sstlfsj.fibra.config.ConfigContextSnapshot context();
 }
 ## com.sstlfsj.fibra.engine.ReplaceDesiredGraph
 Compiled from "ReplaceDesiredGraph.java"

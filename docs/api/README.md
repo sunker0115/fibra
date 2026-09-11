@@ -75,6 +75,13 @@ closeAsync()
 ```
 
 构建 Engine 时可用 `FibraEngine.Builder.autoRefresh(Duration)` 显式开启 desired source 自动刷新。
+`FibraEngine.Builder.configContext(ConfigContextSnapshot)` 设置本次进程启动上下文；默认是空快照。
+运行中提交 `ReplaceConfigContext(expectedViewRevision, expectedContextRevision, context)`，同时执行 view
+与 context 两套 CAS。该命令先完整求值并绑定，再只做实例差量协调；它不保存
+`DeploymentManifest`、不改变 target revision，也不创建 runtime resource update。求值或绑定失败直接
+返回错误，原 context、目标、实例、effects 与 PublishedView 不变。重启从已存 raw target 按新的 builder
+context 重新派生，不持久化上次进程的宿主环境。
+
 文件事件只产生可合并 dirty signal，周期 resync 执行真实重新采集，并与上一次已接受的 source revision
 比较；相同源不会覆盖 `ReplaceDesiredGraph` 等管理变更。源读取或解析失败会公开 `FAILED` 诊断，但
 last-good 目标仍可满足且 mutation gate 保持开放；恢复为相同内容时只清除源错误，不重启实例。
@@ -88,7 +95,7 @@ last-good 目标仍可满足且 mutation gate 保持开放；恢复为相同内�
 
 `PluginRuntimeAdapter.create()` 返回长期 `RuntimeResourceOwner`。制品变化时，Engine 先登记 `createUpdate(target)` 返回的 `RuntimeResourceUpdate`，再执行 `prepareAsync()`；目标集合完整，但 update 只拥有本次新增或被替换资源。`catalog()` 在准备成功后可读，`snapshot()` 在准备或失败期间也能诊断资源。`adopt()` 只交换所有权，不执行 I/O；此前 `closeAsync()` 清理新资源，此后清理被替换的旧资源，借用资源始终归 owner。准备和关闭共享完整终态，关闭后不能重新准备。纯配置变更不创建 runtime update，无变化实例及资源保留。
 
-`FileEngineStateStore` 持久保存单个完整 `DeploymentManifest`。Engine 先保存不可变制品，再保存目标，然后差量协调长期域中的实例。`EngineDiagnostics` 区分目标 revision、变更阶段、真实达成情况和 mutation gate；`EngineChangeException.targetSaved()` 表示目标已确认保存。若 cause 为 `SaveUnconfirmedException`，不能把 `targetSaved() == false` 解释成未写入。保存后启动或清理失败不回滚目标；保存结果不确定或资源清理失败会关闭后续变更准入。重启严格读取完整目标，损坏或缺失引用明确报错。
+`FileEngineStateStore` 持久保存单个完整 `DeploymentManifest`。Engine 先保存不可变制品，再保存目标，然后差量协调长期域中的实例。`EngineDiagnostics` 分别公开 target revision、context revision、变更阶段、真实达成情况和 mutation gate；`EngineChangeException.targetSaved()` 表示目标已确认保存。若 cause 为 `SaveUnconfirmedException`，不能把 `targetSaved() == false` 解释成未写入。保存后启动或清理失败不回滚目标；保存结果不确定或资源清理失败会关闭后续变更准入。重启严格读取完整目标，损坏或缺失引用明确报错。
 
 `DrainingDisposable` 为受管资源提供排空阶段：先停止准入并等待已接受调用，再执行普通清理。排空沿现有 Scope、插件和 effect 所有权关系传播；provider 资源释放还须等待使用旧激活快照的实际消费者完成清理。失败资源的身份与失败信息保留在 `RuntimeDiagnostics.cleanupFailures()`，不暴露 `ClassLoader`、`Process`、RPC channel 或可变资源句柄。
 

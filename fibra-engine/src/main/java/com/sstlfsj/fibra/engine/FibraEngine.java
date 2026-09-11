@@ -19,8 +19,10 @@ import com.sstlfsj.fibra.bridge.ContributionRoutes;
 import com.sstlfsj.fibra.bridge.ContributionServices;
 import com.sstlfsj.fibra.bridge.ContributionSnapshot;
 import com.sstlfsj.fibra.config.ConfigDiagnostic;
+import com.sstlfsj.fibra.config.ConfigContextSnapshot;
 import com.sstlfsj.fibra.config.ConfigStage;
 import com.sstlfsj.fibra.config.DesiredCompilation;
+import com.sstlfsj.fibra.config.DesiredEvaluation;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.DesiredInputGraph.EffectiveDesiredEntry;
@@ -74,6 +76,8 @@ public final class FibraEngine implements AutoCloseable {
     private DesiredCompilation compilation = DesiredCompilation.builder()
         .snapshot(new DesiredSourceSnapshot("unstarted", "0", Set.of()))
         .graph(new DesiredInputGraph(List.of())).build();
+    private ConfigContextSnapshot configContext;
+    private DesiredEvaluation evaluation;
     private Map<ArtifactId, ArtifactRecord> artifacts = Map.of();
     private String targetRevision;
     private ChangePhase phase = ChangePhase.IDLE;
@@ -101,6 +105,8 @@ public final class FibraEngine implements AutoCloseable {
         artifactStore = builder.artifactStore;
         stateStore = builder.stateStore;
         hostServices = builder.hostServices;
+        configContext = builder.configContext;
+        evaluation = DesiredEvaluation.evaluate(compilation.graph(), configContext);
         resources = new RuntimeResources(builder.runtimeAdapters, builder.catalog);
         sourceMonitor = builder.autoRefreshInterval == null ? null
             : new DesiredSourceMonitor(builder.autoRefreshInterval);
@@ -168,9 +174,10 @@ public final class FibraEngine implements AutoCloseable {
         context.services().provide(ContributionServices.REGISTRAR, directory);
         observation = Flux.merge(domain.snapshots(), directory.views())
             .subscribe(ignored -> loop.observe(this::refresh));
-        var plan = new ChangeSet(desired, target);
+        var plan = new ChangeSet(desired, target, configContext);
         plan.bootstrapping = true;
-        plan.saved = saved.isPresent();
+        plan.targetSaved = saved.isPresent();
+        plan.committed = saved.isPresent();
         return execute(plan).map(EngineCommandResult::view).doOnSuccess(view -> {
             if (sourceMonitor == null) return;
             if (saved.isEmpty()) acceptSource(desired);
@@ -184,6 +191,7 @@ public final class FibraEngine implements AutoCloseable {
 
     private Mono<EngineCommandResult> change(EngineCommand command) {
         if (command instanceof RefreshDesired) return refreshDesired(true);
+        if (command instanceof ReplaceConfigContext replace) return replaceConfigContext(replace);
         var desired = compilation;
         if (command instanceof ReplaceDesiredGraph replace) {
             checkDesiredRevision(replace.expectedDesiredRevision());
@@ -193,7 +201,7 @@ public final class FibraEngine implements AutoCloseable {
             checkDesiredRevision(deployment.expectedDesiredRevision());
             desired = replacementCompilation(deployment.graph());
         }
-        var plan = new ChangeSet(desired, new LinkedHashMap<>(artifacts));
+        var plan = new ChangeSet(desired, artifacts, configContext);
         return Mono.defer(() -> {
             if (command instanceof UninstallArtifact uninstall) {
                 if (plan.artifacts.remove(uninstall.artifactId()) == null) {
@@ -212,6 +220,24 @@ public final class FibraEngine implements AutoCloseable {
         }).onErrorResume(error -> plan.executing ? Mono.error(error) : fail(plan, error));
     }
 
+    private Mono<EngineCommandResult> replaceConfigContext(ReplaceConfigContext replace) {
+        checkContextRevision(replace.expectedContextRevision());
+        final DesiredEvaluation nextEvaluation;
+        final Map<String, Bound<?>> nextBound;
+        try {
+            nextEvaluation = DesiredEvaluation.evaluate(compilation.graph(), replace.context());
+            nextBound = bind(compilation, nextEvaluation, resources.catalog());
+        } catch (RuntimeException | Error error) {
+            return Mono.error(error);
+        }
+        var plan = new ChangeSet(compilation, artifacts, replace.context());
+        plan.evaluation = nextEvaluation;
+        plan.bound = nextBound;
+        plan.saveTarget = false;
+        plan.updateResources = false;
+        return execute(plan);
+    }
+
     private Mono<EngineCommandResult> refreshDesired(boolean force) {
         return Mono.defer(() -> {
             final DesiredCompilation desired;
@@ -221,6 +247,12 @@ public final class FibraEngine implements AutoCloseable {
                 return failSourceRefresh(error);
             }
             sourceMonitorUpdate(desired);
+            final DesiredEvaluation nextEvaluation;
+            try {
+                nextEvaluation = DesiredEvaluation.evaluate(desired.graph(), configContext);
+            } catch (RuntimeException | Error error) {
+                return failSourceRefresh(error);
+            }
             if (sourceBaselinePending && !force) {
                 acceptSource(desired);
                 return unchangedSource(desired);
@@ -228,7 +260,8 @@ public final class FibraEngine implements AutoCloseable {
             if (!force && desired.snapshot().revision().equals(lastSourceRevision)) {
                 return unchangedSource(desired);
             }
-            var plan = new ChangeSet(desired, artifacts);
+            var plan = new ChangeSet(desired, artifacts, configContext);
+            plan.evaluation = nextEvaluation;
             return execute(plan).doOnSuccess(ignored -> acceptSource(desired))
                 .doOnError(error -> {
                     if (error instanceof EngineChangeException change && change.targetSaved()) {
@@ -288,7 +321,9 @@ public final class FibraEngine implements AutoCloseable {
 
     private void seedSourceObservation() {
         try {
-            acceptSource(loadDesired());
+            var desired = loadDesired();
+            DesiredEvaluation.evaluate(desired.graph(), configContext);
+            acceptSource(desired);
         } catch (RuntimeException | Error error) {
             LOGGER.warn("Cannot establish desired source refresh baseline: {}",
                 error.toString());
@@ -327,13 +362,20 @@ public final class FibraEngine implements AutoCloseable {
         plan.executing = true;
         return loop.call(() -> {
             sourceFailure = false;
+            if (plan.evaluation == null) {
+                plan.evaluation = DesiredEvaluation.evaluate(plan.desired.graph(), plan.context);
+            }
             phase = ChangePhase.PREPARING;
             failure = null;
             publishControl();
+            if (!plan.updateResources) return Mono.<Void>empty();
             plan.update = resources.createUpdate(plan.artifacts);
             return plan.update.prepareAsync();
         }).then(loop.call(() -> {
-            plan.bound = bind(plan.desired, plan.update.catalog());
+            if (plan.bound == null) {
+                var catalog = plan.update == null ? resources.catalog() : plan.update.catalog();
+                plan.bound = bind(plan.desired, plan.evaluation, catalog);
+            }
             var changed = new LinkedHashSet<String>();
             instances.forEach((id, managed) -> {
                 var next = plan.bound.get(id);
@@ -341,20 +383,27 @@ public final class FibraEngine implements AutoCloseable {
             });
             plan.bound.keySet().stream().filter(id -> !instances.containsKey(id)).forEach(changed::add);
             affected = Set.copyOf(changed);
-            phase = ChangePhase.SAVING;
-            publishControl();
-            plan.installs.forEach(transaction -> {
-                var saved = transaction.save();
-                plan.artifacts.put(saved.id(), saved);
-            });
-            var selections = new LinkedHashMap<ArtifactId, String>();
-            plan.artifacts.forEach((id, record) -> selections.put(id, record.revision()));
-            var manifest = new DeploymentManifest(selections, plan.desired.graph());
-            if (!plan.saved) stateStore.save(manifest);
-            plan.saved = true;
-            targetRevision = manifest.revision();
+            if (plan.saveTarget) {
+                phase = ChangePhase.SAVING;
+                publishControl();
+                plan.installs.forEach(transaction -> {
+                    var saved = transaction.save();
+                    plan.artifacts.put(saved.id(), saved);
+                });
+                var selections = new LinkedHashMap<ArtifactId, String>();
+                plan.artifacts.forEach((id, record) -> selections.put(id, record.revision()));
+                var manifest = new DeploymentManifest(selections, plan.desired.graph());
+                if (!plan.targetSaved) stateStore.save(manifest);
+                plan.targetSaved = true;
+                targetRevision = manifest.revision();
+            } else if (!plan.installs.isEmpty()) {
+                throw new IllegalStateException("context-only change cannot install artifacts");
+            }
             compilation = plan.desired;
+            configContext = plan.context;
+            evaluation = plan.evaluation;
             artifacts = Map.copyOf(plan.artifacts);
+            plan.committed = true;
             phase = ChangePhase.RECONCILING;
             publishControl();
             return reconcile(plan);
@@ -363,6 +412,10 @@ public final class FibraEngine implements AutoCloseable {
                 assertClean();
                 phase = ChangePhase.RETIRING;
                 refresh();
+                if (plan.update == null) {
+                    plan.retired = true;
+                    return Mono.<Void>empty();
+                }
                 return plan.update.closeAsync().doOnSuccess(ignored -> plan.retired = true);
             })).then(loop.call(() -> capture().map(captured -> {
                 phase = ChangePhase.IDLE;
@@ -400,7 +453,7 @@ public final class FibraEngine implements AutoCloseable {
             }));
         })).then(loop.call(() -> {
             assertClean();
-            plan.update.adopt();
+            if (plan.update != null) plan.update.adopt();
             return Flux.fromIterable(plan.bound.entrySet()).concatMap(entry -> loop.call(() -> {
                 var previous = instances.get(entry.getKey());
                 var next = entry.getValue();
@@ -437,20 +490,23 @@ public final class FibraEngine implements AutoCloseable {
         return ((PluginInstance) previous.instance()).updatePrepared(next.prepared()).then();
     }
 
-    private Map<String, Bound<?>> bind(DesiredCompilation desired, PluginCatalog catalog) {
+    private Map<String, Bound<?>> bind(DesiredCompilation desired, DesiredEvaluation evaluation,
+                                       PluginCatalog catalog) {
         var result = new LinkedHashMap<String, Bound<?>>();
         desired.graph().plugins().forEach((id, input) -> {
-            var effective = desired.graph().effective(id);
+            var resolved = evaluation.require(id);
+            var effective = resolved.effective();
             if (!effective.enabled()) return;
+            var config = resolved.resolvedConfig().orElseThrow();
             var contract = catalog.find(input.definitionName()).orElseThrow(() ->
                 bindingFailure(desired, id, "DEFINITION_NOT_FOUND", "unknown definition " + input.definitionName(), null));
             var previous = instances.get(id);
             if (previous != null && previous.bound().prepared().definition() == contract.definition()
-                && previous.bound().input().config().equals(input.config())) {
-                result.put(id, previous.bound().withDeclaration(input, effective));
+                && previous.bound().config().equals(config)) {
+                result.put(id, previous.bound().withDeclaration(input, config, effective));
                 return;
             }
-            try { result.put(id, bound(input, effective, contract)); }
+            try { result.put(id, bound(input, config, effective, contract)); }
             catch (RuntimeException error) {
                 throw bindingFailure(desired, id, "CONFIG_BIND_FAILED", "cannot bind " + input.definitionName(), error);
             }
@@ -464,9 +520,10 @@ public final class FibraEngine implements AutoCloseable {
             desired.entrySources().get(id), id), error);
     }
 
-    private static <C> Bound<C> bound(DesiredInputEntry input, EffectiveDesiredEntry effective,
+    private static <C> Bound<C> bound(DesiredInputEntry input, LiteralValue config,
+                                     EffectiveDesiredEntry effective,
                                      PluginCatalogEntry<C> contract) {
-        return new Bound<>(input, effective, contract.bind(input.config()));
+        return new Bound<>(input, config, effective, contract.bind(config));
     }
 
     private static boolean mustRemount(Bound<?> old, Bound<?> next) {
@@ -477,7 +534,7 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private static boolean sameInput(Bound<?> old, Bound<?> next) {
-        return !mustRemount(old, next) && old.input().config().equals(next.input().config());
+        return !mustRemount(old, next) && old.config().equals(next.config());
     }
 
     private static <C> Managed<C> mount(Scope scope, Bound<C> bound) {
@@ -489,8 +546,8 @@ public final class FibraEngine implements AutoCloseable {
     private Mono<EngineCommandResult> fail(ChangeSet plan, Throwable error) {
         sourceFailure = false;
         boolean unconfirmed = error instanceof EngineStateStore.SaveUnconfirmedException;
-        if (unconfirmed || (plan.saved && !plan.retired)) mutationGate = false;
-        var cleanup = (plan.saved || unconfirmed) ? Mono.<Void>empty()
+        if (unconfirmed || (plan.committed && !plan.retired)) mutationGate = false;
+        var cleanup = (plan.committed || unconfirmed) ? Mono.<Void>empty()
             : (plan.update == null ? Mono.<Void>empty() : plan.update.closeAsync())
                 .then(Mono.fromRunnable(() -> plan.installs.forEach(ArtifactInstallTransaction::rollback)));
         return cleanup.onErrorResume(closeFailure -> {
@@ -503,7 +560,8 @@ public final class FibraEngine implements AutoCloseable {
             if (plan.bootstrapping || domain == null || state == EngineState.NEW) state = EngineState.FAILED;
             return capture().flatMap(captured -> {
                 publish(captured);
-                return Mono.error(new EngineChangeException(publishedState.get().view(), plan.saved, error));
+                return Mono.error(new EngineChangeException(
+                    publishedState.get().view(), plan.targetSaved, error));
             });
         }));
     }
@@ -517,6 +575,13 @@ public final class FibraEngine implements AutoCloseable {
         if (!Objects.equals(expected, compilation.snapshot().revision())) {
             throw new IllegalArgumentException("desired revision conflict: expected " + expected
                 + ", actual " + compilation.snapshot().revision());
+        }
+    }
+
+    private void checkContextRevision(String expected) {
+        if (!expected.equals(configContext.revision())) {
+            throw new IllegalArgumentException("context revision conflict: expected " + expected
+                + ", actual " + configContext.revision());
         }
     }
 
@@ -568,7 +633,7 @@ public final class FibraEngine implements AutoCloseable {
             var input = declared == null ? managed.bound().input() : declared;
             observed.put(id, PluginInstanceSnapshot.builder().identity(managed.instance().identity())
                 .instanceId(id).definitionName(managed.instance().definition().name())
-                .config(managed.bound().input().config())
+                .config(managed.bound().config())
                 .state(fact == null ? PluginInstanceState.DISPOSED : fact.state())
                 .publicationRequirement(input.publicationRequirement())
                 .failure(fact == null ? null : fact.failure()).build());
@@ -605,23 +670,29 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private EngineDiagnostics diagnostics(EngineSnapshot snapshot) {
-        var enabled = compilation.graph().plugins().keySet().stream()
-            .filter(id -> compilation.graph().effective(id).enabled())
+        var enabled = evaluation.entries().entrySet().stream()
+            .filter(entry -> entry.getValue().input() instanceof DesiredInputEntry)
+            .filter(entry -> entry.getValue().effective().enabled())
+            .map(Map.Entry::getKey)
             .collect(java.util.stream.Collectors.toSet());
         boolean satisfied = state == EngineState.RUNNING
             && (phase != ChangePhase.FAILED || sourceFailure)
             && targetRevision != null && snapshot.desiredGraph().equals(compilation.graph())
+            && evaluation.graph().equals(compilation.graph())
+            && evaluation.context().equals(configContext)
             && snapshot.artifacts().equals(artifacts) && resources.matchesTarget(artifacts)
             && snapshot.instances().keySet().equals(enabled) && enabled.stream().allMatch(id -> {
                 var expected = compilation.graph().plugins().get(id);
+                var resolved = evaluation.require(id);
                 var actual = snapshot.instances().get(id);
                 var managed = instances.get(id);
                 return actual != null && actual.requirementSatisfied()
                     && actual.definitionName().equals(expected.definitionName())
-                    && actual.config().equals(expected.config())
-                    && managed != null && managed.bound().effective().equals(compilation.graph().effective(id));
+                    && actual.config().equals(resolved.resolvedConfig().orElseThrow())
+                    && managed != null && managed.bound().effective().equals(resolved.effective());
             });
-        return EngineDiagnostics.builder().targetRevision(targetRevision).phase(phase)
+        return EngineDiagnostics.builder().targetRevision(targetRevision)
+            .contextRevision(configContext.revision()).phase(phase)
             .affectedInstances(affected).resources(snapshot.runtimes()).targetSatisfied(satisfied)
             .mutationGateOpen(mutationGate && !closeRequested.get()).failure(failure).build();
     }
@@ -753,6 +824,7 @@ public final class FibraEngine implements AutoCloseable {
         private EngineStateStore stateStore = EngineStateStore.inMemory();
         private ArtifactStore artifactStore;
         private HostServiceRegistry hostServices = new HostServiceRegistry();
+        private ConfigContextSnapshot configContext = ConfigContextSnapshot.empty();
         private Duration autoRefreshInterval;
         private final Map<RuntimeId, PluginRuntimeAdapter> runtimeAdapters = new LinkedHashMap<>();
         private Builder(DesiredStateRepository repository) { desiredRepository = Objects.requireNonNull(repository, "repository"); }
@@ -760,6 +832,9 @@ public final class FibraEngine implements AutoCloseable {
         public Builder stateStore(EngineStateStore value) { stateStore = Objects.requireNonNull(value); return this; }
         public Builder artifactStore(ArtifactStore value) { artifactStore = Objects.requireNonNull(value); return this; }
         public Builder hostServices(HostServiceRegistry value) { hostServices = Objects.requireNonNull(value); return this; }
+        public Builder configContext(ConfigContextSnapshot value) {
+            configContext = Objects.requireNonNull(value); return this;
+        }
         public Builder autoRefresh(Duration interval) {
             if (interval == null || interval.isZero() || interval.isNegative()) {
                 throw new IllegalArgumentException("auto refresh interval must be positive");
@@ -778,23 +853,32 @@ public final class FibraEngine implements AutoCloseable {
     private static final class ChangeSet {
         final DesiredCompilation desired;
         final LinkedHashMap<ArtifactId, ArtifactRecord> artifacts;
+        final ConfigContextSnapshot context;
         final List<ArtifactInstallTransaction> installs = new ArrayList<>();
+        DesiredEvaluation evaluation;
         RuntimeResources.Update update;
         Map<String, Bound<?>> bound;
-        boolean saved;
+        boolean saveTarget = true;
+        boolean updateResources = true;
+        boolean targetSaved;
+        boolean committed;
         boolean retired;
         boolean bootstrapping;
         boolean executing;
-        ChangeSet(DesiredCompilation desired, Map<ArtifactId, ArtifactRecord> artifacts) {
+        ChangeSet(DesiredCompilation desired, Map<ArtifactId, ArtifactRecord> artifacts,
+                  ConfigContextSnapshot context) {
             this.desired = desired;
             this.artifacts = new LinkedHashMap<>(artifacts);
+            this.context = context;
         }
     }
 
-    private record Bound<C>(DesiredInputEntry input, EffectiveDesiredEntry effective,
+    private record Bound<C>(DesiredInputEntry input, LiteralValue config,
+                            EffectiveDesiredEntry effective,
                             PluginDefinition.Prepared<C> prepared) {
-        Bound<C> withDeclaration(DesiredInputEntry input, EffectiveDesiredEntry effective) {
-            return new Bound<>(input, effective, prepared);
+        Bound<C> withDeclaration(DesiredInputEntry input, LiteralValue config,
+                                 EffectiveDesiredEntry effective) {
+            return new Bound<>(input, config, effective, prepared);
         }
     }
     private record Managed<C>(Scope scope, PluginInstance<C> instance, Bound<C> bound) {

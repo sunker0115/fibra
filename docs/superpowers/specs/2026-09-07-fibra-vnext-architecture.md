@@ -341,6 +341,11 @@ observe -> validate / prepare affected artifacts / bind changed inputs
         -> observe convergence / publish views -> retire unused resources
 ```
 
+`ReplaceConfigContext` 走同一 command loop，但不是部署目标写入：先以候选 context 对当前 raw graph
+完整求值并绑定，全部预检成功后才切换内存中的 context/evaluation，再差量 reconcile。它不创建 runtime
+resource update、不写 `EngineStateStore`、不改变 target revision；view revision 与 context revision 独立
+推进。求值或绑定失败时旧 context、evaluation、目标、实例、effects 与 PublishedView 全部保持不变。
+
 - prepare 读取并冻结输入，完成制品摘要、依赖图和受影响声明的配置绑定；不执行插件启动，不拆旧运行态。
 - reconcile 调用实例生命周期协议，并等待实际依赖图收敛；按声明要求判断目标达成，合法 PENDING
   不能一律当成失败。该阶段不是可回滚的预检，启动或清理失败必须报告实际状态。
@@ -377,7 +382,8 @@ revision 为规范编码的内容摘要，与 source 和 view revision 分离。
 自动源刷新必须显式启用。watcher 只观察最近一次成功采集得到的来源目录并产生可合并 dirty signal，
 周期 resync 负责发现丢失通知；两者都把重新采集提交到唯一 command loop，不建立第二条配置应用队列。
 Engine 单独记录最近一次已接受的 source revision，它不随 Registry 管理变更改写；来源未变化时不得
-重复保存或覆盖管理目标。读取、解析或结构校验失败保留 last-good 目标、实例和 effects，公开来源失败
+重复保存或覆盖管理目标。读取、解析、结构校验或在当前 context 中求值失败，均保留 last-good 目标、
+实例和 effects，公开来源失败
 但不关闭 mutation gate，也不把仍然达成的目标误报为失效；恢复为相同 revision 时只清除来源错误，
 不重新协调实例。关闭先停止新来源信号准入，等待已接受刷新落地，再关闭 watcher 和运行资源。
 

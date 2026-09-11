@@ -4,6 +4,7 @@ import com.sstlfsj.fibra.Disposable;
 import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.artifact.ArtifactId;
 import com.sstlfsj.fibra.artifact.RuntimeId;
+import com.sstlfsj.fibra.config.ConfigContextSnapshot;
 import com.sstlfsj.fibra.config.ConfigLimits;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
@@ -30,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -134,6 +136,78 @@ class AutomaticDesiredRefreshTest {
             assertEquals(identity, recovered.engine().instances().get("sample").identity());
             assertEquals(1, starts.get());
             assertEquals(0, stops.get());
+        }
+    }
+
+    @Test
+    void conditionalEvaluationFailureKeepsLastGoodTargetUntilTheSourceRecovers(
+        @TempDir Path work) throws Exception {
+        var root = work.resolve("fibra.yaml");
+        Files.writeString(root, """
+            - id: sample
+              plugin: sample
+              when: {$eq: [{$ref: /enabled}, true]}
+              config: {$ref: /value}
+            """);
+        var starts = new AtomicInteger();
+        var stops = new AtomicInteger();
+        var repository = new FileDesiredStateRepository(root, ConfigLimits.defaults());
+        try (var engine = FibraEngine.builder(repository)
+            .catalog(catalog(definition(starts, stops)))
+            .configContext(ConfigContextSnapshot.of(Map.of("enabled", true, "value", "one")))
+            .autoRefresh(Duration.ofMillis(25)).build()) {
+            var initial = engine.start().block(TIMEOUT);
+            var identity = initial.engine().instances().get("sample").identity();
+            var targetRevision = initial.engineDiagnostics().targetRevision();
+            var sourceRevision = initial.engine().desiredSource().revision();
+
+            Files.writeString(root, """
+                - id: sample
+                  plugin: sample
+                  when: {$ref: /missing-condition}
+                  config: {$ref: /value}
+                """);
+            var rejectedRevision = repository.load().snapshot().revision();
+            var failed = engine.published().views()
+                .filter(view -> view.engineDiagnostics().phase() == ChangePhase.FAILED)
+                .next().block(TIMEOUT);
+
+            assertNotNull(failed.engineDiagnostics().failure());
+            assertTrue(failed.engineDiagnostics().targetSatisfied());
+            assertTrue(failed.engineDiagnostics().mutationGateOpen());
+            assertEquals(targetRevision, failed.engineDiagnostics().targetRevision());
+            assertEquals(sourceRevision, failed.engine().desiredSource().revision());
+            assertNotEquals(rejectedRevision, failed.engine().desiredSource().revision());
+            assertEquals(identity, failed.engine().instances().get("sample").identity());
+            assertEquals(LiteralValue.of("one"), failed.engine().instances().get("sample").config());
+            assertEquals(1, starts.get());
+            assertEquals(0, stops.get());
+
+            Files.writeString(root, """
+                - id: sample
+                  plugin: sample
+                  when: {$eq: [{$ref: /enabled}, true]}
+                  context: {value: two}
+                  config: {$ref: /value}
+                """);
+            var recoveredRevision = repository.load().snapshot().revision();
+            var recovered = engine.published().views()
+                .filter(view -> view.engineDiagnostics().phase() == ChangePhase.IDLE
+                    && LiteralValue.of("two").equals(
+                    view.engine().instances().get("sample").config()))
+                .next().block(TIMEOUT);
+
+            assertNull(recovered.engineDiagnostics().failure());
+            assertTrue(recovered.engineDiagnostics().targetSatisfied());
+            assertTrue(recovered.engineDiagnostics().mutationGateOpen());
+            assertEquals(recoveredRevision, recovered.engine().desiredSource().revision());
+            assertEquals(identity, recovered.engine().instances().get("sample").identity());
+            assertEquals(2, starts.get());
+            assertEquals(1, stops.get());
+
+            Mono.delay(Duration.ofMillis(150)).block(TIMEOUT);
+            assertEquals(2, starts.get());
+            assertEquals(1, stops.get());
         }
     }
 
