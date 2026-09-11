@@ -46,7 +46,7 @@ class FibraPluginArchetypeIT {
             var definition = (PluginDefinition<Object>) prepared.catalog()
                 .find("sample-fibra-plugin").orElseThrow().definition();
             var instance = runtime.rootScope().context().plugins()
-                .mount("generated-plugin", definition, null);
+                .mount("generated-plugin", definition.prepare(null));
             instance.settled().block();
 
             assertEquals(PluginInstanceState.ACTIVE, instance.state());

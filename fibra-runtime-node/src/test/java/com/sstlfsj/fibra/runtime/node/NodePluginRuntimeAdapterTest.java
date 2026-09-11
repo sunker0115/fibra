@@ -77,7 +77,7 @@ class NodePluginRuntimeAdapterTest {
             var definition = (com.sstlfsj.fibra.PluginDefinition<Object>)
                 entry.definition();
             var instance = runtime.rootScope().context().plugins()
-                .mount("echo-instance", definition, Map.of());
+                .mount("echo-instance", definition.prepare(Map.of()));
             instance.settled().block(Duration.ofSeconds(3));
 
             assertEquals("Echo", ((EchoDescriptor) directory.current().snapshot().entries()
@@ -135,7 +135,7 @@ class NodePluginRuntimeAdapterTest {
             var definition = (com.sstlfsj.fibra.PluginDefinition<Object>)
                 prepared.catalog().find("failing-node").orElseThrow().definition();
             var instance = runtime.rootScope().context().plugins()
-                .mount("failing-instance", definition, Map.of());
+                .mount("failing-instance", definition.prepare(Map.of()));
             instance.settled().block(Duration.ofSeconds(3));
 
             Thread.sleep(300);

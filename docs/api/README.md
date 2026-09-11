@@ -4,11 +4,11 @@
 
 `FibraRuntime.create()` 创建根所有者；`rootScope()` 是生命周期树根。`Context` 是绑定 Scope 的不可变能力视图，通过 `services()`、`events()`、`effects()` 和 `plugins()` 使用能力。
 
-`PluginDefinition` 声明稳定名称、配置类型、校验器、必需服务、提供服务和实例工厂。`PluginInstance.settled()` 等待当前迁移落地；结果可能是 `ACTIVE` 或缺依赖的 `PENDING`，失败以 error 和 `FAILED` 状态同时暴露。失败实例只通过显式 `update` 重新收敛。
+`PluginDefinition` 声明稳定名称、配置类型、校验器、必需服务、提供服务和实例工厂。`definition.prepare(config)` 只校验配置，`plugins.mount(id, prepared)` 创建实例而不重复校验。`PluginInstance.settled()` 等待当前迁移落地；结果可能是 `ACTIVE` 或缺依赖的 `PENDING`，失败以 error 和 `FAILED` 状态同时暴露。失败实例只通过显式 `update` 重新收敛。
 
 ## 配置与制品
 
-`fibra-config` 把 YAML/JSON 或程序化输入编译成不可变 `DesiredGraph`。文件 repository 是只读真源；可写 repository 通过 `prepareReplace` 提供带 revision 的事务写回。
+`fibra-config` 把 YAML/JSON 或程序化输入展开成不可变 `DesiredInputGraph`，不解析插件类型。配置、realm 与 intercept 使用 `LiteralValue`；来源路径单独保存在 `DesiredCompilation.entrySources`。Engine 在目标 catalog 中绑定全部启用声明，校验通过后才挂载；停用声明不要求 definition 已安装。文件 repository 是只读输入源；可写 repository 通过 `prepareReplace` 提供带 revision 的事务写回。
 
 `fibra-artifact` 以 `ArtifactId`、`RuntimeId` 和内容摘要管理制品。安装使用 `prepareInstall`、`commit`、`rollback`、`retire`，仓库拥有进程级文件锁并在打开时恢复遗留事务。
 

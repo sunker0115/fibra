@@ -4,8 +4,8 @@ import com.sstlfsj.fibra.PluginInstanceState;
 import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.artifact.ArtifactId;
 import com.sstlfsj.fibra.artifact.ArtifactStore;
-import com.sstlfsj.fibra.config.DesiredEntry;
-import com.sstlfsj.fibra.config.DesiredGraph;
+import com.sstlfsj.fibra.config.DesiredInputEntry;
+import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
 import com.sstlfsj.fibra.engine.FileTransactionJournal;
 import com.sstlfsj.fibra.engine.FibraEngine;
@@ -58,7 +58,7 @@ public final class PluginDependencyScenario implements AutoCloseable {
         var projection = projection(projectedQuote);
         var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty())
             .catalog(PluginCatalog.of(new PluginCatalogEntry<>(projection,
-                value -> value == null ? null : (Integer) value)))
+                value -> value == null ? null : ((java.math.BigDecimal) value).intValueExact())))
             .artifactStore(new ArtifactStore(storageRoot.resolve("artifacts")))
             .journal(new FileTransactionJournal(storageRoot.resolve("transactions")))
             .runtimeAdapter(new JavaPluginRuntimeAdapter())
@@ -72,11 +72,11 @@ public final class PluginDependencyScenario implements AutoCloseable {
                     install(CONTRACT_ARTIFACT, "1.0.0", contract),
                     install(PROVIDER_ARTIFACT, "1.0.0", provider),
                     install(CONSUMER_ARTIFACT, "1.0.0", consumer)),
-                new DesiredGraph(List.of(
+                new DesiredInputGraph(List.of(
                     desired(PROVIDER_INSTANCE, PROVIDER_DEFINITION),
                     desired(CONSUMER_INSTANCE, CONSUMER_DEFINITION),
-                    DesiredEntry.builder(PROJECTION_INSTANCE, PROJECTION_DEFINITION)
-                        .config(6_000).build()))))
+                    DesiredInputEntry.builder(PROJECTION_INSTANCE, PROJECTION_DEFINITION)
+                        .config(com.sstlfsj.fibra.value.LiteralValue.of(6_000)).build()))))
                 .block(OPERATION_TIMEOUT);
             return new PluginDependencyScenario(engine, registry, projectedQuote);
         } catch (RuntimeException | Error failure) {
@@ -115,11 +115,11 @@ public final class PluginDependencyScenario implements AutoCloseable {
 
     public void startInDependencyOrder() {
         registry.enable(PluginEnableRequest.of(PROVIDER_INSTANCE,
-            PROVIDER_DEFINITION, null)).block(OPERATION_TIMEOUT);
+            PROVIDER_DEFINITION, com.sstlfsj.fibra.value.LiteralValue.of(null))).block(OPERATION_TIMEOUT);
         registry.enable(PluginEnableRequest.of(CONSUMER_INSTANCE,
-            CONSUMER_DEFINITION, null)).block(OPERATION_TIMEOUT);
+            CONSUMER_DEFINITION, com.sstlfsj.fibra.value.LiteralValue.of(null))).block(OPERATION_TIMEOUT);
         registry.enable(PluginEnableRequest.of(PROJECTION_INSTANCE,
-            PROJECTION_DEFINITION, 6_000)).block(OPERATION_TIMEOUT);
+            PROJECTION_DEFINITION, com.sstlfsj.fibra.value.LiteralValue.of(6_000))).block(OPERATION_TIMEOUT);
     }
 
     public PluginInstanceState state(String instanceId) {
@@ -154,9 +154,9 @@ public final class PluginDependencyScenario implements AutoCloseable {
             .version(version).source(source).build();
     }
 
-    private static DesiredEntry desired(String instanceId,
+    private static DesiredInputEntry desired(String instanceId,
                                         String definitionName) {
-        return DesiredEntry.builder(instanceId, definitionName).build();
+        return DesiredInputEntry.builder(instanceId, definitionName).build();
     }
 
     private static PluginDefinition<Integer> projection(

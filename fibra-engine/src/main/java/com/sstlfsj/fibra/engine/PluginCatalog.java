@@ -1,7 +1,5 @@
 package com.sstlfsj.fibra.engine;
 
-import com.sstlfsj.fibra.config.PluginDefinitionResolver;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -44,7 +42,4 @@ public final class PluginCatalog {
         return entries.values();
     }
 
-    public PluginDefinitionResolver resolver() {
-        return name -> find(name).map(PluginCatalogEntry::contract);
-    }
 }

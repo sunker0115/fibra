@@ -46,7 +46,7 @@ class ReflectSpecParityTest extends CordisSpecSupport {
         var definition = PluginDefinition.builder("consumer", Void.class,
                 () -> (context, config) -> Mono.empty())
             .require(FOO).build();
-        var instance = root.plugins().mount("consumer", definition, null);
+        var instance = root.plugins().mount("consumer", definition.prepare(null));
         await(instance);
         instance.dispose().block(TIMEOUT);
         assertThrows(IllegalStateException.class,

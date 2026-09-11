@@ -72,60 +72,67 @@ public interface com.sstlfsj.fibra.config.ConfigWriteTransaction extends java.la
 ## com.sstlfsj.fibra.config.DesiredCompilation
 Compiled from "DesiredCompilation.java"
 public final class com.sstlfsj.fibra.config.DesiredCompilation extends java.lang.Record {
-  public com.sstlfsj.fibra.config.DesiredCompilation(com.sstlfsj.fibra.config.DesiredSourceSnapshot, com.sstlfsj.fibra.config.DesiredGraph, java.util.List<com.sstlfsj.fibra.config.ConfigDiagnostic>);
+  public com.sstlfsj.fibra.config.DesiredCompilation(com.sstlfsj.fibra.config.DesiredSourceSnapshot, com.sstlfsj.fibra.config.DesiredInputGraph, java.util.List<com.sstlfsj.fibra.config.ConfigDiagnostic>, java.util.Map<java.lang.String, java.nio.file.Path>);
+  public static com.sstlfsj.fibra.config.DesiredCompilation$Builder builder();
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public com.sstlfsj.fibra.config.DesiredSourceSnapshot snapshot();
-  public com.sstlfsj.fibra.config.DesiredGraph graph();
+  public com.sstlfsj.fibra.config.DesiredInputGraph graph();
   public java.util.List<com.sstlfsj.fibra.config.ConfigDiagnostic> diagnostics();
+  public java.util.Map<java.lang.String, java.nio.file.Path> entrySources();
+}
+## com.sstlfsj.fibra.config.DesiredCompilation$Builder
+Compiled from "DesiredCompilation.java"
+public final class com.sstlfsj.fibra.config.DesiredCompilation$Builder {
+  public com.sstlfsj.fibra.config.DesiredCompilation$Builder snapshot(com.sstlfsj.fibra.config.DesiredSourceSnapshot);
+  public com.sstlfsj.fibra.config.DesiredCompilation$Builder graph(com.sstlfsj.fibra.config.DesiredInputGraph);
+  public com.sstlfsj.fibra.config.DesiredCompilation$Builder diagnostics(java.util.List<com.sstlfsj.fibra.config.ConfigDiagnostic>);
+  public com.sstlfsj.fibra.config.DesiredCompilation$Builder entrySources(java.util.Map<java.lang.String, java.nio.file.Path>);
+  public com.sstlfsj.fibra.config.DesiredCompilation build();
 }
 ## com.sstlfsj.fibra.config.DesiredConfigCompiler
 Compiled from "DesiredConfigCompiler.java"
 public final class com.sstlfsj.fibra.config.DesiredConfigCompiler {
   public com.sstlfsj.fibra.config.DesiredConfigCompiler(com.sstlfsj.fibra.config.ConfigLimits);
-  public com.sstlfsj.fibra.config.DesiredCompilation compile(java.nio.file.Path, com.sstlfsj.fibra.config.PluginDefinitionResolver);
+  public com.sstlfsj.fibra.config.DesiredCompilation compile(java.nio.file.Path);
 }
-## com.sstlfsj.fibra.config.DesiredEntry
-Compiled from "DesiredEntry.java"
-public final class com.sstlfsj.fibra.config.DesiredEntry {
-  public static com.sstlfsj.fibra.config.DesiredEntry$Builder builder(java.lang.String, java.lang.String);
-  public com.sstlfsj.fibra.config.DesiredEntry$Builder toBuilder();
+## com.sstlfsj.fibra.config.DesiredInputEntry
+Compiled from "DesiredInputEntry.java"
+public final class com.sstlfsj.fibra.config.DesiredInputEntry {
+  public static com.sstlfsj.fibra.config.DesiredInputEntry$Builder builder(java.lang.String, java.lang.String);
+  public com.sstlfsj.fibra.config.DesiredInputEntry$Builder toBuilder();
   public java.lang.String instanceId();
   public java.lang.String definitionName();
   public boolean enabled();
   public com.sstlfsj.fibra.config.PublicationRequirement publicationRequirement();
-  public java.lang.Object config();
-  public java.util.Map<java.lang.String, java.lang.Object> realms();
-  public java.util.Map<java.lang.String, java.lang.Object> intercepts();
-  public java.util.Set<com.sstlfsj.fibra.ServiceKey<?>> requires();
-  public java.util.Set<com.sstlfsj.fibra.ServiceKey<?>> provides();
-  public java.nio.file.Path source();
+  public com.sstlfsj.fibra.value.LiteralValue config();
+  public java.util.Map<java.lang.String, com.sstlfsj.fibra.value.LiteralValue> realms();
+  public java.util.Map<java.lang.String, com.sstlfsj.fibra.value.LiteralValue> intercepts();
   public boolean equals(java.lang.Object);
   public int hashCode();
   public java.lang.String toString();
 }
-## com.sstlfsj.fibra.config.DesiredEntry$Builder
-Compiled from "DesiredEntry.java"
-public final class com.sstlfsj.fibra.config.DesiredEntry$Builder {
-  public com.sstlfsj.fibra.config.DesiredEntry$Builder enabled(boolean);
-  public com.sstlfsj.fibra.config.DesiredEntry$Builder publicationRequirement(com.sstlfsj.fibra.config.PublicationRequirement);
-  public com.sstlfsj.fibra.config.DesiredEntry$Builder config(java.lang.Object);
-  public com.sstlfsj.fibra.config.DesiredEntry$Builder realms(java.util.Map<java.lang.String, java.lang.Object>);
-  public com.sstlfsj.fibra.config.DesiredEntry$Builder intercepts(java.util.Map<java.lang.String, java.lang.Object>);
-  public com.sstlfsj.fibra.config.DesiredEntry$Builder requires(java.util.Set<com.sstlfsj.fibra.ServiceKey<?>>);
-  public com.sstlfsj.fibra.config.DesiredEntry$Builder provides(java.util.Set<com.sstlfsj.fibra.ServiceKey<?>>);
-  public com.sstlfsj.fibra.config.DesiredEntry$Builder source(java.nio.file.Path);
-  public com.sstlfsj.fibra.config.DesiredEntry build();
+## com.sstlfsj.fibra.config.DesiredInputEntry$Builder
+Compiled from "DesiredInputEntry.java"
+public final class com.sstlfsj.fibra.config.DesiredInputEntry$Builder {
+  public com.sstlfsj.fibra.config.DesiredInputEntry$Builder enabled(boolean);
+  public com.sstlfsj.fibra.config.DesiredInputEntry$Builder publicationRequirement(com.sstlfsj.fibra.config.PublicationRequirement);
+  public com.sstlfsj.fibra.config.DesiredInputEntry$Builder config(com.sstlfsj.fibra.value.LiteralValue);
+  public com.sstlfsj.fibra.config.DesiredInputEntry$Builder realms(java.util.Map<java.lang.String, com.sstlfsj.fibra.value.LiteralValue>);
+  public com.sstlfsj.fibra.config.DesiredInputEntry$Builder intercepts(java.util.Map<java.lang.String, com.sstlfsj.fibra.value.LiteralValue>);
+  public com.sstlfsj.fibra.config.DesiredInputEntry build();
 }
-## com.sstlfsj.fibra.config.DesiredGraph
-Compiled from "DesiredGraph.java"
-public final class com.sstlfsj.fibra.config.DesiredGraph {
-  public com.sstlfsj.fibra.config.DesiredGraph(java.util.List<com.sstlfsj.fibra.config.DesiredEntry>);
-  public java.util.List<com.sstlfsj.fibra.config.DesiredEntry> entries();
-  public com.sstlfsj.fibra.config.DesiredEntry require(java.lang.String);
-  public com.sstlfsj.fibra.config.DesiredGraph upsert(com.sstlfsj.fibra.config.DesiredEntry);
-  public com.sstlfsj.fibra.config.DesiredGraph remove(java.lang.String);
+## com.sstlfsj.fibra.config.DesiredInputGraph
+Compiled from "DesiredInputGraph.java"
+public final class com.sstlfsj.fibra.config.DesiredInputGraph {
+  public com.sstlfsj.fibra.config.DesiredInputGraph(java.util.List<com.sstlfsj.fibra.config.DesiredInputEntry>);
+  public java.util.List<com.sstlfsj.fibra.config.DesiredInputEntry> entries();
+  public com.sstlfsj.fibra.config.DesiredInputEntry require(java.lang.String);
+  public com.sstlfsj.fibra.config.DesiredInputGraph upsert(com.sstlfsj.fibra.config.DesiredInputEntry);
+  public com.sstlfsj.fibra.config.DesiredInputGraph remove(java.lang.String);
+  public boolean equals(java.lang.Object);
+  public int hashCode();
 }
 ## com.sstlfsj.fibra.config.DesiredSourceSnapshot
 Compiled from "DesiredSourceSnapshot.java"
@@ -141,9 +148,9 @@ public final class com.sstlfsj.fibra.config.DesiredSourceSnapshot extends java.l
 ## com.sstlfsj.fibra.config.DesiredStateRepository
 Compiled from "DesiredStateRepository.java"
 public interface com.sstlfsj.fibra.config.DesiredStateRepository {
-  public abstract com.sstlfsj.fibra.config.DesiredCompilation load(com.sstlfsj.fibra.config.PluginDefinitionResolver);
+  public abstract com.sstlfsj.fibra.config.DesiredCompilation load();
   public default boolean writable();
-  public default com.sstlfsj.fibra.config.DesiredStateWriteTransaction prepareReplace(java.lang.String, com.sstlfsj.fibra.config.DesiredGraph);
+  public default com.sstlfsj.fibra.config.DesiredStateWriteTransaction prepareReplace(java.lang.String, com.sstlfsj.fibra.config.DesiredInputGraph);
 }
 ## com.sstlfsj.fibra.config.DesiredStateWriteTransaction
 Compiled from "DesiredStateWriteTransaction.java"
@@ -157,40 +164,16 @@ public interface com.sstlfsj.fibra.config.DesiredStateWriteTransaction extends j
 Compiled from "FileDesiredStateRepository.java"
 public final class com.sstlfsj.fibra.config.FileDesiredStateRepository implements com.sstlfsj.fibra.config.DesiredStateRepository {
   public com.sstlfsj.fibra.config.FileDesiredStateRepository(java.nio.file.Path, com.sstlfsj.fibra.config.ConfigLimits);
-  public com.sstlfsj.fibra.config.DesiredCompilation load(com.sstlfsj.fibra.config.PluginDefinitionResolver);
+  public com.sstlfsj.fibra.config.DesiredCompilation load();
 }
 ## com.sstlfsj.fibra.config.InMemoryDesiredStateRepository
 Compiled from "InMemoryDesiredStateRepository.java"
 public final class com.sstlfsj.fibra.config.InMemoryDesiredStateRepository implements com.sstlfsj.fibra.config.DesiredStateRepository {
-  public com.sstlfsj.fibra.config.InMemoryDesiredStateRepository(com.sstlfsj.fibra.config.DesiredGraph);
+  public com.sstlfsj.fibra.config.InMemoryDesiredStateRepository(com.sstlfsj.fibra.config.DesiredInputGraph);
   public static com.sstlfsj.fibra.config.InMemoryDesiredStateRepository empty();
-  public com.sstlfsj.fibra.config.DesiredCompilation load(com.sstlfsj.fibra.config.PluginDefinitionResolver);
+  public com.sstlfsj.fibra.config.DesiredCompilation load();
   public boolean writable();
-  public com.sstlfsj.fibra.config.DesiredStateWriteTransaction prepareReplace(java.lang.String, com.sstlfsj.fibra.config.DesiredGraph);
-}
-## com.sstlfsj.fibra.config.PluginContract
-Compiled from "PluginContract.java"
-public final class com.sstlfsj.fibra.config.PluginContract {
-  public static com.sstlfsj.fibra.config.PluginContract$Builder builder(java.lang.String);
-  public java.lang.String name();
-  public java.lang.Class<?> configType();
-  public java.util.Set<com.sstlfsj.fibra.ServiceKey<?>> requires();
-  public java.util.Set<com.sstlfsj.fibra.ServiceKey<?>> provides();
-  public java.lang.Object bind(java.lang.Object);
-}
-## com.sstlfsj.fibra.config.PluginContract$Builder
-Compiled from "PluginContract.java"
-public final class com.sstlfsj.fibra.config.PluginContract$Builder {
-  public com.sstlfsj.fibra.config.PluginContract$Builder configType(java.lang.Class<?>);
-  public com.sstlfsj.fibra.config.PluginContract$Builder require(com.sstlfsj.fibra.ServiceKey<?>);
-  public com.sstlfsj.fibra.config.PluginContract$Builder provide(com.sstlfsj.fibra.ServiceKey<?>);
-  public com.sstlfsj.fibra.config.PluginContract$Builder binder(java.util.function.Function<java.lang.Object, java.lang.Object>);
-  public com.sstlfsj.fibra.config.PluginContract build();
-}
-## com.sstlfsj.fibra.config.PluginDefinitionResolver
-Compiled from "PluginDefinitionResolver.java"
-public interface com.sstlfsj.fibra.config.PluginDefinitionResolver {
-  public abstract java.util.Optional<com.sstlfsj.fibra.config.PluginContract> resolve(java.lang.String);
+  public com.sstlfsj.fibra.config.DesiredStateWriteTransaction prepareReplace(java.lang.String, com.sstlfsj.fibra.config.DesiredInputGraph);
 }
 ## com.sstlfsj.fibra.config.PublicationRequirement
 Compiled from "PublicationRequirement.java"

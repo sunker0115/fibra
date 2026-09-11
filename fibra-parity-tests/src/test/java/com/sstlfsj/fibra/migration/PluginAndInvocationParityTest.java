@@ -42,7 +42,7 @@ class PluginAndInvocationParityTest {
                     })
                 .require(DEFERRED)
                 .build();
-            var consumer = context.plugins().mount("consumer", consumerDefinition, null);
+            var consumer = context.plugins().mount("consumer", consumerDefinition.prepare(null));
             var providerDefinition = PluginDefinition.builder("deferred-provider", Void.class,
                     () -> (pluginContext, ignored) -> {
                         pluginContext.services().provide(DEFERRED, () -> 1);
@@ -51,7 +51,7 @@ class PluginAndInvocationParityTest {
                 .provide(DEFERRED)
                 .build();
             var provider = context.plugins().mount(
-                "deferred-provider", providerDefinition, null);
+                "deferred-provider", providerDefinition.prepare(null));
 
             assertEquals(PluginInstanceState.STARTING, provider.state());
             assertEquals(PluginInstanceState.PENDING, consumer.state());
@@ -76,11 +76,11 @@ class PluginAndInvocationParityTest {
                 }).build();
             var parentDefinition = PluginDefinition.builder("parent", Void.class,
                 () -> (parentContext, ignored) -> {
-                    parentContext.plugins().mount("child", childDefinition, null);
+                    parentContext.plugins().mount("child", childDefinition.prepare(null));
                     return Mono.empty();
                 }).build();
             var parent = runtime.rootScope().context().plugins()
-                .mount("parent", parentDefinition, null);
+                .mount("parent", parentDefinition.prepare(null));
 
             parent.settled().block();
             parent.dispose().block();
@@ -106,7 +106,7 @@ class PluginAndInvocationParityTest {
                 })
                 .build();
             var plugin = runtime.rootScope().context().plugins()
-                .mount("validated", definition, 2);
+                .mount("validated", definition.prepare(2));
 
             plugin.settled().block();
             plugin.update(3).block();
@@ -137,7 +137,7 @@ class PluginAndInvocationParityTest {
                             service.register(invocation, disposed));
                     return Mono.empty();
                 }).build();
-            var caller = context.plugins().mount("caller", definition, null);
+            var caller = context.plugins().mount("caller", definition.prepare(null));
 
             caller.settled().block();
             caller.dispose().block();
@@ -153,13 +153,13 @@ class PluginAndInvocationParityTest {
             var plugins = runtime.rootScope().context().plugins();
             var definition = PluginDefinition.builder("factory", Void.class,
                 () -> (context, config) -> Mono.empty()).build();
-            var first = plugins.mount("factory-1", definition, null);
+            var first = plugins.mount("factory-1", definition.prepare(null));
             first.settled().block();
 
             assertEquals(List.of(first), plugins.instances());
             assertEquals(first, plugins.find("factory-1").orElseThrow());
             var duplicate = assertThrows(FibraException.class,
-                () -> plugins.mount("factory-1", definition, null));
+                () -> plugins.mount("factory-1", definition.prepare(null)));
             assertEquals(FibraException.PLUGIN_DUPLICATE, duplicate.code());
 
             first.dispose().block();

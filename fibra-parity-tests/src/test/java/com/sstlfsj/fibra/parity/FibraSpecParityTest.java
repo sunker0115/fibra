@@ -31,7 +31,7 @@ class FibraSpecParityTest extends CordisSpecSupport {
                     return loadGate.asMono();
                 })
             .require(FOO).build();
-        var consumer = root.plugins().mount("consumer", definition, null);
+        var consumer = root.plugins().mount("consumer", definition.prepare(null));
         assertEquals(PluginInstanceState.STARTING, consumer.state());
         var removal = registration.dispose().toFuture();
         loadGate.tryEmitEmpty();
@@ -53,7 +53,7 @@ class FibraSpecParityTest extends CordisSpecSupport {
                     return loadGate.asMono();
                 })
             .require(FOO).build();
-        var consumer = root.plugins().mount("consumer", definition, null);
+        var consumer = root.plugins().mount("consumer", definition.prepare(null));
         first.dispose().subscribe();
         root.services().provide(FOO, new Value(2));
         loadGate.tryEmitEmpty();
@@ -71,7 +71,7 @@ class FibraSpecParityTest extends CordisSpecSupport {
                     return Mono.empty();
                 })
             .provide(FOO).build();
-        var provider = root.plugins().mount("provider", providerDefinition, null);
+        var provider = root.plugins().mount("provider", providerDefinition.prepare(null));
         await(provider);
         var consumerDefinition = PluginDefinition.builder("consumer", Void.class,
                 () -> (context, config) -> {
@@ -79,7 +79,7 @@ class FibraSpecParityTest extends CordisSpecSupport {
                     return Mono.empty();
                 })
             .require(FOO).build();
-        var consumer = root.plugins().mount("consumer", consumerDefinition, null);
+        var consumer = root.plugins().mount("consumer", consumerDefinition.prepare(null));
         await(consumer);
         var disposed = provider.dispose().toFuture();
         assertEquals(PluginInstanceState.STOPPING, consumer.state());
@@ -100,8 +100,8 @@ class FibraSpecParityTest extends CordisSpecSupport {
         };
         var definition = PluginDefinition.builder("sample", Boolean.class,
             () -> plugin).build();
-        var failed = root.plugins().mount("failed", definition, false);
-        var active = root.plugins().mount("active", definition, true);
+        var failed = root.plugins().mount("failed", definition.prepare(false));
+        var active = root.plugins().mount("active", definition.prepare(true));
         assertThrows(RuntimeException.class, () -> await(failed));
         await(active);
         assertEquals(PluginInstanceState.FAILED, failed.state());
@@ -118,7 +118,7 @@ class FibraSpecParityTest extends CordisSpecSupport {
                     .then(Mono.error(new IllegalStateException("test"))));
                 return Mono.empty();
             }).build();
-        var instance = root.plugins().mount("dispose-error", definition, null);
+        var instance = root.plugins().mount("dispose-error", definition.prepare(null));
         await(instance);
         assertDoesNotThrow(() -> instance.dispose().block(TIMEOUT));
         assertEquals(1, calls.get());
@@ -132,7 +132,7 @@ class FibraSpecParityTest extends CordisSpecSupport {
                 configs.add(config);
                 return Mono.empty();
             }).build();
-        var instance = root.plugins().mount("config", definition, "hello");
+        var instance = root.plugins().mount("config", definition.prepare("hello"));
         await(instance);
         instance.update("world").block(TIMEOUT);
         instance.update("!!!").block(TIMEOUT);
@@ -148,7 +148,7 @@ class FibraSpecParityTest extends CordisSpecSupport {
                 calls.incrementAndGet();
                 return Mono.empty();
             }).build();
-        var instance = root.plugins().mount("restart", definition, null);
+        var instance = root.plugins().mount("restart", definition.prepare(null));
         await(instance);
         instance.update(null).block(TIMEOUT);
         assertEquals(2, calls.get());
@@ -164,14 +164,14 @@ class FibraSpecParityTest extends CordisSpecSupport {
                     return Mono.empty();
                 })
             .provide(FOO).build();
-        var provider = root.plugins().mount("provider", providerDefinition, 1);
+        var provider = root.plugins().mount("provider", providerDefinition.prepare(1));
         var consumerDefinition = PluginDefinition.builder("consumer", String.class,
                 () -> (context, mode) -> {
                     applied.add(context.services().require(FOO).number + ":" + mode);
                     return Mono.empty();
                 })
             .require(FOO).build();
-        var consumer = root.plugins().mount("consumer", consumerDefinition, "old");
+        var consumer = root.plugins().mount("consumer", consumerDefinition.prepare("old"));
         await(provider);
         await(consumer);
         provider.update(2);

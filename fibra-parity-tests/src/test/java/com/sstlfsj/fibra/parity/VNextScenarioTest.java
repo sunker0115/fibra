@@ -29,7 +29,7 @@ class VNextScenarioTest {
 
         try (var runtime = FibraRuntime.create()) {
             var child = runtime.rootScope().openChild("scenario");
-            var instance = child.context().plugins().mount("provider", definition, "hello");
+            var instance = child.context().plugins().mount("provider", definition.prepare("hello"));
             instance.settled().block();
 
             assertEquals(PluginInstanceState.ACTIVE, instance.state());

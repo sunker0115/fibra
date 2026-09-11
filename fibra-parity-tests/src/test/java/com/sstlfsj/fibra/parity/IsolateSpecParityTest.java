@@ -24,11 +24,11 @@ class IsolateSpecParityTest extends CordisSpecSupport {
         var definition = PluginDefinition.builder("consumer", Void.class,
                 () -> (context, config) -> Mono.empty())
             .require(FOO).build();
-        var rootConsumer = root.plugins().mount("root-consumer", definition, null);
+        var rootConsumer = root.plugins().mount("root-consumer", definition.prepare(null));
         var first = root.withRealm(FOO, "first");
         var second = root.withRealm(FOO, "second");
-        var firstConsumer = first.plugins().mount("first-consumer", definition, null);
-        var secondConsumer = second.plugins().mount("second-consumer", definition, null);
+        var firstConsumer = first.plugins().mount("first-consumer", definition.prepare(null));
+        var secondConsumer = second.plugins().mount("second-consumer", definition.prepare(null));
         root.services().provide(FOO, new Value(100));
         await(rootConsumer);
         assertTrue(first.services().find(FOO).isEmpty());

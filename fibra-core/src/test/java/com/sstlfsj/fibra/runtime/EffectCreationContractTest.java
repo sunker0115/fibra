@@ -26,7 +26,7 @@ class EffectCreationContractTest {
             return Mono.empty();
         }).build();
         try (var runtime = FibraRuntime.create()) {
-            var instance = runtime.rootScope().context().plugins().mount("broken", definition, "");
+            var instance = runtime.rootScope().context().plugins().mount("broken", definition.prepare(""));
             StepVerifier.create(instance.settled())
                 .expectErrorSatisfies(error -> assertSame(expected, error)).verify(TIMEOUT);
             assertEquals(PluginInstanceState.FAILED, instance.state());

@@ -1,7 +1,7 @@
 package com.sstlfsj.fibra.engine;
 
 import com.sstlfsj.fibra.PluginDefinition;
-import com.sstlfsj.fibra.config.PluginContract;
+import com.sstlfsj.fibra.value.LiteralValue;
 
 import java.util.Objects;
 import java.util.function.Function;
@@ -19,17 +19,8 @@ public final class PluginCatalogEntry<C> {
         return definition;
     }
 
-    public C bind(Object literal) {
-        var value = binder.apply(literal);
-        return definition.validate(value);
-    }
-
-    PluginContract contract() {
-        var builder = PluginContract.builder(definition.name())
-            .configType(definition.configType())
-            .binder(this::bind);
-        definition.requires().keySet().forEach(builder::require);
-        definition.provides().forEach(builder::provide);
-        return builder.build();
+    public PluginDefinition.Prepared<C> bind(LiteralValue literal) {
+        var value = binder.apply(Objects.requireNonNull(literal, "literal").toJava());
+        return definition.prepare(value);
     }
 }

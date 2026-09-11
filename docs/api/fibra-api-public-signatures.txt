@@ -131,6 +131,7 @@ public final class com.sstlfsj.fibra.PluginDefinition<C> {
   public com.sstlfsj.fibra.PluginFactory<C> factory();
   public java.lang.Class<?> injectionType();
   public C validate(C);
+  public com.sstlfsj.fibra.PluginDefinition$Prepared<C> prepare(C);
 }
 ## com.sstlfsj.fibra.PluginDefinition$Builder
 Compiled from "PluginDefinition.java"
@@ -141,6 +142,12 @@ public final class com.sstlfsj.fibra.PluginDefinition$Builder<C> {
   public com.sstlfsj.fibra.PluginDefinition$Builder<C> inject(java.lang.Class<?>);
   public com.sstlfsj.fibra.PluginDefinition$Builder<C> validator(com.sstlfsj.fibra.ConfigValidator<C>);
   public com.sstlfsj.fibra.PluginDefinition<C> build();
+}
+## com.sstlfsj.fibra.PluginDefinition$Prepared
+Compiled from "PluginDefinition.java"
+public final class com.sstlfsj.fibra.PluginDefinition$Prepared<C> {
+  public com.sstlfsj.fibra.PluginDefinition<C> definition();
+  public C config();
 }
 ## com.sstlfsj.fibra.PluginEntrypoint
 Compiled from "PluginEntrypoint.java"
@@ -181,7 +188,7 @@ public final class com.sstlfsj.fibra.PluginInstanceState extends java.lang.Enum<
 Compiled from "Plugins.java"
 public interface com.sstlfsj.fibra.Plugins {
   public abstract java.util.Optional<com.sstlfsj.fibra.PluginInstance<?>> current();
-  public abstract <C> com.sstlfsj.fibra.PluginInstance<C> mount(java.lang.String, com.sstlfsj.fibra.PluginDefinition<C>, C);
+  public abstract <C> com.sstlfsj.fibra.PluginInstance<C> mount(java.lang.String, com.sstlfsj.fibra.PluginDefinition$Prepared<C>);
   public abstract java.util.Optional<com.sstlfsj.fibra.PluginInstance<?>> find(java.lang.String);
   public abstract java.util.List<com.sstlfsj.fibra.PluginInstance<?>> instances();
 }

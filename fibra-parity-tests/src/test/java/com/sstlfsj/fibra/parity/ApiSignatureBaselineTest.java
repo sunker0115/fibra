@@ -3,7 +3,7 @@ package com.sstlfsj.fibra.parity;
 import com.sstlfsj.fibra.Context;
 import com.sstlfsj.fibra.artifact.ArtifactStore;
 import com.sstlfsj.fibra.bridge.ContributionDirectory;
-import com.sstlfsj.fibra.config.DesiredGraph;
+import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.registry.PluginRegistry;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
@@ -30,7 +30,7 @@ class ApiSignatureBaselineTest {
     private static final List<ModuleApi> MODULES = List.of(
         new ModuleApi("fibra-api", Context.class, "com.sstlfsj.fibra."),
         new ModuleApi("fibra-core", FibraRuntime.class, "com.sstlfsj.fibra.runtime."),
-        new ModuleApi("fibra-config", DesiredGraph.class, "com.sstlfsj.fibra.config."),
+        new ModuleApi("fibra-config", DesiredInputGraph.class, "com.sstlfsj.fibra.config."),
         new ModuleApi("fibra-artifact", ArtifactStore.class,
             "com.sstlfsj.fibra.artifact."),
         new ModuleApi("fibra-engine", FibraEngine.class, "com.sstlfsj.fibra.engine."),

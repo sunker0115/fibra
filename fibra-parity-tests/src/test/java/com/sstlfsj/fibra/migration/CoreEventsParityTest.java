@@ -65,7 +65,7 @@ class CoreEventsParityTest {
             var context = domain.rootScope().context();
             var definition = PluginDefinition.builder("observed", Void.class,
                 () -> (pluginContext, ignored) -> start.asMono()).build();
-            var plugin = context.plugins().mount("observed", definition, null);
+            var plugin = context.plugins().mount("observed", definition.prepare(null));
             plugin.states().subscribe(states::add);
             var registration = context.services().provide(VALUE, new Value(1));
 
@@ -100,7 +100,7 @@ class CoreEventsParityTest {
                 })
                 .build();
             var plugin = runtime.rootScope().context().plugins()
-                .mount("updated", definition, 1);
+                .mount("updated", definition.prepare(1));
             plugin.settled().block();
 
             assertThrows(IllegalArgumentException.class,

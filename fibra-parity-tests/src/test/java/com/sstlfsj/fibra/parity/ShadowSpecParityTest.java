@@ -58,7 +58,7 @@ class ShadowSpecParityTest extends CordisSpecSupport {
                     observed.set(context.metadata("caller"));
                     return Mono.empty();
                 }).build();
-            await(invocation.plugins().mount("consumer", definition, null));
+            await(invocation.plugins().mount("consumer", definition.prepare(null)));
             return new Inspection(invocation.caller(), null);
         });
         var caller = root.withMetadata("caller", "plugin-owner");

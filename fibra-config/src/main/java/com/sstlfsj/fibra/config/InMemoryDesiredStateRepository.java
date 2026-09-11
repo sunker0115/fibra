@@ -9,17 +9,16 @@ public final class InMemoryDesiredStateRepository implements DesiredStateReposit
     private final ReentrantLock lock = new ReentrantLock();
     private DesiredCompilation current;
 
-    public InMemoryDesiredStateRepository(DesiredGraph initial) {
+    public InMemoryDesiredStateRepository(DesiredInputGraph initial) {
         current = compilation(Objects.requireNonNull(initial, "initial"));
     }
 
     public static InMemoryDesiredStateRepository empty() {
-        return new InMemoryDesiredStateRepository(new DesiredGraph(List.of()));
+        return new InMemoryDesiredStateRepository(new DesiredInputGraph(List.of()));
     }
 
     @Override
-    public DesiredCompilation load(PluginDefinitionResolver resolver) {
-        Objects.requireNonNull(resolver, "resolver");
+    public DesiredCompilation load() {
         lock.lock();
         try {
             return current;
@@ -35,7 +34,7 @@ public final class InMemoryDesiredStateRepository implements DesiredStateReposit
 
     @Override
     public DesiredStateWriteTransaction prepareReplace(String expectedRevision,
-                                                       DesiredGraph candidate) {
+                                                       DesiredInputGraph candidate) {
         if (expectedRevision == null || expectedRevision.isBlank()) {
             throw new IllegalArgumentException("expectedRevision must not be blank");
         }
@@ -51,9 +50,9 @@ public final class InMemoryDesiredStateRepository implements DesiredStateReposit
         }
     }
 
-    private static DesiredCompilation compilation(DesiredGraph graph) {
-        return new DesiredCompilation(new DesiredSourceSnapshot(
-            "memory", UUID.randomUUID().toString(), java.util.Set.of()), graph, List.of());
+    private static DesiredCompilation compilation(DesiredInputGraph graph) {
+        return DesiredCompilation.builder().snapshot(new DesiredSourceSnapshot(
+            "memory", UUID.randomUUID().toString(), java.util.Set.of())).graph(graph).build();
     }
 
     private static ConfigException conflict(String expected, String actual) {

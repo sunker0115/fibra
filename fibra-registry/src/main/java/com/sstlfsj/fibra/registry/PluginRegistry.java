@@ -1,8 +1,8 @@
 package com.sstlfsj.fibra.registry;
 
 import com.sstlfsj.fibra.artifact.ArtifactId;
-import com.sstlfsj.fibra.config.DesiredEntry;
-import com.sstlfsj.fibra.config.DesiredGraph;
+import com.sstlfsj.fibra.config.DesiredInputEntry;
+import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.engine.EngineCommand;
 import com.sstlfsj.fibra.engine.ApplyDeployment;
 import com.sstlfsj.fibra.engine.DeploymentArtifact;
@@ -15,7 +15,6 @@ import com.sstlfsj.fibra.engine.PublishedView;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,10 +73,10 @@ public final class PluginRegistry {
     public Mono<RegistrySnapshot> enable(PluginEnableRequest request) {
         Objects.requireNonNull(request, "request");
         return mutate("enable", request.instanceId(), snapshot -> {
-            var entry = DesiredEntry.builder(request.instanceId(), request.definitionName())
+            var entry = DesiredInputEntry.builder(request.instanceId(), request.definitionName())
                 .config(request.config()).realms(request.realms())
                 .intercepts(request.intercepts())
-                .source(Path.of("registry", request.instanceId())).build();
+                .build();
             return replace(snapshot, snapshot.engine().desiredGraph().upsert(entry));
         });
     }
@@ -149,7 +148,7 @@ public final class PluginRegistry {
     }
 
     private static ReplaceDesiredGraph replace(PublishedView snapshot,
-                                               DesiredGraph graph) {
+                                               DesiredInputGraph graph) {
         return new ReplaceDesiredGraph(snapshot.viewRevision(),
             snapshot.engine().desiredSource().revision(), graph);
     }
@@ -169,7 +168,7 @@ public final class PluginRegistry {
 
     private static RegistrySnapshot project(PublishedView view) {
         var snapshot = view.engine();
-        var desired = new LinkedHashMap<String, DesiredEntry>();
+        var desired = new LinkedHashMap<String, DesiredInputEntry>();
         snapshot.desiredGraph().entries().forEach(entry ->
             desired.put(entry.instanceId(), entry));
         return new RegistrySnapshot(view.viewRevision(), snapshot.artifacts(), desired,

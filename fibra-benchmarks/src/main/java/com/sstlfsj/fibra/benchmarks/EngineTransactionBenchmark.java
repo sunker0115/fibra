@@ -1,8 +1,8 @@
 package com.sstlfsj.fibra.benchmarks;
 
 import com.sstlfsj.fibra.PluginDefinition;
-import com.sstlfsj.fibra.config.DesiredEntry;
-import com.sstlfsj.fibra.config.DesiredGraph;
+import com.sstlfsj.fibra.config.DesiredInputEntry;
+import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.PluginCatalog;
@@ -41,7 +41,7 @@ public class EngineTransactionBenchmark {
     private static final String DEFINITION_NAME = "bench-noop";
     private static final String INSTANCE_ID = "bench-instance";
     private static final PluginEnableRequest ENABLE = PluginEnableRequest.of(
-        INSTANCE_ID, DEFINITION_NAME, null);
+        INSTANCE_ID, DEFINITION_NAME, com.sstlfsj.fibra.value.LiteralValue.of(null));
 
     private FibraEngine engine;
     private PluginRegistry registry;
@@ -52,8 +52,8 @@ public class EngineTransactionBenchmark {
             () -> (context, config) -> Mono.empty()).build();
         var catalog = PluginCatalog.of(new PluginCatalogEntry<>(definition,
             ignored -> null));
-        var desired = new DesiredGraph(List.of(
-            DesiredEntry.builder(INSTANCE_ID, DEFINITION_NAME).build()));
+        var desired = new DesiredInputGraph(List.of(
+            DesiredInputEntry.builder(INSTANCE_ID, DEFINITION_NAME).build()));
         engine = FibraEngine.builder(new InMemoryDesiredStateRepository(desired))
             .catalog(catalog).journal(new DiscardingJournal()).build();
         registry = new PluginRegistry(engine, new DiscardingAudit());

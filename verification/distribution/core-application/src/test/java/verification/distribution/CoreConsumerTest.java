@@ -14,7 +14,7 @@ class CoreConsumerTest {
             var definition = PluginDefinition.builder("sample", Void.class,
                 () -> (context, config) -> Mono.empty()).build();
             var instance = runtime.rootScope().context().plugins()
-                .mount("sample", definition, null);
+                .mount("sample", definition.prepare(null));
             instance.settled().block();
             assertEquals("ACTIVE", instance.state().name());
         }

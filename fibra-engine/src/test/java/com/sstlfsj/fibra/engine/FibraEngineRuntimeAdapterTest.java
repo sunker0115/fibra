@@ -6,8 +6,8 @@ import com.sstlfsj.fibra.artifact.ArtifactRecord;
 import com.sstlfsj.fibra.artifact.ArtifactStore;
 import com.sstlfsj.fibra.artifact.RuntimeId;
 import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
-import com.sstlfsj.fibra.config.DesiredEntry;
-import com.sstlfsj.fibra.config.DesiredGraph;
+import com.sstlfsj.fibra.config.DesiredInputEntry;
+import com.sstlfsj.fibra.config.DesiredInputGraph;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import reactor.core.publisher.Mono;
@@ -120,8 +120,8 @@ class FibraEngineRuntimeAdapterTest {
             .artifactStore(new ArtifactStore(work.resolve("artifacts")))
             .runtimeAdapter(new FakeRuntimeAdapter(runtimeId)).journal(journal).build()) {
             var started = engine.start().block();
-            var graph = new DesiredGraph(List.of(
-                DesiredEntry.builder("sample-one", "sample").build()));
+            var graph = new DesiredInputGraph(List.of(
+                DesiredInputEntry.builder("sample-one", "sample").build()));
             var command = ApplyDeployment.builder(graph)
                 .expectedRevision(started.viewRevision())
                 .expectedDesiredRevision(started.engine().desiredSource().revision())

@@ -1,5 +1,7 @@
 package com.sstlfsj.fibra.config;
 
+import com.sstlfsj.fibra.value.LiteralValue;
+
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.security.MessageDigest;
@@ -30,28 +32,23 @@ public final class DesiredConfigCompiler {
         reader = new ConfigDocumentReader(limits);
     }
 
-    public DesiredCompilation compile(Path root, PluginDefinitionResolver resolver) {
+    public DesiredCompilation compile(Path root) {
         Objects.requireNonNull(root, "root");
-        Objects.requireNonNull(resolver, "resolver");
-        var state = new CompilationState(resolver);
+        var state = new CompilationState();
         var rootDocument = reader.read(root, null);
         state.resolveDocument(rootDocument, "", true, Map.of(), Map.of(), null);
-        return new DesiredCompilation(
-            new DesiredSourceSnapshot(rootDocument.path().toString(), revision(state.sources),
-                state.sources.keySet()),
-            new DesiredGraph(state.entries), List.of());
+        return DesiredCompilation.builder()
+            .snapshot(new DesiredSourceSnapshot(rootDocument.path().toString(),
+                revision(state.sources), state.sources.keySet()))
+            .graph(new DesiredInputGraph(state.entries)).entrySources(state.entrySources).build();
     }
 
     private final class CompilationState {
-        private final PluginDefinitionResolver resolver;
         private final LinkedHashMap<Path, byte[]> sources = new LinkedHashMap<>();
+        private final Map<String, Path> entrySources = new LinkedHashMap<>();
         private final LinkedHashSet<Path> stack = new LinkedHashSet<>();
-        private final List<DesiredEntry> entries = new ArrayList<>();
+        private final List<DesiredInputEntry> entries = new ArrayList<>();
         private final Set<String> ids = new LinkedHashSet<>();
-
-        private CompilationState(PluginDefinitionResolver resolver) {
-            this.resolver = resolver;
-        }
 
         private void resolveDocument(ConfigDocumentReader.Document document,
                                      String parentId, boolean parentEnabled,
@@ -125,23 +122,17 @@ public final class DesiredConfigCompiler {
             }
 
             var definitionName = text(value.get("plugin"), "plugin", source, entryId);
-            var contract = resolver.resolve(definitionName).orElseThrow(() ->
-                error(ConfigStage.COMPILE, "DEFINITION_NOT_FOUND",
-                    "unknown plugin definition " + definitionName, source, entryId, null));
-            Object config;
-            try {
-                config = contract.bind(value.get("config"));
-            } catch (RuntimeException exception) {
-                throw error(ConfigStage.COMPILE, "CONFIG_BIND_FAILED",
-                    "cannot bind config for " + definitionName, source, entryId, exception);
-            }
-            entries.add(DesiredEntry.builder(entryId, definitionName).enabled(enabled)
+            entries.add(DesiredInputEntry.builder(entryId, definitionName).enabled(enabled)
                 .publicationRequirement(publicationRequirement(value.get("publication"),
                     source, entryId))
-                .config(config).realms(realms).intercepts(intercepts)
-                .requires(contract.requires()).provides(contract.provides())
-                .source(source).build());
+                .config(LiteralValue.of(value.get("config")))
+                .realms(literals(realms)).intercepts(literals(intercepts)).build());
+            entrySources.put(entryId, source);
         }
+    }
+
+    private static Map<String, LiteralValue> literals(Map<String, Object> values) {
+        return ((LiteralValue.ObjectValue) LiteralValue.of(values)).values();
     }
 
     private static Kind kind(Map<String, Object> value, Path source, String entryId) {

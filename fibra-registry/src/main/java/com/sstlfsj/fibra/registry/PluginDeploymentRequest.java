@@ -1,12 +1,12 @@
 package com.sstlfsj.fibra.registry;
 
-import com.sstlfsj.fibra.config.DesiredGraph;
+import com.sstlfsj.fibra.config.DesiredInputGraph;
 
 import java.util.List;
 import java.util.Objects;
 
 public record PluginDeploymentRequest(List<PluginInstallRequest> artifacts,
-                                      DesiredGraph graph) {
+                                      DesiredInputGraph graph) {
     public PluginDeploymentRequest {
         artifacts = List.copyOf(artifacts);
         if (artifacts.isEmpty()) {

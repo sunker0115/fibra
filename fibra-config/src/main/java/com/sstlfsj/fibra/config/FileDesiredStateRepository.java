@@ -13,7 +13,7 @@ public final class FileDesiredStateRepository implements DesiredStateRepository 
     }
 
     @Override
-    public DesiredCompilation load(PluginDefinitionResolver resolver) {
-        return compiler.compile(root, resolver);
+    public DesiredCompilation load() {
+        return compiler.compile(root);
     }
 }

@@ -36,7 +36,7 @@ class FibraInertiaParityTest {
                     })
                 .require(VALUE)
                 .build();
-            var consumer = context.plugins().mount("consumer", definition, null);
+            var consumer = context.plugins().mount("consumer", definition.prepare(null));
 
             await(() -> consumer.state() == PluginInstanceState.STARTING);
             var revoke = firstProvider.dispose().toFuture();
@@ -67,7 +67,7 @@ class FibraInertiaParityTest {
                     })
                 .provide(VALUE)
                 .build();
-            var provider = context.plugins().mount("provider", providerDefinition, null);
+            var provider = context.plugins().mount("provider", providerDefinition.prepare(null));
             provider.settled().block();
             var consumerDefinition = PluginDefinition.builder("consumer", Void.class,
                     () -> (pluginContext, ignored) -> {
@@ -76,7 +76,7 @@ class FibraInertiaParityTest {
                     })
                 .require(VALUE)
                 .build();
-            var consumer = context.plugins().mount("consumer", consumerDefinition, null);
+            var consumer = context.plugins().mount("consumer", consumerDefinition.prepare(null));
             consumer.settled().block();
 
             var disposal = provider.dispose().toFuture();

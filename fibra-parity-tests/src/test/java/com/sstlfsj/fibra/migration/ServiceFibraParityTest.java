@@ -69,7 +69,7 @@ class ServiceFibraParityTest {
                     })
                 .require(COUNTER)
                 .build();
-            var consumer = context.plugins().mount("consumer", definition, null);
+            var consumer = context.plugins().mount("consumer", definition.prepare(null));
 
             assertEquals(PluginInstanceState.PENDING, consumer.state());
             context.services().provide(COUNTER, new Counter());
@@ -88,7 +88,7 @@ class ServiceFibraParityTest {
                 .require(COUNTER)
                 .build();
             var consumer = runtime.rootScope().context().plugins()
-                .mount("consumer", definition, null);
+                .mount("consumer", definition.prepare(null));
 
             assertEquals(PluginInstanceState.PENDING, consumer.state());
             assertFalse(java.util.Arrays.stream(PluginInstance.class.getMethods())
@@ -128,7 +128,7 @@ class ServiceFibraParityTest {
                 .build();
 
             context.withIntercept(COUNTER, "configured").plugins()
-                .mount("consumer", definition, null).settled().block();
+                .mount("consumer", definition.prepare(null)).settled().block();
 
             assertEquals("configured", seen.get());
             assertEquals(Counter.class,
@@ -151,7 +151,7 @@ class ServiceFibraParityTest {
                     })
                 .require(COUNTER)
                 .build();
-            var consumer = context.plugins().mount("consumer", definition, null);
+            var consumer = context.plugins().mount("consumer", definition.prepare(null));
             assertEquals(PluginInstanceState.PENDING, consumer.state());
             var registration = context.services().provide(COUNTER, new Counter());
             consumer.settled().block();
@@ -175,7 +175,7 @@ class ServiceFibraParityTest {
                 .require(COUNTER)
                 .build();
             var consumer = runtime.rootScope().context().plugins()
-                .mount("consumer", definition, null);
+                .mount("consumer", definition.prepare(null));
 
             consumer.settled().block();
 
@@ -218,7 +218,7 @@ class ServiceFibraParityTest {
                     })
                 .require(COUNTER)
                 .build();
-            var consumer = context.plugins().mount("consumer", definition, null);
+            var consumer = context.plugins().mount("consumer", definition.prepare(null));
             consumer.settled().block();
             first.dispose().block();
             var secondCounter = new Counter();

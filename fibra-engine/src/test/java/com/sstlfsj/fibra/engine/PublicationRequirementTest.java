@@ -3,8 +3,8 @@ package com.sstlfsj.fibra.engine;
 import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.PluginInstanceState;
 import com.sstlfsj.fibra.ServiceKey;
-import com.sstlfsj.fibra.config.DesiredEntry;
-import com.sstlfsj.fibra.config.DesiredGraph;
+import com.sstlfsj.fibra.config.DesiredInputEntry;
+import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
 import com.sstlfsj.fibra.config.PublicationRequirement;
 import org.junit.jupiter.api.Test;
@@ -67,11 +67,11 @@ class PublicationRequirementTest {
             .build();
     }
 
-    private static DesiredGraph graph(boolean pendingAllowed) {
-        var entry = DesiredEntry.builder("dependent", "dependent");
+    private static DesiredInputGraph graph(boolean pendingAllowed) {
+        var entry = DesiredInputEntry.builder("dependent", "dependent");
         if (pendingAllowed) {
             entry.publicationRequirement(PublicationRequirement.PENDING_ALLOWED);
         }
-        return new DesiredGraph(List.of(entry.build()));
+        return new DesiredInputGraph(List.of(entry.build()));
     }
 }

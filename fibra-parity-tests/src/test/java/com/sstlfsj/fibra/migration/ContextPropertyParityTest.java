@@ -65,7 +65,7 @@ class ContextPropertyParityTest {
                 .require(ANSWER)
                 .build();
 
-            context.plugins().mount("consumer", definition, null).settled().block();
+            context.plugins().mount("consumer", definition.prepare(null)).settled().block();
 
             assertEquals(42, associated.get().get(SESSION_ANSWER));
         }

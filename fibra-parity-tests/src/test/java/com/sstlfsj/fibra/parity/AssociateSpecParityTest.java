@@ -90,7 +90,7 @@ class AssociateSpecParityTest extends CordisSpecSupport {
                 calls.incrementAndGet();
                 return Mono.empty();
             }).build();
-        await(root.plugins().mount("inspect", definition, X.class));
+        await(root.plugins().mount("inspect", definition.prepare(X.class)));
         assertEquals(1, calls.get());
     }
 

@@ -1,8 +1,8 @@
 package com.sstlfsj.fibra.example;
 
 import com.sstlfsj.fibra.artifact.ArtifactId;
-import com.sstlfsj.fibra.config.DesiredEntry;
-import com.sstlfsj.fibra.config.DesiredGraph;
+import com.sstlfsj.fibra.config.DesiredInputEntry;
+import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.engine.PublishedRuntime;
 import com.sstlfsj.fibra.example.sanitizer.ContentSanitizerContribution;
 import com.sstlfsj.fibra.example.sanitizer.SanitizeRequest;
@@ -42,13 +42,13 @@ final class SanitizerPluginManager implements ApplicationRunner {
         var install = PluginInstallRequest.builder().artifactId(ARTIFACT_ID)
             .runtimeId(NodePluginRuntimeAdapter.RUNTIME_ID).version("1.0.0")
             .source(properties.pluginDirectory().toAbsolutePath().normalize()).build();
-        var desired = DesiredEntry.builder(INSTANCE_ID, ARTIFACT_ID.value())
-            .config(Map.of(
+        var desired = DesiredInputEntry.builder(INSTANCE_ID, ARTIFACT_ID.value())
+            .config(com.sstlfsj.fibra.value.LiteralValue.of(Map.of(
                 "replacement", "[REDACTED]",
-                "rules", List.of("email", "bearer-token", "api-key")))
+                "rules", List.of("email", "bearer-token", "api-key"))))
             .build();
         registry.deploy(new PluginDeploymentRequest(List.of(install),
-            new DesiredGraph(List.of(desired)))).block(OPERATION_TIMEOUT);
+            new DesiredInputGraph(List.of(desired)))).block(OPERATION_TIMEOUT);
     }
 
     SanitizeResult sanitize(SanitizeRequest request) {

@@ -1,13 +1,12 @@
 package com.sstlfsj.fibra.config;
 
-import com.sstlfsj.fibra.ServiceKey;
+import com.sstlfsj.fibra.value.LiteralValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -15,7 +14,32 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class DesiredConfigCompilerTest {
-    private static final ServiceKey<String> MESSAGE = ServiceKey.of("message", String.class);
+    @Test
+    void collectsLiteralInputWithoutResolvingOrBindingPluginTypes(@TempDir Path work)
+        throws Exception {
+        var source = work.resolve("input.yaml");
+        Files.writeString(source, "- id: x\n  plugin: not-loaded\n  config: {value: text}\n");
+        var result = new DesiredConfigCompiler(ConfigLimits.defaults()).compile(source);
+
+        assertEquals(com.sstlfsj.fibra.value.LiteralValue.of(Map.of("value", "text")),
+            result.graph().require("x").config());
+    }
+
+    @Test
+    void graphIdentityDoesNotDependOnSourcePaths(@TempDir Path work) throws Exception {
+        var first = work.resolve("first.yaml");
+        var second = work.resolve("second.yaml");
+        var content = "- id: p\n  plugin: p\n  config: {number: 2.50}\n";
+        Files.writeString(first, content);
+        Files.writeString(second, content);
+        var compiler = new DesiredConfigCompiler(ConfigLimits.defaults());
+        var left = compiler.compile(first);
+        var right = compiler.compile(second);
+
+        assertEquals(left.graph(), right.graph());
+        assertEquals(left.graph().hashCode(), right.graph().hashCode());
+        org.junit.jupiter.api.Assertions.assertNotEquals(left.entrySources(), right.entrySources());
+    }
 
     @Test
     void compilesGroupsIncludesPatchesAndInheritedPolicyWithoutRuntime(@TempDir Path work)
@@ -56,19 +80,18 @@ class DesiredConfigCompilerTest {
                     config:
                       value: second
             """);
-        var resolver = resolver();
-
         var result = new DesiredConfigCompiler(ConfigLimits.defaults())
-            .compile(root, resolver);
+            .compile(root);
 
         assertEquals(3, result.graph().entries().size());
         var consumer = result.graph().require("agents:consumer");
         var provider = result.graph().require("bundle:provider");
         var second = result.graph().require("bundle:second");
         assertFalse(consumer.enabled());
-        assertEquals(Map.of("message", "tenant-a"), consumer.realms());
-        assertEquals(Map.of("message", Map.of("trace", true)), consumer.intercepts());
-        assertEquals(new ProviderConfig("patched"), provider.config());
+        assertEquals(Map.of("message", LiteralValue.of("tenant-a")), consumer.realms());
+        assertEquals(Map.of("message", LiteralValue.of(Map.of("trace", true))), consumer.intercepts());
+        assertEquals(LiteralValue.of(Map.of("value", "patched")), provider.config());
+        assertEquals(included.toRealPath(), result.entrySources().get("bundle:provider"));
         assertEquals(PublicationRequirement.PENDING_ALLOWED,
             provider.publicationRequirement());
         assertEquals(PublicationRequirement.ACTIVE_REQUIRED,
@@ -80,47 +103,19 @@ class DesiredConfigCompilerTest {
     }
 
     @Test
-    void rejectsUnknownDefinitionsAndIncludeCyclesWithStructuredDiagnostics(@TempDir Path work)
+    void rejectsIncludeCyclesWithStructuredDiagnostics(@TempDir Path work)
         throws Exception {
-        var unknown = work.resolve("unknown.yaml");
-        Files.writeString(unknown, "- id: x\n  plugin: missing\n");
         var first = work.resolve("first.yaml");
         var second = work.resolve("second.yaml");
         Files.writeString(first, "- id: second\n  include: second.yaml\n");
         Files.writeString(second, "- id: first\n  include: first.yaml\n");
         var compiler = new DesiredConfigCompiler(ConfigLimits.defaults());
 
-        var unknownFailure = assertThrows(ConfigException.class,
-            () -> compiler.compile(unknown, resolver()));
         var cycleFailure = assertThrows(ConfigException.class,
-            () -> compiler.compile(first, resolver()));
+            () -> compiler.compile(first));
 
-        assertEquals(ConfigStage.COMPILE, unknownFailure.diagnostic().stage());
-        assertEquals("x", unknownFailure.diagnostic().entryId());
         assertEquals(ConfigStage.RESOLVE, cycleFailure.diagnostic().stage());
         assertEquals("second:first", cycleFailure.diagnostic().entryId());
     }
 
-    private static PluginDefinitionResolver resolver() {
-        return name -> switch (name) {
-            case "consumer" -> Optional.of(PluginContract.builder("consumer")
-                .configType(Void.class)
-                .require(MESSAGE)
-                .binder(value -> null)
-                .build());
-            case "provider" -> Optional.of(PluginContract.builder("provider")
-                .configType(ProviderConfig.class)
-                .provide(MESSAGE)
-                .binder(value -> {
-                    @SuppressWarnings("unchecked")
-                    var map = (Map<String, Object>) value;
-                    return new ProviderConfig((String) map.get("value"));
-                })
-                .build());
-            default -> Optional.empty();
-        };
-    }
-
-    private record ProviderConfig(String value) {
-    }
 }

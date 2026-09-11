@@ -23,7 +23,7 @@ class DecoratorSpecParityTest extends CordisSpecSupport {
         var definition = PluginDefinition.builder("bar", Void.class,
                 () -> new Bar(starts, stops))
             .inject(Bar.class).build();
-        var owner = root.plugins().mount("bar", definition, null);
+        var owner = root.plugins().mount("bar", definition.prepare(null));
         await(owner);
         var child = root.plugins().find("bar:inject:method").orElseThrow();
         assertEquals(0, starts.get());

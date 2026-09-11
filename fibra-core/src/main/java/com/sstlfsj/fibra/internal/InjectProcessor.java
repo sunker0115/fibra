@@ -80,7 +80,7 @@ final class InjectProcessor {
                 }
                 var parent = context.plugins().current().orElseThrow();
                 context.plugins().mount(parent.id() + ":inject:" + method.getName(),
-                    builder.build(), null);
+                    builder.build().prepare(null));
             }
         }
     }

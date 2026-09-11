@@ -4,14 +4,14 @@ import com.sstlfsj.fibra.Disposable;
 import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.PluginInstanceState;
 import com.sstlfsj.fibra.ServiceKey;
-import com.sstlfsj.fibra.config.DesiredEntry;
-import com.sstlfsj.fibra.config.DesiredGraph;
+import com.sstlfsj.fibra.config.DesiredInputEntry;
+import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
+import com.sstlfsj.fibra.value.LiteralValue;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -52,7 +52,7 @@ class FibraEngineDesiredStateTest {
                 })
             .require(text)
             .build();
-        var graph = new DesiredGraph(List.of(
+        var graph = new DesiredInputGraph(List.of(
             entry("projection", "projection"),
             entry("consumer", "consumer"),
             entry("provider", "provider")));
@@ -89,7 +89,7 @@ class FibraEngineDesiredStateTest {
         var catalog = PluginCatalog.of(new PluginCatalogEntry<>(definition,
             literal -> (String) literal));
         var repository = new InMemoryDesiredStateRepository(
-            new DesiredGraph(List.of(entry("one"))));
+            new DesiredInputGraph(List.of(entry("one"))));
 
         try (var engine = FibraEngine.builder(repository).catalog(catalog).build()) {
             var first = engine.start().block();
@@ -97,17 +97,17 @@ class FibraEngineDesiredStateTest {
             assertEquals(EngineState.RUNNING, first.engine().state());
             assertEquals(PluginInstanceState.ACTIVE,
                 first.engine().instances().get("sample").state());
-            assertEquals("one", first.engine().instances().get("sample").config());
+            assertEquals(LiteralValue.of("one"), first.engine().instances().get("sample").config());
             assertEquals(1, starts.get());
             assertEquals(0, stops.get());
 
             var desiredRevision = first.engine().desiredSource().revision();
             var second = engine.submit(new ReplaceDesiredGraph(
                 first.viewRevision(), desiredRevision,
-                new DesiredGraph(List.of(entry("two"))))).block().view();
+                new DesiredInputGraph(List.of(entry("two"))))).block().view();
 
             assertNotEquals(first.viewRevision(), second.viewRevision());
-            assertEquals("two", second.engine().instances().get("sample").config());
+            assertEquals(LiteralValue.of("two"), second.engine().instances().get("sample").config());
             assertEquals(2, starts.get());
             assertEquals(1, stops.get());
             assertEquals(second, engine.published().current());
@@ -120,7 +120,7 @@ class FibraEngineDesiredStateTest {
         var definition = PluginDefinition.builder("sample", String.class,
             () -> (context, config) -> Mono.empty()).build();
         var repository = new InMemoryDesiredStateRepository(
-            new DesiredGraph(List.of(entry("one"))));
+            new DesiredInputGraph(List.of(entry("one"))));
 
         try (var engine = FibraEngine.builder(repository)
             .catalog(PluginCatalog.of(new PluginCatalogEntry<>(definition,
@@ -129,10 +129,10 @@ class FibraEngineDesiredStateTest {
 
             assertThrows(PublishedRevisionConflictException.class, () -> engine.submit(
                 new ReplaceDesiredGraph("stale", started.engine().desiredSource().revision(),
-                    new DesiredGraph(List.of(entry("two"))))).block());
+                    new DesiredInputGraph(List.of(entry("two"))))).block());
 
             assertEquals(started, engine.published().current());
-            assertEquals("one", repository.load(name -> java.util.Optional.empty())
+            assertEquals(LiteralValue.of("one"), repository.load()
                 .graph().require("sample").config());
         }
     }
@@ -146,7 +146,7 @@ class FibraEngineDesiredStateTest {
                 return Mono.empty();
             }).build();
         var repository = new InMemoryDesiredStateRepository(
-            new DesiredGraph(List.of(entry("one"))));
+            new DesiredInputGraph(List.of(entry("one"))));
 
         try (var engine = FibraEngine.builder(repository)
             .catalog(PluginCatalog.of(new PluginCatalogEntry<>(definition,
@@ -168,13 +168,11 @@ class FibraEngineDesiredStateTest {
         }
     }
 
-    private static DesiredEntry entry(String config) {
-        return DesiredEntry.builder("sample", "sample").config(config)
-            .source(Path.of("memory")).build();
+    private static DesiredInputEntry entry(String config) {
+        return DesiredInputEntry.builder("sample", "sample").config(LiteralValue.of(config)).build();
     }
 
-    private static DesiredEntry entry(String instanceId, String definitionName) {
-        return DesiredEntry.builder(instanceId, definitionName)
-            .source(Path.of("memory")).build();
+    private static DesiredInputEntry entry(String instanceId, String definitionName) {
+        return DesiredInputEntry.builder(instanceId, definitionName).build();
     }
 }

@@ -6,8 +6,8 @@ import com.sstlfsj.fibra.artifact.ArtifactRecord;
 import com.sstlfsj.fibra.artifact.ArtifactStore;
 import com.sstlfsj.fibra.artifact.RuntimeId;
 import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
-import com.sstlfsj.fibra.config.DesiredEntry;
-import com.sstlfsj.fibra.config.DesiredGraph;
+import com.sstlfsj.fibra.config.DesiredInputEntry;
+import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.PluginCatalog;
 import com.sstlfsj.fibra.engine.PluginCatalogEntry;
@@ -48,7 +48,8 @@ class PluginRegistryTest {
             registry.install(PluginInstallRequest.builder().artifactId(artifactId)
                 .runtimeId(runtimeId).version("1.0.0").source(source).build()).block();
             var enabled = registry.enable(PluginEnableRequest.of(
-                "sample-one", "sample", Map.of("message", "hello"))).block();
+                "sample-one", "sample", com.sstlfsj.fibra.value.LiteralValue.of(
+                    Map.of("message", "hello")))).block();
 
             assertTrue(enabled.artifacts().containsKey(artifactId));
             assertTrue(enabled.desired().get("sample-one").enabled());
@@ -105,8 +106,8 @@ class PluginRegistryTest {
             var registry = new PluginRegistry(engine, audit);
             var installed = PluginInstallRequest.builder().artifactId(artifactId)
                 .runtimeId(runtimeId).version("1.0.0").source(source).build();
-            var graph = new DesiredGraph(List.of(
-                DesiredEntry.builder("sample-one", "sample").build()));
+            var graph = new DesiredInputGraph(List.of(
+                DesiredInputEntry.builder("sample-one", "sample").build()));
 
             var deployed = registry.deploy(
                 new PluginDeploymentRequest(List.of(installed), graph)).block();

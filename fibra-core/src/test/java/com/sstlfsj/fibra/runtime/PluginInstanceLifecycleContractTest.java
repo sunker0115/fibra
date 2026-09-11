@@ -19,6 +19,37 @@ class PluginInstanceLifecycleContractTest {
     private static final ServiceKey<Counter> COUNTER = ServiceKey.of("counter", Counter.class);
 
     @Test
+    void preparedMountValidatesOnceWithoutCreatingThePluginUntilMount() {
+        var validations = new AtomicInteger();
+        var creations = new AtomicInteger();
+        var definition = PluginDefinition.builder("prepared", String.class, () -> {
+            creations.incrementAndGet();
+            return (context, config) -> reactor.core.publisher.Mono.empty();
+        }).validator(config -> {
+            validations.incrementAndGet();
+            return config + "-normalized";
+        }).build();
+
+        var prepared = definition.prepare("initial");
+        assertEquals(1, validations.get());
+        assertEquals(0, creations.get());
+        assertEquals("initial-normalized", prepared.config());
+
+        try (var runtime = FibraRuntime.create()) {
+            var instance = runtime.rootScope().context().plugins()
+                .mount("prepared", prepared);
+            instance.settled().block(TIMEOUT);
+            assertEquals(1, creations.get());
+            assertEquals(1, validations.get());
+            assertEquals("initial-normalized", instance.config());
+
+            instance.update("updated").block(TIMEOUT);
+            assertEquals(2, validations.get());
+            assertEquals("updated-normalized", instance.config());
+        }
+    }
+
+    @Test
     void updateDuringStartupConvergesToTheLatestConfigBeforeCompleting() throws Exception {
         var loading = reactor.core.publisher.Sinks.<Void>one();
         try (var runtime = FibraRuntime.create()) {
@@ -32,7 +63,7 @@ class PluginInstanceLifecycleContractTest {
                         : reactor.core.publisher.Mono.empty();
                 }).build();
             var instance = runtime.rootScope().context().plugins()
-                .mount("updating", definition, "old");
+                .mount("updating", definition.prepare("old"));
             try {
                 var first = instance.update("intermediate").toFuture();
                 var latest = instance.update("latest").toFuture();
@@ -69,7 +100,7 @@ class PluginInstanceLifecycleContractTest {
                         : reactor.core.publisher.Mono.empty();
                 }).require(key).build();
             var instance = runtime.rootScope().context().plugins()
-                .mount("consumer", definition, null);
+                .mount("consumer", definition.prepare(null));
             try {
                 var removal = registration.dispose().toFuture();
                 nextProvider.context().services().provide(key, "new");
@@ -108,12 +139,12 @@ class PluginInstanceLifecycleContractTest {
                 .build();
 
             var consumer = runtime.rootScope().context().plugins()
-                .mount("consumer-1", consumerDefinition, null);
+                .mount("consumer-1", consumerDefinition.prepare(null));
             assertSame(consumer, consumer.settled().block(TIMEOUT));
             assertEquals(PluginInstanceState.PENDING, consumer.state());
 
             var provider = runtime.rootScope().context().plugins()
-                .mount("provider-1", providerDefinition, null);
+                .mount("provider-1", providerDefinition.prepare(null));
             provider.settled().block(TIMEOUT);
             consumer.settled().block(TIMEOUT);
             assertEquals(PluginInstanceState.ACTIVE, provider.state());
@@ -142,7 +173,7 @@ class PluginInstanceLifecycleContractTest {
                     })
                 .build();
             var instance = runtime.rootScope().context().plugins()
-                .mount("recoverable-1", definition, "bad");
+                .mount("recoverable-1", definition.prepare("bad"));
 
             instance.settled().onErrorResume(error -> reactor.core.publisher.Mono.just(instance))
                 .block(TIMEOUT);
@@ -164,7 +195,7 @@ class PluginInstanceLifecycleContractTest {
                     return reactor.core.publisher.Mono.empty();
                 }).build();
 
-            runtime.rootScope().context().plugins().mount("identity-1", definition, null)
+            runtime.rootScope().context().plugins().mount("identity-1", definition.prepare(null))
                 .settled().block(TIMEOUT);
 
             assertEquals("identity-1", current.get());
@@ -184,7 +215,7 @@ class PluginInstanceLifecycleContractTest {
                     return reactor.core.publisher.Mono.empty();
                 }).build();
             var instance = runtime.rootScope().context().plugins()
-                .mount("supervised-1", definition, null);
+                .mount("supervised-1", definition.prepare(null));
             instance.settled().block(TIMEOUT);
 
             failure.tryEmitError(new IllegalStateException("sidecar exited"));
@@ -211,7 +242,7 @@ class PluginInstanceLifecycleContractTest {
                 .build();
 
             runtime.rootScope().context().withIntercept(COUNTER, "desired-value")
-                .plugins().mount("intercepted-1", definition, null)
+                .plugins().mount("intercepted-1", definition.prepare(null))
                 .settled().block(TIMEOUT);
 
             assertEquals("desired-value", seen.get());
@@ -227,7 +258,7 @@ class PluginInstanceLifecycleContractTest {
                     return reactor.core.publisher.Mono.empty();
                 }).build();
             var instance = runtime.rootScope().context().plugins()
-                .mount("invalid-provider-1", definition, null);
+                .mount("invalid-provider-1", definition.prepare(null));
 
             instance.settled().onErrorResume(error ->
                 reactor.core.publisher.Mono.just(instance)).block(TIMEOUT);

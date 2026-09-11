@@ -63,6 +63,25 @@ public final class PluginDefinition<C> {
         return validator == null ? config : validator.validate(config);
     }
 
+    /** 仅校验配置，不创建插件或注册资源；结果只属于当前装载域。 */
+    public Prepared<C> prepare(C config) {
+        return new Prepared<>(this, validate(config));
+    }
+
+    /** 由 definition 单次校验产生的挂载声明，不能绕过校验直接构造。 */
+    public static final class Prepared<C> {
+        private final PluginDefinition<C> definition;
+        private final C config;
+
+        private Prepared(PluginDefinition<C> definition, C config) {
+            this.definition = definition;
+            this.config = config;
+        }
+
+        public PluginDefinition<C> definition() { return definition; }
+        public C config() { return config; }
+    }
+
     public static final class Builder<C> {
         private final String name;
         private final Class<C> configType;

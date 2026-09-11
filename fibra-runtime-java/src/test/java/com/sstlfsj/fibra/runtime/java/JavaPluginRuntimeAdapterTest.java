@@ -53,7 +53,7 @@ class JavaPluginRuntimeAdapterTest {
         prepared.commit().block();
         try (var runtime = FibraRuntime.create()) {
             var instance = runtime.rootScope().context().plugins().mount("sample",
-                catalogEntry.definition(), null);
+                catalogEntry.definition().prepare(null));
             instance.settled().block();
             assertEquals(PluginInstanceState.ACTIVE, instance.state());
         }

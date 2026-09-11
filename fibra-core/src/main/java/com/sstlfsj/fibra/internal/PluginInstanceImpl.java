@@ -48,7 +48,7 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
     private Sinks.One<PluginInstance<C>> stable = completedSignal();
 
     PluginInstanceImpl(DefaultContext parentContext, String id,
-                       PluginDefinition<C> definition, C config) {
+                       PluginDefinition.Prepared<C> prepared) {
         runtime = parentContext.runtime();
         domain = parentContext.domain();
         scope = parentContext.scopeImpl();
@@ -56,8 +56,8 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner {
             throw new IllegalArgumentException("plugin instance id must not be blank");
         }
         this.id = id;
-        this.definition = Objects.requireNonNull(definition, "definition");
-        validatedConfig = definition.validate(config);
+        this.definition = Objects.requireNonNull(prepared, "prepared").definition();
+        validatedConfig = prepared.config();
         plugin = Objects.requireNonNull(definition.factory().create(),
             "plugin factory returned null");
         definition.requires().keySet().forEach(key -> requirements.put(key.name(), key));

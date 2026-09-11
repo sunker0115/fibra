@@ -2,11 +2,11 @@
 ## com.sstlfsj.fibra.engine.ApplyDeployment
 Compiled from "ApplyDeployment.java"
 public final class com.sstlfsj.fibra.engine.ApplyDeployment implements com.sstlfsj.fibra.engine.EngineCommand {
-  public static com.sstlfsj.fibra.engine.ApplyDeployment$Builder builder(com.sstlfsj.fibra.config.DesiredGraph);
+  public static com.sstlfsj.fibra.engine.ApplyDeployment$Builder builder(com.sstlfsj.fibra.config.DesiredInputGraph);
   public java.lang.String expectedRevision();
   public java.lang.String expectedDesiredRevision();
   public java.util.List<com.sstlfsj.fibra.engine.DeploymentArtifact> artifacts();
-  public com.sstlfsj.fibra.config.DesiredGraph graph();
+  public com.sstlfsj.fibra.config.DesiredInputGraph graph();
 }
 ## com.sstlfsj.fibra.engine.ApplyDeployment$Builder
 Compiled from "ApplyDeployment.java"
@@ -70,6 +70,11 @@ public final class com.sstlfsj.fibra.engine.DeploymentArtifact$Builder {
   public com.sstlfsj.fibra.engine.DeploymentArtifact$Builder source(java.nio.file.Path);
   public com.sstlfsj.fibra.engine.DeploymentArtifact build();
 }
+## com.sstlfsj.fibra.engine.DesiredBindingException
+Compiled from "DesiredBindingException.java"
+public final class com.sstlfsj.fibra.engine.DesiredBindingException extends java.lang.IllegalArgumentException {
+  public com.sstlfsj.fibra.config.ConfigDiagnostic diagnostic();
+}
 ## com.sstlfsj.fibra.engine.EngineCommand
 Compiled from "EngineCommand.java"
 public interface com.sstlfsj.fibra.engine.EngineCommand {
@@ -103,13 +108,13 @@ public final class com.sstlfsj.fibra.engine.EngineDiagnostics extends java.lang.
 ## com.sstlfsj.fibra.engine.EngineSnapshot
 Compiled from "EngineSnapshot.java"
 public final class com.sstlfsj.fibra.engine.EngineSnapshot extends java.lang.Record {
-  public com.sstlfsj.fibra.engine.EngineSnapshot(com.sstlfsj.fibra.engine.EngineState, com.sstlfsj.fibra.config.DesiredSourceSnapshot, com.sstlfsj.fibra.config.DesiredGraph, java.util.Map<java.lang.String, com.sstlfsj.fibra.engine.PluginInstanceSnapshot>, java.util.Map<com.sstlfsj.fibra.artifact.ArtifactId, com.sstlfsj.fibra.artifact.ArtifactRecord>, java.util.Map<com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.RuntimeGenerationSnapshot>, java.lang.String);
+  public com.sstlfsj.fibra.engine.EngineSnapshot(com.sstlfsj.fibra.engine.EngineState, com.sstlfsj.fibra.config.DesiredSourceSnapshot, com.sstlfsj.fibra.config.DesiredInputGraph, java.util.Map<java.lang.String, com.sstlfsj.fibra.engine.PluginInstanceSnapshot>, java.util.Map<com.sstlfsj.fibra.artifact.ArtifactId, com.sstlfsj.fibra.artifact.ArtifactRecord>, java.util.Map<com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.RuntimeGenerationSnapshot>, java.lang.String);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public com.sstlfsj.fibra.engine.EngineState state();
   public com.sstlfsj.fibra.config.DesiredSourceSnapshot desiredSource();
-  public com.sstlfsj.fibra.config.DesiredGraph desiredGraph();
+  public com.sstlfsj.fibra.config.DesiredInputGraph desiredGraph();
   public java.util.Map<java.lang.String, com.sstlfsj.fibra.engine.PluginInstanceSnapshot> instances();
   public java.util.Map<com.sstlfsj.fibra.artifact.ArtifactId, com.sstlfsj.fibra.artifact.ArtifactRecord> artifacts();
   public java.util.Map<com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.RuntimeGenerationSnapshot> runtimes();
@@ -198,25 +203,24 @@ public final class com.sstlfsj.fibra.engine.PluginCatalog {
   public static com.sstlfsj.fibra.engine.PluginCatalog combine(java.util.Collection<com.sstlfsj.fibra.engine.PluginCatalog>);
   public java.util.Optional<com.sstlfsj.fibra.engine.PluginCatalogEntry<?>> find(java.lang.String);
   public java.util.Collection<com.sstlfsj.fibra.engine.PluginCatalogEntry<?>> entries();
-  public com.sstlfsj.fibra.config.PluginDefinitionResolver resolver();
 }
 ## com.sstlfsj.fibra.engine.PluginCatalogEntry
 Compiled from "PluginCatalogEntry.java"
 public final class com.sstlfsj.fibra.engine.PluginCatalogEntry<C> {
   public com.sstlfsj.fibra.engine.PluginCatalogEntry(com.sstlfsj.fibra.PluginDefinition<C>, java.util.function.Function<java.lang.Object, C>);
   public com.sstlfsj.fibra.PluginDefinition<C> definition();
-  public C bind(java.lang.Object);
+  public com.sstlfsj.fibra.PluginDefinition$Prepared<C> bind(com.sstlfsj.fibra.value.LiteralValue);
 }
 ## com.sstlfsj.fibra.engine.PluginInstanceSnapshot
 Compiled from "PluginInstanceSnapshot.java"
 public final class com.sstlfsj.fibra.engine.PluginInstanceSnapshot extends java.lang.Record {
-  public com.sstlfsj.fibra.engine.PluginInstanceSnapshot(java.lang.String, java.lang.String, java.lang.Object, com.sstlfsj.fibra.PluginInstanceState, java.lang.String);
+  public com.sstlfsj.fibra.engine.PluginInstanceSnapshot(java.lang.String, java.lang.String, com.sstlfsj.fibra.value.LiteralValue, com.sstlfsj.fibra.PluginInstanceState, java.lang.String);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public java.lang.String instanceId();
   public java.lang.String definitionName();
-  public java.lang.Object config();
+  public com.sstlfsj.fibra.value.LiteralValue config();
   public com.sstlfsj.fibra.PluginInstanceState state();
   public java.lang.String failure();
 }
@@ -286,13 +290,13 @@ public final class com.sstlfsj.fibra.engine.RefreshDesired extends java.lang.Rec
 ## com.sstlfsj.fibra.engine.ReplaceDesiredGraph
 Compiled from "ReplaceDesiredGraph.java"
 public final class com.sstlfsj.fibra.engine.ReplaceDesiredGraph extends java.lang.Record implements com.sstlfsj.fibra.engine.EngineCommand {
-  public com.sstlfsj.fibra.engine.ReplaceDesiredGraph(java.lang.String, java.lang.String, com.sstlfsj.fibra.config.DesiredGraph);
+  public com.sstlfsj.fibra.engine.ReplaceDesiredGraph(java.lang.String, java.lang.String, com.sstlfsj.fibra.config.DesiredInputGraph);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public java.lang.String expectedRevision();
   public java.lang.String expectedDesiredRevision();
-  public com.sstlfsj.fibra.config.DesiredGraph graph();
+  public com.sstlfsj.fibra.config.DesiredInputGraph graph();
 }
 ## com.sstlfsj.fibra.engine.RuntimeArtifactInspection
 Compiled from "RuntimeArtifactInspection.java"

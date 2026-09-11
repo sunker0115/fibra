@@ -20,9 +20,9 @@ final class DefaultPlugins implements Plugins {
     }
 
     @Override
-    public <C> PluginInstance<C> mount(String instanceId, PluginDefinition<C> definition, C config) {
+    public <C> PluginInstance<C> mount(String instanceId, PluginDefinition.Prepared<C> prepared) {
         return context.runtime().lifecycle().call(() -> {
-            var instance = new PluginInstanceImpl<>(context, instanceId, definition, config);
+            var instance = new PluginInstanceImpl<>(context, instanceId, prepared);
             context.scopeImpl().addPlugin(instance);
             instance.initialize();
             if (context.owner() instanceof PluginInstanceImpl<?>) {

@@ -60,7 +60,7 @@ var provider = PluginDefinition.builder("provider", String.class,
     .provide(greeting)
     .build();
 
-var instance = scope.context().plugins().mount("provider", provider, "你好");
+var instance = scope.context().plugins().mount("provider", provider.prepare("你好"));
 instance.settled().block();
 var text = scope.context().services().reference(greeting)
     .invoke((invocation, service) -> service.greet("Fibra"));

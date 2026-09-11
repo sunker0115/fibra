@@ -52,6 +52,11 @@ class ArchitectureBaselineTest {
             () -> Class.forName("com.sstlfsj.fibra.pf4j.FibraPluginEntrypoint"));
         assertThrows(ClassNotFoundException.class,
             () -> Class.forName("com.sstlfsj.fibra.loader.pf4j.FibraPluginLoader"));
+        for (var type : List.of("DesiredEntry", "DesiredGraph", "PluginContract",
+            "PluginDefinitionResolver")) {
+            assertThrows(ClassNotFoundException.class,
+                () -> Class.forName("com.sstlfsj.fibra.config." + type));
+        }
     }
 
     @Test

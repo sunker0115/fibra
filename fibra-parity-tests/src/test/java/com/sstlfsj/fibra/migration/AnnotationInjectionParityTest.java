@@ -27,7 +27,7 @@ class AnnotationInjectionParityTest {
                 .inject(InjectedPlugin.class)
                 .build();
             var instance = runtime.rootScope().context().plugins()
-                .mount("field-injected", definition, null);
+                .mount("field-injected", definition.prepare(null));
 
             assertEquals(PluginInstanceState.PENDING, instance.state());
             runtime.rootScope().context().services().provide(VALUE, new Value(7));
@@ -47,7 +47,7 @@ class AnnotationInjectionParityTest {
                 .inject(MethodInjectedPlugin.class)
                 .build();
             var owner = runtime.rootScope().context().plugins()
-                .mount("method-injected", definition, null);
+                .mount("method-injected", definition.prepare(null));
             owner.settled().block();
             var child = owner.context().plugins()
                 .find("method-injected:inject:onValueAvailable").orElseThrow();

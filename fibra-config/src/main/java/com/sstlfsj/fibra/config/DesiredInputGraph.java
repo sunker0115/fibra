@@ -4,14 +4,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class DesiredGraph {
-    private final List<DesiredEntry> entries;
-    private final Map<String, DesiredEntry> byId;
+public final class DesiredInputGraph {
+    private final List<DesiredInputEntry> entries;
+    private final Map<String, DesiredInputEntry> byId;
 
-    public DesiredGraph(List<DesiredEntry> entries) {
+    public DesiredInputGraph(List<DesiredInputEntry> entries) {
         this.entries = List.copyOf(entries);
-        var index = new LinkedHashMap<String, DesiredEntry>();
-        for (var entry : entries) {
+        var index = new LinkedHashMap<String, DesiredInputEntry>();
+        for (var entry : this.entries) {
             if (index.putIfAbsent(entry.instanceId(), entry) != null) {
                 throw new IllegalArgumentException("duplicate instance id " + entry.instanceId());
             }
@@ -19,11 +19,11 @@ public final class DesiredGraph {
         byId = Map.copyOf(index);
     }
 
-    public List<DesiredEntry> entries() {
+    public List<DesiredInputEntry> entries() {
         return entries;
     }
 
-    public DesiredEntry require(String instanceId) {
+    public DesiredInputEntry require(String instanceId) {
         var entry = byId.get(instanceId);
         if (entry == null) {
             throw new IllegalArgumentException("unknown desired entry " + instanceId);
@@ -31,8 +31,8 @@ public final class DesiredGraph {
         return entry;
     }
 
-    public DesiredGraph upsert(DesiredEntry replacement) {
-        var next = new java.util.ArrayList<DesiredEntry>(entries.size() + 1);
+    public DesiredInputGraph upsert(DesiredInputEntry replacement) {
+        var next = new java.util.ArrayList<DesiredInputEntry>(entries.size() + 1);
         var replaced = false;
         for (var entry : entries) {
             if (entry.instanceId().equals(replacement.instanceId())) {
@@ -45,11 +45,20 @@ public final class DesiredGraph {
         if (!replaced) {
             next.add(replacement);
         }
-        return new DesiredGraph(next);
+        return new DesiredInputGraph(next);
     }
 
-    public DesiredGraph remove(String instanceId) {
-        return new DesiredGraph(entries.stream()
+    public DesiredInputGraph remove(String instanceId) {
+        return new DesiredInputGraph(entries.stream()
             .filter(entry -> !entry.instanceId().equals(instanceId)).toList());
     }
+
+    @Override
+    public boolean equals(Object candidate) {
+        return this == candidate || candidate instanceof DesiredInputGraph other
+            && entries.equals(other.entries);
+    }
+
+    @Override
+    public int hashCode() { return entries.hashCode(); }
 }

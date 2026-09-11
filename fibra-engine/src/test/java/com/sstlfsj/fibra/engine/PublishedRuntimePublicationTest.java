@@ -4,9 +4,10 @@ import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.bridge.ContributionId;
 import com.sstlfsj.fibra.bridge.ContributionKind;
 import com.sstlfsj.fibra.bridge.ContributionServices;
-import com.sstlfsj.fibra.config.DesiredEntry;
-import com.sstlfsj.fibra.config.DesiredGraph;
+import com.sstlfsj.fibra.config.DesiredInputEntry;
+import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
+import com.sstlfsj.fibra.value.LiteralValue;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
@@ -83,9 +84,9 @@ class PublishedRuntimePublicationTest {
             }).require(ContributionServices.REGISTRAR).build();
     }
 
-    private static DesiredGraph graph(String prefix) {
-        return new DesiredGraph(List.of(DesiredEntry.builder("command", "command")
-            .config(prefix).build()));
+    private static DesiredInputGraph graph(String prefix) {
+        return new DesiredInputGraph(List.of(DesiredInputEntry.builder("command", "command")
+            .config(LiteralValue.of(prefix)).build()));
     }
 
     private record CommandDescriptor(String title) {

@@ -12,8 +12,10 @@ import com.sstlfsj.fibra.artifact.ArtifactRecord;
 import com.sstlfsj.fibra.artifact.ArtifactStore;
 import com.sstlfsj.fibra.artifact.RuntimeId;
 import com.sstlfsj.fibra.config.DesiredCompilation;
-import com.sstlfsj.fibra.config.DesiredEntry;
-import com.sstlfsj.fibra.config.DesiredGraph;
+import com.sstlfsj.fibra.config.ConfigDiagnostic;
+import com.sstlfsj.fibra.config.ConfigStage;
+import com.sstlfsj.fibra.config.DesiredInputEntry;
+import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.DesiredSourceSnapshot;
 import com.sstlfsj.fibra.config.DesiredStateRepository;
 import com.sstlfsj.fibra.config.DesiredStateWriteTransaction;
@@ -153,8 +155,7 @@ public final class FibraEngine implements AutoCloseable {
                     catalogs, runtimeSnapshots));
             }
             var command = new RefreshDesired(null);
-            builder.participant(desiredReadParticipant(command, compilation,
-                    () -> combinedCatalog(catalogs)))
+            builder.participant(desiredReadParticipant(command, compilation))
                 .participant(coreParticipant(compilation, candidate, previous,
                     () -> combinedCatalog(catalogs)))
                 .verify(() -> verify(candidate.value))
@@ -215,8 +216,7 @@ public final class FibraEngine implements AutoCloseable {
                 replace.expectedDesiredRevision(), replace.graph(), compilation,
                 desiredWrite));
         } else {
-            builder.participant(desiredReadParticipant(command, compilation,
-                () -> effectiveCatalog));
+            builder.participant(desiredReadParticipant(command, compilation));
         }
         builder.participant(coreParticipant(compilation, candidate, previous,
                 () -> effectiveCatalog))
@@ -433,8 +433,7 @@ public final class FibraEngine implements AutoCloseable {
             .participant(runtimeParticipant(command, runtimeId, adapter, candidateArtifacts,
                 runtimePrepared, candidateCatalog, candidateRuntimeCatalogs,
                 candidateRuntimeSnapshots))
-            .participant(desiredReadParticipant(command, compilation,
-                () -> candidateCatalog.value))
+            .participant(desiredReadParticipant(command, compilation))
             .participant(coreParticipant(compilation, candidate, previous,
                 () -> candidateCatalog.value))
             .verify(() -> verify(candidate.value))
@@ -594,9 +593,7 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private ChangeParticipant desiredReadParticipant(EngineCommand command,
-                                                     Holder<DesiredCompilation> output,
-                                                     java.util.function.Supplier<PluginCatalog>
-                                                         effectiveCatalog) {
+                                                     Holder<DesiredCompilation> output) {
         return new ChangeParticipant() {
             @Override
             public String name() {
@@ -606,7 +603,7 @@ public final class FibraEngine implements AutoCloseable {
             @Override
             public Mono<PreparedChange> prepare() {
                 checkRevision(command.expectedRevision());
-                output.value = desiredRepository.load(effectiveCatalog.get().resolver());
+                output.value = desiredRepository.load();
                 return Mono.just(noop("desired"));
             }
         };
@@ -614,7 +611,7 @@ public final class FibraEngine implements AutoCloseable {
 
     private ChangeParticipant desiredWriteParticipant(String expectedRevision,
                                                       String expectedDesiredRevision,
-                                                      DesiredGraph graph,
+                                                      DesiredInputGraph graph,
                                                       Holder<DesiredCompilation> output,
                                                       Holder<DesiredStateWriteTransaction> write) {
         return new ChangeParticipant() {
@@ -710,6 +707,7 @@ public final class FibraEngine implements AutoCloseable {
     private Mono<Generation> prepareGeneration(DesiredCompilation compilation,
                                                PluginCatalog effectiveCatalog) {
         return Mono.defer(() -> {
+            var bound = bind(compilation, effectiveCatalog);
             var name = "engine-generation-"
                 + (Long.parseLong(publishedState.get().view().generationRevision()) + 1);
             var domain = runtime.openDomain(name);
@@ -721,15 +719,8 @@ public final class FibraEngine implements AutoCloseable {
                     scope.context(), binding));
                 scope.context().services().provide(
                     ContributionServices.REGISTRAR, directory);
-                for (var entry : compilation.graph().entries()) {
-                    if (!entry.enabled()) {
-                        continue;
-                    }
-                    var catalogEntry = effectiveCatalog.find(entry.definitionName())
-                        .orElseThrow(() ->
-                        new IllegalArgumentException("unknown plugin definition "
-                            + entry.definitionName()));
-                    mounted.put(entry.instanceId(), mount(scope, entry, catalogEntry));
+                for (var entry : bound) {
+                    mounted.put(entry.input().instanceId(), mount(scope, entry));
                 }
             } catch (RuntimeException | Error failure) {
                 return domain.closeAsync().then(directory.closeAsync())
@@ -753,10 +744,38 @@ public final class FibraEngine implements AutoCloseable {
                 ? awaitSettled(instances) : Mono.empty()));
     }
 
-    private static PluginInstance<?> mount(Scope scope, DesiredEntry entry,
-                                           PluginCatalogEntry<?> catalogEntry) {
-        var context = context(scope.context(), entry, catalogEntry.definition());
-        return mountTyped(context, entry.instanceId(), catalogEntry, entry.config());
+    private static List<BoundDesiredEntry<?>> bind(DesiredCompilation compilation,
+                                                   PluginCatalog catalog) {
+        var bound = new ArrayList<BoundDesiredEntry<?>>();
+        for (var entry : compilation.graph().entries()) {
+            if (!entry.enabled()) {
+                continue;
+            }
+            var source = compilation.entrySources().get(entry.instanceId());
+            var contract = catalog.find(entry.definitionName()).orElseThrow(() ->
+                new DesiredBindingException(new ConfigDiagnostic(ConfigStage.COMPILE,
+                    "DEFINITION_NOT_FOUND", "unknown plugin definition " + entry.definitionName(),
+                    source, entry.instanceId()), null));
+            try {
+                bound.add(bind(entry, contract));
+            } catch (RuntimeException failure) {
+                throw new DesiredBindingException(new ConfigDiagnostic(ConfigStage.COMPILE,
+                    "CONFIG_BIND_FAILED", "cannot bind config for " + entry.definitionName(),
+                    source, entry.instanceId()), failure);
+            }
+        }
+        return List.copyOf(bound);
+    }
+
+    private static <C> BoundDesiredEntry<C> bind(DesiredInputEntry input,
+                                                 PluginCatalogEntry<C> catalogEntry) {
+        return new BoundDesiredEntry<>(input, catalogEntry.bind(input.config()));
+    }
+
+    private static <C> PluginInstance<C> mount(Scope scope, BoundDesiredEntry<C> entry) {
+        var definition = entry.prepared().definition();
+        var context = context(scope.context(), entry.input(), definition);
+        return context.plugins().mount(entry.input().instanceId(), entry.prepared());
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
@@ -765,7 +784,7 @@ public final class FibraEngine implements AutoCloseable {
         context.services().provide(binding.key(), binding.value());
     }
 
-    private static Context context(Context initial, DesiredEntry entry,
+    private static Context context(Context initial, DesiredInputEntry entry,
                                    PluginDefinition<?> definition) {
         var result = initial;
         var keys = new LinkedHashSet<ServiceKey<?>>();
@@ -773,20 +792,13 @@ public final class FibraEngine implements AutoCloseable {
         keys.addAll(definition.provides());
         for (var key : keys) {
             if (entry.realms().containsKey(key.name())) {
-                result = result.withRealm(key, entry.realms().get(key.name()));
+                result = result.withRealm(key, entry.realms().get(key.name()).toJava());
             }
             if (entry.intercepts().containsKey(key.name())) {
-                result = result.withIntercept(key, entry.intercepts().get(key.name()));
+                result = result.withIntercept(key, entry.intercepts().get(key.name()).toJava());
             }
         }
         return result;
-    }
-
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private static PluginInstance<?> mountTyped(Context context, String instanceId,
-                                                PluginCatalogEntry catalogEntry,
-                                                Object config) {
-        return context.plugins().mount(instanceId, catalogEntry.definition(), config);
     }
 
     private Mono<Void> verify(Generation candidate) {
@@ -878,7 +890,8 @@ public final class FibraEngine implements AutoCloseable {
     private static Map<String, PluginInstanceSnapshot> observe(Generation generation) {
         var observed = new LinkedHashMap<String, PluginInstanceSnapshot>();
         generation.instances().forEach((id, instance) -> observed.put(id,
-            new PluginInstanceSnapshot(id, instance.definition().name(), instance.config(),
+            new PluginInstanceSnapshot(id, instance.definition().name(),
+                generation.compilation().graph().require(id).config(),
                 instance.state(), instance.failure().map(Throwable::toString).orElse(null))));
         return Map.copyOf(observed);
     }
@@ -961,7 +974,7 @@ public final class FibraEngine implements AutoCloseable {
         var domain = generation.domain().snapshot();
         var entries = generation.compilation().graph().entries().stream()
             .collect(java.util.stream.Collectors.toMap(
-                DesiredEntry::instanceId, value -> value));
+                DesiredInputEntry::instanceId, value -> value));
         var plugins = domain.plugins().stream().map(plugin -> {
             var requirement = entries.get(plugin.instanceId()).publicationRequirement();
             var impact = plugin.state() == PluginInstanceState.PENDING
@@ -1118,7 +1131,7 @@ public final class FibraEngine implements AutoCloseable {
     private static EngineSnapshot emptySnapshot() {
         return new EngineSnapshot(EngineState.NEW,
             new DesiredSourceSnapshot("unstarted", "0", Set.of()),
-            new DesiredGraph(List.of()), Map.of(), Map.of(), Map.of(), null);
+            new DesiredInputGraph(List.of()), Map.of(), Map.of(), Map.of(), null);
     }
 
     public static final class Builder {
@@ -1286,6 +1299,9 @@ public final class FibraEngine implements AutoCloseable {
                                   ContributionRoutes routes, Generation candidate,
                                   Generation draining) {
     }
+
+    private record BoundDesiredEntry<C>(DesiredInputEntry input,
+                                        PluginDefinition.Prepared<C> prepared) { }
 
     private static final class Holder<T> {
         private T value;

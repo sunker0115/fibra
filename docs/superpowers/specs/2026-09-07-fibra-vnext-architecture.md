@@ -375,9 +375,20 @@ enabled、publication requirement、literal config、realm 和 intercept。inclu
 list 和字符串键 object。容器递归不可变，对象键规范排序，数字规范化；规范编码必须与插入顺序、机器
 路径和 Java 对象身份无关。配置、部署清单和公开描述快照使用同一数据边界，禁止浅拷贝冒充不可变。
 
-绑定在候选代内进行：按清单创建目标 runtime catalog，再将 `DesiredInputGraph` 绑定为
-`BoundDesiredGraph`。typed config 与 requires/provides 的 `ServiceKey<Class>` 仅由该代持有，不进入
-持久清单或宿主快照，也不跨 ClassSpace 复用。
+绑定在候选代内进行：按清单创建目标 runtime catalog，合并程序内建 definition，然后逐个绑定
+`DesiredInputGraph` 中启用的声明。停用声明不查找 definition、不绑定配置，允许保留尚未安装的插件。
+全部启用声明绑定、校验成功后才创建 RuntimeDomain 并挂载，避免后续配置错误发生前已有插件启动。
+绑定结果是 Engine 临时持有的代内挂载声明，不引入另一份公开或持久化图。typed config 与
+requires/provides 的 `ServiceKey<Class>` 不进入持久清单或宿主快照，也不跨 ClassSpace 复用。
+
+配置校验器可以返回规范化后的值，不要求幂等。`PluginDefinition.prepare(config)` 只校验一次，
+产生构造受控的 `PluginDefinition.Prepared<C>`，不创建插件、不注册资源；`Plugins.mount(id, prepared)`
+消费该结果并创建实例，不重复校验。纯内核和 Engine 使用同一挂载协议，显式 update 对新输入重新
+校验一次。Prepared 只属于当前装载域，不是可序列化或可跨代缓存的部署输入。
+
+`DesiredCompilation.entrySources` 单独保存实例的来源路径，用于绑定失败的首次诊断。路径不进入
+`DesiredInputEntry`、输入图相等性或部署内容摘要。宿主实例快照返回输入图中的 `LiteralValue`，
+不能从运行实例的可变 typed config 反推声明。
 
 `fibra-artifact` 只管理通用 identity、版本、摘要、不可变内容及其准备和回收状态。它不知道 JAR、npm、
 ClassLoader 或 Process。配置与 artifact 互不依赖，由 Engine 在 ChangeSet 中对齐。

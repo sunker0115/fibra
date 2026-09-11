@@ -85,7 +85,7 @@ class EffectCleanupContractTest {
             return Mono.empty();
         }).build();
         try (var runtime = FibraRuntime.create()) {
-            runtime.rootScope().context().plugins().mount("supervised", definition, "")
+            runtime.rootScope().context().plugins().mount("supervised", definition.prepare(""))
                 .settled().block(TIMEOUT);
             handle.get().dispose().block(TIMEOUT);
             StepVerifier.create(handle.get().ready()).expectNext(handle.get())

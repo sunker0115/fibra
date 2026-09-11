@@ -4,9 +4,10 @@ import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.bridge.ContributionId;
 import com.sstlfsj.fibra.bridge.ContributionKind;
 import com.sstlfsj.fibra.bridge.ContributionServices;
-import com.sstlfsj.fibra.config.DesiredEntry;
-import com.sstlfsj.fibra.config.DesiredGraph;
+import com.sstlfsj.fibra.config.DesiredInputEntry;
+import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
+import com.sstlfsj.fibra.value.LiteralValue;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
@@ -29,8 +30,8 @@ class PublishedRuntimeLeaseTest {
     void publishesReplacementBeforeWaitingForOldInvocationToDrain() throws Exception {
         var response = Sinks.<String>one();
         var repository = new InMemoryDesiredStateRepository(
-            graph(new Behavior("old-", response, null)));
-        try (var engine = engine(repository)) {
+            graph("old-"));
+        try (var engine = engine(repository, response, null)) {
             var first = engine.start().block(TIMEOUT);
             var invocation = engine.published().invoke(
                 first.viewRevision(), COMMAND, ID, "value").toFuture();
@@ -40,7 +41,7 @@ class PublishedRuntimeLeaseTest {
                 .next().toFuture();
             var replacement = engine.submit(new ReplaceDesiredGraph(
                 first.viewRevision(), first.engine().desiredSource().revision(),
-                graph(new Behavior("new-", null, null)))).toFuture();
+                graph("new-"))).toFuture();
 
             var second = nextView.get(5, TimeUnit.SECONDS);
             assertFalse(replacement.isDone());
@@ -63,8 +64,8 @@ class PublishedRuntimeLeaseTest {
         throws Exception {
         var cleanup = Sinks.<Void>one();
         var repository = new InMemoryDesiredStateRepository(
-            graph(new Behavior("old-", null, cleanup)));
-        try (var engine = engine(repository)) {
+            graph("old-"));
+        try (var engine = engine(repository, null, cleanup)) {
             var first = engine.start().block(TIMEOUT);
             var invocation = engine.published().invoke(
                 first.viewRevision(), COMMAND, ID, "value").toFuture();
@@ -78,7 +79,7 @@ class PublishedRuntimeLeaseTest {
                 .next().toFuture();
             var replacement = engine.submit(new ReplaceDesiredGraph(
                 first.viewRevision(), first.engine().desiredSource().revision(),
-                graph(new Behavior("new-", null, null)))).toFuture();
+                graph("new-"))).toFuture();
             nextView.get(5, TimeUnit.SECONDS);
             assertFalse(replacement.isDone());
 
@@ -88,37 +89,35 @@ class PublishedRuntimeLeaseTest {
         }
     }
 
-    private static FibraEngine engine(InMemoryDesiredStateRepository repository) {
+    private static FibraEngine engine(InMemoryDesiredStateRepository repository,
+                                      Sinks.One<String> response, Sinks.One<Void> cleanup) {
         return FibraEngine.builder(repository)
             .catalog(PluginCatalog.of(new PluginCatalogEntry<>(
-                definition(), value -> (Behavior) value)))
+                definition(response, cleanup), value -> (String) value)))
             .build();
     }
 
-    private static PluginDefinition<Behavior> definition() {
-        return PluginDefinition.builder("command", Behavior.class,
-            () -> (context, behavior) -> {
+    private static PluginDefinition<String> definition(Sinks.One<String> response,
+                                                        Sinks.One<Void> cleanup) {
+        return PluginDefinition.builder("command", String.class,
+            () -> (context, prefix) -> {
                 var provider = context.plugins().current().orElseThrow();
                 return context.services().require(ContributionServices.REGISTRAR)
                     .register(context, COMMAND, provider.id(), ID.localName(),
                         new Descriptor("Run"), (invocation, input) -> {
-                            if (behavior.cleanup() != null) {
-                                invocation.effects().add(behavior.cleanup()::asMono);
+                            if ("old-".equals(prefix) && cleanup != null) {
+                                invocation.effects().add(cleanup::asMono);
                             }
-                            var result = behavior.prefix() + input;
-                            return behavior.response() == null ? Mono.just(result)
-                                : behavior.response().asMono().thenReturn(result);
+                            var result = prefix + input;
+                            return !"old-".equals(prefix) || response == null ? Mono.just(result)
+                                : response.asMono().thenReturn(result);
                         }).then();
             }).require(ContributionServices.REGISTRAR).build();
     }
 
-    private static DesiredGraph graph(Behavior behavior) {
-        return new DesiredGraph(List.of(DesiredEntry.builder("command", "command")
-            .config(behavior).build()));
-    }
-
-    private record Behavior(String prefix, Sinks.One<String> response,
-                            Sinks.One<Void> cleanup) {
+    private static DesiredInputGraph graph(String prefix) {
+        return new DesiredInputGraph(List.of(DesiredInputEntry.builder("command", "command")
+            .config(LiteralValue.of(prefix)).build()));
     }
 
     private record Descriptor(String title) {

@@ -26,7 +26,7 @@ class AnnotationInjectionContractTest {
                 .inject(InjectedPlugin.class)
                 .build();
             var instance = runtime.rootScope().context().plugins()
-                .mount("field", definition, null);
+                .mount("field", definition.prepare(null));
 
             assertEquals(PluginInstanceState.PENDING, instance.state());
             runtime.rootScope().context().services().provide(VALUE, new Value(7));
@@ -47,7 +47,7 @@ class AnnotationInjectionContractTest {
                 .inject(MethodInjectedPlugin.class)
                 .build();
             var owner = runtime.rootScope().context().plugins()
-                .mount("method", definition, starts);
+                .mount("method", definition.prepare(starts));
             owner.settled().block();
             var child = owner.context().plugins()
                 .find("method:inject:onValue").orElseThrow();

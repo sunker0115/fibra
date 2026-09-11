@@ -112,7 +112,7 @@ class LoggerParityTest {
                     pluginContext.logging().exporter(LogExporter.to(captured::add));
                     return Mono.empty();
                 }).build();
-            var plugin = context.plugins().mount("exporter-owner", definition, null);
+            var plugin = context.plugins().mount("exporter-owner", definition.prepare(null));
             plugin.settled().block();
 
             context.logger().info("before");

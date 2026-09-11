@@ -78,7 +78,7 @@ class RuntimeScopeContractTest {
         var definition = PluginDefinition.builder("snapshot", String.class,
             () -> (context, config) -> reactor.core.publisher.Mono.empty()).build();
         var instance = runtime.rootScope().context().plugins()
-            .mount("snapshot-1", definition, "value");
+            .mount("snapshot-1", definition.prepare("value"));
         instance.settled().block(TIMEOUT);
 
         runtime.closeAsync().block(TIMEOUT);

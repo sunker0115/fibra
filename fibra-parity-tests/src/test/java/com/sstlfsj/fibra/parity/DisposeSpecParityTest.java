@@ -44,7 +44,7 @@ class DisposeSpecParityTest {
             handle.set(context.effects().effect(() -> Disposables.from(calls::incrementAndGet), "test"));
             return Mono.empty();
         }).build();
-        var instance = runtime.rootScope().context().plugins().mount("test", definition, "");
+        var instance = runtime.rootScope().context().plugins().mount("test", definition.prepare(""));
         instance.settled().block(TIMEOUT);
         assertEquals(new EffectMetadata("test", List.of()), handle.get().metadata());
         assertEquals(0, calls.get());

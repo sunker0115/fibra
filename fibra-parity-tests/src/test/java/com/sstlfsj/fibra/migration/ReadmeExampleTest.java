@@ -26,7 +26,7 @@ class ReadmeExampleTest {
                     })
                 .require(greeting)
                 .build();
-            var consumer = root.plugins().mount("consumer", definition, null);
+            var consumer = root.plugins().mount("consumer", definition.prepare(null));
 
             consumer.settled().block();
             assertEquals("你好，Fibra", observed[0]);

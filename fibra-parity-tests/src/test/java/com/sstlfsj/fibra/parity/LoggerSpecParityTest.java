@@ -123,7 +123,7 @@ class LoggerSpecParityTest extends CordisSpecSupport {
                 context.logger().debug("from init");
                 return Mono.empty();
             }).build();
-        await(root.plugins().mount("foo:driver", definition, null));
+        await(root.plugins().mount("foo:driver", definition.prepare(null)));
         assertEquals("foo:driver", captured.getLast().name());
     }
 

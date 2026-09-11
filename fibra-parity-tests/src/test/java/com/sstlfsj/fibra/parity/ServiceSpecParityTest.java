@@ -29,14 +29,14 @@ class ServiceSpecParityTest extends CordisSpecSupport {
                     return Mono.empty();
                 })
             .require(FOO).build();
-        var consumer = root.plugins().mount("consumer", consumerDefinition, null);
+        var consumer = root.plugins().mount("consumer", consumerDefinition.prepare(null));
         var providerDefinition = PluginDefinition.builder("provider", Void.class,
                 () -> (context, config) -> {
                     context.services().provide(FOO, new Counter());
                     return gate.asMono();
                 })
             .provide(FOO).build();
-        var provider = root.plugins().mount("provider", providerDefinition, null);
+        var provider = root.plugins().mount("provider", providerDefinition.prepare(null));
         assertEquals(PluginInstanceState.STARTING, provider.state());
         assertEquals(PluginInstanceState.PENDING, consumer.state());
         gate.tryEmitEmpty();
@@ -58,7 +58,7 @@ class ServiceSpecParityTest extends CordisSpecSupport {
                     return Mono.empty();
                 })
             .require(FOO).build();
-        var caller = root.plugins().mount("caller", definition, null);
+        var caller = root.plugins().mount("caller", definition.prepare(null));
         await(caller);
         assertEquals(0, root.services().require(FOO).value());
         caller.dispose().block(TIMEOUT);
@@ -86,12 +86,12 @@ class ServiceSpecParityTest extends CordisSpecSupport {
                     return Mono.empty();
                 })
             .provide(FOO).build();
-        var first = root.plugins().mount("first", definition, null);
+        var first = root.plugins().mount("first", definition.prepare(null));
         await(first);
         assertNotNull(root.services().require(FOO));
         first.dispose().block(TIMEOUT);
         assertTrue(root.services().find(FOO).isEmpty());
-        var second = root.plugins().mount("second", definition, null);
+        var second = root.plugins().mount("second", definition.prepare(null));
         await(second);
         assertNotNull(root.services().require(FOO));
     }
@@ -115,8 +115,8 @@ class ServiceSpecParityTest extends CordisSpecSupport {
                     return Mono.empty();
                 })
             .require(FOO).require(QUX).provide(BAR).build();
-        await(root.plugins().mount("foo", fooDefinition, null));
-        await(root.plugins().mount("bar", barDefinition, null));
+        await(root.plugins().mount("foo", fooDefinition.prepare(null)));
+        await(root.plugins().mount("bar", barDefinition.prepare(null)));
         assertEquals(1, fooCalls.get());
         assertEquals(1, barCalls.get());
     }

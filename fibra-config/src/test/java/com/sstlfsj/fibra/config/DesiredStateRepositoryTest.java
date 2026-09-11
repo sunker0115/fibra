@@ -16,11 +16,11 @@ class DesiredStateRepositoryTest {
     @Test
     void memoryRepositoryUsesOptimisticTransactionalReplacement() {
         var repository = InMemoryDesiredStateRepository.empty();
-        var initial = repository.load(name -> java.util.Optional.empty());
-        var graph = new DesiredGraph(List.of(entry("sample")));
+        var initial = repository.load();
+        var graph = new DesiredInputGraph(List.of(entry("sample")));
 
         try (var ignored = repository.prepareReplace(initial.snapshot().revision(), graph)) {
-            assertEquals(0, repository.load(name -> java.util.Optional.empty())
+            assertEquals(0, repository.load()
                 .graph().entries().size());
         }
 
@@ -32,7 +32,7 @@ class DesiredStateRepositoryTest {
 
         assertTrue(repository.writable());
         assertEquals(List.of("sample"), committed.graph().entries().stream()
-            .map(DesiredEntry::instanceId).toList());
+            .map(DesiredInputEntry::instanceId).toList());
         assertThrows(ConfigException.class,
             () -> repository.prepareReplace(initial.snapshot().revision(), graph));
     }
@@ -40,15 +40,15 @@ class DesiredStateRepositoryTest {
     @Test
     void memoryRepositoryCompensatesACommittedParticipantBeforeGlobalCommit() {
         var repository = InMemoryDesiredStateRepository.empty();
-        var initial = repository.load(name -> java.util.Optional.empty());
-        var graph = new DesiredGraph(List.of(entry("sample")));
+        var initial = repository.load();
+        var graph = new DesiredInputGraph(List.of(entry("sample")));
         var transaction = repository.prepareReplace(initial.snapshot().revision(), graph);
 
         transaction.commit();
         transaction.rollback();
         transaction.rollback();
 
-        var restored = repository.load(name -> java.util.Optional.empty());
+        var restored = repository.load();
         assertEquals(initial.snapshot().revision(), restored.snapshot().revision());
         assertEquals(List.of(), restored.graph().entries());
     }
@@ -56,20 +56,20 @@ class DesiredStateRepositoryTest {
     @Test
     void compensationRejectsALaterWriteAndCloseKeepsCommittedState() {
         var repository = InMemoryDesiredStateRepository.empty();
-        var initial = repository.load(name -> java.util.Optional.empty());
+        var initial = repository.load();
         var first = repository.prepareReplace(initial.snapshot().revision(),
-            new DesiredGraph(List.of(entry("first"))));
+            new DesiredInputGraph(List.of(entry("first"))));
         var firstResult = first.commit();
         first.close();
-        assertEquals(firstResult, repository.load(name -> java.util.Optional.empty()));
+        assertEquals(firstResult, repository.load());
 
         var second = repository.prepareReplace(firstResult.snapshot().revision(),
-            new DesiredGraph(List.of(entry("second"))));
+            new DesiredInputGraph(List.of(entry("second"))));
         var secondResult = second.commit();
         assertThrows(ConfigException.class, first::rollback);
-        assertEquals(secondResult, repository.load(name -> java.util.Optional.empty()));
+        assertEquals(secondResult, repository.load());
         second.close();
-        assertEquals(secondResult, repository.load(name -> java.util.Optional.empty()));
+        assertEquals(secondResult, repository.load());
     }
 
     @Test
@@ -77,17 +77,13 @@ class DesiredStateRepositoryTest {
         var root = work.resolve("fibra.yaml");
         Files.writeString(root, "- id: sample\n  plugin: sample\n");
         var repository = new FileDesiredStateRepository(root, ConfigLimits.defaults());
-        var resolver = (PluginDefinitionResolver) name -> java.util.Optional.of(
-            PluginContract.builder("sample").configType(Void.class)
-                .binder(value -> null).build());
-
         assertFalse(repository.writable());
-        assertEquals(1, repository.load(resolver).graph().entries().size());
+        assertEquals(1, repository.load().graph().entries().size());
         assertThrows(UnsupportedOperationException.class,
-            () -> repository.prepareReplace("revision", new DesiredGraph(List.of())));
+            () -> repository.prepareReplace("revision", new DesiredInputGraph(List.of())));
     }
 
-    private static DesiredEntry entry(String id) {
-        return DesiredEntry.builder(id, "sample").source(Path.of("memory")).build();
+    private static DesiredInputEntry entry(String id) {
+        return DesiredInputEntry.builder(id, "sample").build();
     }
 }

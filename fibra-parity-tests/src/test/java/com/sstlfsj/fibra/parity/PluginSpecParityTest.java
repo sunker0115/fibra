@@ -31,7 +31,7 @@ class PluginSpecParityTest extends CordisSpecSupport {
                 observed.set(config);
                 return Mono.empty();
             }).build();
-        await(root.plugins().mount("functional", definition, "bar"));
+        await(root.plugins().mount("functional", definition.prepare("bar")));
         assertEquals("bar", observed.get());
     }
 
@@ -39,7 +39,7 @@ class PluginSpecParityTest extends CordisSpecSupport {
     void applyObjectPlugin() {
         var definition = PluginDefinition.builder("object", String.class,
             ObjectPlugin::new).build();
-        var instance = root.plugins().mount("object", definition, "foo");
+        var instance = root.plugins().mount("object", definition.prepare("foo"));
         await(instance);
         assertEquals("foo", instance.config());
     }
@@ -66,7 +66,7 @@ class PluginSpecParityTest extends CordisSpecSupport {
                 }));
                 return Mono.empty();
             }).build();
-        var instance = root.plugins().mount("owner", definition, null);
+        var instance = root.plugins().mount("owner", definition.prepare(null));
         await(instance);
         instance.dispose().block(TIMEOUT);
         assertEquals(0, attempts.get());
@@ -80,7 +80,7 @@ class PluginSpecParityTest extends CordisSpecSupport {
                 observed.set(context.plugins().current().orElseThrow().id());
                 return Mono.empty();
             }).build();
-        await(root.plugins().mount("named", definition, null));
+        await(root.plugins().mount("named", definition.prepare(null)));
         assertEquals("named", observed.get());
         assertTrue(root.plugins().current().isEmpty());
     }
@@ -89,7 +89,7 @@ class PluginSpecParityTest extends CordisSpecSupport {
     void ctxRegistry() {
         var definition = PluginDefinition.builder("registry", Void.class,
             () -> (context, config) -> Mono.empty()).build();
-        var instance = root.plugins().mount("registry", definition, null);
+        var instance = root.plugins().mount("registry", definition.prepare(null));
         assertEquals(1, root.plugins().instances().size());
         assertSameInstance(instance);
     }
@@ -106,10 +106,10 @@ class PluginSpecParityTest extends CordisSpecSupport {
                         child.events().on(EVENT, calls::incrementAndGet);
                         return Mono.empty();
                     }).build();
-                parent.plugins().mount("child", childDefinition, null);
+                parent.plugins().mount("child", childDefinition.prepare(null));
                 return Mono.empty();
             }).build();
-        var parent = root.plugins().mount("parent", parentDefinition, null);
+        var parent = root.plugins().mount("parent", parentDefinition.prepare(null));
         await(parent);
         root.events().emit(EVENT, Signal::call);
         assertEquals(3, calls.get());
@@ -126,12 +126,12 @@ class PluginSpecParityTest extends CordisSpecSupport {
                 context.events().on(EVENT, () -> { });
                 return Mono.empty();
             }).build();
-        var first = root.plugins().mount("first", definition, null);
+        var first = root.plugins().mount("first", definition.prepare(null));
         await(first);
         assertEquals(1, root.plugins().instances().size());
         first.dispose().block(TIMEOUT);
         assertTrue(root.plugins().instances().isEmpty());
-        var second = root.plugins().mount("second", definition, null);
+        var second = root.plugins().mount("second", definition.prepare(null));
         await(second);
         assertEquals(1, root.plugins().instances().size());
     }
@@ -144,7 +144,7 @@ class PluginSpecParityTest extends CordisSpecSupport {
                 context.effects().add(Disposables.from(disposed::incrementAndGet));
                 return Mono.empty();
             }).build();
-        var child = root.plugins().mount("child", definition, null);
+        var child = root.plugins().mount("child", definition.prepare(null));
         await(child);
         runtime.closeAsync().block(TIMEOUT);
         assertEquals(PluginInstanceState.DISPOSED, child.state());
@@ -163,7 +163,7 @@ class PluginSpecParityTest extends CordisSpecSupport {
                 context.effects().add(Disposables.from(() -> stopped.set(true)));
                 return Mono.empty();
             }).build();
-        var instance = root.plugins().mount("class-plugin", definition, null);
+        var instance = root.plugins().mount("class-plugin", definition.prepare(null));
         await(instance);
         assertTrue(started.get());
         assertFalse(stopped.get());
