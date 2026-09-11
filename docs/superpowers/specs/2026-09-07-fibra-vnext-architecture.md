@@ -573,7 +573,9 @@ ClassLoader 或 Process。配置与 artifact 互不依赖，由 Engine 在 Chang
 
 - executable 制品显式声明唯一 entrypoint；
 - contract-only 制品省略 entrypoint，只作为依赖图和 ClassSpace 节点；
-- 每制品独立 ClassLoader，按显式依赖图委派；宿主导出的公共契约由 parent 唯一定义；
+- 每制品独立 ClassLoader，按显式依赖图委派；父优先前缀先查 parent，父加载器没有该类时再查本制品与
+  声明依赖。宿主实际导出的公共契约因此仍由 parent 唯一定义，动态 contract 不因使用同一产品命名空间
+  而被误当成宿主必备类；
 - 禁止扫描全部 class 猜入口，不生成 extension index，不维护第二套插件状态机；
 - 替换变化制品及其反向依赖闭包，闭包外装载器保留；旧类型仍被实例、服务槽或调用持有时不得回收；
 - close-and-collect 必须有可观察门禁。ClassLoader 只提供类型隔离，不是安全沙箱。
@@ -804,6 +806,10 @@ contract-only 插件制品；provider 和 consumer 以 `provided` 构建依赖�
 `PublishedRuntime` 查看和调用贡献，不注入专用 catalog，也不取得插件 Service 或内部 `Context`。构建
 测试检查插件 JAR 的 manifest、依赖边和重复 class。配置存储的验收 client 是不发布的真实测试 JAR，
 只放在 `fibra-plugins` 的验收子树；`fibra-example` 至多组合已发布插件，不拥有正式插件源码。
+
+正式产品类型使用 `com.sstlfsj.fibra.plugins.*`：其中 `tool-api` 由宿主 classpath 提供，四个动态 contract
+由各自制品加载器定义。父优先查找成功时不得由插件私有副本遮蔽；父加载器不存在的动态 contract 则必须
+继续沿 manifest 依赖图解析，不能把父优先实现成整个包名前缀的导出白名单。
 
 这里不把应用改写成 Node 插件：Fibra 的 Core Service 不做隐式跨进程注入，若为此额外建立宿主转发
 RPC，反而会绕过本节要验收的服务依赖、realm 和 Scope 所有权。Node sidecar 仍由框架级真实进程门禁验证。

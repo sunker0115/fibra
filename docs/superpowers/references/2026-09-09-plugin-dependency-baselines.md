@@ -29,7 +29,10 @@ IDEA 的模块化插件进一步拆分共享、前端、后端模块，并按模
 
 PF4J 的 `DependencyResolver.resolve` 计算依赖图、拓扑序、缺失依赖与版本冲突。`PluginClassLoader.loadClassFromDependencies` 调用依赖加载器的 `loadClass`，因而可以继续沿传递依赖查找。其资源实现查询直接依赖的 `findResource/findResources`，不能声称与递归类委派完全相同。
 
-Fibra 采用每制品加载器、显式依赖和共享类型单一归属。Java 类沿依赖图委派；资源采用本地、依赖图、宿主顺序，枚举去重。递归资源查找是 Fibra 为同一依赖图确定的契约，并非原样复制 PF4J。宿主导出的类仍由 parent 唯一定义；ClassLoader 是类型隔离机制，不是安全沙箱。
+Fibra 采用每制品加载器、显式依赖和共享类型单一归属。Java 类沿依赖图委派；父优先前缀先查询 parent，
+parent 缺类时继续查询本制品和声明依赖，不能把前缀误作宿主导出白名单。资源采用本地、依赖图、宿主顺序，
+枚举去重。递归资源查找是 Fibra 为同一依赖图确定的契约，并非原样复制 PF4J。宿主实际导出的类仍由
+parent 唯一定义；ClassLoader 是类型隔离机制，不是安全沙箱。
 
 ## DeepSeek Harness 的两种依赖
 

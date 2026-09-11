@@ -33,7 +33,11 @@ final class PluginClassLoader extends URLClassLoader {
         synchronized (getClassLoadingLock(name)) {
             var loaded = findLoadedClass(name);
             if (loaded == null && parentFirst(name)) {
-                loaded = getParent().loadClass(name);
+                try {
+                    loaded = getParent().loadClass(name);
+                } catch (ClassNotFoundException ignored) {
+                    // Parent-first is a preference, not an export whitelist.
+                }
             }
             if (loaded == null) {
                 try {

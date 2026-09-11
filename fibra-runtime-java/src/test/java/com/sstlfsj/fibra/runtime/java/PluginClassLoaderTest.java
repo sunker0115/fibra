@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
+import javax.tools.ToolProvider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -18,6 +19,23 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class PluginClassLoaderTest {
+    @Test
+    void parentFirstPackagesPreferTheParentAndFallBackToDeclaredDependencies(
+        @TempDir Path work) throws Exception {
+        var contractClasses = compileContract(work.resolve("contract"));
+        var consumerClasses = compileShadowContext(work.resolve("consumer"));
+
+        try (var contract = loader(contractClasses);
+             var consumer = loader(consumerClasses)) {
+            consumer.dependencies(List.of(contract));
+
+            assertSame(com.sstlfsj.fibra.Context.class,
+                consumer.loadClass("com.sstlfsj.fibra.Context"));
+            assertSame(contract, consumer.loadClass(
+                "com.sstlfsj.fibra.plugins.fixture.Contract").getClassLoader());
+        }
+    }
+
     @Test
     void resolvesClassesAndResourcesThroughTheDeclaredDependencyGraph(
         @TempDir Path work) throws Exception {
@@ -52,6 +70,35 @@ class PluginClassLoaderTest {
         return new PluginClassLoader(jar.toUri().toURL(),
             PluginClassLoaderTest.class.getClassLoader(),
             List.of("java.", "com.sstlfsj.fibra.", "org.reactivestreams.", "reactor."));
+    }
+
+    private static Path compileContract(Path work) throws Exception {
+        var classes = compileShadowContext(work);
+        var source = work.resolve(
+            "src/com/sstlfsj/fibra/plugins/fixture/Contract.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, """
+            package com.sstlfsj.fibra.plugins.fixture;
+            public interface Contract { }
+            """);
+        var compiler = ToolProvider.getSystemJavaCompiler();
+        assertEquals(0, compiler.run(null, null, null, "-d", classes.toString(),
+            source.toString()));
+        return classes;
+    }
+
+    private static Path compileShadowContext(Path work) throws Exception {
+        var source = work.resolve("src/com/sstlfsj/fibra/Context.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, """
+            package com.sstlfsj.fibra;
+            public interface Context { }
+            """);
+        var classes = Files.createDirectories(work.resolve("classes"));
+        var compiler = ToolProvider.getSystemJavaCompiler();
+        assertEquals(0, compiler.run(null, null, null, "-d", classes.toString(),
+            source.toString()));
+        return classes;
     }
 
     private static void writeContractJar(Path jar) throws Exception {
