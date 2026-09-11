@@ -31,6 +31,14 @@ DSH 的配置组合、源文件自动刷新、真实 Java/Node 局部更新和�
 必须各自提供行为证据，不能用内核门禁替代。DSH 的逐项采用边界见
 [源码基线](2026-09-09-plugin-dependency-baselines.md)。
 
+联合部署故障另由 `ApplyDeploymentPersistenceBoundaryTest` 6 项、
+`ApplyDeploymentMountFailureRecoveryTest` 1 项和 `EngineArtifactRecoveryTest` 2 项覆盖：同一携带新
+artifact 与 desired graph 的 `ApplyDeployment` 验证多制品暂存、运行时准备、制品元数据发布和目标保存
+边界；保存未确认关闭 mutation gate，并从磁盘完整新目标恢复；保存后退休失败关闭 mutation gate，且
+正常关闭明确失败。新实例挂载失败由子 JVM 在确认完整目标已保存后直接 `halt`，父 JVM 再从新 artifact
+和目标恢复；清单引用缺失 revision 或损坏对象时启动明确失败且不覆盖目标与损坏证据。这 9 项不进入
+71/44/120 计数。
+
 ## 1. Cordis 原始行为：71 项
 
 | 当前测试类 | 测试方法 | 验收状态 |

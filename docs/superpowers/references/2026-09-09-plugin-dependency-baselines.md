@@ -68,7 +68,8 @@ definition 身份，仅绑定变更输入，普通配置更新保留实例身份
 源码：[Entry 更新](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/vendor/loader/src/config/entry.ts)、
 [Fiber 生命周期和资源归属](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/vendor/cordis/src/fiber.ts)、
 [服务撤销与消费者等待](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/vendor/cordis/src/reflect.ts#L277-L335)。
-新 Engine 已按上述差量职责重写，但清理前排空和最终行为门禁仍在实施，不能据此宣布交付完成。
+新 Engine 已按上述差量职责重写；清理前排空、跨 Java/Node 局部更新和主动停用已有独立门禁。
+这只证明框架行为边界，仍不能替代第 10.1 节真实多插件应用与最终分发验收。
 
 ### 资源、调用与保存问题的采用边界
 
