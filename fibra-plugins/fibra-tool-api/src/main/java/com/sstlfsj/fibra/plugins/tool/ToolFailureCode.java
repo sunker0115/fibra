@@ -1,0 +1,21 @@
+package com.sstlfsj.fibra.plugins.tool;
+
+public enum ToolFailureCode {
+    INVALID_ARGUMENT,
+    NOT_FOUND,
+    NOT_DIRECTORY,
+    NOT_TEXT,
+    TOO_LARGE,
+    PERMISSION_DENIED,
+    STALE_VERSION,
+    NOT_OBSERVED,
+    AMBIGUOUS_EDIT,
+    EDIT_NOT_FOUND,
+    IO_ERROR,
+    SEARCH_FAILED,
+    OUTPUT_LIMIT,
+    START_FAILED,
+    TIMEOUT,
+    ABORTED,
+    TERMINATION_FAILED
+}

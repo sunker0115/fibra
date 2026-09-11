@@ -1,0 +1,3 @@
+id: fibra-storage
+version: ${project.version}
+requires: []

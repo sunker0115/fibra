@@ -5,6 +5,11 @@ import com.sstlfsj.fibra.artifact.ArtifactStore;
 import com.sstlfsj.fibra.bridge.ContributionDirectory;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.engine.FibraEngine;
+import com.sstlfsj.fibra.plugins.fs.FileSystem;
+import com.sstlfsj.fibra.plugins.shell.Shell;
+import com.sstlfsj.fibra.plugins.storage.ConfigStore;
+import com.sstlfsj.fibra.plugins.subprocess.Subprocess;
+import com.sstlfsj.fibra.plugins.tool.ToolDescriptor;
 import com.sstlfsj.fibra.registry.PluginRegistry;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
 import com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter;
@@ -45,7 +50,17 @@ class ApiSignatureBaselineTest {
         new ModuleApi("fibra-spring", FibraServiceBridge.class,
             "com.sstlfsj.fibra.spring."),
         new ModuleApi("fibra-spring-boot-starter", FibraAutoConfiguration.class,
-            "com.sstlfsj.fibra.spring.boot."));
+            "com.sstlfsj.fibra.spring.boot."),
+        new ModuleApi("fibra-tool-api", ToolDescriptor.class,
+            "com.sstlfsj.fibra.plugins.tool."),
+        new ModuleApi("fibra-fs", FileSystem.class,
+            "com.sstlfsj.fibra.plugins.fs."),
+        new ModuleApi("fibra-subprocess", Subprocess.class,
+            "com.sstlfsj.fibra.plugins.subprocess."),
+        new ModuleApi("fibra-shell", Shell.class,
+            "com.sstlfsj.fibra.plugins.shell."),
+        new ModuleApi("fibra-storage", ConfigStore.class,
+            "com.sstlfsj.fibra.plugins.storage."));
 
     @Test
     void publicApiMatchesCommittedJavapBaselines() throws Exception {

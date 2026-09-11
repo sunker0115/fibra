@@ -99,3 +99,25 @@ artifact 与 desired graph 的 `ApplyDeployment` 验证多制品暂存、运行�
 源码：[Include 与补丁](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/vendor/include/src/index.ts)、
 [Loader 配置钩子与 self-dispose](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/vendor/loader/src/index.ts)、
 [表达式求值](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/vendor/loader/src/config/utils.ts)。
+
+## 5. 正式插件交付门禁
+
+正式插件交付与前述 71/44 项内核行为分开计数；契约存在或模块能打包不等于 provider、consumer 和真实
+组合场景已经完成。当前证据如下，未完成项必须继续保留，不能被全仓绿色构建抵扣：
+
+| 交付层 | 当前证据 | 状态与剩余门禁 |
+|---|---|---|
+| 调用取消与宿主工具契约 | `CancellationSourceTest` 2 项、`InvocationContextCancellationTest` 1 项及 `ToolApiTest` 5 项覆盖 source/token 分离、沿 ServiceRef 传播、不可变参数、结构化结果、稳定错误码、`fibra.tool` contribution kind 与可选 spill service key | 契约完成；仍须由真实插件传播 token、终止资源并经 `PublishedRuntime` 调用 |
+| 文件契约 | `FileSystemContractTest` 9 项覆盖 opaque target/version、显式无条件/受保护写入与编辑 intent、错误码和无 entrypoint manifest | 契约完成；`fibra-fs-local`、`fibra-tool-fs` 及行为/生命周期场景未完成 |
+| 子进程契约 | `SubprocessContractTest` 4 项覆盖显式 argv/cwd/输出界限/清理宽限、进程结果、服务键和无 entrypoint manifest | 契约完成；真实进程组、父进程先退出、树终止及 caller Scope 清理未完成 |
+| Shell 契约 | `ShellContractTest` 4 项覆盖请求、非零退出、互斥 timeout/abort 结果、错误和无 entrypoint manifest | 契约完成；`fibra-shell-local`、`fibra-tool-shell` 及排空场景未完成 |
+| 配置存储契约 | `StorageContractTest` 4 项覆盖 revisioned `LiteralValue` 文档、闭合 change 形状、服务/错误和无 entrypoint manifest | 契约完成；JSON 原子持久化、失败恢复、事件顺序、关闭竞态、realm 与重启场景未完成 |
+| 搜索应用 | 模块与 artifact/service 边已固定 | `rg` 行为、可选 spill、超时/取消和共享 subprocess 场景未完成 |
+
+上述五个契约模块的离线联合定向测试于 2026-09-11 通过，共 26 项，另有调用取消 API/传播测试 3 项，
+均为 0 failure、0 error、0 skipped；
+版本断言读取 Maven 注入的 `${project.version}`，没有把 snapshot 版本写死。该证据只关闭契约层，正式
+插件 JAR 的依赖声明、重复 class 检查、真实组合验收、全仓验证与空仓库分发门禁仍未执行。公共签名门禁
+已纳入 `fibra-tool-api`、`fibra-fs`、`fibra-subprocess`、`fibra-shell`、`fibra-storage` 五个正式契约模块，
+并在不带基线更新开关的普通 `ApiSignatureBaselineTest` 中通过；`fibra-api` 的取消 API 也同步进入既有签名
+基线，后续公开契约漂移必须显式审核并更新基线。

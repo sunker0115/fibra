@@ -218,6 +218,10 @@ PENDING -> STARTING -> ACTIVE -> STOPPING -> DISPOSED
   清理。
 - 服务对象不会因为实现 `AutoCloseable` 就被推测性关闭。外部容器拥有的对象只注册 binding；Fibra
   拥有的资源必须显式登记 disposer。
+- 协作取消使用 owner 持有的 `CancellationSource` 与只读 `CancellationToken` 分离表达；插件不能反向
+  取消调用者。token 随 `ToolRequest` 进入并通过派生 `InvocationContext` 沿 `ServiceRef` 传播。显式 token
+  取消允许业务返回稳定的 aborted 结果；直接取消 Reactor 订阅只触发 invocation Scope 清理，不伪造一个
+  已无人接收的结果。两条路径都必须等待其拥有资源的清理边界，不能把订阅消失等同于进程已经退出。
 
 ## 4. Engine 与局部动态更新
 
@@ -760,6 +764,9 @@ Java Harness 只是验证 built-in definition、EngineCommand、PublishedView、
 每个场景都提供宿主调用入口和失败路径验证，并记录变更前后无关插件的实例身份、资源及状态，
 用于核实生命周期影响范围，不能只断言最终结果相同。文件和 Shell 验证使用专用临时目录及受控命令，
 不依赖模型账号、外部网络服务或真实用户数据。JSON 存储属于应用插件，不引入 Engine 数据库。
+具体 provider 可以采用许可证合适、维护成熟且行为边界可验证的第三方 Java 库，依赖只进入对应 provider
+制品，不进入 `fibra-api`、宿主可见工具契约或动态 contract；采用第三方实现不能改变本节的 DSH 行为契约，
+也不能绕过 Fibra 的 Service、Scope、取消和排空模型。JDK 原生能力已能完整兑现时不额外引入依赖。
 参考 DSH 固定提交 `a66e4702047846cdaa10c66c9d3df3951f5ea70d` 的 `packages/fs/tool-fs`、
 `packages/fs/tool-fs-search`、`packages/shell/tool-bash` 及 `packages/storage`；
 参考其插件协作方式，不将应用场景覆盖误称为整个 DSH 业务产品的等价实现。
@@ -843,6 +850,21 @@ RuntimeDomain Service graph
 | 搜索 | `rg --no-config` 直接 argv；glob 搜索隐藏/忽略文件并排除 VCS 元数据，grep 保持 ripgrep 默认 ignore/hidden 语义；退出码 1 表示空结果，非法模式/超时/取消/原始输出溢出明确失败；可选 spill 缺失或失败不改变搜索成功 | 打包所有平台的 ripgrep 二进制、展示卡片和会话级 spill 所有权；示例由配置提供可执行文件并在启动时验证 |
 | Shell | 每次 fresh shell、显式 workdir、分离 stdout/stderr/exit code；非零退出是结果，超时与取消终止受管进程树 | 后台 job、审批、沙箱策略和 DSH 环境变量注入 |
 | JSON 配置 | 缺失文件视为空并延迟物化；完整文档原子持久化；损坏或版本不匹配明确失败；失败写不改变内存或发事件，后续写仍可继续；事件只在持久化成功后发出；关闭拒绝新操作并排空在途写；重启读取 | per-record、SQLite、领域 schema/migration 和跨进程事件推送 |
+
+四条动态契约只表达本期真实 consumer 需要且能完整兑现的能力，不提前复制 DSH 的 PTY、后台进程、
+sandbox 或流式协议。`FileSystem` 的每项操作都接收 `InvocationContext`，使用稳定的 `FsErrorCode`
+区分不存在、目录、非文本、过大、权限、陈旧观察、未观察、编辑歧义、I/O 与取消；写入与编辑分别用闭合
+intent 显式区分无条件执行和版本保护，取消只能在原子发布前生效。`Subprocess.spawn` 返回调用者 Scope
+所有的 `ProcessUnit`：`done()` 结算直接进程及已收集输出，
+`waitForExit()` 必须等待整个受管进程单元静默，`terminate()` 和资源清理均幂等。deadline 与调用取消的
+先发生原因由 consumer 分类，不由 subprocess provider 猜测。
+
+`Shell.run` 对非零退出、超时和调用方取消都返回 `ShellResult`；`timedOut` 与 `aborted` 互斥，启动或
+基础设施失败才抛 `ShellException`。工具层把超时、取消和终止失败投影为稳定的 `ToolFailureCode`，并且
+只有在 `ProcessUnit.waitForExit()` 证明树静默后才允许调用结算。`ConfigStore` 的写入按 store 实例串行，
+`subscribe` 返回可主动取消且幂等的句柄，实现同时把该句柄登记到传入的 `InvocationContext.effects()`；
+通知不回放、只在持久成功后按 revision 顺序发出，listener 异常被记录并隔离，不能反向推翻已经提交的写。
+关闭与订阅取消或在途写交错时，已接受写及其通知完成后再释放介质，关闭后新操作统一失败。
 
 `subprocess-local` 是搜索和 Shell 共用的唯一进程 seam；工具 consumer 不自行 `ProcessBuilder`。每次调用
 创建一个 `ProcessUnit`，并在启动前把其排空/终止动作登记到服务收到的 `InvocationContext` caller Scope。

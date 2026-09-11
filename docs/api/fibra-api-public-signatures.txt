@@ -8,6 +8,20 @@ public final class com.sstlfsj.fibra.Associated<R> {
   public <T> T get(com.sstlfsj.fibra.PropertyKey<R, T>);
   public <T> void set(com.sstlfsj.fibra.PropertyKey<R, T>, T);
 }
+## com.sstlfsj.fibra.CancellationSource
+Compiled from "CancellationSource.java"
+public final class com.sstlfsj.fibra.CancellationSource {
+  public com.sstlfsj.fibra.CancellationSource();
+  public com.sstlfsj.fibra.CancellationToken token();
+  public boolean cancel();
+}
+## com.sstlfsj.fibra.CancellationToken
+Compiled from "CancellationToken.java"
+public interface com.sstlfsj.fibra.CancellationToken {
+  public abstract boolean isCancelled();
+  public abstract reactor.core.publisher.Mono<java.lang.Void> cancelled();
+  public static com.sstlfsj.fibra.CancellationToken never();
+}
 ## com.sstlfsj.fibra.ConfigValidator
 Compiled from "ConfigValidator.java"
 public interface com.sstlfsj.fibra.ConfigValidator<C> {
@@ -116,9 +130,11 @@ public final class com.sstlfsj.fibra.FibraException extends java.lang.IllegalSta
 Compiled from "InvocationContext.java"
 public final class com.sstlfsj.fibra.InvocationContext {
   public static com.sstlfsj.fibra.InvocationContext of(com.sstlfsj.fibra.Context, java.lang.String);
+  public com.sstlfsj.fibra.InvocationContext withCancellation(com.sstlfsj.fibra.CancellationToken);
   public com.sstlfsj.fibra.Context caller();
   public com.sstlfsj.fibra.logging.FibraLogger logger();
   public java.lang.String serviceName();
+  public com.sstlfsj.fibra.CancellationToken cancellation();
   public <T> com.sstlfsj.fibra.ServiceRef<T> service(com.sstlfsj.fibra.ServiceKey<T>);
   public com.sstlfsj.fibra.Effects effects();
   public com.sstlfsj.fibra.Plugins plugins();
@@ -261,6 +277,7 @@ public final class com.sstlfsj.fibra.ServiceKey<T> extends java.lang.Record {
 Compiled from "ServiceRef.java"
 public final class com.sstlfsj.fibra.ServiceRef<T> {
   public com.sstlfsj.fibra.ServiceRef(com.sstlfsj.fibra.Context, com.sstlfsj.fibra.ServiceKey<T>);
+  public com.sstlfsj.fibra.ServiceRef(com.sstlfsj.fibra.Context, com.sstlfsj.fibra.ServiceKey<T>, com.sstlfsj.fibra.CancellationToken);
   public T value();
   public <R> R invoke(java.util.function.BiFunction<? super com.sstlfsj.fibra.InvocationContext, ? super T, ? extends R>);
 }

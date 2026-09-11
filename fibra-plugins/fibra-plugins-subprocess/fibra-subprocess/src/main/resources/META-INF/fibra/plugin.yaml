@@ -1,0 +1,3 @@
+id: fibra-subprocess
+version: ${project.version}
+requires: []
