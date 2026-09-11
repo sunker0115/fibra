@@ -1,0 +1,6 @@
+id: fibra-tool-shell
+version: ${project.version}
+entrypoint: com.sstlfsj.fibra.plugins.shell.tool.ShellToolEntrypoint
+requires:
+  - id: fibra-shell
+    version: ${project.version}

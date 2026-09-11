@@ -16,11 +16,15 @@ new ZipFile(jar).withCloseable { zip ->
     assert entries.contains("META-INF/fibra/plugin.yaml")
     assert entries.contains("org/example/fibra/FibraPluginEntrypoint.class")
     assert entries.contains("org/example/fibra/PluginConfig.class")
+    assert !entries.any { it.startsWith("com/sstlfsj/fibra/") }
     assert !entries.any { it == "plugin.properties" || it.endsWith("extensions.idx") }
     def manifest = zip.getInputStream(zip.getEntry("META-INF/fibra/plugin.yaml"))
         .getText("UTF-8")
     assert manifest.contains("id: sample-fibra-plugin")
+    assert manifest.contains("version: 1.0.0")
     assert manifest.contains("entrypoint: org.example.fibra.FibraPluginEntrypoint")
+    assert manifest.contains("requires: []")
+    assert !manifest.contains('${')
 }
 
 return true

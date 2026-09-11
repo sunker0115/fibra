@@ -31,8 +31,31 @@
       <artifactId>fibra-shell</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency><groupId>com.sstlfsj</groupId><artifactId>fibra-subprocess-local</artifactId><scope>test</scope></dependency>
   </dependencies>
   <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>false</filtering>
+        <excludes><exclude>META-INF/fibra/plugin.yaml</exclude></excludes>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+        <includes><include>META-INF/fibra/plugin.yaml</include></includes>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

@@ -84,6 +84,7 @@
     <spring-framework.version>7.0.8</spring-framework.version>
     <spring-boot.version>4.1.0</spring-boot.version>
     <jackson.version>3.1.5</jackson.version>
+    <jna.version>5.17.0</jna.version>
     <flatten-maven-plugin.version>1.7.0</flatten-maven-plugin.version>
     <central-publishing-maven-plugin.version>0.9.0</central-publishing-maven-plugin.version>
     <maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
@@ -158,6 +159,11 @@
         <groupId>tools.jackson.dataformat</groupId>
         <artifactId>jackson-dataformat-yaml</artifactId>
         <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>net.java.dev.jna</groupId>
+        <artifactId>jna</artifactId>
+        <version>${jna.version}</version>
       </dependency>
       <!-- 内部模块统一使用当前 reactor 版本，子模块引用时不声明版本。 -->
       <dependency>

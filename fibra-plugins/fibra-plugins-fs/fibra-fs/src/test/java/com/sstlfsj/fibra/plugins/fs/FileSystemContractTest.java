@@ -67,6 +67,7 @@ class FileSystemContractTest {
         assertThrows(NullPointerException.class, () -> new FsEdit(null, "new", false));
         assertThrows(IllegalArgumentException.class, () -> new FsEdit("", "new", false));
         assertThrows(NullPointerException.class, () -> new FsEdit("old", null, false));
+        assertThrows(IllegalArgumentException.class, () -> new FsEdit("same", "same", false));
         assertThrows(NullPointerException.class, () -> new FsEditResult(null, "before", "after"));
         assertThrows(NullPointerException.class, () -> new FsEditResult(version, null, "after"));
         assertThrows(NullPointerException.class, () -> new FsEditResult(version, "before", null));

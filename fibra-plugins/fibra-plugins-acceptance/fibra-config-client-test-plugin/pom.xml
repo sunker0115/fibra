@@ -9,6 +9,11 @@
   </parent>
   <artifactId>fibra-config-client-test-plugin</artifactId>
   <name>Fibra Config Client Test Plugin</name>
+  <properties>
+    <maven.deploy.skip>true</maven.deploy.skip>
+    <maven.source.skip>true</maven.source.skip>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
+  </properties>
   <dependencies>
     <dependency>
       <groupId>com.sstlfsj</groupId>
@@ -30,8 +35,27 @@
       <artifactId>fibra-storage</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+        <includes>
+          <include>META-INF/fibra/plugin.yaml</include>
+        </includes>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

@@ -9,5 +9,8 @@ public record FsEdit(String oldText, String newText, boolean replaceAll) {
             throw new IllegalArgumentException("oldText must not be empty");
         }
         Objects.requireNonNull(newText, "newText");
+        if (oldText.equals(newText)) {
+            throw new IllegalArgumentException("oldText and newText must differ");
+        }
     }
 }

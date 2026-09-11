@@ -14,6 +14,7 @@
     <maven.deploy.skip>false</maven.deploy.skip>
     <maven.source.skip>false</maven.source.skip>
     <maven.javadoc.skip>false</maven.javadoc.skip>
+    <maven.jar.forceCreation>true</maven.jar.forceCreation>
   </properties>
   <dependencies>
     <dependency>
@@ -31,12 +32,75 @@
       <artifactId>fibra-tool-api</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>net.java.dev.jna</groupId>
+      <artifactId>jna</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-core</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <artifactSet>
+                <includes>
+                  <include>net.java.dev.jna:jna</include>
+                </includes>
+              </artifactSet>
+              <filters>
+                <filter>
+                  <artifact>net.java.dev.jna:*</artifact>
+                  <excludes>
+                    <exclude>module-info.class</exclude>
+                    <exclude>META-INF/versions/**</exclude>
+                    <exclude>META-INF/AL2.0</exclude>
+                    <exclude>META-INF/LGPL2.1</exclude>
+                    <exclude>META-INF/LICENSE</exclude>
+                    <exclude>META-INF/MANIFEST.MF</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <fibra.test.projectVersion>${project.version}</fibra.test.projectVersion>
+          </systemPropertyVariables>
+        </configuration>
       </plugin>
     </plugins>
   </build>

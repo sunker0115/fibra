@@ -1,0 +1,6 @@
+id: fibra-storage-json
+version: ${project.version}
+entrypoint: com.sstlfsj.fibra.plugins.storage.json.JsonStorageEntrypoint
+requires:
+  - id: fibra-storage
+    version: ${project.version}

@@ -1,0 +1,6 @@
+id: fibra-config-client-test-plugin
+version: ${project.version}
+entrypoint: com.sstlfsj.fibra.plugins.storage.client.ConfigClientEntrypoint
+requires:
+  - id: fibra-storage
+    version: ${project.version}

@@ -204,7 +204,10 @@ PENDING -> STARTING -> ACTIVE -> STOPPING -> DISPOSED
   服务直接拒绝。制品替换必须清理已退休契约类型的引用；不能让长期 domain 永久钉住旧 Java `Class`。
 - `find` 返回当前可用服务，`require` 要求服务存在；不使用 boolean 参数隐藏查询语义。
 - 会产生调用方资源的服务通过 `ServiceRef` 与 `InvocationContext` 显式携带调用者 Scope，不使用
-  ThreadLocal 或动态代理猜测所有权。
+  ThreadLocal 或动态代理猜测所有权。`InvocationContext.caller()` 是能力解析语境，决定 realm、intercept、
+  logger 与当前插件；`scope()` 是本次调用的资源所有权边界。普通服务调用两者相同；宿主经贡献目录调用时，
+  前者固定为贡献注册 owner，后者固定为临时 invocation Scope，二者连同 cancellation 沿嵌套 `ServiceRef`
+  原样传播。两者必须属于同一 RuntimeDomain，公共构造入口在接纳调用前校验，禁止跨域登记资源。
 - `EventKey` 固定稳定名称、listener 类型和 `EventMode`。支持 `EMIT/PARALLEL/SERIAL/BAIL/WATERFALL`；
   调用方式与 key mode 不一致时直接拒绝。
 - 事件诊断的历史类型描述只保留类型名与 mode，不能永久持有退休的 listener Class。活动监听器必须
@@ -292,8 +295,10 @@ Engine 关闭先在线性化的命令准入边界停止接收新请求，等待�
 目标贡献仍是该注册身份且开放，并登记在途调用。视图检查与条目准入之间的竞争必须重新复核；
 失败返回明确的 stale-revision 或已撤销结果，不能悄悄转向同名的新 handler。旧快照不是永久调用权。
 
-一次调用在目标 domain 内创建临时调用 Scope。成功、失败或取消后都必须等待该 Scope 的异步清理完成，
-再释放在途计数，最后异步向宿主交付结果；宿主回调不能占用生命周期线程或未释放的调用租约。
+一次调用在目标 domain 内创建临时调用 Scope。贡献 handler 必须在注册 owner 的 Context 中解析服务和策略，
+但其 `InvocationContext.effects()` 及通过服务调用创建的资源必须归临时调用 Scope。成功、失败或取消后都必须
+等待该 Scope 的异步清理完成，再释放在途计数，最后异步向宿主交付结果；宿主回调不能占用生命周期线程
+或未释放的调用租约。
 取消订阅不取消已经启动的清理。Engine 关闭后拒绝新调用；局部变更仅停止受影响条目的接入，
 无关条目的已接受调用不被取消，也不因为其他插件更新而等待整个 domain 排空。
 
@@ -640,6 +645,7 @@ public interface Scope extends AutoCloseable {
     String name();
     Context context();
     Scope openChild(String name);
+    boolean sharesDomainWith(Scope other);
     boolean isClosed();
     Mono<Void> closeAsync();
     void close();
@@ -809,7 +815,9 @@ fibra-plugins
 提供；工具插件只把它作为 `provided` 依赖，JAR 不打包副本。`fibra-fs`、`fibra-subprocess`、
 `fibra-shell`、`fibra-storage` 是无 entrypoint 的
 contract-only 插件制品；provider 和 consumer 以 `provided` 构建依赖及 manifest `requires` 共享对应
-契约类型，不把 contract class 打进自身 JAR。宿主只通过 `PluginRegistry` 部署/启停插件，并通过
+契约类型，不把 contract class 打进自身 JAR。vNext 的动态 contract 尚未承诺跨版本二进制兼容，正式插件
+因此对同一发布列使用 `${project.version}` 精确约束，不使用 `*` 掩盖契约错配。宿主只通过
+`PluginRegistry` 部署/启停插件，并通过
 `PublishedRuntime` 查看和调用贡献，不注入专用 catalog，也不取得插件 Service 或内部 `Context`。构建
 测试检查插件 JAR 的 manifest、依赖边和重复 class。配置存储的验收 client 是不发布的真实测试 JAR，
 只放在 `fibra-plugins` 的验收子树；`fibra-example` 至多组合已发布插件，不拥有正式插件源码。
@@ -846,15 +854,23 @@ RuntimeDomain Service graph
 
 | 能力 | 必须保留的行为 | 本次不冒充已覆盖的 DSH 能力 |
 |---|---|---|
-| 文件 | UTF-8 文本、1-based offset、正整数上限、空文件/目录/非文本边界；原子写；默认唯一字面量编辑和显式 replace-all | 图片、附件、观察策略、授权升级与 UI 渲染 |
-| 搜索 | `rg --no-config` 直接 argv；glob 搜索隐藏/忽略文件并排除 VCS 元数据，grep 保持 ripgrep 默认 ignore/hidden 语义；退出码 1 表示空结果，非法模式/超时/取消/原始输出溢出明确失败；可选 spill 缺失或失败不改变搜索成功 | 打包所有平台的 ripgrep 二进制、展示卡片和会话级 spill 所有权；示例由配置提供可执行文件并在启动时验证 |
-| Shell | 每次 fresh shell、显式 workdir、分离 stdout/stderr/exit code；非零退出是结果，超时与取消终止受管进程树 | 后台 job、审批、沙箱策略和 DSH 环境变量注入 |
+| 文件 | UTF-8 文本、1-based offset、正整数上限、空文件/目录/非文本边界；元数据版本不读取文件内容；原子写并保留既有 POSIX mode/Windows ACL；默认唯一字面量编辑和显式 replace-all，编辑先校验 freshness，再全量拒绝 NUL，并以 LF 规范化匹配和恢复原换行风格 | 图片、附件、观察策略、授权升级与 UI 渲染 |
+| 搜索 | `rg --no-config` 直接 argv；glob 搜索隐藏/忽略文件并排除 VCS 元数据，grep 保持 ripgrep 默认 ignore/hidden 语义；退出码 1 表示空结果，非法模式/超时/取消/原始输出溢出明确失败；可选 spill 缺失或普通保存失败不改变搜索成功，但 spill 期间发生的调用取消仍以 `ABORTED` 结束 | 打包所有平台的 ripgrep 二进制、展示卡片和会话级 spill 所有权；示例由配置提供可执行文件并在启动时验证 |
+| Shell | 每次 fresh shell、显式 workdir、分离 stdout/stderr/exit code；非零退出是结果，超时与取消终止受管进程树；模型文本明确标记 stderr、空输出、截断、signal 和非零 exit | 后台 job、审批、沙箱策略和 DSH 环境变量注入 |
 | JSON 配置 | 缺失文件视为空并延迟物化；完整文档原子持久化；损坏或版本不匹配明确失败；失败写不改变内存或发事件，后续写仍可继续；事件只在持久化成功后发出；关闭拒绝新操作并排空在途写；重启读取 | per-record、SQLite、领域 schema/migration 和跨进程事件推送 |
 
 四条动态契约只表达本期真实 consumer 需要且能完整兑现的能力，不提前复制 DSH 的 PTY、后台进程、
 sandbox 或流式协议。`FileSystem` 的每项操作都接收 `InvocationContext`，使用稳定的 `FsErrorCode`
 区分不存在、目录、非文本、过大、权限、陈旧观察、未观察、编辑歧义、I/O 与取消；写入与编辑分别用闭合
-intent 显式区分无条件执行和版本保护，取消只能在原子发布前生效。`Subprocess.spawn` 返回调用者 Scope
+intent 显式区分无条件执行和版本保护，取消只能在原子发布前生效。阻塞文件 I/O 统一进入受控阻塞调度器；
+变更按稳定 target key 串行，无关目标不共用写锁，等待锁期间仍响应调用取消。原子写在目标同目录创建
+POSIX `0700` 私有 staging 目录和 `0600` 临时文件，写全并同步后才发布；发布是提交点，之后的 staging
+清理失败只留下 owner-only 残留，不能反转成功。POSIX 替换恢复既有 mode；Windows 替换在写内容前复制并
+保护既有 DACL，关闭临时文件后调用 `ReplaceFileW`，若目标只在最终替换竞态中消失则以已复制的 DACL
+原子重建。stock JNA 的 JNI 符号绑定固定包名，不能用 bytecode relocation 改名；它只以 optional 依赖和
+原包名私有打进 `fibra-fs-local`，由插件 ClassSpace 隔离，不能进入 contract 或宿主的传递依赖面。当前 macOS
+门禁覆盖注入式 Win32 调用次序、错误映射和接线路径，不把未执行的 Windows 原生调用宣称为实机验证。
+`Subprocess.spawn` 返回调用者 Scope
 所有的 `ProcessUnit`：`done()` 结算直接进程及已收集输出，
 `waitForExit()` 必须等待整个受管进程单元静默，`terminate()` 和资源清理均幂等。deadline 与调用取消的
 先发生原因由 consumer 分类，不由 subprocess provider 猜测。
@@ -865,9 +881,12 @@ intent 显式区分无条件执行和版本保护，取消只能在原子发布�
 `subscribe` 返回可主动取消且幂等的句柄，实现同时把该句柄登记到传入的 `InvocationContext.effects()`；
 通知不回放、只在持久成功后按 revision 顺序发出，listener 异常被记录并隔离，不能反向推翻已经提交的写。
 关闭与订阅取消或在途写交错时，已接受写及其通知完成后再释放介质，关闭后新操作统一失败。
+JSON provider 在同目录写临时文件并同步内容，再原子 rename；POSIX 上随后同步父目录。若 rename 已提交而父目录
+同步失败，不能把内存和事件留在旧 revision：本次写仍按已提交结果更新并发事件，同时记录 durability warning。
+Windows 的目录同步只作能力探测和 best-effort，未实测平台不得据此声称断电持久性已经验证。
 
 `subprocess-local` 是搜索和 Shell 共用的唯一进程 seam；工具 consumer 不自行 `ProcessBuilder`。每次调用
-创建一个 `ProcessUnit`，并在启动前把其排空/终止动作登记到服务收到的 `InvocationContext` caller Scope。
+创建一个 `ProcessUnit`，并在启动前把其排空/终止动作登记到服务收到的 `InvocationContext` resource Scope。
 进程单元采用与 Node runtime supervisor 等价的平台策略：通过受管 supervisor 保持 stdin 生存租约，JVM
 异常退出时以 EOF 触发清理；POSIX 为 payload 建立独立进程组并按组 `TERM/KILL`，Windows 使用
 `taskkill /T /F`。测试平台必须验证超时、取消、父进程先退出及后代清理，不能只依赖一次
@@ -877,7 +896,8 @@ consumer 对同名 key 隔离，不能把全局静态 listener 当作事件总�
 
 `tool-fs-search` 放在 `fs/` 只是业务归属；固定 DSH 源码明确不注入 `fs`，因此它在 Fibra 也不声明
 `requires fibra-fs`。格式化结果 spill 通过父加载器唯一的 `ResultSpillStore` 做可选服务查询；缺少 provider
-或保存失败都只失去 spill 引用，不能让已经成功的搜索失败。
+或普通保存失败都只失去 spill 引用，不能让已经成功的搜索失败；保存等待期间到达的 caller cancellation
+在格式化完成前重新检查并覆盖成功结果。
 
 ### 10.2 固定源码基线
 
