@@ -404,7 +404,8 @@ final class LinuxScopeProcessUnit implements ProcessUnit {
             }
             started.completeExceptionally(failure);
             outcome.completeExceptionally(failure);
-            exited.completeExceptionally(failure);
+            if (quiet && !startedAtScheduling) exited.complete(null);
+            else exited.completeExceptionally(failure);
             if (quiet) {
                 releaseOwnership();
                 disposeCancellationListener();

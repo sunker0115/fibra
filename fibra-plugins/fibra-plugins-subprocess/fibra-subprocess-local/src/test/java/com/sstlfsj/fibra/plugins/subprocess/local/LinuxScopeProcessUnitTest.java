@@ -1,12 +1,16 @@
 package com.sstlfsj.fibra.plugins.subprocess.local;
 
+import com.sstlfsj.fibra.CancellationSource;
 import com.sstlfsj.fibra.EffectHandle;
 import com.sstlfsj.fibra.EffectMetadata;
 import com.sstlfsj.fibra.logging.FibraLogger;
 import com.sstlfsj.fibra.plugins.subprocess.SubprocessErrorCode;
 import com.sstlfsj.fibra.plugins.subprocess.SubprocessException;
 import com.sstlfsj.fibra.plugins.subprocess.SubprocessSpec;
+import com.sstlfsj.fibra.runtime.FibraRuntime;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Mono;
 
 import java.io.ByteArrayInputStream;
@@ -21,6 +25,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
@@ -139,6 +144,55 @@ class LinuxScopeProcessUnitTest {
         assertEquals(SubprocessErrorCode.TERMINATION_FAILED, failure.code());
         assertEquals(0, releases.get());
         assertEquals(1, range.forceCalls.get());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void cancellationBeforeEstablishmentReleasesRealOwnershipOnlyAfterQuietCleanup(boolean quiet)
+        throws Exception {
+        var process = FakeProcess.running();
+        var range = new FakeRange(false, !quiet, process::isAlive);
+        var acquiring = new CountDownLatch(1);
+        var unit = new LinuxScopeProcessUnit((node, spec) -> {
+            acquiring.countDown();
+            return new LinuxScopeLaunch(process, range);
+        }, new NoopLogger());
+        var runtime = FibraRuntime.create();
+        var ownership = runtime.rootScope().context().effects().add(unit);
+        unit.ownedBy(ownership);
+        var cancellation = new CancellationSource();
+        unit.cancelOn(cancellation.token());
+        try {
+            var launch = CompletableFuture.runAsync(() -> unit.launch("node", spec()));
+            assertTrue(acquiring.await(1, TimeUnit.SECONDS));
+
+            cancellation.cancel();
+
+            var failure = assertThrows(ExecutionException.class,
+                () -> launch.get(2, TimeUnit.SECONDS));
+            var expected = quiet ? SubprocessErrorCode.SPAWN_FAILED
+                : SubprocessErrorCode.TERMINATION_FAILED;
+            assertEquals(expected, ((SubprocessException) failure.getCause()).code());
+            assertEquals(expected, assertThrows(SubprocessException.class,
+                () -> unit.done().block(Duration.ofSeconds(1))).code());
+            if (quiet) {
+                unit.waitForExit().block(Duration.ofSeconds(1));
+                long deadline = System.nanoTime() + Duration.ofSeconds(1).toNanos();
+                while (!ownership.isDisposed() && System.nanoTime() < deadline) Thread.sleep(10);
+                assertTrue(ownership.isDisposed());
+                ownership.dispose().block(Duration.ofSeconds(1));
+            } else {
+                assertEquals(SubprocessErrorCode.TERMINATION_FAILED,
+                    assertThrows(SubprocessException.class,
+                        () -> unit.waitForExit().block(Duration.ofSeconds(1))).code());
+                assertFalse(ownership.isDisposed());
+            }
+            assertFalse(process.isAlive());
+            assertEquals(1, range.forceCalls.get());
+        } finally {
+            if (quiet) runtime.close();
+            else assertThrows(RuntimeException.class, runtime::close);
+        }
     }
 
     @Test void watchdogCleanupFailureKeepsTheOriginalBudgetFailureAsEvidence()

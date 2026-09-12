@@ -35,7 +35,8 @@ class SupervisorFailureTest {
         var runtime = FibraRuntime.create();
         var spec = SubprocessSpec.builder().argv(List.of("unused")).cwd(directory.toString())
             .stdoutMaxBytes(100).stderrMaxBytes(100).grace(Duration.ofMillis(100)).build();
-        var unit = new LocalSubprocess(executable.toString()).spawn(
+        var unit = new LocalSubprocess(executable.toString(), LocalSubprocess.HostPlatform.OTHER,
+            JnaWindowsJobOwner.FACTORY, SystemdScopeLauncher.INSTANCE).spawn(
             InvocationContext.of(runtime.rootScope().context(), "test"), spec).block();
         long supervisorPid = Long.parseLong(Files.readString(directory.resolve("supervisor.pid")));
         try {
@@ -67,7 +68,8 @@ class SupervisorFailureTest {
         try (var runtime = FibraRuntime.create()) {
             var spec = SubprocessSpec.builder().argv(List.of("unused")).cwd(directory.toString())
                 .stdoutMaxBytes(100).stderrMaxBytes(100).grace(Duration.ofMillis(100)).build();
-            var future = new LocalSubprocess(executable.toString()).spawn(
+            var future = new LocalSubprocess(executable.toString(), LocalSubprocess.HostPlatform.OTHER,
+                JnaWindowsJobOwner.FACTORY, SystemdScopeLauncher.INSTANCE).spawn(
                 InvocationContext.of(runtime.rootScope().context(), "test")
                     .withCancellation(source.token()), spec).toFuture();
             Path pidFile = directory.resolve("supervisor.pid");
@@ -101,7 +103,8 @@ class SupervisorFailureTest {
 
         try (var runtime = FibraRuntime.create()) {
             var failure = assertThrows(SubprocessException.class, () ->
-                new LocalSubprocess(executable.toString()).spawn(
+                new LocalSubprocess(executable.toString(), LocalSubprocess.HostPlatform.OTHER,
+                    JnaWindowsJobOwner.FACTORY, SystemdScopeLauncher.INSTANCE).spawn(
                     InvocationContext.of(runtime.rootScope().context(), "test"), spec)
                     .block(Duration.ofSeconds(5)));
             assertEquals(SubprocessErrorCode.SPAWN_FAILED, failure.code());
