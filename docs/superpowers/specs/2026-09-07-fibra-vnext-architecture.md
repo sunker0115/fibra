@@ -765,6 +765,11 @@ Java Harness 只是验证 built-in definition、EngineCommand、PublishedView、
 账本计数；Windows 文件发布仅记录实现、注入测试和制品证据，不扩大为未执行的实机声明。逐项证据与
 平台边界见[行为验收账本](../references/2026-09-11-behavior-verification-ledger.md)。
 
+同日 pre-CLI 快照 `618091a` 已在 GitHub Ubuntu runner 重新通过 48 模块 `clean verify`、25 个正式发布
+制品的可复现比较，以及从空临时 Maven 仓部署后的仓库外消费者验证。该证据覆盖正式 storage 和 12 个
+动态插件，但不包含尚未实现的正式 CLI、ZIP 目录、解压启动和命令交互；CLI/ZIP 合并后仍须按最终清单
+重跑全部门禁，不能把 pre-CLI 绿色结果升级为最终交付结论。
+
 ### 10.1 框架交付与多插件应用验收
 
 先完成插件系统本身的行为等价、公开调用、资源生命周期、配置管理和恢复门禁，再实现应用插件。

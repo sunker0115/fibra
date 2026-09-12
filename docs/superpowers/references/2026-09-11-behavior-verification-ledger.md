@@ -1,8 +1,8 @@
 # 行为验收账本
 
-复核日期：2026-09-12。状态：Cordis 原始行为、Fibra 额外回归与既有 vNext 阶段证据已记录；正式
-`fibra-tool-storage`、正式宿主 CLI 与 ZIP 分发继续纳入，最终全仓、可复现及空仓分发门禁待统一复验；
-平台限定证据见第 5、6 节。
+复核日期：2026-09-12。状态：Cordis 原始行为、Fibra 额外回归、正式插件和 pre-CLI 分发证据已记录；
+正式宿主 CLI 与 ZIP 分发仍待交付，合并后的最终全仓、可复现及空仓分发门禁仍须统一复验；平台限定
+证据见第 5、6 节。
 
 本账本把两类当前验收对象分开记录：
 
@@ -33,6 +33,14 @@ mvn -o -pl fibra-parity-tests -am test \
 全仓复验。DSH 配置组合、源文件自动刷新、真实 Java/Node 局部更新和多插件应用仍分别使用第 4、5、6 节
 证据，不用全仓绿色结果替代。DSH 的逐项采用边界见
 [源码基线](2026-09-09-plugin-dependency-baselines.md)。
+
+2026-09-12 在 pre-CLI 快照 `618091a` 上执行 GitHub Actions
+[运行 #11、attempt 2](https://github.com/sunker0115/fibra/actions/runs/34675971947/attempts/2)：Ubuntu
+runner 的 48 模块 `clean verify`、25 个正式发布制品可复现比较、空临时 Maven 仓部署及仓库外消费者验证
+全部通过，作业总耗时 5 分钟。其中 attempt 1 在 `PluginDisableTest` 的预期保存失败告警后停止输出，由用户
+在 15 分 21 秒时取消；同一 SHA 的 attempt 2 中 `clean verify` 步骤耗时 2 分 15 秒，本地同一测试类另连续
+运行 20 次全部通过。当前证据未复现确定性回归，但首次挂起仍保留为 CI 超时与线程转储诊断的待改进项。该结果证明
+正式 storage 纳入后的 pre-CLI 发布闭环，不证明尚不存在的 CLI/ZIP 发行结构。
 
 联合部署故障另由 `ApplyDeploymentPersistenceBoundaryTest` 6 项、
 `ApplyDeploymentMountFailureRecoveryTest` 1 项和 `EngineArtifactRecoveryTest` 2 项覆盖：同一携带新
@@ -129,9 +137,10 @@ artifact 与 desired graph 的 `ApplyDeployment` 验证多制品暂存、运行�
 | 诊断与 best-effort | `FilePluginAuditRepositoryTest`、`CleanupFailureDiagnosticsTest`、`DynamicPluginDiagnosticsTest` 及部署边界测试证明审计/清理失败可诊断，审计失败不反转成功部署，也不丢失错误证据 |
 | 真实 Java 与 Node | Java runtime 测试使用真实 JAR、依赖 DAG、父优先动态契约、资源委派、ClassSpace 和 ClassLoader 回收；Node runtime/sidecar 测试使用真实进程覆盖握手、RPC、心跳、超时、取消、异常退出、父进程退出和其既有 supervisor/进程组终止边界；Node 不使用也不宣称 Java `fibra-subprocess-local` 的 Linux systemd scope 或 Windows Job Object |
 | 结构与公开面 | `ApiSignatureBaselineTest`、`ArchitectureBaselineTest`、模块依赖门禁、Spring、README、示例和 archetype 测试通过；生产源码无 PF4J、旧 loader、`Engine.runtime()`、共享可变 `ContributionBridge` 或兼容转发残留，历史文档中的旧名不作为生产残留 |
-| 可复现发布 | `scripts/verify-reproducible-release.sh` 已更新为 25 个正式发布模块（含 `fibra-tool-storage`）的 clean 与非 clean 两次打包比较 flattened POM、主 JAR、sources JAR 和 Javadoc JAR；本次正式 storage、CLI 与 ZIP 分发合并后尚待最终执行，聚合 POM、acceptance、example、parity 和 benchmark 明确不发布 |
-| 空仓与隔离分发 | `scripts/verify-distribution.sh` 已更新为从空临时 Maven 仓部署并解析 25 个正式制品，检查每个模块恰有 POM、主/sources/javadoc JAR，并在仓库外 fixture 验证 12 个正式动态插件不在宿主 classpath、以公开 API 调用 fs/search/shell/storage；本次正式 storage、CLI 与 ZIP 分发合并后尚待最终执行，不能沿用此前 24 制品/11 动态插件的通过结论 |
+| 可复现发布 | `scripts/verify-reproducible-release.sh` 比较 25 个正式发布模块（含 `fibra-tool-storage`）的 clean 与非 clean 两次打包结果，包括 flattened POM、主 JAR、sources JAR 和 Javadoc JAR；pre-CLI 快照 `618091a` 已在 GitHub Ubuntu runner 通过。聚合 POM、acceptance、example、parity 和 benchmark 明确不发布；CLI 与 ZIP 合并后仍须按新增制品清单最终复验 |
+| 空仓与隔离分发 | `scripts/verify-distribution.sh` 从空临时 Maven 仓部署并解析 25 个正式制品，检查每个模块恰有 POM、主/sources/javadoc JAR，并在仓库外 fixture 验证 12 个正式动态插件不在宿主 classpath、以公开 API 调用 fs/search/shell/storage；pre-CLI 快照 `618091a` 已在 GitHub Ubuntu runner 通过，CLI/ZIP 解压启动及合并后的空仓门禁仍待实现和最终执行 |
 
-2026-09-12 的全仓、24 制品可复现与空仓/隔离分发均为前一阶段独立执行结果；当前 25 制品、12 个动态
-插件及后续 CLI/ZIP 分发必须在最终交付前重新执行。Windows 文件发布仍明确保留平台证据边界：当前完成
-实现、注入测试和制品打包验证，不把 macOS 上未运行的 Win32 原生路径记为实机通过。
+2026-09-12 的 `618091a` 已完成 25 制品、12 个动态插件的 pre-CLI 全仓、可复现与空仓/隔离分发验证；
+后续 CLI/ZIP 合并后必须按最终制品和真实解压启动场景重新执行，不能沿用该快照结果关闭完整交付。
+Windows 文件发布仍明确保留平台证据边界：当前完成实现、注入测试和制品打包验证，不把 macOS 上未运行
+的 Win32 原生路径记为实机通过。
