@@ -1368,7 +1368,70 @@ F4 完成后再创建新仓库。项目名称、坐标和首个模型 provider �
 Web、LSP、Webhook、Schedule 和第二种模型协议属于按需垂直阶段，不占预留空模块。它们必须复用已经稳定
 的 Tool、Session、取消、profile 和 distribution 契约，并用真实调用证明需求后才进入路线。
 
-### 11.6 上层产品不可破坏的 Fibra 契约
+### 11.6 UI 插件与长会话数据流
+
+UI 分为产品壳、UI 扩展和业务后端三层，不能统称为一个插件：
+
+| 层次 | 形态 | 生命周期与交互 |
+|---|---|---|
+| 产品壳 | Web/桌面应用、CLI TUI 或 JavaFX 宿主适配器 | 由上层产品进程拥有，负责窗口、路由、终端、连接和 renderer，不是运行时插件 |
+| UI 扩展 | panel、view、tool renderer、菜单或静态前端资源 | 可以是上层产品插件贡献，但只能通过稳定 UI descriptor、资源引用和 action 契约接入 |
+| 业务后端 | Agent、Session、Tool 等 Java/Node 插件 | 在 RuntimeDomain 内发布动作和查询贡献，不取得 DOM、JavaFX Scene 或终端对象 |
+
+Java 可以实现 UI 插件，但首选方式不是让动态 ClassLoader 返回 Swing/JavaFX 控件。Java 插件应发布
+宿主可见的 `UiExtensionDescriptor`、view model、action endpoint 和内容摘要；如果携带 Web UI 资源，
+资源随插件制品保存并按 artifact revision/content digest 提供，浏览器在受限 module、Web Component 或
+iframe 中渲染。UI 动作携带当前 view revision 和 contribution ID，经产品 gateway 调用
+`PublishedRuntime`；结果与后续事件再投影给 renderer。插件撤销时先停止新 action、排空旧路由，然后
+移除 extension 和对应资源，不能留下指向旧 ClassLoader 的回调。
+
+```text
+UI shell / TUI
+  ├─ 读取 PublishedView 中的 UI/Agent/Tool descriptor
+  ├─ action ──> product gateway ──> PublishedRuntime.invoke(...)
+  └─ events <── session event reader <── durable session journal
+
+Java 或 Node 产品插件
+  ├─ 注册 descriptor / action contribution
+  ├─ 写入 Session 事实与事件
+  └─ Scope 撤销时排空 action、任务和资源
+```
+
+全 JavaFX/Swing 的动态 UI 技术上可行，但会把 toolkit 版本、UI thread、listener 和 Scene graph 对象跨
+ClassLoader 固定为公共契约，卸载与热替换成本高。首版不采用该方式；若以后确有纯 Java 桌面场景，先做
+独立宿主 adapter，仍优先让插件贡献描述和动作，不把任意控件对象作为通用 Fibra contribution。CLI TUI
+同理：产品 CLI 通过 F4 冻结的终端租约拥有唯一输入和屏幕，业务插件可以提供呈现元数据，但不能直接
+读取 `System.in`、切换 raw mode 或占有终端。
+
+长会话必须把“会话事实”“运行中的 turn”和“客户端事件订阅”分开。当前 `PublishedRuntime.views()` 只
+发布 Engine 与 contribution 拓扑快照，`PublishedRuntime.invoke(...)` 和 `ContributionHandler` 只返回
+单结果 `Mono<O>`；现有实现已经能提供 revision 校验、调用 Scope、取消、路由撤销和在途排空，但不提供
+token/event 多值流、持久游标、重放、慢消费者背压或断线续接。因此它是长会话的可靠底座，不是完整的
+长会话数据面。
+
+P2/P7 首版采用上层产品拥有的持久 Session journal 和有界游标读取，不立即修改 Fibra core：
+
+- Session 以 `sessionId/turnId/stepId/sequence/correlationId/type/terminal/payloadRef` 记录追加事实；大模型
+  token、工具原始结果和附件超过限制时保存外置内容，事件只保留摘要与稳定引用。
+- `agent.start` 接受一个 turn 后返回稳定 handle；实际 turn 必须登记为产品插件拥有的受管任务，不能是
+  无 owner 的 fire-and-forget。`agent.cancel` 显式取消该 turn，客户端断线本身不默认取消会话或 turn。
+- `agent.events.read(afterSequence, limit, waitTimeout)` 使用当前 unary contribution 做有界批量读取/长轮询；
+  `limit`、等待时间和单批字节数都有上限。UI、CLI TUI、SSE 或 WebSocket gateway 都消费同一游标协议，
+  gateway 不成为第二事实源。
+- 每个 turn 是可终止、可排空的有限任务，Session 是跨 turn 的持久对象；不能用一个永不结束的 contribution
+  invocation 代表整个会话，否则插件升级会被永久在途调用阻塞。
+- journal 至少保证同一 Session 内 sequence 单调和终态唯一；客户端按 sequence 幂等消费。慢消费者从
+  持久游标补读，超过保留边界时收到明确 resync/checkpoint，不允许无界内存队列。
+- provider 升级或连接重建后，订阅者携带游标重新读取；已提交的工具副作用不重放，未完成步骤按 Session
+  恢复规则进入中断或显式续跑，而不是由 UI 猜测。
+
+只有出现第二个与 Agent/Session 无关、同样需要高吞吐多值调用的真实消费者，并证明有界游标协议无法
+满足延迟或吞吐时，才在 Fibra 设计通用 streaming contribution。届时必须同时定义 codec、背压、取消、
+终态、撤销排空和 Node sidecar 协议；不能把 `Flux` 塞进 `Mono` 的输出 DTO，也不能把进程内 `Sinks` 暴露
+到插件 ClassLoader 或远程 UI。按当前路线，P1 至 P6 不需要修改 Fibra 调用模型，P7 先在上层产品验证
+journal/游标协议。
+
+### 11.7 上层产品不可破坏的 Fibra 契约
 
 - 产品插件只通过 Fibra RuntimeDomain 的 Service、Event、Effect 和 contribution 参与运行；产品宿主只经
   Registry、`PublishedRuntime` 和 CLI API 使用能力，不能取得内部 `Context`。
@@ -1388,7 +1451,7 @@ Web、LSP、Webhook、Schedule 和第二种模型协议属于按需垂直阶段�
 - DSH 的 `jobs-local` 是内存实现，OTel 基线只核实日志导出，UI slot 属客户端组合；上层项目文档不得把
   这些边界扩大为重启续跑、全栈 telemetry 或 core UI 能力。
 
-### 11.7 提交、验证与文档留痕
+### 11.8 提交、验证与文档留痕
 
 Fibra 的 F1 至 F4 仍只维护本文和既有行为验收账本，不新建平行 spec/plan。每阶段使用一个“契约、实现与
 测试”提交；只有发行内容变化时再单独提交 distribution/外部验收，只有决定或证据变化时再提交文档。
