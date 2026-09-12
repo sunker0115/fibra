@@ -1170,6 +1170,9 @@ DSH                                         ▼
 Fibra 比 Cordis 承担更多通用交付职责，但不能因此跨入 Agent 产品领域。新增产品能力是否通用，不以“多个
 项目可能用到”判断，而以它是否只管理插件宿主自身来判断：Engine、Registry、加载器、调用发布、CLI
 会话和分发属于 Fibra；模型语义、会话消息、审批策略、Agent loop、MCP、Skill 和 UI 属于上层产品。
+上层产品可以同时提供 CLI 与 Desktop，但二者只是同一产品 Host 的两个入口和呈现面：都连接同一个
+`PluginRegistry`、Engine、持久目标、`PublishedRuntime` 与 Session 事实源，不能各自维护插件启停、版本、
+配置或调用路由。
 
 DSH 能力基线继续固定为 `0.1.2-rc.1` 的提交
 `a66e4702047846cdaa10c66c9d3df3951f5ea70d`。AgentCLI 与 PaiCLI 只提供 Java 终端交互参考；二者来源和
@@ -1373,7 +1376,7 @@ F4 完成后再创建新仓库。项目名称、坐标和首个模型 provider �
 | P4 Context + Skill | instructions、文件系统 skill、引用、时间；按需附件和 spill | profile/realm 隔离；显式升级；旧会话来源可解释；敏感信息不落盘 |
 | P5 Goal + Todo + Plan + Compaction | 基于 Session 事实的长任务插件和 token 投影 | 跨重启恢复；压缩不丢未完成调用；Plan 切换不重启无关插件 |
 | P6 Sandbox + Jobs + Terminal | 独立 policy/provider、后台任务、owner 权限、按需 PTY | 平台强度不夸大；任务/PTY 关闭排空；`jobs-local` 不冒充持久任务 |
-| P7 Client plugins + 事件流 | client RuntimeDomain、renderer/slots/layout/feature UI 插件、有序事件、断线续接、JSONL 和 TUI | UI 插件差量装卸；慢消费者、终态、取消竞态、窄终端和非 TTY 门禁通过 |
+| P7 Client plugins + 事件流 | 同一 Fibra Engine 管理的 client 执行域、桌面 bootstrap、renderer/slots/layout/feature UI 插件、有序事件、断线续接、JSONL 和 TUI | CLI 与 Desktop 共享一个持久目标和事实源；桌面入口启动 Host 后直接打开页面；UI 插件由同一 ChangeSet 差量装卸；慢消费者、终态、取消竞态、窄终端和非 TTY 门禁通过 |
 | P8 Subagent + Workflow + adapters | 受管子 Agent、DAG、API、SDK、ACP、Spring gateway 与 Web client runner | 父取消排空所有子资源；provider 局部替换；仓库外真实消费 |
 
 Web、LSP、Webhook、Schedule 和第二种模型协议属于按需垂直阶段，不占预留空模块。它们必须复用已经稳定
@@ -1394,16 +1397,164 @@ effect 注册组件，卸载时级联撤销。上层 Agent 产品采用同一原
 | Host 业务插件 | Agent、Session、Model、Tool、gateway 等 | 在 host RuntimeDomain 处理事实与动作，经显式传输插件与 client domain 交互 |
 
 ```text
-极薄 client bootstrap
-  └─ client RuntimeDomain
-       ├─ ui-renderer plugin ──provides──> UiSlotRegistry
-       ├─ layout/theme plugin ──requires──> UiSlotRegistry
-       ├─ feature UI plugins  ──register──> slots/components/actions
-       └─ connection plugin   <───────────> host gateway plugin
-                                                │
-host RuntimeDomain                              ├─ Agent / Session / Model plugins
-                                                └─ Tool / MCP / approval plugins
+                              一个 Fibra PluginRegistry / Engine
+                              一个 desired target / targetRevision
+                                             │
+                         ┌───────────────────┴───────────────────┐
+                         │                                       │
+                  host RuntimeDomain                    client 执行域
+                  Java / Node plugins             浏览器内的极薄 runner
+                         │                                       │
+               Agent / Session / Model               ui-renderer plugin
+               Tool / MCP / approval                 layout/theme plugin
+                         │                            feature UI plugins
+                         └──────── PublishedRuntime / gateway ─────────┘
+
+CLI ───────────────┐
+                   ├──> 同一个 Host、目标、Session 与调用路由
+Desktop bootstrap ─┘
 ```
+
+这里的 `host RuntimeDomain` 与 `client 执行域` 是不同执行位置，不是两个控制面。Host 中唯一的 Engine 通过
+同一个 `ChangeSet` 协调 Java、Node 与 client plugin instance；client 侧只执行 prepare/activate/drain/stop
+指令并回报 observed state。CLI 执行 `plugins apply/disable` 与 Desktop 内的管理 action 最终调用同一个
+Registry 命令，不能分别修改“后端插件状态”和“前端插件状态”。一个逻辑产品插件可以由独立 host/client
+制品组成，但它们必须同时出现在一个目标图和同一 revision 中，不能拥有两份 profile 或升级入口。
+
+#### 桌面启动与页面打开
+
+“极薄 bootstrap”是桌面应用的进程和窗口启动器，不是第二套 Fibra，也不是产品 UI。正式桌面入口允许用户
+双击后直接进入页面；终端入口继续保持无界面和可脚本化，两者不能用同一个隐式行为混在一起：
+
+| 入口 | 默认行为 | 适用场景 |
+|---|---|---|
+| Fibra 的 `bin/fibra` | 只启动通用 CLI，不打开页面 | 框架管理、脚本、服务器和发行验收 |
+| 上层产品 CLI 的显式 `ui` 命令 | 启动产品 Host 并打开页面 | 开发、诊断和从终端进入桌面界面 |
+| 上层产品桌面应用图标/启动器 | 启动产品 Host，等待 ready 后直接创建窗口 | 最终用户的默认桌面体验 |
+| 上层产品 headless/server 入口 | 只启动 Host 和 gateway，不创建窗口 | 远程 Web、自动化和服务部署 |
+
+桌面启动必须经过一条确定的受管路径：
+
+1. bootstrap 解析产品 profile、data 目录和启动模式，以受管子进程或同进程嵌入方式启动 Java Host；桌面壳
+   不扫描插件目录、不选择版本，也不写 desired state。
+2. bootstrap 等待明确的 readiness，而不是固定 sleep。ready 至少表示 `Engine.start()` 已成功、已保存目标
+   已恢复或空目标首次联合启动已完成、gateway 已监听且当前 `PublishedView` 可读取；失败时显示诊断页面并
+   保留原始错误，不能打开一个看似可用的空白界面。
+3. ready 后创建 Electron/浏览器窗口，加载发行包内固定的静态入口页。入口页只负责启动 client runtime；
+   renderer、layout、connection、conversation 等实际界面继续由插件提供。
+4. client runtime 与 Host 中的 client runtime adapter 握手并注册为受管执行端。adapter 属于同一个
+   Engine 的 `PluginRuntimeAdapter`，从当前 ChangeSet 产生不可变 `ClientDeploymentSnapshot`；快照至少
+   包含 `targetRevision`、client artifact identity、版本、content digest、module entrypoint、依赖顺序、
+   配置和资源位置。客户端只能执行 Engine 下发的快照与生命周期指令，不能在本地重新解析目标；当前
+   `PublishedView.viewRevision` 另行随运行事实推进，不能用 `targetRevision` 代替调用准入代。
+5. client runtime 校验 digest 后按 Engine 已确定的顺序装载插件，向同一 Engine 回报 observed revision、
+   加载结果和诊断；只有 renderer 及产品要求的首屏插件达到目标状态后才撤掉启动画面。客户端失败只改变
+   observed/diagnostics，不能反写、降级或另行修订 desired state。
+
+Host ready 与 UI ready 必须分开。Host 首次启动时浏览器尚未连接，因此 client entries 以明确的
+`PENDING_ALLOWED` 进入同一个目标：Host 恢复完成并开放 gateway 后即可打开固定 bootstrap 页面；浏览器
+注册为执行端后，Engine 在不改变 desired target 的前提下继续协调这些 entries 到 ACTIVE，随后发布 UI
+ready。不能让 `ACTIVE_REQUIRED` 的首屏插件反向阻塞用于创建浏览器的 Host ready，形成启动死锁。
+
+本地桌面连接优先使用应用私有 IPC；必须使用 HTTP/WebSocket 时只监听 loopback，使用进程启动时生成的
+短期凭据，并通过受控握手传递，不能把长期 token、data 目录或插件绝对路径放进页面 URL。远程 Web 复用
+相同 gateway 协议，但认证、TLS 和网络暴露属于上层产品部署职责。
+
+桌面关闭由 bootstrap 统一协调：先停止窗口产生新 action，再由唯一 Engine 关闭相关准入并排空既有
+contribution invocation；控制连接必须保留到 client scopes 收到 stop/dispose、撤销 effects 并回报完成后，
+才关闭连接和窗口。Host 退出模式随后停止 Agent turn、Node sidecar 和 subprocess 受管进程，持久化必须
+提交的 Session 事实；bootstrap 只在公开超时耗尽并记录诊断后才强制终止残留 Host，不能在窗口关闭时直接
+杀 JVM。客户端断线本身不等于关闭 Host，也不默认取消正在运行的 Session/turn；非 Host 退出模式只执行
+client detach，是否随最后一个窗口关闭 Host 由产品启动模式明确决定。
+
+#### 薄 client runtime 的边界
+
+浏览器 client runtime 是 Fibra 唯一控制面的客户端执行代理。它只维护当前页面内的 client plugin scopes、
+services、effects、slots、连接和视图投影；这些是 Engine 所拥有插件实例的远端执行状态，不是独立控制
+状态。client 不复制 `PluginRegistry`、Engine、ArtifactStore、ChangeSet、SessionStore 或版本选择逻辑。
+推荐的最小职责如下：
+
+- 按 `ClientDeploymentSnapshot` 加载、启用、差量停用和释放前端模块；
+- 向插件提供 client domain 内的 service/effect/slot；`host.call` 同时携带目标身份和选择贡献时观察到的
+  `expectedViewRevision`，调用准入以 view revision 和贡献注册身份为准；
+- 按 Session 游标消费事件，在重连后从已确认 sequence 续读，而不是维护无界内存流；
+- 回报 observed revision、加载错误和 disposal 结果，使诊断能区分 Host 已提交目标与客户端是否已对齐。
+
+它不得扫描目录、安装制品、自选版本、保存 desired state、执行 Maven/npm 解析、决定权限、直接运行
+Shell/fs/Model 后端能力或成为 Session 事实源。上层产品首版在自身仓库实现 host 侧 client runtime
+adapter、浏览器 runner 和传输协议，但 adapter 必须接入 Fibra Engine 已有的 runtime SPI，所有管理命令
+继续经过 Fibra Registry；不能在产品仓库再建 ClientRegistry、ClientEngine 或第二份 profile。只有出现
+第二个非 Agent 产品消费者并证明协议稳定后，才评估把通用 adapter/SDK 下沉为 Fibra 发布物，不能为了
+预期复用提前扩大 Fibra core。
+
+#### 统一插件管理与全形态插件
+
+上层产品只提供一个插件管理面。CLI 的 `plugins ...` 命令与 Desktop 的插件管理页面是同一组 Registry
+用例的两种呈现，必须产生同一个目标变更；不存在“Host 插件管理器”和“前端插件管理器”。用户可以通过
+这个入口安装、启用、停用、升级、配置和检查任何受支持的插件形态：
+
+| 逻辑插件形态 | 可包含的 facet | 对产品的改变 |
+|---|---|---|
+| Host 插件 | Java 或 Node | 增加 Tool、Model、Session provider、MCP、策略或其它宿主能力 |
+| CLI 插件 | command contribution、renderer/TUI contribution | 增加命令、交互流程、补全或终端视图 |
+| Desktop 插件 | client module、route、slot、component、theme | 增加页面、面板、工具结果渲染、设置项或主题 |
+| 全栈插件 | 一个或多个 Host、CLI、Desktop facet | 在一次安装和一次目标变更中同时增加能力、命令与页面 |
+
+“任何插件”指 manifest 声明了 Fibra API 版本、runtime、依赖、权限、entrypoint 和 digest，且通过兼容性与
+信任校验的插件，不是执行没有描述符的任意 JAR、npm 包或网页脚本。页面扩展同样通过声明的 route、slot、
+component 和 renderer contribution 完成；插件不能直接篡改别的插件 DOM、持有全局静态 UI registry 或
+绕过 Scope 注册永久监听器。renderer/layout 本身也是插件，因此替换根布局或主题仍走相同管理入口和依赖
+闭包，而不是在 bootstrap 中写死页面。
+
+用户看到的安装单位是一个逻辑插件包。为避免破坏 Fibra 已有的单 runtime `ArtifactPackage`，首版用一个
+版本化 bundle manifest 组合多个不可变 facet artifact；例如一个全栈插件可以同时引用一个 Java artifact、
+一个提供 command contribution 的 Java/Node artifact 和一个 client artifact。所有 facet 共享逻辑
+`pluginId/version`，但各自保留独立的物理 `ArtifactId`、runtime、entrypoint 和 content digest；逻辑身份
+只负责组合，不能替代现有 ArtifactStore 和部署集合使用的物理身份。只有一部分的插件则只声明对应 facet，
+不能为凑结构创建空包。
+
+一次管理操作必须遵守以下边界：
+
+1. Registry 先解析整个逻辑插件包，校验全部 facet、依赖、权限和 digest，将制品写入同一个受管
+   ArtifactStore；任何 facet 失败都不能产生可启用的半安装状态。
+2. Engine 把全部 facet 编译进一个 desired graph 和一个 ChangeSet，分别路由到 Java、Node 或 client
+   runtime adapter；CLI 是由 Java/Node 插件发布的 contribution 形态，不为它另建 runtime。runtime 类型
+   只决定执行位置，不产生新的目标或版本选择器。
+3. 目标保存成功后只产生一个 `targetRevision`；Desktop 的 client snapshot 由这个目标派生。CLI 命令代、
+   Host contribution routes 和 client action 则从同一个不可变 `PublishedView.viewRevision` 投影，运行
+   事实变化会推进 view revision 而不改目标。help、调用、页面和配置不能各自读取不同视图代。
+4. 显式停用或升级时，Engine 先阻止受影响 facet 的新 action/invocation，排空旧调用并撤销 effects，再按
+   依赖闭包替换实例；无关 Java/Node/client 实例、ClassLoader、Node PID、组件、effects 和在途调用保持。
+5. 浏览器离线时，唯一 desired target 仍由 Host 保存，client facet 明确显示 `PENDING` 和等待的执行端；
+   重连后按同一 revision 收敛。分布式 observed state 不承诺 ACID，但不允许客户端选择旧版本继续获得
+   Host 授权，也不允许为“看起来成功”而静默删除 client facet。
+
+插件管理页面本身也是 Desktop 插件，但它只调用 Host 暴露的统一 Registry 管理 contribution；固定
+bootstrap 只保留加载失败时的最小恢复入口。即使管理页面插件损坏，用户仍可从同一产品 CLI 执行
+`plugins inspect/disable` 修复同一个目标，不建立专用的前端恢复数据库或旁路配置文件。
+
+同一产品/profile/data 命名空间在一台机器上只有一个 Host 所有者。Desktop 与 CLI 入口先通过受管端点
+发现并附着现有 Host；不存在时，只有成功取得启动所有权的入口可以创建 Engine，其余入口等待并附着，
+不能各自打开同一 data 目录再形成第二个 Registry。借用 Host 的 CLI 退出只关闭自己的会话，不关闭 Host；
+拥有 Host 的 Desktop 也必须按上文关闭策略处理，保证命令行恢复入口始终操作同一个持久目标。
+
+#### 开源参照与 Fibra 取舍
+
+该方案不是凭空创建，采用 DSH、VS Code、Grafana 与 Eclipse Theia 已验证部分的交集，但不复制任一项目的
+完整实现：
+
+| 参照 | 已验证模式 | Fibra 采用 | Fibra 不采用 |
+|---|---|---|---|
+| DSH/Cordis 固定源码 | Host/client runner、renderer、slot、页面与业务能力均可插件化，effect 负责级联清理 | 全插件 UI、依赖驱动装载、Scope/effect 撤销 | pnpm 透传、Cordis Loader、Node 专属包布局和独立客户端目标选择 |
+| [VS Code Extension Host](https://code.visualstudio.com/api/advanced-topics/extension-host) | 一个扩展体系可把实例放到 local、web 或 remote extension host；manifest 声明能力和首选位置 | 一个管理面、显式执行位置、受限 API、浏览器执行端与 Host 隔离 | VS Code 禁止扩展任意修改核心 UI 的限制；Fibra 产品允许通过受控 route/slot 替换页面 |
+| [VS Code Web Extensions](https://code.visualstudio.com/api/extension-guides/web-extensions) | 同一扩展可声明 `main` 与 `browser` 入口，browser 入口在受限 WebWorker 执行 | 逻辑插件多 facet、browser entrypoint 与宿主 entrypoint 分离 | 直接复制 Node/WebWorker API；Fibra 仍使用自身 manifest、runtime SPI 和调用契约 |
+| [Grafana App Plugin](https://grafana.com/developers/plugin-tools/key-concepts/anatomy-of-a-plugin) | 一个可安装 App Plugin 可包含自定义页面、UI extension、后端和嵌套插件 | 一个逻辑安装单位同时改变能力与页面，前后 facet 分开执行 | Grafana 专用组织配置、React/Golang API 和重启式页面发现 |
+| [Grafana Backend Plugin](https://grafana.com/developers/plugin-tools/key-concepts/backend-plugins) | 服务端统一启动隔离的 backend 子进程并通过 RPC 调用 | Host 控制远端执行器、显式协议、健康与实例隔离 | 把所有非 Java 插件都固定为 Go/gRPC 子进程 |
+| [Eclipse Theia 扩展模型](https://theia-ide.org/docs/extensions/) | 区分运行时可安装插件、每客户端执行进程与编译期全权限扩展 | 运行时插件使用受限 API，client observed state 按连接报告 | 同时维护多套不兼容扩展机制，以及让普通插件直接访问产品内部容器 |
+
+最终推荐是“VS Code 的多执行端 + Grafana 的全栈逻辑插件包 + DSH 的全插件 UI 生命周期”，再用 Fibra
+现有的唯一 Engine、持久目标、ChangeSet、PublishedView 和排空语义统一控制。这样既能在一个插件管理中
+安装任何受支持插件并改变命令、能力或页面，也不会把浏览器变成第二个控制面。
 
 Java 完全可以把实际 UI 做成插件。纯 Java 桌面产品在独立 client RuntimeDomain 中使用
 `fibra-runtime-java`：产品级 `ui-api` 固定 JavaFX 版本并定义 `UiSlotRegistry`、组件 factory、owner props
@@ -1416,7 +1567,9 @@ Web UI 同样全部插件化，但浏览器不能由 `fibra-runtime-node` 执行
 runner，加载 renderer/slot/feature 的前端模块；Java/Node host 插件与 client 插件是显式的两半，通过
 gateway/connection 插件交互，不能把 Node sidecar 当浏览器 runtime。插件携带的前端资源随制品保存并按
 artifact revision/content digest 提供；host/client manifest 显式核对版本，停用时同时撤销 action、slot
-和资源路由。
+和资源路由。Host 提交新目标后，新 action 必须携带逻辑目标身份以及选择贡献时的
+`expectedViewRevision`；离线或尚未对齐的旧页面即使暂时仍显示旧组件，其过期 view 或已撤销注册也由
+gateway 拒绝，不能把“页面还开着”误认为旧能力仍获授权。
 
 CLI TUI 也遵守全插件模型：Fibra bootstrap 只拥有物理终端和 F4 定义的终端租约，产品 renderer/layout/
 command 插件取得受管终端 service 后注册视图与按键 action。插件不能绕过租约另读 `System.in`；插件撤销
@@ -1469,6 +1622,10 @@ journal/游标协议。
   本地取消不能被描述为远端已经停止，审批不能被描述为 OS 沙箱。
 - 插件显式升级、停用或候选目录变化继续遵守 Fibra 差量更新不变量：无关实例、ClassLoader、Node PID、
   effects 和在途调用保持；保存目标不因目录变化静默改变。
+- CLI 与 Desktop 只是一套产品底层上的两个入口：它们必须共享同一个 Fibra Engine、Registry、持久目标、
+  `PublishedRuntime`、SessionStore 和诊断投影，不能按“前端/后端”建立两套插件管理或配置保存。
+- 桌面 bootstrap 只拥有进程、窗口、ready 等待和关闭协调；client runtime 只执行同一 Engine 下发的不可变
+  目标和生命周期指令，二者都不能建立插件版本选择、desired state 或 Session 事实的第二来源。
 - DSH 的 `jobs-local` 是内存实现，OTel 基线只核实日志导出，UI slot 属客户端组合；上层项目文档不得把
   这些边界扩大为重启续跑、全栈 telemetry 或 core UI 能力。
 
