@@ -1184,7 +1184,8 @@ Fibra 的后续范围到“可被另一个产品仓库直接复用的完整 CLI 
 
 - 保持已经完成的 RuntimeDomain、Engine、Registry、Artifact、配置、Java/Node runtime、
   `PublishedRuntime`、Spring starter 和正式 distribution；
-- 完成一次性命令与 REPL 共用的 CLI 应用模型、终端交互、调用取消、信号、输出协议和静态组合 SPI；
+- 完成一次性命令与 REPL 共用的 CLI 应用模型、终端交互、调用取消、信号、输出协议、bootstrap 命令和
+  动态 command contribution SPI；
 - 保留已交付的 fs、fs-search、subprocess、shell、storage 和 tool API，作为通用正式插件、真实验收场景
   和上层产品可直接消费的发布物，不移动、不复制源码；
 - 提供仓库外消费者门禁，证明上层产品只依赖声明过的发布制品即可创建自己的 CLI 和 distribution；
@@ -1211,7 +1212,7 @@ Fibra 内部实现。该项目负责：
 - Model、Agent、Session、审批、MCP、Context、Skill、附件、Goal、Todo、Plan、Compaction；
 - Sandbox、Jobs、Terminal/PTY、Web、LSP、Webhook、Schedule 等产品插件；
 - Subagent、Workflow、API、SDK、ACP、Web UI、渐进渲染和产品可观测性；
-- 产品自己的静态 CLI 命令组合、默认插件选择、凭据策略和 distribution。
+- 产品自己的极薄 CLI/bootstrap、command 与 UI 插件、默认插件选择、凭据策略和 distribution。
 
 上层项目可以依赖 Fibra 的 fs/search/shell/storage 发布物，但产品 profile 是否默认启用由上层项目决定。
 产品插件必须像现有 Fibra 正式插件一样进入 RuntimeDomain 生命周期，经 `PublishedRuntime` 向产品宿主
@@ -1227,13 +1228,15 @@ CLI 完成后采用以下模块边界：
 
 | 模块 | 类型 | 职责 |
 |---|---|---|
-| `fibra-cli-api` | 新的宿主可见公开 API | CLI 应用构建、静态命令模块、调用上下文、取消、输出通道和退出状态契约 |
+| `fibra-cli-api` | 新的宿主可见公开 API | CLI 应用构建、bootstrap 命令、动态 command contribution、调用上下文、取消、输出通道和退出状态契约 |
 | `fibra-cli` | CLI 实现与参考入口 | Picocli/JLine 实现、Fibra 固定管理命令、REPL、默认宿主创建和 `main` |
 | `fibra-distribution` | Fibra 参考发行 | 通用 Fibra CLI、正式基础插件、默认 profile 和仓库外验证 |
-| 上层产品的 CLI 模块 | 外部消费者 | 依赖 `fibra-cli-api`/`fibra-cli`，静态增加 Agent 产品命令并提供自己的 `main` |
+| 上层产品的 CLI 模块 | 外部消费者 | 依赖 `fibra-cli-api`/`fibra-cli`，只提供产品 `main`、bootstrap 元数据与 renderer 宿主 |
 
-`fibra-cli-api` 不重新抽象 Picocli：静态命令组合可以明确使用 Picocli `CommandSpec` 或命令对象，Picocli
-因此是该场景 API 的受控公开依赖；JLine 类型和 renderer 实现仍是 `fibra-cli` 私有细节。API 至少提供：
+`fibra-cli-api` 不重新抽象 Picocli：bootstrap 命令可以明确使用 Picocli `CommandSpec` 或命令对象，
+Picocli 因此是该场景 API 的受控公开依赖；动态插件不跨 ClassLoader 传递 Picocli 对象，而是发布
+框架定义的命令 descriptor 与结构化 invocation contribution。JLine 类型和 renderer 实现仍是
+`fibra-cli` 私有细节。API 至少提供：
 
 - `CliApplication` 或等价 builder，用于选择根命令元数据、添加静态命令模块并启动一次性或 REPL 模式；
 - 每次命令调用独有的 `CliInvocation`，携带 cancellation、deadline、stdout/stderr 模式及只读 profile
@@ -1241,15 +1244,19 @@ CLI 完成后采用以下模块边界：
 - 受控的宿主能力入口，使产品命令只能取得 `PluginRegistry`、`PublishedRuntime` 和必要的路径视图；
 - contribution kind/Node 映射扩展点，使上层项目能识别自己的宿主可见贡献类型，但不能修改 Fibra 已发布
   kind 或绕过 `ContributionDirectory`；
+- `CliCommandDescriptor`、结构化参数值和 command contribution kind；Java/Node 插件均可贡献命令路径、
+  参数、帮助、敏感标记和补全来源，执行仍经 `PublishedRuntime.invoke` 获得 revision、取消与排空语义；
 - 不暴露 JLine 类型的终端会话与独占租约：产品命令可查询 TTY/颜色/尺寸能力，在受控范围内暂停 line
   reader、成为租约期内唯一输入读取者、读取按键/字节、进入和恢复 raw mode、接收 resize/interrupt、
   写屏并请求 redisplay；关闭 invocation 会取消阻塞读取，非交互环境明确返回不支持，租约关闭或异常时
   由框架恢复终端属性和提示符；
 - 统一的 usage、启动、业务调用、revision 冲突、关闭和取消退出状态；人类与机器输出走明确分离的通道。
 
-产品命令在应用构建时静态加入命令树，不由运行时插件直接贡献 CLI 命令。这样补全和帮助在启动后稳定，
-插件卸载不会让正在解析的命令树变化；动态内容只作为参数候选或已发布贡献出现。Spring 继续只是宿主
-适配器，不引入 Spring Shell，也不允许应用上下文扫描生成工具或命令。
+根 help/version、profile 解析和插件管理等 bootstrap 命令静态存在；Agent、Session、MCP 等产品命令由
+运行时插件贡献。CLI 先解析最小启动参数并打开 host，再从一个 `PublishedView` 构造不可变命令代；REPL
+每次读新行前采用最新已发布代，已经开始解析或执行的命令继续持有旧 route 并参与排空。插件停用后新代
+立即移除对应命令，help、补全和执行使用同一代，不能各自读取不同快照。Spring 继续只是宿主适配器，不
+引入 Spring Shell，也不允许应用上下文扫描生成工具或命令。
 
 ### 11.3 DSH 能力盘点与项目落点
 
@@ -1261,7 +1268,7 @@ CLI 完成后采用以下模块边界：
 | Boot、package、bundle、profile | 环境分层、配置组合、启动审计；安装包、bundle patch、profile 和最终配置分层 | Fibra 已完成 | 继续由 Fibra 提供，上层项目只声明自己的 profile/bundle/package |
 | 插件生命周期 | 依赖驱动激活、异步 effect、服务撤销等待、条件/isolate、局部更新、主动停用 | Fibra 已完成 | 所有上层产品插件复用，不建产品私有容器 |
 | fs、搜索、shell、subprocess、storage | contract/provider/tool 分层；搜索经 subprocess；进程树排空；具名存储与变更事件 | Fibra 已完成本期范围 | 保留 Fibra 正式发布物；图片、Jobs、PTY、Sandbox 不冒充已完成 |
-| CLI 交互 | DSH 有 commands/questions/approval；AgentCLI/PaiCLI 有 JLine 历史、补全、高亮和 renderer | Fibra 部分完成 | F1 至 F4 完成通用 CLI；Agent questions/approval/renderer 留上层项目 |
+| CLI 交互 | DSH 的 commands/questions/approval 均为插件；AgentCLI/PaiCLI 有 JLine 历史、补全、高亮和 renderer | Fibra 部分完成 | F1 至 F4 完成 bootstrap 与动态 command contribution；产品 command/questions/approval/renderer 均留上层插件 |
 | Model | provider 路由、模型发现、配置解析和流式适配 | 未实现 | 上层项目动态 contract/provider 插件 |
 | Agent | Agent factory、轮次/步骤、模型流与工具调度；完整实现依赖 Session | 未实现 | 上层项目 Agent 插件；P1 使用 invocation 内状态闭合 Model/Tool，P2 再接入独立 Session |
 | Tool 流水线 | schema、作用域、guard、pre/execute/post/result 和多种呈现 | Fibra 已有公开工具调用 | 通用调用留 Fibra；Agent 选择、审批和产品呈现留上层项目 |
@@ -1274,7 +1281,7 @@ CLI 完成后采用以下模块边界：
 | Jobs、Terminal、PTY | 内存 JobRegistry、owner 控制、输出/等待/取消；persistent shell 和 PTY | 未实现 | 上层项目独立插件；DSH `jobs-local` 不持久，首期不承诺重启续跑 |
 | Web、LSP、Webhook、Schedule | 均为独立包和 adapter | 未实现 | 上层项目按需插件，没有真实调用方前不创建 |
 | Subagent、Workflow | 多种 subagent provider、worker/workflow/tool | 未实现 | 上层项目在单 Agent 生命周期稳定后实现 |
-| API、SDK、ACP、Web UI | gateway/remotes、journal stream、JSON-RPC、ACP、浏览器连接和 UI slot | 未实现 | 上层项目宿主/客户端 adapter，不进入 Fibra core |
+| API、SDK、ACP、Web UI | gateway/remotes、journal stream、JSON-RPC、ACP、浏览器连接、renderer 和 UI slot 都由插件组合 | 未实现 | 上层项目 host/client RuntimeDomain 插件与极薄 bootstrap，不进入 Fibra core |
 | Observability | invariant、session telemetry、stats、token meter、启动诊断 | Fibra 框架诊断已完成 | Fibra 保持框架诊断；上层项目随产品阶段交付业务遥测 |
 
 两处边界以源码而不是名称判断：DSH 搜索没有注入 `fs` 或 `shell`，所以上层项目复用 Fibra search 时
@@ -1287,20 +1294,23 @@ CLI 完成后采用以下模块边界：
 
 #### F1：公开 CLI 组合边界
 
-- 新建 `fibra-cli-api`，从当前封闭 `FibraCli`/`CliHost` 中提取最小应用构建、静态命令模块、调用上下文、
-  输出、退出状态和受控终端租约；`fibra-cli` 继续提供默认实现和现有固定命令。
-- 一次性命令与 REPL 必须经过同一命令树和 invocation 创建路径；上层命令只能使用 Registry、
-  `PublishedRuntime` 和声明的 profile/path 视图。
-- 建立仓库外临时 Maven 消费者，只依赖已安装到隔离仓库的 Fibra 发布物，增加一个静态测试命令，调用
-  一个已发布工具并通过 fake/dumb terminal 验证租约恢复，证明无需包私有类型和 reactor。
+- 新建 `fibra-cli-api`，从当前封闭 `FibraCli`/`CliHost` 中提取最小应用构建、bootstrap 命令、动态
+  command contribution、调用上下文、输出、退出状态和受控终端租约；`fibra-cli` 继续提供默认实现和
+  现有固定命令。
+- 一次性命令与 REPL 必须经过同一命令代和 invocation 创建路径；CLI 先解析最小启动参数，再从
+  `PublishedView` 的 command contributions 建树。上层命令只能使用 Registry、`PublishedRuntime` 和
+  声明的 profile/path 视图。
+- 建立仓库外临时 Maven 消费者，只依赖已安装到隔离仓库的 Fibra 发布物，加载一个真实 Java command
+  插件，执行其动态命令、停用并验证命令消失；同时调用一个已发布工具，并通过 fake/dumb terminal 验证
+  租约恢复，证明无需包私有类型和 reactor。
 
 退出条件：公开 API 签名门禁通过；现有 CLI 命令和 distribution 无行为回归；外部消费者从空 Maven
 依赖仓构建、启动并完成扩展命令与真实工具调用。
 
 #### F2：安全历史、补全与终端降级
 
-- 从 Picocli `CommandSpec` 生成静态补全；工具名等动态候选只读取当前 `PublishedView`，插件变更成功后
-  刷新，不引入第二工具目录。
+- bootstrap 补全从 Picocli `CommandSpec` 生成，动态命令及工具名候选来自同一个当前 `PublishedView`；
+  插件变更成功后原子切换命令/补全代，不引入第二命令或工具目录。
 - 吸收 AgentCLI/PaiCLI 的 JLine persistent history、高亮和 dumb-terminal fallback。当前 REPL 内可保留
   完整内存历史；持久历史绝不保存 `tools invoke --input` 原值、未来凭据参数或被标记的敏感值，不安全
   命令只留下不可重放的脱敏摘要。
@@ -1317,7 +1327,8 @@ distribution 回归通过。不得扫描 workspace 或 storage 后把用户明�
   时只清空当前输入，不关闭 Engine。
 - 非交互调用收到 `SIGINT` 时取消当前调用并排空后以 130 退出；`SIGTERM` 继续走已经验证的宿主关闭
   路径。重复信号不能绕过受管资源清理。
-- 取消、排空超时、业务失败和宿主关闭失败保持不同投影；上层静态命令自动获得同一 invocation 语义。
+- 取消、排空超时、业务失败和宿主关闭失败保持不同投影；动态 command contribution 自动获得同一
+  invocation 语义。
 
 退出条件：真实 TTY 中取消后可继续调用另一命令；无关插件实例、ClassLoader、Node PID、effects 和在途
 调用保持；子进程范围静默；外部 `SIGINT`、`SIGTERM`、退出码和产品扩展命令夹具通过。
@@ -1345,8 +1356,8 @@ F4 完成后再创建新仓库。项目名称、坐标和首个模型 provider �
 ```text
 上层 Agent 产品项目
   ├─ product-api/                 Agent、Model、Session 等宿主可见场景 API
-  ├─ product-cli/                 基于 Fibra CLI SPI 的静态产品命令
-  ├─ product-plugins/             contract、provider、consumer 与 policy 插件
+  ├─ product-cli/                 基于 Fibra CLI SPI 的极薄 bootstrap 与 renderer 宿主
+  ├─ product-plugins/             command、UI、contract、provider、consumer 与 policy 插件
   ├─ product-distribution/        自有 profile、插件选择、启动器与 ZIP
   └─ product-acceptance/          真实模型、工具、重启、信号和外部解压验收
 ```
@@ -1355,53 +1366,62 @@ F4 完成后再创建新仓库。项目名称、坐标和首个模型 provider �
 
 | 阶段 | 交付内容 | 关键退出条件 |
 |---|---|---|
-| P0 独立建仓 | 父 POM、CLI 组合、distribution、验收骨架；只消费 Fibra 发布物 | 隔离空 Maven 仓构建；仓库外 ZIP 启动；调用 Fibra 正式工具 |
+| P0 独立建仓 | 父 POM、极薄 CLI bootstrap、首个 command 插件、distribution、验收骨架；只消费 Fibra 发布物 | 隔离空 Maven 仓构建；仓库外 ZIP 启动；动态命令调用 Fibra 正式工具 |
 | P1 Model + Agent | 场景 API、一个真实模型 provider、invocation 内单 Agent loop、system prompt、Tool bridge、最小审批 | 不依赖 Session 完成真实模型选取和调用文件或 Shell 工具；拒绝无 effect；取消无泄漏 |
 | P2 Session | 追加事实、JSONL provider、projection、flush、fork/checkpoint、重启恢复 | 工具调用后重启恢复；三个故障点不产生半完成调用；损坏明确失败 |
 | P3 MCP | stdio/Streamable HTTP client、工具同步、撤销、有限重连 | 真实 MCP server 发现/调用/取消；停用后路由排空和子进程清理 |
 | P4 Context + Skill | instructions、文件系统 skill、引用、时间；按需附件和 spill | profile/realm 隔离；显式升级；旧会话来源可解释；敏感信息不落盘 |
 | P5 Goal + Todo + Plan + Compaction | 基于 Session 事实的长任务插件和 token 投影 | 跨重启恢复；压缩不丢未完成调用；Plan 切换不重启无关插件 |
 | P6 Sandbox + Jobs + Terminal | 独立 policy/provider、后台任务、owner 权限、按需 PTY | 平台强度不夸大；任务/PTY 关闭排空；`jobs-local` 不冒充持久任务 |
-| P7 事件流与 renderer | 有序事件信封、断线续接、JSONL、人类渐进渲染和 TUI | 慢消费者、终态、取消竞态、窄终端和非 TTY 门禁通过 |
-| P8 Subagent + Workflow + adapters | 受管子 Agent、DAG、API、SDK、ACP、Spring bean、Web UI | 父取消排空所有子资源；provider 局部替换；仓库外真实消费 |
+| P7 Client plugins + 事件流 | client RuntimeDomain、renderer/slots/layout/feature UI 插件、有序事件、断线续接、JSONL 和 TUI | UI 插件差量装卸；慢消费者、终态、取消竞态、窄终端和非 TTY 门禁通过 |
+| P8 Subagent + Workflow + adapters | 受管子 Agent、DAG、API、SDK、ACP、Spring gateway 与 Web client runner | 父取消排空所有子资源；provider 局部替换；仓库外真实消费 |
 
 Web、LSP、Webhook、Schedule 和第二种模型协议属于按需垂直阶段，不占预留空模块。它们必须复用已经稳定
 的 Tool、Session、取消、profile 和 distribution 契约，并用真实调用证明需求后才进入路线。
 
-### 11.6 UI 插件与长会话数据流
+### 11.6 全插件 UI 与长会话数据流
 
-UI 分为产品壳、UI 扩展和业务后端三层，不能统称为一个插件：
+DSH 固定源码中的 `ui-renderer`、`ui-slots`、layout、conversation、settings、tool renderer 及 client
+runner 都是 Cordis 插件；`ui-renderer.apply(ctx)` 自己创建并提供 SlotRegistry，其他 UI 插件通过注入和
+effect 注册组件，卸载时级联撤销。上层 Agent 产品采用同一原则：除了创建 JVM、浏览器页面、顶层窗口或
+物理终端的极薄 bootstrap，CLI command、连接、renderer、slots、layout、页面和业务 UI 都是插件。
 
-| 层次 | 形态 | 生命周期与交互 |
+| 层次 | 插件形态 | 生命周期与交互 |
 |---|---|---|
-| 产品壳 | Web/桌面应用、CLI TUI 或 JavaFX 宿主适配器 | 由上层产品进程拥有，负责窗口、路由、终端、连接和 renderer，不是运行时插件 |
-| UI 扩展 | panel、view、tool renderer、菜单或静态前端资源 | 可以是上层产品插件贡献，但只能通过稳定 UI descriptor、资源引用和 action 契约接入 |
-| 业务后端 | Agent、Session、Tool 等 Java/Node 插件 | 在 RuntimeDomain 内发布动作和查询贡献，不取得 DOM、JavaFX Scene 或终端对象 |
-
-Java 可以实现 UI 插件，但首选方式不是让动态 ClassLoader 返回 Swing/JavaFX 控件。Java 插件应发布
-宿主可见的 `UiExtensionDescriptor`、view model、action endpoint 和内容摘要；如果携带 Web UI 资源，
-资源随插件制品保存并按 artifact revision/content digest 提供，浏览器在受限 module、Web Component 或
-iframe 中渲染。UI 动作携带当前 view revision 和 contribution ID，经产品 gateway 调用
-`PublishedRuntime`；结果与后续事件再投影给 renderer。插件撤销时先停止新 action、排空旧路由，然后
-移除 extension 和对应资源，不能留下指向旧 ClassLoader 的回调。
+| 极薄 bootstrap | 唯一非插件部分 | 只创建进程/页面/窗口/终端和 client RuntimeDomain，装载 profile 中的首批插件，不实现产品 UI |
+| UI runtime 插件 | renderer、SlotRegistry、layout、theme、connection | 在 client RuntimeDomain 提供 UI service、slot 和远程连接；根画面由注入的插件组合 |
+| Feature UI 插件 | conversation、settings、tool view、approval、jobs 等 | require UI service，通过自身 Scope/effect 注册组件、状态和 action，停用时差量卸载 |
+| Host 业务插件 | Agent、Session、Model、Tool、gateway 等 | 在 host RuntimeDomain 处理事实与动作，经显式传输插件与 client domain 交互 |
 
 ```text
-UI shell / TUI
-  ├─ 读取 PublishedView 中的 UI/Agent/Tool descriptor
-  ├─ action ──> product gateway ──> PublishedRuntime.invoke(...)
-  └─ events <── session event reader <── durable session journal
-
-Java 或 Node 产品插件
-  ├─ 注册 descriptor / action contribution
-  ├─ 写入 Session 事实与事件
-  └─ Scope 撤销时排空 action、任务和资源
+极薄 client bootstrap
+  └─ client RuntimeDomain
+       ├─ ui-renderer plugin ──provides──> UiSlotRegistry
+       ├─ layout/theme plugin ──requires──> UiSlotRegistry
+       ├─ feature UI plugins  ──register──> slots/components/actions
+       └─ connection plugin   <───────────> host gateway plugin
+                                                │
+host RuntimeDomain                              ├─ Agent / Session / Model plugins
+                                                └─ Tool / MCP / approval plugins
 ```
 
-全 JavaFX/Swing 的动态 UI 技术上可行，但会把 toolkit 版本、UI thread、listener 和 Scene graph 对象跨
-ClassLoader 固定为公共契约，卸载与热替换成本高。首版不采用该方式；若以后确有纯 Java 桌面场景，先做
-独立宿主 adapter，仍优先让插件贡献描述和动作，不把任意控件对象作为通用 Fibra contribution。CLI TUI
-同理：产品 CLI 通过 F4 冻结的终端租约拥有唯一输入和屏幕，业务插件可以提供呈现元数据，但不能直接
-读取 `System.in`、切换 raw mode 或占有终端。
+Java 完全可以把实际 UI 做成插件。纯 Java 桌面产品在独立 client RuntimeDomain 中使用
+`fibra-runtime-java`：产品级 `ui-api` 固定 JavaFX 版本并定义 `UiSlotRegistry`、组件 factory、owner props
+和 disposal 契约；renderer 插件提供 registry，feature 插件通过 `Context` require 它，并用 effect 注册
+factory。factory 只在 JavaFX Application Thread 创建节点；撤销时先停止新渲染和 action，在 UI 线程卸载
+节点、listener 与 binding，排空任务后才释放插件 ClassLoader。JavaFX `Node` 可以作为这个产品专用 UI
+API 的类型，但不能进入 Fibra core 或通用 `fibra-cli-api`，也不能被静态全局 registry 长期持有。
+
+Web UI 同样全部插件化，但浏览器不能由 `fibra-runtime-node` 执行。上层产品需要一个浏览器 client plugin
+runner，加载 renderer/slot/feature 的前端模块；Java/Node host 插件与 client 插件是显式的两半，通过
+gateway/connection 插件交互，不能把 Node sidecar 当浏览器 runtime。插件携带的前端资源随制品保存并按
+artifact revision/content digest 提供；host/client manifest 显式核对版本，停用时同时撤销 action、slot
+和资源路由。
+
+CLI TUI 也遵守全插件模型：Fibra bootstrap 只拥有物理终端和 F4 定义的终端租约，产品 renderer/layout/
+command 插件取得受管终端 service 后注册视图与按键 action。插件不能绕过租约另读 `System.in`；插件撤销
+时先退出 raw mode、取消阻塞读取、卸载视图，再归还终端。这样 command、help、补全、TUI 和业务能力都
+随同一 `PublishedView` 代切换，正在执行的旧命令继续走旧 route 排空。
 
 长会话必须把“会话事实”“运行中的 turn”和“客户端事件订阅”分开。当前 `PublishedRuntime.views()` 只
 发布 Engine 与 contribution 拓扑快照，`PublishedRuntime.invoke(...)` 和 `ContributionHandler` 只返回
@@ -1440,7 +1460,8 @@ journal/游标协议。
   打包副本。
 - Node 产品插件只发布 `fibra-runtime-node` 能解析的宿主可见 contribution；不能假设 JSON-RPC sidecar
   自动参与任意 Java Service 依赖图。新增跨进程 service 协议必须有独立契约、取消、排空和版本门禁。
-- 产品 CLI 命令在构建时静态组合，运行时插件只贡献业务能力和动态候选，不直接改变命令树或 Spring
+- 产品 bootstrap 命令在构建时静态存在，业务 CLI 命令由运行时 command contribution 插件发布；CLI
+  只从一个不可变 `PublishedView` 构造整棵命令代，插件不能直接修改 Picocli 对象或 Spring
   ApplicationContext。
 - `SessionStore`、模型记忆、CLI history、`ConfigStore` 和 `EngineStateStore` 各自只有一个事实来源；
   不能共享格式、revision、恢复入口或把一个存储包装成另一个。
