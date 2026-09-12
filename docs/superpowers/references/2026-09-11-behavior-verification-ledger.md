@@ -1,8 +1,8 @@
 # 行为验收账本
 
-复核日期：2026-09-12。状态：Cordis 原始行为、Fibra 额外回归、正式插件、pre-CLI 分发证据和正式宿主
-CLI 的本地证据已记录；ZIP 分发仍待交付，合并后的最终全仓、可复现及空仓分发门禁仍须统一复验；
-平台限定证据见第 5、6 节。
+复核日期：2026-09-13。状态：Cordis 原始行为、Fibra 额外回归、正式插件、正式宿主 CLI、可运行 ZIP、
+仓库外真实调用、可复现发布、空 Maven 仓分发门禁、最终全仓与公开 API 复验均已有最终本地证据；平台
+限定证据见第 5、6 节。
 
 本账本把两类当前验收对象分开记录：
 
@@ -70,8 +70,8 @@ CLI/ZIP 发行结构。
 
 本次批量目标与终态通知修正完成后执行 `mvn -o -pl fibra-core,fibra-engine,fibra-parity-tests -am test`：
 18 个依赖链模块全部通过，`fibra-core` 110 项、`fibra-parity-tests` 122 项均为 0 failure、0 error、
-0 skipped，Engine、Spring 及真实 Java/Node 跨运行时场景一并通过。该结果是当前架构阶段的定向回归，
-不替代 CLI/ZIP 合并后的最终全仓、可复现和空仓分发门禁。
+0 skipped，Engine、Spring 及真实 Java/Node 跨运行时场景一并通过。该结果是当时架构阶段的定向回归；
+CLI/ZIP 合并后的最终全仓、可复现和空仓证据独立记录在下文，不由历史结果拼接得出。
 
 正式宿主 CLI 阶段使用 Maven 3.9.9、Zulu JDK 21.0.2 对 JLine 4.4.3 `jdk11` 制品执行干净定向编译与
 测试，`FibraCliTest`、`CliReplTest` 共 23 项通过；随后执行 `mvn -o -pl fibra-cli -am test`，12 个
@@ -79,8 +79,42 @@ reactor 模块全部通过，`fibra-cli` 的 62 项为 0 failure、0 error、0 s
 制品清单、首次联合启动、保存目标恢复、显式 apply、目录锁、命令解析、JSON 边界、单行输出和 REPL
 复用宿主。`fibra-tool-api` 的 `ToolApiTest`/`ToolOutcomesTest` 16 项固定成功产物、调用终态和 Node wire
 schema v2；`FormalCliIT` 3 项与 `FormalMultiPluginIT` 5 项通过真实动态 storage/fs/search/shell 插件验证
-REPL 共享状态、重启恢复、完整 apply、公开调用、局部更新和在途调用保留。真实发行目录中的同一流程仍须
-由 ZIP 解压门禁完成，不能由本阶段单元/集成测试替代。
+REPL 共享状态、重启恢复、完整 apply、公开调用、局部更新和在途调用保留。
+
+正式发行阶段在 macOS 26.6.2 arm64、Zulu JDK 21.0.2、Maven 3.9.9 上执行
+`mvn --offline -pl fibra-distribution -am clean verify`，25 个相关 reactor 模块全部通过，耗时 1 分 34 秒；
+`fibra-distribution/src/test/scripts/verify-archive.sh` 将
+`fibra-distribution/target/fibra-0.5.0-SNAPSHOT-bin.zip` 复制到仓库外临时目录解压，并通过其中
+`bin/fibra` 从空 data 首次启动。验证覆盖 12 个正式插件、`plugins list`、`tools list`、文件写入/读取、
+全文搜索、Shell 命令、配置存储 put/load/changes、重启恢复、候选目录移动不改变保存目标、显式 fs
+升级与停用时无关 Java 实例 identity 保持、宿主 JAR 不含正式插件，以及阻塞工具调用期间真实
+`SIGTERM` 后 payload、supervisor 与叶子进程均停止。ZIP 同时检查许可证、非法路径、符号链接、构建残留、
+仓库绝对路径泄漏和目标运行件权限。
+
+同日执行 `scripts/verify-reproducible-release.sh` 通过：先建立 clean package 基准，再分别执行 clean 与
+非 clean package，逐字节比较 26 个正式发布模块的 flattened POM、主 JAR、sources JAR、Javadoc JAR、
+发行 ZIP，并比较完整发行目录中每个路径的类型、权限和 SHA。执行 `scripts/verify-distribution.sh` 也通过：
+第一空仓对 27 项 reactor clean/deploy 耗时 6 分 09 秒，仅向临时仓部署 26 个正式发布物；第二空仓仅从该
+临时仓和 Maven Central 独立构建 `fibra-distribution` 并完成仓库外 ZIP 验证，耗时 4 分 02 秒；随后 5 个
+外部消费者耗时 4 分 20 秒通过，清除消费者仓中的 `com/sstlfsj` 后再次解析验证通过，archetype 在隔离仓
+生成、编译并产生插件目录。门禁显式使用仓库内 settings，不继承用户级 Maven settings。
+
+最终根聚合命令 `mvn --offline clean package` 不附加跳过参数，50 个 reactor 模块全部通过，耗时 1 分
+36 秒，并自动生成 `fibra-distribution/target/fibra-0.5.0-SNAPSHOT/` 与同级
+`fibra-0.5.0-SNAPSHOT-bin.zip`。最终补强后执行的 `mvn --offline clean verify` 对同一 50 个模块全部通过，
+耗时 2 分 22 秒；`fibra-distribution` 的 verify 阶段再次完成仓库外 ZIP 验收。公开 API 与文档另执行
+`mvn --offline -pl fibra-parity-tests -am test`，指定 `ApiSignatureBaselineTest`、
+`ArchitectureBaselineTest`、`ReadmeExampleTest` 与 `surefire.failIfNoSpecifiedTests=false`；18 个相关模块与
+5 项测试通过，0 failure、0 error、0 skipped。上述命令运行平台均为 macOS 26.6.2 arm64、Zulu JDK
+21.0.2、Maven 3.9.9。
+
+独立交付审核未发现 P0/P1，并识别出 3 个 P2 门禁缺口：运行件版本探测可能吞掉非零退出码、REPL 中
+停用/恢复结果未断言、`SIGTERM` 后无截止等待可能把工具自然结束误记为排空成功。提交 `5c760ca` 已在
+实现与测试中一并关闭：新增失败运行件装配契约测试，ZIP 验收显式断言 `fs-tools` 的停用与恢复状态，且
+要求宿主在信号后 10 秒内退出，再检查 payload、supervisor 与叶子进程静默。修正后重新执行
+`mvn --offline -pl fibra-distribution -am verify`，25 个模块全部通过，耗时 1 分 21 秒；可复现门禁也在
+该提交上重新通过。空 Maven 仓门禁已在此前最终发行清单与隔离仓实现上完整通过；`5c760ca` 未改变依赖
+图、发布坐标、26 制品清单或仓库隔离逻辑，按维护者指示不为这三个验收断言重复下载 Central 依赖。
 
 正式安装单元阶段在 macOS 26.6.2 arm64、Zulu JDK 21.0.2 上执行 `mvn -o clean verify`，48 个 reactor
 模块全部通过，耗时 1 分 35 秒。新增的 `ArtifactPackageTest` 20 项、`PluginArtifactProbeTest` 5 项、
@@ -188,11 +222,11 @@ artifact 与 desired graph 的 `ApplyDeployment` 验证多制品暂存、运行�
 | 诊断与 best-effort | `FilePluginAuditRepositoryTest`、`CleanupFailureDiagnosticsTest`、`DynamicPluginDiagnosticsTest` 及部署边界测试证明审计/清理失败可诊断，审计失败不反转成功部署，也不丢失错误证据 |
 | 真实 Java 与 Node | Java runtime 测试使用标准包内真实主 JAR、排序私有依赖、依赖 DAG、父优先动态契约、资源委派、ClassSpace 和 ClassLoader 回收；`JavaArtifactPackageTest` 6 项另证明删除候选目录后仍从受管副本装载私有类、资源和服务，并拒绝隐式 Class-Path、错误 identity 和旧裸 JAR。Node runtime 39 项使用正式目录 payload 和真实进程覆盖受管副本启动、绝对/越界入口拒绝、握手、RPC、心跳、发送前 deadline 所有权、请求级超时/取消、共享 sidecar 隔离、取消宽限耗尽后的实例级终止、异常退出、父进程退出、关闭线程中断、严格 JSON-RPC 响应边界、JSON `null` 响应语义、tool wire schema v2 及 supervisor 范围静默证明；证明缺失或失败时请求排空失败并保留诊断现场。Node 不使用也不宣称 Java `fibra-subprocess-local` 的 Linux systemd scope 或 Windows Job Object |
 | 结构与公开面 | `ApiSignatureBaselineTest`、`ArchitectureBaselineTest`、模块依赖门禁、Spring、README、示例和 archetype 测试通过；archetype 的 `mvn package` 自动产生 `target/<finalName>-plugin/plugin.properties` 与 `lib/plugin.jar`，同时保留标准 Maven 主 JAR。生产源码无 PF4J、旧 loader、裸制品 fallback、`Engine.runtime()`、共享可变 `ContributionBridge` 或兼容转发残留，历史文档中的旧名不作为生产残留 |
-| 正式宿主 CLI | `ProfileArtifactSourceTest` 30 项、`CliPathsTest` 3 项、`CliHostTest` 6 项、`FibraCliTest` 17 项和 `CliReplTest` 6 项覆盖完整制品清单、首次启动/保存恢复/apply、profile 锁、插件管理命令、PublishedView 工具入口、严格 JSON、关闭钩子和单宿主 REPL；Picocli 4.7.7 与 JLine 4.4.3 `jdk11` 在 Java 21 下干净编译并运行。当前只形成 Maven CLI 制品；真实多插件 ZIP 解压调用，以及阻塞工具调用期间向真实 CLI 进程发送 `SIGTERM` 后的取消传播、Engine drain、受管进程树静默和宿主退出，仍待最终分发门禁 |
-| 可复现发布 | `scripts/verify-reproducible-release.sh` 已把 `fibra-cli` 纳入 26 个正式发布模块的 clean/非 clean 比较清单，包括 flattened POM、主 JAR、sources JAR 和 Javadoc JAR；pre-CLI 快照 `618091a` 的 25 制品结果只作历史证据，当前 26 制品清单须在 ZIP 合入后最终执行。聚合 POM、acceptance、example、parity、benchmark 和 distribution 聚合明确不发布 |
-| 空仓与隔离分发 | `scripts/verify-distribution.sh` 已把 `fibra-cli` 纳入 26 个正式 Maven 制品的空仓部署清单；pre-CLI 快照 `618091a` 只证明当时 25 制品及仓库外 core/多插件/Engine/Spring/archetype 消费。当前 26 制品、CLI Maven 消费、ZIP 解压启动及同一真实多插件命令流程仍待最终门禁 |
+| 正式宿主 CLI | `ProfileArtifactSourceTest` 30 项、`CliPathsTest` 4 项、`CliHostTest` 6 项、`FibraCliTest` 17 项和 `CliReplTest` 6 项覆盖完整制品清单、首次启动/保存恢复/apply、profile 锁、插件管理命令、PublishedView 工具入口、严格 JSON、关闭钩子和单宿主 REPL；Picocli 4.7.7 与 JLine 4.4.3 `jdk11` 在 Java 21 下干净编译并运行。`verify-archive.sh` 从仓库外真实运行相同命令树，并向阻塞工具调用的真实宿主进程发送 `SIGTERM`，验证取消传播、Engine drain、payload/supervisor/叶子进程静默和宿主退出 |
+| 正式发行结构 | 顶层 `fibra-distribution` 是根 reactor 的正式聚合模块；根 `mvn clean package` 与 `mvn -pl fibra-distribution -am package` 均自动产生 `target/fibra-<version>/` 和 `fibra-<version>-bin.zip`。目录包含 `bin/fibra`、宿主 `lib/`、12 个正式插件包、默认 profile/bundle、目标平台 Node/rg、固定 `/bin/bash` 转发、LICENSE 与第三方声明；不预置 data，不把插件打入宿主 JAR，不嵌入仓库绝对路径 |
+| 可复现发布 | `scripts/verify-reproducible-release.sh` 已实际通过 26 个正式发布模块的 clean/再次 clean/非 clean 比较，包括 flattened POM、主 JAR、sources JAR、Javadoc JAR、ZIP 字节和发行目录路径/类型/权限/SHA。聚合 POM、acceptance、example、parity、benchmark 和 distribution 聚合明确不发布 |
+| 空仓与隔离分发 | `scripts/verify-distribution.sh` 已实际从相互隔离的空 Maven 本地仓完成 26 个正式制品 clean/deploy、独立 `fibra-distribution` clean verify、仓库外 ZIP 真实调用、Maven core/多插件/Engine/Spring 外部消费及 archetype 生成打包。临时发布仓严格只有 26 个 artifactId；删除消费者仓的 Fibra 坐标后仍能从临时仓重新解析。固定 settings 隔离用户级仓库配置，证明发行不依赖工作区 reactor 或历史缓存中的未声明 Fibra 制品 |
 
-2026-09-12 的 `618091a` 已完成 25 制品、12 个动态插件的 pre-CLI 全仓、可复现与空仓/隔离分发验证；
-后续 CLI/ZIP 合并后必须按最终制品和真实解压启动场景重新执行，不能沿用该快照结果关闭完整交付。
-Windows 文件发布仍明确保留平台证据边界：当前完成实现、注入测试和制品打包验证，不把 macOS 上未运行
-的 Win32 原生路径记为实机通过。
+平台边界：最终 ZIP 实测平台为 macOS 26.6.2 arm64，携带该目标平台的 Node 与 ripgrep。Windows 文件
+发布、Job Object 和 Linux user-systemd 已有实现、注入测试及既有 Ubuntu 构建证据，但本次未在 Windows
+或 Linux 实机解压最终 ZIP，因此不记录为对应平台的最终运行门禁通过。

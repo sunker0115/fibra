@@ -2,7 +2,7 @@
 
 日期：2026-09-07
 
-状态：设计已定稿；实现与最终交付验收进行中（2026-09-12）
+状态：设计、实现、自动化交付验收与独立审核已完成（2026-09-13）
 
 本文是 Fibra vNext 唯一权威设计，定义最终系统边界、运行模型、模块职责和验收标准；不记录旧版本
 迁移过程，也不按参考项目组织正文。外部实现的源码对拍统一收录在
@@ -621,20 +621,34 @@ identity 或 service realm。配置 bundle 是普通、可复用的配置源片�
 分组、realm、条件及局部覆盖；组合顺序必须由 profile 显式声明，不能依赖目录遍历顺序。插件包只携带
 代码、私有依赖和运行时声明，安装插件包本身不隐式启用实例，也不自动注入配置 bundle。
 
-正式分发采用下列职责布局；具体文件名可以由分发装配确定，但边界不得改变：
+正式分发由根 reactor 中的顶层 `fibra-distribution` 聚合模块装配，不放入 example 或 acceptance。
+根目录 `mvn clean package` 与 `mvn -pl fibra-distribution -am package` 均直接生成
+`fibra-distribution/target/fibra-<version>/` 和同级 `fibra-<version>-bin.zip`，不需要人工复制、改名或补充
+依赖。发行目录采用下列职责布局：
 
 ```text
-fibra/
-  bin/                              启动脚本
+fibra-<version>/
+  LICENSE                           项目许可证
+  THIRD_PARTY_NOTICES.md            第三方声明
+  bin/fibra                         POSIX 启动脚本
   lib/                              CLI 与宿主库
   plugins/<plugin-id>/              候选插件包
     plugin.properties               包布局描述
     lib/                            Java payload 与私有依赖，或 Node payload 目录
+  runtime/bin/node                  目标平台 Node 运行件
+  runtime/bin/rg                    目标平台 ripgrep 运行件
+  runtime/bin/bash                  固定转发到目标系统 /bin/bash
   config/profiles/<profile>.yaml    命名组合入口
   config/profiles/<profile>.artifacts.yaml  完整候选包选择输入
   config/bundles/*.yaml             可复用配置片段
-  data/profiles/<profile>/          该 profile 的持久目标、制品与运行数据
+  data/profiles/<profile>/          首次启动时创建的持久目标、制品与运行数据
 ```
+
+ZIP 不预置 `data/`，首次启动从空数据目录建立所选 profile 的完整目标。`bin/fibra` 只根据自身真实目录定位
+`lib/`、`plugins/`、`config/`、`runtime/` 与默认 data 根，不能嵌入构建机或仓库绝对路径；从任意工作目录
+启动时语义相同。发行包携带构建目标平台的 Node 与 `rg`，要求目标系统提供 Java 21 和 `/bin/bash`；
+`runtime/bin/bash` 是固定系统边界，不接受构建时绝对路径覆盖。ZIP 内不得出现符号链接、`target/`、
+`.DS_Store`、绝对路径或 `..` 路径。
 
 插件包根必须是普通目录且整棵树不含符号链接；外层 `plugin.properties` 只允许三个字段：
 
@@ -709,6 +723,9 @@ uninstall/enable/disable`、`tools list/invoke`、`apply` 和 `repl`。REPL 只�
 同一 `PublishedRuntime`，不直接访问插件实例或 Node sidecar。CLI 为每次调用建立独立
 `CancellationSource`；正常命令结束、REPL 退出或 JVM shutdown 均先请求取消 CLI 所有在途调用，再由
 Engine 的既有 drain/Scope/资源所有权边界完成关闭，不能强制跳过清理。
+真实进程收到 `SIGTERM` 时同样走该关闭路径：启动器以 `exec` 交出进程身份，宿主先停止接入并取消在途
+调用，等待工具终态、Engine drain 和受管进程范围静默，再结束 JVM；不能只杀直接 payload PID 或把信号
+退出当作清理完成。
 工具返回契约采用“provider 成功产物、Harness 调用终态、外部协议投影”三层边界。`ToolResult` 只表示
 provider 已成功产生的不可变结果，由有序 `content` 与可选 `structuredContent` 组成；后者使用任意
 `LiteralValue`，严格区分缺省与显式 JSON `null`。本期只有文本内容块具备 producer、wire 与宿主消费的
@@ -803,6 +820,10 @@ desired、observed 三类状态；observed 只来自 `PublishedView.engine()`。
 动态撤销已发布服务；运行域关闭与在途排空仍由 Engine 的 Scope 所有权树负责。
 `fibra-spring-boot-starter` 收集所有 `PluginRuntimeAdapter` Bean，装配一个 Engine、Registry 和
 PublishedRuntime；不能把 Engine 写死为 Java-only。
+starter 只通过标准 `AutoConfiguration.imports` 发现，默认组件均使用 `@ConditionalOnMissingBean`，配置
+通过 `fibra.storage-root` 与 `fibra.source.refresh-interval` 绑定；不引入另一套 JSON、`.env` 或 Spring
+Profile 解释。`SmartLifecycle` 在宿主服务完成预注册后启动 Engine，并在 Spring 关闭阶段调用同一个
+Engine 关闭入口；不得为 Spring 嵌入场景另建 JVM shutdown hook 或绕过 Engine 的排空结果。
 
 默认 ArtifactStore 与 EngineStateStore 在 Engine 工厂内部创建，成功构造后由 Engine 唯一负责关闭，
 不另注册为容器自动销毁的 Bean。工厂失败时释放尚未移交的存储，保留原异常及各项关闭失败。
@@ -936,16 +957,26 @@ Java Harness 只是验证 built-in definition、EngineCommand、PublishedView、
 开发阶段使用本地依赖缓存执行受影响测试，必要时运行全仓验证；空依赖仓库的外部分发验证留到
 最终交付统一执行一次，发现分发问题时才针对修复重新验证，不因每次逻辑修改重复下载依赖。
 
-2026-09-12 的 48 模块离线 clean verify、24 个正式发布制品的可复现比较和空仓外部消费者结果仅是
-更早阶段证据；其后加入的 `fibra-tool-storage` 与正式宿主 CLI 已有各自定向证据，但 ZIP 分发结构合入后
-仍必须按本节门禁重新执行全仓、可复现和空仓分发验证，不能拼接历史绿色结果关闭交付。71 项 Cordis 与
-44 项 Fibra 回归仍按独立账本计数；Windows 文件发布仅记录实现、注入测试和制品证据，不扩大为未执行
-的实机声明。逐项证据与平台边界见[行为验收账本](../references/2026-09-11-behavior-verification-ledger.md)。
+2026-09-13 的最终发行阶段已在 macOS 26.6.2 arm64、Zulu JDK 21.0.2、Maven 3.9.9 上完成以下独立证据：
+`mvn --offline -pl fibra-distribution -am clean verify` 对 25 个相关 reactor 模块通过，并在仓库外解压 ZIP
+执行真实命令；`scripts/verify-reproducible-release.sh` 对 26 个正式 Maven 发布物、ZIP 字节和发行目录
+路径/类型/权限/SHA 完成 clean、再次 clean 与非 clean 三轮一致性比较；`scripts/verify-distribution.sh`
+使用仓库内固定 settings 和互相隔离的空 Maven 本地仓，先 clean/deploy 26 个正式发布物，再仅从临时发布
+仓单独构建 `fibra-distribution`，最后完成 ZIP 外部启动、消费者、Spring 与 archetype 验证。根目录原始
+`mvn --offline clean package` 也已对 50 个 reactor 模块通过，并自动产生完整发行目录与 ZIP；最终
+`mvn --offline clean verify` 对同一 50 模块通过，发行模块在 verify 阶段再次完成仓库外真实验收。该空仓门禁
+不读取本机 Maven 用户 settings，也不允许聚合 POM、distribution、acceptance、example、parity 或
+benchmark 混入发布仓。`ApiSignatureBaselineTest` 另以定向命令通过，最终全仓、公开 API 与文档一致性
+结果记录在
+[行为验收账本](../references/2026-09-11-behavior-verification-ledger.md)。
 
-同日 pre-CLI 快照 `618091a` 已在 GitHub Ubuntu runner 重新通过 48 模块 `clean verify`、25 个正式发布
-制品的可复现比较，以及从空临时 Maven 仓部署后的仓库外消费者验证。该证据覆盖正式 storage 和 12 个
-动态插件，但不包含本轮新增的正式 CLI，也不覆盖 ZIP 目录、解压启动和命令交互；ZIP 合入后仍须按最终
-清单重跑全部门禁，不能把 pre-CLI 绿色结果升级为最终交付结论。
+最终独立审核未发现 P0/P1；审核指出的运行件版本探测非零退出码、REPL 停用/恢复结果断言和 `SIGTERM`
+及时退出证明三个 P2 已在同一实现/测试提交中关闭。最终 ZIP 门禁因此具备 10 秒退出截止，不再可能把工具
+自然超时误记为排空成功；Node、ripgrep 或 Bash 版本探测失败也会直接阻止装配。
+
+平台边界不随本机绿色结果扩大：本次 ZIP 携带的是 macOS arm64 目标运行件；Windows 文件发布、Job
+Object 与 Linux user-systemd 仍只记录实现、注入测试和既有 Ubuntu 构建证据，不宣称已在对应目标平台
+完成最终 ZIP 实机门禁。
 
 ### 10.1 框架交付与多插件应用验收
 
