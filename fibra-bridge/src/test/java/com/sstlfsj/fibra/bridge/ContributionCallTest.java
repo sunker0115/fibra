@@ -1,5 +1,6 @@
 package com.sstlfsj.fibra.bridge;
 
+import com.sstlfsj.fibra.value.LiteralValue;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
@@ -188,6 +189,24 @@ class ContributionCallTest {
         } finally {
             runtime.closeAsync().onErrorResume(ignored -> Mono.empty()).block();
         }
+    }
+
+    @Test
+    void legacyCodecsKeepTheDefaultRemoteFailureAndCancellationBehavior() {
+        ContributionCodec<String, String, String> codec = new ContributionCodec<>() {
+            @Override public int schemaVersion() { return 1; }
+            @Override public String decodeDescriptor(Object descriptor) { return descriptor.toString(); }
+            @Override public Object encodeInput(String input) { return input; }
+            @Override public String decodeInput(Object input) { return input.toString(); }
+            @Override public Object encodeOutput(String output) { return output; }
+            @Override public String decodeOutput(Object output) { return output.toString(); }
+        };
+
+        assertFalse(codec.cancellationToken("input").isCancelled());
+        assertInstanceOf(java.util.concurrent.CancellationException.class,
+            codec.cancellationException());
+        assertTrue(codec.mapRemoteFailure(new RemoteContributionFailure(-32000, "failed",
+            LiteralValue.of(null))).isEmpty());
     }
 
     private static void assertRuntimeCloseRetainsContributionFailure(

@@ -9,6 +9,7 @@ public final class NodeRuntimeOptions {
     private final Path sessionRoot;
     private final Duration handshakeTimeout;
     private final Duration defaultRequestTimeout;
+    private final Duration requestCancellationTimeout;
     private final Duration heartbeatInterval;
     private final Duration heartbeatTimeout;
     private final int maxMessageBytes;
@@ -20,6 +21,8 @@ public final class NodeRuntimeOptions {
         handshakeTimeout = positive(builder.handshakeTimeout, "handshakeTimeout");
         defaultRequestTimeout = positive(builder.defaultRequestTimeout,
             "defaultRequestTimeout");
+        requestCancellationTimeout = positive(builder.requestCancellationTimeout,
+            "requestCancellationTimeout");
         heartbeatInterval = positive(builder.heartbeatInterval, "heartbeatInterval");
         heartbeatTimeout = positive(builder.heartbeatTimeout, "heartbeatTimeout");
         terminateTimeout = positive(builder.terminateTimeout, "terminateTimeout");
@@ -41,6 +44,7 @@ public final class NodeRuntimeOptions {
     public Path sessionRoot() { return sessionRoot; }
     public Duration handshakeTimeout() { return handshakeTimeout; }
     public Duration defaultRequestTimeout() { return defaultRequestTimeout; }
+    public Duration requestCancellationTimeout() { return requestCancellationTimeout; }
     public Duration heartbeatInterval() { return heartbeatInterval; }
     public Duration heartbeatTimeout() { return heartbeatTimeout; }
     public int maxMessageBytes() { return maxMessageBytes; }
@@ -59,6 +63,7 @@ public final class NodeRuntimeOptions {
         private final Path sessionRoot;
         private Duration handshakeTimeout = Duration.ofSeconds(5);
         private Duration defaultRequestTimeout = Duration.ofSeconds(30);
+        private Duration requestCancellationTimeout = Duration.ofSeconds(5);
         private Duration heartbeatInterval = Duration.ofSeconds(15);
         private Duration heartbeatTimeout = Duration.ofSeconds(5);
         private int maxMessageBytes = 1024 * 1024;
@@ -74,6 +79,9 @@ public final class NodeRuntimeOptions {
         }
         public Builder defaultRequestTimeout(Duration value) {
             defaultRequestTimeout = value; return this;
+        }
+        public Builder requestCancellationTimeout(Duration value) {
+            requestCancellationTimeout = value; return this;
         }
         public Builder heartbeatInterval(Duration value) {
             heartbeatInterval = value; return this;

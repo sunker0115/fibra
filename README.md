@@ -157,18 +157,24 @@ protocol: 1
 entrypoint: index.mjs
 contributions:
   - name: echo
-    kind: tool
+    kind: fibra.tool
     schemaVersion: 1
     method: echo
-    descriptor: { title: Echo }
+    descriptor:
+      displayName: Echo
+      description: Echo arguments from the Node sidecar
+      inputSchema: { type: object }
+      outputSchema: { type: object }
 ```
 
 runtime 从 ArtifactStore 受管包的 payload 解析入口。宿主使用参数数组启动随模块发布的进程监督器，
 再由监督器启动该入口，全程不经过 Shell。
-`NodeSidecar` 只处理有界 JSON-RPC、请求超时、取消、心跳和异常退出；`NodeProcessUnit` 负责一个可等待的
-受管进程范围，按“stdin EOF、软终止、强终止、范围静默、目录清理”收口。POSIX 使用独立进程组，
-Windows 使用系统进程树终止后端；主动逃离受管范围不属于本地 sidecar 的安全保证。Node 贡献和 Java
-本地贡献登记到长期运行域的 `ContributionDirectory`，只由 Engine 当前发布的 `PublishedRuntime` 对外调用。
+runtime 内部的 `NodeSidecar` 只处理有界 JSON-RPC、逐请求 deadline/取消、心跳和异常退出；远端请求先登记为
+调用 Scope 的资源，取消只影响该请求并等待原请求终态。取消宽限耗尽、协议故障、心跳失败或异常退出才
+升级为实例级故障。`NodeProcessUnit` 负责一个可等待的受管进程范围，按“stdin EOF、软终止、强终止、
+范围静默、目录清理”收口。POSIX 使用独立进程组，Windows 使用系统进程树终止后端；主动逃离受管范围
+不属于本地 sidecar 的安全保证。Node 贡献和 Java 本地贡献登记到长期运行域的 `ContributionDirectory`，
+只由 Engine 当前发布的 `PublishedRuntime` 对外调用，不向宿主公开 sidecar 或协议请求入口。
 
 ## 托管与 Spring Boot
 

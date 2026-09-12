@@ -1,6 +1,7 @@
 package com.sstlfsj.fibra.plugins.tool;
 
 import com.sstlfsj.fibra.CancellationSource;
+import com.sstlfsj.fibra.bridge.RemoteContributionFailure;
 import com.sstlfsj.fibra.value.LiteralValue;
 import org.junit.jupiter.api.Test;
 
@@ -85,6 +86,61 @@ class ToolApiTest {
             ToolContributions.id("provider", "read"));
         assertEquals("fibra.tool.result-spill-store", ToolServices.RESULT_SPILL_STORE.name());
         assertEquals(ResultSpillStore.class, ToolServices.RESULT_SPILL_STORE.type());
+    }
+
+    @Test
+    void remoteCodecRoundTripsDescriptorInputAndNullableData() {
+        var codec = ToolContributions.KIND.codec().orElseThrow();
+        var descriptor = new ToolDescriptor("Remote", "Remote tool", object(Map.of("type", "object")),
+            object(Map.of("type", "object")));
+        var request = ToolRequest.of(Map.of("path", "note.txt"));
+        var result = ToolResult.text("done");
+
+        assertEquals(descriptor, codec.decodeDescriptor(Map.of(
+            "displayName", "Remote", "description", "Remote tool",
+            "inputSchema", descriptor.inputSchema().toJava(),
+            "outputSchema", descriptor.outputSchema().toJava())));
+        assertEquals(request.arguments(), codec.decodeInput(codec.encodeInput(request)).arguments());
+        assertEquals(result, codec.decodeOutput(codec.encodeOutput(result)));
+    }
+
+    @Test
+    void remoteCodecRoundTripsStructuredResult() {
+        var codec = ToolContributions.KIND.codec().orElseThrow();
+        var result = ToolResult.structured(LiteralValue.of(Map.of("count", 1)));
+
+        assertEquals(result, codec.decodeOutput(codec.encodeOutput(result)));
+    }
+
+    @Test
+    void remoteCodecRejectsMissingAndUnknownFields() {
+        var codec = ToolContributions.KIND.codec().orElseThrow();
+
+        assertThrows(IllegalArgumentException.class,
+            () -> codec.decodeInput(Map.of("arguments", Map.of(), "extra", true)));
+        assertThrows(IllegalArgumentException.class,
+            () -> codec.decodeOutput(Map.of("text", "done")));
+        assertThrows(IllegalArgumentException.class,
+            () -> codec.decodeDescriptor(Map.of("displayName", "name", "description", "desc",
+                "inputSchema", Map.of(), "outputSchema", Map.of(), "extra", true)));
+    }
+
+    @Test
+    void remoteCodecMapsEveryStableToolFailureAndRejectsInvalidVersions() {
+        var codec = ToolContributions.KIND.codec().orElseThrow();
+        for (var code : ToolFailureCode.values()) {
+            var failure = new RemoteContributionFailure(-32001, "failure", LiteralValue.of(Map.of(
+                "kind", "fibra.tool.failure", "schemaVersion", 1, "code", code.name())));
+            var mapped = codec.mapRemoteFailure(failure).orElseThrow();
+            assertEquals(code, assertInstanceOf(ToolException.class, mapped).code());
+        }
+
+        var fractional = new RemoteContributionFailure(-32001, "failure", LiteralValue.of(Map.of(
+            "kind", "fibra.tool.failure", "schemaVersion", 1.5, "code", "ABORTED")));
+        var tooLarge = new RemoteContributionFailure(-32001, "failure", LiteralValue.of(Map.of(
+            "kind", "fibra.tool.failure", "schemaVersion", Long.MAX_VALUE, "code", "ABORTED")));
+        assertTrue(codec.mapRemoteFailure(fractional).isEmpty());
+        assertTrue(codec.mapRemoteFailure(tooLarge).isEmpty());
     }
 
     private static LiteralValue.ObjectValue object(Map<String, ?> values) {

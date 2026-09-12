@@ -5,8 +5,8 @@ import com.sstlfsj.fibra.bridge.ContributionKind;
 
 public final class ToolContributions {
     public static final ContributionKind<ToolDescriptor, ToolRequest, ToolResult> KIND =
-        ContributionKind.local("fibra.tool", ToolDescriptor.class, ToolRequest.class,
-            ToolResult.class);
+        ContributionKind.remote("fibra.tool", ToolDescriptor.class, ToolRequest.class,
+            ToolResult.class, new ToolContributionCodec());
 
     private ToolContributions() {
     }

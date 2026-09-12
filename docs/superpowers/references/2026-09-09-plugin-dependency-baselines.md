@@ -76,15 +76,16 @@ definition 身份，仅绑定变更输入，普通配置更新保留实例身份
 
 ### 资源、调用与保存问题的采用边界
 
-下表均以 `a66e4702047846cdaa10c66c9d3df3951f5ea70d` 为准。实现优先采用已有机制；新增保证必须
-对应本项目实际宿主边界，不能因为新增状态或测试更多就宣称整体优于 DSH。
+下表的 DSH 行为契约仍以 `a66e4702047846cdaa10c66c9d3df3951f5ea70d` 为固定基线；同时已用
+`c291e7961a515f6d7af9304e7fd1d257929aef26` 复核相关实现是否发生漂移。实现优先采用已有机制；
+新增保证必须对应本项目实际宿主边界，不能因为新增状态或测试更多就宣称整体优于 DSH。
 
 | 问题 | DSH 实际处理 | Fibra 落点 |
 |---|---|---|
 | effect 设置期间重入关闭、异步迟到的 disposer | `Fiber.effect()` 先登记 wrapper，设置屏障等待完整收集；`effectInertia/runDisposable` 复用在途清理 | 沿用现有资源所有权和一次清理终态，不另造一棵清理树 |
 | 配置修改失败 | `Entry.update()` 尝试恢复旧配置或重启旧插件；恢复也可能失败 | 预绑定失败不改运行态；完整目标保存后报告实际收敛结果，不自动反写目标。这是持久目标语义差异，不是 DSH 漏做回滚 |
 | 工具卸载与正在执行的调用 | 工具注册由 `ScopedLayers.effect()` 撤销；已进入 body 的调用持有局部 tool 引用，但插件卸载不等待它 | 受管宿主调用登记到贡献条目，停止准入并等待调用及调用方清理后才释放资源。只增强受管入口，不承诺追踪任意线程和裸服务调用 |
-| 调用取消 | 等待 `tool.execute()` 实际结算后返回取消结果，不能硬杀同进程代码 | 同样协作式等待；不能用取消订阅冒充插件代码已经停止 |
+| 调用取消 | 等待 `tool.execute()` 实际结算后返回取消结果；执行超时先发出协作取消，仍等待调用结算，再将结果改写为超时 | 远端请求归调用 Scope，单次取消只发送请求级取消并等待原请求终态；超过明确取消宽限期才将无法收敛上升为实例故障并终止 sidecar，不能用本地取消订阅冒充插件代码已经停止 |
 | 清理失败 | Fiber 普通 disposer 错误记录日志后继续，不提供失败资源保留契约 | 普通清理仍隔离错误；受管卸载另行记录真实失败，保留尚被依赖的资源。排空失败必须明确结束，不无限等待一个已知失败 |
 | 半写入、并发去重与失败清理 | 附件库独占临时文件、校验及同步后无覆盖发布；冲突读回校验，失败只删自己的临时文件 | 制品采用完整暂存后发布、已有对象校验复用、仅清自有暂存。目录不能照搬文件 hard-link；不增加共享对象回滚、引用计数或通用 GC |
 | 摘要与 metadata 不一致 | 附件发布和读取都校验内容摘要及引用字段 | 用同一 revision 公式重验制品身份和内容，不只检查路径中的摘要形状 |
@@ -94,6 +95,19 @@ definition 身份，仅绑定变更输入，普通配置更新保留实例身份
 工具证据：[注册与调用](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/core/tools/src/index.ts#L1028-L1052)、
 [调用执行与协作取消](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/core/tools/src/index.ts#L1333-L1550)、
 [注册所有权](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/core/scope/src/store.ts#L226-L265)。
+
+最新 DSH 提交仍由 Tool Runtime 持有已启动的 `tool.execute()`，取消后等待该执行终态；Timeout Policy
+同样先触发 abort，再等待工具返回，最后把已返回的结果改写为超时。这两点支持 Fibra 的请求终态屏障。
+DSH SDK JSON-RPC 的本地 pending 删除以及 MCP 的取消通知则只表达“不再等待/请求对端取消”，不证明
+远端工作已经停止，Fibra 不采用这一较弱边界。[最新 Tool Runtime](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/core/tools/src/index.ts#L1517-L1549)、
+[最新 Timeout Policy](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/guard/timeout-policy/src/index.ts#L55-L79)、
+[MCP 取消协议](https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/cancellation)。
+
+Codex 的共享 MCP 客户端也把单次调用超时限制在该调用，不因一个请求超时关闭共享连接；本地进程执行
+则在取消/超时时终止其独占进程组。Fibra 的 Node sidecar 是插件实例共享资源，因此采用前者的隔离边界，
+只在请求无法于取消宽限期内结算时进入实例级进程单元回收，不能把独占子进程策略直接套到共享 sidecar。
+[Codex MCP 调用超时](https://github.com/openai/codex/blob/c4017a87aacc7558002b7cb510025e967c1d765e/codex-rs/rmcp-client/src/rmcp_client.rs#L789-L870)、
+[Codex 本地进程回收](https://github.com/openai/codex/blob/c4017a87aacc7558002b7cb510025e967c1d765e/codex-rs/core/src/exec.rs#L994-L1140)。
 
 存储证据：[完整发布与完整性校验](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/attachment/attachment-local/src/store.ts#L145-L305)、
 [settings-file 操作队列与锁](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/settings/settings-file/src/index.ts#L193-L269)。
@@ -159,7 +173,9 @@ provider-managed range，同时公开 systemd scope、Windows Job 与较弱 PGID
 Fibra 采用相同的所有权模型，但不直接依赖 Codex 的 Rust workspace，也不把 DSH 的 RC、Node/Cordis
 组合引入 Java 核心。`fibra-runtime-node` 内部以 `NodeProcessUnit` 隔离协议和进程生命周期：监督器是
 RuntimeDomain 等待的 participant，payload 在 POSIX 独立进程组内运行；Windows 明确使用较弱的系统树
-终止后端。只有受管范围静默才完成 retire，主动逃离该范围的非可信代码必须进入更强的外部 sandbox。
+终止后端。监督器退出前显式写出范围静默终态，Java 侧在进程退出后校验；线程中断不取消这条关闭链，
+缺少证明或明确失败时请求排空与实例清理失败并保留会话目录。只有受管范围静默才完成 retire，主动逃离
+该范围的非可信代码必须进入更强的外部 sandbox。
 
 ### 当前发布策略对拍
 

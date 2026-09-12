@@ -44,6 +44,7 @@ public final class com.sstlfsj.fibra.runtime.node.NodePluginRuntimeAdapter imple
 Compiled from "NodeRpcException.java"
 public final class com.sstlfsj.fibra.runtime.node.NodeRpcException extends java.lang.RuntimeException {
   public com.sstlfsj.fibra.runtime.node.NodeRpcPhase phase();
+  public java.util.Optional<com.sstlfsj.fibra.bridge.RemoteContributionFailure> remoteFailure();
 }
 ## com.sstlfsj.fibra.runtime.node.NodeRpcPhase
 Compiled from "NodeRpcPhase.java"
@@ -72,6 +73,7 @@ public final class com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions {
   public java.nio.file.Path sessionRoot();
   public java.time.Duration handshakeTimeout();
   public java.time.Duration defaultRequestTimeout();
+  public java.time.Duration requestCancellationTimeout();
   public java.time.Duration heartbeatInterval();
   public java.time.Duration heartbeatTimeout();
   public int maxMessageBytes();
@@ -82,19 +84,10 @@ Compiled from "NodeRuntimeOptions.java"
 public final class com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions$Builder {
   public com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions$Builder handshakeTimeout(java.time.Duration);
   public com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions$Builder defaultRequestTimeout(java.time.Duration);
+  public com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions$Builder requestCancellationTimeout(java.time.Duration);
   public com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions$Builder heartbeatInterval(java.time.Duration);
   public com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions$Builder heartbeatTimeout(java.time.Duration);
   public com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions$Builder maxMessageBytes(int);
   public com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions$Builder terminateTimeout(java.time.Duration);
   public com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions build();
-}
-## com.sstlfsj.fibra.runtime.node.NodeSidecar
-Compiled from "NodeSidecar.java"
-public final class com.sstlfsj.fibra.runtime.node.NodeSidecar implements java.lang.AutoCloseable {
-  public static reactor.core.publisher.Mono<com.sstlfsj.fibra.runtime.node.NodeSidecar> start(java.nio.file.Path, com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions, java.lang.Runnable);
-  public reactor.core.publisher.Mono<java.lang.Object> request(java.lang.String, java.lang.Object);
-  public reactor.core.publisher.Mono<java.lang.Object> request(java.lang.String, java.lang.Object, java.time.Duration);
-  public reactor.core.publisher.Mono<java.lang.Void> termination();
-  public boolean isAlive();
-  public void close();
 }

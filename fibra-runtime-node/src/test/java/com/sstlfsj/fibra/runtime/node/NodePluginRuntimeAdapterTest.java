@@ -1,5 +1,7 @@
 package com.sstlfsj.fibra.runtime.node;
 
+import com.sstlfsj.fibra.CancellationSource;
+import com.sstlfsj.fibra.CancellationToken;
 import com.sstlfsj.fibra.artifact.ArtifactId;
 import com.sstlfsj.fibra.artifact.ArtifactPackage;
 import com.sstlfsj.fibra.artifact.ArtifactRecord;
@@ -13,6 +15,10 @@ import com.sstlfsj.fibra.bridge.ContributionServices;
 import com.sstlfsj.fibra.PluginInstanceState;
 import com.sstlfsj.fibra.ManagedPluginControl;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
+import com.sstlfsj.fibra.plugins.tool.ToolContributions;
+import com.sstlfsj.fibra.plugins.tool.ToolException;
+import com.sstlfsj.fibra.plugins.tool.ToolFailureCode;
+import com.sstlfsj.fibra.plugins.tool.ToolRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import reactor.core.publisher.Mono;
@@ -25,8 +31,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -239,6 +249,137 @@ class NodePluginRuntimeAdapterTest {
     }
 
     @Test
+    void preservesToolFailuresAndCancellationAcrossTheNodeBoundary(@TempDir Path work)
+        throws Exception {
+        var artifactRoot = work.resolve("tool-node");
+        var payload = nodePackage(artifactRoot);
+        Files.writeString(payload.resolve("fibra-plugin.yaml"), toolManifest());
+        Files.writeString(payload.resolve("index.mjs"), toolScript());
+        var adapter = new NodePluginRuntimeAdapter(name -> "fibra.tool".equals(name)
+            ? Optional.of(ToolContributions.KIND) : Optional.empty(),
+            NodeRuntimeOptions.defaults(node(), work.resolve("sessions")));
+        var owner = adapter.create();
+        var update = owner.createUpdate(List.of(artifact(artifactRoot, "tool-node")));
+        update.prepareAsync().block();
+        update.adopt();
+        update.closeAsync().block();
+
+        try (var runtime = FibraRuntime.create()) {
+            var directory = new ContributionDirectory();
+            runtime.rootScope().context().services().provide(
+                ContributionServices.REGISTRAR, directory);
+            @SuppressWarnings("unchecked")
+            var definition = (com.sstlfsj.fibra.PluginDefinition<Object>) owner.catalog()
+                .plugins().find("tool-node").orElseThrow().definition();
+            var instance = runtime.rootScope().context().plugins()
+                .mount("tool-instance", definition.prepare(Map.of()));
+            instance.settled().block(Duration.ofSeconds(3));
+
+            var preCancelled = new CancellationSource();
+            preCancelled.cancel();
+            var beforeStart = assertThrows(ToolException.class, () -> directory.current().routes()
+                .invoke(runtime.rootScope().context(), ToolContributions.KIND,
+                    ToolContributions.id("tool-instance", "run"),
+                    ToolRequest.of(Map.of("command", "wait"), preCancelled.token()))
+                .block(Duration.ofSeconds(2)));
+            assertEquals(ToolFailureCode.ABORTED, beforeStart.code());
+            assertEquals(0, integer(status(runtime, directory, "runCalls")));
+
+            var cancellationChecks = new AtomicInteger();
+            var cancelledBetweenChecks = new CancellationToken() {
+                @Override
+                public boolean isCancelled() {
+                    return cancellationChecks.incrementAndGet() > 1;
+                }
+
+                @Override
+                public Mono<Void> cancelled() {
+                    return Mono.never();
+                }
+            };
+            var beforeSend = assertThrows(ToolException.class, () -> directory.current().routes()
+                .invoke(runtime.rootScope().context(), ToolContributions.KIND,
+                    ToolContributions.id("tool-instance", "run"),
+                    ToolRequest.of(Map.of("command", "wait"), cancelledBetweenChecks))
+                .block(Duration.ofSeconds(2)));
+            assertEquals(ToolFailureCode.ABORTED, beforeSend.code());
+            assertEquals(0, integer(status(runtime, directory, "runCalls")));
+
+            var closedCaller = runtime.rootScope().openChild("closed-caller");
+            closedCaller.closeAsync().block(Duration.ofSeconds(2));
+            assertThrows(com.sstlfsj.fibra.FibraException.class,
+                () -> directory.current().routes().invoke(closedCaller.context(),
+                    ToolContributions.KIND, ToolContributions.id("tool-instance", "run"),
+                    ToolRequest.of(Map.of("command", "done"))).block(Duration.ofSeconds(2)));
+            assertEquals(0, integer(status(runtime, directory, "runCalls")));
+
+            var businessFailure = assertThrows(ToolException.class, () -> directory.current().routes()
+                .invoke(runtime.rootScope().context(), ToolContributions.KIND,
+                    ToolContributions.id("tool-instance", "run"), ToolRequest.of(Map.of("command", "fail")))
+                .block(Duration.ofSeconds(2)));
+            assertEquals(ToolFailureCode.NOT_FOUND, businessFailure.code());
+
+            var nullOutput = assertThrows(IllegalArgumentException.class,
+                () -> directory.current().routes().invoke(runtime.rootScope().context(),
+                    ToolContributions.KIND, ToolContributions.id("tool-instance", "run"),
+                    ToolRequest.of(Map.of("command", "null"))).block(Duration.ofSeconds(2)));
+            assertEquals("invalid tool output fields", nullOutput.getMessage());
+
+            var cancellation = new CancellationSource();
+            var release = work.resolve("release");
+            var pending = directory.current().routes().invoke(runtime.rootScope().context(),
+                ToolContributions.KIND, ToolContributions.id("tool-instance", "run"),
+                ToolRequest.of(Map.of("command", "wait", "releasePath", release.toString()),
+                    cancellation.token())).toFuture();
+            awaitStatus(runtime, directory, "waiting", true);
+            cancellation.cancel();
+            awaitStatus(runtime, directory, "cancelled", true);
+            awaitStatus(runtime, directory, "waiting", false);
+            assertFalse(pending.isDone());
+            Files.writeString(release, "release");
+            var completed = assertThrows(ExecutionException.class,
+                () -> pending.get(2, java.util.concurrent.TimeUnit.SECONDS));
+            assertEquals(ToolFailureCode.ABORTED,
+                assertInstanceOf(ToolException.class, completed.getCause()).code());
+
+            var cancelledFailure = new CancellationSource();
+            var failureRelease = work.resolve("failure-release");
+            var failing = directory.current().routes().invoke(runtime.rootScope().context(),
+                ToolContributions.KIND, ToolContributions.id("tool-instance", "run"),
+                ToolRequest.of(Map.of("command", "fail-after-cancel",
+                    "releasePath", failureRelease.toString()), cancelledFailure.token()))
+                .toFuture();
+            awaitStatus(runtime, directory, "waiting", true);
+            cancelledFailure.cancel();
+            awaitStatus(runtime, directory, "cancelled", true);
+            Files.writeString(failureRelease, "release");
+            var remoteFailure = assertThrows(ExecutionException.class,
+                () -> failing.get(2, java.util.concurrent.TimeUnit.SECONDS));
+            assertEquals(ToolFailureCode.NOT_FOUND,
+                assertInstanceOf(ToolException.class, remoteFailure.getCause()).code());
+
+            var nullCancellation = new CancellationSource();
+            var nullRelease = work.resolve("null-release");
+            var nullAfterCancel = directory.current().routes().invoke(runtime.rootScope().context(),
+                ToolContributions.KIND, ToolContributions.id("tool-instance", "run"),
+                ToolRequest.of(Map.of("command", "null-after-cancel",
+                    "releasePath", nullRelease.toString()), nullCancellation.token()))
+                .toFuture();
+            awaitStatus(runtime, directory, "waiting", true);
+            nullCancellation.cancel();
+            awaitStatus(runtime, directory, "cancelled", true);
+            Files.writeString(nullRelease, "release");
+            var nullCancellationFailure = assertThrows(ExecutionException.class,
+                () -> nullAfterCancel.get(2, java.util.concurrent.TimeUnit.SECONDS));
+            assertEquals(ToolFailureCode.ABORTED,
+                assertInstanceOf(ToolException.class, nullCancellationFailure.getCause()).code());
+
+            instance.dispose().block(Duration.ofSeconds(3));
+        }
+        owner.closeAsync().block();
+    }
+
+    @Test
     void unexpectedSidecarExitFailsThePluginAndRevokesItsContributions(
         @TempDir Path work) throws Exception {
         var artifactRoot = work.resolve("failing-node");
@@ -365,6 +506,28 @@ class NodePluginRuntimeAdapterTest {
         return Path.of(System.getProperty("fibra.test.node", "node"));
     }
 
+    private static Object status(FibraRuntime runtime, ContributionDirectory directory, String key) {
+        var result = directory.current().routes().invoke(runtime.rootScope().context(),
+            ToolContributions.KIND, ToolContributions.id("tool-instance", "status"),
+            ToolRequest.of(Map.of())).block(Duration.ofSeconds(2));
+        return ((Map<?, ?>) result.data().toJava()).get(key);
+    }
+
+    private static void awaitStatus(FibraRuntime runtime, ContributionDirectory directory,
+                                    String key, Object expected) throws InterruptedException {
+        for (var attempt = 0; attempt < 20; attempt++) {
+            if (expected.equals(status(runtime, directory, key))) {
+                return;
+            }
+            Thread.sleep(25);
+        }
+        throw new AssertionError("did not observe " + key + '=' + expected);
+    }
+
+    private static int integer(Object value) {
+        return ((java.math.BigDecimal) value).intValueExact();
+    }
+
     private static String script() {
         return """
             import readline from 'node:readline';
@@ -377,6 +540,102 @@ class NodePluginRuntimeAdapterTest {
               else if (method === 'fibra.start') reply(id, {ok:true});
               else if (method === 'fibra.stop') reply(id, {ok:true});
               else if (method === 'echo') reply(id, message.params.input);
+            });
+            """;
+    }
+
+    private static String toolManifest() {
+        return """
+            id: tool-node
+            version: 1.0.0
+            protocol: 1
+            entrypoint: index.mjs
+            contributions:
+              - name: run
+                kind: fibra.tool
+                schemaVersion: 1
+                method: tool.run
+                descriptor:
+                  displayName: Node tool
+                  description: Tool hosted by Node
+                  inputSchema: { type: object }
+                  outputSchema: { type: object }
+              - name: status
+                kind: fibra.tool
+                schemaVersion: 1
+                method: tool.status
+                descriptor:
+                  displayName: Node tool status
+                  description: Tool status hosted by Node
+                  inputSchema: { type: object }
+                  outputSchema: { type: object }
+            """;
+    }
+
+    private static String toolScript() {
+        return """
+            import { existsSync } from 'node:fs';
+            import readline from 'node:readline';
+            let runCalls = 0;
+            let waiting = false;
+            let cancelled = false;
+            let waitingRequest;
+            let releasePath;
+            let failAfterCancel = false;
+            let nullAfterCancel = false;
+            const reply = (id, result) => process.stdout.write(JSON.stringify({jsonrpc:'2.0', id, result}) + '\\n');
+            const fail = (id, error) => process.stdout.write(JSON.stringify({jsonrpc:'2.0', id, error}) + '\\n');
+            readline.createInterface({input: process.stdin}).on('line', line => {
+              const message = JSON.parse(line);
+              const {id, method} = message;
+              if (method === 'fibra.handshake') reply(id, {protocol:1});
+              else if (method === 'fibra.ping' || method === 'fibra.start' || method === 'fibra.stop') reply(id, {ok:true});
+              else if (method === 'tool.run') {
+                runCalls++;
+                const command = message.params.input.arguments.command;
+                if (command === 'fail') fail(id, {code:-32001, message:'missing', data:{kind:'fibra.tool.failure', schemaVersion:1, code:'NOT_FOUND'}});
+                else if (command === 'null') reply(id, null);
+                else if (command === 'wait') {
+                  waiting = true;
+                  cancelled = false;
+                  waitingRequest = id;
+                  releasePath = message.params.input.arguments.releasePath;
+                }
+                else if (command === 'fail-after-cancel') {
+                  waiting = true;
+                  cancelled = false;
+                  waitingRequest = id;
+                  releasePath = message.params.input.arguments.releasePath;
+                  failAfterCancel = true;
+                }
+                else if (command === 'null-after-cancel') {
+                  waiting = true;
+                  cancelled = false;
+                  waitingRequest = id;
+                  releasePath = message.params.input.arguments.releasePath;
+                  nullAfterCancel = true;
+                }
+                else reply(id, {text:'done', data:{command}});
+              }
+              else if (method === 'tool.status') reply(id, {text:'status', data:{runCalls, waiting, cancelled}});
+              else if (method === '$/cancelRequest') {
+                waiting = false;
+                cancelled = true;
+                const release = setInterval(() => {
+                  if (releasePath !== undefined && existsSync(releasePath)) {
+                    clearInterval(release);
+                    const settledRequest = waitingRequest;
+                    waitingRequest = undefined;
+                    if (failAfterCancel) {
+                      failAfterCancel = false;
+                      fail(settledRequest, {code:-32001, message:'missing', data:{kind:'fibra.tool.failure', schemaVersion:1, code:'NOT_FOUND'}});
+                    } else if (nullAfterCancel) {
+                      nullAfterCancel = false;
+                      reply(settledRequest, null);
+                    } else reply(settledRequest, {text:'cancelled', data:null});
+                  }
+                }, 10);
+              }
             });
             """;
     }

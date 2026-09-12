@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -22,13 +23,16 @@ final class NodeProcessUnit implements AutoCloseable {
         "/com/sstlfsj/fibra/runtime/node/node-process-supervisor.mjs";
 
     private final Path sessionDirectory;
+    private final Path terminationStatus;
     private final Process supervisor;
     private final Duration terminateTimeout;
     private final AtomicBoolean closing = new AtomicBoolean();
+    private final CompletableFuture<Void> closeCompletion = new CompletableFuture<>();
 
-    private NodeProcessUnit(Path sessionDirectory, Process supervisor,
-                            Duration terminateTimeout) {
+    NodeProcessUnit(Path sessionDirectory, Path terminationStatus, Process supervisor,
+                    Duration terminateTimeout) {
         this.sessionDirectory = sessionDirectory;
+        this.terminationStatus = terminationStatus;
         this.supervisor = supervisor;
         this.terminateTimeout = terminateTimeout;
     }
@@ -45,15 +49,18 @@ final class NodeProcessUnit implements AutoCloseable {
             Files.createDirectories(options.sessionRoot());
             session = Files.createTempDirectory(options.sessionRoot(), "node-");
             var supervisorScript = materializeSupervisor(session);
+            var terminationStatus = session.resolve("termination.status");
             var process = new ProcessBuilder(List.of(
                 options.nodeExecutable().toString(),
                 supervisorScript.toString(),
                 canonicalEntrypoint.toString(),
-                Long.toString(options.terminateTimeout().toMillis())))
+                Long.toString(options.terminateTimeout().toMillis()),
+                terminationStatus.toString()))
                 .directory(session.toFile())
                 .redirectErrorStream(false)
                 .start();
-            return new NodeProcessUnit(session, process, options.terminateTimeout());
+            return new NodeProcessUnit(session, terminationStatus, process,
+                options.terminateTimeout());
         } catch (NodeRpcException failure) {
             deleteDirectory(session);
             throw failure;
@@ -91,34 +98,86 @@ final class NodeProcessUnit implements AutoCloseable {
     @Override
     public void close() {
         if (!closing.compareAndSet(false, true)) {
+            awaitCloseCompletion();
             return;
         }
-        var cooperativeTimeout = terminateTimeout.plusMillis(250);
-        if (!waitForExit(cooperativeTimeout)) {
-            supervisor.destroy();
-            if (!waitForExit(terminateTimeout)) {
-                supervisor.destroyForcibly();
+        try {
+            var cooperativeTimeout = terminateTimeout.plusMillis(250);
+            if (!waitForExit(cooperativeTimeout)) {
+                supervisor.destroy();
                 if (!waitForExit(terminateTimeout)) {
-                    LOGGER.warn("Node process supervisor {} did not terminate within {}",
-                        supervisor.pid(), terminateTimeout);
+                    supervisor.destroyForcibly();
+                    if (!waitForExit(terminateTimeout)) {
+                        throw new NodeRpcException(NodeRpcPhase.TERMINATE,
+                            "Node process supervisor did not terminate within "
+                                + terminateTimeout);
+                    }
                 }
             }
+            verifyQuiescence();
+            deleteDirectory(sessionDirectory);
+            closeCompletion.complete(null);
+        } catch (RuntimeException failure) {
+            var terminal = failure instanceof NodeRpcException nodeFailure
+                ? nodeFailure : new NodeRpcException(NodeRpcPhase.TERMINATE,
+                "Node process unit cleanup failed", failure);
+            closeCompletion.completeExceptionally(terminal);
+            throw terminal;
+        } catch (Error failure) {
+            closeCompletion.completeExceptionally(failure);
+            throw failure;
         }
-        deleteDirectory(sessionDirectory);
     }
 
     private boolean waitForExit(Duration timeout) {
-        if (!supervisor.isAlive()) {
-            return true;
-        }
+        var deadline = System.nanoTime() + timeout.toNanos();
+        var interrupted = false;
         try {
-            supervisor.onExit().get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            while (supervisor.isAlive()) {
+                var remaining = deadline - System.nanoTime();
+                if (remaining <= 0) {
+                    return false;
+                }
+                try {
+                    supervisor.onExit().get(remaining, TimeUnit.NANOSECONDS);
+                } catch (InterruptedException failure) {
+                    interrupted = true;
+                } catch (java.util.concurrent.TimeoutException failure) {
+                    return !supervisor.isAlive();
+                } catch (java.util.concurrent.ExecutionException failure) {
+                    return !supervisor.isAlive();
+                }
+            }
             return true;
-        } catch (InterruptedException failure) {
-            Thread.currentThread().interrupt();
-            return !supervisor.isAlive();
-        } catch (Exception failure) {
-            return !supervisor.isAlive();
+        } finally {
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    private void verifyQuiescence() {
+        final String status;
+        try {
+            status = Files.readString(terminationStatus);
+        } catch (IOException failure) {
+            throw new NodeRpcException(NodeRpcPhase.TERMINATE,
+                "Node process supervisor did not prove managed range quiescence", failure);
+        }
+        if (!"QUIESCENT\n".equals(status)) {
+            throw new NodeRpcException(NodeRpcPhase.TERMINATE,
+                "Node process supervisor reported managed range cleanup failure");
+        }
+    }
+
+    private void awaitCloseCompletion() {
+        try {
+            closeCompletion.join();
+        } catch (CompletionException failure) {
+            if (failure.getCause() instanceof RuntimeException runtimeFailure) {
+                throw runtimeFailure;
+            }
+            throw failure;
         }
     }
 

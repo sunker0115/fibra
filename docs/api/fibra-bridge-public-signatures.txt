@@ -32,6 +32,9 @@ public interface com.sstlfsj.fibra.bridge.ContributionCodec<D, I, O> {
   public abstract I decodeInput(java.lang.Object);
   public abstract java.lang.Object encodeOutput(O);
   public abstract O decodeOutput(java.lang.Object);
+  public default com.sstlfsj.fibra.CancellationToken cancellationToken(I);
+  public default java.lang.RuntimeException cancellationException();
+  public default java.util.Optional<java.lang.RuntimeException> mapRemoteFailure(com.sstlfsj.fibra.bridge.RemoteContributionFailure);
 }
 ## com.sstlfsj.fibra.bridge.ContributionDirectory
 Compiled from "ContributionDirectory.java"
@@ -131,4 +134,15 @@ public final class com.sstlfsj.fibra.bridge.ContributionSnapshotEntry extends ja
 ## com.sstlfsj.fibra.bridge.ContributionUnavailableException
 Compiled from "ContributionUnavailableException.java"
 public final class com.sstlfsj.fibra.bridge.ContributionUnavailableException extends java.lang.IllegalStateException {
+}
+## com.sstlfsj.fibra.bridge.RemoteContributionFailure
+Compiled from "RemoteContributionFailure.java"
+public final class com.sstlfsj.fibra.bridge.RemoteContributionFailure extends java.lang.Record {
+  public com.sstlfsj.fibra.bridge.RemoteContributionFailure(int, java.lang.String, com.sstlfsj.fibra.value.LiteralValue);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public int code();
+  public java.lang.String message();
+  public com.sstlfsj.fibra.value.LiteralValue data();
 }

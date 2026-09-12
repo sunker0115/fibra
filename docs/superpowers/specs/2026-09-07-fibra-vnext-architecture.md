@@ -237,6 +237,11 @@ PENDING -> STARTING -> ACTIVE -> STOPPING -> DISPOSED
   取消调用者。token 随 `ToolRequest` 进入并通过派生 `InvocationContext` 沿 `ServiceRef` 传播。显式 token
   取消允许业务返回稳定的 aborted 结果；直接取消 Reactor 订阅只触发 invocation Scope 清理，不伪造一个
   已无人接收的结果。两条路径都必须等待其拥有资源的清理边界，不能把订阅消失等同于进程已经退出。
+  已启动的远端调用是 invocation Scope 拥有的 `DrainingDisposable`：调用方结果订阅、原请求终态和实例
+  sidecar 终态是三个不同边界。逐请求取消至多发送一次协议通知，并继续接收原请求的成功或失败终态；
+  通知已经发出不代表远端已经停止。请求 deadline 先进入同一逐请求取消流程并等待明确的取消宽限，只有
+  宽限耗尽、协议故障、心跳失败或异常退出才升级为实例级故障并终止 sidecar。升级前同实例的其他请求
+  继续运行；升级后受影响请求共同等待受管进程范围静默，不能用 aborted 隐藏远端业务失败或清理失败。
 
 ## 4. Engine 与局部动态更新
 
@@ -316,6 +321,8 @@ Engine 关闭先在线性化的命令准入边界停止接收新请求，等待�
 或未释放的调用租约。
 取消订阅不取消已经启动的清理。Engine 关闭后拒绝新调用；局部变更仅停止受影响条目的接入，
 无关条目的已接受调用不被取消，也不因为其他插件更新而等待整个 domain 排空。
+远端 handler 必须在发送请求前先把请求资源登记到该调用 Scope；登记失败不得发送。结果订阅取消后，
+请求资源仍由 Scope 的排空链推进到原请求终态，或推进到实例级终止并确认受管范围静默，最后才释放贡献租约。
 
 调用 Scope 的“关闭流程结束”不等于“资源全部释放成功”。Engine 通过域内按真实 Scope 后代关系
 筛选的 `cleanupFailures(scope)` 核验本次调用，不能把同名 Scope 或其他并发调用的失败混入。
@@ -677,11 +684,16 @@ Node 插件作为受管 sidecar，通过版本化 JSON-RPC 协议参与同一 `P
 
 - 预检完成包与声明校验；实例激活负责进程启动、握手及能力与 schema 协商，失败属于运行收敛失败；
 - endpoint 先适配为通用 contribution，再进入域内目录；
-- 超时、取消、心跳、stderr、异常退出和消息边界必须结构化上报；
+- 超时、取消、心跳、stderr、异常退出和消息边界必须结构化上报。`defaultRequestTimeout` 是原请求执行
+  deadline，`requestCancellationTimeout` 是发送逐请求取消后等待原请求终态的宽限，两者不能合并；
+- 单次请求取消或执行超时不能直接关闭共享 sidecar。宽限内远端结算只结束该请求；宽限耗尽才把 sidecar
+  标记为实例级故障，停止其准入并沿统一关闭屏障终止全部受影响请求；
 - RPC 与进程所有权分离：`NodeSidecar` 只处理协议，内部 `NodeProcessUnit` 启动监督器并持有一个可等待的
   受管进程范围；RuntimeDomain 只等待该范围静默，不枚举或缓存瞬时后代 PID；
 - retire 固定执行“停止接入、关闭 RPC stdin、等待协作退出、软终止、强终止、确认范围静默、清理会话目录”；
-  只有整个受管范围静默后 runtime participant 才算结束；
+  监督器必须在自身退出前写出范围静默终态，Java 侧在进程退出后校验该证明；调用方线程中断不得跳过
+  等待。缺少证明、明确失败或监督器仍未退出均作为清理失败传播到请求 Scope 与实例清理，并保留会话目录，
+  不能完成 pending 请求或 runtime participant 冒充范围已经静默；
 - POSIX payload 在独立进程组中运行，按 PGID 发信号并检查进程组消失；Windows 使用
   `taskkill /PID <pid> /T /F` 作为公开的较弱后端。后代主动离开进程组、Windows breakaway、监督器不可执行
   清理或机器失效不在本地 sidecar 的保证内，非可信插件必须交给 container、Job Object 或外部 sandbox；

@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
     public static final RuntimeId RUNTIME_ID = new RuntimeId("node");
@@ -136,10 +137,50 @@ public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
         }
         var descriptor = codec.decodeDescriptor(endpoint.descriptor());
         return new ContributionBinding<>(kind, endpoint.name(), descriptor,
-            (invocation, input) -> sidecar.request(endpoint.method(), Map.of(
-                    "schemaVersion", codec.schemaVersion(),
-                    "input", codec.encodeInput(input)))
-                .map(codec::decodeOutput));
+            (invocation, input) -> {
+                var cancellationFailure = Objects.requireNonNull(codec.cancellationException(),
+                    "contribution codec returned null cancellation exception");
+                return Mono.defer(() -> {
+                    var cancellation = Objects.requireNonNull(codec.cancellationToken(input),
+                        "contribution codec returned null cancellation token");
+                    if (cancellation.isCancelled()) {
+                        return Mono.error(cancellationFailure);
+                    }
+                    var request = new AtomicReference<NodeSidecar.Request>();
+                    var owned = invocation.effects().effect(() -> {
+                        var started = sidecar.beginRequest(endpoint.method(), Map.of(
+                            "schemaVersion", codec.schemaVersion(),
+                            "input", codec.encodeInput(input)), cancellation);
+                        request.set(started);
+                        return started;
+                    }, "node-request:" + endpoint.method());
+                    return Mono.usingWhen(owned.ready(), ignored -> request.get().result()
+                            .flatMap(response -> cancellation.isCancelled()
+                                ? Mono.error(cancellationFailure)
+                                : Mono.fromCallable(() -> Objects.requireNonNull(
+                                    codec.decodeOutput(response.value()),
+                                    "contribution codec returned null output"))),
+                        ignored -> owned.dispose(),
+                        (ignored, failure) -> owned.dispose(),
+                        ignored -> owned.dispose());
+                })
+                    .onErrorMap(failure -> mapFailure(codec, cancellationFailure, failure));
+            });
+    }
+
+    private static RuntimeException mapFailure(ContributionCodec<?, ?, ?> codec,
+                                               RuntimeException cancellationFailure,
+                                               Throwable failure) {
+        if (!(failure instanceof NodeRpcException nodeFailure)) {
+            return failure instanceof RuntimeException runtimeFailure
+                ? runtimeFailure : new NodeRuntimeException(null,
+                "Node contribution invocation failed", failure);
+        }
+        if (nodeFailure.wasCancelledBeforeSend()) {
+            return cancellationFailure;
+        }
+        return nodeFailure.remoteFailure().flatMap(codec::mapRemoteFailure)
+            .orElse(nodeFailure);
     }
 
     private void validateKinds(NodePluginManifest manifest) {

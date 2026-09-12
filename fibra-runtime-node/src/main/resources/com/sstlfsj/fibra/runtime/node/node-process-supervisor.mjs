@@ -1,9 +1,10 @@
 import { spawn, spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 
-const [, , entrypoint, rawTerminateTimeout] = process.argv;
+const [, , entrypoint, rawTerminateTimeout, terminationStatus] = process.argv;
 const terminateTimeout = Number.parseInt(rawTerminateTimeout, 10);
 
-if (!entrypoint || !Number.isSafeInteger(terminateTimeout) || terminateTimeout <= 0) {
+if (!entrypoint || !terminationStatus || !Number.isSafeInteger(terminateTimeout) || terminateTimeout <= 0) {
   process.stderr.write('Fibra Node supervisor received invalid launch arguments\n');
   process.exit(64);
 }
@@ -47,16 +48,18 @@ function beginShutdown(exitCode) {
   shutdown = terminateManagedRange()
     .then(quiescent => {
       if (!quiescent) {
+        writeTerminationStatus('FAILED');
         process.stderr.write('Fibra Node managed process range did not become quiescent\n');
         process.exitCode = 1;
       } else {
-        process.exitCode = payloadOutcome ?? exitCode;
+        process.exitCode = writeTerminationStatus('QUIESCENT') ? payloadOutcome ?? exitCode : 1;
       }
       process.stdin.pause();
       process.stdout.end();
       process.stderr.end();
     })
     .catch(error => {
+      writeTerminationStatus('FAILED');
       process.stderr.write(`Fibra Node managed process range termination failed: ${error.message}\n`);
       process.exitCode = 1;
       process.stdin.pause();
@@ -64,6 +67,16 @@ function beginShutdown(exitCode) {
       process.stderr.end();
     });
   return shutdown;
+}
+
+function writeTerminationStatus(status) {
+  try {
+    fs.writeFileSync(terminationStatus, `${status}\n`, { encoding: 'utf8', flag: 'wx' });
+    return true;
+  } catch (error) {
+    process.stderr.write(`Fibra Node termination status write failed: ${error.message}\n`);
+    return false;
+  }
 }
 
 async function terminateManagedRange() {
