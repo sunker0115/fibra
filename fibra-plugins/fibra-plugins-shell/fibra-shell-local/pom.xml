@@ -41,6 +41,11 @@
       <artifactId>junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency><groupId>com.sstlfsj</groupId><artifactId>fibra-subprocess-local</artifactId><scope>test</scope></dependency>
   </dependencies>
   <build>
