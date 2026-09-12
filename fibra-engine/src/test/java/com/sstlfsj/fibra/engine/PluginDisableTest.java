@@ -16,6 +16,7 @@ import reactor.core.publisher.Sinks;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.TimeUnit;
@@ -123,15 +124,18 @@ class PluginDisableTest {
             assertEquals(PluginInstanceState.PENDING,
                 started.engine().instances().get("consumer").state());
 
-            providerContext.get().services().provide(service, "available");
-            requestIssued.asMono().block(TIMEOUT);
-            var current = engine.published().current();
-            var barrier = engine.submit(new ReplaceConfigContext(null,
-                current.engineDiagnostics().contextRevision(),
-                com.sstlfsj.fibra.config.ConfigContextSnapshot.empty())).toFuture();
-            await(engine, view -> view.engineDiagnostics().phase() == ChangePhase.PREPARING
-                && view.engine().instances().get("consumer").state() == PluginInstanceState.STARTING);
-            completeStart.tryEmitEmpty();
+            CompletableFuture<EngineCommandResult> barrier;
+            try {
+                providerContext.get().services().provide(service, "available");
+                requestIssued.asMono().block(TIMEOUT);
+                var current = engine.published().current();
+                barrier = engine.submit(new ReplaceConfigContext(null,
+                    current.engineDiagnostics().contextRevision(),
+                    com.sstlfsj.fibra.config.ConfigContextSnapshot.empty())).toFuture();
+                await(engine, view -> view.engineDiagnostics().phase() == ChangePhase.RECONCILING);
+            } finally {
+                completeStart.tryEmitEmpty();
+            }
             barrier.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
             var disabled = await(engine, view -> !view.engine().desiredGraph().plugins()
                 .get("consumer").enabled() && !view.engine().instances().containsKey("consumer"));
