@@ -8,11 +8,13 @@ public record SubprocessSpec(List<String> argv, String cwd, int stdoutMaxBytes,
                              int stderrMaxBytes, Duration grace) {
     public SubprocessSpec {
         argv = List.copyOf(Objects.requireNonNull(argv, "argv"));
-        if (argv.isEmpty() || argv.stream().anyMatch(value -> value == null || value.isBlank())) {
-            throw new IllegalArgumentException("argv must contain non-blank elements");
+        if (argv.isEmpty() || argv.getFirst().isBlank()
+            || argv.stream().anyMatch(value -> value.indexOf('\0') >= 0)) {
+            throw new IllegalArgumentException(
+                "argv[0] must not be blank and all argv elements must be NUL-free");
         }
-        if (cwd == null || cwd.isBlank()) {
-            throw new IllegalArgumentException("cwd must not be blank");
+        if (cwd == null || cwd.isBlank() || cwd.indexOf('\0') >= 0) {
+            throw new IllegalArgumentException("cwd must not be blank or contain NUL");
         }
         if (stdoutMaxBytes <= 0 || stderrMaxBytes <= 0) {
             throw new IllegalArgumentException("output limits must be positive");

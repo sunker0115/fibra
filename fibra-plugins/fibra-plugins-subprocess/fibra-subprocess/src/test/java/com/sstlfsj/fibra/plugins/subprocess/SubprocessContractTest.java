@@ -17,17 +17,30 @@ class SubprocessContractTest {
         var argv = new java.util.ArrayList<>(List.of("rg", "needle"));
         var spec = SubprocessSpec.builder().argv(argv).cwd("/workspace")
             .stdoutMaxBytes(16).stderrMaxBytes(32).grace(Duration.ofSeconds(1)).build();
+        var emptyArguments = SubprocessSpec.builder().argv(List.of("rg", "", " "))
+            .cwd("/workspace").stdoutMaxBytes(1).stderrMaxBytes(1)
+            .grace(Duration.ofMillis(1)).build();
         argv.clear();
 
         assertEquals(List.of("rg", "needle"), spec.argv());
+        assertEquals(List.of("rg", "", " "), emptyArguments.argv());
         assertThrows(IllegalArgumentException.class, () -> SubprocessSpec.builder()
             .argv(List.of()).cwd("/workspace").stdoutMaxBytes(1).stderrMaxBytes(1)
             .grace(Duration.ofMillis(1)).build());
         assertThrows(IllegalArgumentException.class, () -> SubprocessSpec.builder()
-            .argv(List.of("rg", "")).cwd("/workspace").stdoutMaxBytes(1).stderrMaxBytes(1)
+            .argv(List.of("", "argument")).cwd("/workspace").stdoutMaxBytes(1).stderrMaxBytes(1)
             .grace(Duration.ofMillis(1)).build());
         assertThrows(IllegalArgumentException.class, () -> SubprocessSpec.builder()
+            .argv(List.of(" ", "argument")).cwd("/workspace").stdoutMaxBytes(1).stderrMaxBytes(1)
+            .grace(Duration.ofMillis(1)).build());
+        assertThrows(IllegalArgumentException.class, () -> SubprocessSpec.builder()
+            .argv(List.of("rg", "bad\0argument")).cwd("/workspace")
+            .stdoutMaxBytes(1).stderrMaxBytes(1).grace(Duration.ofMillis(1)).build());
+        assertThrows(IllegalArgumentException.class, () -> SubprocessSpec.builder()
             .argv(List.of("rg")).cwd(" ").stdoutMaxBytes(1).stderrMaxBytes(1)
+            .grace(Duration.ofMillis(1)).build());
+        assertThrows(IllegalArgumentException.class, () -> SubprocessSpec.builder()
+            .argv(List.of("rg")).cwd("/bad\0directory").stdoutMaxBytes(1).stderrMaxBytes(1)
             .grace(Duration.ofMillis(1)).build());
         assertThrows(IllegalArgumentException.class, () -> SubprocessSpec.builder()
             .argv(List.of("rg")).cwd("/workspace").stdoutMaxBytes(0).stderrMaxBytes(1)

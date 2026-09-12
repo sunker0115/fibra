@@ -133,24 +133,28 @@ class FormalPluginArtifactsIT {
     }
 
     @Test
-    void localFileSystemJarKeepsJniCompatiblePrivateJnaAndCarriesItsNotice() throws Exception {
-        var localFileSystem = PluginAcceptanceHarness.stagedJar("fibra-fs-local");
-        try (var archive = new JarFile(localFileSystem.toFile(), true)) {
-            var entries = archive.stream().map(entry -> entry.getName()).toList();
-            assertTrue(entries.contains("com/sun/jna/Native.class"));
-            assertTrue(entries.contains("com/sun/jna/win32-x86/jnidispatch.dll"));
-            assertTrue(entries.contains("com/sun/jna/win32-x86-64/jnidispatch.dll"));
-            assertTrue(entries.contains("com/sun/jna/win32-aarch64/jnidispatch.dll"));
-            var notice = archive.getJarEntry("META-INF/THIRD_PARTY_NOTICES.md");
-            assertNotNull(notice);
-            try (var input = archive.getInputStream(notice)) {
-                var content = new String(input.readAllBytes(),
-                    java.nio.charset.StandardCharsets.UTF_8);
-                assertTrue(content.contains("JNA"));
-                assertTrue(content.contains("Apache License 2.0"));
+    void localImplementationJarsKeepJniCompatiblePrivateJnaAndCarryItsNotice()
+        throws Exception {
+        for (var artifact : List.of("fibra-fs-local", "fibra-subprocess-local")) {
+            try (var archive = new JarFile(
+                PluginAcceptanceHarness.stagedJar(artifact).toFile(), true)) {
+                var entries = archive.stream().map(entry -> entry.getName()).toList();
+                assertTrue(entries.contains("com/sun/jna/Native.class"));
+                assertTrue(entries.contains("com/sun/jna/win32-x86/jnidispatch.dll"));
+                assertTrue(entries.contains("com/sun/jna/win32-x86-64/jnidispatch.dll"));
+                assertTrue(entries.contains("com/sun/jna/win32-aarch64/jnidispatch.dll"));
+                var notice = archive.getJarEntry("META-INF/THIRD_PARTY_NOTICES.md");
+                assertNotNull(notice);
+                try (var input = archive.getInputStream(notice)) {
+                    var content = new String(input.readAllBytes(),
+                        java.nio.charset.StandardCharsets.UTF_8);
+                    assertTrue(content.contains("JNA"));
+                    assertTrue(content.contains("Apache License 2.0"));
+                }
             }
         }
-        for (var artifact : List.of("fibra-fs", "fibra-tool-fs", "fibra-tool-fs-search")) {
+        for (var artifact : List.of("fibra-fs", "fibra-tool-fs", "fibra-subprocess",
+            "fibra-tool-fs-search")) {
             assertTrue(classEntries(PluginAcceptanceHarness.stagedJar(artifact)).stream()
                 .noneMatch(name -> name.startsWith("com/sun/jna/")), artifact + " bundles JNA");
         }

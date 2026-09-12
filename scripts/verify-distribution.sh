@@ -173,6 +173,26 @@ sed -n '/<artifactId>jna<\/artifactId>/,+3p' "${fs_local_pom[0]}" \
   > "$fs_local_dependency"
 grep -q '<optional>true</optional>' "$fs_local_dependency"
 
+readonly subprocess_local_jar="$(main_jar fibra-subprocess-local)"
+readonly subprocess_local_pom=("$remote_repository/com/sstlfsj/fibra-subprocess-local/$revision/fibra-subprocess-local-"*.pom)
+readonly subprocess_local_entries="$temporary_root/fibra-subprocess-local.entries"
+readonly subprocess_local_notices="$temporary_root/fibra-subprocess-local.THIRD_PARTY_NOTICES.md"
+readonly subprocess_local_dependency="$temporary_root/fibra-subprocess-local-jna.xml"
+jar tf "$subprocess_local_jar" > "$subprocess_local_entries"
+grep -qx 'META-INF/LICENSE' "$subprocess_local_entries"
+grep -qx 'META-INF/THIRD_PARTY_NOTICES.md' "$subprocess_local_entries"
+grep -qx 'com/sun/jna/Native.class' "$subprocess_local_entries"
+grep -qx 'com/sun/jna/win32-x86/jnidispatch.dll' "$subprocess_local_entries"
+grep -qx 'com/sun/jna/win32-x86-64/jnidispatch.dll' "$subprocess_local_entries"
+grep -qx 'com/sun/jna/win32-aarch64/jnidispatch.dll' "$subprocess_local_entries"
+unzip -p "$subprocess_local_jar" META-INF/THIRD_PARTY_NOTICES.md \
+  > "$subprocess_local_notices"
+grep -q 'JNA' "$subprocess_local_notices"
+grep -q 'Apache License 2.0' "$subprocess_local_notices"
+sed -n '/<artifactId>jna<\/artifactId>/,+3p' "${subprocess_local_pom[0]}" \
+  > "$subprocess_local_dependency"
+grep -q '<optional>true</optional>' "$subprocess_local_dependency"
+
 readonly search_jar="$(main_jar fibra-tool-fs-search)"
 readonly search_pom=("$remote_repository/com/sstlfsj/fibra-tool-fs-search/$revision/fibra-tool-fs-search-"*.pom)
 readonly search_entries="$temporary_root/fibra-tool-fs-search.entries"
