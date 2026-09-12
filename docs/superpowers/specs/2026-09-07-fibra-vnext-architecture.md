@@ -906,7 +906,7 @@ Windows 的目录同步只作能力探测和 best-effort，未实测平台不得
 告警并回退到较弱 supervisor。Darwin 没有等价的系统范围，保持 PGID supervisor 的较弱边界；`setsid`、重父化
 或 breakaway 后代可能逃逸，`waitForExit()` 不能在该回退路径承诺 managed-range 静默。范围 owner 仍通过受管
 supervisor 维持 stdin 生存租约，JVM 异常退出时以 EOF 触发清理；终止必须等待选定范围静默后结算，不能只依赖
-一次 `ProcessHandle.descendants()` 快照。`fibra-subprocess-local` 当前 72 项测试覆盖选择、范围生命周期、
+一次 `ProcessHandle.descendants()` 快照。`fibra-subprocess-local` 当前 74 项测试覆盖选择、范围生命周期、
 超时、取消、父进程先退出及后代清理；Windows Job 与 Linux scope 以注入 seam 覆盖实现路径，当前 macOS
 环境不把它们写成 Windows 或 Linux 实机通过，Linux user-systemd 的实机门禁仍待最终执行。配置事件与
 `ConfigStore` 使用相同 realm；测试必须同时证明同 realm 的两个 consumer 共享一个 provider，以及另一个 realm

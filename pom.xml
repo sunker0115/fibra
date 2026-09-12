@@ -72,6 +72,9 @@
     <maven.compiler.release>21</maven.compiler.release>
     <maven.runtime.version>3.9.9</maven.runtime.version>
     <maven.runtime.sha512>a555254d6b53d267965a3404ecb14e53c3827c09c3b94b5678835887ab404556bfaf78dcfe03ba76fa2508649dca8531c74bca4d5846513522404d48e8c4ac8b</maven.runtime.sha512>
+    <!-- 真实搜索验收与 DSH 0.1.2-rc.1 使用同一 ripgrep 版本。 -->
+    <ripgrep.runtime.version>15.0.1</ripgrep.runtime.version>
+    <ripgrep.runtime.sha256>4499958bfd5252df3d9e7504127fd448e4a14fbf2805ef4f14baaa1bcf775188</ripgrep.runtime.sha256>
     <!-- 聚合根与验证模块不发布；可发布模块在各自 POM 中显式开启。 -->
     <maven.deploy.skip>true</maven.deploy.skip>
     <maven.source.skip>true</maven.source.skip>

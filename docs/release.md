@@ -27,6 +27,10 @@ scripts/verify-reproducible-release.sh
 scripts/verify-distribution.sh
 ```
 
+真实插件组合与仓库外 Engine 消费还需要 Node.js、Bash 和 ripgrep。当前插件 Maven JAR 不捆绑这些
+可执行文件；CI 从 `microsoft/ripgrep-prebuilt` 固定下载 ripgrep 15.0.1 并校验 SHA-256，宿主直接嵌入时
+须把实际可执行路径写入对应插件配置。未来 CLI/ZIP 发行包按目标平台携带 sidecar，并继续注入同一配置。
+
 全量 `verify` 覆盖 Scope/插件/资源所有权、配置与不可变制品保存、完整部署目标与崩溃恢复、ChangeSet
 变更编排、真实 Java JAR/ClassSpace、真实 Node sidecar、运行域内 ContributionDirectory 与
 PublishedRuntime、PluginRegistry、Spring Boot、archetype、公共 API 和 JMH 编译。

@@ -83,6 +83,27 @@ jobs:
           tar -xzf "$archive" -C "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/apache-maven-$maven_version/bin" >> "$GITHUB_PATH"
 
+      - name: 配置项目锁定的 ripgrep 版本
+        shell: bash
+        run: |
+          ripgrep_version="$(sed -n 's/.*<ripgrep.runtime.version>\([^<]*\)<\/ripgrep.runtime.version>.*/\1/p' pom.xml)"
+          ripgrep_sha256="$(sed -n 's/.*<ripgrep.runtime.sha256>\([^<]*\)<\/ripgrep.runtime.sha256>.*/\1/p' pom.xml)"
+          archive="$RUNNER_TEMP/ripgrep-v$ripgrep_version-x86_64-unknown-linux-musl.tar.gz"
+          curl --fail --silent --show-error --location \
+            "https://github.com/microsoft/ripgrep-prebuilt/releases/download/v$ripgrep_version/$(basename "$archive")" \
+            --output "$archive"
+          echo "$ripgrep_sha256  $archive" | sha256sum --check -
+          tar -xzf "$archive" -C "$RUNNER_TEMP" rg
+          chmod 0755 "$RUNNER_TEMP/rg"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - name: 确认构建与真实插件验收环境
+        run: |
+          mvn --version
+          node --version
+          bash --version
+          rg --version
+
       - name: 全量构建与兼容性验收
         run: mvn --batch-mode --no-transfer-progress clean verify
 

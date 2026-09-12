@@ -99,6 +99,10 @@ runtime.close();
 Job Object；Linux 优先使用 user-systemd transient scope，能力不可用时显式降级到较弱的进程组监督器；
 macOS 使用进程组边界并保留逃逸后代限制。它与 Node sidecar 的进程管理实现相互独立。
 
+当前 Maven 插件 JAR 不捆绑外部可执行文件。宿主须分别为 subprocess、搜索和 Shell provider 配置可执行的
+Node.js、ripgrep 与 Bash 路径；建议使用绝对路径。项目 CI 固定使用与 DSH 0.1.2-rc.1 相同的 ripgrep
+15.0.1。未来 CLI/ZIP 发行层可按目标平台携带二进制并注入现有配置，不需要改变插件公开 API。
+
 ## Java 插件 JAR
 
 Java 制品 JAR 中只声明一个 `META-INF/fibra/plugin.yaml`。可运行插件实现
