@@ -112,7 +112,7 @@ public final class LocalSubprocess implements Subprocess {
         String message = platform == HostPlatform.WINDOWS
             ? "Windows Job Object unavailable; using weaker supervisor fallback where descendants may "
                 + "escape and managed-range exit cannot be guaranteed"
-            : "Native managed-process range unavailable; using weaker process-group supervisor fallback "
+            : "Persistent managed-process range unavailable; using native POSIX process-group boundary "
                 + "where setsid or reparented descendants may escape and waitForExit cannot guarantee "
                 + "managed-range quiescence";
         if (cause == null) invocation.logger().warn(message);

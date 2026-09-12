@@ -53,7 +53,8 @@ class LocalSubprocessLinuxSelectionTest {
                 unit.waitForExit().block(Duration.ofSeconds(2));
             }
             assertEquals(1, warnings.stream().filter(message -> message.arguments().getFirst()
-                .toString().contains("setsid or reparented descendants may escape")).count());
+                .toString().contains("using native POSIX process-group boundary where setsid or "
+                    + "reparented descendants may escape")).count());
         }
         assertEquals(2, provider.deep.get());
         assertEquals(0, provider.manager.get());
