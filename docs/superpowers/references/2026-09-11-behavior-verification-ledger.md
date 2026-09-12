@@ -50,6 +50,13 @@ fork 增加 300 秒上限，从 180 秒起每 60 秒采集 Maven 进程组内 JV
 失败现场能在作业总超时前上传。该结果证明正式 storage 纳入后的 pre-CLI 发布闭环，不证明尚不存在的
 CLI/ZIP 发行结构。
 
+修正提交 `e678dee` 的
+[运行 #13](https://github.com/sunker0115/fibra/actions/runs/34679269936) 随后在 Ubuntu runner 全部通过：
+48 模块 `clean verify` 耗时 2 分 14 秒，25 制品可复现比较耗时 1 分 9 秒，空临时 Maven 仓及仓库外消费者
+验证耗时 1 分 43 秒，作业总计 5 分 15 秒。该结果验证了 `PluginDisableTest` 修正和 CI 诊断包装器的绿色
+路径；此前 `FibraEngineRuntimeAdapterTest` 停点仍未取得线程栈，不把单次成功扩大为该未知停点已定位，
+后续若复发由新的超时与失败制品保留现场。
+
 联合部署故障另由 `ApplyDeploymentPersistenceBoundaryTest` 6 项、
 `ApplyDeploymentMountFailureRecoveryTest` 1 项和 `EngineArtifactRecoveryTest` 2 项覆盖：同一携带新
 artifact 与 desired graph 的 `ApplyDeployment` 验证多制品暂存、运行时准备、制品元数据发布和目标保存
