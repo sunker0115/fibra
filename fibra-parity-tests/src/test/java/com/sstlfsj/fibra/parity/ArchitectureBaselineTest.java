@@ -16,7 +16,7 @@ class ArchitectureBaselineTest {
     private static final List<String> MODULES = List.of(
         "fibra-api", "fibra-core", "fibra-config", "fibra-artifact",
         "fibra-engine", "fibra-bridge", "fibra-runtime-java",
-        "fibra-runtime-node", "fibra-registry", "fibra-spring",
+        "fibra-runtime-node", "fibra-registry", "fibra-cli", "fibra-spring",
         "fibra-spring-boot-starter", "fibra-plugin-archetype",
         "fibra-plugins", "fibra-example", "fibra-parity-tests",
         "fibra-benchmarks");
