@@ -155,6 +155,15 @@ class LocalSubprocessTest {
             Context.class.getClassLoader(), new Class<?>[] {Context.class}, (proxy, method, arguments) -> {
                 if (method.getName().equals("effects")) return effects;
                 if (method.getName().equals("scope")) return scope;
+                if (method.getName().equals("loggerForService")) {
+                    return new com.sstlfsj.fibra.logging.FibraLogger() {
+                        @Override public String name() { return "test"; }
+                        @Override public void error(Object... values) { }
+                        @Override public void info(Object... values) { }
+                        @Override public void warn(Object... values) { }
+                        @Override public void debug(Object... values) { }
+                    };
+                }
                 if (method.getDeclaringClass() == Object.class) return method.invoke(this, arguments);
                 throw new UnsupportedOperationException(method.getName());
             });
