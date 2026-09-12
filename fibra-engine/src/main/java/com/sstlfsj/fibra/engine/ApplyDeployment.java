@@ -5,6 +5,10 @@ import com.sstlfsj.fibra.config.DesiredInputGraph;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Replaces the complete desired graph and dynamic artifact selection atomically.
+ * An empty artifact list removes every dynamic artifact from the target deployment.
+ */
 public final class ApplyDeployment implements EngineCommand {
     private final String expectedRevision;
     private final String expectedDesiredRevision;
@@ -19,9 +23,6 @@ public final class ApplyDeployment implements EngineCommand {
         }
         expectedDesiredRevision = builder.expectedDesiredRevision;
         artifacts = List.copyOf(builder.artifacts);
-        if (artifacts.isEmpty()) {
-            throw new IllegalArgumentException("deployment artifacts must not be empty");
-        }
         graph = Objects.requireNonNull(builder.graph, "graph");
     }
 

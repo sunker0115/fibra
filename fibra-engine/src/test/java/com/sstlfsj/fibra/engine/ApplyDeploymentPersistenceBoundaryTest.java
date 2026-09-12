@@ -38,9 +38,72 @@ class ApplyDeploymentPersistenceBoundaryTest {
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
     private static final ArtifactId ARTIFACT = new ArtifactId("sample");
     private static final ArtifactId AUXILIARY = new ArtifactId("auxiliary");
+    private static final ArtifactId THIRD = new ArtifactId("third");
     private static final ContributionKind<String, String, String> COMMAND =
         ContributionKind.local("command", String.class, String.class, String.class);
     private static final ContributionId CONTRIBUTION = new ContributionId("sample", "run");
+
+    @Test
+    void applyDeploymentReplacesTheCompleteArtifactSelectionAndRemovesDependentInstances(
+        @TempDir Path work) throws Exception {
+        var probe = new Probe(false);
+        var stateStore = new FileEngineStateStore(work.resolve("state"));
+        var artifactStore = new ArtifactStore(work.resolve("artifacts"));
+        var firstSample = write(work.resolve("sample-first.bin"), "sample-first");
+        var auxiliary = write(work.resolve("auxiliary.bin"), "auxiliary");
+        var third = write(work.resolve("third.bin"), "third");
+        try (var engine = engine(artifactStore, stateStore, probe, new DesiredInputGraph(List.of()))) {
+            var started = engine.start().block(TIMEOUT);
+            var first = engine.submit(deployment(started, graph("first"), List.of(
+                artifact(ARTIFACT, firstSample, "1.0.0", probe),
+                artifact(AUXILIARY, auxiliary, "1.0.0", probe)))).block(TIMEOUT).view();
+
+            assertTrue(first.engine().instances().containsKey("sample"));
+
+            var replaced = engine.submit(deployment(first, new DesiredInputGraph(List.of()), List.of(
+                artifact(AUXILIARY, auxiliary, "1.0.0", probe),
+                artifact(THIRD, third, "1.0.0", probe)))).block(TIMEOUT).view();
+            var manifest = stateStore.load().orElseThrow();
+            var runtimeArtifacts = replaced.engine().runtimes().get(probe.id()).resources().stream()
+                .map(resource -> resource.artifact().id()).collect(java.util.stream.Collectors.toSet());
+
+            assertAll(
+                () -> assertEquals(Set.of(AUXILIARY, THIRD), replaced.engine().artifacts().keySet()),
+                () -> assertFalse(replaced.engine().instances().containsKey("sample")),
+                () -> assertEquals(Set.of(AUXILIARY, THIRD), manifest.artifacts().keySet()),
+                () -> assertEquals(Set.of(AUXILIARY, THIRD), runtimeArtifacts));
+        }
+    }
+
+    @Test
+    void applyDeploymentCanClearTheCompleteArtifactSelectionAndDesiredGraph(
+        @TempDir Path work) throws Exception {
+        var probe = new Probe(false);
+        var stateStore = new FileEngineStateStore(work.resolve("state"));
+        var artifactStore = new ArtifactStore(work.resolve("artifacts"));
+        var sample = write(work.resolve("sample.bin"), "sample");
+        var auxiliary = write(work.resolve("auxiliary.bin"), "auxiliary");
+        var emptyGraph = new DesiredInputGraph(List.of());
+        try (var engine = engine(artifactStore, stateStore, probe, emptyGraph)) {
+            var started = engine.start().block(TIMEOUT);
+            var deployed = engine.submit(deployment(started, graph("first"), List.of(
+                artifact(ARTIFACT, sample, "1.0.0", probe),
+                artifact(AUXILIARY, auxiliary, "1.0.0", probe)))).block(TIMEOUT).view();
+
+            assertTrue(deployed.engine().instances().containsKey("sample"));
+
+            var cleared = engine.submit(deployment(deployed, emptyGraph, List.of()))
+                .block(TIMEOUT).view();
+            var manifest = stateStore.load().orElseThrow();
+
+            assertAll(
+                () -> assertTrue(cleared.engine().artifacts().isEmpty()),
+                () -> assertTrue(cleared.engine().instances().isEmpty()),
+                () -> assertEquals(emptyGraph, manifest.desiredGraph()),
+                () -> assertTrue(manifest.artifacts().isEmpty()),
+                () -> assertTrue(cleared.engine().runtimes().get(probe.id()).resources().isEmpty()));
+        }
+    }
 
     @Test
     void targetSaveFailureRetainsOldRuntimeAndAllowsAnotherApplyDeployment(@TempDir Path work)

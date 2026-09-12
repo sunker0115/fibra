@@ -214,7 +214,9 @@ public final class FibraEngine implements AutoCloseable {
             checkDesiredRevision(deployment.expectedDesiredRevision());
             desired = replacementCompilation(deployment.graph());
         }
-        var plan = new ChangeSet(desired, artifacts, configContext);
+        Map<ArtifactId, ArtifactRecord> selection = command instanceof ApplyDeployment
+            ? Map.of() : artifacts;
+        var plan = new ChangeSet(desired, selection, configContext);
         return Mono.defer(() -> {
             if (command instanceof UninstallArtifact uninstall) {
                 if (plan.artifacts.remove(uninstall.artifactId()) == null) {

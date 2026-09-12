@@ -277,6 +277,13 @@ class PluginRegistryTest {
             assertTrue(deployed.desiredGraph().plugins().containsKey("sample-one"));
             assertEquals(1, registry.history().size());
             assertEquals("deploy", registry.history().getFirst().operation());
+
+            var cleared = registry.deploy(new PluginDeploymentRequest(List.of(),
+                new DesiredInputGraph(List.of()))).block();
+
+            assertTrue(cleared.artifacts().isEmpty());
+            assertTrue(cleared.desiredGraph().roots().isEmpty());
+            assertTrue(cleared.observed().isEmpty());
         } finally {
             engine.close();
         }
