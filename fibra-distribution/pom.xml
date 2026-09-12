@@ -133,6 +133,17 @@
         <artifactId>exec-maven-plugin</artifactId>
         <executions>
           <execution>
+            <id>verify-runtime-staging-contract</id>
+            <phase>verify</phase>
+            <goals><goal>exec</goal></goals>
+            <configuration>
+              <executable>${project.basedir}/src/test/scripts/verify-stage-runtime.sh</executable>
+              <arguments>
+                <argument>${project.basedir}/src/main/scripts/stage-runtime.sh</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>stage-target-platform-runtime</id>
             <phase>prepare-package</phase>
             <goals><goal>exec</goal></goals>

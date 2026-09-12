@@ -16,6 +16,11 @@ host_pid=
 cleanup() {
   if [[ -n "$host_pid" ]] && kill -0 "$host_pid" 2>/dev/null; then
     kill -TERM "$host_pid" 2>/dev/null || true
+    for _ in {1..100}; do
+      kill -0 "$host_pid" 2>/dev/null || break
+      sleep 0.05
+    done
+    kill -KILL "$host_pid" 2>/dev/null || true
     wait "$host_pid" 2>/dev/null || true
   fi
   rm -rf "$temporary_root"
@@ -212,6 +217,12 @@ done
 fs_provider_identities=$(grep -o '"id":"fs-provider","identity":[^,}]*' \
   "$mutation_output" | sort -u | wc -l | tr -d ' ')
 [[ "$fs_provider_identities" == 2 ]] || fail "fibra-fs-local 升级未替换目标实例"
+fs_tool_states=$(grep -o '"definition":"tool-fs"[^}]*"id":"fs-tools"[^}]*' "$mutation_output")
+grep -F '"enabled":false' <<< "$fs_tool_states" >/dev/null || fail "fs-tools 停用未生效"
+grep -F '"observed":false' <<< "$fs_tool_states" >/dev/null || fail "fs-tools 停用后仍在运行"
+last_fs_tool_state=$(tail -n 1 <<< "$fs_tool_states")
+[[ "$last_fs_tool_state" == *'"enabled":true'* && "$last_fs_tool_state" == *'"observed":true'* ]] ||
+  fail "fs-tools 未恢复启用"
 
 entered="$temporary_root/shutdown-entered"
 process_ids="$temporary_root/shutdown-pids"
@@ -226,11 +237,23 @@ host_pid=$!
 await_file "$entered"
 read -r payload_pid supervisor_pid leaf_pid < "$process_ids"
 kill -TERM "$host_pid"
+shutdown_deadline="$temporary_root/shutdown-deadline-exceeded"
+(
+  sleep 10
+  if kill -0 "$host_pid" 2>/dev/null; then
+    : > "$shutdown_deadline"
+    kill -KILL "$host_pid" 2>/dev/null || true
+  fi
+) &
+deadline_pid=$!
 set +e
 wait "$host_pid"
 host_status=$?
+kill "$deadline_pid" 2>/dev/null
+wait "$deadline_pid" 2>/dev/null
 set -e
 host_pid=
+[[ ! -e "$shutdown_deadline" ]] || fail "SIGTERM 后宿主未在 10 秒内排空退出"
 [[ "$host_status" == 0 || "$host_status" == 143 ]] || fail "SIGTERM 后宿主退出码异常：$host_status"
 await_stopped "$payload_pid"
 await_stopped "$supervisor_pid"

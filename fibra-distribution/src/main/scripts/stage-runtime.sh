@@ -36,11 +36,14 @@ cp -L "$rg_source" "$runtime_bin/rg"
 chmod 0755 "$runtime_bin/node" "$runtime_bin/rg" "$runtime_bin/bash"
 chmod 0755 "$distribution_root/bin/fibra"
 
+node_version=$("$runtime_bin/node" --version)
+rg_version=$("$runtime_bin/rg" --version)
+bash_version=$("$bash_source" --version)
 {
   printf 'os=%s\n' "$(uname -s)"
   printf 'arch=%s\n' "$(uname -m)"
-  printf 'node=%s\n' "$("$runtime_bin/node" --version)"
-  printf 'ripgrep=%s\n' "$("$runtime_bin/rg" --version | sed -n '1p')"
+  printf 'node=%s\n' "$node_version"
+  printf 'ripgrep=%s\n' "$(printf '%s\n' "$rg_version" | sed -n '1p')"
   printf 'bashExecutable=%s\n' "$bash_source"
-  printf 'bash=%s\n' "$("$bash_source" --version | sed -n '1p')"
+  printf 'bash=%s\n' "$(printf '%s\n' "$bash_version" | sed -n '1p')"
 } > "$distribution_root/runtime/platform.properties"
