@@ -39,8 +39,8 @@ mvn -o -pl fibra-parity-tests -am test \
 runner 的 48 模块 `clean verify`、25 个正式发布制品可复现比较、空临时 Maven 仓部署及仓库外消费者验证
 全部通过，作业总耗时 5 分钟。其中 attempt 1 在 `PluginDisableTest` 的预期保存失败告警后停止输出，由用户
 在 15 分 21 秒时取消；同一 SHA 的 attempt 2 中 `clean verify` 步骤耗时 2 分 15 秒，本地同一测试类另连续
-运行 20 次全部通过。当前证据未复现确定性回归，但首次挂起仍保留为 CI 超时与线程转储诊断的待改进项。该结果证明
-正式 storage 纳入后的 pre-CLI 发布闭环，不证明尚不存在的 CLI/ZIP 发行结构。
+运行 20 次全部通过。当前证据未复现确定性回归，但首次挂起仍保留为细粒度测试超时与线程转储诊断的
+待改进项。该结果证明正式 storage 纳入后的 pre-CLI 发布闭环，不证明尚不存在的 CLI/ZIP 发行结构。
 
 联合部署故障另由 `ApplyDeploymentPersistenceBoundaryTest` 6 项、
 `ApplyDeploymentMountFailureRecoveryTest` 1 项和 `EngineArtifactRecoveryTest` 2 项覆盖：同一携带新
