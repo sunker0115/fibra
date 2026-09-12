@@ -1,9 +1,11 @@
 package com.sstlfsj.fibra.runtime.java;
 
 import com.sstlfsj.fibra.artifact.ArtifactId;
+import com.sstlfsj.fibra.artifact.ArtifactPackage;
 import com.sstlfsj.fibra.artifact.ArtifactRecord;
 import com.sstlfsj.fibra.artifact.RuntimeId;
 import com.sstlfsj.fibra.engine.PluginCatalog;
+import com.sstlfsj.fibra.engine.DeploymentArtifact;
 import com.sstlfsj.fibra.engine.PluginCatalogEntry;
 import com.sstlfsj.fibra.engine.PluginRuntimeAdapter;
 import com.sstlfsj.fibra.engine.RuntimeArtifactInspection;
@@ -54,10 +56,19 @@ public final class JavaPluginRuntimeAdapter implements PluginRuntimeAdapter {
     }
 
     @Override
+    public Mono<DeploymentArtifact> probe(ArtifactPackage artifact) {
+        return Mono.fromCallable(() -> {
+            var manifest = manifests.read(artifact).manifest();
+            return DeploymentArtifact.builder().artifactId(manifest.artifactId())
+                .runtimeId(RUNTIME_ID).version(manifest.version()).source(artifact.root()).build();
+        });
+    }
+
+    @Override
     public Mono<RuntimeArtifactInspection> inspect(ArtifactRecord artifact) {
         return Mono.fromCallable(() -> {
             requireRuntime(artifact);
-            var manifest = manifests.read(artifact);
+            var manifest = manifests.read(artifact).manifest();
             var attributes = new LinkedHashMap<String, Object>();
             manifest.entrypoint().ifPresent(value -> attributes.put("entrypoint", value));
             attributes.put("requires", manifest.requires().stream()
@@ -165,12 +176,15 @@ public final class JavaPluginRuntimeAdapter implements PluginRuntimeAdapter {
         private void prepare() {
             var records = new LinkedHashMap<ArtifactId, ArtifactRecord>();
             var next = new LinkedHashMap<ArtifactId, JavaPluginManifest>();
+            var packages = new LinkedHashMap<ArtifactId, JavaManifestReader.JavaPackage>();
             for (var record : target) {
                 requireRuntime(record);
                 if (records.putIfAbsent(record.id(), record) != null) {
                     throw new IllegalArgumentException("duplicate Java artifact " + record.id().value());
                 }
-                next.put(record.id(), manifests.read(record));
+                var artifact = manifests.read(record);
+                packages.put(record.id(), artifact);
+                next.put(record.id(), artifact.manifest());
             }
             var graph = JavaArtifactGraph.resolve(next.values());
             Map<ArtifactId, Loaded> previous;
@@ -182,7 +196,9 @@ public final class JavaPluginRuntimeAdapter implements PluginRuntimeAdapter {
                 for (var id : graph.dependencyFirst()) {
                     if (!affected.contains(id)) continue;
                     var record = records.get(id);
-                    var loader = new PluginClassLoader(record.location().toUri().toURL(), parent, parentPackages);
+                    var urls = new ArrayList<java.net.URL>();
+                    for (var jar : packages.get(id).jars()) urls.add(jar.toUri().toURL());
+                    var loader = new PluginClassLoader(urls, parent, parentPackages);
                     synchronized (owner) {
                         var loaded = new Loaded(record, next.get(id), loader,
                             "java:" + id.value() + ':' + record.revision() + ':' + ++owner.nextIdentity);

@@ -1,7 +1,8 @@
 # Fibra 正式插件
 
 `fibra-plugins` 是正式插件产品的根聚合模块，不是可部署制品。领域目录下的聚合 POM 也只负责组织
-Maven reactor；真正安装到 Fibra 的是各 contract、provider 和 consumer JAR。
+Maven reactor。12 个动态 contract、provider 和 consumer 的 Maven 发布物仍是 JAR；实际安装到
+Fibra 的是分别包含这些 Java payload 的完整目录包。
 
 ## 模块角色
 
@@ -30,6 +31,29 @@ fibra-storage-json ──提供 ConfigStore/event──> fibra-tool-storage ─�
 `fibra-api`、`fibra-tool-api` 或动态 contract class；实现私有的第三方库可以 relocation 后随 provider
 制品发布。
 
+## 安装目录包
+
+每个安装包根必须有 `plugin.properties`，且只允许下列三个字段：
+
+```properties
+formatVersion=1
+runtime=java
+payload=lib/main.jar
+```
+
+Java 主 JAR 和 `lib/` 中的私有依赖构成同一安装单元；四个动态 contract 仍分别作为独立安装包，
+不能复制到 consumer/provider 的私有依赖中。主 JAR 的 `META-INF/fibra/plugin.yaml` 是
+`id`、`version`、`requires` 和 `entrypoint` 的唯一真源。主 JAR 先于按路径排序的私有 JAR 装载，
+共用同一 ClassLoader，插件间类型沿显式依赖图委派；这些 JAR 禁止通过非空 `Class-Path` 扩展路径。
+
+Node 安装包使用 `runtime=node`，payload 指向包内独立目录；该目录的 `fibra-plugin.yaml` 是插件
+标识、版本、入口、协议和贡献声明的唯一真源。布局描述不重复这些运行时字段。payload 必须存在且
+位于包根内部，不能是绝对路径、越界路径或包根本身，整个包禁止符号链接。
+
+`PluginArtifactProbe` 读取包布局并委托对应 runtime 探测，安装请求的 source 始终是整个包根。
+`ArtifactStore` 复制完整包，后续 Java 装载和 Node sidecar 启动从受管 payload 进行；不接受裸 JAR
+或直接在根目录放置内部 manifest 的旧 Node 目录。正式 CLI、ZIP 装配和 profile 选择仍属于后续交付。
+
 `fibra-storage-json` 在 POSIX 上对临时文件和原子 rename 后的父目录分别同步。rename 已成功、但父目录
 同步失败时，写入按已提交处理并记录 durability warning，内存 revision、事件与磁盘当前内容保持一致；
 Windows 目录同步是 best-effort，不能据此承诺断电后的目录项持久性。
@@ -51,8 +75,8 @@ Windows 目录同步是 best-effort，不能据此承诺断电后的目录项持
 
 ## 插件模板与多模块产品
 
-`fibra-plugin-archetype` 生成的是一个独立、可部署的插件 JAR，因此默认只有一个 Maven 工程并只依赖
-`fibra-api`。这与本目录的多模块产品不矛盾：当一个产品需要稳定 contract、多个 provider 或 consumer
+`fibra-plugin-archetype` 生成独立 Java 插件工程，其主 JAR 是安装包的 payload；默认只有一个 Maven
+工程并只依赖 `fibra-api`。这与本目录的多模块产品不矛盾：当一个产品需要稳定 contract、多个 provider 或 consumer
 时，用不发布的聚合 POM 组织多个由模板规则约束的独立插件工程即可。动态 contract 需手工以 `provided`
 依赖加入生成项目，并同步写入 `plugin.yaml` 的精确 `requires`。
 
@@ -64,5 +88,5 @@ Windows 目录同步是 best-effort，不能据此承诺断电后的目录项持
 mvn -o -pl fibra-plugins -am verify
 ```
 
-`fibra-plugins-acceptance-host` 会把正式 JAR 放到测试宿主 classpath 之外，再经 `PluginRegistry`、
+`fibra-plugins-acceptance-host` 会把正式 JAR 放到测试宿主 classpath 之外并组装为安装目录包，再经 `PluginRegistry`、
 `JavaPluginRuntimeAdapter` 和 `PublishedRuntime` 完成制品级装载、协作、局部更新、撤销、排空与重启验证。

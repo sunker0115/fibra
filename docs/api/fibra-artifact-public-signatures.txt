@@ -22,6 +22,14 @@ public interface com.sstlfsj.fibra.artifact.ArtifactInstallTransaction extends j
   public abstract void rollback();
   public default void close();
 }
+## com.sstlfsj.fibra.artifact.ArtifactPackage
+Compiled from "ArtifactPackage.java"
+public final class com.sstlfsj.fibra.artifact.ArtifactPackage {
+  public java.nio.file.Path root();
+  public com.sstlfsj.fibra.artifact.RuntimeId runtimeId();
+  public java.nio.file.Path payload();
+  public static com.sstlfsj.fibra.artifact.ArtifactPackage read(java.nio.file.Path);
+}
 ## com.sstlfsj.fibra.artifact.ArtifactPhase
 Compiled from "ArtifactPhase.java"
 public final class com.sstlfsj.fibra.artifact.ArtifactPhase extends java.lang.Enum<com.sstlfsj.fibra.artifact.ArtifactPhase> {

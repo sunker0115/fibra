@@ -325,6 +325,9 @@ class RuntimeResourceOwnershipTest {
         private Path lastArtifact;
 
         @Override public RuntimeId id() { return new RuntimeId("probe"); }
+        @Override public Mono<DeploymentArtifact> probe(com.sstlfsj.fibra.artifact.ArtifactPackage artifact) {
+            return Mono.error(new AssertionError("ownership tests do not probe installation packages"));
+        }
         @Override public Mono<RuntimeArtifactInspection> inspect(ArtifactRecord artifact) {
             return Mono.just(new RuntimeArtifactInspection(id(), artifact.id(), Map.of()));
         }

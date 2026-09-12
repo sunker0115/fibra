@@ -1,7 +1,9 @@
 package com.sstlfsj.fibra.runtime.node;
 
 import com.sstlfsj.fibra.artifact.ArtifactId;
+import com.sstlfsj.fibra.artifact.ArtifactPackage;
 import com.sstlfsj.fibra.artifact.ArtifactRecord;
+import com.sstlfsj.fibra.artifact.ArtifactStore;
 import com.sstlfsj.fibra.artifact.ArtifactState;
 import com.sstlfsj.fibra.bridge.ContributionDirectory;
 import com.sstlfsj.fibra.bridge.ContributionCodec;
@@ -50,11 +52,135 @@ class NodePluginRuntimeAdapterTest {
             String.class, new EchoCodec());
 
     @Test
+    void probeReturnsTheCompleteNodePackageRoot(@TempDir Path work) throws Exception {
+        var root = work.resolve("echo-package");
+        var payload = nodePackage(root);
+        Files.writeString(payload.resolve("fibra-plugin.yaml"), manifest("echo-node"));
+        Files.writeString(payload.resolve("index.mjs"), script());
+        var adapter = adapter(work);
+
+        var deployment = adapter.probe(ArtifactPackage.read(root)).block();
+
+        assertEquals(new ArtifactId("echo-node"), deployment.artifactId());
+        assertEquals(NodePluginRuntimeAdapter.RUNTIME_ID, deployment.runtimeId());
+        assertEquals("1.0.0", deployment.version());
+        assertEquals(root.toRealPath(), deployment.source());
+    }
+
+    @Test
+    void inspectsAndStartsOnlyFromTheManagedPackagePayload(@TempDir Path work) throws Exception {
+        var source = work.resolve("source-package");
+        var payload = nodePackage(source);
+        Files.writeString(payload.resolve("fibra-plugin.yaml"), manifest("echo-node"));
+        Files.writeString(payload.resolve("index.mjs"), script());
+        ArtifactRecord installed;
+        try (var store = new ArtifactStore(work.resolve("store"));
+             var transaction = store.prepareInstall(new ArtifactId("echo-node"),
+                 NodePluginRuntimeAdapter.RUNTIME_ID, "1.0.0", source)) {
+            installed = transaction.save();
+        }
+        Files.delete(payload.resolve("index.mjs"));
+        var adapter = adapter(work);
+        var owner = adapter.create();
+        var update = owner.createUpdate(List.of(installed));
+
+        assertEquals("index.mjs", adapter.inspect(installed).block().metadata().get("entrypoint"));
+        update.prepareAsync().block();
+        update.adopt();
+        update.closeAsync().block();
+        try (var runtime = FibraRuntime.create()) {
+            var directory = new ContributionDirectory();
+            runtime.rootScope().context().services().provide(
+                ContributionServices.REGISTRAR, directory);
+            @SuppressWarnings("unchecked")
+            var definition = (com.sstlfsj.fibra.PluginDefinition<Object>) owner.catalog()
+                .plugins().find("echo-node").orElseThrow().definition();
+            var instance = runtime.rootScope().context().plugins()
+                .mount("echo-instance", definition.prepare(Map.of()));
+            instance.settled().block(Duration.ofSeconds(3));
+            assertEquals("managed", directory.current().routes().invoke(
+                runtime.rootScope().context(), ECHO,
+                new ContributionId("echo-instance", "say"), "managed")
+                .block(Duration.ofSeconds(2)));
+            instance.dispose().block(Duration.ofSeconds(3));
+        }
+        owner.closeAsync().block();
+    }
+
+    @Test
+    void rejectsPayloadFilesAndBareLegacyDirectories(@TempDir Path work) throws Exception {
+        var filePayload = work.resolve("file-payload");
+        Files.createDirectories(filePayload);
+        Files.writeString(filePayload.resolve("plugin.properties"), """
+            formatVersion=1
+            runtime=node
+            payload=index.mjs
+            """);
+        Files.writeString(filePayload.resolve("index.mjs"), script());
+        var bare = work.resolve("bare");
+        Files.createDirectories(bare);
+        Files.writeString(bare.resolve("fibra-plugin.yaml"), manifest("echo-node"));
+        var adapter = adapter(work);
+
+        assertThrows(NodeRuntimeException.class,
+            () -> adapter.probe(ArtifactPackage.read(filePayload)).block());
+        assertThrows(com.sstlfsj.fibra.artifact.ArtifactException.class,
+            () -> ArtifactPackage.read(bare));
+    }
+
+    @Test
+    void rejectsPackageRuntimeAndIdentityMismatches(@TempDir Path work) throws Exception {
+        var wrongRuntime = work.resolve("wrong-runtime");
+        var payload = nodePackage(wrongRuntime);
+        Files.writeString(wrongRuntime.resolve("plugin.properties"), """
+            formatVersion=1
+            runtime=java
+            payload=payload
+            """);
+        Files.writeString(payload.resolve("fibra-plugin.yaml"), manifest("echo-node"));
+        var root = work.resolve("identity-mismatch");
+        var identityPayload = nodePackage(root);
+        Files.writeString(identityPayload.resolve("fibra-plugin.yaml"), manifest("other"));
+        Files.writeString(identityPayload.resolve("index.mjs"), script());
+        var adapter = adapter(work);
+        var artifact = artifact(root, "echo-node");
+
+        assertThrows(IllegalArgumentException.class,
+            () -> adapter.probe(ArtifactPackage.read(wrongRuntime)).block());
+        assertThrows(NodeRuntimeException.class, () -> adapter.inspect(artifact).block());
+    }
+
+    @Test
+    void rejectsAnAbsoluteEntrypointEvenWhenItNamesThePayloadFile(@TempDir Path work)
+        throws Exception {
+        var root = work.resolve("absolute-node");
+        var payload = nodePackage(root);
+        var entrypoint = payload.resolve("index.mjs");
+        Files.writeString(entrypoint, script());
+        Files.writeString(payload.resolve("fibra-plugin.yaml"), """
+            id: absolute-node
+            version: 1.0.0
+            protocol: 1
+            entrypoint: %s
+            contributions:
+              - name: say
+                kind: echo
+                schemaVersion: 1
+                method: echo
+                descriptor: { title: Absolute }
+            """.formatted(entrypoint));
+        var adapter = adapter(work);
+
+        assertThrows(NodeRuntimeException.class,
+            () -> adapter.probe(ArtifactPackage.read(root)).block());
+    }
+
+    @Test
     void mountsRemoteContributionsThroughTheDomainDirectoryAndDrainsBeforeStop(
         @TempDir Path work) throws Exception {
         var artifactRoot = work.resolve("echo-node");
-        Files.createDirectories(artifactRoot);
-        Files.writeString(artifactRoot.resolve("fibra-plugin.yaml"), """
+        var payload = nodePackage(artifactRoot);
+        Files.writeString(payload.resolve("fibra-plugin.yaml"), """
             id: echo-node
             version: 1.0.0
             protocol: 1
@@ -67,7 +193,7 @@ class NodePluginRuntimeAdapterTest {
                 descriptor:
                   title: Echo
             """);
-        Files.writeString(artifactRoot.resolve("index.mjs"), script());
+        Files.writeString(payload.resolve("index.mjs"), script());
         var artifact = ArtifactRecord.builder()
             .id(new ArtifactId("echo-node"))
             .runtimeId(NodePluginRuntimeAdapter.RUNTIME_ID)
@@ -116,8 +242,8 @@ class NodePluginRuntimeAdapterTest {
     void unexpectedSidecarExitFailsThePluginAndRevokesItsContributions(
         @TempDir Path work) throws Exception {
         var artifactRoot = work.resolve("failing-node");
-        Files.createDirectories(artifactRoot);
-        Files.writeString(artifactRoot.resolve("fibra-plugin.yaml"), """
+        var payload = nodePackage(artifactRoot);
+        Files.writeString(payload.resolve("fibra-plugin.yaml"), """
             id: failing-node
             version: 1.0.0
             protocol: 1
@@ -130,7 +256,7 @@ class NodePluginRuntimeAdapterTest {
                 descriptor:
                   title: Failing
             """);
-        Files.writeString(artifactRoot.resolve("index.mjs"), exitingScript());
+        Files.writeString(payload.resolve("index.mjs"), exitingScript());
         var artifact = ArtifactRecord.builder()
             .id(new ArtifactId("failing-node"))
             .runtimeId(NodePluginRuntimeAdapter.RUNTIME_ID)
@@ -177,9 +303,9 @@ class NodePluginRuntimeAdapterTest {
     void forwardsDisableNotificationToTheCurrentWrapperContext(@TempDir Path work)
         throws Exception {
         var artifactRoot = work.resolve("disable-node");
-        Files.createDirectories(artifactRoot);
-        Files.writeString(artifactRoot.resolve("fibra-plugin.yaml"), manifest("disable-node"));
-        Files.writeString(artifactRoot.resolve("index.mjs"), disablingScript());
+        var payload = nodePackage(artifactRoot);
+        Files.writeString(payload.resolve("fibra-plugin.yaml"), manifest("disable-node"));
+        Files.writeString(payload.resolve("index.mjs"), disablingScript());
         var artifact = artifact(artifactRoot, "disable-node");
         var adapter = new NodePluginRuntimeAdapter(name -> "echo".equals(name)
             ? Optional.of(ECHO) : Optional.empty(),
@@ -211,9 +337,9 @@ class NodePluginRuntimeAdapterTest {
     @Test
     void rejectsAnEntrypointThatEscapesTheArtifact(@TempDir Path work) throws Exception {
         var artifactRoot = work.resolve("escaped-node");
-        Files.createDirectories(artifactRoot);
+        var payload = nodePackage(artifactRoot);
         Files.writeString(work.resolve("outside.mjs"), script());
-        Files.writeString(artifactRoot.resolve("fibra-plugin.yaml"), """
+        Files.writeString(payload.resolve("fibra-plugin.yaml"), """
             id: escaped-node
             version: 1.0.0
             protocol: 1
@@ -279,6 +405,22 @@ class NodePluginRuntimeAdapterTest {
             .runtimeId(NodePluginRuntimeAdapter.RUNTIME_ID).version("1.0.0")
             .checksum("checksum").revision("revision").location(artifactRoot)
             .state(ArtifactState.INSTALLED).updatedAt(Instant.now()).build();
+    }
+
+    private static NodePluginRuntimeAdapter adapter(Path work) {
+        return new NodePluginRuntimeAdapter(name -> "echo".equals(name) ? Optional.of(ECHO)
+            : Optional.empty(), NodeRuntimeOptions.defaults(node(), work.resolve("sessions")));
+    }
+
+    private static Path nodePackage(Path root) throws Exception {
+        var payload = root.resolve("payload");
+        Files.createDirectories(payload);
+        Files.writeString(root.resolve("plugin.properties"), """
+            formatVersion=1
+            runtime=node
+            payload=payload
+            """);
+        return payload;
     }
 
     private static String manifest(String id) {

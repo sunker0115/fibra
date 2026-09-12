@@ -35,6 +35,7 @@ public final class com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter imple
   public com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter();
   public com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter(java.lang.ClassLoader, java.util.List<java.lang.String>);
   public com.sstlfsj.fibra.artifact.RuntimeId id();
+  public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.DeploymentArtifact> probe(com.sstlfsj.fibra.artifact.ArtifactPackage);
   public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.RuntimeArtifactInspection> inspect(com.sstlfsj.fibra.artifact.ArtifactRecord);
   public com.sstlfsj.fibra.engine.RuntimeResourceOwner create();
 }

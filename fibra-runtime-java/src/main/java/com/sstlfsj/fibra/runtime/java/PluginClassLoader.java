@@ -16,8 +16,8 @@ final class PluginClassLoader extends URLClassLoader {
     private final List<String> parentPackages;
     private volatile List<PluginClassLoader> dependencies = List.of();
 
-    PluginClassLoader(URL jar, ClassLoader parent, List<String> parentPackages) {
-        super(new URL[] {jar}, parent);
+    PluginClassLoader(List<URL> jars, ClassLoader parent, List<String> parentPackages) {
+        super(jars.toArray(URL[]::new), parent);
         this.parentPackages = List.copyOf(parentPackages);
     }
 

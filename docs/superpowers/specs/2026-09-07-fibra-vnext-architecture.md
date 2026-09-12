@@ -592,6 +592,72 @@ ClassLoader 或 Process。配置与 artifact 互不依赖，由 Engine 在 Chang
 程序内建 definition 与 runtime catalog 合并后供目标输入绑定；语法解析和声明采集不持有 catalog 的
 类型对象。绑定端口不向输入源暴露制品路径、运行时句柄或运行实例。
 
+#### Profile、配置 Bundle 与插件包
+
+Fibra 保留 DSH `profile` / `bundle` 的组合职责，但不复制其 npm、pnpm 或 `package.json` 实现。
+DSH 中已安装 package、bundle patch、profile 组合和最终运行配置是四个不同层次；Fibra 必须保持同样
+的分离，不能把扫描到的插件目录直接当作本次运行目标，也不能把配置 bundle 混同为插件 JAR。
+
+| DSH 职责 | Fibra 落点 |
+|---|---|
+| package 的物理安装 | `ArtifactPackage`、`ArtifactStore` 与 Registry 安装记录 |
+| bundle 提供的有序配置 patch | `DesiredInputGraph` 的 include 与条目 patch |
+| profile 选择 bundle 及其顺序 | 命名配置入口按声明顺序组合配置 bundle |
+| profile 的 package 依赖闭包 | `DeploymentManifest` 的 artifact revision 集合及 runtime 制品依赖图 |
+| profile 合成后的活动配置 | Engine 保存的单一完整部署目标 |
+| 应用运行态 | 长期 `RuntimeDomain` 中按目标差量协调的实例与资源 |
+
+这里的 profile 是一次宿主启动选择的应用组合，不是 Spring Profile，也不是新的运行域。正式 CLI 每次
+启动选择一个 profile；profile 名称只决定配置入口和持久数据命名空间，不进入 artifact identity、实例
+identity 或 service realm。配置 bundle 是普通、可复用的配置源片段，以 include 和 patch 表达实例、
+分组、realm、条件及局部覆盖；组合顺序必须由 profile 显式声明，不能依赖目录遍历顺序。插件包只携带
+代码、私有依赖和运行时声明，安装插件包本身不隐式启用实例，也不自动注入配置 bundle。
+
+正式分发采用下列职责布局；具体文件名可以由分发装配确定，但边界不得改变：
+
+```text
+fibra/
+  bin/                              启动脚本
+  lib/                              CLI 与宿主库
+  plugins/<plugin-id>/              候选插件包
+    plugin.properties               包布局描述
+    lib/                            Java payload 与私有依赖，或 Node payload 目录
+  config/profiles/<profile>.yaml    命名组合入口
+  config/bundles/*.yaml             可复用配置片段
+  data/profiles/<profile>/          该 profile 的持久目标、制品与运行数据
+```
+
+插件包根必须是普通目录且整棵树不含符号链接；外层 `plugin.properties` 只允许三个字段：
+
+```properties
+formatVersion=1
+runtime=java
+payload=lib/plugin.jar
+```
+
+字段缺失、重复、未知或格式版本不支持均拒绝；`payload` 必须是包根内部已存在的独立文件或目录，不能
+为包根本身、绝对路径或越界路径。外层描述只解决运行时选择和 payload 定位，不重复声明插件 ID、版本、
+依赖或入口；这些仍以 Java/Node payload 内部 manifest 为唯一事实。探测返回整个包根作为待安装 source，
+`ArtifactStore` 校验并复制完整目录，runtime 在受管副本中重新读取外层描述和内部 manifest，并核对保存
+记录中的 runtime、ID 与版本，不能保留对候选目录的运行依赖或提供裸 JAR/旧 Node 目录 fallback。
+
+Java payload 是含 `META-INF/fibra/plugin.yaml` 的主 JAR；同包 `lib/*.jar` 按规范文件名顺序加入该插件的
+唯一 ClassLoader，主 JAR 固定最先，私有依赖不进入宿主或其他插件 ClassLoader。主 JAR 和纳入该
+ClassLoader 的私有依赖 JAR 若 `MANIFEST.MF Class-Path` 非空则拒绝，避免 URLClassLoader 隐式引入未受管
+路径。Node payload 必须是目录，
+其中 `fibra-plugin.yaml` 和相对 entrypoint 一同被保存；entrypoint 不能是绝对路径或逃出 payload。
+
+`fibra-cli` 只解析 profile、配置根、候选插件目录和数据目录；`fibra-config` 负责 include、patch、条件及
+配置树编译；Registry 负责安装、版本、期望状态和审计；Engine 只接收完整 desired graph 与 artifact
+选择，不感知 profile/bundle 的文件组织；runtime adapter 只解释目标引用的 payload；distribution 只
+提供默认目录和正式组合内容。不得新增与 `DesiredInputGraph`、`DeploymentManifest` 平行的
+`BundleManager`、`ProfileRuntime` 或第二套活动状态。
+
+首次所选 profile 的持久存储为空时，可以从其配置入口采集、组合并建立初始部署目标。已有完整目标时，
+重启必须直接恢复该目标；候选插件目录、默认 profile 或分发升级均不得静默覆盖。后续 profile 文件变化
+只有通过显式 apply/refresh，或该 profile 已明确启用的自动源刷新，才能编译并提交新目标。切换 profile
+等价于选择另一套持久数据命名空间并启动新的宿主进程，不在同一 Engine 内实现整代切换或回滚。
+
 ### 6.2 Java Runtime
 
 标准 Java 制品使用 `META-INF/fibra/plugin.yaml`：

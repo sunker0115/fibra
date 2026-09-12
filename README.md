@@ -41,7 +41,7 @@ Fibra 是 Java 21 的通用插件底座。它把生命周期与资源所有权�
 - `fibra-bridge`：本地与远程贡献的统一目录、调用适配和 drain；
 - `fibra-registry`：面向管理面的安装、升级、启停、查询、watch 和审计；
 - `fibra-spring`、`fibra-spring-boot-starter`：显式 Spring 服务桥接和组合入口；
-- `fibra-plugin-archetype`：生成独立 Java 插件 JAR；
+- `fibra-plugin-archetype`：生成独立 Java 插件工程，其主 JAR 用作安装包的 payload；
 - `fibra-plugins`：正式插件产品的根聚合模块，自身不发布；`fibra-tool-api` 以及 fs、subprocess、shell、
   storage 四个领域在其下分别发布 contract、provider 和 tool consumer。
 
@@ -91,7 +91,8 @@ runtime.close();
 - Shell：`fibra-shell`、`fibra-shell-local`、`fibra-tool-shell`；
 - 配置存储：`fibra-storage`、`fibra-storage-json`、`fibra-tool-storage`。
 
-除宿主使用的 `fibra-tool-api` 外，以上包含 12 个可动态安装的正式插件 JAR。它们通过真实制品图和
+除宿主使用的 `fibra-tool-api` 外，以上包含 12 个动态插件的 Maven JAR 发布物。每个 JAR 是对应 Java
+安装目录包的 payload；实际安装、升级和持久化均以完整包根目录为单位。它们通过真实制品图和
 公开 `PublishedRuntime` 联合验收，不进入宿主 classpath，也不打入 Engine 或宿主 JAR。完整角色关系、
 依赖和打包约束见 [正式插件说明](fibra-plugins/README.md)。
 
@@ -104,7 +105,26 @@ Node.js、ripgrep 与 Bash 路径；建议使用绝对路径。项目 CI 固定�
 0.1.5-rc.2 锁定的 `@vscode/ripgrep` 1.18.0 一致。未来 CLI/ZIP 发行层可按目标平台携带二进制并注入
 现有配置，不需要改变插件公开 API。
 
-## Java 插件 JAR
+## 插件安装单元
+
+Java 与 Node 统一安装目录包，包根的 `plugin.properties` 只允许三个字段：
+
+```properties
+formatVersion=1
+runtime=java
+payload=lib/main.jar
+```
+
+Java 包的 `lib/main.jar` 为主 payload，`lib/` 中的其他 JAR 是包内私有依赖。Node 包使用
+`runtime=node`，`payload` 指向包内独立目录，例如 `payload/`。payload 必须存在且位于包根内，
+不能是绝对路径、包根本身或越界路径；整个安装包禁止符号链接。裸 JAR 和直接在根目录放置
+`fibra-plugin.yaml` 的旧 Node 目录都不作为安装输入。
+
+`plugin.properties` 仅描述布局和 runtime 路由，不重复声明插件标识、版本、依赖或入口。
+`PluginArtifactProbe` 调用对应 runtime 读取内部 manifest，返回的 `DeploymentArtifact.source()`
+始终是整个包根。`ArtifactStore` 复制完整包并计算内容摘要，runtime 从受管副本解析 payload。
+
+## Java 插件 payload
 
 Java 制品 JAR 中只声明一个 `META-INF/fibra/plugin.yaml`。可运行插件实现
 `PluginEntrypoint<C>` 并声明唯一 `entrypoint`：
@@ -116,11 +136,19 @@ entrypoint: org.example.GreetingEntrypoint
 requires: []
 ```
 
-只承载共享 SPI/DTO 的 contract-only JAR 省略 `entrypoint`，仍参与 SemVer 依赖图，但不会生成可挂载的 `PluginDefinition`。插件工程仅以 `provided` 方式依赖 `fibra-api` 及其契约制品。`fibra-runtime-java` 校验 manifest、解析 SemVer 依赖图，为每个制品建立隔离 `URLClassLoader`。升级替换变化制品及其旧新依赖图中的反向依赖闭包，无关 ClassLoader 保留；旧资源在相关调用和实例清理完成后关闭。不需要 `plugin.properties`、注解扫描或扩展索引。
+内部 manifest 是 `id`、`version`、`requires` 和 `entrypoint` 的唯一真源。只承载共享 SPI/DTO 的
+contract-only JAR 省略 `entrypoint`，仍参与 SemVer 依赖图，但不会生成可挂载的 `PluginDefinition`。
+插件工程仅以 `provided` 方式依赖 `fibra-api` 及其契约制品。`fibra-runtime-java` 校验 manifest、解析
+SemVer 依赖图，为每个安装包建立隔离 `URLClassLoader`：主 JAR 优先，随后按路径顺序读取 `lib/` 中的
+私有 JAR，插件间类型仍沿显式依赖图委派。主 JAR 和私有 JAR 均不得通过 manifest 的 `Class-Path`
+扩展装载路径。升级替换变化制品及其旧新依赖图中的反向依赖闭包，无关 ClassLoader 保留；旧资源在
+相关调用和实例清理完成后关闭。不扫描注解或全部 class 猜测入口，也不生成扩展索引。
 
 ## Node 插件
 
-Node 插件目录包含 `fibra-plugin.yaml` 和目录内的 `.js`、`.mjs` 或 `.cjs` 入口：
+Node 安装包根声明 `runtime=node` 和 `payload=payload`；其 `payload/` 目录包含
+`fibra-plugin.yaml` 和目录内的 `.js`、`.mjs` 或 `.cjs` 入口。内部 manifest 是插件标识、版本、
+入口、协议和贡献声明的唯一真源：
 
 ```yaml
 id: echo-node
@@ -135,7 +163,8 @@ contributions:
     descriptor: { title: Echo }
 ```
 
-宿主使用参数数组启动随模块发布的进程监督器，再由监督器启动 canonical entrypoint，全程不经过 Shell。
+runtime 从 ArtifactStore 受管包的 payload 解析入口。宿主使用参数数组启动随模块发布的进程监督器，
+再由监督器启动该入口，全程不经过 Shell。
 `NodeSidecar` 只处理有界 JSON-RPC、请求超时、取消、心跳和异常退出；`NodeProcessUnit` 负责一个可等待的
 受管进程范围，按“stdin EOF、软终止、强终止、范围静默、目录清理”收口。POSIX 使用独立进程组，
 Windows 使用系统进程树终止后端；主动逃离受管范围不属于本地 sidecar 的安全保证。Node 贡献和 Java
@@ -180,7 +209,7 @@ scripts/verify-reproducible-release.sh
 scripts/verify-distribution.sh
 ```
 
-当前发布边界为 25 个 Maven 制品，其中包含 12 个可动态安装的正式插件 JAR，`fibra-tool-storage` 已
+当前发布边界为 25 个 Maven 制品，其中包含 12 个动态插件的 Java payload JAR，`fibra-tool-storage` 已
 纳入发布、可复现和仓库外消费清单。完整 reactor 覆盖真实 JAR、真实 Node 进程、目标恢复、Spring、
 archetype、架构边界和 JMH 编译门禁。
 

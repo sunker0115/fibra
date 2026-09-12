@@ -3,13 +3,22 @@ import java.util.zip.ZipFile
 def project = new File(basedir, "project/sample-fibra-plugin")
 def pom = new File(project, "pom.xml")
 def jar = new File(project, "target/sample-fibra-plugin-1.0.0.jar")
+def installation = new File(project, "target/sample-fibra-plugin-1.0.0-plugin")
 assert pom.isFile()
 assert jar.isFile()
+assert installation.isDirectory()
+assert installation.list().toList().sort() == ["lib", "plugin.properties"]
+assert new File(installation, "lib").list().toList() == ["plugin.jar"]
+assert new File(installation, "lib/plugin.jar").bytes == jar.bytes
+def properties = new Properties()
+new File(installation, "plugin.properties").withReader("UTF-8") { properties.load(it) }
+assert properties == [formatVersion: "1", runtime: "java", payload: "lib/plugin.jar"]
 
 def pomText = pom.getText("UTF-8")
 assert !pomText.contains("<parent>")
 assert !pomText.contains("pf4j")
 assert pomText.contains("fibra-api")
+assert pomText.contains("maven-assembly-plugin")
 
 new ZipFile(jar).withCloseable { zip ->
     def entries = zip.entries().toList()*.name

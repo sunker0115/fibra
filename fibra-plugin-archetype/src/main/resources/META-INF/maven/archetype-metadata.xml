@@ -20,5 +20,12 @@
       <directory>src/main/java</directory>
       <includes><include>**/*.java</include></includes>
     </fileSet>
+    <fileSet filtered="false" packaged="false">
+      <directory>src</directory>
+      <includes>
+        <include>assembly/plugin.xml</include>
+        <include>plugin/plugin.properties</include>
+      </includes>
+    </fileSet>
   </fileSets>
 </archetype-descriptor>

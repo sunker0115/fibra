@@ -147,6 +147,9 @@ class RuntimeResourcesTest {
                 .state(ArtifactState.INSTALLED).updatedAt(Instant.EPOCH).build();
         }
         @Override public RuntimeId id() { return id; }
+        @Override public Mono<DeploymentArtifact> probe(com.sstlfsj.fibra.artifact.ArtifactPackage artifact) {
+            return Mono.error(new AssertionError("resource tests do not probe installation packages"));
+        }
         @Override public Mono<RuntimeArtifactInspection> inspect(ArtifactRecord artifact) {
             return Mono.just(new RuntimeArtifactInspection(id, artifact.id(), Map.of()));
         }

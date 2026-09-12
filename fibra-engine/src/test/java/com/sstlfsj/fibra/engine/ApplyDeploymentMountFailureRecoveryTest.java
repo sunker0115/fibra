@@ -183,6 +183,10 @@ class ApplyDeploymentMountFailureRecoveryTest {
 
         @Override public RuntimeId id() { return RUNTIME; }
 
+        @Override public Mono<DeploymentArtifact> probe(com.sstlfsj.fibra.artifact.ArtifactPackage artifact) {
+            return Mono.error(new AssertionError("deployment tests do not probe installation packages"));
+        }
+
         @Override public Mono<RuntimeArtifactInspection> inspect(ArtifactRecord artifact) {
             return Mono.just(new RuntimeArtifactInspection(RUNTIME, artifact.id(), Map.of()));
         }

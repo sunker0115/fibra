@@ -3,6 +3,7 @@ package com.sstlfsj.fibra.runtime.node;
 import com.sstlfsj.fibra.Disposable;
 import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.artifact.ArtifactId;
+import com.sstlfsj.fibra.artifact.ArtifactPackage;
 import com.sstlfsj.fibra.artifact.ArtifactRecord;
 import com.sstlfsj.fibra.artifact.RuntimeId;
 import com.sstlfsj.fibra.bridge.ContributionBinding;
@@ -12,6 +13,7 @@ import com.sstlfsj.fibra.bridge.ContributionServices;
 import com.sstlfsj.fibra.engine.PluginCatalog;
 import com.sstlfsj.fibra.engine.PluginCatalogEntry;
 import com.sstlfsj.fibra.engine.PluginRuntimeAdapter;
+import com.sstlfsj.fibra.engine.DeploymentArtifact;
 import com.sstlfsj.fibra.engine.RuntimeArtifactInspection;
 import com.sstlfsj.fibra.engine.RuntimeCatalog;
 import com.sstlfsj.fibra.engine.RuntimeResourceOwner;
@@ -47,10 +49,20 @@ public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
     }
 
     @Override
-    public Mono<RuntimeArtifactInspection> inspect(ArtifactRecord artifact) {
+    public Mono<DeploymentArtifact> probe(ArtifactPackage artifact) {
         return Mono.fromCallable(() -> {
             requireRuntime(artifact);
-            var manifest = manifests.read(artifact);
+            var manifest = manifests.read(artifact, null, null);
+            validateKinds(manifest);
+            return DeploymentArtifact.builder().artifactId(manifest.artifactId())
+                .runtimeId(RUNTIME_ID).version(manifest.version()).source(artifact.root()).build();
+        });
+    }
+
+    @Override
+    public Mono<RuntimeArtifactInspection> inspect(ArtifactRecord artifact) {
+        return Mono.fromCallable(() -> {
+            var manifest = readManaged(artifact).manifest();
             validateKinds(manifest);
             return new RuntimeArtifactInspection(RUNTIME_ID, artifact.id(), Map.of(
                 "entrypoint", manifest.entrypoint(),
@@ -66,7 +78,8 @@ public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
     }
 
     private PluginCatalogEntry<Object> catalogEntry(ArtifactRecord artifact,
-                                                     NodePluginManifest manifest) {
+                                                     NodePluginManifest manifest,
+                                                     java.nio.file.Path payload) {
         var definition = PluginDefinition.builder(manifest.artifactId().value(),
             Object.class, () -> (context, config) -> {
                 var provider = context.plugins().current().orElseThrow(() ->
@@ -74,7 +87,7 @@ public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
                 var registrar = context.services().require(
                     ContributionServices.REGISTRAR);
                 return NodeSidecar.start(
-                        artifact.location().resolve(manifest.entrypoint()), options,
+                        payload.resolve(manifest.entrypoint()), options,
                         context.plugins()::requestDisable)
                     .flatMap(sidecar -> sidecar.request("fibra.start", Map.of(
                             "protocol", manifest.protocol(),
@@ -154,6 +167,20 @@ public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
         if (!artifact.runtimeId().equals(RUNTIME_ID)) {
             throw new IllegalArgumentException("artifact runtime is not Node");
         }
+    }
+
+    private static void requireRuntime(ArtifactPackage artifact) {
+        if (!artifact.runtimeId().equals(RUNTIME_ID)) {
+            throw new IllegalArgumentException("artifact package runtime is not Node");
+        }
+    }
+
+    private ManagedManifest readManaged(ArtifactRecord artifact) {
+        requireRuntime(artifact);
+        var packageArtifact = ArtifactPackage.read(artifact.location());
+        requireRuntime(packageArtifact);
+        return new ManagedManifest(packageArtifact.payload(),
+            manifests.read(packageArtifact, artifact.id(), artifact.version()));
     }
 
     private final class Owner implements RuntimeResourceOwner {
@@ -332,10 +359,11 @@ public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
                     next.put(artifact.id(), existing);
                     continue;
                 }
-                requireRuntime(artifact);
-                var manifest = manifests.read(artifact);
+                var managed = readManaged(artifact);
+                var manifest = managed.manifest();
                 validateKinds(manifest);
-                var resource = new ArtifactResource(artifact, catalogEntry(artifact, manifest));
+                var resource = new ArtifactResource(artifact,
+                    catalogEntry(artifact, manifest, managed.payload()));
                 next.put(artifact.id(), resource);
                 fresh.put(artifact.id(), resource);
             }
@@ -444,5 +472,8 @@ public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
                 .identity("node:" + artifact.id().value() + ':' + artifact.revision())
                 .state(state).build();
         }
+    }
+
+    private record ManagedManifest(java.nio.file.Path payload, NodePluginManifest manifest) {
     }
 }

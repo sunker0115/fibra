@@ -41,12 +41,24 @@ PublishedRuntime、PluginRegistry、Spring Boot、archetype、公共 API 和 JMH
 
 ## 插件制品
 
-Java 插件是带 `META-INF/fibra/plugin.yaml` 的普通 JAR。宿主可见契约以 `provided` 方式依赖
+Maven 发布物与安装单元不同：当前 25 个发布模块中，12 个动态插件仍发布 Java JAR，并作为各自安装包
+的主 payload；source/Javadoc 附件不进入安装包。实际插件安装单元统一为目录包，根
+`plugin.properties` 必须且只能声明 `formatVersion=1`、`runtime` 和包内相对 `payload`，不复制
+插件标识、版本、依赖或入口。payload 必须存在且不等于包根，包内不得有符号链接。
+
+Java 包以 `lib/main.jar` 等主 JAR 为 payload，`lib/` 可携带同一安装单元的私有依赖 JAR；主 JAR 内的
+`META-INF/fibra/plugin.yaml` 是 `id`、`version`、`requires`、`entrypoint` 的唯一真源。宿主可见契约以 `provided` 方式依赖
 `fibra-api`、`fibra-bridge` 与 `fibra-tool-api`；动态 provider/consumer 还以 `provided` 方式依赖对应的
 `fibra-fs`、`fibra-subprocess`、`fibra-shell` 或 `fibra-storage` contract，并在 manifest 中声明精确版本边。
-JNA、Jackson 等实现依赖只允许作为对应插件的 `optional` 私有着色内容，不能传递到宿主或动态 contract。
-Node 插件是带 `fibra-plugin.yaml` 的目录制品。插件市场、下载、签名、信任和上传鉴权属于宿主策略，
-不属于 Fibra 制品协议。
+当前正式插件中的 JNA、Jackson 等实现依赖仍作为对应插件的 `optional` 私有着色内容发布，不能传递到
+宿主或动态 contract。主 JAR 和私有 JAR 均不得用非空 manifest `Class-Path` 隐式扩展装载路径。
+
+Node 包声明 `runtime=node`，payload 指向包含 `fibra-plugin.yaml` 和 JavaScript 入口的包内目录；
+内部 manifest 是插件标识、版本、入口、协议及贡献声明的唯一真源。Java/Node runtime 均不保留
+裸 JAR 或旧 Node 目录 fallback。`ArtifactStore` 复制完整包，装载和重启从受管包解析 payload。
+插件市场、下载、签名、信任和上传鉴权属于宿主策略，不属于 Fibra 制品协议。
+
+以上安装协议不代表正式 CLI、ZIP 发行或 profile 选择已完成；这些产品能力及最终解压运行门禁仍待交付。
 
 ## Maven Central
 

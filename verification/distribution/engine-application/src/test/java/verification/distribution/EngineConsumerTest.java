@@ -1,7 +1,7 @@
 package verification.distribution;
 
 import com.sstlfsj.fibra.PluginInstanceState;
-import com.sstlfsj.fibra.artifact.ArtifactId;
+import com.sstlfsj.fibra.artifact.ArtifactPackage;
 import com.sstlfsj.fibra.artifact.ArtifactStore;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
@@ -21,7 +21,6 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -29,7 +28,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.jar.JarFile;
 import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,8 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EngineConsumerTest {
     private static final Duration TIMEOUT = Duration.ofSeconds(20);
-    private static final Pattern ID = Pattern.compile("(?m)^id: ([^\\s]+)$");
-    private static final Pattern VERSION = Pattern.compile("(?m)^version: ([^\\s]+)$");
     private static final List<String> FORMAL_ARTIFACTS = List.of(
         "fibra-fs", "fibra-fs-local", "fibra-tool-fs",
         "fibra-subprocess", "fibra-subprocess-local", "fibra-tool-fs-search",
@@ -84,9 +80,9 @@ class EngineConsumerTest {
             var registry = new PluginRegistry(engine, new InMemoryPluginAuditRepository());
             var artifacts = new ArrayList<PluginInstallRequest>();
             for (var id : FORMAL_ARTIFACTS) {
-                artifacts.add(installRequest(pluginArtifacts.resolve(id + ".jar")));
+                artifacts.add(installRequest(work.resolve("packages"), pluginArtifacts.resolve(id + ".jar")));
             }
-            artifacts.add(installRequest(Path.of(System.getProperty("plugin.jar"))));
+            artifacts.add(installRequest(work.resolve("packages"), Path.of(System.getProperty("plugin.jar"))));
 
             var deployed = registry.deploy(new PluginDeploymentRequest(artifacts,
                 applicationGraph(content, work.resolve("storage")))).block(TIMEOUT);
@@ -165,14 +161,15 @@ class EngineConsumerTest {
         return builder.build();
     }
 
-    private static PluginInstallRequest installRequest(Path source) {
-        var manifest = manifest(source);
-        return PluginInstallRequest.builder()
-            .artifactId(new ArtifactId(first(ID, manifest)))
-            .runtimeId(JavaPluginRuntimeAdapter.RUNTIME_ID)
-            .version(first(VERSION, manifest))
-            .source(source)
-            .build();
+    private static PluginInstallRequest installRequest(Path packages, Path source) throws IOException {
+        var root = Files.createTempDirectory(Files.createDirectories(packages), "plugin-");
+        var lib = Files.createDirectory(root.resolve("lib"));
+        Files.copy(source, lib.resolve(source.getFileName()));
+        Files.writeString(root.resolve("plugin.properties"),
+            "formatVersion=1\nruntime=java\npayload=lib/" + source.getFileName() + "\n");
+        var candidate = new JavaPluginRuntimeAdapter().probe(ArtifactPackage.read(root)).block(TIMEOUT);
+        return PluginInstallRequest.builder().artifactId(candidate.artifactId())
+            .runtimeId(candidate.runtimeId()).version(candidate.version()).source(candidate.source()).build();
     }
 
     private static ToolResult invoke(FibraEngine engine, String provider, String localName,
@@ -180,24 +177,6 @@ class EngineConsumerTest {
         var current = engine.published().current();
         return engine.published().invoke(current.viewRevision(), ToolContributions.KIND,
             ToolContributions.id(provider, localName), ToolRequest.of(arguments)).block(TIMEOUT);
-    }
-
-    private static String manifest(Path jar) {
-        try (var archive = new JarFile(jar.toFile(), true)) {
-            var entry = archive.getJarEntry("META-INF/fibra/plugin.yaml");
-            if (entry == null) throw new IllegalStateException("missing plugin manifest in " + jar);
-            try (var input = archive.getInputStream(entry)) {
-                return new String(input.readAllBytes(), StandardCharsets.UTF_8);
-            }
-        } catch (IOException failure) {
-            throw new IllegalStateException("cannot read plugin manifest " + jar, failure);
-        }
-    }
-
-    private static String first(Pattern pattern, String input) {
-        var matcher = pattern.matcher(input);
-        if (!matcher.find()) throw new IllegalStateException("missing " + pattern + " in\n" + input);
-        return matcher.group(1);
     }
 
     private static long countJars(Path directory) throws IOException {

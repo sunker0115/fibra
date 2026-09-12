@@ -144,9 +144,9 @@ class NodeRuntimeResourceOwnerTest {
 
     private static ArtifactRecord artifact(Path work, String id, String revision) throws Exception {
         var root = work.resolve(id + '-' + revision);
-        Files.createDirectories(root);
-        Files.writeString(root.resolve("index.mjs"), "export {};\n");
-        Files.writeString(root.resolve("fibra-plugin.yaml"), """
+        var payload = nodePackage(root);
+        Files.writeString(payload.resolve("index.mjs"), "export {};\n");
+        Files.writeString(payload.resolve("fibra-plugin.yaml"), """
             id: %s
             version: 1.0.0
             protocol: 1
@@ -164,9 +164,9 @@ class NodeRuntimeResourceOwnerTest {
     private static ArtifactRecord invalidArtifact(Path work, String id, String revision)
         throws Exception {
         var root = work.resolve(id + '-' + revision + "-invalid");
-        Files.createDirectories(root);
-        Files.writeString(root.resolve("index.mjs"), "export {};\n");
-        Files.writeString(root.resolve("fibra-plugin.yaml"), """
+        var payload = nodePackage(root);
+        Files.writeString(payload.resolve("index.mjs"), "export {};\n");
+        Files.writeString(payload.resolve("fibra-plugin.yaml"), """
             id: %s
             version: 1.0.0
             protocol: 1
@@ -186,6 +186,17 @@ class NodeRuntimeResourceOwnerTest {
             .runtimeId(NodePluginRuntimeAdapter.RUNTIME_ID).version("1.0.0")
             .checksum("checksum-" + revision).revision(revision).location(root)
             .state(ArtifactState.INSTALLED).updatedAt(Instant.EPOCH).build();
+    }
+
+    private static Path nodePackage(Path root) throws Exception {
+        var payload = root.resolve("payload");
+        Files.createDirectories(payload);
+        Files.writeString(root.resolve("plugin.properties"), """
+            formatVersion=1
+            runtime=node
+            payload=payload
+            """);
+        return payload;
     }
 
     private static Path node() {

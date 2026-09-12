@@ -2,6 +2,7 @@ package com.sstlfsj.fibra.registry;
 
 import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.artifact.ArtifactId;
+import com.sstlfsj.fibra.artifact.ArtifactPackage;
 import com.sstlfsj.fibra.artifact.ArtifactRecord;
 import com.sstlfsj.fibra.artifact.ArtifactStore;
 import com.sstlfsj.fibra.artifact.RuntimeId;
@@ -13,6 +14,7 @@ import com.sstlfsj.fibra.config.DesiredInputInclude;
 import com.sstlfsj.fibra.config.DesiredIncludeContent;
 import com.sstlfsj.fibra.config.PublicationRequirement;
 import com.sstlfsj.fibra.engine.EngineChangeException;
+import com.sstlfsj.fibra.engine.DeploymentArtifact;
 import com.sstlfsj.fibra.engine.EngineStateStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.PluginCatalog;
@@ -410,6 +412,11 @@ class PluginRegistryTest {
         @Override
         public RuntimeId id() {
             return id;
+        }
+
+        @Override
+        public Mono<DeploymentArtifact> probe(ArtifactPackage artifact) {
+            throw new AssertionError("registry test runtime must not probe source packages");
         }
 
         @Override

@@ -271,7 +271,10 @@ class JavaPluginRuntimeAdapterTest {
 
     private static ArtifactRecord artifact(Path work, String id, String version, List<String> requires,
                                            String entrypoint) throws Exception {
-        var jar = work.resolve(id + '-' + version + ".jar");
+        var root = Files.createDirectories(work.resolve(id + '-' + version));
+        var jar = Files.createDirectories(root.resolve("lib")).resolve(id + '-' + version + ".jar");
+        Files.writeString(root.resolve("plugin.properties"), "formatVersion=1\nruntime=java\npayload=lib/"
+            + jar.getFileName() + "\n");
         try (var output = new JarOutputStream(Files.newOutputStream(jar))) {
             output.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml"));
             var dependencies = requires.isEmpty() ? "[]" : requires.stream().map(value -> "\n  - id: "
@@ -313,7 +316,7 @@ class JavaPluginRuntimeAdapterTest {
             output.closeEntry();
         }
         return ArtifactRecord.builder().id(new ArtifactId(id)).runtimeId(JavaPluginRuntimeAdapter.RUNTIME_ID)
-            .version(version).checksum(id + version).revision(version).location(jar).state(ArtifactState.INSTALLED)
+            .version(version).checksum(id + version).revision(version).location(root).state(ArtifactState.INSTALLED)
             .updatedAt(Instant.EPOCH).build();
     }
 }

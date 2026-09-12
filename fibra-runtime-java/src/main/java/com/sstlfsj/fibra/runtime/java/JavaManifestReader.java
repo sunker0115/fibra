@@ -1,12 +1,15 @@
 package com.sstlfsj.fibra.runtime.java;
 
 import com.sstlfsj.fibra.artifact.ArtifactId;
+import com.sstlfsj.fibra.artifact.ArtifactPackage;
 import com.sstlfsj.fibra.artifact.ArtifactRecord;
 import tools.jackson.core.StreamReadFeature;
 import tools.jackson.dataformat.yaml.YAMLFactory;
 import tools.jackson.dataformat.yaml.YAMLMapper;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -14,6 +17,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.jar.JarFile;
+import java.util.jar.Attributes;
 
 final class JavaManifestReader {
     static final String LOCATION = "META-INF/fibra/plugin.yaml";
@@ -25,42 +29,84 @@ final class JavaManifestReader {
             .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build())
         .build();
 
-    JavaPluginManifest read(ArtifactRecord artifact) {
-        try (var jar = new JarFile(artifact.location().toFile(), true)) {
+    JavaPackage read(ArtifactRecord artifact) {
+        var result = read(ArtifactPackage.read(artifact.location()));
+        if (!result.manifest().artifactId().equals(artifact.id())) {
+            throw error(artifact.id(), "manifest id does not match artifact id", null);
+        }
+        if (!result.manifest().version().equals(artifact.version())) {
+            throw error(artifact.id(), "manifest version does not match artifact version", null);
+        }
+        return result;
+    }
+
+    JavaPackage read(ArtifactPackage artifact) {
+        if (!JavaPluginRuntimeAdapter.RUNTIME_ID.equals(artifact.runtimeId())) {
+            throw new IllegalArgumentException("artifact package runtime is not Java");
+        }
+        var jars = new ArrayList<Path>();
+        jars.add(artifact.payload());
+        var lib = artifact.root().resolve("lib");
+        try {
+            if (Files.isDirectory(lib)) {
+                try (var files = Files.list(lib)) {
+                    files.filter(path -> path.getFileName().toString().endsWith(".jar"))
+                        .filter(path -> !path.equals(artifact.payload())).sorted().forEach(jars::add);
+                }
+            }
+            for (var path : jars) {
+                if (!Files.isRegularFile(path) || !path.getFileName().toString().endsWith(".jar")) {
+                    throw error(null, "Java package classpath must contain regular JAR files: " + path, null);
+                }
+                try (var jar = new JarFile(path.toFile(), true)) {
+                    var manifest = jar.getManifest();
+                    var classPath = manifest == null ? null
+                        : manifest.getMainAttributes().getValue(Attributes.Name.CLASS_PATH);
+                    if (classPath != null && !classPath.isBlank()) {
+                        throw error(null, "Java package JAR must not declare Class-Path: " + path, null);
+                    }
+                }
+            }
+            return new JavaPackage(readManifest(artifact.payload()), List.copyOf(jars));
+        } catch (IOException failure) {
+            throw error(null, "cannot read Java package", failure);
+        }
+    }
+
+    private JavaPluginManifest readManifest(Path payload) {
+        ArtifactId owner = null;
+        try (var jar = new JarFile(payload.toFile(), true)) {
             var entry = jar.getJarEntry(LOCATION);
             if (entry == null) {
-                throw error(artifact.id(), "missing " + LOCATION, null);
+                throw error(owner, "missing " + LOCATION, null);
             }
             if (entry.getSize() > 64 * 1024) {
-                throw error(artifact.id(), "Java plugin manifest is too large", null);
+                throw error(owner, "Java plugin manifest is too large", null);
             }
             Object raw;
             try (var input = jar.getInputStream(entry)) {
                 raw = yaml.readValue(input, Object.class);
             }
             if (!(raw instanceof Map<?, ?> map)) {
-                throw error(artifact.id(), "Java plugin manifest must be an object", null);
+                throw error(owner, "Java plugin manifest must be an object", null);
             }
-            var values = stringMap(map, artifact.id());
-            rejectUnknown(values, FIELDS, artifact.id());
-            var id = new ArtifactId(text(values.get("id"), "id", artifact.id()));
-            var version = text(values.get("version"), "version", artifact.id());
+            var values = stringMap(map, owner);
+            rejectUnknown(values, FIELDS, owner);
+            var id = new ArtifactId(text(values.get("id"), "id", owner));
+            owner = id;
+            var version = text(values.get("version"), "version", owner);
             var entrypoint = optionalText(values.get("entrypoint"), "entrypoint",
-                artifact.id());
-            if (!id.equals(artifact.id())) {
-                throw error(artifact.id(), "manifest id does not match artifact id", null);
-            }
-            if (!version.equals(artifact.version())) {
-                throw error(artifact.id(), "manifest version does not match artifact version", null);
-            }
+                owner);
             return new JavaPluginManifest(id, version, entrypoint,
-                requirements(values.get("requires"), artifact.id()));
+                requirements(values.get("requires"), owner));
         } catch (JavaRuntimeException exception) {
             throw exception;
         } catch (IOException | RuntimeException exception) {
-            throw error(artifact.id(), "cannot read Java plugin manifest", exception);
+            throw error(owner, "cannot read Java plugin manifest", exception);
         }
     }
+
+    record JavaPackage(JavaPluginManifest manifest, List<Path> jars) { }
 
     private static List<JavaArtifactRequirement> requirements(Object value,
                                                               ArtifactId owner) {

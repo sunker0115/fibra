@@ -2,7 +2,7 @@ package com.sstlfsj.fibra.archetype;
 
 import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.PluginInstanceState;
-import com.sstlfsj.fibra.artifact.ArtifactId;
+import com.sstlfsj.fibra.artifact.ArtifactPackage;
 import com.sstlfsj.fibra.artifact.ArtifactRecord;
 import com.sstlfsj.fibra.artifact.ArtifactState;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
@@ -19,23 +19,32 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FibraPluginArchetypeIT {
     @Test
-    void generatedJarLoadsThroughTheJavaRuntime() {
+    void generatedInstallationLoadsThroughTheJavaRuntime() throws Exception {
         var generated = Path.of("target/test-classes/projects/basic/project",
             "sample-fibra-plugin");
         var jar = generated.resolve("target/sample-fibra-plugin-1.0.0.jar");
         assertTrue(Files.isRegularFile(jar),
             () -> "generated plugin JAR is missing: " + jar);
+        var root = generated.resolve("target/sample-fibra-plugin-1.0.0-plugin");
+        assertTrue(Files.isDirectory(root), () -> "generated installation is missing: " + root);
+        var installation = ArtifactPackage.read(root);
+        assertEquals(root.resolve("lib/plugin.jar").toRealPath(), installation.payload());
+        assertEquals(-1, Files.mismatch(jar, installation.payload()));
+        var adapter = new JavaPluginRuntimeAdapter();
+        var candidate = adapter.probe(installation).block();
+        assertEquals("sample-fibra-plugin", candidate.artifactId().value());
+        assertEquals("1.0.0", candidate.version());
+        assertEquals(root.toRealPath(), candidate.source());
         var artifact = ArtifactRecord.builder()
-            .id(new ArtifactId("sample-fibra-plugin"))
-            .runtimeId(JavaPluginRuntimeAdapter.RUNTIME_ID)
-            .version("1.0.0")
+            .id(candidate.artifactId())
+            .runtimeId(candidate.runtimeId())
+            .version(candidate.version())
             .checksum("verified-by-archetype-it")
             .revision("1")
-            .location(jar)
+            .location(candidate.source())
             .state(ArtifactState.INSTALLED)
             .updatedAt(Instant.now())
             .build();
-        var adapter = new JavaPluginRuntimeAdapter();
         var owner = adapter.create();
         var update = owner.createUpdate(List.of(artifact));
         try {

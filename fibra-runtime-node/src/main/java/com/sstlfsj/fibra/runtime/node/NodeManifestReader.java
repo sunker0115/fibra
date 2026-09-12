@@ -1,7 +1,7 @@
 package com.sstlfsj.fibra.runtime.node;
 
 import com.sstlfsj.fibra.artifact.ArtifactId;
-import com.sstlfsj.fibra.artifact.ArtifactRecord;
+import com.sstlfsj.fibra.artifact.ArtifactPackage;
 import tools.jackson.core.StreamReadFeature;
 import tools.jackson.dataformat.yaml.YAMLFactory;
 import tools.jackson.dataformat.yaml.YAMLMapper;
@@ -25,49 +25,56 @@ final class NodeManifestReader {
             .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build())
         .build();
 
-    NodePluginManifest read(ArtifactRecord artifact) {
-        var manifest = artifact.location().resolve(FILE_NAME);
+    NodePluginManifest read(ArtifactPackage artifact, ArtifactId expectedId,
+                            String expectedVersion) {
+        var payload = artifact.payload();
+        var manifest = payload.resolve(FILE_NAME);
         try {
-            if (!Files.isDirectory(artifact.location()) || Files.isSymbolicLink(manifest)
+            if (!Files.isDirectory(payload) || Files.isSymbolicLink(manifest)
                 || !Files.isRegularFile(manifest) || Files.size(manifest) > 64 * 1024) {
-                throw error(artifact.id(), "missing or invalid " + FILE_NAME, null);
+                throw error(expectedId, "missing or invalid " + FILE_NAME, null);
             }
             var raw = yaml.readValue(manifest.toFile(), Object.class);
             if (!(raw instanceof Map<?, ?> map)) {
-                throw error(artifact.id(), "Node plugin manifest must be an object", null);
+                throw error(expectedId, "Node plugin manifest must be an object", null);
             }
-            var values = stringMap(map, artifact.id());
-            rejectUnknown(values, FIELDS, artifact.id());
-            var id = new ArtifactId(text(values.get("id"), "id", artifact.id()));
-            var version = text(values.get("version"), "version", artifact.id());
-            if (!id.equals(artifact.id())) {
-                throw error(artifact.id(), "manifest id does not match artifact id", null);
+            var values = stringMap(map, expectedId);
+            rejectUnknown(values, FIELDS, expectedId);
+            var id = new ArtifactId(text(values.get("id"), "id", expectedId));
+            var version = text(values.get("version"), "version", expectedId);
+            if (expectedId != null && !id.equals(expectedId)) {
+                throw error(expectedId, "manifest id does not match artifact id", null);
             }
-            if (!version.equals(artifact.version())) {
-                throw error(artifact.id(), "manifest version does not match artifact version", null);
+            if (expectedVersion != null && !version.equals(expectedVersion)) {
+                throw error(expectedId, "manifest version does not match artifact version", null);
             }
-            var protocol = positiveInteger(values.get("protocol"), "protocol", artifact.id());
-            var entrypoint = text(values.get("entrypoint"), "entrypoint", artifact.id());
-            validateEntrypoint(artifact, entrypoint);
+            var protocol = positiveInteger(values.get("protocol"), "protocol", expectedId);
+            var entrypoint = text(values.get("entrypoint"), "entrypoint", expectedId);
+            validateEntrypoint(payload, expectedId, entrypoint);
             return new NodePluginManifest(id, version, protocol, entrypoint,
-                contributions(values.get("contributions"), artifact.id()));
+                contributions(values.get("contributions"), expectedId));
         } catch (NodeRuntimeException failure) {
             throw failure;
         } catch (IOException | RuntimeException failure) {
-            throw error(artifact.id(), "cannot read Node plugin manifest", failure);
+            throw error(expectedId, "cannot read Node plugin manifest", failure);
         }
     }
 
-    private static void validateEntrypoint(ArtifactRecord artifact, String entrypoint)
+    private static void validateEntrypoint(java.nio.file.Path payload, ArtifactId owner,
+                                           String entrypoint)
         throws IOException {
-        var root = artifact.location().toRealPath();
-        var path = root.resolve(entrypoint).normalize().toRealPath();
+        var root = payload.toRealPath();
+        var relative = java.nio.file.Path.of(entrypoint);
+        if (relative.isAbsolute()) {
+            throw error(owner, "entrypoint must be relative to payload", null);
+        }
+        var path = root.resolve(relative).normalize().toRealPath();
         var lower = path.getFileName().toString().toLowerCase(java.util.Locale.ROOT);
         if (!path.startsWith(root) || Files.isSymbolicLink(root.resolve(entrypoint))
             || !Files.isRegularFile(path)
             || !(lower.endsWith(".js") || lower.endsWith(".mjs")
             || lower.endsWith(".cjs"))) {
-            throw error(artifact.id(), "entrypoint must be a JavaScript file inside artifact",
+            throw error(owner, "entrypoint must be a JavaScript file inside payload",
                 null);
         }
     }

@@ -4,12 +4,12 @@
 
 ```text
 api/          Java 侧贡献契约、类型和跨语言 codec
-node-plugin/  Node 插件实现与 fibra-plugin.yaml
+node-plugin/  正式 Node 安装包（plugin.properties + payload/）
 java-host/    手工组合 Fibra 的纯 Java 宿主
 spring-host/  通过 Starter 接入并暴露 HTTP API 的宿主
 ```
 
-`node-plugin` 不是 Maven 模块。它是可独立复制、安装和升级的 Node 制品，本例没有 npm 依赖，不需要改变其制品形态来迎合 Java reactor。
+`node-plugin` 不是 Maven 模块。它是可独立复制、安装和升级的 Node 安装包：根目录的 `plugin.properties` 声明 runtime 与 payload，`payload/fibra-plugin.yaml` 和 `payload/index.mjs` 是 Node 运行时内容。本例没有 npm 依赖。
 
 ## 构建与验证
 
@@ -33,7 +33,7 @@ java -jar fibra-example/content-sanitizer/java-host/target/fibra-example-java-ho
 建议按以下顺序读：
 
 1. [`ContentSanitizerContribution`](api/src/main/java/com/sstlfsj/fibra/example/sanitizer/ContentSanitizerContribution.java)：定义宿主拥有的贡献类型与协议。
-2. [`fibra-plugin.yaml`](node-plugin/fibra-plugin.yaml) 和 [`index.mjs`](node-plugin/index.mjs)：声明并实现 Node 贡献。
+2. [`plugin.properties`](node-plugin/plugin.properties)、[`fibra-plugin.yaml`](node-plugin/payload/fibra-plugin.yaml) 和 [`index.mjs`](node-plugin/payload/index.mjs)：声明安装包与 Node 贡献。
 3. [`ContentSanitizerScenario`](java-host/src/main/java/com/sstlfsj/fibra/example/ContentSanitizerScenario.java)：组合 Bridge、Node runtime、Engine 与 Registry。
 4. [`JavaHost`](java-host/src/main/java/com/sstlfsj/fibra/example/JavaHost.java)：业务代码的类型化调用入口。
 

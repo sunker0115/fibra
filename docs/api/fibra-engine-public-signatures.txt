@@ -230,6 +230,12 @@ public final class com.sstlfsj.fibra.engine.InstallArtifact$Builder {
 Compiled from "MutationGateClosedException.java"
 public final class com.sstlfsj.fibra.engine.MutationGateClosedException extends java.lang.IllegalStateException {
 }
+## com.sstlfsj.fibra.engine.PluginArtifactProbe
+Compiled from "PluginArtifactProbe.java"
+public final class com.sstlfsj.fibra.engine.PluginArtifactProbe {
+  public com.sstlfsj.fibra.engine.PluginArtifactProbe(java.util.List<? extends com.sstlfsj.fibra.engine.PluginRuntimeAdapter>);
+  public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.DeploymentArtifact> probe(java.nio.file.Path);
+}
 ## com.sstlfsj.fibra.engine.PluginCatalog
 Compiled from "PluginCatalog.java"
 public final class com.sstlfsj.fibra.engine.PluginCatalog {
@@ -279,6 +285,7 @@ public final class com.sstlfsj.fibra.engine.PluginInstanceSnapshot$Builder {
 Compiled from "PluginRuntimeAdapter.java"
 public interface com.sstlfsj.fibra.engine.PluginRuntimeAdapter {
   public abstract com.sstlfsj.fibra.artifact.RuntimeId id();
+  public abstract reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.DeploymentArtifact> probe(com.sstlfsj.fibra.artifact.ArtifactPackage);
   public abstract reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.RuntimeArtifactInspection> inspect(com.sstlfsj.fibra.artifact.ArtifactRecord);
   public abstract com.sstlfsj.fibra.engine.RuntimeResourceOwner create();
 }

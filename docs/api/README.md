@@ -61,7 +61,22 @@ include 的 `patches` 按顺序浅覆盖条目：`id` 定位当前文档中的�
 覆盖产生的新后代不重新入索引。缺失目标、名称不符等可跳过项保存在 `DesiredCompilation.diagnostics`，
 Engine 采集时记录告警，刷新结果通过 `EngineCommandResult.warnings` 返回；非法结构和重复 ID 仍拒绝。
 
-`fibra-artifact` 以 `ArtifactId`、`RuntimeId` 和内容摘要管理不可变制品。`prepareInstall` 返回已登记、位于稳定路径的候选；`save()` 保存精确 revision，`rollback()` 只释放未保存的准备资源，不删除已保存内容。读取必须指定 `find(id, revision)`；活动选择只属于完整部署目标，制品仓库没有 current 指针。仓库拥有进程级文件锁并在打开时检查遗留准备记录。
+`ArtifactPackage.read(Path)` 严格读取安装目录包，返回规范的 `root()`、`runtimeId()` 和 `payload()`。
+根 `plugin.properties` 必须且只能包含 `formatVersion=1`、`runtime`、`payload`，重复或未知字段均拒绝。
+payload 是包内独立文件或目录，不允许绝对路径、越界、不存在、包根本身或符号链接；整个包禁止
+符号链接。Java 使用主 JAR payload 与 `lib/` 私有依赖，Node 使用包含内部 manifest 的 payload 目录。
+Java/Node runtime 不接受裸 JAR 或旧 Node 根目录形式。
+
+`PluginArtifactProbe(List<? extends PluginRuntimeAdapter>).probe(Path)` 先读取安装包，再按 runtimeId
+路由唯一 adapter 的 `probe(ArtifactPackage)`；未知 runtime 或重复 adapter 明确报错。runtime 读取
+自己的内部 manifest，返回 `DeploymentArtifact`，其 source 必须保留整个包根，不能缩减为 payload。
+包布局字段不复制插件标识、版本、依赖、入口等内部 manifest 声明；探测不安装制品或创建运行资源。
+
+`fibra-artifact` 以 `ArtifactId`、`RuntimeId` 和内容摘要管理不可变制品。插件安装把完整包根交给
+`ArtifactStore.prepareInstall`，复制整个包并返回已登记、位于稳定路径的候选；runtime 随后从受管
+副本重新解析 payload。`save()` 保存精确 revision，`rollback()` 只释放未保存的准备资源，不删除已保存
+内容。读取必须指定 `find(id, revision)`；活动选择只属于完整部署目标，制品仓库没有 current 指针。
+仓库拥有进程级文件锁并在打开时检查遗留准备记录。
 
 ## Engine 与 runtime
 
@@ -120,17 +135,24 @@ ChangeSet 内提交多个 artifact 与完整 desired graph。Registry 只把请�
 
 ## Java 插件入口
 
-独立 JAR 实现 `PluginEntrypoint<C>`，并包含：
+Java 安装包的主 JAR payload 实现 `PluginEntrypoint<C>`，并包含：
 
 ```text
 META-INF/fibra/plugin.yaml
 ```
 
-manifest 字段为 `id`、`version`、可选的 `entrypoint` 和 `requires`。可运行 artifact 只有一个入口；只承载共享类型的 contract-only artifact 省略入口，但仍参与 SemVer 依赖解析和 ClassSpace。ClassSpace 按 dependency-first 打开并按 dependent-first 关闭。
+内部 manifest 是 `id`、`version`、可选的 `entrypoint` 和 `requires` 的唯一真源。可运行 artifact
+只有一个入口；只承载共享类型的 contract-only artifact 省略入口，但仍参与 SemVer 依赖解析和
+ClassSpace。同一安装包的主 JAR 与 `lib/` 私有依赖使用同一隔离 ClassLoader，主 JAR 优先，私有 JAR
+按路径顺序读取；插件间依赖仍沿 manifest 声明的图委派。所有包内 classpath JAR 都禁止声明非空
+`Class-Path`。ClassSpace 按 dependency-first 打开并按 dependent-first 关闭。
 
 ## Node 插件入口
 
-目录制品包含 `fibra-plugin.yaml`，字段为 `id`、`version`、`protocol`、`entrypoint` 和 `contributions`。入口必须是制品真实目录内的普通 `.js`、`.mjs` 或 `.cjs` 文件。
+Node 安装包的 `plugin.properties` 声明 `runtime=node`，payload 指向包内目录。该目录包含
+`fibra-plugin.yaml`，它是 `id`、`version`、`protocol`、`entrypoint` 和 `contributions` 的唯一真源。
+入口必须是 payload 真实目录内的普通 `.js`、`.mjs` 或 `.cjs` 文件；sidecar 从受管副本的 payload
+启动，不从原始候选目录启动。
 
 ## Spring
 

@@ -1,7 +1,6 @@
 package com.sstlfsj.fibra.plugins.acceptance;
 
 import com.sstlfsj.fibra.CancellationSource;
-import com.sstlfsj.fibra.artifact.ArtifactId;
 import com.sstlfsj.fibra.bridge.ContributionUnavailableException;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
@@ -245,10 +244,7 @@ class FormalMultiPluginIT {
             assertTrue(ProcessHandle.of(supervisorPid).map(ProcessHandle::isAlive).orElse(false));
 
             var variant = variantJar(work, PluginAcceptanceHarness.stagedJar("fibra-fs-local"));
-            var request = com.sstlfsj.fibra.registry.PluginInstallRequest.builder()
-                .artifactId(new ArtifactId("fibra-fs-local"))
-                .runtimeId(com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter.RUNTIME_ID)
-                .version(manifestVersion(variant)).source(variant).build();
+            var request = PluginAcceptanceHarness.installRequest(work.resolve("variant-packages"), variant);
             var changed = harness.registry().upgrade(request).block(PluginAcceptanceHarness.TIMEOUT);
 
             assertNotEquals(before.engine().instances().get("fs-provider").identity(),
@@ -425,14 +421,6 @@ class FormalMultiPluginIT {
             output.closeEntry();
         }
         return target;
-    }
-
-    private static String manifestVersion(Path jar) {
-        var manifest = PluginAcceptanceHarness.manifest(jar);
-        for (var line : manifest.lines().toList()) {
-            if (line.startsWith("version: ")) return line.substring("version: ".length()).trim();
-        }
-        throw new IllegalStateException("manifest has no version");
     }
 
     private static void awaitFile(Path file, CompletableFuture<?> operation) throws Exception {

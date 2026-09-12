@@ -1,6 +1,6 @@
 package com.sstlfsj.fibra.plugins.acceptance;
 
-import com.sstlfsj.fibra.artifact.ArtifactId;
+import com.sstlfsj.fibra.artifact.ArtifactPackage;
 import com.sstlfsj.fibra.artifact.ArtifactStore;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.DesiredStateRepository;
@@ -35,14 +35,15 @@ final class PluginAcceptanceHarness implements AutoCloseable {
         "fibra-storage", "fibra-storage-json", "fibra-tool-storage"
     };
 
-    private static final Pattern VERSION = Pattern.compile("(?m)^version: ([^\\s]+)$");
     private static final Pattern ID = Pattern.compile("(?m)^id: ([^\\s]+)$");
 
     private final FibraEngine engine;
     private final PluginRegistry registry;
+    private final Path packages;
 
-    private PluginAcceptanceHarness(FibraEngine engine) {
+    private PluginAcceptanceHarness(FibraEngine engine, Path packages) {
         this.engine = engine;
+        this.packages = packages;
         registry = new PluginRegistry(engine, new InMemoryPluginAuditRepository());
     }
 
@@ -54,12 +55,12 @@ final class PluginAcceptanceHarness implements AutoCloseable {
             .runtimeAdapter(new JavaPluginRuntimeAdapter())
             .build();
         engine.start().block(TIMEOUT);
-        return new PluginAcceptanceHarness(engine);
+        return new PluginAcceptanceHarness(engine, artifactStore.resolveSibling("packages"));
     }
 
     RegistrySnapshot deploy(DesiredInputGraph graph, String... artifactIds) {
         var artifacts = new ArrayList<PluginInstallRequest>();
-        for (var artifactId : artifactIds) artifacts.add(installRequest(artifactId));
+        for (var artifactId : artifactIds) artifacts.add(installRequest(packages, stagedJar(artifactId)));
         return registry.deploy(new PluginDeploymentRequest(artifacts, graph)).block(TIMEOUT);
     }
 
@@ -77,11 +78,19 @@ final class PluginAcceptanceHarness implements AutoCloseable {
         return registry;
     }
 
-    static PluginInstallRequest installRequest(String artifactId) {
-        var source = stagedJar(artifactId);
-        return PluginInstallRequest.builder().artifactId(new ArtifactId(artifactId))
-            .runtimeId(JavaPluginRuntimeAdapter.RUNTIME_ID)
-            .version(manifestVersion(source)).source(source).build();
+    static PluginInstallRequest installRequest(Path packages, Path source) {
+        try {
+            var root = Files.createTempDirectory(Files.createDirectories(packages), "plugin-");
+            var lib = Files.createDirectory(root.resolve("lib"));
+            Files.copy(source, lib.resolve(source.getFileName()));
+            Files.writeString(root.resolve("plugin.properties"),
+                "formatVersion=1\nruntime=java\npayload=lib/" + source.getFileName() + "\n");
+            var candidate = new JavaPluginRuntimeAdapter().probe(ArtifactPackage.read(root)).block(TIMEOUT);
+            return PluginInstallRequest.builder().artifactId(candidate.artifactId())
+                .runtimeId(candidate.runtimeId()).version(candidate.version()).source(candidate.source()).build();
+        } catch (IOException failure) {
+            throw new IllegalStateException("cannot package staged plugin " + source, failure);
+        }
     }
 
     static Path stagedJar(String artifactId) {
@@ -109,12 +118,6 @@ final class PluginAcceptanceHarness implements AutoCloseable {
         } catch (IOException failure) {
             throw new IllegalStateException("cannot read plugin manifest " + jar, failure);
         }
-    }
-
-    private static String manifestVersion(Path jar) {
-        var match = VERSION.matcher(manifest(jar));
-        if (!match.find()) throw new IllegalStateException("manifest has no version: " + jar);
-        return match.group(1);
     }
 
     private static String manifestId(Path jar) {

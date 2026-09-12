@@ -20,6 +20,8 @@ import com.sstlfsj.fibra.registry.PluginRegistry;
 import com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter;
 
 import java.nio.file.Path;
+import java.nio.file.Files;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -42,13 +44,15 @@ public final class PluginDependencyScenario implements AutoCloseable {
     private final FibraEngine engine;
     private final PluginRegistry registry;
     private final AtomicReference<CheckoutQuote> projectedQuote;
+    private final Path packages;
     private boolean closed;
 
     private PluginDependencyScenario(FibraEngine engine, PluginRegistry registry,
-                                     AtomicReference<CheckoutQuote> projectedQuote) {
+                                     AtomicReference<CheckoutQuote> projectedQuote, Path packages) {
         this.engine = engine;
         this.registry = registry;
         this.projectedQuote = projectedQuote;
+        this.packages = packages;
     }
 
     public static PluginDependencyScenario open(Path contract,
@@ -56,6 +60,7 @@ public final class PluginDependencyScenario implements AutoCloseable {
                                                 Path consumer,
                                                 Path storageRoot) {
         var projectedQuote = new AtomicReference<CheckoutQuote>();
+        var packages = storageRoot.resolve("packages");
         var projection = projection(projectedQuote);
         var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty())
             .catalog(PluginCatalog.of(new PluginCatalogEntry<>(projection,
@@ -70,16 +75,16 @@ public final class PluginDependencyScenario implements AutoCloseable {
             engine.start().block(OPERATION_TIMEOUT);
             registry.deploy(new PluginDeploymentRequest(
                 List.of(
-                    install(CONTRACT_ARTIFACT, "1.0.0", contract),
-                    install(PROVIDER_ARTIFACT, "1.0.0", provider),
-                    install(CONSUMER_ARTIFACT, "1.0.0", consumer)),
+                    install(packages, CONTRACT_ARTIFACT, "1.0.0", contract),
+                    install(packages, PROVIDER_ARTIFACT, "1.0.0", provider),
+                    install(packages, CONSUMER_ARTIFACT, "1.0.0", consumer)),
                 new DesiredInputGraph(List.of(
                     desired(PROVIDER_INSTANCE, PROVIDER_DEFINITION),
                     desired(CONSUMER_INSTANCE, CONSUMER_DEFINITION),
                     DesiredInputEntry.builder(PROJECTION_INSTANCE, PROJECTION_DEFINITION)
                         .config(com.sstlfsj.fibra.value.LiteralValue.of(6_000)).build()))))
                 .block(OPERATION_TIMEOUT);
-            return new PluginDependencyScenario(engine, registry, projectedQuote);
+            return new PluginDependencyScenario(engine, registry, projectedQuote, packages);
         } catch (RuntimeException | Error failure) {
             engine.close();
             throw failure;
@@ -103,12 +108,12 @@ public final class PluginDependencyScenario implements AutoCloseable {
     }
 
     public void upgradeProvider(Path artifact, String version) {
-        registry.upgrade(install(PROVIDER_ARTIFACT, version, artifact))
+        registry.upgrade(install(packages, PROVIDER_ARTIFACT, version, artifact))
             .block(OPERATION_TIMEOUT);
     }
 
     public void upgradeContract(Path artifact, String version) {
-        registry.upgrade(install(CONTRACT_ARTIFACT, version, artifact))
+        registry.upgrade(install(packages, CONTRACT_ARTIFACT, version, artifact))
             .block(OPERATION_TIMEOUT);
     }
 
@@ -151,12 +156,21 @@ public final class PluginDependencyScenario implements AutoCloseable {
         engine.close();
     }
 
-    private static PluginInstallRequest install(ArtifactId artifactId,
+    private static PluginInstallRequest install(Path packages, ArtifactId artifactId,
                                                 String version,
                                                 Path source) {
-        return PluginInstallRequest.builder().artifactId(artifactId)
-            .runtimeId(JavaPluginRuntimeAdapter.RUNTIME_ID)
-            .version(version).source(source).build();
+        try {
+            var root = Files.createTempDirectory(Files.createDirectories(packages), artifactId.value() + '-');
+            var lib = Files.createDirectory(root.resolve("lib"));
+            Files.copy(source, lib.resolve(source.getFileName()));
+            Files.writeString(root.resolve("plugin.properties"),
+                "formatVersion=1\nruntime=java\npayload=lib/" + source.getFileName() + "\n");
+            return PluginInstallRequest.builder().artifactId(artifactId)
+                .runtimeId(JavaPluginRuntimeAdapter.RUNTIME_ID)
+                .version(version).source(root).build();
+        } catch (IOException failure) {
+            throw new IllegalStateException("cannot package example plugin " + source, failure);
+        }
     }
 
     private static DesiredInputEntry desired(String instanceId,

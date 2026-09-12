@@ -3,6 +3,7 @@ package com.sstlfsj.fibra.spring.boot;
 import com.sstlfsj.fibra.ServiceKey;
 import com.sstlfsj.fibra.artifact.ArtifactId;
 import com.sstlfsj.fibra.artifact.ArtifactException;
+import com.sstlfsj.fibra.artifact.ArtifactPackage;
 import com.sstlfsj.fibra.artifact.ArtifactStore;
 import com.sstlfsj.fibra.artifact.RuntimeId;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
@@ -302,6 +303,11 @@ class FibraAutoConfigurationTest {
                 }
 
                 @Override
+                public Mono<DeploymentArtifact> probe(ArtifactPackage artifact) {
+                    return Mono.error(new UnsupportedOperationException());
+                }
+
+                @Override
                 public Mono<RuntimeArtifactInspection> inspect(
                     com.sstlfsj.fibra.artifact.ArtifactRecord artifact) {
                     return Mono.error(new UnsupportedOperationException());
@@ -329,6 +335,11 @@ class FibraAutoConfigurationTest {
         @Override
         public RuntimeId id() {
             return RUNTIME_ID;
+        }
+
+        @Override
+        public Mono<DeploymentArtifact> probe(ArtifactPackage artifact) {
+            return Mono.error(new UnsupportedOperationException());
         }
 
         @Override
@@ -372,6 +383,11 @@ class FibraAutoConfigurationTest {
         @Override
         public RuntimeId id() {
             return RUNTIME_ID;
+        }
+
+        @Override
+        public Mono<DeploymentArtifact> probe(ArtifactPackage artifact) {
+            return Mono.error(new UnsupportedOperationException());
         }
 
         @Override

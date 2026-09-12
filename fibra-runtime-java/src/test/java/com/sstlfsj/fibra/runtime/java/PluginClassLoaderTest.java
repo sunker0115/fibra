@@ -67,7 +67,7 @@ class PluginClassLoaderTest {
     }
 
     private static PluginClassLoader loader(Path jar) throws Exception {
-        return new PluginClassLoader(jar.toUri().toURL(),
+        return new PluginClassLoader(List.of(jar.toUri().toURL()),
             PluginClassLoaderTest.class.getClassLoader(),
             List.of("java.", "com.sstlfsj.fibra.", "org.reactivestreams.", "reactor."));
     }

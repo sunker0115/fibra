@@ -320,7 +320,14 @@ class CrossRuntimeConditionalConfigTest {
     }
 
     private static Path javaArtifact(Path work, ArtifactId id, String entrypoint) throws Exception {
-        var jar = work.resolve(id.value() + ".jar");
+        var root = Files.createDirectory(work.resolve(id.value() + "-package"));
+        var lib = Files.createDirectory(root.resolve("lib"));
+        var jar = lib.resolve("main.jar");
+        Files.writeString(root.resolve("plugin.properties"), """
+            formatVersion=1
+            runtime=java
+            payload=lib/main.jar
+            """);
         try (var output = new JarOutputStream(Files.newOutputStream(jar))) {
             output.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml"));
             output.write(("id: " + id.value() + "\nversion: 1.0.0\nentrypoint: " + entrypoint
@@ -329,7 +336,7 @@ class CrossRuntimeConditionalConfigTest {
             copyClass(output, "fixture/ContextJavaEntrypoint.class");
             copyClass(output, "fixture/ContextJavaEntrypoint$Stable.class");
         }
-        return jar;
+        return root;
     }
 
     private static void copyClass(JarOutputStream output, String name) throws Exception {
@@ -344,7 +351,13 @@ class CrossRuntimeConditionalConfigTest {
 
     private static Path nodeArtifact(Path work, ArtifactId id) throws Exception {
         var root = Files.createDirectory(work.resolve(id.value()));
-        Files.writeString(root.resolve("fibra-plugin.yaml"), """
+        var payload = Files.createDirectory(root.resolve("payload"));
+        Files.writeString(root.resolve("plugin.properties"), """
+            formatVersion=1
+            runtime=node
+            payload=payload
+            """);
+        Files.writeString(payload.resolve("fibra-plugin.yaml"), """
             id: %s
             version: 1.0.0
             protocol: 1
@@ -356,7 +369,7 @@ class CrossRuntimeConditionalConfigTest {
                 method: control
                 descriptor: { title: Control }
             """.formatted(id.value()));
-        Files.writeString(root.resolve("index.mjs"), sidecar());
+        Files.writeString(payload.resolve("index.mjs"), sidecar());
         return root;
     }
 
