@@ -18,7 +18,7 @@ class ArchitectureBaselineTest {
         "fibra-engine", "fibra-bridge", "fibra-runtime-java",
         "fibra-runtime-node", "fibra-registry", "fibra-cli", "fibra-spring",
         "fibra-spring-boot-starter", "fibra-plugin-archetype",
-        "fibra-plugins", "fibra-example", "fibra-parity-tests",
+        "fibra-plugins", "fibra-distribution", "fibra-example", "fibra-parity-tests",
         "fibra-benchmarks");
 
     @Test

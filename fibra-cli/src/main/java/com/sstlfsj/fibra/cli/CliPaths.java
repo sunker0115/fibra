@@ -1,11 +1,14 @@
 package com.sstlfsj.fibra.cli;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
 record CliPaths(Path home, String profile, Path configRoot, Path pluginsRoot,
-                Path dataRoot, Path nodeExecutable) {
+                Path dataRoot, Path nodeExecutable, Path rgExecutable,
+                Path bashExecutable) {
     private static final Pattern PROFILE = Pattern.compile(
         "[A-Za-z0-9][A-Za-z0-9._-]{0,63}");
 
@@ -18,6 +21,8 @@ record CliPaths(Path home, String profile, Path configRoot, Path pluginsRoot,
         pluginsRoot = absolute(pluginsRoot, "pluginsRoot");
         dataRoot = absolute(dataRoot, "dataRoot");
         nodeExecutable = Objects.requireNonNull(nodeExecutable, "nodeExecutable");
+        rgExecutable = Objects.requireNonNull(rgExecutable, "rgExecutable");
+        bashExecutable = Objects.requireNonNull(bashExecutable, "bashExecutable");
     }
 
     static CliPaths resolve(Path home, String profile, Path configRoot,
@@ -27,7 +32,8 @@ record CliPaths(Path home, String profile, Path configRoot, Path pluginsRoot,
             configRoot == null ? resolvedHome.resolve("config") : configRoot,
             pluginsRoot == null ? resolvedHome.resolve("plugins") : pluginsRoot,
             dataRoot == null ? resolvedHome.resolve("data") : dataRoot,
-            nodeExecutable == null ? Path.of("node") : nodeExecutable);
+            nodeExecutable == null ? bundledOr(resolvedHome, "node") : nodeExecutable,
+            bundledOr(resolvedHome, "rg"), bundledOr(resolvedHome, "bash"));
     }
 
     Path profileFile() {
@@ -56,6 +62,30 @@ record CliPaths(Path home, String profile, Path configRoot, Path pluginsRoot,
 
     Path nodeSessionRoot() {
         return profileData().resolve("node-sessions");
+    }
+
+    Path workspaceRoot() {
+        return profileData().resolve("workspace");
+    }
+
+    Path storageRoot() {
+        return profileData().resolve("storage");
+    }
+
+    Map<String, Object> configContext() {
+        return Map.of("fibra", Map.of(
+            "home", home.toString(),
+            "dataRoot", dataRoot.toString(),
+            "workspaceRoot", workspaceRoot().toString(),
+            "storageRoot", storageRoot().toString(),
+            "nodeExecutable", nodeExecutable.toString(),
+            "rgExecutable", rgExecutable.toString(),
+            "bashExecutable", bashExecutable.toString()));
+    }
+
+    private static Path bundledOr(Path home, String name) {
+        var bundled = home.resolve("runtime/bin").resolve(name);
+        return Files.isRegularFile(bundled) ? bundled : Path.of(name);
     }
 
     private static Path absolute(Path value, String name) {

@@ -3,7 +3,9 @@ package com.sstlfsj.fibra.cli;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -40,6 +42,29 @@ class CliPathsTest {
         assertEquals(plugins, paths.pluginsRoot());
         assertEquals(data, paths.dataRoot());
         assertEquals(node, paths.nodeExecutable());
+    }
+
+    @Test
+    void resolvesBundledRuntimeExecutablesAndProfileContext(@TempDir Path work) throws Exception {
+        var home = work.resolve("fibra");
+        var runtime = Files.createDirectories(home.resolve("runtime/bin"));
+        for (var executable : new String[] {"node", "rg", "bash"}) {
+            Files.writeString(runtime.resolve(executable), executable);
+        }
+
+        var paths = CliPaths.resolve(home, "default", null, null, null, null);
+
+        assertEquals(runtime.resolve("node"), paths.nodeExecutable());
+        assertEquals(runtime.resolve("rg"), paths.rgExecutable());
+        assertEquals(runtime.resolve("bash"), paths.bashExecutable());
+        assertEquals(Map.of("fibra", Map.of(
+            "home", home.toString(),
+            "dataRoot", home.resolve("data").toString(),
+            "workspaceRoot", home.resolve("data/profiles/default/workspace").toString(),
+            "storageRoot", home.resolve("data/profiles/default/storage").toString(),
+            "nodeExecutable", runtime.resolve("node").toString(),
+            "rgExecutable", runtime.resolve("rg").toString(),
+            "bashExecutable", runtime.resolve("bash").toString())), paths.configContext());
     }
 
     @Test

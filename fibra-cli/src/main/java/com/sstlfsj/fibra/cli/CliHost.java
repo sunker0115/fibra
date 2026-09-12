@@ -1,6 +1,7 @@
 package com.sstlfsj.fibra.cli;
 
 import com.sstlfsj.fibra.artifact.ArtifactStore;
+import com.sstlfsj.fibra.config.ConfigContextSnapshot;
 import com.sstlfsj.fibra.config.ConfigLimits;
 import com.sstlfsj.fibra.config.FileDesiredStateRepository;
 import com.sstlfsj.fibra.engine.DeploymentArtifact;
@@ -18,6 +19,7 @@ import com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter;
 import com.sstlfsj.fibra.runtime.node.NodePluginRuntimeAdapter;
 import com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions;
 
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,6 +49,8 @@ final class CliHost implements AutoCloseable {
         FilePluginAuditRepository audit = null;
         FibraEngine engine = null;
         try {
+            Files.createDirectories(paths.workspaceRoot());
+            Files.createDirectories(paths.storageRoot());
             state = new FileEngineStateStore(paths.stateRoot());
             artifacts = new ArtifactStore(paths.artifactRoot());
             audit = new FilePluginAuditRepository(paths.auditFile());
@@ -57,7 +61,8 @@ final class CliHost implements AutoCloseable {
             var probe = new PluginArtifactProbe(List.of(java, node));
             var source = new ProfileArtifactSource(paths.profileArtifactsFile(), paths.pluginsRoot(), probe);
             engine = FibraEngine.builder(config).stateStore(state).artifactStore(artifacts)
-                .initialArtifacts(source).runtimeAdapter(java).runtimeAdapter(node).build();
+                .initialArtifacts(source).configContext(ConfigContextSnapshot.of(paths.configContext()))
+                .runtimeAdapter(java).runtimeAdapter(node).build();
             var registry = new PluginRegistry(engine, audit);
             engine.start().block();
             return new CliHost(paths, probe, engine, registry, audit);

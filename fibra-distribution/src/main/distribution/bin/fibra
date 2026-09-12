@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+
+install_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+if [ -n "${JAVA_HOME:-}" ]; then
+  java_executable="$JAVA_HOME/bin/java"
+else
+  java_executable=java
+fi
+
+exec "$java_executable" -Dfibra.home="$install_root" \
+  -cp "$install_root/lib/*" com.sstlfsj.fibra.cli.FibraCli "$@"

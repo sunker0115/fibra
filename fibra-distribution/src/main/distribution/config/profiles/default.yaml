@@ -1,0 +1,38 @@
+- id: fs-provider
+  plugin: fs-local
+  config:
+    root: {$ref: /fibra/workspaceRoot}
+    spillDirectory: .fibra-spill
+  realm: {fibra.fs: files}
+- id: fs-tools
+  plugin: tool-fs
+  realm: {fibra.fs: files}
+- id: subprocess-provider
+  plugin: fibra-subprocess-local
+  config:
+    nodeExecutable: {$ref: /fibra/nodeExecutable}
+  realm: {fibra.subprocess: processes}
+- id: search-tools
+  plugin: tool-fs-search
+  config:
+    rgExecutable: {$ref: /fibra/rgExecutable}
+    workdir: {$ref: /fibra/workspaceRoot}
+  realm: {fibra.subprocess: processes}
+- id: shell-provider
+  plugin: fibra-shell-local
+  config:
+    bashExecutable: {$ref: /fibra/bashExecutable}
+    outputMaxBytes: 1048576
+    graceMillis: 500
+  realm: {fibra.subprocess: processes, fibra.shell: shells}
+- id: shell-tools
+  plugin: fibra-tool-shell
+  realm: {fibra.subprocess: processes, fibra.shell: shells}
+- id: storage-provider
+  plugin: storage-json
+  config:
+    root: {$ref: /fibra/storageRoot}
+  realm: {fibra.storage: shared}
+- id: storage-tools
+  plugin: tool-storage
+  realm: {fibra.storage: shared}
