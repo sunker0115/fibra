@@ -18,6 +18,7 @@ jobs:
     env:
       TZ: UTC
       JAVA_TOOL_OPTIONS: -Duser.timezone=UTC -Dfile.encoding=UTF-8
+      FIBRA_CI_DIAGNOSTICS_DIR: ${{ runner.temp }}/fibra-ci-hang-diagnostics
     steps:
       - name: 检出源码
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -64,7 +65,23 @@ jobs:
           rg --version
 
       - name: 全量构建与兼容性验收
-        run: mvn --batch-mode --no-transfer-progress clean verify
+        run: >-
+          scripts/run-ci-with-jvm-diagnostics.sh
+          mvn --batch-mode --no-transfer-progress
+          -Dsurefire.timeout=300 -Dfailsafe.timeout=300
+          clean verify
+
+      - name: 上传失败现场
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-hang-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/fibra-ci-hang-diagnostics
+            **/target/surefire-reports
+            **/target/failsafe-reports
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: 验证二十五个发布制品可复现
         run: scripts/verify-reproducible-release.sh

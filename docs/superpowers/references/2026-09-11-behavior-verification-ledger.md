@@ -37,10 +37,18 @@ mvn -o -pl fibra-parity-tests -am test \
 2026-09-12 在 pre-CLI 快照 `618091a` 上执行 GitHub Actions
 [运行 #11、attempt 2](https://github.com/sunker0115/fibra/actions/runs/34675971947/attempts/2)：Ubuntu
 runner 的 48 模块 `clean verify`、25 个正式发布制品可复现比较、空临时 Maven 仓部署及仓库外消费者验证
-全部通过，作业总耗时 5 分钟。其中 attempt 1 在 `PluginDisableTest` 的预期保存失败告警后停止输出，由用户
-在 15 分 21 秒时取消；同一 SHA 的 attempt 2 中 `clean verify` 步骤耗时 2 分 15 秒，本地同一测试类另连续
-运行 20 次全部通过。当前证据未复现确定性回归，但首次挂起仍保留为细粒度测试超时与线程转储诊断的
-待改进项。该结果证明正式 storage 纳入后的 pre-CLI 发布闭环，不证明尚不存在的 CLI/ZIP 发行结构。
+全部通过，作业总耗时 5 分钟，`clean verify` 步骤耗时 2 分 15 秒。同一 SHA 的 attempt 1 在
+`PluginDisableTest` 中停止输出并于 15 分 21 秒时取消；随后
+[运行 #12](https://github.com/sunker0115/fibra/actions/runs/34677393980) 的 attempt 1 在
+`FibraEngineRuntimeAdapterTest` 启动后停止输出并于 7 分 7 秒时取消，开启 GitHub debug logging 的
+attempt 2 则确认该类 12 项已通过，随后在 `PluginDisableTest` 启动后停止输出并于 3 分 6 秒时取消。
+重复远程现象不能再归为单次 runner 噪音：`PluginDisableTest` 已确认使用瞬时 `PREPARING` 与异步
+`STARTING` 快照作屏障，订阅错过该组合后又未释放启动闸门，导致测试超时进入等待命令排空的无界
+`engine.close()`；修正后该用例在双核调度下连续 20 次通过，完整 `fibra-engine` 155 项通过。另一次
+`FibraEngineRuntimeAdapterTest` 停点仍无线程栈，不能据此宣告同源或已修复；CI 因此为 Surefire/Failsafe
+fork 增加 300 秒上限，从 180 秒起每 60 秒采集 Maven 进程组内 JVM 线程栈，并以 720 秒命令上限确保
+失败现场能在作业总超时前上传。该结果证明正式 storage 纳入后的 pre-CLI 发布闭环，不证明尚不存在的
+CLI/ZIP 发行结构。
 
 联合部署故障另由 `ApplyDeploymentPersistenceBoundaryTest` 6 项、
 `ApplyDeploymentMountFailureRecoveryTest` 1 项和 `EngineArtifactRecoveryTest` 2 项覆盖：同一携带新
