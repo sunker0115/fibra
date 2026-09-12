@@ -26,7 +26,10 @@ bash_source=$(resolve_executable "$bash_input")
 mkdir -p "$runtime_bin"
 cp -L "$node_source" "$runtime_bin/node"
 cp -L "$rg_source" "$runtime_bin/rg"
-cp -L "$bash_source" "$runtime_bin/bash"
+{
+  printf '#!/bin/sh\n'
+  printf 'exec "%s" "$@"\n' "$bash_source"
+} > "$runtime_bin/bash"
 chmod 0755 "$runtime_bin/node" "$runtime_bin/rg" "$runtime_bin/bash"
 chmod 0755 "$distribution_root/bin/fibra"
 
@@ -35,5 +38,6 @@ chmod 0755 "$distribution_root/bin/fibra"
   printf 'arch=%s\n' "$(uname -m)"
   printf 'node=%s\n' "$("$runtime_bin/node" --version)"
   printf 'ripgrep=%s\n' "$("$runtime_bin/rg" --version | sed -n '1p')"
-  printf 'bash=%s\n' "$("$runtime_bin/bash" --version | sed -n '1p')"
+  printf 'bashExecutable=%s\n' "$bash_source"
+  printf 'bash=%s\n' "$("$bash_source" --version | sed -n '1p')"
 } > "$distribution_root/runtime/platform.properties"

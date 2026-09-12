@@ -20,6 +20,7 @@
     <fibra.distribution.node>node</fibra.distribution.node>
     <fibra.distribution.rg>rg</fibra.distribution.rg>
     <fibra.distribution.bash>/bin/bash</fibra.distribution.bash>
+    <fibra.distribution.verify.skip>false</fibra.distribution.verify.skip>
   </properties>
 
   <dependencies>
@@ -43,6 +44,25 @@
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-clean-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>reset-distribution-staging</id>
+            <phase>prepare-package</phase>
+            <goals><goal>clean</goal></goals>
+            <configuration>
+              <excludeDefaultDirectories>true</excludeDefaultDirectories>
+              <filesets>
+                <fileset>
+                  <directory>${fibra.distribution.directory}</directory>
+                </fileset>
+              </filesets>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
@@ -124,6 +144,19 @@
                 <argument>${fibra.distribution.node}</argument>
                 <argument>${fibra.distribution.rg}</argument>
                 <argument>${fibra.distribution.bash}</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>verify-external-binary-distribution</id>
+            <phase>verify</phase>
+            <goals><goal>exec</goal></goals>
+            <configuration>
+              <skip>${fibra.distribution.verify.skip}</skip>
+              <executable>${project.basedir}/src/test/scripts/verify-archive.sh</executable>
+              <arguments>
+                <argument>${project.build.directory}/fibra-${project.version}-bin.zip</argument>
+                <argument>${project.version}</argument>
               </arguments>
             </configuration>
           </execution>
