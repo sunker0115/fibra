@@ -3,10 +3,11 @@ package com.sstlfsj.fibra.spring.boot;
 import com.sstlfsj.fibra.artifact.ArtifactStore;
 import com.sstlfsj.fibra.config.DesiredStateRepository;
 import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
-import com.sstlfsj.fibra.engine.FibraEngine;
-import com.sstlfsj.fibra.engine.HostServiceRegistry;
 import com.sstlfsj.fibra.engine.EngineStateStore;
 import com.sstlfsj.fibra.engine.FileEngineStateStore;
+import com.sstlfsj.fibra.engine.FibraEngine;
+import com.sstlfsj.fibra.engine.HostServiceRegistry;
+import com.sstlfsj.fibra.engine.InitialArtifactSource;
 import com.sstlfsj.fibra.engine.PluginRuntimeAdapter;
 import com.sstlfsj.fibra.engine.PublishedRuntime;
 import com.sstlfsj.fibra.registry.FilePluginAuditRepository;
@@ -47,6 +48,7 @@ public class FibraAutoConfiguration {
                             FibraProperties properties,
                             FibraSourceProperties sourceProperties,
                             ObjectProvider<ArtifactStore> artifactStores,
+                            ObjectProvider<InitialArtifactSource> initialArtifacts,
                             ObjectProvider<PluginRuntimeAdapter> runtimes,
                             ObjectProvider<EngineStateStore> stateStores,
                             HostServiceRegistry hostServices) {
@@ -63,6 +65,7 @@ public class FibraAutoConfiguration {
             }
             var builder = FibraEngine.builder(desired).artifactStore(artifacts)
                 .stateStore(stateStore).hostServices(hostServices);
+            initialArtifacts.ifAvailable(builder::initialArtifacts);
             if (!sourceProperties.refreshInterval().isZero()) {
                 builder.autoRefresh(sourceProperties.refreshInterval());
             }

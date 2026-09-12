@@ -9,12 +9,14 @@ import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.DesiredStateRepository;
 import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
+import com.sstlfsj.fibra.engine.DeploymentArtifact;
+import com.sstlfsj.fibra.engine.DeploymentManifest;
 import com.sstlfsj.fibra.engine.EngineState;
 import com.sstlfsj.fibra.engine.EngineStateStore;
 import com.sstlfsj.fibra.engine.EngineStateStoreException;
-import com.sstlfsj.fibra.engine.DeploymentManifest;
 import com.sstlfsj.fibra.engine.FileEngineStateStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
+import com.sstlfsj.fibra.engine.InitialArtifactSource;
 import com.sstlfsj.fibra.engine.PluginRuntimeAdapter;
 import com.sstlfsj.fibra.engine.RuntimeArtifactInspection;
 import com.sstlfsj.fibra.engine.RuntimeCatalog;
@@ -89,6 +91,30 @@ class FibraAutoConfigurationTest {
             .run(context -> assertNotNull(context.getBean(FibraEngine.class)));
 
         assertDefaultStoresCanReopen(work);
+    }
+
+    @Test
+    void wiresInitialArtifactsIntoTheFirstEngineChangeSet(@TempDir Path work)
+        throws IOException {
+        var source = Files.writeString(work.resolve("initial.plugin"), "fixture");
+        var loads = new java.util.concurrent.atomic.AtomicInteger();
+        new ApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(FibraAutoConfiguration.class))
+            .withUserConfiguration(HostConfiguration.class)
+            .withBean(InitialArtifactSource.class, () -> () -> {
+                loads.incrementAndGet();
+                return List.of(DeploymentArtifact.builder()
+                    .artifactId(new ArtifactId("initial-plugin"))
+                    .runtimeId(CustomRuntime.RUNTIME_ID).version("1.0.0")
+                    .source(source).build());
+            })
+            .withPropertyValues("fibra.storage-root=" + work.resolve("storage"))
+            .run(context -> {
+                var engine = context.getBean(FibraEngine.class);
+                assertEquals(1, loads.get());
+                assertTrue(engine.published().current().engine().artifacts()
+                    .containsKey(new ArtifactId("initial-plugin")));
+            });
     }
 
     @Test

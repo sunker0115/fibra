@@ -118,6 +118,178 @@ class FibraEngineRuntimeAdapterTest {
     }
 
     @Test
+    void initialArtifactsAndDesiredGraphStartInOneChangeSet(@TempDir Path work)
+        throws Exception {
+        var artifact = new ArtifactId("sample");
+        var runtimeId = new RuntimeId("fake");
+        var source = Files.writeString(work.resolve("sample.bin"), "plugin");
+        var graph = new DesiredInputGraph(List.of(
+            DesiredInputEntry.builder("sample-one", "sample").build()));
+        var stateStore = new RecordingStateStore();
+        var loads = new AtomicInteger();
+        try (var engine = FibraEngine.builder(new InMemoryDesiredStateRepository(graph))
+            .artifactStore(new ArtifactStore(work.resolve("artifacts")))
+            .stateStore(stateStore).runtimeAdapter(new FakeRuntimeAdapter(runtimeId))
+            .initialArtifacts(() -> {
+                loads.incrementAndGet();
+                return List.of(DeploymentArtifact.builder().artifactId(artifact)
+                    .runtimeId(runtimeId).version("1.0.0").source(source).build());
+            }).build()) {
+            assertEquals(0, loads.get());
+
+            var started = engine.start().block().engine();
+
+            assertEquals(1, loads.get());
+            assertEquals(1, stateStore.saves.get());
+            assertEquals(graph, stateStore.load().orElseThrow().desiredGraph());
+            assertEquals(started.artifacts().get(artifact).revision(),
+                stateStore.load().orElseThrow().artifacts().get(artifact));
+            assertEquals(com.sstlfsj.fibra.PluginInstanceState.ACTIVE,
+                started.instances().get("sample-one").state());
+        }
+    }
+
+    @Test
+    void savedTargetDoesNotReadInitialArtifactsOrDesiredSource(@TempDir Path work)
+        throws Exception {
+        var artifact = new ArtifactId("sample");
+        var runtimeId = new RuntimeId("fake");
+        var source = Files.writeString(work.resolve("sample.bin"), "plugin");
+        var store = new ArtifactStore(work.resolve("artifacts"));
+        var saved = store.prepareInstall(artifact, runtimeId, "1.0.0", source).save();
+        var stateStore = EngineStateStore.inMemory();
+        stateStore.save(new DeploymentManifest(Map.of(artifact, saved.revision()),
+            new DesiredInputGraph(List.of())));
+        var initialLoads = new AtomicInteger();
+        try (var engine = FibraEngine.builder(() -> {
+                throw new IllegalStateException("desired source must not be read");
+            }).artifactStore(store).stateStore(stateStore)
+            .runtimeAdapter(new FakeRuntimeAdapter(runtimeId))
+            .initialArtifacts(() -> {
+                initialLoads.incrementAndGet();
+                throw new IllegalStateException("initial artifacts must not be read");
+            }).build()) {
+            var started = engine.start().block().engine();
+
+            assertEquals(0, initialLoads.get());
+            assertEquals(saved.revision(), started.artifacts().get(artifact).revision());
+        }
+    }
+
+    @Test
+    void rejectsInvalidInitialArtifactListsBeforeSavingATarget(@TempDir Path work)
+        throws Exception {
+        assertThrows(NullPointerException.class, () -> FibraEngine.builder(
+            InMemoryDesiredStateRepository.empty()).initialArtifacts(null));
+
+        var runtimeId = new RuntimeId("fake");
+        var source = Files.writeString(work.resolve("sample.bin"), "plugin");
+        var artifact = DeploymentArtifact.builder().artifactId(new ArtifactId("sample"))
+            .runtimeId(runtimeId).version("1.0.0").source(source).build();
+        var stateStore = new RecordingStateStore();
+        try (var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty())
+            .artifactStore(new ArtifactStore(work.resolve("artifacts")))
+            .stateStore(stateStore).runtimeAdapter(new FakeRuntimeAdapter(runtimeId))
+            .initialArtifacts(() -> List.of(artifact, artifact)).build()) {
+            assertThrows(IllegalArgumentException.class, () -> engine.start().block());
+            assertEquals(0, stateStore.saves.get());
+        }
+
+        var nullEntryStateStore = new RecordingStateStore();
+        try (var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty())
+            .stateStore(nullEntryStateStore)
+            .initialArtifacts(() -> java.util.Arrays.asList(artifact, null)).build()) {
+            assertThrows(NullPointerException.class, () -> engine.start().block());
+            assertEquals(0, nullEntryStateStore.saves.get());
+        }
+
+        var nullStateStore = new RecordingStateStore();
+        try (var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty())
+            .stateStore(nullStateStore).initialArtifacts(() -> null).build()) {
+            assertThrows(NullPointerException.class, () -> engine.start().block());
+            assertEquals(0, nullStateStore.saves.get());
+        }
+    }
+
+    @Test
+    void initialArtifactPrepareFailureRollsBackEarlierStaging(@TempDir Path work)
+        throws Exception {
+        var runtimeId = new RuntimeId("fake");
+        var artifactRoot = work.resolve("artifacts");
+        var store = new ArtifactStore(artifactRoot);
+        var stateStore = new RecordingStateStore();
+        var first = DeploymentArtifact.builder().artifactId(new ArtifactId("first"))
+            .runtimeId(runtimeId).version("1.0.0")
+            .source(Files.writeString(work.resolve("first.bin"), "plugin")).build();
+        var missing = DeploymentArtifact.builder().artifactId(new ArtifactId("missing"))
+            .runtimeId(runtimeId).version("1.0.0").source(work.resolve("missing.bin")).build();
+        try (var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty())
+            .artifactStore(store).stateStore(stateStore)
+            .runtimeAdapter(new FakeRuntimeAdapter(runtimeId))
+            .initialArtifacts(() -> List.of(first, missing)).build()) {
+            var failure = assertThrows(EngineChangeException.class, () -> engine.start().block());
+
+            assertFalse(failure.targetSaved());
+            assertTrue(stateStore.load().isEmpty());
+            assertTrue(store.history(first.artifactId()).isEmpty());
+            assertTransactionsEmpty(artifactRoot);
+        }
+    }
+
+    @Test
+    void initialArtifactBindFailureDoesNotSaveTargetAndRollsBackStaging(@TempDir Path work)
+        throws Exception {
+        var runtimeId = new RuntimeId("fake");
+        var artifactId = new ArtifactId("sample");
+        var artifactRoot = work.resolve("artifacts");
+        var store = new ArtifactStore(artifactRoot);
+        var stateStore = new RecordingStateStore();
+        var graph = new DesiredInputGraph(List.of(
+            DesiredInputEntry.builder("sample-one", "sample").build()));
+        var artifact = DeploymentArtifact.builder().artifactId(artifactId)
+            .runtimeId(runtimeId).version("1.0.0")
+            .source(Files.writeString(work.resolve("sample.bin"), "plugin")).build();
+        try (var engine = FibraEngine.builder(new InMemoryDesiredStateRepository(graph))
+            .artifactStore(store).stateStore(stateStore)
+            .runtimeAdapter(new FakeRuntimeAdapter(runtimeId, RuntimeFailure.BIND))
+            .initialArtifacts(() -> List.of(artifact)).build()) {
+            var failure = assertThrows(EngineChangeException.class, () -> engine.start().block());
+
+            assertFalse(failure.targetSaved());
+            assertTrue(stateStore.load().isEmpty());
+            assertTrue(store.history(artifactId).isEmpty());
+            assertTransactionsEmpty(artifactRoot);
+        }
+    }
+
+    @Test
+    void initialArtifactMountFailureKeepsTheSavedTargetAndCommittedArtifact(@TempDir Path work)
+        throws Exception {
+        var runtimeId = new RuntimeId("fake");
+        var artifactId = new ArtifactId("sample");
+        var artifactRoot = work.resolve("artifacts");
+        var store = new ArtifactStore(artifactRoot);
+        var stateStore = new RecordingStateStore();
+        var graph = new DesiredInputGraph(List.of(
+            DesiredInputEntry.builder("sample-one", "sample").build()));
+        var artifact = DeploymentArtifact.builder().artifactId(artifactId)
+            .runtimeId(runtimeId).version("1.0.0")
+            .source(Files.writeString(work.resolve("sample.bin"), "plugin")).build();
+        try (var engine = FibraEngine.builder(new InMemoryDesiredStateRepository(graph))
+            .artifactStore(store).stateStore(stateStore)
+            .runtimeAdapter(new FakeRuntimeAdapter(runtimeId, RuntimeFailure.MOUNT))
+            .initialArtifacts(() -> List.of(artifact)).build()) {
+            var failure = assertThrows(EngineChangeException.class, () -> engine.start().block());
+
+            assertTrue(failure.targetSaved());
+            assertEquals(1, stateStore.saves.get());
+            assertEquals(graph, stateStore.load().orElseThrow().desiredGraph());
+            assertEquals(1, store.history(artifactId).size());
+            assertTransactionsEmpty(artifactRoot);
+        }
+    }
+
+    @Test
     void rejectsMissingAndMismatchedRuntimeIdsWithoutPublishing(@TempDir Path work)
         throws Exception {
         var source = work.resolve("sample.bin");
@@ -207,15 +379,29 @@ class FibraEngineRuntimeAdapterTest {
         }
     }
 
+    private static void assertTransactionsEmpty(Path artifactRoot) throws Exception {
+        try (var transactions = Files.list(artifactRoot.resolve("transactions"))) {
+            assertEquals(0, transactions.count());
+        }
+    }
+
+    private enum RuntimeFailure { NONE, BIND, MOUNT }
+
     private static final class FakeRuntimeAdapter implements PluginRuntimeAdapter {
         private final RuntimeId id;
+        private final RuntimeFailure failure;
         private final AtomicInteger owners = new AtomicInteger();
         private final AtomicInteger updates = new AtomicInteger();
         private final AtomicInteger updateCloses = new AtomicInteger();
         private final AtomicInteger ownerCloses = new AtomicInteger();
 
         private FakeRuntimeAdapter(RuntimeId id) {
+            this(id, RuntimeFailure.NONE);
+        }
+
+        private FakeRuntimeAdapter(RuntimeId id, RuntimeFailure failure) {
             this.id = id;
+            this.failure = failure;
         }
 
         @Override
@@ -232,7 +418,8 @@ class FibraEngineRuntimeAdapterTest {
         public RuntimeResourceOwner create() {
             owners.incrementAndGet();
             var definition = PluginDefinition.builder("sample", Void.class,
-                () -> (context, config) -> Mono.empty()).build();
+                () -> (context, config) -> failure == RuntimeFailure.MOUNT
+                    ? Mono.error(new IllegalStateException("mount fixture failure")) : Mono.empty()).build();
             return new RuntimeResourceOwner() {
                 private List<ArtifactRecord> active = List.of();
                 private RuntimeCatalog catalog = RuntimeCatalog.empty();
@@ -243,7 +430,12 @@ class FibraEngineRuntimeAdapterTest {
                     updates.incrementAndGet();
                     var next = List.copyOf(target);
                     var nextCatalog = next.isEmpty() ? RuntimeCatalog.empty()
-                        : new RuntimeCatalog(PluginCatalog.of(new PluginCatalogEntry<>(definition, value -> null)),
+                        : new RuntimeCatalog(PluginCatalog.of(new PluginCatalogEntry<>(definition, value -> {
+                            if (failure == RuntimeFailure.BIND) {
+                                throw new IllegalStateException("bind fixture failure");
+                            }
+                            return null;
+                        })),
                             Map.of(definition.name(), next.getFirst().id()));
                     return new RuntimeResourceUpdate() {
                         @Override public Mono<Void> prepareAsync() { return Mono.empty(); }

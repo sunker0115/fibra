@@ -176,6 +176,7 @@ public final class com.sstlfsj.fibra.engine.FibraEngine implements java.lang.Aut
 ## com.sstlfsj.fibra.engine.FibraEngine$Builder
 Compiled from "FibraEngine.java"
 public final class com.sstlfsj.fibra.engine.FibraEngine$Builder {
+  public com.sstlfsj.fibra.engine.FibraEngine$Builder initialArtifacts(com.sstlfsj.fibra.engine.InitialArtifactSource);
   public com.sstlfsj.fibra.engine.FibraEngine$Builder catalog(com.sstlfsj.fibra.engine.PluginCatalog);
   public com.sstlfsj.fibra.engine.FibraEngine$Builder stateStore(com.sstlfsj.fibra.engine.EngineStateStore);
   public com.sstlfsj.fibra.engine.FibraEngine$Builder artifactStore(com.sstlfsj.fibra.artifact.ArtifactStore);
@@ -198,6 +199,11 @@ Compiled from "HostServiceRegistry.java"
 public final class com.sstlfsj.fibra.engine.HostServiceRegistry {
   public com.sstlfsj.fibra.engine.HostServiceRegistry();
   public synchronized <T> com.sstlfsj.fibra.ServiceRegistration<T> register(com.sstlfsj.fibra.ServiceKey<T>, T);
+}
+## com.sstlfsj.fibra.engine.InitialArtifactSource
+Compiled from "InitialArtifactSource.java"
+public interface com.sstlfsj.fibra.engine.InitialArtifactSource {
+  public abstract java.util.List<com.sstlfsj.fibra.engine.DeploymentArtifact> load();
 }
 ## com.sstlfsj.fibra.engine.InstallArtifact
 Compiled from "InstallArtifact.java"

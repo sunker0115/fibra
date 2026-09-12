@@ -54,6 +54,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class FibraEngine implements AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger(FibraEngine.class);
     private final DesiredStateRepository desiredRepository;
+    private final InitialArtifactSource initialArtifacts;
     private final ArtifactStore artifactStore;
     private final EngineStateStore stateStore;
     private final HostServiceRegistry hostServices;
@@ -103,6 +104,7 @@ public final class FibraEngine implements AutoCloseable {
 
     private FibraEngine(Builder builder) {
         desiredRepository = builder.desiredRepository;
+        initialArtifacts = builder.initialArtifacts;
         artifactStore = builder.artifactStore;
         stateStore = builder.stateStore;
         hostServices = builder.hostServices;
@@ -155,6 +157,7 @@ public final class FibraEngine implements AutoCloseable {
         var saved = stateStore.load();
         var target = new LinkedHashMap<ArtifactId, ArtifactRecord>();
         DesiredCompilation desired;
+        List<DeploymentArtifact> bootstrapArtifacts = List.of();
         if (saved.isPresent()) {
             var manifest = saved.get();
             desired = compilation(manifest.desiredGraph(), manifest.revision());
@@ -168,6 +171,7 @@ public final class FibraEngine implements AutoCloseable {
             artifacts = Map.copyOf(target);
         } else {
             desired = loadDesired();
+            bootstrapArtifacts = validatedArtifacts(initialArtifacts.load());
         }
         domain = runtime.openDomain("engine");
         var context = domain.rootScope().context();
@@ -180,7 +184,12 @@ public final class FibraEngine implements AutoCloseable {
         plan.bootstrapping = true;
         plan.targetSaved = saved.isPresent();
         plan.committed = saved.isPresent();
-        return execute(plan).map(EngineCommandResult::view).doOnSuccess(view -> {
+        var initialSelection = bootstrapArtifacts;
+        return Mono.defer(() -> {
+            if (saved.isEmpty()) stage(plan, initialSelection);
+            return execute(plan);
+        }).onErrorResume(error -> plan.executing ? Mono.error(error) : fail(plan, error))
+            .map(EngineCommandResult::view).doOnSuccess(view -> {
             if (sourceMonitor == null) return;
             if (saved.isEmpty()) acceptSource(desired);
             else {
@@ -212,11 +221,7 @@ public final class FibraEngine implements AutoCloseable {
             } else if (command instanceof InstallArtifact install) {
                 stage(plan, install.artifactId(), install.runtimeId(), install.version(), install.source());
             } else if (command instanceof ApplyDeployment deployment) {
-                var ids = new LinkedHashSet<ArtifactId>();
-                for (var artifact : deployment.artifacts()) {
-                    if (!ids.add(artifact.artifactId())) throw new IllegalArgumentException("duplicate deployment artifact");
-                    stage(plan, artifact.artifactId(), artifact.runtimeId(), artifact.version(), artifact.source());
-                }
+                stage(plan, validatedArtifacts(deployment.artifacts()));
             }
             return execute(plan);
         }).onErrorResume(error -> plan.executing ? Mono.error(error) : fail(plan, error));
@@ -399,6 +404,23 @@ public final class FibraEngine implements AutoCloseable {
         var transaction = artifactStore.prepareInstall(id, runtimeId, version, source);
         plan.installs.add(transaction);
         plan.artifacts.put(id, transaction.candidate());
+    }
+
+    private void stage(ChangeSet plan, List<DeploymentArtifact> artifacts) {
+        artifacts.forEach(artifact -> stage(plan, artifact.artifactId(),
+            artifact.runtimeId(), artifact.version(), artifact.source()));
+    }
+
+    private static List<DeploymentArtifact> validatedArtifacts(
+        List<DeploymentArtifact> artifacts) {
+        var selection = List.copyOf(Objects.requireNonNull(artifacts, "artifacts"));
+        var ids = new LinkedHashSet<ArtifactId>();
+        for (var artifact : selection) {
+            if (!ids.add(artifact.artifactId())) {
+                throw new IllegalArgumentException("duplicate deployment artifact");
+            }
+        }
+        return selection;
     }
 
     private Mono<EngineCommandResult> execute(ChangeSet plan) {
@@ -863,6 +885,7 @@ public final class FibraEngine implements AutoCloseable {
 
     public static final class Builder {
         private final DesiredStateRepository desiredRepository;
+        private InitialArtifactSource initialArtifacts = List::of;
         private PluginCatalog catalog = PluginCatalog.empty();
         private EngineStateStore stateStore = EngineStateStore.inMemory();
         private ArtifactStore artifactStore;
@@ -871,6 +894,9 @@ public final class FibraEngine implements AutoCloseable {
         private Duration autoRefreshInterval;
         private final Map<RuntimeId, PluginRuntimeAdapter> runtimeAdapters = new LinkedHashMap<>();
         private Builder(DesiredStateRepository repository) { desiredRepository = Objects.requireNonNull(repository, "repository"); }
+        public Builder initialArtifacts(InitialArtifactSource value) {
+            initialArtifacts = Objects.requireNonNull(value); return this;
+        }
         public Builder catalog(PluginCatalog value) { catalog = Objects.requireNonNull(value); return this; }
         public Builder stateStore(EngineStateStore value) { stateStore = Objects.requireNonNull(value); return this; }
         public Builder artifactStore(ArtifactStore value) { artifactStore = Objects.requireNonNull(value); return this; }
