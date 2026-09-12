@@ -39,7 +39,7 @@ class FormalPluginArtifactsIT {
         expected.put("fibra-tool-shell", List.of("fibra-shell"));
         expected.put("fibra-storage", List.of());
         expected.put("fibra-storage-json", List.of("fibra-storage"));
-        expected.put("fibra-config-client-test-plugin", List.of("fibra-storage"));
+        expected.put("fibra-tool-storage", List.of("fibra-storage"));
         var releaseVersion = first(VERSION, PluginAcceptanceHarness.manifest(
             PluginAcceptanceHarness.stagedJar("fibra-fs")));
 
@@ -71,7 +71,7 @@ class FormalPluginArtifactsIT {
 
         for (var artifact : List.of("fibra-fs-local", "fibra-tool-fs",
             "fibra-subprocess-local", "fibra-tool-fs-search", "fibra-shell-local",
-            "fibra-tool-shell", "fibra-storage-json", "fibra-config-client-test-plugin")) {
+            "fibra-tool-shell", "fibra-storage-json", "fibra-tool-storage")) {
             var entries = classEntries(PluginAcceptanceHarness.stagedJar(artifact));
             assertTrue(disjoint(entries, contractClasses), artifact + " bundles a dynamic contract class");
             assertTrue(disjoint(entries, hostContractClasses), artifact + " bundles fibra-tool-api");

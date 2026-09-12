@@ -19,5 +19,6 @@
   <modules>
     <module>fibra-storage</module>
     <module>fibra-storage-json</module>
+    <module>fibra-tool-storage</module>
   </modules>
 </project>

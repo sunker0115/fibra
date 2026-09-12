@@ -89,7 +89,7 @@
     </dependency>
     <dependency>
       <groupId>com.sstlfsj</groupId>
-      <artifactId>fibra-config-client-test-plugin</artifactId>
+      <artifactId>fibra-tool-storage</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -111,7 +111,7 @@
             </goals>
             <configuration>
               <includeGroupIds>com.sstlfsj</includeGroupIds>
-              <includeArtifactIds>fibra-fs,fibra-fs-local,fibra-tool-fs,fibra-subprocess,fibra-subprocess-local,fibra-tool-fs-search,fibra-shell,fibra-shell-local,fibra-tool-shell,fibra-storage,fibra-storage-json,fibra-config-client-test-plugin</includeArtifactIds>
+              <includeArtifactIds>fibra-fs,fibra-fs-local,fibra-tool-fs,fibra-subprocess,fibra-subprocess-local,fibra-tool-fs-search,fibra-shell,fibra-shell-local,fibra-tool-shell,fibra-storage,fibra-storage-json,fibra-tool-storage</includeArtifactIds>
               <outputDirectory>${project.build.directory}/plugin-artifacts</outputDirectory>
               <overWriteReleases>true</overWriteReleases>
               <overWriteSnapshots>true</overWriteSnapshots>
@@ -135,7 +135,7 @@
             <classpathDependencyExclude>com.sstlfsj:fibra-tool-shell</classpathDependencyExclude>
             <classpathDependencyExclude>com.sstlfsj:fibra-storage</classpathDependencyExclude>
             <classpathDependencyExclude>com.sstlfsj:fibra-storage-json</classpathDependencyExclude>
-            <classpathDependencyExclude>com.sstlfsj:fibra-config-client-test-plugin</classpathDependencyExclude>
+            <classpathDependencyExclude>com.sstlfsj:fibra-tool-storage</classpathDependencyExclude>
           </classpathDependencyExcludes>
           <systemPropertyVariables>
             <fibra.pluginArtifacts>${project.build.directory}/plugin-artifacts</fibra.pluginArtifacts>
@@ -158,7 +158,7 @@
             <classpathDependencyExclude>com.sstlfsj:fibra-tool-shell</classpathDependencyExclude>
             <classpathDependencyExclude>com.sstlfsj:fibra-storage</classpathDependencyExclude>
             <classpathDependencyExclude>com.sstlfsj:fibra-storage-json</classpathDependencyExclude>
-            <classpathDependencyExclude>com.sstlfsj:fibra-config-client-test-plugin</classpathDependencyExclude>
+            <classpathDependencyExclude>com.sstlfsj:fibra-tool-storage</classpathDependencyExclude>
           </classpathDependencyExcludes>
           <systemPropertyVariables>
             <fibra.pluginArtifacts>${project.build.directory}/plugin-artifacts</fibra.pluginArtifacts>

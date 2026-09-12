@@ -32,7 +32,7 @@ final class PluginAcceptanceHarness implements AutoCloseable {
         "fibra-fs", "fibra-fs-local", "fibra-tool-fs",
         "fibra-subprocess", "fibra-subprocess-local", "fibra-tool-fs-search",
         "fibra-shell", "fibra-shell-local", "fibra-tool-shell",
-        "fibra-storage", "fibra-storage-json", "fibra-config-client-test-plugin"
+        "fibra-storage", "fibra-storage-json", "fibra-tool-storage"
     };
 
     private static final Pattern VERSION = Pattern.compile("(?m)^version: ([^\\s]+)$");

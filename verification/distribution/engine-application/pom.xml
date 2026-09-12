@@ -48,6 +48,7 @@
             <artifactItem><groupId>com.sstlfsj</groupId><artifactId>fibra-tool-shell</artifactId><version>${fibra.version}</version><destFileName>fibra-tool-shell.jar</destFileName></artifactItem>
             <artifactItem><groupId>com.sstlfsj</groupId><artifactId>fibra-storage</artifactId><version>${fibra.version}</version><destFileName>fibra-storage.jar</destFileName></artifactItem>
             <artifactItem><groupId>com.sstlfsj</groupId><artifactId>fibra-storage-json</artifactId><version>${fibra.version}</version><destFileName>fibra-storage-json.jar</destFileName></artifactItem>
+            <artifactItem><groupId>com.sstlfsj</groupId><artifactId>fibra-tool-storage</artifactId><version>${fibra.version}</version><destFileName>fibra-tool-storage.jar</destFileName></artifactItem>
           </artifactItems>
         </configuration>
       </execution></executions>

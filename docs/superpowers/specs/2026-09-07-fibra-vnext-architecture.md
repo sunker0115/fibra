@@ -2,7 +2,7 @@
 
 日期：2026-09-07
 
-状态：设计与全项目架构验收已完成（2026-09-12）
+状态：设计已定稿；实现与最终交付验收进行中（2026-09-12）
 
 本文是 Fibra vNext 唯一权威设计，定义最终系统边界、运行模型、模块职责和验收标准；不记录旧版本
 迁移过程，也不按参考项目组织正文。外部实现的源码对拍统一收录在
@@ -607,9 +607,10 @@ Node 插件作为受管 sidecar，通过版本化 JSON-RPC 协议参与同一 `P
   清理或机器失效不在本地 sidecar 的保证内，非可信插件必须交给 container、Job Object 或外部 sandbox；
 - Engine snapshot 不暴露 Process、channel 或协议对象。
 
-`ProcessHandle.descendants()` 只能用于诊断快照，不能成为生命周期所有权来源。该边界借鉴 Codex 的
-POSIX process group / Windows Job Object 和 DSH 的 provider-managed range，但 Fibra 不引入它们的运行时；
-当前 Node 模块只携带最小监督器，不新增 npm/Cordis 依赖。
+`ProcessHandle.descendants()` 只能用于诊断快照，不能成为生命周期所有权来源。此段只定义 Node runtime：
+它维持最小监督器、POSIX PGID 与 Windows `taskkill` 的既有边界，不使用 Linux user-systemd scope 或 Windows
+Job Object，也不新增 npm/Cordis 依赖。`fibra-subprocess-local` 是独立的 Java provider，才采用 DSH 的
+provider-managed range；两者不得因同样处理子进程而混为一套实现。
 
 ### 6.4 Registry、Bridge 与 Spring
 
@@ -754,11 +755,11 @@ Java Harness 只是验证 built-in definition、EngineCommand、PublishedView、
 开发阶段使用本地依赖缓存执行受影响测试，必要时运行全仓验证；空依赖仓库的外部分发验证留到
 最终交付统一执行一次，发现分发问题时才针对修复重新验证，不因每次逻辑修改重复下载依赖。
 
-2026-09-12 最终验收已关闭本节全部门禁：48 模块离线 clean verify、24 个正式发布制品的两轮可复现
-比较、空仓库外部消费者、关闭 Central 回退后的隔离复验、真实正式多插件公开 API 调用及 archetype
-生成构建均通过。71 项 Cordis 与 44 项 Fibra 回归仍按独立账本计数；Windows 文件发布仅记录实现、
-注入测试和制品证据，不扩大为未执行的实机声明。逐项证据与平台边界见
-[行为验收账本](../references/2026-09-11-behavior-verification-ledger.md)。
+2026-09-12 的 48 模块离线 clean verify、24 个正式发布制品的可复现比较和空仓外部消费者结果仅是
+前一阶段证据；正式 `fibra-tool-storage`、正式宿主 CLI 与 ZIP 分发结构继续纳入后，必须按本节门禁重新
+执行全仓、可复现和空仓分发验证，不能以该历史结果关闭交付。71 项 Cordis 与 44 项 Fibra 回归仍按独立
+账本计数；Windows 文件发布仅记录实现、注入测试和制品证据，不扩大为未执行的实机声明。逐项证据与
+平台边界见[行为验收账本](../references/2026-09-11-behavior-verification-ledger.md)。
 
 ### 10.1 框架交付与多插件应用验收
 
@@ -773,7 +774,7 @@ Java Harness 只是验证 built-in definition、EngineCommand、PublishedView、
 | `tool-fs` | 文件访问后端与文件工具分离 | 多服务就绪、共享 provider、撤销与恢复、调用期间卸载 |
 | `tool-fs-search` | 文件名匹配与全文搜索 | 共享子进程服务、可选能力、超时与取消 |
 | `tool-shell` | 命令执行、输出与退出码 | 多级依赖、在途调用排空、进程及子进程清理 |
-| 配置存储 | JSON 键值保存、读取和变更通知 | 多消费者共享、事件监听回收、隔离与重启读取 |
+| 配置存储 | JSON 键值保存、读取和变更通知 | 正式 `tool-storage` 公开 load/put/remove/changes、多消费者共享、事件监听回收、隔离与重启读取 |
 
 每个场景都提供宿主调用入口和失败路径验证，并记录变更前后无关插件的实例身份、资源及状态，
 用于核实生命周期影响范围，不能只断言最终结果相同。文件和 Shell 验证使用专用临时目录及受控命令，
@@ -808,9 +809,9 @@ fibra-plugins
   │  └─ fibra-tool-shell/
   ├─ fibra-plugins-storage/               （领域聚合，不发布）
   │  ├─ fibra-storage/
-  │  └─ fibra-storage-json/
+  │  ├─ fibra-storage-json/
+  │  └─ fibra-tool-storage/
   └─ fibra-plugins-acceptance/            （真实组合验收，不发布）
-     ├─ fibra-config-client-test-plugin/
      └─ fibra-plugins-acceptance-host/
 ```
 
@@ -827,8 +828,9 @@ contract-only 插件制品；provider 和 consumer 以 `provided` 构建依赖�
 因此对同一发布列使用 `${project.version}` 精确约束，不使用 `*` 掩盖契约错配。宿主只通过
 `PluginRegistry` 部署/启停插件，并通过
 `PublishedRuntime` 查看和调用贡献，不注入专用 catalog，也不取得插件 Service 或内部 `Context`。构建
-测试检查插件 JAR 的 manifest、依赖边和重复 class。配置存储的验收 client 是不发布的真实测试 JAR，
-只放在 `fibra-plugins` 的验收子树；`fibra-example` 至多组合已发布插件，不拥有正式插件源码。
+测试检查插件 JAR 的 manifest、依赖边和重复 class。`fibra-tool-storage` 是与其他工具同等的正式发布
+consumer，`fibra-plugins-acceptance` 只保留组合宿主；`fibra-example` 至多组合已发布插件，不拥有正式插件
+源码。
 
 正式产品类型使用 `com.sstlfsj.fibra.plugins.*`：其中 `tool-api` 由宿主 classpath 提供，四个动态 contract
 由各自制品加载器定义。父优先查找成功时不得由插件私有副本遮蔽；父加载器不存在的动态 contract 则必须
@@ -843,18 +845,18 @@ Artifact requires（每条边都由 manifest 声明）
   fibra-subprocess-local / fibra-tool-fs-search ──requires──> fibra-subprocess
   fibra-shell-local / fibra-tool-shell ──requires──> fibra-shell
   fibra-shell-local ──requires──> fibra-subprocess
-  fibra-storage-json / config-client-test-plugin ──requires──> fibra-storage
+  fibra-storage-json / fibra-tool-storage ──requires──> fibra-storage
 
 RuntimeDomain Service graph
   fibra-fs-local ──FileSystem──> fibra-tool-fs
                  └─ResultSpillStore（tool-api 中的可选服务）──> fibra-tool-fs-search
   fibra-subprocess-local ──Subprocess──> fibra-tool-fs-search
                          └─Subprocess──> fibra-shell-local ──Shell──> fibra-tool-shell
-  shared realm:   fibra-storage-json-shared ──ConfigStore/event──> config-client-a、config-client-b
-  isolated realm: fibra-storage-json-isolated ──ConfigStore/event──> config-client-c
+  shared realm:   fibra-storage-json-shared ──ConfigStore/event──> tool-storage-a、tool-storage-b
+  isolated realm: fibra-storage-json-isolated ──ConfigStore/event──> tool-storage-c
 
 贡献发布
-  fibra-tool-fs / fibra-tool-fs-search / fibra-tool-shell / config-client-test-plugin
+  fibra-tool-fs / fibra-tool-fs-search / fibra-tool-shell / fibra-tool-storage
     ──ContributionRegistrar──> ContributionDirectory ──snapshot/routes──> PublishedRuntime ──调用──> host
 ```
 
@@ -865,7 +867,7 @@ RuntimeDomain Service graph
 | 文件 | UTF-8 文本、1-based offset、正整数上限、空文件/目录/非文本边界；元数据版本不读取文件内容；原子写并保留既有 POSIX mode/Windows ACL；默认唯一字面量编辑和显式 replace-all，编辑先校验 freshness，再全量拒绝 NUL，并以 LF 规范化匹配和恢复原换行风格 | 图片、附件、观察策略、授权升级与 UI 渲染 |
 | 搜索 | `rg --no-config` 直接 argv；glob 搜索隐藏/忽略文件并排除 VCS 元数据，grep 保持 ripgrep 默认 ignore/hidden 语义；退出码 1 表示空结果，非法模式/超时/取消/原始输出溢出明确失败；可选 spill 缺失或普通保存失败不改变搜索成功，但 spill 期间发生的调用取消仍以 `ABORTED` 结束 | 打包所有平台的 ripgrep 二进制、展示卡片和会话级 spill 所有权；示例由配置提供可执行文件并在启动时验证 |
 | Shell | 每次 fresh shell、显式 workdir、分离 stdout/stderr/exit code；非零退出是结果，超时与取消终止受管进程树；模型文本明确标记 stderr、空输出、截断、signal 和非零 exit | 后台 job、审批、沙箱策略和 DSH 环境变量注入 |
-| JSON 配置 | 缺失文件视为空并延迟物化；完整文档原子持久化；损坏或版本不匹配明确失败；失败写不改变内存或发事件，后续写仍可继续；事件只在持久化成功后发出；关闭拒绝新操作并排空在途写；重启读取 | per-record、SQLite、领域 schema/migration 和跨进程事件推送 |
+| JSON 配置 | 缺失文件视为空并延迟物化；完整文档原子持久化；损坏或版本不匹配明确失败；失败写不改变内存或发事件，后续写仍可继续；事件只在持久化成功后发出；关闭拒绝新操作并排空在途写；重启读取；正式 `tool-storage` 公开 `load`、`put`、`remove` 与 `changes`，其中变更是实例内不回放的最多 64 条快照，溢出以 `dropped` 标识 | per-record、SQLite、领域 schema/migration 和跨进程事件推送 |
 
 四条动态契约只表达本期真实 consumer 需要且能完整兑现的能力，不提前复制 DSH 的 PTY、后台进程、
 sandbox 或流式协议。`FileSystem` 的每项操作都接收 `InvocationContext`，使用稳定的 `FsErrorCode`
@@ -895,12 +897,16 @@ Windows 的目录同步只作能力探测和 best-effort，未实测平台不得
 
 `subprocess-local` 是搜索和 Shell 共用的唯一进程 seam；工具 consumer 不自行 `ProcessBuilder`。每次调用
 创建一个 `ProcessUnit`，并在启动前把其排空/终止动作登记到服务收到的 `InvocationContext` resource Scope。
-进程单元采用与 Node runtime supervisor 等价的平台策略：通过受管 supervisor 保持 stdin 生存租约，JVM
-异常退出时以 EOF 触发清理；POSIX 为 payload 建立独立进程组并按组 `TERM/KILL`，Windows 使用
-`taskkill /T /F`。测试平台必须验证超时、取消、父进程先退出及后代清理，不能只依赖一次
-`ProcessHandle.descendants()` 快照；未实测的平台不得声称已验证。配置事件与 `ConfigStore` 使用相同
-realm；测试必须同时证明同 realm 的两个 consumer 共享一个 provider，以及另一个 realm 的 provider 和
-consumer 对同名 key 隔离，不能把全局静态 listener 当作事件总线。
+该 Java provider 采用 provider-managed range：Windows 由 Job Object 管理，Linux 在 user manager 可用时由
+`systemd-run --user --scope --collect` 创建 transient scope；Linux manager 或 Job Object 不可用时记录一次明确
+告警并回退到较弱 supervisor。Darwin 没有等价的系统范围，保持 PGID supervisor 的较弱边界；`setsid`、重父化
+或 breakaway 后代可能逃逸，`waitForExit()` 不能在该回退路径承诺 managed-range 静默。范围 owner 仍通过受管
+supervisor 维持 stdin 生存租约，JVM 异常退出时以 EOF 触发清理；终止必须等待选定范围静默后结算，不能只依赖
+一次 `ProcessHandle.descendants()` 快照。`fibra-subprocess-local` 当前 72 项测试覆盖选择、范围生命周期、
+超时、取消、父进程先退出及后代清理；Windows Job 与 Linux scope 以注入 seam 覆盖实现路径，当前 macOS
+环境不把它们写成 Windows 或 Linux 实机通过，Linux user-systemd 的实机门禁仍待最终执行。配置事件与
+`ConfigStore` 使用相同 realm；测试必须同时证明同 realm 的两个 consumer 共享一个 provider，以及另一个 realm
+的 provider 和 consumer 对同名 key 隔离，不能把全局静态 listener 当作事件总线。
 
 `tool-fs-search` 放在 `fs/` 只是业务归属；固定 DSH 源码明确不注入 `fs`，因此它在 Fibra 也不声明
 `requires fibra-fs`。格式化结果 spill 通过父加载器唯一的 `ResultSpillStore` 做可选服务查询；缺少 provider

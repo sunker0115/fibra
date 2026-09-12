@@ -44,7 +44,7 @@ class EngineConsumerTest {
         "fibra-fs", "fibra-fs-local", "fibra-tool-fs",
         "fibra-subprocess", "fibra-subprocess-local", "fibra-tool-fs-search",
         "fibra-shell", "fibra-shell-local", "fibra-tool-shell",
-        "fibra-storage", "fibra-storage-json");
+        "fibra-storage", "fibra-storage-json", "fibra-tool-storage");
     private static final Map<String, LiteralValue> FS_REALM = realm("fibra.fs", "files");
     private static final Map<String, LiteralValue> PROCESS_REALM =
         realm("fibra.subprocess", "processes");
@@ -68,6 +68,9 @@ class EngineConsumerTest {
                 .anyMatch(name -> name.equals(id + ".jar")
                     || name.startsWith(id + "-") && name.endsWith(".jar")),
             () -> id + " leaked onto the host classpath"));
+        var externalPluginJar = Path.of(System.getProperty("plugin.jar")).getFileName().toString();
+        assertFalse(classpath.contains(externalPluginJar),
+            "dynamic external plugin leaked onto the host classpath");
 
         var content = Files.createDirectories(work.resolve("content"));
         Files.createDirectories(content.resolve("nested"));
@@ -112,9 +115,23 @@ class EngineConsumerTest {
 
             invoke(engine, "config-client", "config", Map.of(
                 "operation", "put", "key", "theme", "value", "dark"));
-            var config = map(invoke(engine, "config-client", "config",
+            var formalConfig = map(invoke(engine, "storage-tools", "load", Map.of())
+                .data().toJava());
+            assertEquals("dark", map(formalConfig.get("values")).get("theme"));
+            var changes = map(invoke(engine, "storage-tools", "changes", Map.of())
+                .data().toJava());
+            assertEquals(false, changes.get("dropped"));
+            var firstChange = map(list(changes.get("changes")).getFirst());
+            assertEquals("theme", firstChange.get("key"));
+            assertEquals("PUT", firstChange.get("operation"));
+            assertEquals("dark", firstChange.get("value"));
+
+            invoke(engine, "storage-tools", "put", Map.of(
+                "key", "language", "value", "zh-CN"));
+            var externalConfig = map(invoke(engine, "config-client", "config",
                 Map.of("operation", "load")).data().toJava());
-            assertEquals("dark", map(config.get("values")).get("theme"));
+            assertEquals("dark", map(externalConfig.get("values")).get("theme"));
+            assertEquals("zh-CN", map(externalConfig.get("values")).get("language"));
         }
     }
 
@@ -136,6 +153,7 @@ class EngineConsumerTest {
         entries.add(entry("shell-tools", "fibra-tool-shell", null, shellRealms));
         entries.add(entry("storage-provider", "storage-json", Map.of(
             "root", storage.toString()), STORAGE_REALM));
+        entries.add(entry("storage-tools", "tool-storage", null, STORAGE_REALM));
         entries.add(entry("config-client", "external", null, STORAGE_REALM));
         return new DesiredInputGraph(entries);
     }

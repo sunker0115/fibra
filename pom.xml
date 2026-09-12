@@ -288,7 +288,7 @@
       </dependency>
       <dependency>
         <groupId>com.sstlfsj</groupId>
-        <artifactId>fibra-config-client-test-plugin</artifactId>
+        <artifactId>fibra-tool-storage</artifactId>
         <version>${project.version}</version>
       </dependency>
     </dependencies>

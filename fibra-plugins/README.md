@@ -10,8 +10,7 @@ Maven reactor；真正安装到 Fibra 的是各 contract、provider 和 consumer
 | 宿主工具契约 | `fibra-tool-api` | 宿主与工具插件共享 `ToolRequest`、`ToolResult`、贡献类型和可选 spill 服务 |
 | 动态 contract | `fibra-fs`、`fibra-subprocess`、`fibra-shell`、`fibra-storage` | 定义一个领域的 Service 与 DTO；没有 entrypoint，不直接运行 |
 | provider | `fibra-fs-local`、`fibra-subprocess-local`、`fibra-shell-local`、`fibra-storage-json` | 在一个 realm 内提供 contract 定义的 Service |
-| consumer | `fibra-tool-fs`、`fibra-tool-fs-search`、`fibra-tool-shell` | 消费 Service，并把工具贡献注册到长期 `ContributionDirectory` |
-| 验收插件 | `fibra-config-client-test-plugin` | 只用于真实配置存储组合验收，不发布 |
+| consumer | `fibra-tool-fs`、`fibra-tool-fs-search`、`fibra-tool-shell`、`fibra-tool-storage` | 消费 Service，并把工具贡献注册到长期 `ContributionDirectory` |
 
 provider 与 consumer 是运行时角色，不是两套插件格式。二者都是普通 Fibra 插件：provider 通过
 `PluginDefinition.provide(...)` 声明服务，consumer 通过 `PluginDefinition.require(...)` 声明服务依赖。
@@ -24,7 +23,7 @@ manifest 的 `requires` 先建立制品级类型可见性，desired graph 中相
 fibra-fs-local ──提供 FileSystem──> fibra-tool-fs ──注册 read/write/edit──> PublishedRuntime
 fibra-subprocess-local ──提供 Subprocess──> fibra-tool-fs-search ──注册 glob/grep──> PublishedRuntime
 fibra-subprocess-local ──> fibra-shell-local ──提供 Shell──> fibra-tool-shell ──注册 bash──> PublishedRuntime
-fibra-storage-json ──提供 ConfigStore/event──> 同 realm 的多个 consumer
+fibra-storage-json ──提供 ConfigStore/event──> fibra-tool-storage ──注册 load/put/remove/changes──> PublishedRuntime
 ```
 
 正式插件对动态 contract 使用同一发布列的精确版本。构建依赖必须是 `provided`，实现 JAR 不得复制

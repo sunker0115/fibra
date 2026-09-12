@@ -140,7 +140,7 @@ class FormalMultiPluginIT {
     }
 
     @Test
-    void sharedStorageRealmPropagatesEventsWhileAnotherRealmIsolatedAndRestartRecovers(
+    void sharedStorageRealmPropagatesChangesWhileAnotherRealmIsolatedAndRestartRecovers(
         @TempDir Path work) throws Exception {
         var storage = work.resolve("storage");
         var state = work.resolve("engine-state");
@@ -150,36 +150,44 @@ class FormalMultiPluginIT {
         try (var harness = PluginAcceptanceHarness.start(artifacts,
              new FileEngineStateStore(state),
                  InMemoryDesiredStateRepository.empty())) {
-            harness.deploy(graph, "fibra-storage", "fibra-storage-json",
-                "fibra-config-client-test-plugin");
+            harness.deploy(graph, "fibra-storage", "fibra-storage-json", "fibra-tool-storage");
 
-            harness.invoke("config-a", "config", Map.of(
-                "operation", "put", "key", "theme", "value", "dark"));
-            var shared = configResult(harness.invoke("config-b", "config", Map.of("operation", "load")));
-            var isolated = configResult(harness.invoke("config-c", "config", Map.of("operation", "load")));
+            harness.invoke("config-a", "put", Map.of("key", "theme", "value", "dark"));
+            var shared = javaMap(harness.invoke("config-b", "load", Map.of()).data().toJava());
+            var isolated = javaMap(harness.invoke("config-c", "load", Map.of()).data().toJava());
             assertEquals("dark", javaMap(shared.get("values")).get("theme"));
-            assertEquals(1, javaList(shared.get("events")).size());
+            assertChanges(harness.invoke("config-b", "changes", Map.of()),
+                new ExpectedChange(1, "theme", "PUT", "dark"));
             assertTrue(javaMap(isolated.get("values")).isEmpty());
-            assertTrue(javaList(isolated.get("events")).isEmpty());
+            assertChanges(harness.invoke("config-c", "changes", Map.of()));
 
-            var configBEvents = storage.resolve("config-b.events");
-            assertEquals(List.of("1"), Files.readAllLines(configBEvents));
             harness.registry().disable("config-b").block(PluginAcceptanceHarness.TIMEOUT);
-            harness.invoke("config-a", "config", Map.of(
-                "operation", "put", "key", "language", "value", "zh-CN"));
-            assertEquals(List.of("1"), Files.readAllLines(configBEvents));
+            for (var tool : List.of("load", "put", "remove", "changes")) {
+                assertThrows(ContributionUnavailableException.class,
+                    () -> harness.invoke("config-b", tool, Map.of()));
+            }
+            harness.invoke("config-a", "put", Map.of("key", "language", "value", "zh-CN"));
             harness.registry().enable("config-b").block(PluginAcceptanceHarness.TIMEOUT);
-            var reenabled = configResult(harness.invoke("config-b", "config",
-                Map.of("operation", "load")));
+            var reenabled = javaMap(harness.invoke("config-b", "load", Map.of()).data().toJava());
             assertEquals("zh-CN", javaMap(reenabled.get("values")).get("language"));
-            assertTrue(javaList(reenabled.get("events")).isEmpty());
+            assertChanges(harness.invoke("config-b", "changes", Map.of()));
 
-            harness.invoke("config-c", "config", Map.of(
-                "operation", "put", "key", "theme", "value", "light"));
-            assertEquals("dark", javaMap(configResult(harness.invoke("config-a", "config",
-                Map.of("operation", "load"))).get("values")).get("theme"));
-            assertEquals("light", javaMap(configResult(harness.invoke("config-c", "config",
-                Map.of("operation", "load"))).get("values")).get("theme"));
+            harness.invoke("config-a", "put", Map.of("key", "font", "value", "serif"));
+            assertChanges(harness.invoke("config-b", "changes", Map.of()),
+                new ExpectedChange(3, "font", "PUT", "serif"));
+            harness.invoke("config-c", "put", Map.of("key", "theme", "value", "light"));
+            harness.invoke("config-c", "put", Map.of("key", "temporary", "value", true));
+            harness.invoke("config-c", "remove", Map.of("key", "temporary"));
+            assertChanges(harness.invoke("config-b", "changes", Map.of()),
+                new ExpectedChange(3, "font", "PUT", "serif"));
+            assertChanges(harness.invoke("config-c", "changes", Map.of()),
+                new ExpectedChange(1, "theme", "PUT", "light"),
+                new ExpectedChange(2, "temporary", "PUT", true),
+                new ExpectedChange(3, "temporary", "REMOVED", null));
+            assertEquals("dark", javaMap(javaMap(harness.invoke("config-a", "load", Map.of())
+                .data().toJava()).get("values")).get("theme"));
+            assertEquals("light", javaMap(javaMap(harness.invoke("config-c", "load", Map.of())
+                .data().toJava()).get("values")).get("theme"));
         }
 
         try (var reopened = PluginAcceptanceHarness.start(artifacts,
@@ -187,10 +195,16 @@ class FormalMultiPluginIT {
                  InMemoryDesiredStateRepository.empty())) {
             var current = reopened.engine().published().current();
             assertEquals(graph.plugins().keySet(), current.engine().instances().keySet());
-            assertEquals("dark", javaMap(configResult(reopened.invoke("config-b", "config",
-                Map.of("operation", "load"))).get("values")).get("theme"));
-            assertEquals("light", javaMap(configResult(reopened.invoke("config-c", "config",
-                Map.of("operation", "load"))).get("values")).get("theme"));
+            assertEquals("dark", javaMap(javaMap(reopened.invoke("config-b", "load", Map.of())
+                .data().toJava()).get("values")).get("theme"));
+            assertEquals("light", javaMap(javaMap(reopened.invoke("config-c", "load", Map.of())
+                .data().toJava()).get("values")).get("theme"));
+            assertChanges(reopened.invoke("config-a", "changes", Map.of()));
+            assertChanges(reopened.invoke("config-b", "changes", Map.of()));
+            assertChanges(reopened.invoke("config-c", "changes", Map.of()));
+            reopened.invoke("config-a", "put", Map.of("key", "layout", "value", "compact"));
+            assertChanges(reopened.invoke("config-b", "changes", Map.of()),
+                new ExpectedChange(4, "layout", "PUT", "compact"));
         }
     }
 
@@ -209,10 +223,11 @@ class FormalMultiPluginIT {
             harness.deploy(graph, PluginAcceptanceHarness.ALL_ARTIFACTS);
             var before = harness.engine().published().current();
             var stableInstances = instanceIdentities(before, "subprocess-provider", "shell-provider",
-                "shell-tools", "search-tools", "storage-shared", "config-a");
+                "shell-tools", "search-tools", "storage-shared", "storage-isolated", "config-a",
+                "config-b", "config-c");
             var stableResources = resourceIdentities(before, "fibra-subprocess",
                 "fibra-subprocess-local", "fibra-shell", "fibra-shell-local",
-                "fibra-tool-shell", "fibra-storage", "fibra-storage-json");
+                "fibra-tool-shell", "fibra-storage", "fibra-storage-json", "fibra-tool-storage");
 
             var command = "printf '%s %s' $$ $PPID > " + shellQuote(pidFile)
                 + "; : > " + shellQuote(entered)
@@ -240,10 +255,10 @@ class FormalMultiPluginIT {
                 changed.observed().get("fs-provider").identity());
             assertEquals(stableInstances, instanceIdentities(harness.engine().published().current(),
                 "subprocess-provider", "shell-provider", "shell-tools", "search-tools",
-                "storage-shared", "config-a"));
+                "storage-shared", "storage-isolated", "config-a", "config-b", "config-c"));
             assertEquals(stableResources, resourceIdentities(harness.engine().published().current(),
                 "fibra-subprocess", "fibra-subprocess-local", "fibra-shell", "fibra-shell-local",
-                "fibra-tool-shell", "fibra-storage", "fibra-storage-json"));
+                "fibra-tool-shell", "fibra-storage", "fibra-storage-json", "fibra-tool-storage"));
             assertFalse(held.isDone());
             assertTrue(ProcessHandle.of(payloadPid).map(ProcessHandle::isAlive).orElse(false));
             assertTrue(ProcessHandle.of(supervisorPid).map(ProcessHandle::isAlive).orElse(false));
@@ -338,14 +353,11 @@ class FormalMultiPluginIT {
         return List.of(
             entry("storage-shared", "storage-json", Map.of(
                 "root", storage.resolve("shared").toString()), shared),
-            entry("config-a", "config-client-test", Map.of(
-                "eventLog", storage.resolve("config-a.events").toString()), shared),
-            entry("config-b", "config-client-test", Map.of(
-                "eventLog", storage.resolve("config-b.events").toString()), shared),
+            entry("config-a", "tool-storage", null, shared),
+            entry("config-b", "tool-storage", null, shared),
             entry("storage-isolated", "storage-json", Map.of(
                 "root", storage.resolve("isolated").toString()), isolated),
-            entry("config-c", "config-client-test", Map.of(
-                "eventLog", storage.resolve("config-c.events").toString()), isolated));
+            entry("config-c", "tool-storage", null, isolated));
     }
 
     private static DesiredInputEntry entry(String id, String definition, Object config,
@@ -359,11 +371,24 @@ class FormalMultiPluginIT {
         return Map.of(service, LiteralValue.of(value));
     }
 
-    private static Map<String, Object> configResult(com.sstlfsj.fibra.plugins.tool.ToolResult result) {
-        var root = javaMap(result.data().toJava());
-        var document = javaMap(root.get("document"));
-        document.put("events", root.get("events"));
-        return document;
+    private static void assertChanges(com.sstlfsj.fibra.plugins.tool.ToolResult result,
+                                      ExpectedChange... expected) {
+        var snapshot = javaMap(result.data().toJava());
+        assertFalse((Boolean) snapshot.get("dropped"));
+        var changes = javaList(snapshot.get("changes")).stream()
+            .map(FormalMultiPluginIT::javaMap).toList();
+        assertEquals(expected.length, changes.size());
+        for (var index = 0; index < expected.length; index++) {
+            var actual = changes.get(index);
+            var change = expected[index];
+            assertEquals(change.revision(), ((Number) actual.get("revision")).longValue());
+            assertEquals(change.key(), actual.get("key"));
+            assertEquals(change.operation(), actual.get("operation"));
+            assertEquals(change.value(), actual.get("value"));
+        }
+    }
+
+    private record ExpectedChange(long revision, String key, String operation, Object value) {
     }
 
     private static Map<String, Long> instanceIdentities(PublishedView view, String... ids) {
