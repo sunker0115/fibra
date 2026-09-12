@@ -45,9 +45,9 @@ Windows 目录同步是 best-effort，不能据此承诺断电后的目录项持
 当前 Maven 插件 JAR 不捆绑外部可执行文件。宿主装配应用图时须给 `fibra-subprocess-local` 配置可执行的
 `nodeExecutable`，给 `fibra-tool-fs-search` 配置可执行的 `rgExecutable`，给 `fibra-shell-local` 配置
 可执行的 `bashExecutable`；建议全部使用绝对路径。搜索插件在激活时验证 ripgrep，Node.js 与 Bash
-不可启动时由首次调用明确失败。项目 CI 固定下载并校验 ripgrep 15.0.1，与 DSH 0.1.2-rc.1 的
-`@vscode/ripgrep` 基线一致。最终 CLI/ZIP 应按目标平台携带对应 sidecar 并注入这些既有字段，而不是把
-多平台二进制塞进每个插件 JAR。
+不可启动时由首次调用明确失败。项目 CI 固定下载并校验 ripgrep 15.0.1，与当前 DSH 0.1.5-rc.2
+锁定的 `@vscode/ripgrep` 1.18.0 一致。最终 CLI/ZIP 应按目标平台携带对应 sidecar 并注入这些既有字段，
+而不是把多平台二进制塞进每个插件 JAR。
 
 ## 插件模板与多模块产品
 
