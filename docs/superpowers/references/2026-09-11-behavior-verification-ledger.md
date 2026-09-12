@@ -57,6 +57,22 @@ CLI/ZIP 发行结构。
 路径；此前 `FibraEngineRuntimeAdapterTest` 停点仍未取得线程栈，不把单次成功扩大为该未知停点已定位，
 后续若复发由新的超时与失败制品保留现场。
 
+在继续排查本地同类无输出等待时，`FibraEngineIncrementalTest` 的失败配置修正场景取得了两份 JVM dump：
+命令等待在域收敛，Engine command 与 lifecycle 线程均空闲。根因是 FAILED/PENDING 终态先同步发布状态事件、
+后清除 `transitioning`；既有 `settled()` 等待者收到 revision 后立即在 lifecycle lane 重采样，仍看到转换中，
+再次等待下一 revision，而随后清除标志没有通知。内核现统一先清除转换标志再发布终态；
+`RuntimeDomainSettlementTest.failedTransitionWakesAnExistingDomainSettlementWaiter` 与
+`pendingTransitionWakesAnExistingDomainSettlementWaiter` 在旧顺序下稳定超时，修正后通过，原失败配置修正场景
+也通过。`PluginInstanceLifecycleContractTest` 另验证 ACTIVE/FAILED 状态观察者同步发起下一次更新时，新旧
+转换完成句柄互不串线，并固定已释放实例在用户 validator 前拒绝更新。这个缺陷具备造成远程无输出等待的
+条件，但此前 `FibraEngineRuntimeAdapterTest` 停点没有线程栈，
+仍不把历史 CI 停点追认为同一根因；超时和 dump 上传继续保留为最终分发门禁的诊断保护。
+
+本次批量目标与终态通知修正完成后执行 `mvn -o -pl fibra-core,fibra-engine,fibra-parity-tests -am test`：
+18 个依赖链模块全部通过，`fibra-core` 110 项、`fibra-parity-tests` 122 项均为 0 failure、0 error、
+0 skipped，Engine、Spring 及真实 Java/Node 跨运行时场景一并通过。该结果是当前架构阶段的定向回归，
+不替代 CLI/ZIP 合并后的最终全仓、可复现和空仓分发门禁。
+
 联合部署故障另由 `ApplyDeploymentPersistenceBoundaryTest` 6 项、
 `ApplyDeploymentMountFailureRecoveryTest` 1 项和 `EngineArtifactRecoveryTest` 2 项覆盖：同一携带新
 artifact 与 desired graph 的 `ApplyDeployment` 验证多制品暂存、运行时准备、制品元数据发布和目标保存
@@ -73,7 +89,7 @@ artifact 与 desired graph 的 `ApplyDeployment` 验证多制品暂存、运行�
 | `DecoratorSpecParityTest` | `injectOnClassMethod` | 1 项通过 |
 | `DisposeSpecParityTest` | `disposeByPlugin`<br>`disposeManually`<br>`yieldDispose`<br>`asyncReturn1`<br>`asyncReturn2`<br>`asyncYield1`<br>`asyncYield2Aborted`<br>`asyncYield3Aborted`<br>`asyncYield4AwaitDispose`<br>`returnWithError`<br>`yieldWithError`<br>`asyncReturnWithError`<br>`asyncYieldWithError` | 13 项通过；前三项以 `EffectHandle.metadata()` 表达只读所有权，并验证嵌套与幂等清理；`yieldWithError` 用 Java `Publisher` 表达“先产出再失败” |
 | `EventsSpecParityTest` | `ctxOn`<br>`ctxOnce`<br>`ctxParallel`<br>`ctxEmit`<br>`ctxSerial`<br>`ctxBail`<br>`ctxWaterfall` | 7 项通过；`EventMode` 固化在 `EventKey`，跨域隔离另有门禁 |
-| `FibraSpecParityTest` | `inertiaLock1`<br>`inertiaLock2`<br>`inertiaLock3`<br>`pluginError`<br>`disposeError`<br>`updateConfigOnWrappedFibra`<br>`restartWrappedFibra`<br>`updateConfigWhileInjectedServiceReloads` | 8 项通过；覆盖 provider epoch、配置预校验与清理失败隔离 |
+| `FibraSpecParityTest` | `inertiaLock1`<br>`inertiaLock2`<br>`inertiaLock3`<br>`pluginError`<br>`disposeError`<br>`updateConfigOnWrappedFibra`<br>`restartWrappedFibra`<br>`updateConfigWhileInjectedServiceReloads` | 8 项通过；覆盖 provider epoch、配置预校验、整组目标先登记后收敛与清理失败隔离 |
 | `InvokeSpecParityTest` | `functionalService`<br>`usesServiceShadowForCallableExtensions` | 2 项通过；PublishedRuntime lease 另有调用门禁 |
 | `IsolateSpecParityTest` | `isolatedContext`<br>`sharedLabel`<br>`isolatedEvent` | 3 项通过；域内业务 realm 与独立 RuntimeDomain 隔离分开验证 |
 | `LoggerSpecParityTest` | `keepsBoundedBufferInPlaceAndChronological`<br>`disposesExporterThatRegisteredDisposer`<br>`usesFibraNameOutsideService`<br>`honoursExplicitNameArgument`<br>`honoursInterceptName`<br>`usesServiceNameInsideServiceMethod`<br>`outerCallerInterceptOverridesServiceName`<br>`usesInnermostServiceNameAndRestoresOuter`<br>`usesServiceNameInsideServiceInit` | 9 项通过 |
@@ -113,7 +129,7 @@ artifact 与 desired graph 的 `ApplyDeployment` 验证多制品暂存、运行�
 | 使用场景 | DSH 源码行为 | Fibra 当前证据与缺口 |
 |---|---|---|
 | include、分组与局部开关 | Include 挂载子树，group 保留条目层级；隔离策略从父条目继承 | `DesiredConfigCompilerTest`、`DesiredInputGraphTest` 和 `DesiredRealmIsolationTest` 覆盖树形采集、禁用 include 不读取、命名空间、局部/命名 realm 和重启重建 |
-| 配置差量与启动交错 | Entry 无变化时跳过，普通 config 更新原 Fiber；Include 将初始装配和刷新排入同一队列 | `FibraEngineIncrementalTest` 8 项通过，包含启动未完成时提交新目标，两个已接受命令串行执行；旧 Scope/effect 释放，无关实例保留 |
+| 配置差量与启动交错 | Entry 无变化时跳过，普通 config 更新原 Fiber；同一 JavaScript 调用栈先写各 Fiber 目标配置，实际 reload 在微任务边界后执行；Include 将初始装配和刷新排入同一队列 | `FibraEngineIncrementalTest` 9 项与 `RuntimeDomainSettlementTest` 的批量契约通过：同一 ChangeSet 的既有实例先在一个 lifecycle turn 内登记全部配置目标，再独立收敛，provider 与 consumer 同改只观察到 `1:old`、`2:new`；批量登记前失败不应用任何目标，登记后实例失败以 `PLUGIN_BATCH_UPDATE_FAILED` 区分且不回滚。另覆盖启动未完成时提交新目标、两个已接受命令串行执行；旧 Scope/effect 释放，无关实例保留 |
 | 多层补丁组合 | `applyEntryPatches` 深拷贝输入，按顺序执行，新增条目可被后续补丁匹配；根/分组追加、名称保护及未匹配告警跳过 | `DesiredConfigPatchTest` 21 项与 `DesiredConfigCompilerTest` 9 项通过；覆盖固定索引、根/分组追加、浅覆盖、字面 null、include 边界、跳过诊断及非法有效结构拒绝。Engine 启动/刷新门禁证明告警不阻止后续有效补丁，刷新返回 warnings，无变化实例不重启 |
 | 源文件自动刷新、无效后修正 | HMR 将文件事件合并为 dirty 刷新，读取、解析和更新成功才接受新内容；关闭等待已接受刷新 | `AutomaticDesiredRefreshTest` 11 项、`DesiredSourceMonitorTest` 与 `DesiredInputBindingTest.invalidFileRefreshKeepsTheLastGoodTreeAndAcceptsTheNextValidEdit` 通过：文件事件与周期 resync 共用 Engine command lane；相同 source revision 不覆盖管理目标；已有持久目标启动时不被源覆盖，初次源观察失败无需等待长周期即可发布，瞬时失败后的首次成功观察只建立基线，但显式刷新仍立即导入；删除、无效源或条件表达式求值失败公开失败但保留 last-good 目标、实例、effects 和 mutation gate，坏 source revision 不接受，恢复后仅导入一次；来源失败分类不会掩盖后续管理命令失败；关闭等待已接受刷新，关闭后的 monitor 更新无操作 |
 | 条件配置与运行上下文 | Loader 在叶子 Fiber 的配置钩子求值；group/include 中的子条目配置保持字面值，避免提前使用错误上下文 | 配置层已建立 raw `when`/局部 `context`、独立 `ConfigContextSnapshot` 和受限 AST 求值；Engine 以 `ReplaceConfigContext` 提供独立 view/context CAS，在不保存 target、不创建 runtime resource update 的前提下消费 resolved config 并差量协调。`ConfigExpressionEvaluatorTest`、`DesiredEvaluationTest`、`DesiredConfigCompilerTest`、`DeploymentManifestTest`、`FibraEngineConditionalConfigTest` 7 项及自动刷新恢复测试覆盖严格求值、预检失败全量保留、条件子树启停、原实例 update、无关实例保留与重启派生。`CrossRuntimeConditionalConfigTest` 另以真实 JAR、真实 Node sidecar、`ArtifactStore` 和 `ApplyDeployment` 证明同一 raw target 下 Java 实收 resolved typed config 且实例/ClassLoader 不换；Node 条件实例按 context 激活，运行中 Node 的 resolved config 从 `before` 更新为 `after` 且仅该 sidecar 更换 PID；无关 Java 实例/effect、Node 实例/PID/runtime resource 及稳定 Node 的在途 RPC 保持，在途调用可由新 view 完成。失败预检不改任何已发布状态，source/target revision 与保存次数不变，最终 gate 开放且目标满足；Engine 关闭后 Java effect 仅清理一次，全部记录过的 Node PID 终止。本场景完成 |
@@ -147,7 +163,7 @@ artifact 与 desired graph 的 `ApplyDeployment` 验证多制品暂存、运行�
 
 | 验收项 | 证据与结论 |
 |---|---|
-| 长期 RuntimeDomain 与差量协调 | `RuntimeDomainIsolationTest`、`RuntimeDomainSettlementTest`、`FibraEngineIncrementalTest`、`PublishedRuntimePublicationTest`、`PublishedRuntimeLeaseTest`、`ContributionDrainLifecycleTest`、`CrossRuntimeConditionalConfigTest` 和 `CrossRuntimeSelfDisableTest` 覆盖域间隔离、启动期间目标变化、配置原实例更新、反向依赖闭包替换、旧路由拒绝、嵌套实例、关闭/提交交错及受影响调用排空；改变 Java/Node 局部实例时，无关实例、ClassLoader、Node PID、effects、runtime resource 与在途调用保持 |
+| 长期 RuntimeDomain 与差量协调 | `RuntimeDomainIsolationTest`、`RuntimeDomainSettlementTest`、`FibraEngineIncrementalTest`、`PublishedRuntimePublicationTest`、`PublishedRuntimeLeaseTest`、`ContributionDrainLifecycleTest`、`CrossRuntimeConditionalConfigTest` 和 `CrossRuntimeSelfDisableTest` 覆盖域间隔离、启动期间目标变化、配置原实例批量目标登记、终态收敛通知、反向依赖闭包替换、旧路由拒绝、嵌套实例、关闭/提交交错及受影响调用排空；改变 Java/Node 局部实例时，无关实例、ClassLoader、Node PID、effects、runtime resource 与在途调用保持 |
 | ChangeSet、持久边界与恢复 | `ApplyDeploymentPersistenceBoundaryTest` 6 项、`ApplyDeploymentMountFailureRecoveryTest` 1 项、`EngineArtifactRecoveryTest` 2 项及 artifact/state store 测试覆盖重复内容、半份写入、替换后同步失败、目标保存前后边界、保存后崩溃、缺失/损坏引用、mutation gate 和按完整清单重建；不恢复整代并存、切换或回滚模型 |
 | 诊断与 best-effort | `FilePluginAuditRepositoryTest`、`CleanupFailureDiagnosticsTest`、`DynamicPluginDiagnosticsTest` 及部署边界测试证明审计/清理失败可诊断，审计失败不反转成功部署，也不丢失错误证据 |
 | 真实 Java 与 Node | Java runtime 测试使用真实 JAR、依赖 DAG、父优先动态契约、资源委派、ClassSpace 和 ClassLoader 回收；Node runtime/sidecar 测试使用真实进程覆盖握手、RPC、心跳、超时、取消、异常退出、父进程退出和其既有 supervisor/进程组终止边界；Node 不使用也不宣称 Java `fibra-subprocess-local` 的 Linux systemd scope 或 Windows Job Object |

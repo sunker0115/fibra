@@ -32,6 +32,39 @@ class FibraEngineIncrementalTest {
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
 
     @Test
+    void oneDesiredGraphChangeDoesNotStartAConsumerWithMixedProviderAndConsumerConfig() {
+        var service = ServiceKey.of("value", Integer.class);
+        var applied = new CopyOnWriteArrayList<String>();
+        var provider = PluginDefinition.builder("provider", String.class,
+            () -> (context, config) -> {
+                context.services().provide(service, Integer.parseInt(config));
+                return Mono.empty();
+            }).provide(service).build();
+        var consumer = PluginDefinition.builder("consumer", String.class,
+            () -> (context, config) -> {
+                applied.add(context.services().require(service) + ":" + config);
+                return Mono.empty();
+            }).require(service).build();
+        var catalog = PluginCatalog.of(
+            new PluginCatalogEntry<>(provider, value -> (String) value),
+            new PluginCatalogEntry<>(consumer, value -> (String) value));
+        var initial = graph(entry("provider", "provider", "1"),
+            entry("consumer", "consumer", "old"));
+        var changed = graph(entry("provider", "provider", "2"),
+            entry("consumer", "consumer", "new"));
+
+        try (var engine = FibraEngine.builder(new InMemoryDesiredStateRepository(initial))
+            .catalog(catalog).build()) {
+            var started = engine.start().block(TIMEOUT);
+
+            engine.submit(new ReplaceDesiredGraph(started.viewRevision(),
+                started.engine().desiredSource().revision(), changed)).block(TIMEOUT);
+
+            assertEquals(List.of("1:old", "2:new"), applied);
+        }
+    }
+
+    @Test
     void replacementSubmittedDuringStartupWaitsForTheAcceptedInitialTarget() throws Exception {
         var entered = Sinks.<Scope>one();
         var release = Sinks.<Void>one();

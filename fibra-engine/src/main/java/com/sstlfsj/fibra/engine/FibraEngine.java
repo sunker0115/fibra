@@ -1,6 +1,7 @@
 package com.sstlfsj.fibra.engine;
 
 import com.sstlfsj.fibra.Context;
+import com.sstlfsj.fibra.FibraException;
 import com.sstlfsj.fibra.ManagedPluginControl;
 import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.PluginInstance;
@@ -30,6 +31,7 @@ import com.sstlfsj.fibra.config.DesiredInputGraph.EffectiveDesiredEntry;
 import com.sstlfsj.fibra.config.DesiredSourceSnapshot;
 import com.sstlfsj.fibra.config.DesiredStateRepository;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
+import com.sstlfsj.fibra.runtime.PluginUpdate;
 import com.sstlfsj.fibra.runtime.RuntimeDomain;
 import com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot;
 import com.sstlfsj.fibra.value.LiteralValue;
@@ -519,40 +521,44 @@ public final class FibraEngine implements AutoCloseable {
         })).then(loop.call(() -> {
             assertClean();
             if (plan.update != null) plan.update.adopt();
-            return Flux.fromIterable(plan.bound.entrySet()).concatMap(entry -> loop.call(() -> {
-                var previous = instances.get(entry.getKey());
-                var next = entry.getValue();
-                if (previous == null) {
-                    var scope = domain.rootScope().openChild("plugin:" + entry.getKey());
-                    try {
-                        var managed = mount(scope, next);
-                        instances.put(entry.getKey(), managed);
-                    } catch (RuntimeException | Error error) {
-                        return scope.closeAsync().then(Mono.error(error));
-                    }
+            var existing = plan.bound.entrySet().stream()
+                .map(entry -> new ExistingTarget(entry.getKey(),
+                    instances.get(entry.getKey()), entry.getValue()))
+                .filter(target -> target.previous() != null)
+                .toList();
+            var updating = existing.stream()
+                .filter(target -> !sameInput(target.previous().bound(), target.next()))
+                .toList();
+            var updates = updating.stream().map(target -> preparedUpdate(
+                target.previous(), target.next())).toArray(PluginUpdate<?>[]::new);
+            return domain.updateBatch(updates).onErrorResume(error ->
+                    error instanceof FibraException failure
+                        && FibraException.PLUGIN_BATCH_UPDATE_FAILED.equals(failure.code())
+                        ? Mono.empty() : Mono.error(error))
+                .then(loop.call(() -> {
+                    existing.forEach(target -> instances.put(target.id(),
+                        target.previous().withBound(target.next())));
                     refresh();
-                    return Mono.empty();
-                }
-                if (!sameInput(previous.bound(), next)) return update(previous, next)
-                    .onErrorResume(error -> {
-                        if (previous.instance().state() != PluginInstanceState.FAILED) return Mono.error(error);
-                        return Mono.empty();
-                    })
-                    .then(loop.call(() -> {
-                        instances.put(entry.getKey(), previous.withBound(next));
-                        refresh();
-                        return Mono.empty();
-                    }));
-                // Declaration-only requirements may change without restarting the instance.
-                instances.put(entry.getKey(), previous.withBound(next));
-                return Mono.empty();
-            })).then();
+                    return Flux.fromIterable(plan.bound.entrySet())
+                        .filter(entry -> !instances.containsKey(entry.getKey()))
+                        .concatMap(entry -> loop.call(() -> {
+                            var scope = domain.rootScope().openChild("plugin:" + entry.getKey());
+                            try {
+                                var managed = mount(scope, entry.getValue());
+                                instances.put(entry.getKey(), managed);
+                            } catch (RuntimeException | Error error) {
+                                return scope.closeAsync().then(Mono.error(error));
+                            }
+                            refresh();
+                            return Mono.empty();
+                        })).then();
+                }));
         }));
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private static Mono<Void> update(Managed<?> previous, Bound<?> next) {
-        return ((PluginInstance) previous.instance()).updatePrepared(next.prepared()).then();
+    private static PluginUpdate<?> preparedUpdate(Managed<?> previous, Bound<?> next) {
+        return PluginUpdate.prepared((PluginInstance) previous.instance(), next.prepared());
     }
 
     private Map<String, Bound<?>> bind(DesiredCompilation desired, DesiredEvaluation evaluation,
@@ -956,6 +962,8 @@ public final class FibraEngine implements AutoCloseable {
     }
     private record PublishedState(PublishedView view, ContributionRoutes routes) { }
     private record ObservedRuntime(RuntimeDomainSnapshot domain, ContributionDirectoryView contributions) { }
+
+    private record ExistingTarget(String id, Managed<?> previous, Bound<?> next) { }
     private record LocalRealm(String ownerEntryId) {
         @Override public String toString() { return "local:" + ownerEntryId; }
     }

@@ -157,30 +157,39 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner, D
     }
 
     private Mono<PluginInstance<C>> update(Supplier<PluginDefinition.Prepared<C>> prepared) {
-        return lifecycle().call(() -> {
-            if (disposeRequested || state == PluginInstanceState.DISPOSED) {
-                return Mono.error(new FibraException(FibraException.PLUGIN_DISPOSED,
-                    "plugin instance \"" + id + "\" is disposed"));
-            }
-            return applyPrepared(prepared.get());
-        });
+        return domain.update(this, prepared);
     }
 
-    private Mono<PluginInstance<C>> applyPrepared(PluginDefinition.Prepared<C> prepared) {
-        prepared = Objects.requireNonNull(prepared, "prepared");
-        if (prepared.definition() != definition) {
-            throw new IllegalArgumentException("prepared config belongs to another plugin definition");
+    void validateBatchUpdate(PluginDefinition.Prepared<?> prepared) {
+        validateUpdateAvailable();
+        if (Objects.requireNonNull(prepared, "prepared").definition() != definition) {
+            throw new IllegalArgumentException(
+                "prepared config belongs to another plugin definition");
         }
-        validatedConfig = prepared.config();
+    }
+
+    void validateUpdateAvailable() {
+        if (disposeRequested || state == PluginInstanceState.DISPOSED) {
+            throw new FibraException(FibraException.PLUGIN_DISPOSED,
+                "plugin instance \"" + id + "\" is disposed");
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    void registerBatchUpdate(PluginDefinition.Prepared<?> prepared) {
+        var typed = (PluginDefinition.Prepared<C>) prepared;
+        validatedConfig = typed.config();
         configRevision++;
         error = null;
         if (state == PluginInstanceState.FAILED) {
             state = PluginInstanceState.PENDING;
             currentEpoch = null;
         }
-        refreshDependencies();
         domain.diagnosticChanged();
-        return settled();
+    }
+
+    void convergeBatchUpdate() {
+        refreshDependencies();
     }
 
     @Override
@@ -414,9 +423,9 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner, D
         if (Objects.equals(targetEpoch, loadingEpoch)) {
             currentEpoch = loadingEpoch;
             error = null;
-            transitioning = false;
-            setState(PluginInstanceState.ACTIVE);
-            stable.tryEmitValue(this);
+            var completed = completeTransition(PluginInstanceState.ACTIVE);
+            domain.services().ownerStateChanged(this);
+            completed.tryEmitValue(this);
             return;
         }
         startStop();
@@ -509,36 +518,38 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner, D
     }
 
     private void finishPending() {
-        state = PluginInstanceState.PENDING;
-        states.tryEmitNext(state);
-        transitioning = false;
-        stable.tryEmitValue(this);
+        var completed = completeTransition(PluginInstanceState.PENDING);
+        completed.tryEmitValue(this);
     }
 
     private void finishFailed(Throwable failure) {
         error = failure;
-        state = PluginInstanceState.FAILED;
-        states.tryEmitNext(state);
-        transitioning = false;
+        var completed = completeTransition(PluginInstanceState.FAILED);
         domain.services().ownerStateChanged(this);
-        stable.tryEmitError(failure);
+        completed.tryEmitError(failure);
     }
 
     private void finishDisposed(Throwable failure) {
-        state = PluginInstanceState.DISPOSED;
-        states.tryEmitNext(state);
-        transitioning = false;
+        var completed = completeTransition(PluginInstanceState.DISPOSED);
         scope.removePlugin(this);
         domain.removeInstance(this);
         domain.services().ownerStateChanged(this);
         if (failure == null) {
-            stable.tryEmitValue(this);
+            completed.tryEmitValue(this);
             disposed.tryEmitEmpty();
         } else {
-            stable.tryEmitError(failure);
+            completed.tryEmitError(failure);
             disposed.tryEmitError(failure);
         }
         states.tryEmitComplete();
+    }
+
+    private Sinks.One<PluginInstance<C>> completeTransition(PluginInstanceState nextState) {
+        var completed = stable;
+        transitioning = false;
+        state = nextState;
+        states.tryEmitNext(nextState);
+        return completed;
     }
 
     private void setState(PluginInstanceState nextState) {

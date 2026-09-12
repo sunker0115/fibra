@@ -4,6 +4,7 @@ import com.sstlfsj.fibra.Plugin;
 import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.PluginInstanceState;
 import com.sstlfsj.fibra.ServiceKey;
+import com.sstlfsj.fibra.runtime.PluginUpdate;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
@@ -158,26 +159,26 @@ class FibraSpecParityTest extends CordisSpecSupport {
     @Test
     void updateConfigWhileInjectedServiceReloads() {
         var applied = new CopyOnWriteArrayList<String>();
+        var domain = runtime.openDomain("batched-config-update");
+        var scopedRoot = domain.rootScope().context();
         var providerDefinition = PluginDefinition.builder("provider", Integer.class,
-                () -> (context, value) -> {
-                    context.services().provide(FOO, new Value(value));
-                    return Mono.empty();
-                })
+            () -> (context, value) -> {
+                context.services().provide(FOO, new Value(value));
+                return Mono.empty();
+            })
             .provide(FOO).build();
-        var provider = root.plugins().mount("provider", providerDefinition.prepare(1));
+        var provider = scopedRoot.plugins().mount("provider", providerDefinition.prepare(1));
         var consumerDefinition = PluginDefinition.builder("consumer", String.class,
                 () -> (context, mode) -> {
                     applied.add(context.services().require(FOO).number + ":" + mode);
                     return Mono.empty();
                 })
             .require(FOO).build();
-        var consumer = root.plugins().mount("consumer", consumerDefinition.prepare("old"));
+        var consumer = scopedRoot.plugins().mount("consumer", consumerDefinition.prepare("old"));
         await(provider);
         await(consumer);
-        provider.update(2);
-        consumer.update("new");
-        await(provider);
-        await(consumer);
+        domain.updateBatch(PluginUpdate.config(provider, 2),
+            PluginUpdate.config(consumer, "new")).block(TIMEOUT);
         assertEquals(List.of("1:old", "2:new"), applied);
         assertEquals(PluginInstanceState.ACTIVE, consumer.state());
     }

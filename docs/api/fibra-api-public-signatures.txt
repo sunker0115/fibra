@@ -120,6 +120,7 @@ public final class com.sstlfsj.fibra.FibraException extends java.lang.IllegalSta
   public static final java.lang.String EFFECT_INACTIVE;
   public static final java.lang.String PLUGIN_DUPLICATE;
   public static final java.lang.String PLUGIN_DISPOSED;
+  public static final java.lang.String PLUGIN_BATCH_UPDATE_FAILED;
   public static final java.lang.String PLUGIN_UNDECLARED_SERVICE;
   public static final java.lang.String PLUGIN_DISABLE_UNAVAILABLE;
   public com.sstlfsj.fibra.FibraException(java.lang.String, java.lang.String);

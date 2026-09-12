@@ -5,8 +5,9 @@ import com.sstlfsj.fibra.internal.DefaultRuntimeDomain;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.Objects;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /** 在一个 FibraRuntime lifecycle lane 内独立拥有可见性与资源树的托管运行域。 */
 public final class RuntimeDomain implements AutoCloseable {
@@ -45,6 +46,16 @@ public final class RuntimeDomain implements AutoCloseable {
     /** 等待本域已创建的插件实例完成当前生命周期收敛。 */
     public Mono<Void> settled() {
         return delegate.settled();
+    }
+
+    /**
+     * 先校验整组更新，再在同一个 lifecycle turn 内登记全部目标；全部目标登记后才允许实例收敛。
+     * 登记前失败不应用任何目标；登记后的实例失败以
+     * {@link com.sstlfsj.fibra.FibraException#PLUGIN_BATCH_UPDATE_FAILED} 报告，且不触发运行态回滚。
+     */
+    public Mono<Void> updateBatch(PluginUpdate<?>... updates) {
+        Objects.requireNonNull(updates, "updates");
+        return delegate.updateBatch(Arrays.asList(updates));
     }
 
     public Mono<Void> closeAsync() {

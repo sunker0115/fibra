@@ -1,6 +1,10 @@
 package com.sstlfsj.fibra.internal;
 
+import com.sstlfsj.fibra.FibraException;
+import com.sstlfsj.fibra.PluginDefinition;
+import com.sstlfsj.fibra.PluginInstance;
 import com.sstlfsj.fibra.Scope;
+import com.sstlfsj.fibra.runtime.PluginUpdate;
 import com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -8,11 +12,13 @@ import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 public final class DefaultRuntimeDomain {
     private final DefaultFibraRuntime runtime;
@@ -107,6 +113,81 @@ public final class DefaultRuntimeDomain {
     public Mono<Void> settled() {
         return Mono.defer(this::awaitSettlement);
     }
+
+    public Mono<Void> updateBatch(List<? extends PluginUpdate<?>> updates) {
+        Objects.requireNonNull(updates, "updates");
+        var requested = List.copyOf(updates);
+        final List<PluginInstanceImpl<?>> updated;
+        try {
+            updated = applyUpdateBatch(() -> registerUpdateTargets(
+                requested.stream().map(this::target).toList()));
+        } catch (RuntimeException | Error failure) {
+            return Mono.error(failure);
+        }
+        return settled().then(Mono.whenDelayError(updated.stream()
+                .map(PluginInstanceImpl::settled).toList()))
+            .onErrorMap(failure -> new FibraException(
+                FibraException.PLUGIN_BATCH_UPDATE_FAILED,
+                "one or more plugin updates failed after their targets were registered",
+                failure));
+    }
+
+    <C> Mono<PluginInstance<C>> update(PluginInstanceImpl<C> instance,
+                                       Supplier<PluginDefinition.Prepared<C>> prepared) {
+        Objects.requireNonNull(instance, "instance");
+        Objects.requireNonNull(prepared, "prepared");
+        try {
+            applyUpdateBatch(() -> {
+                instance.validateUpdateAvailable();
+                return registerUpdateTargets(List.of(
+                    new BatchTarget(instance, prepared.get())));
+            });
+        } catch (RuntimeException | Error failure) {
+            return Mono.error(failure);
+        }
+        return instance.settled();
+    }
+
+    private <T> T applyUpdateBatch(Callable<T> updates) {
+        Objects.requireNonNull(updates, "updates");
+        return runtime.lifecycle().call(() -> {
+            if (closeRequested.get()) {
+                throw new IllegalStateException("runtime domain is closing");
+            }
+            return updates.call();
+        });
+    }
+
+    private BatchTarget target(PluginUpdate<?> update) {
+        Objects.requireNonNull(update, "updates must not contain null");
+        if (!(update.instance() instanceof PluginInstanceImpl<?> instance)
+            || instance.domain() != this) {
+            throw new IllegalArgumentException(
+                "plugin instance does not belong to runtime domain \"" + name + "\"");
+        }
+        return new BatchTarget(instance, update.prepared());
+    }
+
+    private List<PluginInstanceImpl<?>> registerUpdateTargets(
+        List<BatchTarget> targets) {
+        var identities = new IdentityHashMap<PluginInstanceImpl<?>, Boolean>();
+        for (var target : targets) {
+            if (identities.put(target.instance(), Boolean.TRUE) != null) {
+                throw new IllegalArgumentException(
+                    "plugin update batch contains duplicate instance \""
+                        + target.instance().id() + "\"");
+            }
+        }
+        targets.forEach(target -> target.instance()
+            .validateBatchUpdate(target.prepared()));
+        targets.forEach(target -> target.instance()
+            .registerBatchUpdate(target.prepared()));
+        targets.forEach(target -> target.instance().convergeBatchUpdate());
+        return targets.stream().map(BatchTarget::instance).toList();
+    }
+
+    private record BatchTarget(PluginInstanceImpl<?> instance,
+                               PluginDefinition.Prepared<?> prepared) { }
 
     void diagnosticChanged() {
         if (!snapshotPending && !closed.get()) {

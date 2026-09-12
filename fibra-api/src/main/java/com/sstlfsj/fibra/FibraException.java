@@ -11,6 +11,7 @@ public final class FibraException extends IllegalStateException {
     public static final String EFFECT_INACTIVE = "EFFECT_INACTIVE";
     public static final String PLUGIN_DUPLICATE = "PLUGIN_DUPLICATE";
     public static final String PLUGIN_DISPOSED = "PLUGIN_DISPOSED";
+    public static final String PLUGIN_BATCH_UPDATE_FAILED = "PLUGIN_BATCH_UPDATE_FAILED";
     public static final String PLUGIN_UNDECLARED_SERVICE = "PLUGIN_UNDECLARED_SERVICE";
     public static final String PLUGIN_DISABLE_UNAVAILABLE = "PLUGIN_DISABLE_UNAVAILABLE";
 

@@ -9,6 +9,18 @@ public final class com.sstlfsj.fibra.runtime.FibraRuntime implements java.lang.A
   public reactor.core.publisher.Mono<java.lang.Void> closeAsync();
   public void close();
 }
+## com.sstlfsj.fibra.runtime.PluginUpdate
+Compiled from "PluginUpdate.java"
+public final class com.sstlfsj.fibra.runtime.PluginUpdate<C> extends java.lang.Record {
+  public com.sstlfsj.fibra.runtime.PluginUpdate(com.sstlfsj.fibra.PluginInstance<C>, com.sstlfsj.fibra.PluginDefinition$Prepared<C>);
+  public static <C> com.sstlfsj.fibra.runtime.PluginUpdate<C> config(com.sstlfsj.fibra.PluginInstance<C>, C);
+  public static <C> com.sstlfsj.fibra.runtime.PluginUpdate<C> prepared(com.sstlfsj.fibra.PluginInstance<C>, com.sstlfsj.fibra.PluginDefinition$Prepared<C>);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public com.sstlfsj.fibra.PluginInstance<C> instance();
+  public com.sstlfsj.fibra.PluginDefinition$Prepared<C> prepared();
+}
 ## com.sstlfsj.fibra.runtime.RuntimeDomain
 Compiled from "RuntimeDomain.java"
 public final class com.sstlfsj.fibra.runtime.RuntimeDomain implements java.lang.AutoCloseable {
@@ -19,6 +31,7 @@ public final class com.sstlfsj.fibra.runtime.RuntimeDomain implements java.lang.
   public java.util.List<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot$CleanupFailure> cleanupFailures(com.sstlfsj.fibra.Scope);
   public reactor.core.publisher.Flux<com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot> snapshots();
   public reactor.core.publisher.Mono<java.lang.Void> settled();
+  public reactor.core.publisher.Mono<java.lang.Void> updateBatch(com.sstlfsj.fibra.runtime.PluginUpdate<?>...);
   public reactor.core.publisher.Mono<java.lang.Void> closeAsync();
   public void close();
 }

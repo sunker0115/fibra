@@ -7,10 +7,15 @@ import com.sstlfsj.fibra.ServiceKey;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -258,6 +263,87 @@ class PluginInstanceLifecycleContractTest {
     }
 
     @Test
+    void activeStateObserverCanUpdateWithoutCorruptingEitherTransitionSignal() throws Exception {
+        var firstStart = reactor.core.publisher.Sinks.<Void>one();
+        var nextStart = reactor.core.publisher.Sinks.<Void>one();
+        var updateStarted = new CountDownLatch(1);
+        var updateResult = new AtomicReference<CompletableFuture<com.sstlfsj.fibra.PluginInstance<String>>>();
+        var definition = PluginDefinition.builder("reentrant-active", String.class,
+            () -> (context, config) -> "old".equals(config)
+                ? firstStart.asMono() : nextStart.asMono()).build();
+
+        try (var runtime = FibraRuntime.create()) {
+            var instance = runtime.rootScope().context().plugins()
+                .mount("reentrant-active", definition.prepare("old"));
+            var firstResult = instance.settled().toFuture();
+            var observation = instance.states()
+                .filter(state -> state == PluginInstanceState.ACTIVE).take(1)
+                .subscribe(ignored -> {
+                    updateResult.set(instance.update("new").toFuture());
+                    updateStarted.countDown();
+                });
+            try {
+                firstStart.tryEmitEmpty();
+                assertTrue(updateStarted.await(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
+                assertSame(instance, firstResult.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
+                assertFalse(updateResult.get().isDone());
+
+                nextStart.tryEmitEmpty();
+                assertSame(instance,
+                    updateResult.get().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
+                assertEquals("new", instance.config());
+                assertEquals(PluginInstanceState.ACTIVE, instance.state());
+            } finally {
+                firstStart.tryEmitEmpty();
+                nextStart.tryEmitEmpty();
+                observation.dispose();
+            }
+        }
+    }
+
+    @Test
+    void failedStateObserverCanRecoverWithoutSendingOldFailureToTheNewTransition() throws Exception {
+        var firstStart = reactor.core.publisher.Sinks.<Void>one();
+        var nextStart = reactor.core.publisher.Sinks.<Void>one();
+        var failure = new IllegalStateException("first start failed");
+        var updateStarted = new CountDownLatch(1);
+        var updateResult = new AtomicReference<CompletableFuture<com.sstlfsj.fibra.PluginInstance<String>>>();
+        var definition = PluginDefinition.builder("reentrant-failed", String.class,
+            () -> (context, config) -> "bad".equals(config)
+                ? firstStart.asMono() : nextStart.asMono()).build();
+
+        try (var runtime = FibraRuntime.create()) {
+            var instance = runtime.rootScope().context().plugins()
+                .mount("reentrant-failed", definition.prepare("bad"));
+            var firstResult = instance.settled().toFuture();
+            var observation = instance.states()
+                .filter(state -> state == PluginInstanceState.FAILED).take(1)
+                .subscribe(ignored -> {
+                    updateResult.set(instance.update("good").toFuture());
+                    updateStarted.countDown();
+                });
+            try {
+                firstStart.tryEmitError(failure);
+                assertTrue(updateStarted.await(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
+                var reported = assertThrows(ExecutionException.class,
+                    () -> firstResult.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
+                assertSame(failure, reported.getCause());
+                assertFalse(updateResult.get().isDone());
+
+                nextStart.tryEmitEmpty();
+                assertSame(instance,
+                    updateResult.get().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
+                assertEquals("good", instance.config());
+                assertEquals(PluginInstanceState.ACTIVE, instance.state());
+            } finally {
+                firstStart.tryEmitError(failure);
+                nextStart.tryEmitEmpty();
+                observation.dispose();
+            }
+        }
+    }
+
+    @Test
     void disposedInstanceRejectsPreparedUpdateWithoutApplyingIt() {
         var definition = PluginDefinition.builder("disposed-prepared", String.class,
             () -> (context, config) -> reactor.core.publisher.Mono.empty()).build();
@@ -271,6 +357,34 @@ class PluginInstanceLifecycleContractTest {
                 () -> instance.updatePrepared(definition.prepare("next")).block(TIMEOUT));
 
             assertEquals(com.sstlfsj.fibra.FibraException.PLUGIN_DISPOSED, failure.code());
+            assertEquals("initial", instance.config());
+        }
+    }
+
+    @Test
+    void disposedInstanceRejectsRawUpdateBeforeRunningItsValidator() {
+        var validations = new AtomicInteger();
+        var definition = PluginDefinition.builder("disposed-raw", String.class,
+            () -> (context, config) -> reactor.core.publisher.Mono.empty())
+            .validator(config -> {
+                validations.incrementAndGet();
+                if ("next".equals(config)) {
+                    throw new IllegalArgumentException("validator must not run after disposal");
+                }
+                return config;
+            }).build();
+
+        try (var runtime = FibraRuntime.create()) {
+            var instance = runtime.rootScope().context().plugins()
+                .mount("disposed-raw", definition.prepare("initial"));
+            instance.settled().block(TIMEOUT);
+            instance.dispose().block(TIMEOUT);
+
+            var failure = assertThrows(com.sstlfsj.fibra.FibraException.class,
+                () -> instance.update("next").block(TIMEOUT));
+
+            assertEquals(com.sstlfsj.fibra.FibraException.PLUGIN_DISPOSED, failure.code());
+            assertEquals(1, validations.get());
             assertEquals("initial", instance.config());
         }
     }

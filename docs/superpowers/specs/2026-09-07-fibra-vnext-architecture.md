@@ -196,6 +196,16 @@ PENDING -> STARTING -> ACTIVE -> STOPPING -> DISPOSED
 - `settled()` 表示当前状态转换已经落地；稳定 PENDING 可以 settled，但不等于 ACTIVE。
 - `updatePrepared` 只接受当前 definition 对象的预校验配置，与 `update(config)` 共用状态机但不重复
   校验。使用独立方法名，避免合法 null 配置与 Prepared 形成重载歧义。
+- 同一逻辑配置变更涉及多个既有实例时，`RuntimeDomain.updateBatch` 先校验整组实例归属、definition、
+  存活状态和实例唯一性，再在同一个 lifecycle turn 内登记全部配置修订，之后才允许任一实例开始收敛；
+  单实例 `update/updatePrepared` 复用同一登记路径。该边界把 DSH 同一 JavaScript 调用栈“先写目标、微任务
+  后重载”的行为契约显式化，不依赖调用线程与 lifecycle 线程的调度竞争。
+- 批量登记前失败原样返回且不应用任何目标；登记后各实例独立收敛，任一实例失败以
+  `PLUGIN_BATCH_UPDATE_FAILED` 标记，但不回滚已登记目标或已发生的运行副作用。批量完成同时等待域依赖图
+  和全部目标实例稳定，不把“整组登记”描述为多实例原子生效。
+- 终态事件发布前必须先清除实例的转换中标志，使同步状态观察者重采样时看到稳定 PENDING、ACTIVE、
+  FAILED 或 DISPOSED；每次转换的完成信号绑定该转换自己的句柄，状态观察者同步发起下一次更新时不能让
+  旧结果写入新句柄。不能在事件后静默改变收敛条件，否则既有 `settled()` 等待者可能永久等待下一次通知。
 - dispose、update、关闭和注册都提供可等待、幂等的完成结果。
 
 ### 3.4 Service、Event 与 Effect
@@ -236,6 +246,9 @@ Engine 长期持有一个运行域、一个贡献目录和各 runtime 的资源�
 definition、配置和有效继承策略：新增实例挂载，删除或停用实例撤销；仅配置变化使用实例更新协议；
 definition 或有效隔离归属变化重挂受影响实例。没有变化的实例、effects、ClassLoader 和 Node 进程保留。
 服务 provider 变化引起的消费者停止和重新激活由内核依赖协议驱动，Engine 不另建第二套服务调度器。
+同一 `ChangeSet` 中所有仅配置变化的既有实例组成一次域级目标批量登记，再由内核依赖图独立收敛；
+新增和重挂实例仍按所有权先决顺序处理。Engine 只把 `PLUGIN_BATCH_UPDATE_FAILED` 识别为“目标已全部登记、
+实例收敛失败”，继续捕获并发布实际状态；登记前错误直接终止协调，不能通过读取某个实例状态猜测失败阶段。
 
 制品变更先校验完整目标依赖图，再按变化制品及其反向依赖闭包准备资源。Java 的已链接契约类型要求
 消费者装载器随所依赖契约一起替换；不能只更新 provider 的 ClassLoader。未受影响的装载器继续使用。
@@ -422,6 +435,7 @@ Engine 单独记录最近一次已接受的 source revision，它不随 Registry
 Fibra 保证：
 
 - 输入预检失败不改变正在运行的实例；局部生命周期失败如实发布，不冒充原子回滚；
+- 同一逻辑变更的既有实例配置目标先整组登记再开始收敛，组内不会以旧目标启动新的 activation；
 - `EngineSnapshot`、贡献快照、运行域诊断和 Engine 诊断来自同一个 view revision；
 - 新调用只进入当前开放的贡献注册，已接受调用计入该注册的排空直到完成或被明确终止；
 - 未受影响实例、运行资源和在途调用不会因为其他插件配置变更而重建或中断；
