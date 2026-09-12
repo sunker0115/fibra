@@ -1,5 +1,7 @@
 package com.sstlfsj.fibra.plugins.fs.search;
 
+import com.sstlfsj.fibra.plugins.tool.ToolContent;
+
 import com.sstlfsj.fibra.PluginInstanceState;
 import com.sstlfsj.fibra.bridge.ContributionDirectory;
 import com.sstlfsj.fibra.bridge.ContributionServices;
@@ -52,7 +54,7 @@ class ToolFsSearchEntrypointTest {
             var result = directory.current().routes().invoke(context, ToolContributions.KIND,
                 ToolContributions.id("search-instance", "glob"),
                 ToolRequest.of(Map.of("pattern", "*"))).block();
-            assertTrue(result.text().contains("one.txt"));
+            assertTrue(((ToolContent.Text) result.content().getFirst()).text().contains("one.txt"));
 
             plugin.dispose().block();
             assertFalse(directory.current().snapshot().entries().stream().anyMatch(entry ->

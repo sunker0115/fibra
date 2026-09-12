@@ -1,4 +1,6 @@
 package com.sstlfsj.fibra.plugins.shell.tool;
+
+import com.sstlfsj.fibra.plugins.tool.ToolContent;
 import com.sstlfsj.fibra.*;
 import com.sstlfsj.fibra.bridge.*;
 import com.sstlfsj.fibra.plugins.shell.*;
@@ -29,7 +31,7 @@ class ShellToolTest {
             var value = directory.current().routes().invoke(caller, ToolContributions.KIND,
                 ToolContributions.id("shell-tools-actual", "bash"),
                 ToolRequest.of(Map.of("command", "exit 3", "workdir", "/tmp", "timeoutMs", 1000), cancellation.token())).block();
-            assertTrue(value.data().canonicalJson().contains("\"exitCode\":3"));
+            assertTrue(value.structuredContent().orElseThrow().canonicalJson().contains("\"exitCode\":3"));
             plugin.dispose().block();
             assertTrue(directory.current().snapshot().entries().isEmpty());
         }
@@ -74,7 +76,7 @@ class ShellToolTest {
             var failure = assertThrows(ToolException.class, () -> directory.current().routes().invoke(caller,
                 ToolContributions.KIND, ToolContributions.id("tools", "bash"),
                 ToolRequest.of(Map.of("command", "pwd", "workdir", "/tmp", "timeoutMs", 0))).block());
-            assertEquals(ToolFailureCode.INVALID_ARGUMENT, failure.code());
+            assertEquals(ToolFailureCode.INVALID_ARGUMENT, failure.failure().code());
         }
     }
     @Test void rejectsTimeoutBeyondTheSupportedTimerRangeBeforeCallingShell() {
@@ -88,7 +90,7 @@ class ShellToolTest {
             var failure = assertThrows(ToolException.class, () -> directory.current().routes().invoke(caller,
                 ToolContributions.KIND, ToolContributions.id("tools", "bash"), ToolRequest.of(Map.of(
                     "command", "pwd", "workdir", "/tmp", "timeoutMs", (long) Integer.MAX_VALUE + 1))).block());
-            assertEquals(ToolFailureCode.INVALID_ARGUMENT, failure.code());
+            assertEquals(ToolFailureCode.INVALID_ARGUMENT, failure.failure().code());
             assertEquals("timeoutMs must be between 1 and 2147483647", failure.getMessage());
         }
     }
@@ -101,7 +103,7 @@ class ShellToolTest {
             var failure = assertThrows(ToolException.class, () -> directory.current().routes().invoke(caller,
                 ToolContributions.KIND, ToolContributions.id("tools", "bash"),
                 ToolRequest.of(Map.of("command", "pwd", "workdir", "/tmp", "timeoutMs", 1000))).block());
-            assertEquals(code, failure.code());
+            assertEquals(code, failure.failure().code());
         }
     }
     private void assertRendered(ShellResult shellResult, String expected) {
@@ -117,7 +119,7 @@ class ShellToolTest {
                 ToolContributions.id("tools", "bash"), ToolRequest.of(Map.of(
                     "command", "test", "workdir", "/tmp", "timeoutMs", 1000))).block();
 
-            assertEquals(expected, actual.text());
+            assertEquals(expected, ((ToolContent.Text) actual.content().getFirst()).text());
         }
     }
     private static ShellResult result(int code, boolean timeout, boolean aborted) {

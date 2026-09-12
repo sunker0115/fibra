@@ -28,7 +28,7 @@ class SearchOutputParserTest {
     void malformedJsonFailsInsteadOfReturningPartialMatches() {
         var failure = assertThrows(ToolException.class,
             () -> SearchOutputParser.grep("{not-json}"));
-        assertEquals(ToolFailureCode.SEARCH_FAILED, failure.code());
+        assertEquals(ToolFailureCode.SEARCH_FAILED, failure.failure().code());
     }
 
     @Test

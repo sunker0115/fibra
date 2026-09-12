@@ -14,6 +14,8 @@ class CliPathsTest {
         var paths = CliPaths.resolve(work, "default", null, null, null, null);
 
         assertEquals(work.resolve("config/profiles/default.yaml"), paths.profileFile());
+        assertEquals(work.resolve("config/profiles/default.artifacts.yaml"),
+            paths.profileArtifactsFile());
         assertEquals(work.resolve("plugins"), paths.pluginsRoot());
         assertEquals(work.resolve("data/profiles/default/state"), paths.stateRoot());
         assertEquals(work.resolve("data/profiles/default/artifacts"), paths.artifactRoot());
@@ -34,6 +36,7 @@ class CliPathsTest {
             plugins, data, node);
 
         assertEquals(config, paths.configRoot());
+        assertEquals(config.resolve("profiles/team-a.artifacts.yaml"), paths.profileArtifactsFile());
         assertEquals(plugins, paths.pluginsRoot());
         assertEquals(data, paths.dataRoot());
         assertEquals(node, paths.nodeExecutable());

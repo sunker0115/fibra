@@ -7,6 +7,8 @@ import com.sstlfsj.fibra.value.LiteralValue;
 
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -14,11 +16,13 @@ import java.util.Set;
 
 final class ToolContributionCodec
     implements ContributionCodec<ToolDescriptor, ToolRequest, ToolResult> {
-    private static final int SCHEMA_VERSION = 1;
+    private static final int SCHEMA_VERSION = 2;
     private static final Set<String> DESCRIPTOR_FIELDS = Set.of(
         "displayName", "description", "inputSchema", "outputSchema");
     private static final Set<String> INPUT_FIELDS = Set.of("arguments");
-    private static final Set<String> OUTPUT_FIELDS = Set.of("text", "data");
+    private static final Set<String> OUTPUT_FIELDS = Set.of("content");
+    private static final Set<String> STRUCTURED_OUTPUT_FIELDS = Set.of("content", "structuredContent");
+    private static final Set<String> TEXT_FIELDS = Set.of("type", "text");
     private static final Set<String> FAILURE_FIELDS = Set.of("kind", "schemaVersion", "code");
 
     @Override
@@ -49,15 +53,28 @@ final class ToolContributionCodec
     public Object encodeOutput(ToolResult output) {
         Objects.requireNonNull(output, "output");
         var fields = new LinkedHashMap<String, Object>();
-        fields.put("text", output.text());
-        fields.put("data", output.data().toJava());
+        fields.put("content", output.content().stream().map(content -> switch (content) {
+            case ToolContent.Text text -> Map.of("type", "text", "text", text.text());
+        }).toList());
+        output.structuredContent().ifPresent(value -> fields.put("structuredContent", value.toJava()));
         return fields;
     }
 
     @Override
     public ToolResult decodeOutput(Object value) {
-        var fields = object(value, "output", OUTPUT_FIELDS);
-        return new ToolResult(text(fields, "text"), LiteralValue.of(fields.get("data")));
+        var fields = object(value, "output", value instanceof Map<?, ?> raw && raw.containsKey("structuredContent")
+            ? STRUCTURED_OUTPUT_FIELDS : OUTPUT_FIELDS);
+        if (!(fields.get("content") instanceof List<?> blocks)) {
+            throw new IllegalArgumentException("invalid tool content");
+        }
+        var content = new ArrayList<ToolContent>();
+        for (var block : blocks) {
+            var entry = object(block, "content block", TEXT_FIELDS);
+            if (!"text".equals(entry.get("type"))) throw new IllegalArgumentException("unsupported tool content type");
+            content.add(ToolContent.text(text(entry, "text")));
+        }
+        return new ToolResult(content, fields.containsKey("structuredContent")
+            ? Optional.of(LiteralValue.of(fields.get("structuredContent"))) : Optional.empty());
     }
 
     @Override

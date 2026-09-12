@@ -310,7 +310,7 @@ final class SearchRunner {
     }
 
     private static ToolResult result(String text, Map<String, ?> data) {
-        return new ToolResult(text, LiteralValue.of(data));
+        return ToolResult.textAndStructured(text, LiteralValue.of(data));
     }
 
     private static ToolException subprocessFailure(String toolName, Throwable failure) {

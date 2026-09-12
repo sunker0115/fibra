@@ -371,7 +371,7 @@ class NodeSidecarTest {
             assertEquals(-32001, remote.code());
             assertEquals("missing file", remote.message());
             assertEquals(LiteralValue.of(Map.of("kind", "fibra.tool.failure",
-                "schemaVersion", 1, "code", "NOT_FOUND")), remote.data());
+                "schemaVersion", 2, "code", "NOT_FOUND")), remote.data());
         }
     }
 
@@ -385,6 +385,28 @@ class NodeSidecarTest {
         }) {
             var script = work.resolve("error-" + error.hashCode() + ".mjs");
             Files.writeString(script, malformedErrorScript(error));
+            try (var session = NodeSidecar.start(script,
+                NodeRuntimeOptions.defaults(node(), work.resolve("sessions")), () -> { }).block()) {
+                var failure = assertThrows(NodeRpcException.class,
+                    () -> session.request("fail", Map.of(), Duration.ofSeconds(2)).block());
+                assertEquals(NodeRpcPhase.PROTOCOL, failure.phase());
+                assertTrue(failure.remoteFailure().isEmpty());
+            }
+        }
+    }
+
+    @Test
+    void rejectsAmbiguousAndDuplicateJsonRpcResponseMembers(@TempDir Path work)
+        throws Exception {
+        for (var response : new String[] {
+            "JSON.stringify({jsonrpc:'2.0',id,result:{ok:true},error:{code:-32001,message:'missing',"
+                + "data:{kind:'fibra.tool.failure',schemaVersion:2,code:'NOT_FOUND'}}})",
+            "'{\"jsonrpc\":\"2.0\",\"id\":' + id + ',\"result\":{\"one\":1},"
+                + "\"result\":{\"two\":2}}'",
+            "JSON.stringify({jsonrpc:'2.0',id,result:{ok:true}}) + JSON.stringify({extra:true})"
+        }) {
+            var script = work.resolve("response-" + response.hashCode() + ".mjs");
+            Files.writeString(script, malformedResponseScript(response));
             try (var session = NodeSidecar.start(script,
                 NodeRuntimeOptions.defaults(node(), work.resolve("sessions")), () -> { }).block()) {
                 var failure = assertThrows(NodeRpcException.class,
@@ -551,7 +573,7 @@ class NodeSidecarTest {
     private static String structuredErrorScript() {
         return baseScript("""
               if (method === 'fail') process.stdout.write(JSON.stringify({jsonrpc:'2.0', id,
-                error:{code:-32001,message:'missing file',data:{kind:'fibra.tool.failure',schemaVersion:1,code:'NOT_FOUND'}}}) + '\\n');
+                error:{code:-32001,message:'missing file',data:{kind:'fibra.tool.failure',schemaVersion:2,code:'NOT_FOUND'}}}) + '\\n');
             """);
     }
 
@@ -573,6 +595,12 @@ class NodeSidecarTest {
               else if (message.method === 'fail') process.stdout.write('{"jsonrpc":"2.0","id":' + message.id + ',"error":{"code":1.0000000000000001,"message":"fraction"}}\\n');
             });
             """;
+    }
+
+    private static String malformedResponseScript(String response) {
+        return baseScript("""
+              if (method === 'fail') process.stdout.write(%s + '\\n');
+            """.formatted(response));
     }
 
     private static String baseScript(String body) {

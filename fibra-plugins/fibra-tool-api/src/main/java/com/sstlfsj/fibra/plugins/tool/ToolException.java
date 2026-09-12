@@ -3,7 +3,7 @@ package com.sstlfsj.fibra.plugins.tool;
 import java.util.Objects;
 
 public final class ToolException extends RuntimeException {
-    private final ToolFailureCode code;
+    private final ToolFailure failure;
 
     public ToolException(ToolFailureCode code, String message) {
         this(code, message, null);
@@ -11,10 +11,10 @@ public final class ToolException extends RuntimeException {
 
     public ToolException(ToolFailureCode code, String message, Throwable cause) {
         super(Objects.requireNonNull(message, "message"), cause);
-        this.code = Objects.requireNonNull(code, "code");
+        failure = new ToolFailure(code, message);
     }
 
-    public ToolFailureCode code() {
-        return code;
+    public ToolFailure failure() {
+        return failure;
     }
 }

@@ -34,6 +34,10 @@ record CliPaths(Path home, String profile, Path configRoot, Path pluginsRoot,
         return configRoot.resolve("profiles").resolve(profile + ".yaml");
     }
 
+    Path profileArtifactsFile() {
+        return configRoot.resolve("profiles").resolve(profile + ".artifacts.yaml");
+    }
+
     Path profileData() {
         return dataRoot.resolve("profiles").resolve(profile);
     }

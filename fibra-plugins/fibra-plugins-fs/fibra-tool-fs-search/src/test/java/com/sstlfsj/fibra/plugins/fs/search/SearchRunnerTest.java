@@ -1,5 +1,7 @@
 package com.sstlfsj.fibra.plugins.fs.search;
 
+import com.sstlfsj.fibra.plugins.tool.ToolContent;
+
 import com.sstlfsj.fibra.CancellationSource;
 import com.sstlfsj.fibra.InvocationContext;
 import com.sstlfsj.fibra.plugins.subprocess.ProcessUnit;
@@ -51,8 +53,8 @@ class SearchRunnerTest {
                 ToolRequest.of(Map.of("pattern", "*.java"))).block();
 
             assertEquals(1, spills.get());
-            assertTrue(result.text().contains("Found 1 of 2 files"));
-            assertTrue(result.text().contains("spill://glob"));
+            assertTrue(((ToolContent.Text) result.content().getFirst()).text().contains("Found 1 of 2 files"));
+            assertTrue(((ToolContent.Text) result.content().getFirst()).text().contains("spill://glob"));
             assertEquals("/opt/rg", spec.get().argv().get(0));
             assertEquals("--no-config", spec.get().argv().get(1));
             assertEquals("/workspace", spec.get().cwd());
@@ -72,7 +74,7 @@ class SearchRunnerTest {
 
             var found = runner.grep(invocation(context),
                 ToolRequest.of(Map.of("pattern", "needle"))).block();
-            assertTrue(found.text().contains("Line 4: needle"));
+            assertTrue(((ToolContent.Text) found.content().getFirst()).text().contains("Line 4: needle"));
         }
         try (var runtime = FibraRuntime.create()) {
             var context = runtime.openDomain("empty-search").rootScope().context();
@@ -81,7 +83,7 @@ class SearchRunnerTest {
             var empty = new SearchRunner(SearchPluginConfig.defaults("rg", "/workspace"))
                 .grep(invocation(context),
                 ToolRequest.of(Map.of("pattern", "absent"))).block();
-            assertEquals("No matches found", empty.text());
+            assertEquals("No matches found", ((ToolContent.Text) empty.content().getFirst()).text());
         }
     }
 
@@ -94,7 +96,7 @@ class SearchRunnerTest {
             var runner = new SearchRunner(SearchPluginConfig.defaults("rg", "/workspace"));
             var overflow = assertThrows(ToolException.class, () -> runner.glob(invocation(context),
                 ToolRequest.of(Map.of("pattern", "*"))).block());
-            assertEquals(ToolFailureCode.OUTPUT_LIMIT, overflow.code());
+            assertEquals(ToolFailureCode.OUTPUT_LIMIT, overflow.failure().code());
         }
         try (var runtime = FibraRuntime.create()) {
             var context = runtime.openDomain("invalid-search").rootScope().context();
@@ -104,7 +106,7 @@ class SearchRunnerTest {
             var invalid = assertThrows(ToolException.class,
                 () -> new SearchRunner(SearchPluginConfig.defaults("rg", "/workspace"))
                     .grep(invocation(context), ToolRequest.of(Map.of("pattern", "["))).block());
-            assertEquals(ToolFailureCode.INVALID_ARGUMENT, invalid.code());
+            assertEquals(ToolFailureCode.INVALID_ARGUMENT, invalid.failure().code());
         }
     }
 
@@ -123,7 +125,7 @@ class SearchRunnerTest {
                 () -> new SearchRunner(SearchPluginConfig.defaults("rg", "/workspace"))
                     .glob(invocation(context).withCancellation(source.token()),
                         ToolRequest.of(Map.of("pattern", "*"), source.token())).block());
-            assertEquals(ToolFailureCode.ABORTED, failure.code());
+            assertEquals(ToolFailureCode.ABORTED, failure.failure().code());
             assertTrue(unit.terminated.get());
             assertTrue(unit.waited.get());
         }
@@ -146,7 +148,7 @@ class SearchRunnerTest {
                     .glob(invocation(context).withCancellation(source.token()),
                         ToolRequest.of(Map.of("pattern", "*"), source.token())).block());
 
-            assertEquals(ToolFailureCode.ABORTED, failure.code());
+            assertEquals(ToolFailureCode.ABORTED, failure.failure().code());
             assertTrue(unit.terminated.get());
             assertTrue(unit.waited.get());
         }
@@ -168,7 +170,7 @@ class SearchRunnerTest {
                     .glob(invocation(context).withCancellation(source.token()),
                         ToolRequest.of(Map.of("pattern", "*"), source.token())).block());
 
-            assertEquals(ToolFailureCode.ABORTED, failure.code());
+            assertEquals(ToolFailureCode.ABORTED, failure.failure().code());
         }
     }
 
@@ -184,7 +186,7 @@ class SearchRunnerTest {
             var failure = assertThrows(ToolException.class,
                 () -> new SearchRunner(config).glob(invocation(context),
                     ToolRequest.of(Map.of("pattern", "*"))).block(Duration.ofSeconds(2)));
-            assertEquals(ToolFailureCode.TIMEOUT, failure.code());
+            assertEquals(ToolFailureCode.TIMEOUT, failure.failure().code());
             assertTrue(unit.terminated.get());
             assertTrue(unit.waited.get());
         }
@@ -203,7 +205,7 @@ class SearchRunnerTest {
                 () -> new SearchRunner(config).glob(invocation(context),
                     ToolRequest.of(Map.of("pattern", "*"))).block(Duration.ofSeconds(2)));
 
-            assertEquals(ToolFailureCode.TIMEOUT, failure.code());
+            assertEquals(ToolFailureCode.TIMEOUT, failure.failure().code());
         }
     }
 
@@ -220,7 +222,7 @@ class SearchRunnerTest {
                 .withLimits(SearchLimits.defaults().withGlobMaxResults(1));
             var result = new SearchRunner(config).glob(invocation(context),
                 ToolRequest.of(Map.of("pattern", "*"))).block();
-            assertTrue(result.text().contains("could not be saved"));
+            assertTrue(((ToolContent.Text) result.content().getFirst()).text().contains("could not be saved"));
             assertFalse(unit.terminated.get());
         }
     }
@@ -249,7 +251,7 @@ class SearchRunnerTest {
                     ToolRequest.of(Map.of("pattern", "*"), source.token())).block());
 
             assertTrue(spillStarted.get());
-            assertEquals(ToolFailureCode.ABORTED, failure.code());
+            assertEquals(ToolFailureCode.ABORTED, failure.failure().code());
         }
     }
 
@@ -270,7 +272,7 @@ class SearchRunnerTest {
             var result = new SearchRunner(config).glob(invocation(context),
                 ToolRequest.of(Map.of("pattern", "*"))).block();
 
-            assertTrue(result.text().contains("could not be saved"));
+            assertTrue(((ToolContent.Text) result.content().getFirst()).text().contains("could not be saved"));
             assertFalse(unit.terminated.get());
         }
     }
@@ -283,7 +285,7 @@ class SearchRunnerTest {
                 () -> new SearchRunner(SearchPluginConfig.defaults("rg", "/workspace"))
                     .glob(invocation(context), ToolRequest.of(Map.of("pattern", " "))).block());
 
-            assertEquals(ToolFailureCode.INVALID_ARGUMENT, failure.code());
+            assertEquals(ToolFailureCode.INVALID_ARGUMENT, failure.failure().code());
         }
     }
 

@@ -71,13 +71,15 @@ class StorageToolEntrypointTest {
     void loadsPutsAndRemovesDocumentsWhileRejectingUnknownOrInvalidArguments() {
         var store = new FakeStore();
         try (var harness = new Harness(store)) {
-            assertEquals("{\"revision\":0,\"values\":{}}", harness.invoke("load", Map.of()).data().canonicalJson());
+            var loaded = harness.invoke("load", Map.of());
+            assertEquals("{\"revision\":0,\"values\":{}}", loaded.structuredContent().orElseThrow().canonicalJson());
+            assertEquals(List.of(com.sstlfsj.fibra.plugins.tool.ToolContent.text("{\"revision\":0,\"values\":{}}")), loaded.content());
             assertEquals("{\"revision\":1,\"values\":{\"theme\":\"dark\"}}",
-                harness.invoke("put", Map.of("key", "theme", "value", "dark")).data().canonicalJson());
+                harness.invoke("put", Map.of("key", "theme", "value", "dark")).structuredContent().orElseThrow().canonicalJson());
             assertEquals("{\"revision\":2,\"values\":{}}",
-                harness.invoke("remove", Map.of("key", "theme")).data().canonicalJson());
+                harness.invoke("remove", Map.of("key", "theme")).structuredContent().orElseThrow().canonicalJson());
             assertEquals("{\"revision\":2,\"values\":{}}",
-                harness.invoke("remove", Map.of("key", "theme")).data().canonicalJson());
+                harness.invoke("remove", Map.of("key", "theme")).structuredContent().orElseThrow().canonicalJson());
             assertEquals(2, store.revision);
             assertEquals(2, store.emitted.size());
             assertFailure(ToolFailureCode.INVALID_ARGUMENT,
@@ -125,7 +127,7 @@ class StorageToolEntrypointTest {
             store.commitPendingPut("x", LiteralValue.of(true));
             var completion = assertThrows(CompletionException.class, result::join);
             assertEquals(ToolFailureCode.ABORTED,
-                assertInstanceOf(ToolException.class, completion.getCause()).code());
+                assertInstanceOf(ToolException.class, completion.getCause()).failure().code());
             assertEquals(LiteralValue.of(true), store.values.get("x"));
         }
     }
@@ -136,14 +138,14 @@ class StorageToolEntrypointTest {
         store.emit(1, "before", ConfigChangeOperation.PUT, LiteralValue.of(true));
         try (var harness = new Harness(store)) {
             assertEquals(PluginInstanceState.ACTIVE, harness.plugin.state());
-            assertEquals("{\"changes\":[],\"dropped\":false}", harness.invoke("changes", Map.of()).data().canonicalJson());
+            assertEquals("{\"changes\":[],\"dropped\":false}", harness.invoke("changes", Map.of()).structuredContent().orElseThrow().canonicalJson());
             store.emit(2, "live", ConfigChangeOperation.PUT, LiteralValue.of(true));
             assertEquals("{\"changes\":[{\"key\":\"live\",\"operation\":\"PUT\",\"revision\":2,\"value\":true}],\"dropped\":false}",
-                harness.invoke("changes", Map.of()).data().canonicalJson());
+                harness.invoke("changes", Map.of()).structuredContent().orElseThrow().canonicalJson());
             for (var revision = 3; revision <= 67; revision++) {
                 store.emit(revision, "k" + revision, ConfigChangeOperation.PUT, LiteralValue.of(revision));
             }
-            var snapshot = (Map<?, ?>) harness.invoke("changes", Map.of()).data().toJava();
+            var snapshot = (Map<?, ?>) harness.invoke("changes", Map.of()).structuredContent().orElseThrow().toJava();
             assertEquals(true, snapshot.get("dropped"));
             var changes = (List<?>) snapshot.get("changes");
             assertEquals(64, changes.size());
@@ -155,7 +157,7 @@ class StorageToolEntrypointTest {
     }
 
     private static void assertFailure(ToolFailureCode expected, org.junit.jupiter.api.function.Executable action) {
-        assertEquals(expected, assertThrows(ToolException.class, action).code());
+        assertEquals(expected, assertThrows(ToolException.class, action).failure().code());
     }
 
     private static final class Harness implements AutoCloseable {

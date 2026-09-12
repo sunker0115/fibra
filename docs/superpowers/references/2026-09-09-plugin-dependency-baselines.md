@@ -9,6 +9,11 @@
 | PF4J | `org.pf4j:pf4j:3.15.0:sources`；SHA-256 `7b8333b0d59a9cbe6bdc31771f7bb250b6d21fe99275539a855135593a311597` | `org/pf4j/DependencyResolver.java`、`org/pf4j/PluginClassLoader.java` |
 | IntelliJ Platform | 官方 SDK 文档与 2026-09-09 访问的 `master` 源码；未取得固定提交，不能当作发布版行为承诺 | 下方官方链接 |
 | DeepSeek Harness | 原始设计基线 `b0a7d2ce3b4c19d7452e364b2d7acbfa87e707ed`；文章对拍 `a66e4702047846cdaa10c66c9d3df3951f5ea70d`；进程单元复核 `c291e7961a515f6d7af9304e7fd1d257929aef26` | 原有插件路径及 `packages/subprocess` |
+| Model Context Protocol | 最新正式规范 `2026-07-28` | `CallToolResult`、ContentBlock、Multi Round-Trip Requests 与工具错误边界 |
+| Agent2Agent Protocol | 最新正式发布 `1.0.1` | `Task`、`Message`、`Artifact`、状态/流式事件与协议错误边界 |
+| Agent Client Protocol | v1 | tool call update、权限请求与 elicitation 边界 |
+| AG-UI | 当前正式事件规范 | run/tool/state/interrupt 前端事件边界 |
+| OpenAI Responses / Anthropic Tool Use | 2026-09-12 官方文档 | 调用关联、参数流与工具结果投影 |
 | OpenAI Codex | `b9852fe6f7c73c98277da38cccb238083c843d4e` | `codex-rs/utils/pty/src/process_group.rs`、`codex-rs/utils/pty/src/win/job.rs`、`codex-rs/core/src/exec.rs` |
 | cordis4j | `6cfd56e684fb403ded952afc09eddb49a5228494` | 独立的[设计对拍与采用边界](2026-09-11-cordis4j-design-evidence.md)；本文件不再代管其内核语义 |
 
@@ -101,7 +106,50 @@ definition 身份，仅绑定变更输入，普通配置更新保留实例身份
 DSH SDK JSON-RPC 的本地 pending 删除以及 MCP 的取消通知则只表达“不再等待/请求对端取消”，不证明
 远端工作已经停止，Fibra 不采用这一较弱边界。[最新 Tool Runtime](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/core/tools/src/index.ts#L1517-L1549)、
 [最新 Timeout Policy](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/guard/timeout-policy/src/index.ts#L55-L79)、
-[MCP 取消协议](https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/cancellation)。
+[MCP 取消协议](https://modelcontextprotocol.io/specification/2026-07-28/basic/utilities/cancellation)。
+
+### 工具返回契约的采用边界
+
+最新 MCP `2026-07-28` 的 `CallToolResult` 要求 `resultType` 与 `content`，允许任意 JSON 值的
+`structuredContent`，并用 `isError=true` 表达可供模型修正的工具执行错误；未知工具、畸形请求和服务端
+错误仍走 JSON-RPC 协议错误。`InputRequiredResult` 是调用未终结时的多轮交互响应，客户端携带
+`inputResponses` 与不透明 `requestState` 重新发起原请求；它既不是成功输出，也不是工具失败。
+[最新工具规范](https://modelcontextprotocol.io/specification/2026-07-28/server/tools)、
+[最新 schema](https://modelcontextprotocol.io/specification/2026-07-28/schema#calltoolresult)、
+[版本变更](https://modelcontextprotocol.io/specification/2026-07-28/changelog)。
+
+DSH 最新 Tool Runtime 保持另一条内部边界：工具 body 返回 canonical JSON 成功值或抛错，Runtime 才生成
+互斥的 `ToolExecutionSuccess/ToolExecutionFailure`；其 MCP bridge 先保留远端 `content` 与
+`structuredContent`，收到 `isError=true` 时抛错并交给同一 Runtime 归一化。Fibra 因此采用相同职责拆分，
+不把 MCP 的 JSON-RPC envelope 直接变成 contribution 输出：`ToolResult` 只描述 provider 成功产物，
+Harness 工具调用边界再形成 `ToolOutcome`，MCP adapter 最后投影 `resultType/isError/_meta` 并独立处理
+`input_required`。当前正式工具只完整兑现文本内容块；未实现附件、资源访问和宿主展示前，不以若干 DTO
+冒充完整 MCP rich content 支持。[DSH Tool Runtime](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/core/tools/src/index.ts)、
+[DSH MCP bridge](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/mcp/mcp-client/src/tools.ts)。
+
+### Agent 与客户端协议的采用边界
+
+A2A 最新正式发布为 `1.0.1`；其核心是可持久、可查询、可订阅的异步 Agent Task，而不是另一种工具
+返回 DTO。运行中的 `SUBMITTED/WORKING`、交互中断的 `INPUT_REQUIRED/AUTH_REQUIRED` 与终态
+`COMPLETED/FAILED/CANCELED/REJECTED` 必须原样留在 Agent/Task 层。状态消息和增量 Artifact 由
+`TaskStatusUpdateEvent/TaskArtifactUpdateEvent` 发布，取消只有在实际工作和资源清理结算后才能发布
+`CANCELED`。工具失败若仍可被 Agent 重试、改计划或转为追问，不应机械把 Task 标为 `FAILED`；
+任务不存在、不可取消、畸形请求和鉴权问题则保留为传输/协议错误。
+[A2A 1.0.1 发布](https://github.com/a2aproject/A2A/releases/tag/v1.0.1)、
+[A2A 规范](https://a2a-protocol.org/latest/specification/)。
+
+ACP v1 用 session update 表达 `toolCallId`、pending/in-progress/completed/failed、内容和客户端展示进度，
+权限请求与结构化补充输入分别使用独立协议；AG-UI 把 run、tool call、state、interrupt 建模为前端事件流。
+OpenAI Responses 以 `call_id` 关联 `function_call_output`，Anthropic 以 `tool_use_id` 关联带内容和
+`is_error` 的 `tool_result`。这些协议都要求相关 ID、权限、补充输入、增量序号和展示状态处在调用
+envelope，而不是 provider 成功值。Fibra 因此保持四层职责：provider `ToolResult`、Harness
+`ToolOutcome`、Harness invocation/Agent task、外部 adapter；当前不增加未形成生产闭环的 image、
+document、resource、diff 或 terminal 内容变体。
+[ACP v1 Tool Calls](https://agentclientprotocol.com/protocol/v1/tool-calls)、
+[ACP Elicitation](https://agentclientprotocol.com/rfds/elicitation)、
+[AG-UI Events](https://docs.ag-ui.com/concepts/events)、
+[OpenAI Function Calling](https://developers.openai.com/api/docs/guides/function-calling)、
+[Anthropic Tool Use](https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls)。
 
 Codex 的共享 MCP 客户端也把单次调用超时限制在该调用，不因一个请求超时关闭共享连接；本地进程执行
 则在取消/超时时终止其独占进程组。Fibra 的 Node sidecar 是插件实例共享资源，因此采用前者的隔离边界，

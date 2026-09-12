@@ -4,6 +4,20 @@ Compiled from "ResultSpillStore.java"
 public interface com.sstlfsj.fibra.plugins.tool.ResultSpillStore {
   public abstract reactor.core.publisher.Mono<java.lang.String> store(com.sstlfsj.fibra.InvocationContext, java.lang.String, java.lang.String);
 }
+## com.sstlfsj.fibra.plugins.tool.ToolContent
+Compiled from "ToolContent.java"
+public interface com.sstlfsj.fibra.plugins.tool.ToolContent {
+  public static com.sstlfsj.fibra.plugins.tool.ToolContent$Text text(java.lang.String);
+}
+## com.sstlfsj.fibra.plugins.tool.ToolContent$Text
+Compiled from "ToolContent.java"
+public final class com.sstlfsj.fibra.plugins.tool.ToolContent$Text extends java.lang.Record implements com.sstlfsj.fibra.plugins.tool.ToolContent {
+  public com.sstlfsj.fibra.plugins.tool.ToolContent$Text(java.lang.String);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String text();
+}
 ## com.sstlfsj.fibra.plugins.tool.ToolContributions
 Compiled from "ToolContributions.java"
 public final class com.sstlfsj.fibra.plugins.tool.ToolContributions {
@@ -27,7 +41,17 @@ Compiled from "ToolException.java"
 public final class com.sstlfsj.fibra.plugins.tool.ToolException extends java.lang.RuntimeException {
   public com.sstlfsj.fibra.plugins.tool.ToolException(com.sstlfsj.fibra.plugins.tool.ToolFailureCode, java.lang.String);
   public com.sstlfsj.fibra.plugins.tool.ToolException(com.sstlfsj.fibra.plugins.tool.ToolFailureCode, java.lang.String, java.lang.Throwable);
+  public com.sstlfsj.fibra.plugins.tool.ToolFailure failure();
+}
+## com.sstlfsj.fibra.plugins.tool.ToolFailure
+Compiled from "ToolFailure.java"
+public final class com.sstlfsj.fibra.plugins.tool.ToolFailure extends java.lang.Record {
+  public com.sstlfsj.fibra.plugins.tool.ToolFailure(com.sstlfsj.fibra.plugins.tool.ToolFailureCode, java.lang.String);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
   public com.sstlfsj.fibra.plugins.tool.ToolFailureCode code();
+  public java.lang.String message();
 }
 ## com.sstlfsj.fibra.plugins.tool.ToolFailureCode
 Compiled from "ToolFailureCode.java"
@@ -52,6 +76,34 @@ public final class com.sstlfsj.fibra.plugins.tool.ToolFailureCode extends java.l
   public static com.sstlfsj.fibra.plugins.tool.ToolFailureCode[] values();
   public static com.sstlfsj.fibra.plugins.tool.ToolFailureCode valueOf(java.lang.String);
 }
+## com.sstlfsj.fibra.plugins.tool.ToolOutcome
+Compiled from "ToolOutcome.java"
+public interface com.sstlfsj.fibra.plugins.tool.ToolOutcome {
+}
+## com.sstlfsj.fibra.plugins.tool.ToolOutcome$Failure
+Compiled from "ToolOutcome.java"
+public final class com.sstlfsj.fibra.plugins.tool.ToolOutcome$Failure extends java.lang.Record implements com.sstlfsj.fibra.plugins.tool.ToolOutcome {
+  public com.sstlfsj.fibra.plugins.tool.ToolOutcome$Failure(com.sstlfsj.fibra.plugins.tool.ToolFailure, java.util.List<com.sstlfsj.fibra.plugins.tool.ToolContent>);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public com.sstlfsj.fibra.plugins.tool.ToolFailure error();
+  public java.util.List<com.sstlfsj.fibra.plugins.tool.ToolContent> content();
+}
+## com.sstlfsj.fibra.plugins.tool.ToolOutcome$Success
+Compiled from "ToolOutcome.java"
+public final class com.sstlfsj.fibra.plugins.tool.ToolOutcome$Success extends java.lang.Record implements com.sstlfsj.fibra.plugins.tool.ToolOutcome {
+  public com.sstlfsj.fibra.plugins.tool.ToolOutcome$Success(com.sstlfsj.fibra.plugins.tool.ToolResult);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public com.sstlfsj.fibra.plugins.tool.ToolResult result();
+}
+## com.sstlfsj.fibra.plugins.tool.ToolOutcomes
+Compiled from "ToolOutcomes.java"
+public final class com.sstlfsj.fibra.plugins.tool.ToolOutcomes {
+  public static reactor.core.publisher.Mono<com.sstlfsj.fibra.plugins.tool.ToolOutcome> normalize(java.util.function.Supplier<? extends reactor.core.publisher.Mono<com.sstlfsj.fibra.plugins.tool.ToolResult>>);
+}
 ## com.sstlfsj.fibra.plugins.tool.ToolRequest
 Compiled from "ToolRequest.java"
 public final class com.sstlfsj.fibra.plugins.tool.ToolRequest extends java.lang.Record {
@@ -67,14 +119,15 @@ public final class com.sstlfsj.fibra.plugins.tool.ToolRequest extends java.lang.
 ## com.sstlfsj.fibra.plugins.tool.ToolResult
 Compiled from "ToolResult.java"
 public final class com.sstlfsj.fibra.plugins.tool.ToolResult extends java.lang.Record {
-  public com.sstlfsj.fibra.plugins.tool.ToolResult(java.lang.String, com.sstlfsj.fibra.value.LiteralValue);
+  public com.sstlfsj.fibra.plugins.tool.ToolResult(java.util.List<com.sstlfsj.fibra.plugins.tool.ToolContent>, java.util.Optional<com.sstlfsj.fibra.value.LiteralValue>);
   public static com.sstlfsj.fibra.plugins.tool.ToolResult text(java.lang.String);
   public static com.sstlfsj.fibra.plugins.tool.ToolResult structured(com.sstlfsj.fibra.value.LiteralValue);
+  public static com.sstlfsj.fibra.plugins.tool.ToolResult textAndStructured(java.lang.String, com.sstlfsj.fibra.value.LiteralValue);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
-  public java.lang.String text();
-  public com.sstlfsj.fibra.value.LiteralValue data();
+  public java.util.List<com.sstlfsj.fibra.plugins.tool.ToolContent> content();
+  public java.util.Optional<com.sstlfsj.fibra.value.LiteralValue> structuredContent();
 }
 ## com.sstlfsj.fibra.plugins.tool.ToolServices
 Compiled from "ToolServices.java"

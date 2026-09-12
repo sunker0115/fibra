@@ -7,9 +7,9 @@ Fibra 是 Java 21 的通用插件底座。它把生命周期与资源所有权�
 
 当前开发版本为 `0.5.0-SNAPSHOT`，是无兼容层的 vNext 重构。唯一权威设计是 [Fibra vNext 架构](docs/superpowers/specs/2026-09-07-fibra-vnext-architecture.md)。Java Harness 只是一个接入场景，参考 [Java Harness 集成](docs/superpowers/specs/2026-09-07-fibra-java-harness-integration.md)。
 
-当前 pre-CLI 快照已经交付长期 `RuntimeDomain`、实例差量更新、首次联合制品启动、provider-managed
-子进程范围和 fs、fs-search、shell、storage 正式插件。顶层 `fibra-cli`、可执行 ZIP 与仓库外解压启动
-仍是后续交付项，因此不能把该快照描述为完整命令行产品。
+当前快照已经交付长期 `RuntimeDomain`、实例差量更新、首次联合制品启动、provider-managed 子进程范围，
+以及 fs、fs-search、shell、storage 正式插件。正式 `fibra-cli` 宿主与交互命令树已进入仓库；可执行 ZIP
+和仓库外解压启动仍是后续交付项，因此当前 Maven CLI JAR 还不能描述为完整发行包。
 
 ## 架构
 
@@ -40,6 +40,7 @@ Fibra 是 Java 21 的通用插件底座。它把生命周期与资源所有权�
 - `fibra-runtime-node`：受限 Node 入口、sidecar、JSON-RPC、心跳和进程树治理；
 - `fibra-bridge`：本地与远程贡献的统一目录、调用适配和 drain；
 - `fibra-registry`：面向管理面的安装、升级、启停、查询、watch 和审计；
+- `fibra-cli`：profile 级正式宿主、插件管理、PublishedRuntime 工具调用和长期 REPL；
 - `fibra-spring`、`fibra-spring-boot-starter`：显式 Spring 服务桥接和组合入口；
 - `fibra-plugin-archetype`：生成独立 Java 插件工程，其主 JAR 用作安装包的 payload；
 - `fibra-plugins`：正式插件产品的根聚合模块，自身不发布；`fibra-tool-api` 以及 fs、subprocess、shell、
@@ -124,6 +125,44 @@ Java 包的 `lib/main.jar` 为主 payload，`lib/` 中的其他 JAR 是包内私
 `PluginArtifactProbe` 调用对应 runtime 读取内部 manifest，返回的 `DeploymentArtifact.source()`
 始终是整个包根。`ArtifactStore` 复制完整包并计算内容摘要，runtime 从受管副本解析 payload。
 
+## 正式 CLI 宿主
+
+CLI 的默认目录是 `${fibra.home}/config`、`${fibra.home}/plugins` 和 `${fibra.home}/data`。每个 profile
+使用 `config/profiles/<profile>.yaml` 作为配置条目树，并使用相邻的
+`<profile>.artifacts.yaml` 显式列出相对 `plugins/` 的完整插件包集合。首次启动从两份输入建立并保存一个
+完整目标；后续启动直接恢复该目标，只有 `apply` 会重新导入两份 profile 输入。
+
+命令面如下：
+
+```text
+fibra [--home DIR] [--profile NAME] plugins list
+fibra [全局选项] plugins install|upgrade PACKAGE
+fibra [全局选项] plugins uninstall ARTIFACT_ID
+fibra [全局选项] plugins enable|disable INSTANCE_ID
+fibra [全局选项] tools list
+fibra [全局选项] tools invoke PROVIDER LOCAL_NAME --input JSON
+fibra [全局选项] apply
+fibra [全局选项] repl
+```
+
+一次性命令和 REPL 使用同一命令树。REPL 在会话期间只创建一个 Engine/Registry 宿主，因此插件实例、
+ClassLoader、Node sidecar、effects 和在途调用不会因每行命令重建。`plugins install/upgrade` 接受明确的
+本地标准插件包路径并把内容复制到当前 profile 的不可变制品库；网络链接下载属于后续市场/来源适配层，
+不伪装成本地安装。`tools list` 与 `tools invoke` 都经过当前不可变 `PublishedView`，调用携带同一
+view revision；关闭和 JVM shutdown 会先取消 CLI 发起的在途调用，再由 Engine 排空受管资源。
+工具成功与失败都使用带 `isError` 的判别式 JSON。成功包含有序 `content` 与可选
+`structuredContent`；失败包含同样可直接展示的 `content` 以及稳定 `error.code/message`，调用方不需要
+解析易变文案。例如：
+
+```json
+{"content":[{"type":"text","text":"saved"}],"isError":false,"structuredContent":{"revision":1},"viewRevision":"..."}
+{"content":[{"type":"text","text":"Error: timed out"}],"error":{"code":"TIMEOUT","message":"timed out"},"isError":true,"viewRevision":"..."}
+```
+
+该形状由 `fibra-tool-api` 的成功产物与调用终态统一投影，可适配最新 MCP `2026-07-28`，但 CLI JSON
+不是 MCP JSON-RPC response；`resultType`、`input_required` 和协议 `_meta` 由未来 MCP bridge 管理。
+直接 `tools invoke` 失败仍以进程退出码 4 表达 CLI 业务失败，不为每个工具错误码再造一套退出码。
+
 ## Java 插件 payload
 
 Java 制品 JAR 中只声明一个 `META-INF/fibra/plugin.yaml`。可运行插件实现
@@ -158,7 +197,7 @@ entrypoint: index.mjs
 contributions:
   - name: echo
     kind: fibra.tool
-    schemaVersion: 1
+    schemaVersion: 2
     method: echo
     descriptor:
       displayName: Echo
@@ -215,12 +254,13 @@ scripts/verify-reproducible-release.sh
 scripts/verify-distribution.sh
 ```
 
-当前发布边界为 25 个 Maven 制品，其中包含 12 个动态插件的 Java payload JAR，`fibra-tool-storage` 已
-纳入发布、可复现和仓库外消费清单。完整 reactor 覆盖真实 JAR、真实 Node 进程、目标恢复、Spring、
-archetype、架构边界和 JMH 编译门禁。
+当前发布边界为 26 个 Maven 制品，其中包含正式 `fibra-cli` 和 12 个动态插件的 Java payload JAR；
+这些制品已纳入发布、可复现和临时仓部署清单；现有仓库外消费者尚不包含 CLI，须由最终 ZIP 分发门禁
+验证 CLI 依赖闭包与启动器。完整 reactor 覆盖真实 JAR、真实 Node 进程、目标恢复、Spring、archetype、
+架构边界和 JMH 编译门禁。
 
-本快照尚未合入正式 CLI 与 ZIP 分发结构，因此当前 GitHub CI 只验证 pre-CLI 边界；最终全仓、公开 API、
-可复现和空 Maven 仓分发门禁必须在 CLI/ZIP 合入后统一重跑，不能沿用此前 24 制品的结果关闭交付。
+本快照已合入正式 CLI 宿主和命令树，但尚未合入 ZIP 分发结构；最终全仓、公开 API、可复现和空 Maven
+仓及解压启动门禁必须在 ZIP 合入后统一重跑，不能沿用 pre-CLI 结果关闭交付。
 可运行示例见 [`fibra-example`](fibra-example/README.md)，公共入口见 [`docs/api`](docs/api/README.md)，
 发布边界见 [`docs/release.md`](docs/release.md)。
 

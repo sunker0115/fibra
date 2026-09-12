@@ -1,5 +1,7 @@
 package com.sstlfsj.fibra.plugins.fs.tool;
 
+import com.sstlfsj.fibra.plugins.tool.ToolContent;
+
 import com.sstlfsj.fibra.InvocationContext;
 import com.sstlfsj.fibra.plugins.fs.FileSystem;
 import com.sstlfsj.fibra.plugins.fs.FsErrorCode;
@@ -61,8 +63,8 @@ class FileToolHandlersTest {
         var result = FileToolHandlers.write(fileSystem, context(), request).block();
 
         assertEquals(request.cancellation(), observedCancellation.get());
-        assertTrue(result.text().contains("Created file"));
-        var data = (Map<?, ?>) result.data().toJava();
+        assertTrue(((ToolContent.Text) result.content().getFirst()).text().contains("Created file"));
+        var data = (Map<?, ?>) result.structuredContent().orElseThrow().toJava();
         assertEquals("note.txt", data.get("path"));
         assertEquals("create", data.get("operation"));
         assertEquals("v1", data.get("version"));
@@ -87,9 +89,9 @@ class FileToolHandlersTest {
             "lines", java.util.List.of(
                 Map.of("number", new java.math.BigDecimal("2"), "text", "second"),
                 Map.of("number", new java.math.BigDecimal("3"), "text", "third")),
-            "totalLines", new java.math.BigDecimal("3")), result.data().toJava());
-        assertTrue(result.text().contains("2: second"));
-        assertTrue(result.text().contains("End of file - total 3 lines"));
+            "totalLines", new java.math.BigDecimal("3")), result.structuredContent().orElseThrow().toJava());
+        assertTrue(((ToolContent.Text) result.content().getFirst()).text().contains("2: second"));
+        assertTrue(((ToolContent.Text) result.content().getFirst()).text().contains("End of file - total 3 lines"));
         assertCode(ToolFailureCode.INVALID_ARGUMENT, () -> FileToolHandlers.read(fileSystem,
             context(), config, ToolRequest.of(Map.of("path", "note.txt", "offset", 0))).block());
         assertCode(ToolFailureCode.INVALID_ARGUMENT, () -> FileToolHandlers.read(fileSystem,
@@ -101,7 +103,7 @@ class FileToolHandlersTest {
     }
 
     private static void assertCode(ToolFailureCode code, org.junit.jupiter.api.function.Executable action) {
-        assertEquals(code, assertThrows(ToolException.class, action).code());
+        assertEquals(code, assertThrows(ToolException.class, action).failure().code());
     }
 
     private static final class FailingFileSystem implements FileSystem {

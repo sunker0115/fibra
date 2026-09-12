@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -52,15 +53,32 @@ class ToolApiTest {
     }
 
     @Test
-    void resultFactoriesKeepTextAndStructuredDataNonNull() {
+    void resultFactoriesSeparateTextAbsenceAndExplicitNull() {
         var text = ToolResult.text("done");
         var structured = ToolResult.structured(LiteralValue.of(Map.of("count", 1)));
 
-        assertEquals("done", text.text());
-        assertEquals(LiteralValue.of(null), text.data());
-        assertEquals("", structured.text());
-        assertEquals(LiteralValue.of(Map.of("count", 1)), structured.data());
-        assertThrows(NullPointerException.class, () -> new ToolResult(null, LiteralValue.of(null)));
+        assertEquals(List.of(ToolContent.text("done")), text.content());
+        assertTrue(text.structuredContent().isEmpty());
+        assertEquals(List.of(ToolContent.text("{\"count\":1}")), structured.content());
+        assertEquals(LiteralValue.of(Map.of("count", 1)), structured.structuredContent().orElseThrow());
+        assertEquals(List.of(ToolContent.text("null")), ToolResult.structured(LiteralValue.of(null)).content());
+        assertEquals(Optional.of(LiteralValue.of(null)), ToolResult.structured(LiteralValue.of(null)).structuredContent());
+        assertThrows(NullPointerException.class, () -> new ToolResult(null, Optional.empty()));
+        assertThrows(NullPointerException.class, () -> new ToolResult(List.of(), null));
+        assertThrows(NullPointerException.class, () -> ToolContent.text(null));
+        assertThrows(NullPointerException.class, () -> ToolResult.structured(null));
+        assertEquals(List.of(ToolContent.text("human")),
+            ToolResult.textAndStructured("human", LiteralValue.of(42)).content());
+    }
+
+    @Test
+    void resultDefensivelyCopiesOrderedContent() {
+        var blocks = new ArrayList<ToolContent>(List.of(ToolContent.text("one"), ToolContent.text("two")));
+        var result = new ToolResult(blocks, Optional.empty());
+        blocks.clear();
+        assertEquals(List.of(ToolContent.text("one"), ToolContent.text("two")), result.content());
+        assertThrows(UnsupportedOperationException.class, result.content()::clear);
+        assertThrows(NullPointerException.class, () -> new ToolResult(java.util.Arrays.asList((ToolContent) null), Optional.empty()));
     }
 
     @Test
@@ -68,10 +86,10 @@ class ToolApiTest {
         var cause = new IllegalStateException("disk unavailable");
         var exception = new ToolException(ToolFailureCode.IO_ERROR, "cannot read", cause);
 
-        assertEquals(ToolFailureCode.IO_ERROR, exception.code());
+        assertEquals(new ToolFailure(ToolFailureCode.IO_ERROR, "cannot read"), exception.failure());
         assertSame(cause, exception.getCause());
         assertEquals(ToolFailureCode.NOT_FOUND,
-            new ToolException(ToolFailureCode.NOT_FOUND, "missing").code());
+            new ToolException(ToolFailureCode.NOT_FOUND, "missing").failure().code());
         assertThrows(NullPointerException.class,
             () -> new ToolException(ToolFailureCode.IO_ERROR, null));
     }
@@ -109,7 +127,34 @@ class ToolApiTest {
         var codec = ToolContributions.KIND.codec().orElseThrow();
         var result = ToolResult.structured(LiteralValue.of(Map.of("count", 1)));
 
+        assertEquals(2, codec.schemaVersion());
+        assertEquals(Map.of("content", List.of(Map.of("type", "text", "text", "{\"count\":1}")),
+            "structuredContent", Map.of("count", java.math.BigDecimal.ONE)), codec.encodeOutput(result));
         assertEquals(result, codec.decodeOutput(codec.encodeOutput(result)));
+    }
+
+    @Test
+    void remoteCodecPreservesEveryJsonValueAndDistinguishesMissingFromNull() {
+        var codec = ToolContributions.KIND.codec().orElseThrow();
+        for (var value : java.util.Arrays.asList(null, "text", 42, true, List.of(1, 2), Map.of("key", "value"))) {
+            var result = ToolResult.structured(LiteralValue.of(value));
+            assertEquals(result, codec.decodeOutput(codec.encodeOutput(result)));
+            assertTrue(((Map<?, ?>) codec.encodeOutput(result)).containsKey("structuredContent"));
+        }
+        assertFalse(((Map<?, ?>) codec.encodeOutput(ToolResult.text("done"))).containsKey("structuredContent"));
+        assertEquals(new ToolResult(List.of(), Optional.empty()), codec.decodeOutput(Map.of("content", List.of())));
+    }
+
+    @Test
+    void remoteCodecRejectsMalformedOrUnknownContentBlocks() {
+        var codec = ToolContributions.KIND.codec().orElseThrow();
+        for (var content : List.of("not-array", List.of("text"), List.of(Map.of("type", "image", "data", "AA==")),
+            List.of(Map.of("type", "text")), List.of(Map.of("type", "text", "text", 42)),
+            List.of(Map.of("type", "text", "text", "ok", "extra", true)))) {
+            assertThrows(IllegalArgumentException.class, () -> codec.decodeOutput(Map.of("content", content)));
+        }
+        assertThrows(IllegalArgumentException.class, () -> codec.decodeOutput(Map.of(
+            "content", List.of(), "isError", false)));
     }
 
     @Test
@@ -121,6 +166,8 @@ class ToolApiTest {
         assertThrows(IllegalArgumentException.class,
             () -> codec.decodeOutput(Map.of("text", "done")));
         assertThrows(IllegalArgumentException.class,
+            () -> codec.decodeOutput(Map.of("text", "done", "data", Map.of())));
+        assertThrows(IllegalArgumentException.class,
             () -> codec.decodeDescriptor(Map.of("displayName", "name", "description", "desc",
                 "inputSchema", Map.of(), "outputSchema", Map.of(), "extra", true)));
     }
@@ -130,9 +177,10 @@ class ToolApiTest {
         var codec = ToolContributions.KIND.codec().orElseThrow();
         for (var code : ToolFailureCode.values()) {
             var failure = new RemoteContributionFailure(-32001, "failure", LiteralValue.of(Map.of(
-                "kind", "fibra.tool.failure", "schemaVersion", 1, "code", code.name())));
-            var mapped = codec.mapRemoteFailure(failure).orElseThrow();
-            assertEquals(code, assertInstanceOf(ToolException.class, mapped).code());
+                "kind", "fibra.tool.failure", "schemaVersion", 2, "code", code.name())));
+            var mapped = codec.mapRemoteFailure(failure);
+            assertTrue(mapped.isPresent());
+            assertEquals(code, assertInstanceOf(ToolException.class, mapped.orElseThrow()).failure().code());
         }
 
         var fractional = new RemoteContributionFailure(-32001, "failure", LiteralValue.of(Map.of(
@@ -141,6 +189,8 @@ class ToolApiTest {
             "kind", "fibra.tool.failure", "schemaVersion", Long.MAX_VALUE, "code", "ABORTED")));
         assertTrue(codec.mapRemoteFailure(fractional).isEmpty());
         assertTrue(codec.mapRemoteFailure(tooLarge).isEmpty());
+        assertTrue(codec.mapRemoteFailure(new RemoteContributionFailure(-32001, "legacy", LiteralValue.of(
+            Map.of("kind", "fibra.tool.failure", "schemaVersion", 1, "code", "ABORTED")))).isEmpty());
     }
 
     private static LiteralValue.ObjectValue object(Map<String, ?> values) {

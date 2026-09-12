@@ -12,6 +12,11 @@
   <dependencies>
     <dependency>
       <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-cli</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
       <artifactId>fibra-tool-api</artifactId>
     </dependency>
     <dependency>

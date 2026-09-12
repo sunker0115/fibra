@@ -84,7 +84,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-      - name: 验证二十五个发布制品可复现
+      - name: 验证二十六个发布制品可复现
         run: scripts/verify-reproducible-release.sh
 
       - name: 验证仓库外项目可直接消费发布制品

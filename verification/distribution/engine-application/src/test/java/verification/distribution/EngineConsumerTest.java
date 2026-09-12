@@ -90,21 +90,21 @@ class EngineConsumerTest {
                 .allMatch(instance -> instance.state() == PluginInstanceState.ACTIVE));
 
             var written = map(invoke(engine, "fs-tools", "write", Map.of(
-                "path", "created.txt", "content", "created externally")).data().toJava());
+                "path", "created.txt", "content", "created externally")).structuredContent().orElseThrow().toJava());
             assertEquals("create", written.get("operation"));
             var read = map(invoke(engine, "fs-tools", "read", Map.of(
-                "path", "created.txt")).data().toJava());
+                "path", "created.txt")).structuredContent().orElseThrow().toJava());
             assertEquals("created externally", map(list(read.get("lines")).getFirst()).get("text"));
 
             var grep = map(invoke(engine, "search-tools", "grep", Map.of(
-                "pattern", "needle", "path", ".")).data().toJava());
+                "pattern", "needle", "path", ".")).structuredContent().orElseThrow().toJava());
             assertEquals(1, ((Number) grep.get("seen")).intValue());
             assertEquals("./nested/input.txt", map(list(grep.get("matches")).getFirst()).get("path"));
 
             var shell = invoke(engine, "shell-tools", "bash", Map.of(
                 "command", "printf 'out'; printf 'err' >&2; exit 7",
                 "workdir", content.toString(), "timeoutMs", 5_000));
-            var shellData = map(shell.data().toJava());
+            var shellData = map(shell.structuredContent().orElseThrow().toJava());
             assertEquals(7, ((Number) shellData.get("exitCode")).intValue());
             assertEquals("out", map(shellData.get("stdout")).get("text"));
             assertEquals("err", map(shellData.get("stderr")).get("text"));
@@ -112,10 +112,10 @@ class EngineConsumerTest {
             invoke(engine, "config-client", "config", Map.of(
                 "operation", "put", "key", "theme", "value", "dark"));
             var formalConfig = map(invoke(engine, "storage-tools", "load", Map.of())
-                .data().toJava());
+                .structuredContent().orElseThrow().toJava());
             assertEquals("dark", map(formalConfig.get("values")).get("theme"));
             var changes = map(invoke(engine, "storage-tools", "changes", Map.of())
-                .data().toJava());
+                .structuredContent().orElseThrow().toJava());
             assertEquals(false, changes.get("dropped"));
             var firstChange = map(list(changes.get("changes")).getFirst());
             assertEquals("theme", firstChange.get("key"));
@@ -125,7 +125,7 @@ class EngineConsumerTest {
             invoke(engine, "storage-tools", "put", Map.of(
                 "key", "language", "value", "zh-CN"));
             var externalConfig = map(invoke(engine, "config-client", "config",
-                Map.of("operation", "load")).data().toJava());
+                Map.of("operation", "load")).structuredContent().orElseThrow().toJava());
             assertEquals("dark", map(externalConfig.get("values")).get("theme"));
             assertEquals("zh-CN", map(externalConfig.get("values")).get("language"));
         }

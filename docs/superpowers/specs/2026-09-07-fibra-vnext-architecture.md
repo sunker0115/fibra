@@ -610,6 +610,7 @@ DSH 中已安装 package、bundle patch、profile 组合和最终运行配置是
 | package 的物理安装 | `ArtifactPackage`、`ArtifactStore` 与 Registry 安装记录 |
 | bundle 提供的有序配置 patch | `DesiredInputGraph` 的 include 与条目 patch |
 | profile 选择 bundle 及其顺序 | 命名配置入口按声明顺序组合配置 bundle |
+| profile 声明的完整 package 选择 | 相邻的 `<profile>.artifacts.yaml` 输入清单，只列相对候选目录的包路径 |
 | profile 的 package 依赖闭包 | `DeploymentManifest` 的 artifact revision 集合及 runtime 制品依赖图 |
 | profile 合成后的活动配置 | Engine 保存的单一完整部署目标 |
 | 应用运行态 | 长期 `RuntimeDomain` 中按目标差量协调的实例与资源 |
@@ -630,6 +631,7 @@ fibra/
     plugin.properties               包布局描述
     lib/                            Java payload 与私有依赖，或 Node payload 目录
   config/profiles/<profile>.yaml    命名组合入口
+  config/profiles/<profile>.artifacts.yaml  完整候选包选择输入
   config/bundles/*.yaml             可复用配置片段
   data/profiles/<profile>/          该 profile 的持久目标、制品与运行数据
 ```
@@ -654,16 +656,94 @@ ClassLoader 的私有依赖 JAR 若 `MANIFEST.MF Class-Path` 非空则拒绝，�
 路径。Node payload 必须是目录，
 其中 `fibra-plugin.yaml` 和相对 entrypoint 一同被保存；entrypoint 不能是绝对路径或逃出 payload。
 
-`fibra-cli` 只解析 profile、配置根、候选插件目录和数据目录；`fibra-config` 负责 include、patch、条件及
+`<profile>.yaml` 保持现有配置条目数组语法，不增加包管理字段或 profile 顶层对象；相邻的
+`<profile>.artifacts.yaml` 是必需的字符串数组，例如：
+
+```yaml
+- fibra-fs
+- fibra-fs-local
+- fibra-tool-fs
+```
+
+每项是相对所选候选插件目录的包根路径，不是 artifact ID。清单不重复声明 ID、runtime、版本、入口或
+依赖；这些事实仍由 `PluginArtifactProbe` 通过标准包及其内部 manifest 读取。清单必须显式列出本次
+目标的全部制品，包括所需依赖包，不根据配置 definition 名猜测闭包，不执行版本范围求解。未列出的
+候选目录完全忽略；清单顺序仅保留输入与诊断顺序，不取代 runtime 的实际依赖顺序。
+
+缺失、空文件、`null`、非数组、非字符串或空白项均拒绝；`[]` 是唯一明确的空制品选择。路径按候选根
+规范化，拒绝绝对路径、根本身、越界路径、URL、通配模式及重复规范路径；解析真实路径后再次检查
+候选根边界与重复路径，拒绝通过中间符号链接逃出候选根。包本身仍遵守上述无符号链接约束。不同包路径
+探测出相同 artifact ID 也拒绝。清单读取沿用配置文件的大小、嵌套、字符串和条目数量限制。
+
+`fibra-cli` 解析 profile、配置根、候选插件目录和数据目录，并把显式包路径清单交给统一 probe；
+`fibra-config` 负责 include、patch、条件及
 配置树编译；Registry 负责安装、版本、期望状态和审计；Engine 只接收完整 desired graph 与 artifact
 选择，不感知 profile/bundle 的文件组织；runtime adapter 只解释目标引用的 payload；distribution 只
 提供默认目录和正式组合内容。不得新增与 `DesiredInputGraph`、`DeploymentManifest` 平行的
 `BundleManager`、`ProfileRuntime` 或第二套活动状态。
 
-首次所选 profile 的持久存储为空时，可以从其配置入口采集、组合并建立初始部署目标。已有完整目标时，
-重启必须直接恢复该目标；候选插件目录、默认 profile 或分发升级均不得静默覆盖。后续 profile 文件变化
-只有通过显式 apply/refresh，或该 profile 已明确启用的自动源刷新，才能编译并提交新目标。切换 profile
-等价于选择另一套持久数据命名空间并启动新的宿主进程，不在同一 Engine 内实现整代切换或回滚。
+首次所选 profile 的持久存储为空时，配置入口由 `DesiredStateRepository` 采集、组合，包清单由惰性的
+`InitialArtifactSource` 采集；两者经同一个 ChangeSet 建立初始完整目标，不能先逐个安装再提交配置。
+空配置数组与空制品数组构成合法空目标。已有完整目标时，重启必须直接恢复该目标，不读取两个 profile
+源文件或候选目录；它们即使缺失也不影响恢复，默认 profile 或分发升级不得静默覆盖保存目标。
+
+显式 `apply` 重新采集配置与完整包清单，验证后通过 Registry 的 deployment 请求一次性替换目标；
+不与当前安装集合取并集。此时列出的候选包必须存在，不能缺失时隐式回退到已安装版本。修改候选包不
+自动升级目标，只有显式 apply 或 Registry upgrade 才选择新内容。`refresh` 与明确启用的自动源刷新
+只刷新配置图、保留当前制品选择，不读取包清单或扫描候选目录；不能把它们描述成完整 apply 的同义词。
+
+Registry install、upgrade、uninstall 只改变当前保存目标，不回写 profile 或包清单；后续完整 apply
+明确以输入清单替换这些命令式制品变更。安装不修改实例启用意图或配置 bundle，但可能补齐已有启用
+声明所缺的制品，从而使该声明达成。输入文件是下一次导入来源，`DeploymentManifest` 仍是唯一保存
+目标，不增加活动选择指针或第二安装数据库。切换 profile 等价于选择另一套持久数据命名空间并启动
+新的宿主进程，不在同一 Engine 内实现整代切换或回滚。
+
+正式 CLI 以 Picocli 4.7.7 提供同一棵一次性/交互命令树，以 JLine 4.4.3 `jdk11` 制品提供 Java 21
+终端输入；不引入 Spring Shell 或第二宿主生命周期。命令面固定为 `plugins list/install/upgrade/
+uninstall/enable/disable`、`tools list/invoke`、`apply` 和 `repl`。REPL 只在入口建立一次
+`CliHost`，每行复用同一 Engine、Registry、PublishedRuntime 和持久资源；REPL 内不允许改变 profile
+或根目录，切换命名空间须启动另一宿主进程。插件与工具输出使用确定性单行 JSON，usage、宿主启动、
+业务/调用、revision 冲突、变更关闭和宿主关闭分别使用稳定退出码 2、3、4、5、6、7。
+
+`tools list` 从单个不可变 `PublishedView` 读取 descriptor；`tools invoke` 使用该 view 的 revision 调用
+同一 `PublishedRuntime`，不直接访问插件实例或 Node sidecar。CLI 为每次调用建立独立
+`CancellationSource`；正常命令结束、REPL 退出或 JVM shutdown 均先请求取消 CLI 所有在途调用，再由
+Engine 的既有 drain/Scope/资源所有权边界完成关闭，不能强制跳过清理。
+工具返回契约采用“provider 成功产物、Harness 调用终态、外部协议投影”三层边界。`ToolResult` 只表示
+provider 已成功产生的不可变结果，由有序 `content` 与可选 `structuredContent` 组成；后者使用任意
+`LiteralValue`，严格区分缺省与显式 JSON `null`。本期只有文本内容块具备 producer、wire 与宿主消费的
+完整闭环，不以无类型 map 预演 image、audio 或 resource。`ToolOutcome` 在 Harness 工具调用边界把
+`ToolResult` 归一为成功，把明确的 `ToolException` 归一为带稳定 `ToolFailureCode`、消息和文本内容的
+失败；未知贡献、revision 冲突、畸形输出、断链及未知异常仍属于宿主或协议失败，不猜测成工具业务错误。
+Engine、通用 contribution 和 runtime adapter 不识别工具终态类型。
+
+该分层采用 DSH 的实际执行模型：工具 body 返回 canonical JSON 成功值或抛错，`ToolRuntime` 才生成判别式
+成功/失败；DSH 的 MCP bridge 收到远端 `isError=true` 也先进入同一抛错/归一化路径，而不是把 MCP
+传输对象当作工具 body。Fibra 内部 `fibra.tool` Node wire 使用独立 schema v2：成功输出只传必需
+`content` 与可选 `structuredContent`，明确工具失败仍通过版本化远端业务错误传输；v1 不保留兼容分支。
+
+外部 MCP 以当前最新正式规范 `2026-07-28` 为适配基线。MCP adapter 只在协议边界增加
+`resultType="complete"`、`isError` 与协议 `_meta`，并把 Fibra 终态映射为 `CallToolResult`；
+`structuredContent` 可为任意 JSON 值，若工具声明 output schema 则适配器必须校验。MCP 的
+`InputRequiredResult(resultType="input_required")` 是调用尚未终结时的多轮交互 envelope，不是成功值或
+工具失败；未来由 Harness 交互编排层管理 `inputRequests`、不透明 `requestState` 与重提，不能塞进
+`ToolResult` 或 `ToolOutcome`。同理，`viewRevision`、provider identity、请求/trace ID、退出码、重试、
+耗时、Throwable 和 DSH 的 presentation meta 均属于调用 envelope、诊断或 adapter，不进入结果领域对象。
+
+其他主流协议验证了同一边界，但服务于不同层次。A2A `1.0.1` 面向 Agent 间异步任务：`Task`、
+`Message`、`Artifact`、`INPUT_REQUIRED/AUTH_REQUIRED`、订阅和推送属于 Tool 之上的 Agent/Task 编排层；
+单次工具失败只有在 Agent 不再重试、改计划或追问时才可能使 Task 进入 `FAILED`。ACP v1 与 AG-UI
+主要承载客户端可观察的调用 ID、pending/in-progress/terminal 状态、权限/补充输入、增量内容及界面事件；
+OpenAI Responses 和 Anthropic Tool Use 的 `call_id/tool_use_id`、流式序号与 `is_error` 同样属于调用
+关联或协议投影。未来 adapter 必须建立独立的 Harness invocation envelope 和 Agent task envelope，不能
+把这些协议字段反向塞进 `ToolResult`/`ToolOutcome`，也不能把每次内部工具输出机械提升为 A2A Artifact。
+文件、多模态、diff、terminal 等内容只有在资源所有权、传输和宿主消费形成完整闭环时才增加明确的
+`ToolContent` 变体，不设置无类型协议透传字段。
+
+CLI 投影使用 `content`、可选 `structuredContent`、`isError`、失败时的 `error {code,message}` 以及独立
+`viewRevision`；直接 `tools invoke` 的明确工具失败仍使用业务失败退出码 4，不为每个工具码发明另一套
+进程退出码。该 JSON 是 CLI envelope，不冒充 MCP JSON-RPC response，也不机械携带 MCP 的
+`resultType` 或 `_meta`。
 
 ### 6.2 Java Runtime
 
@@ -842,6 +922,11 @@ Java Harness 只是验证 built-in definition、EngineCommand、PublishedView、
 - Java 使用真实 JAR 验证依赖图、资源委派和 ClassLoader 回收；
 - Node 使用真实进程验证握手、超时、取消、心跳、异常退出与进程树终止；
 - 公开 API 签名、模块依赖、Spring、示例、archetype、外部消费和可复现分发门禁通过；
+- CLI profile 首次启动与完整 apply 验证必需的制品清单、严格字符串数组和路径边界；缺失清单不能
+  清空目标，`[]` 配置加 `[]` 制品合法，额外候选包不被探测或安装，重复路径及重复内部 ID 明确失败；
+- profile 完整 apply 覆盖 A+B 到 B+C 的制品、实例与持久目标一致性；install 不改启用意图、不回写源，
+  后续 apply 明确替换命令式选择；候选换版不自动升级，删除源及候选目录后仍从保存目标恢复，配置
+  refresh 不读取制品清单或改变制品集合；
 - 全仓无 PF4J、旧 loader、`Engine.runtime()`、共享可变 ContributionBridge 或兼容转发残留。
 
 交付判定以这些不变量的实际覆盖为准，不能仅凭既有测试数量或历史绿色构建认定完成。逐项行为映射见
@@ -852,15 +937,15 @@ Java Harness 只是验证 built-in definition、EngineCommand、PublishedView、
 最终交付统一执行一次，发现分发问题时才针对修复重新验证，不因每次逻辑修改重复下载依赖。
 
 2026-09-12 的 48 模块离线 clean verify、24 个正式发布制品的可复现比较和空仓外部消费者结果仅是
-前一阶段证据；正式 `fibra-tool-storage`、正式宿主 CLI 与 ZIP 分发结构继续纳入后，必须按本节门禁重新
-执行全仓、可复现和空仓分发验证，不能以该历史结果关闭交付。71 项 Cordis 与 44 项 Fibra 回归仍按独立
-账本计数；Windows 文件发布仅记录实现、注入测试和制品证据，不扩大为未执行的实机声明。逐项证据与
-平台边界见[行为验收账本](../references/2026-09-11-behavior-verification-ledger.md)。
+更早阶段证据；其后加入的 `fibra-tool-storage` 与正式宿主 CLI 已有各自定向证据，但 ZIP 分发结构合入后
+仍必须按本节门禁重新执行全仓、可复现和空仓分发验证，不能拼接历史绿色结果关闭交付。71 项 Cordis 与
+44 项 Fibra 回归仍按独立账本计数；Windows 文件发布仅记录实现、注入测试和制品证据，不扩大为未执行
+的实机声明。逐项证据与平台边界见[行为验收账本](../references/2026-09-11-behavior-verification-ledger.md)。
 
 同日 pre-CLI 快照 `618091a` 已在 GitHub Ubuntu runner 重新通过 48 模块 `clean verify`、25 个正式发布
 制品的可复现比较，以及从空临时 Maven 仓部署后的仓库外消费者验证。该证据覆盖正式 storage 和 12 个
-动态插件，但不包含尚未实现的正式 CLI、ZIP 目录、解压启动和命令交互；CLI/ZIP 合并后仍须按最终清单
-重跑全部门禁，不能把 pre-CLI 绿色结果升级为最终交付结论。
+动态插件，但不包含本轮新增的正式 CLI，也不覆盖 ZIP 目录、解压启动和命令交互；ZIP 合入后仍须按最终
+清单重跑全部门禁，不能把 pre-CLI 绿色结果升级为最终交付结论。
 
 ### 10.1 框架交付与多插件应用验收
 

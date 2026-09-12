@@ -9,6 +9,8 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
+import tools.jackson.core.StreamReadFeature;
+import tools.jackson.core.json.JsonFactory;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.json.JsonMapper;
@@ -44,7 +46,9 @@ final class NodeSidecar implements AutoCloseable {
     private final NodeProcessUnit processUnit;
     private final Runnable disableRequest;
     private final BufferedWriter writer;
-    private final JsonMapper json = JsonMapper.builder()
+    private final JsonMapper json = JsonMapper.builder(JsonFactory.builder()
+            .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build())
+        .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
         .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
         .enable(DeserializationFeature.USE_BIG_INTEGER_FOR_INTS)
         .build();
@@ -307,11 +311,18 @@ final class NodeSidecar implements AutoCloseable {
             if (id == null) {
                 return;
             }
+            var hasResult = message.containsKey("result");
+            var hasError = message.containsKey("error");
+            if (hasResult == hasError) {
+                throw new NodeRpcException(NodeRpcPhase.PROTOCOL,
+                    hasResult ? "Node response contains both result and error"
+                        : "Node response contains neither result nor error");
+            }
             var request = removePending(id);
             if (request == null) {
                 return;
             }
-            if (message.containsKey("error")) {
+            if (hasError) {
                 var failure = remoteFailure(message.get("error"));
                 if (failure == null) {
                     request.completeFailure(new NodeRpcException(NodeRpcPhase.PROTOCOL,
@@ -319,9 +330,6 @@ final class NodeSidecar implements AutoCloseable {
                 } else {
                     request.completeFailure(new NodeRpcException(NodeRpcPhase.REQUEST, failure));
                 }
-            } else if (!message.containsKey("result")) {
-                request.completeFailure(new NodeRpcException(NodeRpcPhase.PROTOCOL,
-                    "Node response contains neither result nor error"));
             } else {
                 request.complete(message.get("result"));
             }

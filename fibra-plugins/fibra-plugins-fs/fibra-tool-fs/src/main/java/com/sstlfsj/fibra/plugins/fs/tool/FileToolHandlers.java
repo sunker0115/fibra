@@ -76,7 +76,7 @@ public final class FileToolHandlers {
                         var verb = result.operation().name().equals("CREATE") ? "Created" : "Updated";
                         var text = "<path>" + target.displayPath() + "</path>\n<type>file</type>\n"
                             + "<content>\n" + verb + " file\n</content>";
-                        return new ToolResult(text, LiteralValue.of(data));
+                        return ToolResult.textAndStructured(text, LiteralValue.of(data));
                     }));
         });
     }
@@ -102,7 +102,7 @@ public final class FileToolHandlers {
                             ? "The file " + target.displayPath()
                                 + " has been updated. All occurrences were successfully replaced."
                             : "The file " + target.displayPath() + " has been updated successfully.";
-                        return new ToolResult(text, LiteralValue.of(data));
+                        return ToolResult.textAndStructured(text, LiteralValue.of(data));
                     }));
         });
     }
@@ -134,7 +134,7 @@ public final class FileToolHandlers {
         data.put("offset", offset);
         data.put("lines", lines);
         data.put("totalLines", rawLines.size());
-        return new ToolResult(formatRead(path, offset, lines, rawLines.size(), truncatedByBytes),
+        return ToolResult.textAndStructured(formatRead(path, offset, lines, rawLines.size(), truncatedByBytes),
             LiteralValue.of(data));
     }
 

@@ -13,6 +13,7 @@ import com.sstlfsj.fibra.engine.ReplaceDesiredGraph;
 import com.sstlfsj.fibra.bridge.ContributionUnavailableException;
 import com.sstlfsj.fibra.engine.PublishedRevisionConflictException;
 import com.sstlfsj.fibra.plugins.tool.ToolContributions;
+import com.sstlfsj.fibra.plugins.tool.ToolContent;
 import com.sstlfsj.fibra.plugins.tool.ToolRequest;
 import com.sstlfsj.fibra.runtime.node.NodePluginRuntimeAdapter;
 import com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions;
@@ -67,7 +68,7 @@ class NodePublishedCancellationOwnershipTest {
                 var completed = engine.published().invoke(engine.published().current().viewRevision(),
                     ToolContributions.KIND, ToolContributions.id(INSTANCE, "run"),
                     ToolRequest.of(Map.of("command", "complete"))).block(TIMEOUT);
-                assertEquals("B completed", completed.text());
+                assertEquals(List.of(ToolContent.text("B completed")), completed.content());
                 assertEquals(List.of(pid), recordedPids(pidFile));
 
                 cancelled.dispose();
@@ -154,7 +155,7 @@ class NodePublishedCancellationOwnershipTest {
             contributions:
               - name: run
                 kind: fibra.tool
-                schemaVersion: 1
+                schemaVersion: 2
                 method: tool.run
                 descriptor:
                   displayName: Node tool
@@ -186,7 +187,7 @@ class NodePublishedCancellationOwnershipTest {
                   heldRequest = id;
                   fs.writeFileSync(config.holdEntered, 'entered');
                 } else if (command === 'complete') {
-                  reply(id, {text:'B completed', data:null});
+                  reply(id, {content:[{type:'text', text:'B completed'}]});
                 }
               } else if (method === '$/cancelRequest') {
                 fs.writeFileSync(config.cancelObserved, 'cancelled');
@@ -194,7 +195,7 @@ class NodePublishedCancellationOwnershipTest {
                   if (fs.existsSync(config.release)) {
                     clearInterval(waiting);
                     fs.appendFileSync(config.lifecycleEvents, 'request-settled' + String.fromCharCode(10));
-                    reply(heldRequest, {text:'A cancelled', data:null});
+                    reply(heldRequest, {content:[{type:'text', text:'A cancelled'}]});
                     heldRequest = undefined;
                   }
                 }, 10);

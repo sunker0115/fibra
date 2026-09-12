@@ -249,6 +249,24 @@ class NodePluginRuntimeAdapterTest {
     }
 
     @Test
+    void rejectsLegacyToolCodecBeforeStartingNode(@TempDir Path work) throws Exception {
+        var root = work.resolve("legacy-tool");
+        var payload = nodePackage(root);
+        Files.writeString(payload.resolve("fibra-plugin.yaml"), toolManifest().replace("schemaVersion: 2", "schemaVersion: 1"));
+        Files.writeString(payload.resolve("index.mjs"), "throw new Error('must not start');");
+        var sessions = work.resolve("sessions");
+        var adapter = new NodePluginRuntimeAdapter(name -> "fibra.tool".equals(name)
+            ? Optional.of(ToolContributions.KIND) : Optional.empty(),
+            NodeRuntimeOptions.defaults(work.resolve("unavailable-node"), sessions));
+
+        var failure = assertThrows(NodeRuntimeException.class,
+            () -> adapter.probe(com.sstlfsj.fibra.artifact.ArtifactPackage.read(root)).block());
+
+        assertTrue(failure.getMessage().contains("schema version"));
+        assertFalse(Files.exists(sessions));
+    }
+
+    @Test
     void preservesToolFailuresAndCancellationAcrossTheNodeBoundary(@TempDir Path work)
         throws Exception {
         var artifactRoot = work.resolve("tool-node");
@@ -282,7 +300,7 @@ class NodePluginRuntimeAdapterTest {
                     ToolContributions.id("tool-instance", "run"),
                     ToolRequest.of(Map.of("command", "wait"), preCancelled.token()))
                 .block(Duration.ofSeconds(2)));
-            assertEquals(ToolFailureCode.ABORTED, beforeStart.code());
+            assertEquals(ToolFailureCode.ABORTED, beforeStart.failure().code());
             assertEquals(0, integer(status(runtime, directory, "runCalls")));
 
             var cancellationChecks = new AtomicInteger();
@@ -302,7 +320,7 @@ class NodePluginRuntimeAdapterTest {
                     ToolContributions.id("tool-instance", "run"),
                     ToolRequest.of(Map.of("command", "wait"), cancelledBetweenChecks))
                 .block(Duration.ofSeconds(2)));
-            assertEquals(ToolFailureCode.ABORTED, beforeSend.code());
+            assertEquals(ToolFailureCode.ABORTED, beforeSend.failure().code());
             assertEquals(0, integer(status(runtime, directory, "runCalls")));
 
             var closedCaller = runtime.rootScope().openChild("closed-caller");
@@ -317,7 +335,7 @@ class NodePluginRuntimeAdapterTest {
                 .invoke(runtime.rootScope().context(), ToolContributions.KIND,
                     ToolContributions.id("tool-instance", "run"), ToolRequest.of(Map.of("command", "fail")))
                 .block(Duration.ofSeconds(2)));
-            assertEquals(ToolFailureCode.NOT_FOUND, businessFailure.code());
+            assertEquals(ToolFailureCode.NOT_FOUND, businessFailure.failure().code());
 
             var nullOutput = assertThrows(IllegalArgumentException.class,
                 () -> directory.current().routes().invoke(runtime.rootScope().context(),
@@ -340,7 +358,7 @@ class NodePluginRuntimeAdapterTest {
             var completed = assertThrows(ExecutionException.class,
                 () -> pending.get(2, java.util.concurrent.TimeUnit.SECONDS));
             assertEquals(ToolFailureCode.ABORTED,
-                assertInstanceOf(ToolException.class, completed.getCause()).code());
+                assertInstanceOf(ToolException.class, completed.getCause()).failure().code());
 
             var cancelledFailure = new CancellationSource();
             var failureRelease = work.resolve("failure-release");
@@ -356,7 +374,7 @@ class NodePluginRuntimeAdapterTest {
             var remoteFailure = assertThrows(ExecutionException.class,
                 () -> failing.get(2, java.util.concurrent.TimeUnit.SECONDS));
             assertEquals(ToolFailureCode.NOT_FOUND,
-                assertInstanceOf(ToolException.class, remoteFailure.getCause()).code());
+                assertInstanceOf(ToolException.class, remoteFailure.getCause()).failure().code());
 
             var nullCancellation = new CancellationSource();
             var nullRelease = work.resolve("null-release");
@@ -372,7 +390,7 @@ class NodePluginRuntimeAdapterTest {
             var nullCancellationFailure = assertThrows(ExecutionException.class,
                 () -> nullAfterCancel.get(2, java.util.concurrent.TimeUnit.SECONDS));
             assertEquals(ToolFailureCode.ABORTED,
-                assertInstanceOf(ToolException.class, nullCancellationFailure.getCause()).code());
+                assertInstanceOf(ToolException.class, nullCancellationFailure.getCause()).failure().code());
 
             instance.dispose().block(Duration.ofSeconds(3));
         }
@@ -510,7 +528,7 @@ class NodePluginRuntimeAdapterTest {
         var result = directory.current().routes().invoke(runtime.rootScope().context(),
             ToolContributions.KIND, ToolContributions.id("tool-instance", "status"),
             ToolRequest.of(Map.of())).block(Duration.ofSeconds(2));
-        return ((Map<?, ?>) result.data().toJava()).get(key);
+        return ((Map<?, ?>) result.structuredContent().orElseThrow().toJava()).get(key);
     }
 
     private static void awaitStatus(FibraRuntime runtime, ContributionDirectory directory,
@@ -553,7 +571,7 @@ class NodePluginRuntimeAdapterTest {
             contributions:
               - name: run
                 kind: fibra.tool
-                schemaVersion: 1
+                schemaVersion: 2
                 method: tool.run
                 descriptor:
                   displayName: Node tool
@@ -562,7 +580,7 @@ class NodePluginRuntimeAdapterTest {
                   outputSchema: { type: object }
               - name: status
                 kind: fibra.tool
-                schemaVersion: 1
+                schemaVersion: 2
                 method: tool.status
                 descriptor:
                   displayName: Node tool status
@@ -593,7 +611,7 @@ class NodePluginRuntimeAdapterTest {
               else if (method === 'tool.run') {
                 runCalls++;
                 const command = message.params.input.arguments.command;
-                if (command === 'fail') fail(id, {code:-32001, message:'missing', data:{kind:'fibra.tool.failure', schemaVersion:1, code:'NOT_FOUND'}});
+                if (command === 'fail') fail(id, {code:-32001, message:'missing', data:{kind:'fibra.tool.failure', schemaVersion:2, code:'NOT_FOUND'}});
                 else if (command === 'null') reply(id, null);
                 else if (command === 'wait') {
                   waiting = true;
@@ -615,9 +633,9 @@ class NodePluginRuntimeAdapterTest {
                   releasePath = message.params.input.arguments.releasePath;
                   nullAfterCancel = true;
                 }
-                else reply(id, {text:'done', data:{command}});
+                else reply(id, {content:[{type:'text', text:'done'}], structuredContent:{command}});
               }
-              else if (method === 'tool.status') reply(id, {text:'status', data:{runCalls, waiting, cancelled}});
+              else if (method === 'tool.status') reply(id, {content:[{type:'text', text:'status'}], structuredContent:{runCalls, waiting, cancelled}});
               else if (method === '$/cancelRequest') {
                 waiting = false;
                 cancelled = true;
@@ -628,11 +646,11 @@ class NodePluginRuntimeAdapterTest {
                     waitingRequest = undefined;
                     if (failAfterCancel) {
                       failAfterCancel = false;
-                      fail(settledRequest, {code:-32001, message:'missing', data:{kind:'fibra.tool.failure', schemaVersion:1, code:'NOT_FOUND'}});
+                      fail(settledRequest, {code:-32001, message:'missing', data:{kind:'fibra.tool.failure', schemaVersion:2, code:'NOT_FOUND'}});
                     } else if (nullAfterCancel) {
                       nullAfterCancel = false;
                       reply(settledRequest, null);
-                    } else reply(settledRequest, {text:'cancelled', data:null});
+                    } else reply(settledRequest, {content:[{type:'text', text:'cancelled'}], structuredContent:null});
                   }
                 }, 10);
               }

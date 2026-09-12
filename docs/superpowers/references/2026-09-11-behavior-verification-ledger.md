@@ -1,8 +1,8 @@
 # 行为验收账本
 
-复核日期：2026-09-12。状态：Cordis 原始行为、Fibra 额外回归、正式插件和 pre-CLI 分发证据已记录；
-正式宿主 CLI 与 ZIP 分发仍待交付，合并后的最终全仓、可复现及空仓分发门禁仍须统一复验；平台限定
-证据见第 5、6 节。
+复核日期：2026-09-12。状态：Cordis 原始行为、Fibra 额外回归、正式插件、pre-CLI 分发证据和正式宿主
+CLI 的本地证据已记录；ZIP 分发仍待交付，合并后的最终全仓、可复现及空仓分发门禁仍须统一复验；
+平台限定证据见第 5、6 节。
 
 本账本把两类当前验收对象分开记录：
 
@@ -73,6 +73,15 @@ CLI/ZIP 发行结构。
 0 skipped，Engine、Spring 及真实 Java/Node 跨运行时场景一并通过。该结果是当前架构阶段的定向回归，
 不替代 CLI/ZIP 合并后的最终全仓、可复现和空仓分发门禁。
 
+正式宿主 CLI 阶段使用 Maven 3.9.9、Zulu JDK 21.0.2 对 JLine 4.4.3 `jdk11` 制品执行干净定向编译与
+测试，`FibraCliTest`、`CliReplTest` 共 23 项通过；随后执行 `mvn -o -pl fibra-cli -am test`，12 个
+reactor 模块全部通过，`fibra-cli` 的 62 项为 0 failure、0 error、0 skipped。该证据覆盖严格 profile
+制品清单、首次联合启动、保存目标恢复、显式 apply、目录锁、命令解析、JSON 边界、单行输出和 REPL
+复用宿主。`fibra-tool-api` 的 `ToolApiTest`/`ToolOutcomesTest` 16 项固定成功产物、调用终态和 Node wire
+schema v2；`FormalCliIT` 3 项与 `FormalMultiPluginIT` 5 项通过真实动态 storage/fs/search/shell 插件验证
+REPL 共享状态、重启恢复、完整 apply、公开调用、局部更新和在途调用保留。真实发行目录中的同一流程仍须
+由 ZIP 解压门禁完成，不能由本阶段单元/集成测试替代。
+
 正式安装单元阶段在 macOS 26.6.2 arm64、Zulu JDK 21.0.2 上执行 `mvn -o clean verify`，48 个 reactor
 模块全部通过，耗时 1 分 35 秒。新增的 `ArtifactPackageTest` 20 项、`PluginArtifactProbeTest` 5 项、
 `JavaArtifactPackageTest` 6 项及 Node runtime 22 项共同覆盖严格三字段包描述、整包 runtime 路由、
@@ -82,7 +91,7 @@ CLI/ZIP 发行结构。
 `target/<finalName>-plugin/` 并完成真实 Java adapter 装载；正式多插件组合验收 9 项继续通过。
 该证据固定 CLI 前的插件安装边界，不证明 profile 配置文件、正式宿主、发行 ZIP 或仓库外解压启动已完成。
 
-联合部署故障另由 `ApplyDeploymentPersistenceBoundaryTest` 6 项、
+联合部署故障另由 `ApplyDeploymentPersistenceBoundaryTest` 8 项、
 `ApplyDeploymentMountFailureRecoveryTest` 1 项和 `EngineArtifactRecoveryTest` 2 项覆盖：同一携带新
 artifact 与 desired graph 的 `ApplyDeployment` 验证多制品暂存、运行时准备、制品元数据发布和目标保存
 边界；保存未确认关闭 mutation gate，并从磁盘完整新目标恢复；保存后退休失败关闭 mutation gate，且
@@ -156,7 +165,7 @@ artifact 与 desired graph 的 `ApplyDeployment` 验证多制品暂存、运行�
 | 交付层 | 契约与实现证据 | 真实组合及结论 |
 |---|---|---|
 | 正式安装单元 | `ArtifactPackageTest` 20 项严格校验 `plugin.properties` 的 `formatVersion`、`runtime`、`payload` 三字段、包根与 payload 规范路径、完整树无符号链接，并拒绝裸制品；`PluginArtifactProbeTest` 5 项验证按唯一 runtime adapter 路由且 adapter 不得篡改 runtime 或包根 | `ArtifactStore` 保存整个包根而不是单个 payload；Java/Node runtime 的 inspect、prepare 和启动只重新读取受管副本。删除原候选目录后，Java 私有类、资源和 `ServiceLoader` provider 仍可从受管包正常装载；Node sidecar 也只从受管 payload 启动 |
-| 调用取消与宿主工具契约 | `CancellationSourceTest` 2 项、`InvocationContextCancellationTest` 2 项及 `ToolApiTest` 9 项覆盖 source/token 分离、沿 `ServiceRef` 传播、调用方资源 Context、同 RuntimeDomain 的资源 Scope 约束、不可变参数、结构化结果、稳定错误码、版本化 `fibra.tool` 远端描述/输入/输出/失败协议与可选 spill service key | `FormalMultiPluginIT` 通过 `PublishedRuntime` 触发真实搜索超时/取消和 Shell 取消；调用只在受管进程树静默后结算，插件卸载等待在途调用与调用 Scope 清理。`NodePublishedCancellationOwnershipTest` 另以同一真实 sidecar 的两个并发工具请求证明：取消 A 只发出请求级取消，A 的远端终态到达前实例停用保持排空，B 正常完成，PID 与实例 identity 不变；A 终态后才释放调用 Scope、完成停用并关闭进程单元。能力 Context 与资源 Context 不混用 |
+| 调用取消与宿主工具契约 | `CancellationSourceTest` 2 项、`InvocationContextCancellationTest` 2 项及 `ToolApiTest`/`ToolOutcomesTest` 16 项覆盖 source/token 分离、沿 `ServiceRef` 传播、调用方资源 Context、同 RuntimeDomain 的资源 Scope 约束、不可变参数、`content`/`structuredContent` 成功结果、缺失值与 JSON `null`、已知/未知调用失败边界、稳定错误码、版本化 `fibra.tool` schema v2 远端描述/输入/输出/失败协议与可选 spill service key | `FormalMultiPluginIT` 通过 `PublishedRuntime` 触发真实搜索超时/取消和 Shell 取消；调用只在受管进程树静默后结算，插件卸载等待在途调用与调用 Scope 清理。`NodePublishedCancellationOwnershipTest` 另以同一真实 sidecar 的两个并发工具请求证明：取消 A 只发出请求级取消，A 的远端终态到达前实例停用保持排空，B 正常完成，PID 与实例 identity 不变；A 终态后才释放调用 Scope、完成停用并关闭进程单元。能力 Context 与资源 Context 不混用 |
 | 文件 | `FileSystemContractTest` 9 项、`fibra-fs-local` 33 项、`fibra-tool-fs` 3 项；覆盖 UTF-8、1-based 分页、空文件/目录/非文本、版本观察、原子写、POSIX mode、Windows DACL 接线、换行恢复、NUL 与歧义拒绝 | `FormalMultiPluginIT` 以标准安装包内的真实 Java JAR 验证 provider/consumer 就绪、共享 provider、读写编辑、受保护写、撤销恢复和调用期间卸载；JNA 以 optional 依赖及原包名私有打包，分发门禁检查原生 DLL、许可证和非传递 POM。macOS 仅证明 Win32 注入调用次序/映射/打包，不声称 Windows 实机已执行 |
 | 子进程 | `SubprocessContractTest` 4 项、`fibra-subprocess-local` 74 项；覆盖显式 argv/cwd/输出上限、受管 supervisor、Windows Job Object 生命周期、Linux user-systemd transient scope 选择/启动/停止/静默确认、建立前取消的成功排空与清理失败保留、不可用时的一次性较弱回退告警、Darwin PGID 边界、父进程先退出、后代排空、TERM/KILL、幂等终止与调用方资源归属 | 搜索与 Shell 共用唯一 `Subprocess` provider；真实超时、取消、插件卸载和 supervisor 失败测试均等待选定范围静默，不由工具自行创建 `ProcessBuilder`。Node sidecar 仍使用其自身的 supervisor/PGID 或 Windows `taskkill` 边界，不把 Java provider 的 Job Object/systemd 实现移植或宣称到 Node。当前 macOS 以真实进程与注入 seam 验证；Windows Job、Linux user-systemd 路径尚未在对应实机完成最终门禁 |
 | Shell | `ShellContractTest` 4 项、`fibra-shell-local` 9 项、`fibra-tool-shell` 9 项；覆盖 fresh shell、workdir、stdout/stderr、非零退出、互斥 timeout/abort、截断、signal 与基础设施失败 | `FormalMultiPluginIT` 验证多级依赖、真实 bash 非零结果、超时/取消、在途调用排空、进程树清理和无关插件保持 |
@@ -175,12 +184,13 @@ artifact 与 desired graph 的 `ApplyDeployment` 验证多制品暂存、运行�
 | 验收项 | 证据与结论 |
 |---|---|
 | 长期 RuntimeDomain 与差量协调 | `RuntimeDomainIsolationTest`、`RuntimeDomainSettlementTest`、`FibraEngineIncrementalTest`、`PublishedRuntimePublicationTest`、`PublishedRuntimeLeaseTest`、`ContributionDrainLifecycleTest`、`CrossRuntimeConditionalConfigTest`、`CrossRuntimeSelfDisableTest` 和 `NodePublishedCancellationOwnershipTest` 覆盖域间隔离、启动期间目标变化、配置原实例批量目标登记、终态收敛通知、反向依赖闭包替换、旧路由拒绝、嵌套实例、关闭/提交交错、受影响调用排空及同一 sidecar 的请求级取消隔离；改变 Java/Node 局部实例或取消单次请求时，无关实例、ClassLoader、Node PID、effects、runtime resource 与在途调用保持 |
-| ChangeSet、持久边界与恢复 | `ApplyDeploymentPersistenceBoundaryTest` 6 项、`ApplyDeploymentMountFailureRecoveryTest` 1 项、`EngineArtifactRecoveryTest` 2 项及 artifact/state store 测试覆盖重复内容、半份写入、替换后同步失败、目标保存前后边界、保存后崩溃、缺失/损坏引用、mutation gate 和按完整清单重建；不恢复整代并存、切换或回滚模型 |
+| ChangeSet、持久边界与恢复 | `ApplyDeploymentPersistenceBoundaryTest` 8 项、`ApplyDeploymentMountFailureRecoveryTest` 1 项、`EngineArtifactRecoveryTest` 2 项及 artifact/state store 测试覆盖重复内容、半份写入、替换后同步失败、目标保存前后边界、保存后崩溃、缺失/损坏引用、mutation gate 和按完整清单重建；不恢复整代并存、切换或回滚模型 |
 | 诊断与 best-effort | `FilePluginAuditRepositoryTest`、`CleanupFailureDiagnosticsTest`、`DynamicPluginDiagnosticsTest` 及部署边界测试证明审计/清理失败可诊断，审计失败不反转成功部署，也不丢失错误证据 |
-| 真实 Java 与 Node | Java runtime 测试使用标准包内真实主 JAR、排序私有依赖、依赖 DAG、父优先动态契约、资源委派、ClassSpace 和 ClassLoader 回收；`JavaArtifactPackageTest` 6 项另证明删除候选目录后仍从受管副本装载私有类、资源和服务，并拒绝隐式 Class-Path、错误 identity 和旧裸 JAR。Node runtime 37 项使用正式目录 payload 和真实进程覆盖受管副本启动、绝对/越界入口拒绝、握手、RPC、心跳、发送前 deadline 所有权、请求级超时/取消、共享 sidecar 隔离、取消宽限耗尽后的实例级终止、异常退出、父进程退出、关闭线程中断、JSON `null` 响应语义及 supervisor 范围静默证明；证明缺失或失败时请求排空失败并保留诊断现场。Node 不使用也不宣称 Java `fibra-subprocess-local` 的 Linux systemd scope 或 Windows Job Object |
+| 真实 Java 与 Node | Java runtime 测试使用标准包内真实主 JAR、排序私有依赖、依赖 DAG、父优先动态契约、资源委派、ClassSpace 和 ClassLoader 回收；`JavaArtifactPackageTest` 6 项另证明删除候选目录后仍从受管副本装载私有类、资源和服务，并拒绝隐式 Class-Path、错误 identity 和旧裸 JAR。Node runtime 39 项使用正式目录 payload 和真实进程覆盖受管副本启动、绝对/越界入口拒绝、握手、RPC、心跳、发送前 deadline 所有权、请求级超时/取消、共享 sidecar 隔离、取消宽限耗尽后的实例级终止、异常退出、父进程退出、关闭线程中断、严格 JSON-RPC 响应边界、JSON `null` 响应语义、tool wire schema v2 及 supervisor 范围静默证明；证明缺失或失败时请求排空失败并保留诊断现场。Node 不使用也不宣称 Java `fibra-subprocess-local` 的 Linux systemd scope 或 Windows Job Object |
 | 结构与公开面 | `ApiSignatureBaselineTest`、`ArchitectureBaselineTest`、模块依赖门禁、Spring、README、示例和 archetype 测试通过；archetype 的 `mvn package` 自动产生 `target/<finalName>-plugin/plugin.properties` 与 `lib/plugin.jar`，同时保留标准 Maven 主 JAR。生产源码无 PF4J、旧 loader、裸制品 fallback、`Engine.runtime()`、共享可变 `ContributionBridge` 或兼容转发残留，历史文档中的旧名不作为生产残留 |
-| 可复现发布 | `scripts/verify-reproducible-release.sh` 比较 25 个正式发布模块（含 `fibra-tool-storage`）的 clean 与非 clean 两次打包结果，包括 flattened POM、主 JAR、sources JAR 和 Javadoc JAR；pre-CLI 快照 `618091a` 已在 GitHub Ubuntu runner 通过。聚合 POM、acceptance、example、parity 和 benchmark 明确不发布；CLI 与 ZIP 合并后仍须按新增制品清单最终复验 |
-| 空仓与隔离分发 | `scripts/verify-distribution.sh` 从空临时 Maven 仓部署并解析 25 个正式制品，检查每个模块恰有 POM、主/sources/javadoc JAR，并在仓库外 fixture 验证 12 个正式动态插件不在宿主 classpath、以公开 API 调用 fs/search/shell/storage；pre-CLI 快照 `618091a` 已在 GitHub Ubuntu runner 通过，CLI/ZIP 解压启动及合并后的空仓门禁仍待实现和最终执行 |
+| 正式宿主 CLI | `ProfileArtifactSourceTest` 30 项、`CliPathsTest` 3 项、`CliHostTest` 6 项、`FibraCliTest` 17 项和 `CliReplTest` 6 项覆盖完整制品清单、首次启动/保存恢复/apply、profile 锁、插件管理命令、PublishedView 工具入口、严格 JSON、关闭钩子和单宿主 REPL；Picocli 4.7.7 与 JLine 4.4.3 `jdk11` 在 Java 21 下干净编译并运行。当前只形成 Maven CLI 制品；真实多插件 ZIP 解压调用，以及阻塞工具调用期间向真实 CLI 进程发送 `SIGTERM` 后的取消传播、Engine drain、受管进程树静默和宿主退出，仍待最终分发门禁 |
+| 可复现发布 | `scripts/verify-reproducible-release.sh` 已把 `fibra-cli` 纳入 26 个正式发布模块的 clean/非 clean 比较清单，包括 flattened POM、主 JAR、sources JAR 和 Javadoc JAR；pre-CLI 快照 `618091a` 的 25 制品结果只作历史证据，当前 26 制品清单须在 ZIP 合入后最终执行。聚合 POM、acceptance、example、parity、benchmark 和 distribution 聚合明确不发布 |
+| 空仓与隔离分发 | `scripts/verify-distribution.sh` 已把 `fibra-cli` 纳入 26 个正式 Maven 制品的空仓部署清单；pre-CLI 快照 `618091a` 只证明当时 25 制品及仓库外 core/多插件/Engine/Spring/archetype 消费。当前 26 制品、CLI Maven 消费、ZIP 解压启动及同一真实多插件命令流程仍待最终门禁 |
 
 2026-09-12 的 `618091a` 已完成 25 制品、12 个动态插件的 pre-CLI 全仓、可复现与空仓/隔离分发验证；
 后续 CLI/ZIP 合并后必须按最终制品和真实解压启动场景重新执行，不能沿用该快照结果关闭完整交付。

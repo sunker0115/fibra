@@ -55,7 +55,7 @@ public final class ShellToolEntrypoint implements PluginEntrypoint<Void> {
                     data.put("timeoutMs", result.timeout().toMillis());
                     data.put("stdout", output(result.stdout()));
                     data.put("stderr", output(result.stderr()));
-                    return new ToolResult(ShellResultFormatter.format(result), LiteralValue.of(data));
+                    return ToolResult.textAndStructured(ShellResultFormatter.format(result), LiteralValue.of(data));
                 })
                 .onErrorMap(ShellException.class, error -> new ToolException(
                     error.code() == ShellErrorCode.TERMINATION_FAILED
