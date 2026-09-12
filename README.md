@@ -3,9 +3,13 @@
 [![CI](https://github.com/sunker0115/fibra/actions/workflows/ci.yml/badge.svg)](https://github.com/sunker0115/fibra/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-Fibra 是 Java 21 的通用插件底座。它把生命周期与资源所有权、期望状态、不可变制品、运行时适配、贡献目录和管理控制面拆成稳定边界，可直接嵌入 Java 服务，也可用于 Harness、Agent 平台、CLI 或 Spring Boot 宿主。
+Fibra 是 Java 21 的通用插件底座。它把生命周期与资源所有权、期望状态、不可变制品、运行时适配、贡献目录和管理控制面拆成稳定边界，可直接嵌入 Java 服务，也可用于 Harness、Agent 平台或 Spring Boot 宿主，并作为正式 CLI 宿主的运行底座。
 
 当前开发版本为 `0.5.0-SNAPSHOT`，是无兼容层的 vNext 重构。唯一权威设计是 [Fibra vNext 架构](docs/superpowers/specs/2026-09-07-fibra-vnext-architecture.md)。Java Harness 只是一个接入场景，参考 [Java Harness 集成](docs/superpowers/specs/2026-09-07-fibra-java-harness-integration.md)。
+
+当前 pre-CLI 快照已经交付长期 `RuntimeDomain`、实例差量更新、首次联合制品启动、provider-managed
+子进程范围和 fs、fs-search、shell、storage 正式插件。顶层 `fibra-cli`、可执行 ZIP 与仓库外解压启动
+仍是后续交付项，因此不能把该快照描述为完整命令行产品。
 
 ## 架构
 
@@ -37,7 +41,9 @@ Fibra 是 Java 21 的通用插件底座。它把生命周期与资源所有权�
 - `fibra-bridge`：本地与远程贡献的统一目录、调用适配和 drain；
 - `fibra-registry`：面向管理面的安装、升级、启停、查询、watch 和审计；
 - `fibra-spring`、`fibra-spring-boot-starter`：显式 Spring 服务桥接和组合入口；
-- `fibra-plugin-archetype`：生成独立 Java 插件 JAR。
+- `fibra-plugin-archetype`：生成独立 Java 插件 JAR；
+- `fibra-plugins`：正式插件产品的根聚合模块，自身不发布；`fibra-tool-api` 以及 fs、subprocess、shell、
+  storage 四个领域在其下分别发布 contract、provider 和 tool consumer。
 
 浏览器/WebView 前端插件、远程市场、非可信插件沙箱和具体 Agent 模型不在本期核心内。
 
@@ -72,6 +78,26 @@ runtime.close();
 返回该 owner 所在的生命周期 Scope。普通服务调用的资源语境就是 caller，因此插件内调用创建的 effect
 仍归插件实例；贡献调用的 `caller()` 是注册插件 owner，资源语境则是宿主为该次调用创建的临时 Scope
 `Context`。两者必须位于同一 `RuntimeDomain`，调用结束会先排空临时 Scope，再释放贡献的在途计数。
+
+## 正式插件
+
+正式插件和宿主主程序分离，每个插件都是独立制品；provider 与 consumer 是运行时角色，不是两套插件
+格式。provider 向 `RuntimeDomain` 提供服务，consumer 只依赖 contract，并把工具注册到长期
+`ContributionDirectory`。当前产品模块如下：
+
+- 宿主工具契约：`fibra-tool-api`；
+- 文件：`fibra-fs`、`fibra-fs-local`、`fibra-tool-fs`、`fibra-tool-fs-search`；
+- 子进程：`fibra-subprocess`、`fibra-subprocess-local`；
+- Shell：`fibra-shell`、`fibra-shell-local`、`fibra-tool-shell`；
+- 配置存储：`fibra-storage`、`fibra-storage-json`、`fibra-tool-storage`。
+
+除宿主使用的 `fibra-tool-api` 外，以上包含 12 个可动态安装的正式插件 JAR。它们通过真实制品图和
+公开 `PublishedRuntime` 联合验收，不进入宿主 classpath，也不打入 Engine 或宿主 JAR。完整角色关系、
+依赖和打包约束见 [正式插件说明](fibra-plugins/README.md)。
+
+`fibra-subprocess-local` 是文件搜索和 Shell 共用的独立 Java provider。Windows 使用 kill-on-close
+Job Object；Linux 优先使用 user-systemd transient scope，能力不可用时显式降级到较弱的进程组监督器；
+macOS 使用进程组边界并保留逃逸后代限制。它与 Node sidecar 的进程管理实现相互独立。
 
 ## Java 插件 JAR
 
@@ -112,7 +138,7 @@ Windows 使用系统进程树终止后端；主动逃离受管范围不属于本
 
 ## 托管与 Spring Boot
 
-需要动态安装和管理时依赖 `fibra-engine` 或 `fibra-registry`；宿主只通过 `start()`、`submit(EngineCommand)` 和稳定的 `published()` 门面工作。`PublishedRuntime.current()` / `views()` 返回状态、诊断和贡献一致的不可变视图，能力调用必须携带选择能力时看到的 `viewRevision`。所有外部变更经过同一个命令队列：预检、保存完整目标、差量协调、发布实际结果。目标保存成功不等于插件已经达成目标；保存后的运行故障不会反写旧目标。恢复只按完整目标读取精确制品，不回退旧版本或猜测源文件。
+需要动态安装和管理时依赖 `fibra-engine` 或 `fibra-registry`；宿主只通过 `start()`、`submit(EngineCommand)` 和稳定的 `published()` 门面工作。`PublishedRuntime.current()` / `views()` 返回状态、诊断和贡献一致的不可变视图，能力调用必须携带选择能力时看到的 `viewRevision`。所有外部变更经过同一个命令队列：预检、保存完整目标、差量协调、发布实际结果。目标保存成功不等于插件已经达成目标；保存后的运行故障不会反写旧目标。恢复只按完整目标读取精确制品，不回退旧版本或猜测源文件。仅在没有已保存目标时，宿主提供的初始制品和配置树才进入同一个首次启动 `ChangeSet`；已有持久目标启动时不会被插件目录、默认空配置或 watcher 静默覆盖。
 
 Spring Boot 只需引入：
 
@@ -145,7 +171,14 @@ scripts/verify-reproducible-release.sh
 scripts/verify-distribution.sh
 ```
 
-完整 reactor 包含真实 JAR、真实 Node 进程、目标恢复、Spring、archetype、架构边界、分发和 JMH 编译门禁。可运行示例见 [`fibra-example`](fibra-example/README.md)，公共入口见 [`docs/api`](docs/api/README.md)，发布边界见 [`docs/release.md`](docs/release.md)。
+当前发布边界为 25 个 Maven 制品，其中包含 12 个可动态安装的正式插件 JAR，`fibra-tool-storage` 已
+纳入发布、可复现和仓库外消费清单。完整 reactor 覆盖真实 JAR、真实 Node 进程、目标恢复、Spring、
+archetype、架构边界和 JMH 编译门禁。
+
+本快照尚未合入正式 CLI 与 ZIP 分发结构，因此当前 GitHub CI 只验证 pre-CLI 边界；最终全仓、公开 API、
+可复现和空 Maven 仓分发门禁必须在 CLI/ZIP 合入后统一重跑，不能沿用此前 24 制品的结果关闭交付。
+可运行示例见 [`fibra-example`](fibra-example/README.md)，公共入口见 [`docs/api`](docs/api/README.md)，
+发布边界见 [`docs/release.md`](docs/release.md)。
 
 ## 许可证
 
