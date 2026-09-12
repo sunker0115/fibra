@@ -2,7 +2,6 @@
 ## com.sstlfsj.fibra.plugins.subprocess.ProcessUnit
 Compiled from "ProcessUnit.java"
 public interface com.sstlfsj.fibra.plugins.subprocess.ProcessUnit extends com.sstlfsj.fibra.DrainingDisposable {
-  public abstract long pid();
   public abstract reactor.core.publisher.Mono<com.sstlfsj.fibra.plugins.subprocess.SubprocessOutcome> done();
   public abstract void terminate();
   public abstract reactor.core.publisher.Mono<java.lang.Void> waitForExit();

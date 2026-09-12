@@ -97,7 +97,6 @@ class ToolFsSearchEntrypointTest {
             .stderr(SubprocessOutput.builder().text("").truncated(false).totalBytes(0).build())
             .build();
         return new ProcessUnit() {
-            @Override public long pid() { return 1; }
             @Override public Mono<SubprocessOutcome> done() { return Mono.just(outcome); }
             @Override public void terminate() { }
             @Override public Mono<Void> waitForExit() { return Mono.empty(); }

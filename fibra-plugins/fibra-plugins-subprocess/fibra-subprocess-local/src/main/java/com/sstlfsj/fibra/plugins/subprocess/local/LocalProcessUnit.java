@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 /** A supervisor owns the process group; stdin is its JVM lifetime lease. */
 final class LocalProcessUnit implements ProcessUnit {
     private static final long QUIESCENCE_MILLIS = 1000;
-    private final CompletableFuture<Long> started = new CompletableFuture<>();
+    private final CompletableFuture<Void> started = new CompletableFuture<>();
     private final CompletableFuture<SubprocessOutcome> outcome = new CompletableFuture<>();
     private final CompletableFuture<Void> exited = new CompletableFuture<>();
     private final Mono<Void> exit = Mono.fromFuture(exited, true);
@@ -34,7 +34,6 @@ final class LocalProcessUnit implements ProcessUnit {
     private boolean stopping;
     private boolean watchingDrain;
     private long graceMillis;
-    private volatile long pid;
     private EffectHandle ownership;
     private Disposable cancellationListener;
 
@@ -71,7 +70,7 @@ final class LocalProcessUnit implements ProcessUnit {
                 supervisor = new ProcessBuilder(argv).directory(new File(spec.cwd())).start();
                 Thread.ofVirtual().name("fibra-process-control").start(this::readControl);
             }
-            pid = started.get(10, TimeUnit.SECONDS);
+            started.get(10, TimeUnit.SECONDS);
         } catch (Exception failure) {
             terminate();
             var cause = failure instanceof ExecutionException ? failure.getCause() : failure;
@@ -110,8 +109,10 @@ final class LocalProcessUnit implements ProcessUnit {
                 var fields = line.split("\t", -1);
                 switch (fields[0]) {
                     case "P" -> {
+                        var payloadPid = Long.parseLong(fields[1]);
+                        if (payloadPid <= 0) throw new IOException("invalid supervisor payload pid");
                         payloadStarted = true;
-                        started.complete(Long.parseLong(fields[1]));
+                        started.complete(null);
                     }
                     case "D" -> {
                         watchDrain();
@@ -181,11 +182,6 @@ final class LocalProcessUnit implements ProcessUnit {
 
     private static String decode(String text) {
         return new String(Base64.getDecoder().decode(text), StandardCharsets.UTF_8);
-    }
-
-    @Override
-    public long pid() {
-        return pid;
     }
 
     @Override

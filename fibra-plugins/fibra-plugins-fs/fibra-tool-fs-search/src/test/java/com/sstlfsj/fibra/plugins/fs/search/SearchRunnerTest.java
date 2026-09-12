@@ -324,7 +324,6 @@ class SearchRunnerTest {
             this.outcome = outcome;
         }
 
-        @Override public long pid() { return 1; }
         @Override public Mono<SubprocessOutcome> done() { return outcome; }
         @Override public void terminate() { terminated.set(true); }
         @Override public Mono<Void> waitForExit() {

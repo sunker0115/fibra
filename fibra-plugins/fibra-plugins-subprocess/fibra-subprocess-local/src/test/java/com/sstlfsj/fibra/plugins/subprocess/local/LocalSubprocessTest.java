@@ -127,16 +127,17 @@ class LocalSubprocessTest {
         try (var runtime = FibraRuntime.create()) {
             var caller = runtime.rootScope().openChild("caller");
             var unit = subprocess.spawn(InvocationContext.of(caller.context(), "test"),
-                spec("sleep 60 & echo $! > child.pid; wait")).block();
+                spec("printf '%s' $$ > payload.pid; sleep 60 & echo $! > child.pid; wait")).block();
             long deadline = System.nanoTime() + Duration.ofSeconds(5).toNanos();
             while (!Files.exists(directory.resolve("child.pid")) && System.nanoTime() < deadline) {
                 Thread.sleep(10);
             }
+            long payload = Long.parseLong(Files.readString(directory.resolve("payload.pid")).trim());
             long child = Long.parseLong(Files.readString(directory.resolve("child.pid")).trim());
             caller.closeAsync().block(Duration.ofSeconds(5));
             unit.waitForExit().block(Duration.ofSeconds(1));
             assertFalse(ProcessHandle.of(child).map(ProcessHandle::isAlive).orElse(false));
-            assertFalse(ProcessHandle.of(unit.pid()).map(ProcessHandle::isAlive).orElse(false));
+            assertFalse(ProcessHandle.of(payload).map(ProcessHandle::isAlive).orElse(false));
         }
     }
 

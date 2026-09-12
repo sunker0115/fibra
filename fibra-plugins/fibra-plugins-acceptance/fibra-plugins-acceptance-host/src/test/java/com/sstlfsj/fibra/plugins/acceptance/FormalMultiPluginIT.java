@@ -118,12 +118,10 @@ class FormalMultiPluginIT {
                 ToolContributions.KIND, ToolContributions.id("search-tools", "glob"),
                 ToolRequest.of(Map.of("pattern", "*.txt"))).toFuture();
             awaitFile(entered, timed);
-            var timedPayload = Long.parseLong(Files.readString(pidFile));
-            var timedSupervisor = ProcessHandle.of(timedPayload).flatMap(ProcessHandle::parent)
-                .orElseThrow().pid();
+            var timedProcesses = readProcessIds(pidFile);
             assertToolFailure(ToolFailureCode.TIMEOUT, timed);
-            assertProcessStopped(timedPayload);
-            assertProcessStopped(timedSupervisor);
+            assertProcessStopped(timedProcesses.payload());
+            assertProcessStopped(timedProcesses.supervisor());
 
             Files.delete(entered);
             Files.delete(pidFile);
@@ -133,13 +131,11 @@ class FormalMultiPluginIT {
                 ToolContributions.KIND, ToolContributions.id("search-tools", "grep"),
                 ToolRequest.of(Map.of("pattern", "needle"), cancellation.token())).toFuture();
             awaitFile(entered, cancelled);
-            var cancelledPayload = Long.parseLong(Files.readString(pidFile));
-            var cancelledSupervisor = ProcessHandle.of(cancelledPayload).flatMap(ProcessHandle::parent)
-                .orElseThrow().pid();
+            var cancelledProcesses = readProcessIds(pidFile);
             cancellation.cancel();
             assertToolFailure(ToolFailureCode.ABORTED, cancelled);
-            assertProcessStopped(cancelledPayload);
-            assertProcessStopped(cancelledSupervisor);
+            assertProcessStopped(cancelledProcesses.payload());
+            assertProcessStopped(cancelledProcesses.supervisor());
         }
     }
 
@@ -218,7 +214,7 @@ class FormalMultiPluginIT {
                 "fibra-subprocess-local", "fibra-shell", "fibra-shell-local",
                 "fibra-tool-shell", "fibra-storage", "fibra-storage-json");
 
-            var command = "printf '%s' $$ > " + shellQuote(pidFile)
+            var command = "printf '%s %s' $$ $PPID > " + shellQuote(pidFile)
                 + "; : > " + shellQuote(entered)
                 + "; while [ ! -e " + shellQuote(release) + " ]; do sleep 0.05; done; printf held";
             var heldView = harness.engine().published().current();
@@ -227,9 +223,9 @@ class FormalMultiPluginIT {
                 ToolRequest.of(Map.of("command", command, "workdir", content.toString(),
                     "timeoutMs", 15_000))).toFuture();
             awaitFile(entered, held);
-            var payloadPid = Long.parseLong(Files.readString(pidFile));
-            var supervisorPid = ProcessHandle.of(payloadPid).flatMap(ProcessHandle::parent)
-                .orElseThrow().pid();
+            var processes = readProcessIds(pidFile);
+            var payloadPid = processes.payload();
+            var supervisorPid = processes.supervisor();
             assertTrue(ProcessHandle.of(payloadPid).map(ProcessHandle::isAlive).orElse(false));
             assertTrue(ProcessHandle.of(supervisorPid).map(ProcessHandle::isAlive).orElse(false));
 
@@ -437,7 +433,7 @@ class FormalMultiPluginIT {
     private static Path hangingExecutable(Path executable, Path entered, Path pidFile)
         throws IOException {
         Files.writeString(executable, "#!/bin/sh\n"
-            + "printf '%s' $$ > " + shellQuote(pidFile) + "\n"
+            + "printf '%s %s' $$ $PPID > " + shellQuote(pidFile) + "\n"
             + ": > " + shellQuote(entered) + "\n"
             + "while :; do sleep 1; done\n", StandardCharsets.UTF_8);
         Files.setPosixFilePermissions(executable, Set.of(PosixFilePermission.OWNER_READ,
@@ -455,6 +451,14 @@ class FormalMultiPluginIT {
     private static void assertProcessStopped(long pid) {
         assertFalse(ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false),
             () -> "process remains alive: " + pid);
+    }
+
+    private static ProcessIds readProcessIds(Path pidFile) throws IOException {
+        var values = Files.readString(pidFile).trim().split("\\s+");
+        return new ProcessIds(Long.parseLong(values[0]), Long.parseLong(values[1]));
+    }
+
+    private record ProcessIds(long payload, long supervisor) {
     }
 
     private static String shellQuote(Path path) {

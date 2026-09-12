@@ -19,6 +19,8 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
@@ -45,7 +47,7 @@ class ShellLifecycleTest {
 
     private ShellRequest processRequest(long milliseconds) {
         return ShellRequest.builder()
-            .command("sleep 60")
+            .command("printf '%s' $$ > process.pid; sleep 60")
             .workdir(directory.toString())
             .timeout(Duration.ofMillis(milliseconds))
             .build();
@@ -80,9 +82,8 @@ class ShellLifecycleTest {
     @Test void timeoutCancelsARealProviderDuringAcquisitionAndWaitsForQuiescence() throws Exception {
         try (var runtime = FibraRuntime.create()) {
             var acquired = new CountDownLatch(1);
-            var unit = new AtomicReference<ProcessUnit>();
             var observed = new AtomicReference<CancellationToken>();
-            var result = shell.run(realAcquisitionInvocation(runtime, acquired, unit, observed),
+            var result = shell.run(realAcquisitionInvocation(runtime, acquired, observed),
                 processRequest(500)).toFuture();
 
             assertTrue(acquired.await(2, TimeUnit.SECONDS));
@@ -90,7 +91,7 @@ class ShellLifecycleTest {
             assertTrue(settled.timedOut());
             assertFalse(settled.aborted());
             assertTrue(observed.get().isCancelled());
-            assertProcessStopped(unit.get());
+            assertProcessStopped(directory.resolve("process.pid"));
         }
     }
 
@@ -99,19 +100,22 @@ class ShellLifecycleTest {
         try (var runtime = FibraRuntime.create()) {
             var source = new CancellationSource();
             var acquired = new CountDownLatch(1);
-            var unit = new AtomicReference<ProcessUnit>();
             var observed = new AtomicReference<CancellationToken>();
-            var invocation = realAcquisitionInvocation(runtime, acquired, unit, observed)
+            var invocation = realAcquisitionInvocation(runtime, acquired, observed)
                 .withCancellation(source.token());
             var result = shell.run(invocation, processRequest(5000)).toFuture();
 
             assertTrue(acquired.await(2, TimeUnit.SECONDS));
             assertNotSame(source.token(), observed.get());
+            var pidFile = directory.resolve("process.pid");
+            long deadline = System.nanoTime() + Duration.ofSeconds(2).toNanos();
+            while (!Files.exists(pidFile) && System.nanoTime() < deadline) Thread.sleep(10);
+            assertTrue(Files.exists(pidFile));
             source.cancel();
             var settled = result.get(5, TimeUnit.SECONDS);
             assertTrue(settled.aborted());
             assertFalse(settled.timedOut());
-            assertProcessStopped(unit.get());
+            assertProcessStopped(pidFile);
         }
     }
 
@@ -140,14 +144,12 @@ class ShellLifecycleTest {
     }
 
     private InvocationContext realAcquisitionInvocation(FibraRuntime runtime, CountDownLatch acquired,
-                                                         AtomicReference<ProcessUnit> unit,
                                                          AtomicReference<CancellationToken> observed) {
         var caller = runtime.rootScope().context();
         var subprocess = new LocalSubprocess("node");
         caller.services().provide(SubprocessServices.SUBPROCESS, (serviceInvocation, spec) -> {
             observed.set(serviceInvocation.cancellation());
             return subprocess.spawn(serviceInvocation, spec).flatMap(processUnit -> {
-                unit.set(processUnit);
                 acquired.countDown();
                 return serviceInvocation.cancellation().cancelled()
                     .then(processUnit.waitForExit())
@@ -157,8 +159,9 @@ class ShellLifecycleTest {
         return InvocationContext.of(caller, "shell");
     }
 
-    private static void assertProcessStopped(ProcessUnit unit) {
-        assertFalse(ProcessHandle.of(unit.pid()).map(ProcessHandle::isAlive).orElse(false));
+    private static void assertProcessStopped(Path pidFile) throws IOException {
+        long pid = Long.parseLong(Files.readString(pidFile).trim());
+        assertFalse(ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false));
     }
 
     private static final class ControlledUnit implements ProcessUnit {
@@ -171,11 +174,6 @@ class ShellLifecycleTest {
             cancellationListener = cancellation.cancelled()
                 .subscribe(ignored -> { }, ignored -> terminate(), this::terminate);
         }
-        @Override
-        public long pid() {
-            return 1;
-        }
-
         @Override
         public Mono<SubprocessOutcome> done() {
             return done.asMono();
