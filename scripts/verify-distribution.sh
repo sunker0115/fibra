@@ -39,6 +39,7 @@ readonly non_published_artifacts=(
   fibra-plugins-storage
   fibra-plugins-acceptance
   fibra-plugins-acceptance-host
+  fibra-distribution
   fibra-example
   fibra-parity-tests
   fibra-benchmarks
@@ -61,16 +62,47 @@ readonly temporary_root="$(mktemp -d)"
 trap 'rm -rf "$temporary_root"' EXIT
 
 readonly remote_repository="$temporary_root/remote"
+readonly build_repository="$temporary_root/build"
+readonly distribution_repository="$temporary_root/distribution-repository"
 readonly consumer_repository="$temporary_root/consumer"
 readonly consumer_project="$temporary_root/distribution"
 readonly consumer_sources="$temporary_root/distribution-sources.tar"
-mkdir -p "$remote_repository" "$consumer_repository"
+mkdir -p "$remote_repository" "$build_repository" \
+  "$distribution_repository" "$consumer_repository"
 
 cd "$repository_root"
-"$maven_executable" --batch-mode --no-transfer-progress \
+"$maven_executable" --settings "$fixture/settings.xml" \
+  --batch-mode --no-transfer-progress \
+  -Dmaven.repo.local="$build_repository" \
+  -Dfibra.repository.url="file://$remote_repository" \
   -pl "$module_list" -am clean deploy -DskipTests \
   -Darchetype.test.skip=true \
   -DaltDeploymentRepository="fibra-verification::file://$remote_repository"
+
+"$maven_executable" --settings "$fixture/settings.xml" \
+  --batch-mode --no-transfer-progress \
+  -Dmaven.repo.local="$distribution_repository" \
+  -Dfibra.repository.url="file://$remote_repository" \
+  -f "$repository_root/fibra-distribution/pom.xml" clean verify
+
+readonly distribution_archive="$repository_root/fibra-distribution/target/fibra-$revision-bin.zip"
+[[ -f "$distribution_archive" ]] || {
+  echo "空 Maven 仓构建未生成发行 ZIP：$distribution_archive" >&2
+  exit 1
+}
+
+expected_artifacts="$temporary_root/expected-artifacts"
+actual_artifacts="$temporary_root/actual-artifacts"
+for module in "${production_modules[@]}"; do
+  basename "$module"
+done | LC_ALL=C sort > "$expected_artifacts"
+find "$remote_repository/com/sstlfsj" -mindepth 1 -maxdepth 1 -type d \
+  -exec basename {} \; | LC_ALL=C sort > "$actual_artifacts"
+cmp -s "$expected_artifacts" "$actual_artifacts" || {
+  echo "临时发布仓库的 artifactId 集合不是严格 26 个正式发布物" >&2
+  diff -u "$expected_artifacts" "$actual_artifacts" >&2 || true
+  exit 1
+}
 
 for module in "${production_modules[@]}"; do
   artifact_id="$(basename "$module")"
@@ -261,7 +293,7 @@ rm -rf "$consumer_repository/com/sstlfsj"
   -Dspring-boot.version="$spring_boot_version" \
   -f "$consumer_project/pom.xml" clean verify
 
-for module in "${production_modules[@]:12}"; do
+for module in "${production_modules[@]:13}"; do
   artifact_id="$(basename "$module")"
   consumer_directory="$consumer_repository/com/sstlfsj/$artifact_id/$revision"
   consumer_jar="$consumer_directory/$artifact_id-$revision.jar"

@@ -4,7 +4,6 @@ set -eu
 distribution_root=$1
 node_input=$2
 rg_input=$3
-bash_input=$4
 runtime_bin="$distribution_root/runtime/bin"
 
 resolve_executable() {
@@ -22,7 +21,11 @@ resolve_executable() {
 
 node_source=$(resolve_executable "$node_input")
 rg_source=$(resolve_executable "$rg_input")
-bash_source=$(resolve_executable "$bash_input")
+bash_source=/bin/bash
+if [ ! -f "$bash_source" ] || [ ! -x "$bash_source" ]; then
+  echo "目标平台缺少 Bash：$bash_source" >&2
+  exit 1
+fi
 mkdir -p "$runtime_bin"
 cp -L "$node_source" "$runtime_bin/node"
 cp -L "$rg_source" "$runtime_bin/rg"

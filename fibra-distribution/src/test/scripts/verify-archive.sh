@@ -10,8 +10,14 @@ readonly extract_root="$temporary_root/extracted"
 readonly working_directory="$temporary_root/external working directory"
 readonly install_root="$extract_root/fibra-$version"
 readonly launcher="$install_root/bin/fibra"
+readonly repository_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)
+host_pid=
 
 cleanup() {
+  if [[ -n "$host_pid" ]] && kill -0 "$host_pid" 2>/dev/null; then
+    kill -TERM "$host_pid" 2>/dev/null || true
+    wait "$host_pid" 2>/dev/null || true
+  fi
   rm -rf "$temporary_root"
 }
 trap cleanup EXIT
@@ -67,14 +73,24 @@ await_stopped() {
 [[ -f "$archive" ]] || fail "缺少 ZIP：$archive"
 mkdir -p "$(dirname "$archive_copy")" "$extract_root" "$working_directory"
 cp "$archive" "$archive_copy"
+zip_entries="$temporary_root/zip.entries"
+unzip -Z1 "$archive_copy" > "$zip_entries"
+if grep -Eq '(^/|(^|/)\.\.(/|$)|(^|/)(target|\.DS_Store)(/|$))' "$zip_entries"; then
+  fail "发行 ZIP 包含非法路径或构建残留"
+fi
 (
   cd "$extract_root"
   unzip -q "$archive_copy"
 )
 [[ -x "$launcher" ]] || fail "bin/fibra 不可执行"
 [[ ! -e "$install_root/data" ]] || fail "发行包不得预置 data 目录"
+[[ -f "$install_root/LICENSE" ]] || fail "发行包缺少 LICENSE"
+[[ -f "$install_root/THIRD_PARTY_NOTICES.md" ]] || fail "发行包缺少第三方声明"
 if find "$install_root" -type l -print -quit | grep -q .; then
   fail "发行包不得包含符号链接"
+fi
+if LC_ALL=C grep -R -a -F -m 1 -- "$repository_root" "$install_root" >/dev/null; then
+  fail "发行包泄漏仓库绝对路径"
 fi
 for executable in node rg bash; do
   [[ -x "$install_root/runtime/bin/$executable" ]] || fail "缺少运行件：$executable"
@@ -200,22 +216,24 @@ fs_provider_identities=$(grep -o '"id":"fs-provider","identity":[^,}]*' \
 entered="$temporary_root/shutdown-entered"
 process_ids="$temporary_root/shutdown-pids"
 shutdown_output="$temporary_root/shutdown.json"
-shutdown_command="printf '%s %s\\n' \$\$ \$PPID > '$process_ids'; : > '$entered'; while :; do sleep 1; done"
+shutdown_command="sleep 60 & leaf=\$!; printf '%s %s %s\\n' \$\$ \$PPID \$leaf > '$process_ids'; : > '$entered'; wait \$leaf"
 (
   cd "$working_directory"
-  "$launcher" tools invoke shell-tools bash --input \
+  exec "$launcher" tools invoke shell-tools bash --input \
     "{\"command\":\"$shutdown_command\",\"workdir\":\"$working_directory\",\"timeoutMs\":60000}"
 ) > "$shutdown_output" 2> "$shutdown_output.stderr" &
 host_pid=$!
 await_file "$entered"
-read -r payload_pid supervisor_pid < "$process_ids"
+read -r payload_pid supervisor_pid leaf_pid < "$process_ids"
 kill -TERM "$host_pid"
 set +e
 wait "$host_pid"
 host_status=$?
 set -e
+host_pid=
 [[ "$host_status" == 0 || "$host_status" == 143 ]] || fail "SIGTERM 后宿主退出码异常：$host_status"
 await_stopped "$payload_pid"
 await_stopped "$supervisor_pid"
+await_stopped "$leaf_pid"
 
 echo "发行 ZIP 仓库外验证通过：$archive"

@@ -19,7 +19,6 @@
     <fibra.distribution.directory>${project.build.directory}/fibra-${project.version}</fibra.distribution.directory>
     <fibra.distribution.node>node</fibra.distribution.node>
     <fibra.distribution.rg>rg</fibra.distribution.rg>
-    <fibra.distribution.bash>/bin/bash</fibra.distribution.bash>
     <fibra.distribution.verify.skip>false</fibra.distribution.verify.skip>
   </properties>
 
@@ -79,7 +78,7 @@
                   <filtering>false</filtering>
                 </resource>
                 <resource>
-                  <directory>${maven.multiModuleProjectDirectory}</directory>
+                  <directory>${project.basedir}/..</directory>
                   <filtering>false</filtering>
                   <includes>
                     <include>LICENSE</include>
@@ -143,7 +142,6 @@
                 <argument>${fibra.distribution.directory}</argument>
                 <argument>${fibra.distribution.node}</argument>
                 <argument>${fibra.distribution.rg}</argument>
-                <argument>${fibra.distribution.bash}</argument>
               </arguments>
             </configuration>
           </execution>
