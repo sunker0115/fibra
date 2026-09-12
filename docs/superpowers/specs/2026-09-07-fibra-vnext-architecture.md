@@ -32,7 +32,7 @@ Tool、Agent、Session 等业务插件的实现不因此进入通用底座；其
 5. 配置和制品只是输入事实，不能直接修改 Runtime；所有托管变更统一编译为 `ChangeSet`。
 6. Java 与 Node 通过同一个 `PluginRuntimeAdapter` 端口参与变更，Engine 不接触 ClassLoader、Process 或
    JSON-RPC 私有句柄。
-7. 所有注册都归某个 `Scope`，注册生效与逆操作登记是同一个 lane command；关闭可等待且幂等。
+7. 运行域内所有注册都归某个 `Scope`，注册生效与逆操作登记是同一个 lane command；关闭可等待且幂等。
 8. `PENDING` 是合法运行状态；逐 entry 的 `PublicationRequirement` 决定目标是否达成，不允许隐瞒实际运行状态。
 9. vNext 不引入 PF4J，不保留旧公开 API、旧模块名、旧配置入口或兼容转发。
 10. Tool、Agent、Skill、Session、UI slot 等业务类型只存在于场景适配层，不进入 Fibra 通用模块。
@@ -469,7 +469,7 @@ fibra-spring-boot-starter -> fibra-spring + fibra-registry + fibra-runtime-java
 | `fibra-runtime-java` | manifest、依赖图、隔离 ClassSpace、Java 插件物化 | Node、config、宿主业务 |
 | `fibra-runtime-node` | Node package、sidecar、JSON-RPC endpoint | Java ClassLoader、config、具体业务类型 |
 | `fibra-registry` | 安装、版本、期望状态与审计控制面 | runtime 私有对象、业务贡献目录 |
-| `fibra-spring` | Spring 服务与 Scope 协议适配 | Engine 装配、制品事务、宿主业务 |
+| `fibra-spring` | Spring 宿主服务显式收集与 Engine 启动桥接 | Engine 装配、制品事务、宿主业务 |
 | `fibra-spring-boot-starter` | 默认 composition root | 业务规则与场景协议 |
 
 禁止新增 `common/shared/utils` 发布模块承接边界不清的代码。跨 Fibra 框架模块且属于公开语义的类型
@@ -625,17 +625,21 @@ desired、observed 三类状态；observed 只来自 `PublishedView.engine()`。
 在途调用；成功、失败和取消各释放一次。撤销后的旧路由不能重新取得调用权，未订阅的 Publisher 不占用
 资源。目录保留已撤销但尚未排空的条目，重复关闭必须共享同一个完成结果，不能提前宣告回收完成。
 
-`fibra-spring` 提供显式 key/type 的服务 bridge。Spring Bean 由容器拥有，bridge 只登记 binding；撤销
-仍走 Scope 协议。`fibra-spring-boot-starter` 收集所有 `PluginRuntimeAdapter` Bean，装配一个 Engine、
-Registry 和 PublishedRuntime；不能把 Engine 写死为 Java-only。
+`fibra-spring` 提供显式 key/type 的服务 bridge。`@FibraService` Bean 由 Spring 容器拥有，exporter
+仅在 Engine 启动前将 binding 收集到 `HostServiceRegistry`；Engine 启动时冻结该收集表，并把 binding
+复制到长期 `RuntimeDomain`。`ServiceRegistration.dispose()` 仅在冻结前移除待收集 binding，启动后不会
+动态撤销已发布服务；运行域关闭与在途排空仍由 Engine 的 Scope 所有权树负责。
+`fibra-spring-boot-starter` 收集所有 `PluginRuntimeAdapter` Bean，装配一个 Engine、Registry 和
+PublishedRuntime；不能把 Engine 写死为 Java-only。
 
 默认 ArtifactStore 与 EngineStateStore 在 Engine 工厂内部创建，成功构造后由 Engine 唯一负责关闭，
 不另注册为容器自动销毁的 Bean。工厂失败时释放尚未移交的存储，保留原异常及各项关闭失败。
 显式提供自定义存储 Bean 时，同样将关闭所有权交给 Engine，须声明 `@Bean(destroyMethod = "")`；
 容器不能在 Engine 因清理失败保留资源后，再独立释放对应存储锁。普通宿主服务 Bean 的容器所有权不变。
 
-非 Spring 宿主遵循同一规则：外部服务在 Engine 构建或命令边界形成不可变 host binding snapshot，
-adapter 只收集 binding，不取得 Engine 托管的 root Context，也不替外部所有者关闭服务对象。
+非 Spring 宿主遵循同一启动边界和所有权规则：外部服务在 Engine 启动前通过 `HostServiceRegistry`
+显式登记；Engine 启动时冻结并复制 binding，不取得外部对象的关闭所有权。启动后不提供动态
+host-binding 变更入口。
 
 ## 7. 公开使用边界
 

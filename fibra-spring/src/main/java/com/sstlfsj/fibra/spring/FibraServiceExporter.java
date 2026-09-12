@@ -2,11 +2,11 @@ package com.sstlfsj.fibra.spring;
 
 import com.sstlfsj.fibra.ServiceKey;
 import com.sstlfsj.fibra.ServiceRegistration;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.DestructionAwareBeanPostProcessor;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.context.SmartLifecycle;
-import org.springframework.util.ClassUtils;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -31,7 +31,7 @@ public final class FibraServiceExporter
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName)
         throws BeansException {
-        var type = ClassUtils.getUserClass(bean);
+        var type = AopUtils.getTargetClass(bean);
         var annotation = AnnotationUtils.findAnnotation(type, FibraService.class);
         if (annotation == null) {
             return bean;

@@ -157,7 +157,11 @@ fibra:
     refresh-interval: 1s
 ```
 
-starter 自动组合 `ArtifactStore`、持久化 `FileEngineStateStore`、Java runtime、Engine 与 Registry。宿主 bean 只有标注 `@FibraService` 才会显式进入 Fibra root，不会扫描或托管动态插件对象。
+starter 自动组合 `ArtifactStore`、持久化 `FileEngineStateStore`、Java runtime、Engine 与 Registry。
+初始化阶段仅将标注 `@FibraService` 的宿主 Bean 收集为显式 host binding，不扫描或托管动态插件对象。
+Engine 启动时冻结并复制这些 binding；bridge 返回的 `ServiceRegistration.dispose()` 仅能在启动前取消
+待收集 binding，启动后不会动态撤销已发布服务。
+Spring 继续拥有 Bean，运行域关闭与在途排空由 Engine 负责。
 
 `fibra.source.refresh-interval` 默认 `0s`，即不自动导入配置源；设置为正值后，文件事件只触发可合并的 dirty signal，周期 resync 负责发现丢失通知。无效源保留 last-good 目标和运行实例并公开失败诊断，修正后自动恢复。已有持久目标启动时只建立源观察基线，不会被源文件静默覆盖。
 

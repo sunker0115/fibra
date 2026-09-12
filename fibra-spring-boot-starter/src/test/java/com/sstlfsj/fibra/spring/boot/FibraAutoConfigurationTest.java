@@ -18,6 +18,7 @@ import com.sstlfsj.fibra.engine.FileEngineStateStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.InitialArtifactSource;
 import com.sstlfsj.fibra.engine.PluginRuntimeAdapter;
+import com.sstlfsj.fibra.engine.PublishedRuntime;
 import com.sstlfsj.fibra.engine.RuntimeArtifactInspection;
 import com.sstlfsj.fibra.engine.RuntimeCatalog;
 import com.sstlfsj.fibra.engine.RuntimeResourceOwner;
@@ -30,6 +31,7 @@ import com.sstlfsj.fibra.spring.FibraService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -50,11 +52,26 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FibraAutoConfigurationTest {
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
+
+    @Test
+    void discoversTheStarterThroughBootAutoConfigurationImports(@TempDir Path work) {
+        new ApplicationContextRunner()
+            .withUserConfiguration(AutoConfiguredHost.class)
+            .withPropertyValues("fibra.storage-root=" + work)
+            .run(context -> {
+                var engine = context.getBean(FibraEngine.class);
+                assertEquals(EngineState.RUNNING, engine.published().current().engine().state());
+                assertSame(engine.published(), context.getBean(PublishedRuntime.class));
+                assertNotNull(context.getBean(PluginRegistry.class));
+                assertNotNull(context.getBean(JavaPluginRuntimeAdapter.class));
+            });
+    }
 
     @Test
     void composesEngineRegistryJavaRuntimeAndExplicitSpringServices(
@@ -220,6 +237,11 @@ class FibraAutoConfigurationTest {
         try (var artifacts = new ArtifactStore(work.resolve("artifacts"))) {
             assertNotNull(artifacts);
         }
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableAutoConfiguration
+    static class AutoConfiguredHost {
     }
 
     interface Greeting {
