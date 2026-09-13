@@ -94,7 +94,7 @@
 - PF4J 升级至 `3.15.0`。
 - 删除直接 JAR API（`loadArtifact`/`reloadArtifact`），不保留兼容转发。
 
-详见 openspec change `standardize-plugin-packages`（已归档）与[插件 `artifact` 与事务更新设计](docs/superpowers/specs/2026-08-23-fibra-plugin-package-transaction-design.md)。
+详见已归档的 openspec change [`standardize-plugin-packages`](openspec/changes/archive/2026-08-23-standardize-plugin-packages/design.md)；当前架构以 [Fibra vNext](docs/superpowers/specs/2026-09-07-fibra-vnext-architecture.md) 为准。
 
 ## [0.2.0] - 2026-08-23
 

@@ -8,7 +8,7 @@
 |---|---|---|
 | PF4J | `org.pf4j:pf4j:3.15.0:sources`；SHA-256 `7b8333b0d59a9cbe6bdc31771f7bb250b6d21fe99275539a855135593a311597` | `org/pf4j/DependencyResolver.java`、`org/pf4j/PluginClassLoader.java` |
 | IntelliJ Platform | 官方 SDK 文档与 2026-09-09 访问的 `master` 源码；未取得固定提交，不能当作发布版行为承诺 | 下方官方链接 |
-| DeepSeek Harness | 原始设计基线 `b0a7d2ce3b4c19d7452e364b2d7acbfa87e707ed`；文章对拍 `a66e4702047846cdaa10c66c9d3df3951f5ea70d`；进程单元复核 `c291e7961a515f6d7af9304e7fd1d257929aef26` | 原有插件路径及 `packages/subprocess` |
+| DeepSeek Harness | 当前架构契约 `0.1.5-rc.2`、`c291e7961a515f6d7af9304e7fd1d257929aef26`；原始设计 `b0a7d2ce3b4c19d7452e364b2d7acbfa87e707ed` 与文章对拍 `a66e4702047846cdaa10c66c9d3df3951f5ea70d` 仅为历史证据 | 原有插件路径及 `packages/subprocess` |
 | Model Context Protocol | 最新正式规范 `2026-07-28` | `CallToolResult`、ContentBlock、Multi Round-Trip Requests 与工具错误边界 |
 | Agent2Agent Protocol | 最新正式发布 `1.0.1` | `Task`、`Message`、`Artifact`、状态/流式事件与协议错误边界 |
 | Agent Client Protocol | v1 | tool call update、权限请求与 elicitation 边界 |
@@ -21,8 +21,9 @@
 
 用户提供的文章
 [《拆解 dsh：这套插件设计该如何借鉴》](https://mp.weixin.qq.com/s/CCAMmQHYQ8I1Kxq27Du2Gw)
-以 `@deepseek-ai/dsh 0.1.2-rc.1` 为基线。本轮已使用对应提交 `a66e470204` 复核文章影响当前设计的
-发布策略、事件模式和动态插件边界；文章中的统计与判断不是 Fibra 的实现承诺。
+以 `@deepseek-ai/dsh 0.1.2-rc.1` 为解读对象。本轮曾使用对应提交 `a66e470204` 复核文章内容；这只保留为
+历史对拍，不再充当架构契约。当前结论必须以 DSH `0.1.5-rc.2` 的固定提交 `c291e7961` 复核，文章中的
+统计与判断不是 Fibra 的实现承诺。
 
 ## IDEA 与 PF4J
 
@@ -41,7 +42,9 @@ parent 唯一定义；ClassLoader 是类型隔离机制，不是安全沙箱。
 
 ## DeepSeek Harness 的两种依赖
 
-固定提交下，`vendor/cordis/src/registry.ts` 的 `Inject.resolve` 归一化服务依赖；`fiber.ts` 和 `reflect.ts` 驱动服务变更后的生命周期收敛。JavaScript 模块 import 与 Cordis 服务注入承担不同职责。
+固定契约提交 `c291e7961` 下，`vendor/cordis/src/registry.ts` 的 `Inject.resolve` 归一化服务依赖；
+`fiber.ts` 和 `reflect.ts` 驱动服务变更后的生命周期收敛。JavaScript 模块 import 与 Cordis 服务注入承担
+不同职责。
 
 前端 `packages/client/modules/src/index.ts` 的 `orderByModuleGraph` 按 `external` 边排序，拒绝自依赖和环；模块请求与提供方检查由组合流程完成。`dsh.client.inject` 的包名列表是信息字段，不控制服务激活顺序。浏览器模块物化由 `src/client/system.ts` 负责，实例启动仍由浏览器 Cordis 服务依赖决定。
 
@@ -51,7 +54,7 @@ parent 唯一定义；ClassLoader 是类型隔离机制，不是安全沙箱。
 
 ### 差量更新与清理顺序的直接采用边界
 
-固定 `a66e470204` 的 `Entry.update()` 使用 `deepEqual` 计算条目字段变化：无变化且非强制时立即返回；
+固定契约提交 `c291e7961` 的 `Entry.update()` 使用 `deepEqual` 计算条目字段变化：无变化且非强制时立即返回；
 普通配置变化经 `_patchContext()` 调用原 Fiber 的 `update()`；`name/inject/group` 变化才替换 Fiber，
 其中新入口 import 在旧实例 dispose 之前完成。Fibra 采用相同的职责划分：Engine 比较声明和实际
 definition 身份，仅绑定变更输入，普通配置更新保留实例身份；Java 契约类被重新装载或有效隔离策略
@@ -73,16 +76,16 @@ definition 身份，仅绑定变更输入，普通配置更新保留实例身份
 消费者清理全部成功。Fibra 采用“撤销服务、由内核等待真实消费者”的逻辑；只等待旧 activation 清理，
 不把消费者重新激活当作释放旧资源的先决条件。
 
-源码：[Entry 更新](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/vendor/loader/src/config/entry.ts)、
-[Fiber 生命周期和资源归属](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/vendor/cordis/src/fiber.ts)、
-[服务撤销与消费者等待](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/vendor/cordis/src/reflect.ts#L277-L335)。
+源码：[Entry 更新](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/vendor/loader/src/config/entry.ts)、
+[Fiber 生命周期和资源归属](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/vendor/cordis/src/fiber.ts)、
+[服务撤销与消费者等待](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/vendor/cordis/src/reflect.ts)。
 新 Engine 已按上述差量职责重写；清理前排空、跨 Java/Node 局部更新和主动停用已有独立门禁。
 这只证明框架行为边界，仍不能替代第 10.1 节真实多插件应用与最终分发验收。
 
 ### 资源、调用与保存问题的采用边界
 
-下表的 DSH 行为契约仍以 `a66e4702047846cdaa10c66c9d3df3951f5ea70d` 为固定基线；同时已用
-`c291e7961a515f6d7af9304e7fd1d257929aef26` 复核相关实现是否发生漂移。实现优先采用已有机制；
+下表的 DSH 架构与行为契约以 `0.1.5-rc.2`、
+`c291e7961a515f6d7af9304e7fd1d257929aef26` 为固定基线。实现优先采用已有机制；
 新增保证必须对应本项目实际宿主边界，不能因为新增状态或测试更多就宣称整体优于 DSH。
 
 | 问题 | DSH 实际处理 | Fibra 落点 |
@@ -97,11 +100,11 @@ definition 身份，仅绑定变更输入，普通配置更新保留实例身份
 | 并发保存、关闭与持久性 | settings-file 串行队列及完整文件锁，停止等待队列；附件库同步文件和目录链 | Store 操作串行且关闭后旧句柄不可再写；持久确认不能仅依赖 rename 或“目标已存在” |
 | 宿主资源关闭 | CLI 单一 shutdown 协调器关闭 root fiber，host-half 启动失败立即释放新 fiber | Engine 拥有其内部资源，Spring 只调用该关闭入口；DSH 无 Spring DI 对照，不能从它推导 Bean 销毁细节 |
 
-工具证据：[注册与调用](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/core/tools/src/index.ts#L1028-L1052)、
-[调用执行与协作取消](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/core/tools/src/index.ts#L1333-L1550)、
-[注册所有权](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/core/scope/src/store.ts#L226-L265)。
+工具证据：[注册与调用](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/core/tools/src/index.ts)、
+[调用执行与协作取消](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/core/tools/src/index.ts)、
+[注册所有权](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/core/scope/src/store.ts)。
 
-最新 DSH 提交仍由 Tool Runtime 持有已启动的 `tool.execute()`，取消后等待该执行终态；Timeout Policy
+固定契约提交仍由 Tool Runtime 持有已启动的 `tool.execute()`，取消后等待该执行终态；Timeout Policy
 同样先触发 abort，再等待工具返回，最后把已返回的结果改写为超时。这两点支持 Fibra 的请求终态屏障。
 DSH SDK JSON-RPC 的本地 pending 删除以及 MCP 的取消通知则只表达“不再等待/请求对端取消”，不证明
 远端工作已经停止，Fibra 不采用这一较弱边界。[最新 Tool Runtime](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/core/tools/src/index.ts#L1517-L1549)、
@@ -157,18 +160,18 @@ Codex 的共享 MCP 客户端也把单次调用超时限制在该调用，不因
 [Codex MCP 调用超时](https://github.com/openai/codex/blob/c4017a87aacc7558002b7cb510025e967c1d765e/codex-rs/rmcp-client/src/rmcp_client.rs#L789-L870)、
 [Codex 本地进程回收](https://github.com/openai/codex/blob/c4017a87aacc7558002b7cb510025e967c1d765e/codex-rs/core/src/exec.rs#L994-L1140)。
 
-存储证据：[完整发布与完整性校验](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/attachment/attachment-local/src/store.ts#L145-L305)、
-[settings-file 操作队列与锁](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/settings/settings-file/src/index.ts#L193-L269)。
+存储证据：[完整发布与完整性校验](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/attachment/attachment-local/src/store.ts)、
+[settings-file 操作队列与锁](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/settings/settings-file/src/index.ts)。
 `util/atomic-write` 的 `writeFileAtomic()` 明确不负责 fsync；`vendor/include` 的写队列和临时文件 rename
 也不能直接证明断电持久性。DSH Loader 使用 Node import，包安装由外部 npm/pnpm 处理，不存在对应
-Fibra 的 Java 制品仓库与 ClassLoader 协议。[原子写工具的职责](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/util/atomic-write/src/index.ts#L62-L93)。
+Fibra 的 Java 制品仓库与 ClassLoader 协议。[原子写工具的职责](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/util/atomic-write/src/index.ts)。
 
-宿主证据：[单一退出协调器](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/apps/cli/src/process-shutdown.ts#L22-L76)、
-[启动失败的资源归还](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/extensions/cordis-host-runner/src/lifecycle.ts#L22-L45)。
+宿主证据：[单一退出协调器](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/apps/cli/src/process-shutdown.ts)、
+[启动失败的资源归还](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/extensions/cordis-host-runner/src/lifecycle.ts)。
 
 ### 配置组合的直接采用边界
 
-固定 `a66e470204` 的 `vendor/include/src/index.ts#applyEntryPatches` 复制输入，建立当前文档的
+固定契约提交 `c291e7961` 的 `vendor/include/src/index.ts#applyEntryPatches` 复制输入，建立当前文档的
 条目 ID 索引，再按顺序浅覆盖或追加；索引递归 group，但不跨 include。名称字段只作匹配保护，
 缺失目标或保护不符产生告警并继续，显式插入的条目可被后续补丁命中。Fibra 采用这一模型，
 用已有声明字段 `plugin/entries/enabled` 表达 DSH 的 `name/config/disabled`，不维持另一套补丁协议。
@@ -184,13 +187,13 @@ DSH 的 `packages/boot/app-boot/tests/config-dump.spec.ts` 明确验证这一点
 实例身份及 effects 不变，再验证修正后原实例更新。Jackson 将空文件归为解析错误，DSH 的 js-yaml
 将其归为后续校验错误；两者都明确拒绝该输入，不为统一错误阶段改写底层解析器。
 
-源码：[条目补丁](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/vendor/include/src/index.ts#L58-L127)、
-[单次索引门禁](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/boot/app-boot/tests/config-dump.spec.ts#L109-L140)、
-[配置刷新场景](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/boot/app-boot/tests/config-reload.spec.ts)。
+源码：[条目补丁](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/vendor/include/src/index.ts)、
+[单次索引门禁](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/boot/app-boot/tests/config-dump.spec.ts)、
+[配置刷新场景](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/boot/app-boot/tests/config-reload.spec.ts)。
 
 ### 配置条目隔离与分组继承
 
-`a66e470204` 的 `vendor/loader/src/config/isolate.ts` 将 `true` 解析为条目持有的 `LocalRealm`，
+固定契约提交 `c291e7961` 的 `vendor/loader/src/config/isolate.ts` 将 `true` 解析为条目持有的 `LocalRealm`，
 字符串标签解析为共享的 `GlobalRealm`；每个 realm 内又按服务名称取得稳定 symbol。
 `loader/patch-context` 从父条目的 isolate/intercept 视图继承，再应用当前条目的覆盖。
 因此，在 group 上声明 `true` 时，未覆盖该服务隔离策略的组内插件共享同一个范围；不同 group
@@ -227,9 +230,9 @@ RuntimeDomain 等待的 participant，payload 在 POSIX 独立进程组内运行
 
 ### 当前发布策略对拍
 
-`a66e470204` 的 `packages/boot/app-boot/src/index.ts#assertEntriesActivated` 在应用启动审计中拒绝 enabled
+固定契约提交 `c291e7961` 的 `packages/boot/app-boot/src/index.ts#assertEntriesActivated` 在应用启动审计中拒绝 enabled
 但仍为 `PENDING` 的 entry，并从其 Fiber 依赖中报告缺失服务；对应测试位于
-`packages/boot/app-boot/tests/app-boot.spec.ts`。同一提交的
+`packages/boot/app-boot/tests/app-boot.spec.ts`。该提交的
 `packages/extensions/cordis-client-runner/src/client/runtime.ts` 则把 settled、非 ACTIVE 的动态插件视为
 合法等待，返回 `waitingFor`；行为测试位于 `tests/plugin.client.spec.ts`。
 

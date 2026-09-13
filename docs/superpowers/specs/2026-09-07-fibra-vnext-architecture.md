@@ -2,7 +2,7 @@
 
 日期：2026-09-07
 
-状态：设计、实现、自动化交付验收与独立审核已完成（2026-09-13）
+状态：第 1–10 节设计、实现、自动化交付验收与独立审核已完成；第 11 节 F1–F4 为尚未实施的后续路线（2026-09-13）
 
 本文是 Fibra vNext 唯一权威设计，定义最终系统边界、运行模型、模块职责和验收标准；不记录旧版本
 迁移过程，也不按参考项目组织正文。外部实现的源码对拍统一收录在
@@ -14,7 +14,7 @@ Fibra vNext 是一套面向受信任动态插件的托管运行底座。它允�
 插件进入同一个期望状态、生命周期、发布和诊断模型，同时保留纯内核嵌入方式。
 
 交付以满足实际场景的最小完整架构为目标，不以比参考项目更多的组件或更强的限制作为增强。
-以 DSH `0.1.2-rc.1`（`a66e4702047846cdaa10c66c9d3df3951f5ea70d`）的插件系统为固定行为基线，
+以 DSH `0.1.5-rc.2`（`c291e7961a515f6d7af9304e7fd1d257929aef26`）的插件系统为固定架构与行为基线，
 逐项覆盖插件协作、配置装配与动态管理场景，提供等价或增强的实现，不退化、不变形。Java/Node 的
 实现机制和输入语法可以不同，但不能削弱核心行为契约；等价性由源码对照和行为测试证明。
 Tool、Agent、Session 等业务插件的实现不因此进入通用底座；其所需的通用插件能力仍须完整提供。
@@ -970,8 +970,8 @@ benchmark 混入发布仓。`ApiSignatureBaselineTest` 另以定向命令通过�
 结果记录在
 [行为验收账本](../references/2026-09-11-behavior-verification-ledger.md)。
 
-最终独立审核未发现 P0/P1；审核指出的运行件版本探测非零退出码、REPL 停用/恢复结果断言和 `SIGTERM`
-及时退出证明三个 P2 已在同一实现/测试提交中关闭。最终 ZIP 门禁因此具备 10 秒退出截止，不再可能把工具
+最终独立审核未发现审计级别 P0/P1；审核指出的运行件版本探测非零退出码、REPL 停用/恢复结果断言和
+`SIGTERM` 及时退出证明三个审计级别 P2 已在同一实现/测试提交中关闭。最终 ZIP 门禁因此具备 10 秒退出截止，不再可能把工具
 自然超时误记为排空成功；Node、ripgrep 或 Bash 版本探测失败也会直接阻止装配。
 
 平台边界不随本机绿色结果扩大：本次 ZIP 携带的是 macOS arm64 目标运行件；Windows 文件发布、Job
@@ -999,7 +999,7 @@ Object 与 Linux user-systemd 仍只记录实现、注入测试和既有 Ubuntu 
 具体 provider 可以采用许可证合适、维护成熟且行为边界可验证的第三方 Java 库，依赖只进入对应 provider
 制品，不进入 `fibra-api`、宿主可见工具契约或动态 contract；采用第三方实现不能改变本节的 DSH 行为契约，
 也不能绕过 Fibra 的 Service、Scope、取消和排空模型。JDK 原生能力已能完整兑现时不额外引入依赖。
-参考 DSH 固定提交 `a66e4702047846cdaa10c66c9d3df3951f5ea70d` 的 `packages/fs/tool-fs`、
+参考 DSH 固定提交 `c291e7961a515f6d7af9304e7fd1d257929aef26` 的 `packages/fs/tool-fs`、
 `packages/fs/tool-fs-search`、`packages/shell/tool-bash` 及 `packages/storage`；
 参考其插件协作方式，不将应用场景覆盖误称为整个 DSH 业务产品的等价实现。
 
@@ -1141,7 +1141,7 @@ supervisor 维持 stdin 生存租约，JVM 异常退出时以 EOF 触发清理�
 |---|---|---|
 | Fibra 0.4.x | `02fe4b5dcd7b1052203d2027c9808931dceddb65` | 旧实现问题只用于解释最终边界，不进入主叙事 |
 | cordiverse/cordis | `8cc9e33fab69e2d0476d126baaf2acb24e6a6ab4` | [Cordis 行为证据](../references/2026-09-09-cordis-behavior-evidence.md) |
-| DeepSeek Harness | `b0a7d2ce3b4c19d7452e364b2d7acbfa87e707ed`、`a66e4702047846cdaa10c66c9d3df3951f5ea70d` | [插件依赖、装载与更新基线](../references/2026-09-09-plugin-dependency-baselines.md) |
+| DeepSeek Harness | 架构契约 `0.1.5-rc.2`、`c291e7961a515f6d7af9304e7fd1d257929aef26`；`b0a7d2ce3b4c19d7452e364b2d7acbfa87e707ed` 与 `a66e4702047846cdaa10c66c9d3df3951f5ea70d` 仅为历史对拍 | [插件依赖、装载与更新基线](../references/2026-09-09-plugin-dependency-baselines.md) |
 | cordis4j | `6cfd56e684fb403ded952afc09eddb49a5228494`、设计契约 v2.13 | [cordis4j 设计证据](../references/2026-09-11-cordis4j-design-evidence.md) |
 
 DSH 的插件行为基线构成功能等价门禁；其他来源用于解释取舍，不自动扩大实现承诺。两篇用户提供的解读文章作为问题清单
@@ -1149,8 +1149,9 @@ DSH 的插件行为基线构成功能等价门禁；其他来源用于解释取�
 
 ## 11. Fibra CLI 完成路线与上层 Agent 产品边界
 
-本节定义 vNext 交付完成后的演进路线。它不改变第 1 至 10 节已经完成的范围，也不把后续待办计入
-当前版本完成度。后续不再把 DSH 的 Agent 产品能力继续堆入 Fibra 仓库，而采用与 Cordis/DSH 相同的
+本节定义第 1–10 节交付完成后的演进路线。F1–F4 均尚未实施，现有固定管理命令、一次性执行、REPL、
+CLI/ZIP 验收只证明第 1–10 节的封闭 Fibra CLI 与发行范围，不能作为 F1–F4 任一阶段的完成证据。
+后续不再把 DSH 的 Agent 产品能力继续堆入 Fibra 仓库，而采用与 Cordis/DSH 相同的
 上下层关系：Fibra 负责通用运行时、插件宿主和完整 CLI 框架；另建上层 Agent 产品项目，依赖 Fibra
 发布物并组合 Model、Agent、Session、MCP、Skill、Workflow、UI 等产品能力。
 
@@ -1174,10 +1175,12 @@ Fibra 比 Cordis 承担更多通用交付职责，但不能因此跨入 Agent �
 `PluginRegistry`、Engine、持久目标、`PublishedRuntime` 与 Session 事实源，不能各自维护插件启停、版本、
 配置或调用路由。
 
-DSH 能力基线继续固定为 `0.1.2-rc.1` 的提交
-`a66e4702047846cdaa10c66c9d3df3951f5ea70d`。AgentCLI 与 PaiCLI 只提供 Java 终端交互参考；二者来源和
+DSH 能力基线继续固定为 `0.1.5-rc.2` 的提交
+`c291e7961a515f6d7af9304e7fd1d257929aef26`。AgentCLI 与 PaiCLI 只提供 Java 终端交互参考；二者来源和
 历史不同、当前实现高度接近，不构成第二套产品架构基线。吸收源码已经证明的行为，不复制 DSH 的 Node
 包布局、Cordis Loader 和 pnpm 安装流程，也不复制 AgentCLI/PaiCLI 的单体 `ToolRegistry` 或斜杠命令树。
+固定版本、提交、源码位置和“直接证明/ Fibra 自定增强”的证据分级见
+[后续架构真源与外部参考审计](../references/2026-09-13-architecture-source-audit.md)。
 
 ### 11.1 两个项目的责任边界
 
@@ -1256,10 +1259,21 @@ Picocli 因此是该场景 API 的受控公开依赖；动态插件不跨 ClassL
 - 统一的 usage、启动、业务调用、revision 冲突、关闭和取消退出状态；人类与机器输出走明确分离的通道。
 
 根 help/version、profile 解析和插件管理等 bootstrap 命令静态存在；Agent、Session、MCP 等产品命令由
-运行时插件贡献。CLI 先解析最小启动参数并打开 host，再从一个 `PublishedView` 构造不可变命令代；REPL
-每次读新行前采用最新已发布代，已经开始解析或执行的命令继续持有旧 route 并参与排空。插件停用后新代
-立即移除对应命令，help、补全和执行使用同一代，不能各自读取不同快照。Spring 继续只是宿主适配器，不
-引入 Spring Shell，也不允许应用上下文扫描生成工具或命令。
+运行时插件贡献。CLI 先解析最小启动参数并打开 host，再捕获一个 `PublishedView` 的 command descriptor、
+贡献注册身份与 view revision，形成 Fibra 定义的不可变命令代。一次解析，以及由该次解析触发的 help、
+usage 与补全，只能使用这组已捕获事实，过程中不得重新读取最新 view。
+
+“不可变命令代”只指 Fibra descriptor、贡献注册身份和 revision。Picocli `CommandSpec` 是带有
+`addSubcommand`、`removeSubcommand`、usage setter 等可变操作的解析对象，不是并发只读快照。实现必须从
+捕获的 Fibra 命令代构造受单次操作或单条 CLI lane 约束的 `CommandSpec`，不得把它作为命令代身份、跨线程
+发布后继续修改，或允许插件直接取得并修改。
+
+解析开始不等于调用已准入，也不取得旧 route 租约。只有执行边界通过
+`PublishedRuntime` 以捕获的 revision 和贡献注册身份完成准入后，invocation 才持有 route 租约并参与
+排空；尚未准入而 view revision 已变化，或贡献已撤销时，稳定返回 stale/revoked，不调用旧 handler，
+也不转向同名新 handler。已经准入的 invocation 继续使用获准 route，直到调用 Scope 清理完成后才释放
+租约。REPL 每次读新行前可以采用最新已发布命令代；同一行的解析、help、补全和执行选择仍固定在该次
+捕获上。Spring 继续只是宿主适配器，不引入 Spring Shell，也不允许应用上下文扫描生成工具或命令。
 
 ### 11.3 DSH 能力盘点与项目落点
 
@@ -1273,7 +1287,7 @@ Picocli 因此是该场景 API 的受控公开依赖；动态插件不跨 ClassL
 | fs、搜索、shell、subprocess、storage | contract/provider/tool 分层；搜索经 subprocess；进程树排空；具名存储与变更事件 | Fibra 已完成本期范围 | 保留 Fibra 正式发布物；图片、Jobs、PTY、Sandbox 不冒充已完成 |
 | CLI 交互 | DSH 的 commands/questions/approval 均为插件；AgentCLI/PaiCLI 有 JLine 历史、补全、高亮和 renderer | Fibra 部分完成 | F1 至 F4 完成 bootstrap 与动态 command contribution；产品 command/questions/approval/renderer 均留上层插件 |
 | Model | provider 路由、模型发现、配置解析和流式适配 | 未实现 | 上层项目动态 contract/provider 插件 |
-| Agent | Agent factory、轮次/步骤、模型流与工具调度；完整实现依赖 Session | 未实现 | 上层项目 Agent 插件；P1 使用 invocation 内状态闭合 Model/Tool，P2 再接入独立 Session |
+| Agent | Agent factory、轮次/步骤、模型流与工具调度；完整实现依赖 Session | 未实现 | 上层项目 Agent 插件；先以 invocation 内状态闭合 Model/Tool，再按产品架构真源接入独立 Session |
 | Tool 流水线 | schema、作用域、guard、pre/execute/post/result 和多种呈现 | Fibra 已有公开工具调用 | 通用调用留 Fibra；Agent 选择、审批和产品呈现留上层项目 |
 | Session | 追加日志、冻结事实、投影、fork、flush；持久化和投影分离 | 未实现 | 上层项目独立 Session contract/provider，不复用 EngineStateStore 或 ConfigStore |
 | MCP | stdio/Streamable HTTP、工具同步、撤销和有限重连 | 未实现 | 上层项目 Tool adapter 插件；首期不声称 resources/prompts 全覆盖 |
@@ -1301,19 +1315,23 @@ Picocli 因此是该场景 API 的受控公开依赖；动态插件不跨 ClassL
   command contribution、调用上下文、输出、退出状态和受控终端租约；`fibra-cli` 继续提供默认实现和
   现有固定命令。
 - 一次性命令与 REPL 必须经过同一命令代和 invocation 创建路径；CLI 先解析最小启动参数，再从
-  `PublishedView` 的 command contributions 建树。上层命令只能使用 Registry、`PublishedRuntime` 和
-  声明的 profile/path 视图。
+  `PublishedView` 的 command contributions 捕获 descriptor、贡献注册身份和 revision 后建树。解析、
+  help、补全固定使用这次捕获；执行前必须以同一身份/revision 经 `PublishedRuntime` 准入。尚未准入即
+  发生代变化时返回 stale/revoked，不调用旧 handler，也不转向同名新 handler。上层命令只能使用
+  Registry、`PublishedRuntime` 和声明的 profile/path 视图。
 - 建立仓库外临时 Maven 消费者，只依赖已安装到隔离仓库的 Fibra 发布物，加载一个真实 Java command
   插件，执行其动态命令、停用并验证命令消失；同时调用一个已发布工具，并通过 fake/dumb terminal 验证
   租约恢复，证明无需包私有类型和 reactor。
 
-退出条件：公开 API 签名门禁通过；现有 CLI 命令和 distribution 无行为回归；外部消费者从空 Maven
-依赖仓构建、启动并完成扩展命令与真实工具调用。
+退出条件：公开 API 签名门禁通过；现有 CLI 命令和 distribution 无行为回归；契约测试证明解析中更新、
+help/补全中更新、执行准入前撤销和同名贡献替换均不跨代，且只有已准入 invocation 持有租约并参与排空；
+外部消费者从空 Maven 依赖仓构建、启动并完成扩展命令与真实工具调用。
 
 #### F2：安全历史、补全与终端降级
 
-- bootstrap 补全从 Picocli `CommandSpec` 生成，动态命令及工具名候选来自同一个当前 `PublishedView`；
-  插件变更成功后原子切换命令/补全代，不引入第二命令或工具目录。
+- bootstrap 补全从捕获的 Fibra descriptor/revision 派生，并可使用同次操作内受约束的 Picocli
+  `CommandSpec` 渲染；动态命令及工具名候选来自同一个已捕获 `PublishedView`。插件变更成功后原子发布
+  新的 Fibra 命令代，不在原 `CommandSpec` 上原地并发修改，也不引入第二命令或工具目录。
 - 吸收 AgentCLI/PaiCLI 的 JLine persistent history、高亮和 dumb-terminal fallback。当前 REPL 内可保留
   完整内存历史；持久历史绝不保存 `tools invoke --input` 原值、未来凭据参数或被标记的敏感值，不安全
   命令只留下不可重放的脱敏摘要。
@@ -1326,15 +1344,27 @@ distribution 回归通过。不得扫描 workspace 或 storage 后把用户明�
 
 #### F3：调用级取消与信号
 
-- REPL 中第一次 `Ctrl+C` 取消当前 invocation，等待其 Scope 排空，输出稳定取消结果后返回提示符；空闲
-  时只清空当前输入，不关闭 Engine。
-- 非交互调用收到 `SIGINT` 时取消当前调用并排空后以 130 退出；`SIGTERM` 继续走已经验证的宿主关闭
-  路径。重复信号不能绕过受管资源清理。
-- 取消、排空超时、业务失败和宿主关闭失败保持不同投影；动态 command contribution 自动获得同一
-  invocation 语义。
+三个入口必须分开识别，再汇入同一个幂等 invocation 取消与排空协调器：
 
-退出条件：真实 TTY 中取消后可继续调用另一命令；无关插件实例、ClassLoader、Node PID、effects 和在途
-调用保持；子进程范围静默；外部 `SIGINT`、`SIGTERM`、退出码和产品扩展命令夹具通过。
+- 普通 REPL 由 JLine `LineReader` 读取命令行时，键入 `Ctrl+C` 产生输入中断，只清空当前编辑缓冲；此时
+  尚无已准入 invocation，不创建 route 租约、不触发 Engine 关闭。
+- 已准入 invocation 持有 raw terminal lease 时，租约读取到字节 `0x03` 必须将其转换为当前 invocation
+  的取消请求，不把该字节交给业务输入。租约停止新读、唤醒阻塞读取并恢复终端属性；invocation Scope
+  排空完成后才释放 route 租约并返回 REPL。若平台把该按键提升为进程信号，信号入口与字节入口必须由
+  同一协调器去重。
+- 外部 `SIGINT` 是进程级中断：停止本 CLI 进程的新 invocation 准入，取消已经准入的当前调用并等待其
+  Scope 排空，随后终止当前 CLI 进程并以 130 退出；是否同时关闭共享 Host 由宿主所有权决定，不能把附着
+  client 的退出扩大为 Host 关闭。外部 `SIGTERM` 进入宿主关闭：owner 全局停止准入，取消并排空全部已
+  准入 invocation，再沿 Engine/Scope 所有权顺序关闭；非 owner 只释放自己的会话/租约。重复信号只能按
+  公开截止升级，不能绕过诊断保存和受管资源清理。
+
+取消、排空超时、业务失败和宿主关闭失败保持不同投影；动态 command contribution 自动获得同一
+invocation 语义。AgentCLI/PaiCLI 的 `Future.cancel(true)` 与 DSH command 的 abort-race 只能证明立即停止
+等待/请求取消，不能作为 Fibra 已等待 invocation Scope、route 租约和远端终态排空的证据。
+
+退出条件：真实 TTY 分别覆盖普通 REPL `Ctrl+C` 与 raw lease `0x03`，并证明取消后可继续调用另一命令；
+无关插件实例、ClassLoader、Node PID、effects 和在途调用保持；子进程范围静默；外部 `SIGINT`、
+`SIGTERM`、退出码和产品扩展命令夹具通过。
 
 #### F4：CLI 框架冻结与交付门禁
 
@@ -1351,36 +1381,17 @@ distribution 回归通过。不得扫描 workspace 或 storage 后把用户明�
 分发门禁全部通过；权威架构和既有验收账本已回填；独立审核无未关闭的高优先级问题。此时 Fibra CLI
 框架宣布完成，Fibra 不再沿本路线增加 Agent 产品功能。
 
-### 11.5 上层 Agent 产品项目实施阶段
+### 11.5 上层 Agent 产品边界与权威真源
 
-F4 完成后再创建新仓库。项目名称、坐标和首个模型 provider 在建仓时单独确认；本设计只固定职责和顺序，
-不提前把临时名称写成公开 API。
+F4 完成后才进入上层 Agent 产品实施。本节不再定义产品阶段编号、顺序、模块清单或退出条件；产品
+P0–P8 的唯一权威真源是
+[基于 Fibra 的 CLI + Desktop Agent 产品架构与实施路线](./2026-09-13-fibra-based-agent-product-architecture.md)。
+任何产品阶段调整只修改该文件，不回填第二套阶段表到 vNext。
 
-```text
-上层 Agent 产品项目
-  ├─ product-api/                 Agent、Model、Session 等宿主可见场景 API
-  ├─ product-cli/                 基于 Fibra CLI SPI 的极薄 bootstrap 与 renderer 宿主
-  ├─ product-plugins/             command、UI、contract、provider、consumer 与 policy 插件
-  ├─ product-distribution/        自有 profile、插件选择、启动器与 ZIP
-  └─ product-acceptance/          真实模型、工具、重启、信号和外部解压验收
-```
-
-默认依赖顺序如下；每一阶段完成并提交后才进入下一阶段：
-
-| 阶段 | 交付内容 | 关键退出条件 |
-|---|---|---|
-| P0 独立建仓 | 父 POM、极薄 CLI bootstrap、首个 command 插件、distribution、验收骨架；只消费 Fibra 发布物 | 隔离空 Maven 仓构建；仓库外 ZIP 启动；动态命令调用 Fibra 正式工具 |
-| P1 Model + Agent | 场景 API、一个真实模型 provider、invocation 内单 Agent loop、system prompt、Tool bridge、最小审批 | 不依赖 Session 完成真实模型选取和调用文件或 Shell 工具；拒绝无 effect；取消无泄漏 |
-| P2 Session | 追加事实、JSONL provider、projection、flush、fork/checkpoint、重启恢复 | 工具调用后重启恢复；三个故障点不产生半完成调用；损坏明确失败 |
-| P3 MCP | stdio/Streamable HTTP client、工具同步、撤销、有限重连 | 真实 MCP server 发现/调用/取消；停用后路由排空和子进程清理 |
-| P4 Context + Skill | instructions、文件系统 skill、引用、时间；按需附件和 spill | profile/realm 隔离；显式升级；旧会话来源可解释；敏感信息不落盘 |
-| P5 Goal + Todo + Plan + Compaction | 基于 Session 事实的长任务插件和 token 投影 | 跨重启恢复；压缩不丢未完成调用；Plan 切换不重启无关插件 |
-| P6 Sandbox + Jobs + Terminal | 独立 policy/provider、后台任务、owner 权限、按需 PTY | 平台强度不夸大；任务/PTY 关闭排空；`jobs-local` 不冒充持久任务 |
-| P7 Client plugins + 事件流 | 同一 Fibra Engine 管理的 client 执行域、桌面 bootstrap、renderer/slots/layout/feature UI 插件、有序事件、断线续接、JSONL 和 TUI | CLI 与 Desktop 共享一个持久目标和事实源；桌面入口启动 Host 后直接打开页面；UI 插件由同一 ChangeSet 差量装卸；慢消费者、终态、取消竞态、窄终端和非 TTY 门禁通过 |
-| P8 Subagent + Workflow + adapters | 受管子 Agent、DAG、API、SDK、ACP、Spring gateway 与 Web client runner | 父取消排空所有子资源；provider 局部替换；仓库外真实消费 |
-
-Web、LSP、Webhook、Schedule 和第二种模型协议属于按需垂直阶段，不占预留空模块。它们必须复用已经稳定
-的 Tool、Session、取消、profile 和 distribution 契约，并用真实调用证明需求后才进入路线。
+vNext 只保留边界：上层产品单独拥有仓库、版本、CLI/Desktop 入口、产品插件、Session 事实源和发行物；
+它只消费 F4 后发布的 Fibra 制品，不能取得 Engine 内部 `Context`、建立第二插件控制面，或把产品实现证据
+回写成 Fibra F1–F4 已完成。Web、LSP、Webhook、Schedule 和第二种模型协议等是否进入路线，也只由上述
+产品架构真源按真实消费者决定。
 
 ### 11.6 全插件 UI 与长会话数据流
 
@@ -1540,21 +1551,12 @@ bootstrap 只保留加载失败时的最小恢复入口。即使管理页面插�
 
 #### 开源参照与 Fibra 取舍
 
-该方案不是凭空创建，采用 DSH、VS Code、Grafana 与 Eclipse Theia 已验证部分的交集，但不复制任一项目的
-完整实现：
-
-| 参照 | 已验证模式 | Fibra 采用 | Fibra 不采用 |
-|---|---|---|---|
-| DSH/Cordis 固定源码 | Host/client runner、renderer、slot、页面与业务能力均可插件化，effect 负责级联清理 | 全插件 UI、依赖驱动装载、Scope/effect 撤销 | pnpm 透传、Cordis Loader、Node 专属包布局和独立客户端目标选择 |
-| [VS Code Extension Host](https://code.visualstudio.com/api/advanced-topics/extension-host) | 一个扩展体系可把实例放到 local、web 或 remote extension host；manifest 声明能力和首选位置 | 一个管理面、显式执行位置、受限 API、浏览器执行端与 Host 隔离 | VS Code 禁止扩展任意修改核心 UI 的限制；Fibra 产品允许通过受控 route/slot 替换页面 |
-| [VS Code Web Extensions](https://code.visualstudio.com/api/extension-guides/web-extensions) | 同一扩展可声明 `main` 与 `browser` 入口，browser 入口在受限 WebWorker 执行 | 逻辑插件多 facet、browser entrypoint 与宿主 entrypoint 分离 | 直接复制 Node/WebWorker API；Fibra 仍使用自身 manifest、runtime SPI 和调用契约 |
-| [Grafana App Plugin](https://grafana.com/developers/plugin-tools/key-concepts/anatomy-of-a-plugin) | 一个可安装 App Plugin 可包含自定义页面、UI extension、后端和嵌套插件 | 一个逻辑安装单位同时改变能力与页面，前后 facet 分开执行 | Grafana 专用组织配置、React/Golang API 和重启式页面发现 |
-| [Grafana Backend Plugin](https://grafana.com/developers/plugin-tools/key-concepts/backend-plugins) | 服务端统一启动隔离的 backend 子进程并通过 RPC 调用 | Host 控制远端执行器、显式协议、健康与实例隔离 | 把所有非 Java 插件都固定为 Go/gRPC 子进程 |
-| [Eclipse Theia 扩展模型](https://theia-ide.org/docs/extensions/) | 区分运行时可安装插件、每客户端执行进程与编译期全权限扩展 | 运行时插件使用受限 API，client observed state 按连接报告 | 同时维护多套不兼容扩展机制，以及让普通插件直接访问产品内部容器 |
-
-最终推荐是“VS Code 的多执行端 + Grafana 的全栈逻辑插件包 + DSH 的全插件 UI 生命周期”，再用 Fibra
-现有的唯一 Engine、持久目标、ChangeSet、PublishedView 和排空语义统一控制。这样既能在一个插件管理中
-安装任何受支持插件并改变命令、能力或页面，也不会把浏览器变成第二个控制面。
+DSH/Cordis 的固定源码直接证明 Host/client runner、renderer、slot 与 effect 生命周期可以插件化；
+VS Code、Grafana 与 Eclipse Theia 的浮动官方文档只作为截至 2026-09-13 的非契约设计灵感。外部事实和
+Fibra 推导不得写在同一栏，完整分级见
+[后续架构真源与外部参考审计](../references/2026-09-13-architecture-source-audit.md)。唯一管理面、跨 facet
+`ChangeSet`、desired/observed 协调、同一目标和排空语义均是 Fibra/产品自定契约，不是这些项目直接证明
+或保证的行为。
 
 Java 完全可以把实际 UI 做成插件。纯 Java 桌面产品在独立 client RuntimeDomain 中使用
 `fibra-runtime-java`：产品级 `ui-api` 固定 JavaFX 版本并定义 `UiSlotRegistry`、组件 factory、owner props
@@ -1573,8 +1575,9 @@ gateway 拒绝，不能把“页面还开着”误认为旧能力仍获授权。
 
 CLI TUI 也遵守全插件模型：Fibra bootstrap 只拥有物理终端和 F4 定义的终端租约，产品 renderer/layout/
 command 插件取得受管终端 service 后注册视图与按键 action。插件不能绕过租约另读 `System.in`；插件撤销
-时先退出 raw mode、取消阻塞读取、卸载视图，再归还终端。这样 command、help、补全、TUI 和业务能力都
-随同一 `PublishedView` 代切换，正在执行的旧命令继续走旧 route 排空。
+时先退出 raw mode、取消阻塞读取、卸载视图，再归还终端。command、help、补全和 TUI 使用同次捕获的
+descriptor/revision；只有已经通过 `PublishedRuntime` 准入的 invocation 继续持有获准 route 并参与排空，
+仍在解析但尚未准入的旧代命令必须返回 stale/revoked。
 
 长会话必须把“会话事实”“运行中的 turn”和“客户端事件订阅”分开。当前 `PublishedRuntime.views()` 只
 发布 Engine 与 contribution 拓扑快照，`PublishedRuntime.invoke(...)` 和 `ContributionHandler` 只返回
@@ -1582,7 +1585,7 @@ command 插件取得受管终端 service 后注册视图与按键 action。插�
 token/event 多值流、持久游标、重放、慢消费者背压或断线续接。因此它是长会话的可靠底座，不是完整的
 长会话数据面。
 
-P2/P7 首版采用上层产品拥有的持久 Session journal 和有界游标读取，不立即修改 Fibra core：
+上层产品首版采用自身拥有的持久 Session journal 和有界游标读取，不立即修改 Fibra core：
 
 - Session 以 `sessionId/turnId/stepId/sequence/correlationId/type/terminal/payloadRef` 记录追加事实；大模型
   token、工具原始结果和附件超过限制时保存外置内容，事件只保留摘要与稳定引用。
@@ -1601,8 +1604,7 @@ P2/P7 首版采用上层产品拥有的持久 Session journal 和有界游标读
 只有出现第二个与 Agent/Session 无关、同样需要高吞吐多值调用的真实消费者，并证明有界游标协议无法
 满足延迟或吞吐时，才在 Fibra 设计通用 streaming contribution。届时必须同时定义 codec、背压、取消、
 终态、撤销排空和 Node sidecar 协议；不能把 `Flux` 塞进 `Mono` 的输出 DTO，也不能把进程内 `Sinks` 暴露
-到插件 ClassLoader 或远程 UI。按当前路线，P1 至 P6 不需要修改 Fibra 调用模型，P7 先在上层产品验证
-journal/游标协议。
+到插件 ClassLoader 或远程 UI。产品阶段编号与进入时机只由产品架构真源定义；vNext 不重复映射。
 
 ### 11.7 上层产品不可破坏的 Fibra 契约
 
@@ -1614,8 +1616,8 @@ journal/游标协议。
 - Node 产品插件只发布 `fibra-runtime-node` 能解析的宿主可见 contribution；不能假设 JSON-RPC sidecar
   自动参与任意 Java Service 依赖图。新增跨进程 service 协议必须有独立契约、取消、排空和版本门禁。
 - 产品 bootstrap 命令在构建时静态存在，业务 CLI 命令由运行时 command contribution 插件发布；CLI
-  只从一个不可变 `PublishedView` 构造整棵命令代，插件不能直接修改 Picocli 对象或 Spring
-  ApplicationContext。
+  从捕获的 descriptor、贡献身份和 revision 构造 Fibra 不可变命令代。Picocli `CommandSpec` 只是受限的
+  可变解析对象，插件不能直接取得或修改它，也不能修改 Spring ApplicationContext。
 - `SessionStore`、模型记忆、CLI history、`ConfigStore` 和 `EngineStateStore` 各自只有一个事实来源；
   不能共享格式、revision、恢复入口或把一个存储包装成另一个。
 - 直接工具、Agent 工具和 MCP 工具调用传递同一类 cancellation、deadline、调用 Scope 和稳定失败码；
@@ -1642,4 +1644,4 @@ F4 统一执行一次，不在每个阶段重复下载。
 空 Maven 仓先取得 Fibra 正式发布物，再单独构建上层项目，以证明两仓边界真实成立。
 
 下一次实现从 F1 开始。F1 至 F4 完成以前，不创建 Model、Agent、Session、MCP 或其它 DSH 产品模块；
-F4 的外部消费者和空仓门禁通过后，才创建上层 Agent 产品项目并进入 P0。
+F4 的外部消费者和空仓门禁通过后，才创建上层 Agent 产品项目并进入其权威架构定义的首阶段。

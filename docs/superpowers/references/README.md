@@ -1,8 +1,9 @@
 # 源码参考与行为证据
 
-本目录只保存架构取舍的来源、固定版本、源码定位和验证映射。当前方案由
-[vNext 架构](../specs/2026-09-07-fibra-vnext-architecture.md)定义；参考项目的实现不自动成为 Fibra 的
-实现承诺，文章解读也不能替代固定提交的源码与测试。
+本目录只保存架构取舍的来源、固定版本、源码定位和验证映射。Fibra 已完成范围与 F1–F4 由
+[vNext 架构](../specs/2026-09-07-fibra-vnext-architecture.md)定义；产品 P0–P8 只由
+[CLI + Desktop Agent 产品架构](../specs/2026-09-13-fibra-based-agent-product-architecture.md)定义。
+参考项目的实现不自动成为 Fibra 的实现承诺，文章解读也不能替代固定提交的源码与测试。
 
 ## 当前证据链
 
@@ -13,7 +14,10 @@
 - [插件依赖、装载与更新基线](2026-09-09-plugin-dependency-baselines.md)：IDEA、PF4J 与 DeepSeek
   Harness 的依赖图、ClassLoader、配置更新、客户端插件和发布策略证据。
 - [行为验收账本](2026-09-11-behavior-verification-ledger.md)：71 项 Cordis 原始行为与 44 项 Fibra
-  额外回归的逐项方法清单和通过证据。
+  额外回归的逐项方法清单和通过证据；现有 CLI/ZIP 属于 vNext 第 1–10 节，不证明 F1–F4。
+- [后续架构真源与外部参考审计](2026-09-13-architecture-source-audit.md)：唯一真源矩阵，DSH/Cordis、
+  AgentCLI、PaiCLI、Picocli 4.7.7、JLine 4.4.3 的固定源码证据，外部事实与 Fibra 推导分级，以及本次
+  审计级别 P0/P1/P2 闭环。
 
 ## 用户提供的解读材料
 
@@ -25,7 +29,8 @@
 
 ## 文档职责
 
-- `specs` 记录 Fibra 已确认的架构决定、边界和验收条件。
+- vNext spec 记录 Fibra 第 1–10 节已完成范围和第 11 节 F1–F4；产品 spec 独占 P0–P8 编号与顺序。
+- `specs` 记录已确认的架构决定、边界和验收条件，不在 `references` 建立平行架构或实施计划。
 - `references` 记录支持决定的外部事实、版本、源码定位与测试映射。
 - 行为验收账本只证明逐项覆盖和执行结果，不替代架构理由。
 - 过程记录和被替代的旧 API 只留在 Git 历史，不重新混入当前设计真源。

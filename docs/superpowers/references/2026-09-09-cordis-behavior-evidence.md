@@ -5,8 +5,11 @@
 
 ## 固定真源
 
-- DeepSeek Harness：`b0a7d2ce3b4c19d7452e364b2d7acbfa87e707ed`。
-- `vendor/cordis/src` Git tree：`745dea6282ba11f41fa0eb87171a4a56afe9730f`。
+- 当前架构契约：DeepSeek Harness `0.1.5-rc.2`、`c291e7961a515f6d7af9304e7fd1d257929aef26`，
+  内置 Cordis `4.0.2`。
+- 当前契约的 `vendor/cordis/src` Git tree：`745dea6282ba11f41fa0eb87171a4a56afe9730f`。
+- 既有 71 项验收快照：DeepSeek Harness `b0a7d2ce3b4c19d7452e364b2d7acbfa87e707ed`；只保留历史复现价值，
+  不作为 F1 或产品阶段的架构契约。
 - Cordis 原始测试语料：`8cc9e33fab69e2d0476d126baaf2acb24e6a6ab4` 的 `packages/core/tests`。
 - Fibra 当前验收源码：`fibra-parity-tests` 的 `parity` 与 `migration` 测试包。
 
@@ -16,7 +19,8 @@
 
 ### 源码文件摘要
 
-以下摘要已对本地 `b0a7d2c` 重新计算。`4.0.1 -> 4.0.2` 期间 `vendor/cordis/src` 内容未变；
+以下摘要源自既有 `b0a7d2c` 验收快照，并已确认与当前契约 `c291e7961` 的
+`vendor/cordis/src` tree `745dea6282` 相同。`4.0.1 -> 4.0.2` 期间该目录内容未变；
 `package.json` 因版本元数据变化不列入源码摘要。
 
 | 文件 | SHA-256 |
@@ -94,7 +98,7 @@ Java 表达边界：通过 `context.events()` 使用能力；`EventTarget` 显�
 未到达的一次性监听器不因提前截断或取消而被消耗，普通监听器仍可重复派发。七个原始复现用例在
 修正前均因一次性监听器被调用两次而失败，修正共用调用准入后通过；其余用例补充错误和取消边界。
 这是 Fibra 的补充语义，不计入 71 项原始映射或 44 项历史回归，也不声称上游已有相同并发保证：
-DSH 固定提交 `a66e4702047846cdaa10c66c9d3df3951f5ea70d` 的 `vendor/cordis/src/events.ts`
+DSH 当前架构契约提交 `c291e7961a515f6d7af9304e7fd1d257929aef26` 的 `vendor/cordis/src/events.ts`
 在 `once` 包装器中只执行注销再调用，注销本身不能阻止另一份已捕获快照再次执行该包装器。
 
 额外的 Reactor 回归测试不计入原始 71 项。`parallel` 必须等待监听器 Publisher 的终止而非首个元素；每次订阅的错误集合独立。两个测试曾分别复现首元素取消后续流、下一次订阅携带旧错误，修正后通过。`serial` 仍是单结果截断模型，本轮没有把它改为流式结果聚合。

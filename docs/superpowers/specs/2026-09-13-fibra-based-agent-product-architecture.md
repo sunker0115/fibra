@@ -1,11 +1,11 @@
 # 基于 Fibra 的 CLI + Desktop Agent 产品架构与实施路线
 
-状态：已确认的产品架构与后续实施依据；尚未开始产品代码实现。
+状态：产品 P0–P8 的唯一权威架构与实施顺序；Fibra CLI F1–F4 和产品 P0–P8 均尚未实施。
 
-本文件承接 Fibra vNext 阶段完成点 `a83174d`，定义后续独立 Agent 产品的双端架构、统一插件模型、
-实施顺序和验收门禁。Fibra 内核、CLI 框架及已完成分发的权威说明仍见
-[Fibra vNext 架构](./2026-09-07-fibra-vnext-architecture.md)；本文件不修改其完成状态，也不把产品侧规划
-写成 Fibra 当前已经交付的能力。
+本文件承接 Fibra vNext 第 1–10 节的完成点 `a83174d`，定义后续独立 Agent 产品的双端架构、统一插件模型、
+P0–P8 唯一阶段顺序和验收门禁。Fibra 已完成范围与尚未实施的 CLI F1–F4 仍以
+[Fibra vNext 架构](./2026-09-07-fibra-vnext-architecture.md)为准；本文件不把现有封闭 CLI/ZIP 验收写成
+F1–F4 已完成，也不把产品侧规划写成 Fibra 当前已经交付的能力。
 
 产品项目名称、Maven/npm 坐标和首个模型 provider 在建仓阶段确定。本文使用“产品”作为占位称呼，
 不提前冻结品牌或公开坐标。
@@ -35,9 +35,9 @@
 
 | 层次 | 状态 | 内容 |
 |---|---|---|
-| Fibra vNext 已有 | 已实现并有发行证据 | RuntimeDomain、Engine、Registry、ArtifactStore、Java/Node runtime、PublishedRuntime、差量更新、调用排空、正式基础插件和发行 ZIP |
-| Fibra CLI F1–F4 | 产品建仓前置，按既有文档完成 | 公开 CLI 组合 API、动态 command contribution、终端租约、历史/补全/高亮、调用级取消、CLI API 与发行冻结 |
-| 上层 Agent 产品 | 本文待实现 | 单 Host 附着、Electron/React Desktop、client runtime adapter、统一逻辑插件包、Model、Agent、Session、MCP、Skill、审批及其它产品插件 |
+| Fibra vNext 第 1–10 节 | 已实现并有发行证据 | RuntimeDomain、Engine、Registry、ArtifactStore、Java/Node runtime、PublishedRuntime、差量更新、调用排空、正式基础插件、封闭 CLI 和发行 ZIP |
+| Fibra CLI F1–F4 | 产品建仓前置，尚未实施 | 公开 CLI 组合 API、动态 command contribution、终端租约、历史/补全/高亮、调用级取消、CLI API 与发行冻结 |
+| 上层 Agent 产品 P0–P8 | 尚未实施；阶段顺序只由本文定义 | 单 Host 附着、Electron/React Desktop、client runtime adapter、统一逻辑插件包、Model、Agent、Session、MCP、Skill、审批及其它产品插件 |
 
 F4 的空 Maven 仓、仓库外消费者、公开 API 签名和最终发行门禁通过以前，不创建产品代码仓库。现在完成
 本设计不等于提前开始 P0 实现。
@@ -64,17 +64,19 @@ Swing/JavaFX 能在单 JVM 内直接做插件 UI，但富文本、复杂布局�
 
 ### 2.2 开源参照与取舍
 
-| 参照 | 已验证模式 | 本产品采用 | 明确不采用 |
-|---|---|---|---|
-| DSH/Cordis 固定源码 | Host/client runner、renderer、slot、layout、页面和业务能力均可插件化，Scope/effect 负责级联清理 | renderer/layout/feature 全插件化，owner-bound slot/effect 撤销 | Cordis Loader、pnpm 透传、Node 专属包布局和浏览器自行选择目标 |
-| [VS Code Extension Host](https://code.visualstudio.com/api/advanced-topics/extension-host) | 一个扩展体系把实例放到 local、web 或 remote host | 一个管理面、多个执行域、manifest 声明执行位置 | VS Code API 兼容层和禁止受控页面扩展的 UI 限制 |
-| [VS Code Web Extensions](https://code.visualstudio.com/api/extension-guides/web-extensions) | 一个扩展可有 `main` 与 `browser` 入口，浏览器入口在受限环境执行 | 逻辑插件多 facet、browser 与 host entrypoint 分离 | 直接复制 Node/WebWorker API 与模块规则 |
-| [Grafana App Plugin](https://grafana.com/developers/plugin-tools/key-concepts/anatomy-of-a-plugin) | 一个可安装插件可以包含页面、UI extension、backend 和嵌套插件 | 一个逻辑安装单位同时改变功能、命令和页面 | Grafana 组织配置、Go/React 专用 API 和重启式页面发现 |
-| [Grafana Backend Plugin](https://grafana.com/developers/plugin-tools/key-concepts/backend-plugins) | Host 启动隔离 backend 并通过 RPC 调用 | 远端执行器受 Host 管理、显式协议、健康与实例隔离 | 把所有非 Java runtime 固定为 Go/gRPC |
-| [Eclipse Theia 扩展模型](https://theia-ide.org/docs/extensions/) | 运行时插件按客户端连接执行，headless 插件独立运行 | client observed state 按执行端会话报告 | 多套不兼容扩展机制、编译期全权限插件和普通插件直访内部容器 |
+DSH/Cordis 使用固定源码作为契约参照；VS Code、Grafana 与 Eclipse Theia 使用浮动官方文档，只是截至
+2026-09-13 的非契约设计灵感。版本、提交、源码位置及证据等级见
+[后续架构真源与外部参考审计](../references/2026-09-13-architecture-source-audit.md)。
 
-最终组合是“VS Code 的多执行域 + Grafana 的全栈逻辑插件包 + DSH/Cordis 的 React slot/effect 生命周期”，
-再由 Fibra 的唯一 Engine、目标、ChangeSet、PublishedView 和排空语义统一控制。
+| 参照 | 外部事实 | 证据等级 | Fibra/产品自定推导 |
+|---|---|---|---|
+| DSH/Cordis `0.1.5-rc.2` 固定源码 | Host/client runner、renderer、slot、layout、页面和业务能力可由插件组合，Scope/effect 负责所有权清理 | 固定提交直接证明所列行为 | renderer/layout/feature 全插件化，并继续使用 Fibra 自身准入与排空 |
+| [VS Code Extension Host](https://code.visualstudio.com/api/advanced-topics/extension-host) 与 [Web Extensions](https://code.visualstudio.com/api/extension-guides/web-extensions) | 官方文档描述 local/web/remote extension host，以及 `main`/`browser` 入口和受限浏览器环境 | 浮动链接，非契约灵感 | 唯一管理面、多个执行域、逻辑插件多 facet、manifest 执行位置均为本项目契约，不声称 VS Code 提供这些组合保证 |
+| [Grafana App Plugin](https://grafana.com/developers/plugin-tools/key-concepts/anatomy-of-a-plugin) 与 [Backend Plugin](https://grafana.com/developers/plugin-tools/key-concepts/backend-plugins) | 官方文档描述一个 App Plugin 可包含页面/UI extension/backend，后端由服务端启动并经协议调用 | 浮动链接，非契约灵感 | 一个逻辑安装单位跨 facet 进入同一 `ChangeSet`、由 Host 协调准入与排空，是本项目契约 |
+| [Eclipse Theia 扩展模型](https://theia-ide.org/docs/extensions/) | 官方文档区分运行时插件与编译期扩展，并描述前后端插件运行位置 | 浮动链接，非契约灵感 | client execution session、desired/observed 分离和重连协调是本项目契约 |
+
+因此，唯一管理面、跨 facet `ChangeSet`、desired/observed 协调、同一目标与排空语义均由 Fibra/产品
+自行定义和验收；不得把外部项目的局部模式写成它们已经直接证明这些组合保证。
 
 ## 3. 系统结构与核心不变量
 
@@ -271,6 +273,12 @@ lifecycleOperationId；client 回报必须匹配对应 Host、连接、实例和
 revoked contribution 或 wrong host instance，不自动切换到同名新 handler，也不自动重放可能已经产生副作用
 的调用。
 
+CLI 的一次解析、help 和补全固定使用捕获的 Fibra command descriptor、贡献注册身份与 viewRevision。
+这些不可变事实共同定义命令代；Picocli `CommandSpec` 只是从该代派生、受单次操作或 CLI lane 约束的
+可变解析对象，不是并发只读快照，也不能充当代身份。解析尚未完成准入时不持有 route 租约；只有执行
+边界以捕获身份/revision 通过 `PublishedRuntime` 准入的 invocation 才取得租约并参与排空。若准入前
+revision 已变化或贡献已撤销，返回 stale/revoked，不调用旧 handler，也不转向同名新 handler。
+
 “两端共享一个 PublishedView”表示一次命令、一次渲染投影或一次调用各自在一个不可变快照内自洽，不表示
 所有窗口和 CLI 在同一时刻形成同步屏障。view 变化通过订阅通知，客户端按最新可用事实重建投影。
 
@@ -396,14 +404,10 @@ CLI ZIP 与 Desktop 安装包是同一产品版本下的不同物理发行：
 
 ### 11.1 前置阶段：完成 Fibra CLI F1–F4
 
-| 阶段 | 交付 | 退出条件 |
-|---|---|---|
-| F1 | 公开 CLI 组合 API 与动态 command contribution | 空 Maven 仓外部消费者加载真实 command 插件、停用后命令消失，并调用正式工具 |
-| F2 | 安全历史、补全、高亮和 dumb-terminal 降级 | 真实 TTY、窄终端、重启、敏感历史和非 TTY 门禁通过 |
-| F3 | invocation 级 Ctrl+C、SIGINT、SIGTERM | 取消后 REPL 可继续；退出码、排空和受管子进程范围真实通过 |
-| F4 | CLI API/终端租约冻结与 Fibra 最终发行 | 签名、全仓、可复现、仓库外 ZIP、空 Maven 仓和独立审核全部通过 |
-
-F1 至 F4 的实现、测试和提交边界仍以既有 Fibra 架构文档为准，本文件不重复细化。
+四阶段均尚未实施。现有 Fibra 固定管理命令、REPL 和 ZIP 验收属于 vNext 第 1–10 节已完成范围，不能
+抵扣任一阶段退出条件。F1–F4 的编号、交付、契约测试、退出条件和提交边界只以
+[Fibra vNext 第 11 节](./2026-09-07-fibra-vnext-architecture.md)
+为准；本产品真源只把 F4 通过作为进入 P0 的前置条件，不复制第二套 F 阶段表。
 
 ### 11.2 产品阶段
 

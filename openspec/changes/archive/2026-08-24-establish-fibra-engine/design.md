@@ -1,6 +1,6 @@
 ## Context
 
-完整模块、职责、控制流、部署格式、事务所有权、Spring 接缝和测试边界以 [`docs/superpowers/specs/2026-08-24-fibra-engine-architecture.md`](../../../docs/superpowers/specs/2026-08-24-fibra-engine-architecture.md) 为唯一上游权威源。本文件只记录实施决策。
+本文件只保存该归档变更当时的实施决策；它原先引用的旧 Engine 设计已随 vNext 重写删除。当前模块、职责、控制流、部署格式、所有权与测试边界只以 [Fibra vNext](../../../../docs/superpowers/specs/2026-09-07-fibra-vnext-architecture.md) 为准。
 
 ## Decisions
 

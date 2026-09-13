@@ -1,6 +1,6 @@
 ## Context
 
-总体边界以 [`docs/superpowers/specs/2026-08-24-fibra-engine-architecture.md`](../../../docs/superpowers/specs/2026-08-24-fibra-engine-architecture.md) 第 7 节为权威源。本 change 依赖 `establish-fibra-engine` 的 deployment package 和 `standardize-spring-runtime-integration` 的最终发布布局，但生成插件本身不依赖 Spring。
+本文件只保存该归档变更当时的实施边界；它原先引用的旧 Engine 设计已随 vNext 重写删除。当前总体边界以 [Fibra vNext](../../../../docs/superpowers/specs/2026-09-07-fibra-vnext-architecture.md) 为准。该历史 change 依赖 `establish-fibra-engine` 的 deployment package 和 `standardize-spring-runtime-integration` 的发布布局，但生成插件本身不依赖 Spring。
 
 ## Decisions
 

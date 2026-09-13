@@ -1,6 +1,6 @@
 ## Context
 
-engine 权威源为 [`docs/superpowers/specs/2026-08-24-fibra-engine-architecture.md`](../../../docs/superpowers/specs/2026-08-24-fibra-engine-architecture.md)，Spring 接缝权威源为 [`docs/superpowers/specs/2026-08-23-fibra-spring-boot-starter-design.md`](../../../docs/superpowers/specs/2026-08-23-fibra-spring-boot-starter-design.md)。本 change 必须在 `establish-fibra-engine` 的 API 与所有权冻结后实施。
+本文件只保存该归档变更当时的实施决定；它原先引用的旧 Engine 与 Spring 设计已随 vNext 重写删除。当前 Engine 和 Spring 接缝的权威源均为 [Fibra vNext](../../../../docs/superpowers/specs/2026-09-07-fibra-vnext-architecture.md)。该历史 change 在 `establish-fibra-engine` 的 API 与所有权冻结后实施。
 
 ## Decisions
 

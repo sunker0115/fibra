@@ -1,6 +1,6 @@
 ## Context
 
-本变更的完整架构、包结构、公开数据结构、流程和开源对比以 [`docs/superpowers/specs/2026-08-23-fibra-plugin-package-transaction-design.md`](../../../docs/superpowers/specs/2026-08-23-fibra-plugin-package-transaction-design.md) 为权威源。本文件只记录 OpenSpec 实施级决定，不重复字段定义；两者出现差异时以该完整架构文档为准，并必须在同一变更中修正本文件和对应规格，不能让两份语义长期并存。
+本文件只保存该归档变更当时的实施级决定；它原先引用的旧插件包设计已随 vNext 重写删除。当前架构只以 [Fibra vNext](../../../../docs/superpowers/specs/2026-09-07-fibra-vnext-architecture.md) 为准，本归档不再充当现行权威源。
 
 当前实现使用 `FibraJarPluginManager`、直接 JAR Manifest 和 `reloadArtifact(Path)`。它能在单包运行失败后恢复，但只有关闭旧依赖闭包后才验证新图；多个插件必须分次更新；文件恢复依赖内存状态，进程崩溃时没有 journal。
 
