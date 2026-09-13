@@ -260,8 +260,13 @@ verify_signal_shutdown() {
   local leaf_pid
   shutdown_command="sleep 60 & leaf=\$!; printf '%s %s %s\\n' \$\$ \$PPID \$leaf > '$process_ids'; : > '$entered'; wait \$leaf"
   (
-    trap - INT
     cd "$working_directory"
+    # 非交互 Bash 会让异步命令继承 SIGINT=SIG_IGN，需在 JVM 启动前恢复默认处置。
+    if env --default-signal="$signal" true >/dev/null 2>&1; then
+      exec env --default-signal="$signal" "$launcher" tools invoke shell-tools bash --input \
+        "{\"command\":\"$shutdown_command\",\"workdir\":\"$working_directory\",\"timeoutMs\":60000}"
+    fi
+    trap - "$signal"
     exec "$launcher" tools invoke shell-tools bash --input \
       "{\"command\":\"$shutdown_command\",\"workdir\":\"$working_directory\",\"timeoutMs\":60000}"
   ) > "$shutdown_output" 2> "$shutdown_output.stderr" &
