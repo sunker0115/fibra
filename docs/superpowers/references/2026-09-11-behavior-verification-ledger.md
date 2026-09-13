@@ -6,7 +6,7 @@
 
 状态边界：第 6 节记录的正式宿主 CLI、REPL 与可运行 ZIP 是 vNext 架构第 1–10 节的历史完成证据；它们
 没有公开 `fibra-cli-api`、动态 command contribution、受控终端租约或命令代竞态测试，不能冒充 F1。
-第 7 节单独记录 F1 新证据。当前第 1–10 节与 F1 已完成，F2–F4 尚未实施。
+第 7 节单独记录 F1 新证据，第 8 节单独记录 F2 新证据。当前第 1–10 节与 F1、F2 已完成，F3–F4 尚未实施。
 
 本账本把两类当前验收对象分开记录：
 
@@ -253,3 +253,16 @@ F1 不复用第 6 节的旧 CLI/ZIP 结果抵扣完成条件；新增证据按�
 F1 的完成不改变 F2–F4 边界：持久安全历史、高亮和完整交互补全属于 F2；普通 REPL `Ctrl+C`、raw
 terminal lease 的 `0x03`、外部 `SIGINT/SIGTERM` 汇流与调用级取消属于 F3；raw/resize/redisplay、兼容性
 规则和 CLI 框架冻结属于 F4。
+
+## 8. F2 安全历史、补全与终端降级证据
+
+F2 不复用第 6 节或 F1 的旧 CLI/ZIP 结果抵扣完成条件；新增证据限定为安全历史、捕获命令代的交互辅助与
+终端降级，不实现 F3/F4 的取消、raw mode、resize、redisplay 或信号协调。
+
+| 验收项 | F2 证据与结论 |
+|---|---|
+| 同代编辑与工具候选 | `CliRepl` 在每次读行前捕获 `CommandGeneration`，把同一代交给该行执行、补全、高亮和敏感参数识别；`CommandGenerationTest` 在真实 Engine 同名重注册后验证旧代仍只给出旧 command/option/argument/tool 候选，旧 identity/revision 准入失败且两个 handler 均不调用，新代才给出新候选并调用新 handler。Picocli `CommandLine` 只是同一捕获事实的 lane-local 派生物。 |
+| 历史与诊断安全 | `CliHistory` 以 JLine `DefaultHistory.attach` 绑定并恢复 history 文件；`CliReplTest` 验证普通命令重启后保留、`tools invoke --input` 只写不可重放摘要，且历史保存失败仍关闭终端。`FibraCliTest` 分别覆盖动态命令和 bootstrap 的 `sensitive=true` option、Picocli 短选项附着值、以 `-` 开头的分离敏感值、解析失败及 handler 失败；历史与 CLI 诊断均不可检出样本原值，诊断仍保留非敏感错误上下文。敏感性只由内置命令契约或捕获代中的显式 descriptor 决定，采用 DSH schema `role('secret')`/`recordInput` 的显式声明思路；不扫描 workspace、storage 或业务输出，也不采用 Codex `save-all` 历史或 best-effort 正则作为正确性边界。 |
+| 人类/机器终端分离 | `CliReplTest` 验证非 dumb terminal 的 profile/workspace/tool 数量/revision 摘要只写 stderr，dumb terminal JSON stdout 不含 ANSI；一次性命令路径不变。`CliCommandCompleter`/`CliCommandHighlighter` 均为 `fibra-cli` 私有 JLine 实现，`fibra-cli-api` 未引入 JLine 或 Picocli。 |
+| 仓外 ZIP | `fibra-distribution/src/test/scripts/verify-archive.sh` 用仓库外解压 ZIP 跑 REPL、持久化 history，并以不命中工具的敏感 JSON 样本检查 history 与 CLI 诊断都不泄漏原值；同一脚本继续回归 storage、fs、search、shell、配置恢复与分发结构。实际执行通过。 |
+| P2 接受项 | 当前可控自动化表面不允许驱动本机 iTerm，`script`/`expect` PTY 又不模拟 JLine 所需的终端能力协商响应，故未把该环境的伪终端当作真实 TTY 通过。接受理由是 F2 未定义 raw mode、resize、redisplay 或调用级中断，且 `CommandGenerationTest` 覆盖补全/高亮和同代语义，`CliReplTest` 覆盖非 dumb/dumb reader、历史重启与 stderr 分离，仓外 ZIP 覆盖管道与敏感历史；F4 冻结前必须在真实桌面 TTY 重新执行 history、补全、高亮、窄终端与重启手工门禁。 |

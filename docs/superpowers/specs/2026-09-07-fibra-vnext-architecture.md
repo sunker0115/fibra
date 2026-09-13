@@ -2,7 +2,7 @@
 
 日期：2026-09-07
 
-状态：第 1–10 节与第 11 节 F1 已完成；F2–F4 尚未实施（2026-09-13）
+状态：第 1–10 节与第 11 节 F1、F2 已完成；F3–F4 尚未实施（2026-09-13）
 
 本文是 Fibra vNext 唯一权威设计，定义最终系统边界、运行模型、模块职责和验收标准；不记录旧版本
 迁移过程，也不按参考项目组织正文。外部实现的源码对拍统一收录在
@@ -1149,7 +1149,8 @@ DSH 的插件行为基线构成功能等价门禁；其他来源用于解释取�
 
 ## 11. Fibra CLI 完成路线与上层 Agent 产品边界
 
-本节定义第 1–10 节交付完成后的演进路线。F1 已完成公开 CLI 组合边界；F2–F4 尚未实施。第 1–10 节
+本节定义第 1–10 节交付完成后的演进路线。F1 已完成公开 CLI 组合边界，F2 已完成安全历史、补全与终端
+降级；F3–F4 尚未实施。第 1–10 节
 已有的固定管理命令、一次性执行、REPL 与 CLI/ZIP 验收只证明当时的封闭 CLI，不能冒充 F1 证据；F1
 由本节列出的命令代、显式准入身份、动态 Java command、终端租约和仓外消费者测试单独证明。
 后续不再把 DSH 的 Agent 产品能力继续堆入 Fibra 仓库，而采用与 Cordis/DSH 相同的
@@ -1229,8 +1230,8 @@ Fibra 内部实现。该项目负责：
 
 当前 `fibra-cli` 已有固定管理命令、一次性执行、共享 Engine 的 REPL、稳定 JSON 输出、profile 路径、
 关闭 hook 和真实发行入口。F1 已把应用元数据、bootstrap command、动态 command descriptor、调用上下文、
-输出、退出状态和终端租约提取为公开组合边界；交互历史、高亮、运行时补全体验和调用级 `Ctrl+C` 仍分别
-属于 F2/F3/F4，尚未完成。
+输出、退出状态和终端租约提取为公开组合边界；F2 已提供安全持久历史、高亮、运行时补全和 dumb-terminal
+降级。调用级 `Ctrl+C`、raw lease、信号、resize 与 redisplay 仍分别属于 F3/F4，尚未完成。
 
 F1 起采用以下模块边界：
 
@@ -1284,7 +1285,7 @@ usage 与补全，只能使用这组已捕获事实，过程中不得重新读�
 | Boot、package、bundle、profile | 环境分层、配置组合、启动审计；安装包、bundle patch、profile 和最终配置分层 | Fibra 已完成 | 继续由 Fibra 提供，上层项目只声明自己的 profile/bundle/package |
 | 插件生命周期 | 依赖驱动激活、异步 effect、服务撤销等待、条件/isolate、局部更新、主动停用 | Fibra 已完成 | 所有上层产品插件复用，不建产品私有容器 |
 | fs、搜索、shell、subprocess、storage | contract/provider/tool 分层；搜索经 subprocess；进程树排空；具名存储与变更事件 | Fibra 已完成本期范围 | 保留 Fibra 正式发布物；图片、Jobs、PTY、Sandbox 不冒充已完成 |
-| CLI 交互 | DSH 的 commands/questions/approval 均为插件；AgentCLI/PaiCLI 有 JLine 历史、补全、高亮和 renderer | Fibra F1 已完成，F2–F4 未完成 | F1 已交付 bootstrap、不可变命令代与动态 Java command；安全历史、交互增强、调用级取消和终端冻结继续由 F2–F4 完成，产品 command/questions/approval/renderer 均留上层插件 |
+| CLI 交互 | DSH 的 commands/questions/approval 均为插件；AgentCLI/PaiCLI 有 JLine 历史、补全、高亮和 renderer | Fibra F1、F2 已完成，F3–F4 未完成 | F1 已交付 bootstrap、不可变命令代与动态 Java command；F2 已交付安全历史、交互补全、高亮与 dumb-terminal 降级；调用级取消和终端冻结继续由 F3/F4 完成，产品 command/questions/approval/renderer 均留上层插件 |
 | Model | provider 路由、模型发现、配置解析和流式适配 | 未实现 | 上层项目动态 contract/provider 插件 |
 | Agent | Agent factory、轮次/步骤、模型流与工具调度；完整实现依赖 Session | 未实现 | 上层项目 Agent 插件；先以 invocation 内状态闭合 Model/Tool，再按产品架构真源接入独立 Session |
 | Tool 流水线 | schema、作用域、guard、pre/execute/post/result 和多种呈现 | Fibra 已有公开工具调用 | 通用调用留 Fibra；Agent 选择、审批和产品呈现留上层项目 |
@@ -1306,7 +1307,7 @@ usage 与补全，只能使用这组已捕获事实，过程中不得重新读�
 
 ### 11.4 Fibra 仓库实施阶段
 
-F1 已完成，后续依次完成 F2 至 F4。F4 通过前不创建上层 Agent 产品仓库，以免产品代码反向塑造尚未
+F1、F2 已完成，后续依次完成 F3、F4。F4 通过前不创建上层 Agent 产品仓库，以免产品代码反向塑造尚未
 稳定的 CLI SPI。
 
 #### F1：公开 CLI 组合边界（已完成，2026-09-13）
@@ -1329,20 +1330,24 @@ F1 已完成，后续依次完成 F2 至 F4。F4 通过前不创建上层 Agent 
 help/补全中更新、执行准入前撤销和同名贡献替换均不跨代，且只有已准入 invocation 持有租约并参与排空；
 外部消费者从空 Maven 依赖仓构建、启动并完成扩展命令与真实工具调用。
 
-#### F2：安全历史、补全与终端降级
+#### F2：安全历史、补全与终端降级（已完成，2026-09-13）
 
 - bootstrap 补全从捕获的 Fibra descriptor/revision 派生，并可使用同次操作内受约束的 Picocli
   `CommandSpec` 渲染；动态命令及工具名候选来自同一个已捕获 `PublishedView`。插件变更成功后原子发布
   新的 Fibra 命令代，不在原 `CommandSpec` 上原地并发修改，也不引入第二命令或工具目录。
-- 吸收 AgentCLI/PaiCLI 的 JLine persistent history、高亮和 dumb-terminal fallback。当前 REPL 内可保留
-  完整内存历史；持久历史绝不保存 `tools invoke --input` 原值、未来凭据参数或被标记的敏感值，不安全
-  命令只留下不可重放的脱敏摘要。
+- 吸收 AgentCLI/PaiCLI 的 JLine persistent history、高亮和 dumb-terminal fallback。JLine history 只接收
+  可安全重放的命令；`tools invoke --input` 原值以及 descriptor 中 `sensitive=true` 的当前或未来凭据参数，
+  在内存与持久历史中都只留下不可重放的脱敏摘要。敏感参数位置按 DSH schema `role('secret')`/
+  `recordInput` 的显式声明思路处理：option 后的值即使以 `-` 开头也属于敏感位置。CLI 诊断仅替换实际敏感值，
+  保留非敏感错误上下文；不得采用 Codex `save-all` 历史或 best-effort 正则作为正确性边界。
 - 仅在人类终端 stderr 显示 profile、workspace、工具数量和 revision 摘要；JSON stdout 保持机器可解析，
   管道和非 TTY 不因 renderer 改变。
 
-退出条件：真实 TTY 验证历史、补全、高亮、窄终端和重启；使用未被测试工具写入业务数据的敏感样本，
+完成证据：同代 command/tool 补全、敏感持久历史、重启、dumb/管道、stderr 摘要和仓外 ZIP 验收已通过，
+详情见[行为验收账本第 8 节](../references/2026-09-11-behavior-verification-ledger.md#8-f2-安全历史补全与终端降级证据)。真实 TTY 验证历史、补全、高亮、窄终端和重启；使用未被测试工具写入业务数据的敏感样本，
 确认 CLI 历史文件及 CLI 自身诊断输出中不可检出原值；dumb terminal、管道输入、一次性命令和仓库外
-distribution 回归通过。不得扫描 workspace 或 storage 后把用户明确要求保存的内容误判为历史泄漏。
+distribution 回归通过。直接桌面 TTY 在 F4 冻结前仍须复验；本次自动化环境的 P2 接受理由同见账本。不得扫描
+workspace 或 storage 后把用户明确要求保存的内容误判为历史泄漏。
 
 #### F3：调用级取消与信号
 
@@ -1644,5 +1649,5 @@ Fibra 的 F1 至 F4 仍只维护本文和既有行为验收账本，不新建平
 每个 P 阶段同样要求实现与测试同提交、真实 provider 验收、仓库外 ZIP 验收和独立审核；发布里程碑从
 空 Maven 仓先取得 Fibra 正式发布物，再单独构建上层项目，以证明两仓边界真实成立。
 
-下一次实现从 F2 开始。F2 至 F4 完成以前，不创建 Model、Agent、Session、MCP 或其它 DSH 产品模块；
+下一次实现从 F3 开始。F3、F4 完成以前，不创建 Model、Agent、Session、MCP 或其它 DSH 产品模块；
 F4 的外部消费者和空仓门禁通过后，才创建上层 Agent 产品项目并进入其权威架构定义的首阶段。

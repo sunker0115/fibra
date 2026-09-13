@@ -14,11 +14,11 @@
 - [插件依赖、装载与更新基线](2026-09-09-plugin-dependency-baselines.md)：IDEA、PF4J 与 DeepSeek
   Harness 的依赖图、ClassLoader、配置更新、客户端插件和发布策略证据。
 - [行为验收账本](2026-09-11-behavior-verification-ledger.md)：71 项 Cordis 原始行为、44 项 Fibra
-  额外回归、第 1–10 节发行证据与独立 F1 命令代/仓外消费者证据；旧 CLI/ZIP 结果不冒充 F1，F1 结果也
-  不证明 F2–F4。
+  额外回归、第 1–10 节发行证据与独立 F1 命令代/仓外消费者、F2 安全历史/补全/高亮证据；旧 CLI/ZIP
+  结果不冒充 F1，F1/F2 结果也不证明 F3–F4。
 - [后续架构真源与外部参考审计](2026-09-13-architecture-source-audit.md)：唯一真源矩阵，DSH/Cordis、
-  AgentCLI、PaiCLI、Picocli 4.7.7、JLine 4.4.3 的固定源码证据，外部事实与 Fibra 推导分级，以及本次
-  审计级别 P0/P1/P2 闭环。
+  OpenAI Codex CLI 0.154.0、AgentCLI、PaiCLI、Picocli 4.7.7、JLine 4.4.3 的固定源码证据，外部事实与
+  Fibra 推导分级，以及本次审计级别 P0/P1/P2 闭环。
 
 ## 用户提供的解读材料
 

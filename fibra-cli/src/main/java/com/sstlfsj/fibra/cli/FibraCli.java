@@ -8,6 +8,7 @@ import com.sstlfsj.fibra.bridge.ContributionSnapshotEntry;
 import com.sstlfsj.fibra.bridge.ContributionUnavailableException;
 import com.sstlfsj.fibra.cli.api.CliCommandRequest;
 import com.sstlfsj.fibra.cli.api.CliCommandResult;
+import com.sstlfsj.fibra.cli.api.CliCommandDescriptor;
 import com.sstlfsj.fibra.cli.api.CliApplication;
 import com.sstlfsj.fibra.cli.api.CliBootstrapCommand;
 import com.sstlfsj.fibra.cli.api.CliInvocation;
@@ -45,6 +46,7 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -132,18 +134,20 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
         Objects.requireNonNull(out, "out");
         Objects.requireNonNull(err, "err");
         var command = new FibraCli(application, hostFactory, installShutdownHook, in, out, err);
-        var line = command.commandLine(null);
+        CommandGeneration generation = null;
+        var line = command.commandLine(generation);
         int result;
         try {
             if (requiresPublishedGeneration(args, line)) {
                 line.setStopAtUnmatched(true).setUnmatchedArgumentsAllowed(true).parseArgs(args);
-                line = command.commandLine(CommandGeneration.capture(command.host().published()));
+                generation = CommandGeneration.capture(command.host().published());
+                line = command.commandLine(generation);
             }
             result = line.execute(args);
         } catch (CommandLine.ParameterException failure) {
-            result = parameterFailure(failure, args);
+            result = command.parameterFailure(failure, args, generation);
         } catch (RuntimeException failure) {
-            result = executionFailure(failure, line, null);
+            result = command.executionFailure(failure, args, generation);
         } catch (Error failure) {
             try {
                 command.close();
@@ -162,9 +166,12 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
     }
 
     private CommandLine commandLine(CommandGeneration generation) {
+        var descriptors = commandDescriptors(generation);
         var line = new CommandLine(this).setExpandAtFiles(false).setOut(output).setErr(error)
-            .setParameterExceptionHandler(FibraCli::parameterFailure)
-            .setExecutionExceptionHandler(FibraCli::executionFailure);
+            .setParameterExceptionHandler((failure, arguments) ->
+                parameterFailure(failure, arguments, descriptors))
+            .setExecutionExceptionHandler((failure, commandLine, result) ->
+                executionFailure(failure, result.originalArgs(), descriptors));
         line.getCommandSpec().name(application.rootName());
         line.getCommandSpec().usageMessage().description(application.description());
         line.getCommandSpec().versionProvider(() -> new String[] {
@@ -176,6 +183,15 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
             (command, arguments, options) -> invokeDynamic(
                 generation, command, arguments, options));
         return line;
+    }
+
+    private List<CliCommandDescriptor> commandDescriptors(CommandGeneration generation) {
+        var descriptors = new ArrayList<CliCommandDescriptor>();
+        application.bootstrapCommands().forEach(command -> descriptors.add(command.descriptor()));
+        if (generation != null) {
+            generation.commands().forEach(command -> descriptors.add(command.descriptor()));
+        }
+        return List.copyOf(descriptors);
     }
 
     private static boolean requiresPublishedGeneration(String[] args, CommandLine base) {
@@ -296,16 +312,44 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
     }
 
     private int repl() {
+        var paths = paths();
         host();
-        return CliRepl.run(this::executeReplLine,
+        return CliRepl.run(new CliRepl.GeneratedDispatcher() {
+            @Override public CommandGeneration capture() {
+                return CommandGeneration.capture(host().published());
+            }
+
+            @Override public CommandLine completionLine(CommandGeneration generation) {
+                return commandLine(generation);
+            }
+
+            @Override public List<CliCommandDescriptor> historyDescriptors(
+                CommandGeneration generation) {
+                return commandDescriptors(generation);
+            }
+
+            @Override public int execute(CommandGeneration generation, String[] arguments,
+                                         CliTerminal invocationTerminal) {
+                return executeReplLine(generation, arguments, invocationTerminal);
+            }
+        },
             input, output, error,
-            installShutdownHook && System.console() != null);
+            installShutdownHook && System.console() != null, paths.replHistoryFile(), replSessionSummary(paths));
     }
 
-    private int executeReplLine(String[] arguments, CliTerminal invocationTerminal) {
+    private String replSessionSummary(CliPaths paths) {
+        var view = host().published().current();
+        var tools = view.contributions().entries().stream()
+            .filter(entry -> ToolContributions.KIND.name().equals(entry.kind())).count();
+        return "profile=" + paths.profile() + " workspace=" + paths.workspaceRoot()
+            + " tools=" + tools + " revision=" + view.viewRevision();
+    }
+
+    private int executeReplLine(CommandGeneration generation, String[] arguments,
+                                CliTerminal invocationTerminal) {
         terminal = Objects.requireNonNull(invocationTerminal, "invocationTerminal");
         try {
-            return commandLine(CommandGeneration.capture(host().published())).execute(arguments);
+            return commandLine(generation).execute(arguments);
         } finally {
             terminal = NonInteractiveTerminal.INSTANCE;
         }
@@ -487,19 +531,36 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
         return value.toAbsolutePath().normalize();
     }
 
-    private static int parameterFailure(CommandLine.ParameterException failure, String[] args) {
-        failure.getCommandLine().getErr().println(failure.getMessage());
-        failure.getCommandLine().usage(failure.getCommandLine().getErr());
+    private int parameterFailure(CommandLine.ParameterException failure, String[] arguments,
+                                 CommandGeneration generation) {
+        return parameterFailure(failure, arguments, commandDescriptors(generation));
+    }
+
+    private int parameterFailure(CommandLine.ParameterException failure, String[] arguments,
+                                 List<CliCommandDescriptor> descriptors) {
+        error.println(safeDiagnostic(message(failure), descriptors, List.of(arguments)));
+        failure.getCommandLine().usage(error);
         return 2;
     }
 
-    private static int executionFailure(Exception failure, CommandLine line, CommandLine.ParseResult result) {
-        line.getErr().println(message(failure));
+    private int executionFailure(RuntimeException failure, String[] arguments,
+                                 CommandGeneration generation) {
+        return executionFailure(failure, List.of(arguments), commandDescriptors(generation));
+    }
+
+    private int executionFailure(Exception failure, List<String> arguments,
+                                 List<CliCommandDescriptor> descriptors) {
+        error.println(safeDiagnostic(message(failure), descriptors, arguments));
         if (failure instanceof CliFailure cli) return cli.code;
         if (failure instanceof PublishedRevisionConflictException
             || failure instanceof ContributionUnavailableException) return 5;
         if (failure instanceof MutationGateClosedException || failure instanceof EngineChangeException) return 6;
         return 4;
+    }
+
+    private static String safeDiagnostic(String diagnostic, List<CliCommandDescriptor> descriptors,
+                                         List<String> arguments) {
+        return CliSensitiveInput.redactDiagnostic(diagnostic, descriptors, arguments);
     }
 
     private static String message(Throwable failure) {

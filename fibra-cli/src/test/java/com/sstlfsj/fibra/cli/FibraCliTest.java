@@ -404,6 +404,86 @@ class FibraCliTest {
     }
 
     @Test
+    void replHistoryAndDiagnosticsRedactDynamicSensitiveOptions(@TempDir Path home) throws Exception {
+        dynamicCommandProfile(home);
+        var output = new ByteArrayOutputStream();
+        var error = new ByteArrayOutputStream();
+        var secret = "f2-dynamic-secret";
+
+        assertEquals(0, FibraCli.run(new String[] {"--home", home.toString(), "repl"},
+            new ByteArrayInputStream(("echo --secret " + secret + " visible\nexit\n")
+                .getBytes(StandardCharsets.UTF_8)), writer(output), writer(error)));
+
+        var persisted = Files.readString(home.resolve("data/profiles/default/repl.history"));
+        assertTrue(persisted.contains("[敏感命令已省略]"), persisted);
+        assertFalse(persisted.contains(secret), persisted);
+        assertFalse(error.toString(StandardCharsets.UTF_8).contains(secret));
+    }
+
+    @Test
+    void replHistoryRedactsBootstrapShortSensitiveOptions(@TempDir Path home) throws Exception {
+        emptyProfile(home);
+        var output = new ByteArrayOutputStream();
+        var error = new ByteArrayOutputStream();
+        var secret = "f2-bootstrap-short-secret";
+
+        assertEquals(0, FibraCli.run(sensitiveBootstrapApplication(),
+            new String[] {"--home", home.toString(), "repl"},
+            new ByteArrayInputStream(("login -s" + secret + "\nexit\n")
+                .getBytes(StandardCharsets.UTF_8)), writer(output), writer(error)));
+
+        var persisted = Files.readString(home.resolve("data/profiles/default/repl.history"));
+        assertTrue(persisted.contains("[敏感命令已省略]"), persisted);
+        assertFalse(persisted.contains(secret), persisted);
+        assertFalse(error.toString(StandardCharsets.UTF_8).contains(secret));
+    }
+
+    @Test
+    void sensitiveBootstrapFailuresDoNotEchoTheSuppliedValue() {
+        var output = new ByteArrayOutputStream();
+        var error = new ByteArrayOutputStream();
+        var secret = "f2-bootstrap-diagnostic-secret";
+
+        assertEquals(4, FibraCli.run(sensitiveBootstrapApplication(),
+            new String[] {"login", "-s" + secret}, new ByteArrayInputStream(new byte[0]),
+            writer(output), writer(error)));
+
+        var diagnostics = error.toString(StandardCharsets.UTF_8);
+        assertTrue(diagnostics.contains("登录令牌无效: [敏感值已省略]"), diagnostics);
+        assertFalse(diagnostics.contains(secret), diagnostics);
+    }
+
+    @Test
+    void sensitiveBootstrapDashPrefixedValuesDoNotEchoTheSuppliedValue() {
+        var output = new ByteArrayOutputStream();
+        var error = new ByteArrayOutputStream();
+        var secret = "--f2-bootstrap-parse-secret";
+
+        assertEquals(4, FibraCli.run(sensitiveBootstrapApplication(),
+            new String[] {"login", "--secret", secret},
+            new ByteArrayInputStream(new byte[0]), writer(output), writer(error)));
+
+        var diagnostics = error.toString(StandardCharsets.UTF_8);
+        assertTrue(diagnostics.contains("[敏感值已省略]"), diagnostics);
+        assertFalse(diagnostics.contains(secret), diagnostics);
+    }
+
+    @Test
+    void sensitiveBootstrapParseFailuresDoNotEchoTheSuppliedValue() {
+        var output = new ByteArrayOutputStream();
+        var error = new ByteArrayOutputStream();
+        var secret = "f2-bootstrap-parse-secret";
+
+        assertEquals(2, FibraCli.run(sensitiveBootstrapApplication(),
+            new String[] {"login", "-s" + secret, "unexpected"},
+            new ByteArrayInputStream(new byte[0]), writer(output), writer(error)));
+
+        var diagnostics = error.toString(StandardCharsets.UTF_8);
+        assertTrue(diagnostics.contains("Unmatched argument at index 2: 'unexpected'"), diagnostics);
+        assertFalse(diagnostics.contains(secret), diagnostics);
+    }
+
+    @Test
     void instanceJsonDistinguishesDisabledAndFailedRuntimeState() {
         var disabled = FibraCli.instance("disabled",
             DesiredInputEntry.builder("disabled", "sample").enabled(false).build(), null);
@@ -446,6 +526,25 @@ class FibraCliTest {
         return FibraCli.execute(new String[] {"--home", home.toString(), "plugins", "list"},
             new ByteArrayInputStream(new byte[0]), new PrintWriter(new ByteArrayOutputStream(), true),
             new PrintWriter(new ByteArrayOutputStream(), true), CliHost::open, true);
+    }
+
+    private static CliApplication sensitiveBootstrapApplication() {
+        return CliApplication.builder("agent")
+            .addBootstrapCommand(new CliBootstrapCommand(
+                new CliCommandDescriptor(List.of("login"), "登录。",
+                    List.of(new CliCommandOption(List.of("-s", "--secret"), "令牌。",
+                        true, true, List.of())), null, List.of()),
+                request -> {
+                    throw new IllegalStateException("登录令牌无效: "
+                        + request.options().get("-s"));
+                }))
+            .build();
+    }
+
+    private static void emptyProfile(Path home) throws Exception {
+        var profiles = Files.createDirectories(home.resolve("config/profiles"));
+        Files.writeString(profiles.resolve("default.yaml"), "[]\n");
+        Files.writeString(profiles.resolve("default.artifacts.yaml"), "[]\n");
     }
 
     private static PrintWriter writer(ByteArrayOutputStream output) {
@@ -519,12 +618,19 @@ class FibraCliTest {
             return PluginDefinition.builder("command", Void.class, () -> (context, config) -> {
                 var provider = context.plugins().current().orElseThrow().id();
                 var descriptor = new CliCommandDescriptor(List.of("echo"),
-                    "输出带前缀的参数。", List.of(new CliCommandOption(List.of("--prefix"),
-                    "输出前缀。", false, false, List.of("hello-"))), "TEXT", List.of());
+                    "输出带前缀的参数。", List.of(
+                    new CliCommandOption(List.of("--prefix"), "输出前缀。", false, false,
+                        List.of("hello-")),
+                    new CliCommandOption(List.of("--secret"), "敏感测试参数。", false, true,
+                        List.of())), "TEXT", List.of());
                 var registrar = context.services().require(ContributionServices.REGISTRAR);
                 var echo = registrar.register(context,
                     CliCommandContributions.KIND, provider, "echo", descriptor,
                     (invocation, request) -> {
+                        if (request.options().containsKey("--secret")) {
+                            throw new IllegalStateException("敏感参数无效: "
+                                + request.options().get("--secret"));
+                        }
                         var prefix = request.options().getOrDefault("--prefix", "");
                         request.invocation().output().stdout(prefix
                             + String.join(" ", request.arguments()));

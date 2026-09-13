@@ -7,6 +7,7 @@ import com.sstlfsj.fibra.cli.api.CliCommandDescriptor;
 import com.sstlfsj.fibra.cli.api.CliCommandRequest;
 import com.sstlfsj.fibra.cli.api.CliCommandResult;
 import com.sstlfsj.fibra.engine.PublishedRuntime;
+import com.sstlfsj.fibra.plugins.tool.ToolContributions;
 import picocli.CommandLine;
 import reactor.core.publisher.Mono;
 
@@ -21,12 +22,14 @@ final class CommandGeneration {
     private final PublishedRuntime published;
     private final String viewRevision;
     private final List<Command> commands;
+    private final List<Tool> tools;
 
     private CommandGeneration(PublishedRuntime published, String viewRevision,
-                              List<Command> commands) {
+                              List<Command> commands, List<Tool> tools) {
         this.published = published;
         this.viewRevision = viewRevision;
         this.commands = List.copyOf(commands);
+        this.tools = List.copyOf(tools);
     }
 
     static CommandGeneration capture(PublishedRuntime published) {
@@ -40,7 +43,11 @@ final class CommandGeneration {
                 }
                 return new Command(entry.id(), entry.registrationIdentity(), descriptor);
             }).toList();
-        return new CommandGeneration(published, view.viewRevision(), commands);
+        var tools = view.contributions().entries().stream()
+            .filter(entry -> ToolContributions.KIND.name().equals(entry.kind()))
+            .map(entry -> new Tool(entry.id().providerInstanceId(), entry.id().localName()))
+            .toList();
+        return new CommandGeneration(published, view.viewRevision(), commands, tools);
     }
 
     String viewRevision() {
@@ -49,6 +56,10 @@ final class CommandGeneration {
 
     List<Command> commands() {
         return commands;
+    }
+
+    List<Tool> tools() {
+        return tools;
     }
 
     Mono<CliCommandResult> invoke(Command command, CliCommandRequest request) {
@@ -130,6 +141,13 @@ final class CommandGeneration {
         Command {
             Objects.requireNonNull(id, "id");
             Objects.requireNonNull(descriptor, "descriptor");
+        }
+    }
+
+    record Tool(String provider, String name) {
+        Tool {
+            Objects.requireNonNull(provider, "provider");
+            Objects.requireNonNull(name, "name");
         }
     }
 

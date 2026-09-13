@@ -180,15 +180,22 @@ run_cli "$load_output" tools invoke storage-tools load --input '{}'
 assert_contains "$load_output" '"theme":"dark"'
 
 repl_output="$temporary_root/storage-repl.log"
+readonly repl_history_secret='f2-distribution-history-secret'
 (
   cd "$working_directory"
   printf '%s\n' \
     "tools invoke storage-tools put --input '{\"key\":\"language\",\"value\":\"zh-CN\"}'" \
     'tools invoke storage-tools changes --input {}' \
+    "tools invoke missing history --input '{\"token\":\"$repl_history_secret\"}'" \
     'quit' | "$launcher" repl
 ) > "$repl_output" 2> "$repl_output.stderr"
 assert_contains "$repl_output" '"key":"language"'
 assert_contains "$repl_output" '"operation":"PUT"'
+repl_history="$install_root/data/profiles/default/repl.history"
+assert_contains "$repl_history" '[敏感命令已省略]'
+if grep -F -- "$repl_history_secret" "$repl_history" "$repl_output.stderr" >/dev/null; then
+  fail 'REPL 历史或 CLI 诊断泄漏敏感样本'
+fi
 
 target="$install_root/data/profiles/default/state/target.json"
 target_before=$(sha256_file "$target")

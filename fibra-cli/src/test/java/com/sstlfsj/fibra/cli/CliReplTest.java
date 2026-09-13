@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CliReplTest {
@@ -32,7 +33,9 @@ class CliReplTest {
 
         assertEquals(0, exitCode);
         assertEquals(1, opened.get());
-        assertEquals(2, occurrences(output.toString(StandardCharsets.UTF_8), "\"artifacts\":[]"));
+        var rendered = output.toString(StandardCharsets.UTF_8);
+        assertEquals(2, occurrences(rendered, "\"artifacts\":[]"));
+        assertFalse(rendered.contains("\u001B"), rendered);
         assertEquals("", error.toString(StandardCharsets.UTF_8));
     }
 
@@ -122,6 +125,30 @@ class CliReplTest {
     }
 
     @Test
+    void closesTheTerminalWhenPersistingHistoryFails(@TempDir Path work) throws Exception {
+        var historyParent = work.resolve("history-parent");
+        var historyFile = historyParent.resolve("repl.history");
+        var terminal = new TrackingTerminal(false, "break\n");
+        var error = new ByteArrayOutputStream();
+
+        var exitCode = CliRepl.run((arguments, invocationTerminal) -> {
+            try {
+                Files.createDirectories(historyParent);
+                Files.deleteIfExists(historyFile);
+                Files.delete(historyParent);
+                Files.writeString(historyParent, "not-a-directory");
+                return 0;
+            } catch (IOException failure) {
+                throw new IllegalStateException(failure);
+            }
+        }, terminal, writer(new ByteArrayOutputStream()), writer(error), historyFile, null);
+
+        assertEquals(7, exitCode);
+        assertTrue(terminal.closed);
+        assertTrue(error.toString(StandardCharsets.UTF_8).contains("保存命令历史失败:"));
+    }
+
+    @Test
     void invocationScopeRestoresALeakedTerminalLeaseBeforeTheNextLine() throws Exception {
         var acquired = new AtomicInteger();
         var terminal = new TrackingTerminal(false, "first\nsecond\nexit\n");
@@ -138,6 +165,59 @@ class CliReplTest {
         assertEquals(0, exitCode);
         assertEquals(2, acquired.get());
         assertTrue(error.toString(StandardCharsets.UTF_8).contains("simulated command failure"));
+    }
+
+    @Test
+    void persistsOnlyReplaySafeHistoryAndNeverLeaksToolInput(@TempDir Path home) throws Exception {
+        initialize(home);
+        var output = new ByteArrayOutputStream();
+        var error = new ByteArrayOutputStream();
+        var secret = "f2-history-secret";
+
+        assertEquals(0, execute(home, "plugins list\n"
+            + "tools invoke missing run --input {\"token\":\"" + secret + "\"}\nexit\n",
+            output, error, CliHost::open));
+
+        var history = home.resolve("data/profiles/default/repl.history");
+        assertTrue(Files.isRegularFile(history));
+        var persisted = Files.readString(history);
+        assertTrue(persisted.contains("plugins list"), persisted);
+        assertTrue(persisted.contains("[敏感命令已省略]"), persisted);
+        assertFalse(persisted.contains(secret), persisted);
+        assertFalse(persisted.contains("tools invoke missing run --input"), persisted);
+        assertFalse(output.toString(StandardCharsets.UTF_8).contains(secret));
+        assertFalse(error.toString(StandardCharsets.UTF_8).contains(secret));
+    }
+
+    @Test
+    void reloadsPersistedHistoryWhenTheReplRestarts(@TempDir Path home) throws Exception {
+        initialize(home);
+
+        assertEquals(0, execute(home, "plugins list\nexit\n", new ByteArrayOutputStream(),
+            new ByteArrayOutputStream(), CliHost::open));
+        var output = new ByteArrayOutputStream();
+        var error = new ByteArrayOutputStream();
+
+        assertEquals(0, execute(home, "exit\n", output, error, CliHost::open),
+            error.toString(StandardCharsets.UTF_8));
+        var persisted = Files.readString(home.resolve("data/profiles/default/repl.history"));
+        assertTrue(persisted.contains("plugins list"), persisted);
+        assertEquals("", error.toString(StandardCharsets.UTF_8));
+        assertFalse(output.toString(StandardCharsets.UTF_8).contains("\u001B"));
+    }
+
+    @Test
+    void writesHumanSessionSummaryOnlyToStderrForANonDumbTerminal() throws Exception {
+        var output = new ByteArrayOutputStream();
+        var error = new ByteArrayOutputStream();
+        var terminal = new InteractiveTrackingTerminal("exit\n");
+
+        assertEquals(0, CliRepl.run((arguments, invocationTerminal) -> 0, terminal,
+            writer(output), writer(error), null,
+            "profile=default workspace=/work tools=0 revision=view-1"));
+        assertEquals("", output.toString(StandardCharsets.UTF_8));
+        assertEquals("profile=default workspace=/work tools=0 revision=view-1\n",
+            error.toString(StandardCharsets.UTF_8));
     }
 
     private static int execute(Path home, String input, ByteArrayOutputStream output,
@@ -162,7 +242,7 @@ class CliReplTest {
         return text.split(java.util.regex.Pattern.quote(expected), -1).length - 1;
     }
 
-    private static final class TrackingTerminal extends DumbTerminal {
+    private static class TrackingTerminal extends DumbTerminal {
         private final boolean failClose;
         private boolean closed;
 
@@ -180,6 +260,16 @@ class CliReplTest {
             closed = true;
             if (failClose) throw new IOException("simulated");
             super.doClose();
+        }
+    }
+
+    private static final class InteractiveTrackingTerminal extends TrackingTerminal {
+        private InteractiveTrackingTerminal(String input) throws IOException {
+            super(false, input);
+        }
+
+        @Override public String getType() {
+            return "xterm-256color";
         }
     }
 }

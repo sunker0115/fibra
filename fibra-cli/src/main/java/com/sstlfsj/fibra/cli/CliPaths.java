@@ -72,6 +72,10 @@ record CliPaths(Path home, String profile, Path configRoot, Path pluginsRoot,
         return profileData().resolve("storage");
     }
 
+    Path replHistoryFile() {
+        return profileData().resolve("repl.history");
+    }
+
     Map<String, Object> configContext() {
         return Map.of("fibra", Map.of(
             "home", home.toString(),

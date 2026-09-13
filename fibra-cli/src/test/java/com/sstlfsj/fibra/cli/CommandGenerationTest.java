@@ -5,6 +5,7 @@ import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.bridge.ContributionServices;
 import com.sstlfsj.fibra.cli.api.CliCommandContributions;
 import com.sstlfsj.fibra.cli.api.CliCommandDescriptor;
+import com.sstlfsj.fibra.cli.api.CliCommandOption;
 import com.sstlfsj.fibra.cli.api.CliCommandRequest;
 import com.sstlfsj.fibra.cli.api.CliCommandResult;
 import com.sstlfsj.fibra.cli.api.CliInvocation;
@@ -22,6 +23,9 @@ import com.sstlfsj.fibra.engine.PluginCatalog;
 import com.sstlfsj.fibra.engine.PluginCatalogEntry;
 import com.sstlfsj.fibra.engine.PublishedRevisionConflictException;
 import com.sstlfsj.fibra.engine.ReplaceDesiredGraph;
+import com.sstlfsj.fibra.plugins.tool.ToolContributions;
+import com.sstlfsj.fibra.plugins.tool.ToolDescriptor;
+import com.sstlfsj.fibra.plugins.tool.ToolResult;
 import com.sstlfsj.fibra.value.LiteralValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -75,11 +79,26 @@ class CommandGenerationTest {
                 .contains("old description"));
             assertTrue(line.getSubcommands().get("echo").getUsageMessage()
                 .contains("old description"));
-            var candidates = new ArrayList<CharSequence>();
-            line.getSubcommands().get("echo").getCommandSpec().positionalParameters().getFirst()
-                .completionCandidates().forEach(candidates::add);
+            var completer = new CliCommandCompleter();
+            completer.commandLine(line);
+            completer.commandGeneration(oldGeneration);
+            var candidates = candidates(completer, "echo ");
             assertTrue(candidates.contains("old-value"), candidates.toString());
             assertTrue(!candidates.contains("new-value"), candidates.toString());
+            var helpCandidates = candidates(completer, "help e");
+            assertTrue(helpCandidates.contains("echo"), helpCandidates.toString());
+            var optionCandidates = candidates(completer, "echo --");
+            assertTrue(optionCandidates.contains("--old"), optionCandidates.toString());
+            var optionValueCandidates = candidates(completer, "echo --old ");
+            assertTrue(optionValueCandidates.contains("old-option"), optionValueCandidates.toString());
+            var oldProviders = candidates(completer, "tools invoke ");
+            assertTrue(oldProviders.contains("command"), oldProviders.toString());
+            var oldTools = candidates(completer, "tools invoke command ");
+            assertTrue(oldTools.contains("old-tool"), oldTools.toString());
+            var highlighter = new CliCommandHighlighter();
+            highlighter.commandLine(line);
+            var highlighted = highlighter.highlight(null, "echo old-value");
+            assertNotEquals(org.jline.utils.AttributedStyle.DEFAULT, highlighted.styleAt(0));
             assertThrows(PublishedRevisionConflictException.class, () ->
                 notAdmitted.block(TIMEOUT));
             assertEquals(0, oldCalls.get());
@@ -87,9 +106,31 @@ class CommandGenerationTest {
 
             assertEquals(CliCommandResult.success(),
                 newGeneration.invoke(newCommand, request(work)).block(TIMEOUT));
+            completer.commandLine(commandLine(newGeneration, output));
+            completer.commandGeneration(newGeneration);
+            var newCandidates = candidates(completer, "echo ");
+            assertTrue(newCandidates.contains("new-value"), newCandidates.toString());
+            assertTrue(!newCandidates.contains("old-value"), newCandidates.toString());
+            var newOptionCandidates = candidates(completer, "echo --");
+            assertTrue(newOptionCandidates.contains("--new"), newOptionCandidates.toString());
+            assertTrue(!newOptionCandidates.contains("--old"), newOptionCandidates.toString());
+            var newOptionValueCandidates = candidates(completer, "echo --new ");
+            assertTrue(newOptionValueCandidates.contains("new-option"),
+                newOptionValueCandidates.toString());
+            var newTools = candidates(completer, "tools invoke command ");
+            assertTrue(newTools.contains("new-tool"), newTools.toString());
+            assertTrue(!newTools.contains("old-tool"), newTools.toString());
             assertEquals(0, oldCalls.get());
             assertEquals(1, newCalls.get());
         }
+    }
+
+    private static List<String> candidates(CliCommandCompleter completer, String line) {
+        var parsed = new org.jline.reader.impl.DefaultParser().parse(line, line.length(),
+            org.jline.reader.Parser.ParseContext.COMPLETE);
+        var values = new ArrayList<org.jline.reader.Candidate>();
+        completer.complete(null, parsed, values);
+        return values.stream().map(org.jline.reader.Candidate::value).toList();
     }
 
     private static CommandLine commandLine(CommandGeneration generation,
@@ -106,13 +147,21 @@ class CommandGenerationTest {
         return PluginDefinition.builder("command", String.class, () -> (context, value) -> {
             var provider = context.plugins().current().orElseThrow();
             var descriptor = new CliCommandDescriptor(List.of("echo"),
-                value + " description", List.of(), "VALUE", List.of(value + "-value"));
-            return context.services().require(ContributionServices.REGISTRAR)
-                .register(context, CliCommandContributions.KIND, provider.id(), "echo",
+                value + " description", List.of(new CliCommandOption(List.of("--" + value),
+                value + " option", false, false, List.of(value + "-option"))), "VALUE",
+                List.of(value + "-value"));
+            var registrar = context.services().require(ContributionServices.REGISTRAR);
+            var command = registrar.register(context, CliCommandContributions.KIND, provider.id(), "echo",
                     descriptor, (invocation, request) -> {
                         (value.equals("old") ? oldCalls : newCalls).incrementAndGet();
                         return Mono.just(CliCommandResult.success());
-                    }).then();
+                    });
+            var tool = registrar.register(context, ToolContributions.KIND, provider.id(), value + "-tool",
+                new ToolDescriptor(value + " tool", "completion fixture",
+                    (LiteralValue.ObjectValue) LiteralValue.of(Map.of("type", "object")),
+                    (LiteralValue.ObjectValue) LiteralValue.of(Map.of("type", "object"))),
+                (invocation, request) -> Mono.just(ToolResult.text(value)));
+            return Mono.when(command, tool).then();
         }).require(ContributionServices.REGISTRAR).build();
     }
 
