@@ -3,7 +3,6 @@ package com.sstlfsj.fibra.cli;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.jline.terminal.impl.DumbTerminal;
-import picocli.CommandLine;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -109,17 +108,36 @@ class CliReplTest {
         var error = new ByteArrayOutputStream();
         var terminal = new TrackingTerminal(false);
 
-        var commandLine = new CommandLine(CommandLine.Model.CommandSpec.create());
-        var exitCode = CliRepl.run(commandLine, terminal,
+        CliRepl.Dispatcher dispatcher = (arguments, invocationTerminal) -> 0;
+        var exitCode = CliRepl.run(dispatcher, terminal,
             writer(output), writer(error));
 
         assertEquals(0, exitCode);
         assertTrue(terminal.closed);
         var failing = new TrackingTerminal(true);
-        assertEquals(7, CliRepl.run(commandLine, failing,
+        assertEquals(7, CliRepl.run(dispatcher, failing,
             writer(new ByteArrayOutputStream()), writer(error)));
         assertTrue(failing.closed);
         assertTrue(error.toString(StandardCharsets.UTF_8).contains("关闭交互终端失败: simulated"));
+    }
+
+    @Test
+    void invocationScopeRestoresALeakedTerminalLeaseBeforeTheNextLine() throws Exception {
+        var acquired = new AtomicInteger();
+        var terminal = new TrackingTerminal(false, "first\nsecond\nexit\n");
+        var error = new ByteArrayOutputStream();
+
+        var exitCode = CliRepl.run((arguments, invocationTerminal) -> {
+            invocationTerminal.acquire();
+            if (acquired.incrementAndGet() == 1) {
+                throw new IllegalStateException("simulated command failure");
+            }
+            return 0;
+        }, terminal, writer(new ByteArrayOutputStream()), writer(error));
+
+        assertEquals(0, exitCode);
+        assertEquals(2, acquired.get());
+        assertTrue(error.toString(StandardCharsets.UTF_8).contains("simulated command failure"));
     }
 
     private static int execute(Path home, String input, ByteArrayOutputStream output,
@@ -149,7 +167,11 @@ class CliReplTest {
         private boolean closed;
 
         private TrackingTerminal(boolean failClose) throws IOException {
-            super(new ByteArrayInputStream("exit\n".getBytes(StandardCharsets.UTF_8)),
+            this(failClose, "exit\n");
+        }
+
+        private TrackingTerminal(boolean failClose, String input) throws IOException {
+            super(new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8)),
                 new ByteArrayOutputStream());
             this.failClose = failClose;
         }

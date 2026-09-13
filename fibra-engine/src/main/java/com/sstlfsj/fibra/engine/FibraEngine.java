@@ -99,8 +99,10 @@ public final class FibraEngine implements AutoCloseable {
             return views.asFlux().publishOn(Schedulers.boundedElastic());
         }
         @Override public <D, I, O> Mono<O> invoke(String revision,
+                long registrationIdentity,
                 ContributionKind<D, I, O> kind, ContributionId id, I input) {
-            return invokePublished(revision, kind, id, input).publishOn(Schedulers.boundedElastic());
+            return invokePublished(revision, registrationIdentity, kind, id, input)
+                .publishOn(Schedulers.boundedElastic());
         }
     };
 
@@ -789,7 +791,8 @@ public final class FibraEngine implements AutoCloseable {
         return current == null ? "0" : Long.toString(Long.parseLong(current.view().viewRevision()) + 1);
     }
 
-    private <D, I, O> Mono<O> invokePublished(String revision, ContributionKind<D, I, O> kind,
+    private <D, I, O> Mono<O> invokePublished(String revision, long registrationIdentity,
+                                             ContributionKind<D, I, O> kind,
                                              ContributionId id, I input) {
         Objects.requireNonNull(revision, "revision");
         Objects.requireNonNull(kind, "kind");
@@ -801,7 +804,7 @@ public final class FibraEngine implements AutoCloseable {
                 new PublishedRevisionConflictException(revision, current.view().viewRevision()));
             if (domain == null) return Mono.error(new IllegalStateException("engine is not running"));
             final ContributionCall<I, O> call;
-            try { call = current.routes().acquire(kind, id); }
+            try { call = current.routes().acquire(kind, id, registrationIdentity); }
             catch (RuntimeException error) { return Mono.error(error); }
             if (publishedState.get() != current || closeRequested.get()) {
                 call.close();

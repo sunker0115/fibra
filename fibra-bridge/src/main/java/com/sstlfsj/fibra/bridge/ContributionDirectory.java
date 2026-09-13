@@ -27,6 +27,7 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
     private final Sinks.Many<ContributionDirectoryView> views =
         Sinks.many().replay().latest();
     private long revision;
+    private long nextRegistrationIdentity;
     private boolean closed;
     private Mono<Void> closing;
 
@@ -113,15 +114,25 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
         ContributionId id) {
         Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(id, "id");
-        return new Call<>(acquireEntry(routes, kind, id), kind);
+        return new Call<>(acquireEntry(routes, kind, id, null), kind);
+    }
+
+    <D, I, O> ContributionCall<I, O> acquire(
+        Map<ContributionId, Entry<?, ?, ?>> routes, ContributionKind<D, I, O> kind,
+        ContributionId id, long registrationIdentity) {
+        Objects.requireNonNull(kind, "kind");
+        Objects.requireNonNull(id, "id");
+        return new Call<>(acquireEntry(routes, kind, id, registrationIdentity), kind);
     }
 
     private <D, I, O> Entry<D, I, O> acquireEntry(
         Map<ContributionId, Entry<?, ?, ?>> routes, ContributionKind<D, I, O> kind,
-        ContributionId id) {
+        ContributionId id, Long registrationIdentity) {
         synchronized (monitor) {
             var raw = routes.get(id);
-            if (closed || raw == null || !raw.accepting || raw.kind != kind) {
+            if (closed || raw == null || !raw.accepting || raw.kind != kind
+                || registrationIdentity != null
+                && raw.registrationIdentity != registrationIdentity) {
                 throw new ContributionUnavailableException(id);
             }
             @SuppressWarnings("unchecked")
@@ -146,7 +157,7 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
                     throw new IllegalArgumentException("duplicate contribution "
                         + id.providerInstanceId() + '/' + id.localName());
                 }
-                additions.add(entry(owner, id, binding));
+                additions.add(entry(owner, id, ++nextRegistrationIdentity, binding));
             }
             additions.forEach(entry -> entries.put(entry.id, entry));
             liveEntries.addAll(additions);
@@ -156,8 +167,10 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
     }
 
     private static <D, I, O> Entry<D, I, O> entry(
-        Context owner, ContributionId id, ContributionBinding<D, I, O> binding) {
-        return new Entry<>(owner, id, binding.kind(), binding.descriptor(), binding.handler());
+        Context owner, ContributionId id, long registrationIdentity,
+        ContributionBinding<D, I, O> binding) {
+        return new Entry<>(owner, id, registrationIdentity, binding.kind(), binding.descriptor(),
+            binding.handler());
     }
 
     private Mono<Void> revokeAll(List<Registration> registrations) {
@@ -238,7 +251,7 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
     private ContributionDirectoryView viewUnsafe() {
         var values = entries.values().stream()
             .map(entry -> new ContributionSnapshotEntry(
-                entry.id, entry.kind.name(), entry.descriptor))
+                entry.id, entry.registrationIdentity, entry.kind.name(), entry.descriptor))
             .sorted(Comparator.comparing(value ->
                 value.id().providerInstanceId() + '\0' + value.id().localName()))
             .toList();
@@ -250,6 +263,7 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
     static final class Entry<D, I, O> {
         private final Context owner;
         private final ContributionId id;
+        private final long registrationIdentity;
         private final ContributionKind<D, I, O> kind;
         private final D descriptor;
         private final ContributionHandler<I, O> handler;
@@ -258,10 +272,12 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
         private int inflight;
         private String cleanupFailure;
 
-        private Entry(Context owner, ContributionId id, ContributionKind<D, I, O> kind,
-                      D descriptor, ContributionHandler<I, O> handler) {
+        private Entry(Context owner, ContributionId id, long registrationIdentity,
+                      ContributionKind<D, I, O> kind, D descriptor,
+                      ContributionHandler<I, O> handler) {
             this.owner = owner;
             this.id = id;
+            this.registrationIdentity = registrationIdentity;
             this.kind = kind;
             this.descriptor = descriptor;
             this.handler = handler;
@@ -348,6 +364,11 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
         @Override
         public ContributionId id() {
             return entry.id;
+        }
+
+        @Override
+        public long registrationIdentity() {
+            return entry.registrationIdentity;
         }
 
         @Override

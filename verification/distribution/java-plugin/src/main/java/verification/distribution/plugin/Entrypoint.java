@@ -4,6 +4,10 @@ import com.sstlfsj.fibra.InvocationContext;
 import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.PluginEntrypoint;
 import com.sstlfsj.fibra.bridge.ContributionServices;
+import com.sstlfsj.fibra.cli.api.CliCommandContributions;
+import com.sstlfsj.fibra.cli.api.CliCommandDescriptor;
+import com.sstlfsj.fibra.cli.api.CliCommandOption;
+import com.sstlfsj.fibra.cli.api.CliCommandResult;
 import com.sstlfsj.fibra.plugins.storage.ConfigDocument;
 import com.sstlfsj.fibra.plugins.storage.StorageServices;
 import com.sstlfsj.fibra.plugins.tool.ToolContributions;
@@ -22,12 +26,19 @@ public final class Entrypoint implements PluginEntrypoint<Void> {
     @Override
     public PluginDefinition<Void> definition() {
         return PluginDefinition.builder("external", Void.class,
-            () -> (context, config) -> context.services()
-                .require(ContributionServices.REGISTRAR)
-                .register(context, ToolContributions.KIND,
-                    context.plugins().current().orElseThrow().id(), "config",
-                    descriptor(), Entrypoint::invoke)
-                .then())
+            () -> (context, config) -> {
+                var registrar = context.services().require(ContributionServices.REGISTRAR);
+                var instanceId = context.plugins().current().orElseThrow().id();
+                return registrar.register(context, ToolContributions.KIND, instanceId, "config",
+                    descriptor(), Entrypoint::invoke).then(registrar.register(context,
+                    CliCommandContributions.KIND, instanceId, "echo", commandDescriptor(),
+                    (invocation, request) -> {
+                        var prefix = request.options().getOrDefault("--prefix", "");
+                        request.invocation().output().stdout(prefix
+                            + String.join(" ", request.arguments()));
+                        return Mono.just(CliCommandResult.success());
+                    })).then();
+            })
             .require(ContributionServices.REGISTRAR)
             .require(StorageServices.CONFIG_STORE)
             .build();
@@ -71,6 +82,12 @@ public final class Entrypoint implements PluginEntrypoint<Void> {
         return new ToolDescriptor("Configuration", "Read and write the shared configuration store",
             object(Map.of("type", "object", "required", List.of("operation"))),
             object(Map.of("type", "object")));
+    }
+
+    private static CliCommandDescriptor commandDescriptor() {
+        return new CliCommandDescriptor(List.of("external-cli", "echo"),
+            "输出仓外 Java 动态命令。", List.of(new CliCommandOption(List.of("--prefix"),
+            "输出前缀。", false, false, List.of("from-"))), "TEXT", List.of());
     }
 
     private static LiteralValue.ObjectValue object(Map<String, ?> value) {

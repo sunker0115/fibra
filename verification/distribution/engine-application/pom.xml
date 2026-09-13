@@ -21,6 +21,10 @@
       <version>${fibra.version}</version>
     </dependency>
     <dependency>
+      <groupId>com.sstlfsj</groupId><artifactId>fibra-cli-api</artifactId>
+      <version>${fibra.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>

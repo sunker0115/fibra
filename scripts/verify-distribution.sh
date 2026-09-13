@@ -12,6 +12,7 @@ readonly production_modules=(
   fibra-runtime-java
   fibra-runtime-node
   fibra-registry
+  fibra-cli-api
   fibra-cli
   fibra-spring
   fibra-spring-boot-starter
@@ -44,7 +45,7 @@ readonly non_published_artifacts=(
   fibra-parity-tests
   fibra-benchmarks
 )
-readonly module_list="fibra-api,fibra-core,fibra-config,fibra-artifact,fibra-engine,fibra-bridge,fibra-runtime-java,fibra-runtime-node,fibra-registry,fibra-cli,fibra-spring,fibra-spring-boot-starter,fibra-plugin-archetype,fibra-plugins/fibra-tool-api,fibra-plugins/fibra-plugins-fs/fibra-fs,fibra-plugins/fibra-plugins-fs/fibra-fs-local,fibra-plugins/fibra-plugins-fs/fibra-tool-fs,fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search,fibra-plugins/fibra-plugins-subprocess/fibra-subprocess,fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local,fibra-plugins/fibra-plugins-shell/fibra-shell,fibra-plugins/fibra-plugins-shell/fibra-shell-local,fibra-plugins/fibra-plugins-shell/fibra-tool-shell,fibra-plugins/fibra-plugins-storage/fibra-storage,fibra-plugins/fibra-plugins-storage/fibra-storage-json,fibra-plugins/fibra-plugins-storage/fibra-tool-storage"
+readonly module_list="fibra-api,fibra-core,fibra-config,fibra-artifact,fibra-engine,fibra-bridge,fibra-runtime-java,fibra-runtime-node,fibra-registry,fibra-cli-api,fibra-cli,fibra-spring,fibra-spring-boot-starter,fibra-plugin-archetype,fibra-plugins/fibra-tool-api,fibra-plugins/fibra-plugins-fs/fibra-fs,fibra-plugins/fibra-plugins-fs/fibra-fs-local,fibra-plugins/fibra-plugins-fs/fibra-tool-fs,fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search,fibra-plugins/fibra-plugins-subprocess/fibra-subprocess,fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local,fibra-plugins/fibra-plugins-shell/fibra-shell,fibra-plugins/fibra-plugins-shell/fibra-shell-local,fibra-plugins/fibra-plugins-shell/fibra-tool-shell,fibra-plugins/fibra-plugins-storage/fibra-storage,fibra-plugins/fibra-plugins-storage/fibra-storage-json,fibra-plugins/fibra-plugins-storage/fibra-tool-storage"
 readonly maven_executable="${MVN:-mvn}"
 readonly repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly fixture="$repository_root/verification/distribution"
@@ -99,7 +100,7 @@ done | LC_ALL=C sort > "$expected_artifacts"
 find "$remote_repository/com/sstlfsj" -mindepth 1 -maxdepth 1 -type d \
   -exec basename {} \; | LC_ALL=C sort > "$actual_artifacts"
 cmp -s "$expected_artifacts" "$actual_artifacts" || {
-  echo "临时发布仓库的 artifactId 集合不是严格 26 个正式发布物" >&2
+  echo "临时发布仓库的 artifactId 集合不是严格 27 个正式发布物" >&2
   diff -u "$expected_artifacts" "$actual_artifacts" >&2 || true
   exit 1
 }
@@ -293,7 +294,7 @@ rm -rf "$consumer_repository/com/sstlfsj"
   -Dspring-boot.version="$spring_boot_version" \
   -f "$consumer_project/pom.xml" clean verify
 
-for module in "${production_modules[@]:13}"; do
+for module in "${production_modules[@]:14}"; do
   artifact_id="$(basename "$module")"
   consumer_directory="$consumer_repository/com/sstlfsj/$artifact_id/$revision"
   consumer_jar="$consumer_directory/$artifact_id-$revision.jar"
@@ -314,3 +315,102 @@ done
 
 verify_generated_plugin "$consumer_project/isolated-settings.xml" \
   "$temporary_root/generated" generated-plugin
+
+readonly external_cli_root="$temporary_root/external-cli"
+readonly external_cli_extract="$external_cli_root/extracted"
+readonly external_cli_install="$external_cli_extract/fibra-$revision"
+readonly external_cli_launcher="$external_cli_install/bin/fibra"
+readonly external_cli_plugin="$consumer_project/java-plugin/target/java-plugin-1.0.0.jar"
+mkdir -p "$external_cli_extract"
+unzip -q "$distribution_archive" -d "$external_cli_extract"
+[[ -x "$external_cli_launcher" ]] || {
+  echo "仓外 CLI 验证缺少 ZIP 启动器：$external_cli_launcher" >&2
+  exit 1
+}
+[[ -f "$external_cli_plugin" ]] || {
+  echo "仓外 CLI 验证缺少 Java 插件 JAR：$external_cli_plugin" >&2
+  exit 1
+}
+mkdir -p "$external_cli_install/plugins/external/lib" \
+  "$external_cli_install/config/profiles"
+cp "$external_cli_plugin" "$external_cli_install/plugins/external/lib/main.jar"
+printf '%s\n' \
+  'formatVersion=1' \
+  'runtime=java' \
+  'payload=lib/main.jar' \
+  > "$external_cli_install/plugins/external/plugin.properties"
+printf '%s\n' \
+  '- fibra-storage' \
+  '- fibra-storage-json' \
+  '- external' \
+  > "$external_cli_install/config/profiles/default.artifacts.yaml"
+printf '%s\n' \
+  '- id: storage-provider' \
+  '  plugin: storage-json' \
+  '  config:' \
+  '    root: {$ref: /fibra/storageRoot}' \
+  '  realm: {fibra.storage: shared}' \
+  '- id: external-cli' \
+  '  plugin: external' \
+  '  realm: {fibra.storage: shared}' \
+  > "$external_cli_install/config/profiles/default.yaml"
+
+readonly external_cli_output="$external_cli_root/command.out"
+readonly external_cli_error="$external_cli_root/command.err"
+"$external_cli_launcher" --home "$external_cli_install" external-cli echo \
+  --prefix from- distribution > "$external_cli_output" 2> "$external_cli_error"
+printf 'from-distribution\n' > "$external_cli_root/expected.out"
+cmp -s "$external_cli_root/expected.out" "$external_cli_output" || {
+  echo "仓外 Java 动态 CLI 命令输出不符合预期" >&2
+  exit 1
+}
+[[ ! -s "$external_cli_error" ]] || {
+  echo "仓外 Java 动态 CLI 命令写入 stderr" >&2
+  exit 1
+}
+
+readonly external_cli_help="$external_cli_root/help.out"
+readonly external_cli_help_error="$external_cli_root/help.err"
+"$external_cli_launcher" --home "$external_cli_install" external-cli echo --help \
+  > "$external_cli_help" 2> "$external_cli_help_error"
+grep -F -- '输出仓外 Java 动态命令。' "$external_cli_help" >/dev/null || {
+  echo "仓外 Java 动态 CLI help 缺少命令描述" >&2
+  exit 1
+}
+grep -F -- '--prefix' "$external_cli_help" >/dev/null || {
+  echo "仓外 Java 动态 CLI help 缺少选项" >&2
+  exit 1
+}
+[[ ! -s "$external_cli_help_error" ]] || {
+  echo "仓外 Java 动态 CLI help 写入 stderr" >&2
+  exit 1
+}
+
+readonly external_cli_disable="$external_cli_root/disable.out"
+readonly external_cli_disable_error="$external_cli_root/disable.err"
+"$external_cli_launcher" --home "$external_cli_install" plugins disable external-cli \
+  > "$external_cli_disable" 2> "$external_cli_disable_error"
+[[ ! -s "$external_cli_disable_error" ]] || {
+  echo "仓外 Java 动态 CLI 停用写入 stderr" >&2
+  exit 1
+}
+
+readonly external_cli_revoked_output="$external_cli_root/revoked.out"
+readonly external_cli_revoked_error="$external_cli_root/revoked.err"
+set +e
+"$external_cli_launcher" --home "$external_cli_install" external-cli echo distribution \
+  > "$external_cli_revoked_output" 2> "$external_cli_revoked_error"
+external_cli_revoked_status=$?
+set -e
+[[ $external_cli_revoked_status -eq 2 ]] || {
+  echo "停用后的仓外 Java 动态 CLI 命令退出码不是 2：$external_cli_revoked_status" >&2
+  exit 1
+}
+[[ ! -s "$external_cli_revoked_output" ]] || {
+  echo "停用后的仓外 Java 动态 CLI 命令仍产生 stdout" >&2
+  exit 1
+}
+grep -F -- 'external-cli' "$external_cli_revoked_error" >/dev/null || {
+  echo "停用后的仓外 Java 动态 CLI 命令缺少移除诊断" >&2
+  exit 1
+}

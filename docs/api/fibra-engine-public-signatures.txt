@@ -301,7 +301,7 @@ Compiled from "PublishedRuntime.java"
 public interface com.sstlfsj.fibra.engine.PublishedRuntime {
   public abstract com.sstlfsj.fibra.engine.PublishedView current();
   public abstract reactor.core.publisher.Flux<com.sstlfsj.fibra.engine.PublishedView> views();
-  public abstract <D, I, O> reactor.core.publisher.Mono<O> invoke(java.lang.String, com.sstlfsj.fibra.bridge.ContributionKind<D, I, O>, com.sstlfsj.fibra.bridge.ContributionId, I);
+  public abstract <D, I, O> reactor.core.publisher.Mono<O> invoke(java.lang.String, long, com.sstlfsj.fibra.bridge.ContributionKind<D, I, O>, com.sstlfsj.fibra.bridge.ContributionId, I);
 }
 ## com.sstlfsj.fibra.engine.PublishedView
 Compiled from "PublishedView.java"

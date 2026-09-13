@@ -45,6 +45,16 @@
     </dependency>
     <dependency>
       <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-cli-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-cli</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
       <artifactId>fibra-spring-boot-starter</artifactId>
       <scope>test</scope>
     </dependency>

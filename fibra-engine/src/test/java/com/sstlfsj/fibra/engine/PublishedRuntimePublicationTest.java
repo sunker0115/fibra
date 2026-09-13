@@ -78,7 +78,7 @@ class PublishedRuntimePublicationTest {
             assertEquals(firstTarget, first.engineDiagnostics().targetRevision());
             assertEquals(ChangePhase.IDLE, first.engineDiagnostics().phase());
             assertEquals("old-value", engine.published().invoke(
-                first.viewRevision(), COMMAND, ID, "value").block(TIMEOUT));
+                first.viewRevision(), identity(first), COMMAND, ID, "value").block(TIMEOUT));
 
             var reconcilingSignal = engine.published().views()
                 .filter(view -> view.engineDiagnostics().phase() == ChangePhase.RECONCILING
@@ -98,11 +98,28 @@ class PublishedRuntimePublicationTest {
             assertEquals(second.engine().instances().get("command").identity(),
                 second.diagnostics().plugins().getFirst().identity());
             assertThrows(PublishedRevisionConflictException.class, () ->
-                engine.published().invoke(first.viewRevision(), COMMAND, ID, "value")
+                engine.published().invoke(first.viewRevision(), identity(first), COMMAND, ID, "value")
                     .block(TIMEOUT));
             assertEquals("new-value", engine.published().invoke(
-                second.viewRevision(), COMMAND, ID, "value").block(TIMEOUT));
+                second.viewRevision(), identity(second), COMMAND, ID, "value").block(TIMEOUT));
             assertEquals(second, engine.published().current());
+        }
+    }
+
+    @Test
+    void publishedAdmissionRejectsTheWrongRegistrationIdentity() {
+        var repository = new InMemoryDesiredStateRepository(graph("value-"));
+        try (var engine = FibraEngine.builder(repository)
+            .catalog(PluginCatalog.of(new PluginCatalogEntry<>(definition(),
+                value -> (String) value))).build()) {
+            var view = engine.start().block(TIMEOUT);
+            var entry = view.contributions().entries().getFirst();
+
+            assertThrows(com.sstlfsj.fibra.bridge.ContributionUnavailableException.class, () ->
+                engine.published().invoke(view.viewRevision(), entry.registrationIdentity() + 1,
+                    COMMAND, ID, "value").block(TIMEOUT));
+            assertEquals("value-value", engine.published().invoke(view.viewRevision(),
+                entry.registrationIdentity(), COMMAND, ID, "value").block(TIMEOUT));
         }
     }
 
@@ -125,6 +142,12 @@ class PublishedRuntimePublicationTest {
 
     private static String targetRevision(DesiredInputGraph graph) {
         return new DeploymentManifest(Map.of(), graph).revision();
+    }
+
+    private static long identity(PublishedView view) {
+        return view.contributions().entries().stream()
+            .filter(entry -> entry.kind().equals(COMMAND.name()) && entry.id().equals(ID))
+            .findFirst().orElseThrow().registrationIdentity();
     }
 
     private static void assertConsistentPluginFacts(PublishedView view) {

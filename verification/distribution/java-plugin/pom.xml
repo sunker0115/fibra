@@ -20,6 +20,10 @@
       <groupId>com.sstlfsj</groupId><artifactId>fibra-storage</artifactId>
       <version>${fibra.version}</version><scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId><artifactId>fibra-cli-api</artifactId>
+      <version>${fibra.version}</version><scope>provided</scope>
+    </dependency>
   </dependencies>
   <build><resources><resource>
     <directory>src/main/resources</directory><filtering>true</filtering>

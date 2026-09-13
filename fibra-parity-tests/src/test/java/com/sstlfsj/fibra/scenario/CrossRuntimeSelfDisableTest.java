@@ -109,12 +109,15 @@ class CrossRuntimeSelfDisableTest {
                 try (var watcher = FileSystems.getDefault().newWatchService()) {
                     work.register(watcher, StandardWatchEventKinds.ENTRY_CREATE,
                         StandardWatchEventKinds.ENTRY_MODIFY);
-                    var held = engine.published().invoke(deployed.viewRevision(), CONTROL,
+                    var held = engine.published().invoke(deployed.viewRevision(), identity(deployed, CONTROL,
+                        STABLE_CONTROL), CONTROL,
                         STABLE_CONTROL, "hold").toFuture();
                     try {
                         awaitFile(watcher, holdEntered);
-                        assertEquals("requested", engine.published().invoke(engine.published().current().viewRevision(),
-                            CONTROL, new ContributionId("self-java", "control"), "disable").block(TIMEOUT));
+                        var current = engine.published().current();
+                        assertEquals("requested", engine.published().invoke(current.viewRevision(),
+                            identity(current, CONTROL, new ContributionId("self-java", "control")), CONTROL,
+                            new ContributionId("self-java", "control"), "disable").block(TIMEOUT));
                         var javaDisabled = awaitDisabled(engine, "self-java");
                         assertTarget(initialTarget, raw.withEnabled("self-java", false), store, javaDisabled);
                         assertEquals(1, observations.size());
@@ -129,8 +132,10 @@ class CrossRuntimeSelfDisableTest {
                         assertFalse(held.isDone());
 
                         store.failNextSave();
-                        assertEquals("requested", engine.published().invoke(engine.published().current().viewRevision(),
-                            CONTROL, new ContributionId("self-node", "control"), "disable").block(TIMEOUT));
+                        current = engine.published().current();
+                        assertEquals("requested", engine.published().invoke(current.viewRevision(),
+                            identity(current, CONTROL, new ContributionId("self-node", "control")), CONTROL,
+                            new ContributionId("self-node", "control"), "disable").block(TIMEOUT));
                         var failedNodeDisable = engine.published().views().filter(view ->
                             view.engineDiagnostics().failure() != null
                                 && view.engine().desiredGraph().plugins().get("self-node").enabled()
@@ -145,8 +150,10 @@ class CrossRuntimeSelfDisableTest {
                         assertTrue(failedNodeDisable.engineDiagnostics().mutationGateOpen());
                         assertFalse(held.isDone());
 
-                        assertEquals("requested", engine.published().invoke(engine.published().current().viewRevision(),
-                            CONTROL, new ContributionId("self-node", "control"), "disable").block(TIMEOUT));
+                        current = engine.published().current();
+                        assertEquals("requested", engine.published().invoke(current.viewRevision(),
+                            identity(current, CONTROL, new ContributionId("self-node", "control")), CONTROL,
+                            new ContributionId("self-node", "control"), "disable").block(TIMEOUT));
                         var bothDisabled = awaitDisabled(engine, "self-node");
                         var expectedRaw = raw.withEnabled("self-java", false).withEnabled("self-node", false);
                         assertTarget(initialTarget, expectedRaw, store, bothDisabled);
@@ -161,8 +168,10 @@ class CrossRuntimeSelfDisableTest {
                             stablePidFile, stablePid);
                         assertHealthy(bothDisabled);
                         assertFalse(held.isDone());
-                        assertEquals("released", engine.published().invoke(engine.published().current().viewRevision(),
-                            CONTROL, STABLE_CONTROL, "release").block(TIMEOUT));
+                        current = engine.published().current();
+                        assertEquals("released", engine.published().invoke(current.viewRevision(),
+                            identity(current, CONTROL, STABLE_CONTROL), CONTROL, STABLE_CONTROL,
+                            "release").block(TIMEOUT));
                         assertEquals("held", held.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
                         disabledTarget = store.load().orElseThrow();
                     } finally {
@@ -192,7 +201,8 @@ class CrossRuntimeSelfDisableTest {
                 assertNotEquals(stablePids.getFirst(), stablePids.getLast());
                 assertTrue(alive(stablePids.getLast()));
                 assertNotSame(loader(starts, "stable-java"), starts.getLast().loader());
-                assertEquals("released", reopened.published().invoke(restored.viewRevision(), CONTROL,
+                assertEquals("released", reopened.published().invoke(restored.viewRevision(), identity(restored, CONTROL,
+                    STABLE_CONTROL), CONTROL,
                     STABLE_CONTROL, "release").block(TIMEOUT));
             }
             assertEquals(starts, cleanups);
@@ -267,6 +277,12 @@ class CrossRuntimeSelfDisableTest {
     private static void assertHealthy(PublishedView view) {
         assertTrue(view.engineDiagnostics().targetSatisfied());
         assertTrue(view.engineDiagnostics().mutationGateOpen());
+    }
+
+    private static long identity(PublishedView view, ContributionKind<?, ?, ?> kind, ContributionId id) {
+        return view.contributions().entries().stream()
+            .filter(entry -> entry.kind().equals(kind.name()) && entry.id().equals(id))
+            .map(entry -> entry.registrationIdentity()).findFirst().orElseThrow();
     }
 
     private static PublishedView awaitDisabled(FibraEngine engine, String id) {

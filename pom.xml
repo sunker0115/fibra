@@ -54,6 +54,7 @@
     <module>fibra-runtime-java</module>
     <module>fibra-runtime-node</module>
     <module>fibra-registry</module>
+    <module>fibra-cli-api</module>
     <module>fibra-cli</module>
     <module>fibra-spring</module>
     <module>fibra-spring-boot-starter</module>
@@ -223,6 +224,11 @@
       <dependency>
         <groupId>com.sstlfsj</groupId>
         <artifactId>fibra-registry</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-cli-api</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

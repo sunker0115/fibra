@@ -170,7 +170,8 @@ class CrossRuntimeConditionalConfigTest {
             try (var watcher = FileSystems.getDefault().newWatchService()) {
                 work.register(watcher, StandardWatchEventKinds.ENTRY_CREATE,
                     StandardWatchEventKinds.ENTRY_MODIFY);
-                var held = engine.published().invoke(lastGood.viewRevision(), CONTROL,
+                var held = engine.published().invoke(lastGood.viewRevision(), identity(lastGood, CONTROL,
+                    STABLE_CONTROL), CONTROL,
                     STABLE_CONTROL, "hold").toFuture();
                 try {
                     awaitFile(watcher, holdEntered);
@@ -228,8 +229,8 @@ class CrossRuntimeConditionalConfigTest {
                     assertTrue(changed.engineDiagnostics().mutationGateOpen());
                     assertFalse(held.isDone());
 
-                    assertEquals("released", engine.published().invoke(changed.viewRevision(), CONTROL,
-                        STABLE_CONTROL, "release").block(TIMEOUT));
+                    assertEquals("released", engine.published().invoke(changed.viewRevision(), identity(changed,
+                        CONTROL, STABLE_CONTROL), CONTROL, STABLE_CONTROL, "release").block(TIMEOUT));
                     assertEquals("held", held.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
                 } finally {
                     held.cancel(true);
@@ -420,6 +421,12 @@ class CrossRuntimeConditionalConfigTest {
                                                                ArtifactId artifact) {
         return view.engine().runtimes().get(runtime).resources().stream()
             .filter(resource -> resource.artifact().id().equals(artifact)).findFirst().orElseThrow();
+    }
+
+    private static long identity(PublishedView view, ContributionKind<?, ?, ?> kind, ContributionId id) {
+        return view.contributions().entries().stream()
+            .filter(entry -> entry.kind().equals(kind.name()) && entry.id().equals(id))
+            .map(entry -> entry.registrationIdentity()).findFirst().orElseThrow();
     }
 
     private static void assertSameResource(RuntimeResourceSnapshot.Resource expected,

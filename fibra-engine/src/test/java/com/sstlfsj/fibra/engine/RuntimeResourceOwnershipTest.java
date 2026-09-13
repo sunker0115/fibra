@@ -91,7 +91,7 @@ class RuntimeResourceOwnershipTest {
             assertEquals(2, adapter.prepared.get());
             assertTrue(adapter.calls.isEmpty());
             var rejected = assertThrows(IllegalStateException.class, () ->
-                engine.published().invoke(engine.published().current().viewRevision(),
+                engine.published().invoke(started.viewRevision(), identity(started),
                     COMMAND, CONTRIBUTION, "late").block(TIMEOUT));
             assertEquals("engine is closing", rejected.getMessage());
             adapter.prepareGate.tryEmitEmpty();
@@ -183,7 +183,8 @@ class RuntimeResourceOwnershipTest {
         try (var engine = engine(work, adapter)) {
             var first = engine.start().block(TIMEOUT);
             adapter.calls.clear();
-            var invocation = engine.published().invoke(first.viewRevision(), COMMAND, CONTRIBUTION, "x")
+            var invocation = engine.published().invoke(first.viewRevision(), identity(first),
+                COMMAND, CONTRIBUTION, "x")
                 .toFuture();
             var next = engine.published().views().filter(view -> !view.viewRevision()
                 .equals(first.viewRevision())).next().toFuture();
@@ -217,7 +218,8 @@ class RuntimeResourceOwnershipTest {
             var current = engine.published().current();
             assertEquals(first.engine().artifacts(), current.engine().artifacts());
             assertTrue(adapter.calls.contains("runtime-update:2"));
-            assertEquals("old:x", engine.published().invoke(current.viewRevision(), COMMAND, CONTRIBUTION, "x")
+            assertEquals("old:x", engine.published().invoke(current.viewRevision(), identity(current),
+                COMMAND, CONTRIBUTION, "x")
                 .block(TIMEOUT));
         }
     }
@@ -248,8 +250,8 @@ class RuntimeResourceOwnershipTest {
                 () -> assertEquals(savedTarget.artifacts(), current.engine().artifacts().entrySet().stream()
                     .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey,
                         entry -> entry.getValue().revision()))),
-                () -> assertEquals("old:x", engine.published().invoke(current.viewRevision(), COMMAND,
-                    CONTRIBUTION, "x").block(TIMEOUT)),
+                () -> assertEquals("old:x", engine.published().invoke(current.viewRevision(),
+                    identity(current), COMMAND, CONTRIBUTION, "x").block(TIMEOUT)),
                 () -> assertFalse(current.engineDiagnostics().mutationGateOpen()),
                 () -> assertThrows(RuntimeException.class, engine::close));
         } finally {
@@ -409,5 +411,12 @@ class RuntimeResourceOwnershipTest {
             return java.util.Optional.ofNullable(manifest);
         }
         @Override public void save(DeploymentManifest value) { manifest = value; }
+    }
+
+    private static long identity(PublishedView view) {
+        return view.contributions().entries().stream()
+            .filter(entry -> entry.kind().equals(COMMAND.name())
+                && entry.id().equals(CONTRIBUTION))
+            .findFirst().orElseThrow().registrationIdentity();
     }
 }

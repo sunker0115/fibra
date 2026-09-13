@@ -396,7 +396,12 @@ class ApplyDeploymentPersistenceBoundaryTest {
     }
 
     private static String invoke(FibraEngine engine, PublishedView view) {
-        return engine.published().invoke(view.viewRevision(), COMMAND, CONTRIBUTION, "call").block(TIMEOUT);
+        var identity = view.contributions().entries().stream()
+            .filter(entry -> entry.kind().equals(COMMAND.name())
+                && entry.id().equals(CONTRIBUTION))
+            .findFirst().orElseThrow().registrationIdentity();
+        return engine.published().invoke(view.viewRevision(), identity,
+            COMMAND, CONTRIBUTION, "call").block(TIMEOUT);
     }
 
     private static Path write(Path path, String content) throws IOException {

@@ -175,8 +175,13 @@ class EngineConsumerTest {
     private static ToolResult invoke(FibraEngine engine, String provider, String localName,
                                      Map<String, ?> arguments) {
         var current = engine.published().current();
-        return engine.published().invoke(current.viewRevision(), ToolContributions.KIND,
-            ToolContributions.id(provider, localName), ToolRequest.of(arguments)).block(TIMEOUT);
+        var id = ToolContributions.id(provider, localName);
+        var identity = current.contributions().entries().stream()
+            .filter(entry -> entry.kind().equals(ToolContributions.KIND.name())
+                && entry.id().equals(id))
+            .findFirst().orElseThrow().registrationIdentity();
+        return engine.published().invoke(current.viewRevision(), identity,
+            ToolContributions.KIND, id, ToolRequest.of(arguments)).block(TIMEOUT);
     }
 
     private static long countJars(Path directory) throws IOException {

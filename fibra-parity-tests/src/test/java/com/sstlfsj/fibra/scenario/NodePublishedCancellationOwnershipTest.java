@@ -11,7 +11,10 @@ import com.sstlfsj.fibra.engine.DeploymentArtifact;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.ReplaceDesiredGraph;
 import com.sstlfsj.fibra.bridge.ContributionUnavailableException;
+import com.sstlfsj.fibra.bridge.ContributionId;
+import com.sstlfsj.fibra.bridge.ContributionKind;
 import com.sstlfsj.fibra.engine.PublishedRevisionConflictException;
+import com.sstlfsj.fibra.engine.PublishedView;
 import com.sstlfsj.fibra.plugins.tool.ToolContributions;
 import com.sstlfsj.fibra.plugins.tool.ToolContent;
 import com.sstlfsj.fibra.plugins.tool.ToolRequest;
@@ -55,18 +58,22 @@ class NodePublishedCancellationOwnershipTest {
                 .expectedRevision(started.viewRevision())
                 .expectedDesiredRevision(started.engine().desiredSource().revision())
                 .artifacts(List.of(artifact(nodeArtifact(work)))).build()).block(TIMEOUT).view();
-            var identity = deployed.engine().instances().get(INSTANCE).identity();
+            var instanceIdentity = deployed.engine().instances().get(INSTANCE).identity();
+            var runId = ToolContributions.id(INSTANCE, "run");
+            var registrationIdentity = identity(deployed, ToolContributions.KIND, runId);
             var pid = recordedPid(pidFile);
             assertTrue(alive(pid));
 
-            var cancelled = engine.published().invoke(deployed.viewRevision(), ToolContributions.KIND,
-                ToolContributions.id(INSTANCE, "run"), ToolRequest.of(Map.of("command", "hold")))
+            var cancelled = engine.published().invoke(deployed.viewRevision(), registrationIdentity,
+                ToolContributions.KIND, runId, ToolRequest.of(Map.of("command", "hold")))
                 .subscribe();
             try {
                 awaitFile(holdEntered, "等待 Node 请求进入超时");
 
-                var completed = engine.published().invoke(engine.published().current().viewRevision(),
-                    ToolContributions.KIND, ToolContributions.id(INSTANCE, "run"),
+                var current = engine.published().current();
+                var completed = engine.published().invoke(current.viewRevision(), identity(current,
+                    ToolContributions.KIND, ToolContributions.id(INSTANCE, "run")), ToolContributions.KIND,
+                    ToolContributions.id(INSTANCE, "run"),
                     ToolRequest.of(Map.of("command", "complete"))).block(TIMEOUT);
                 assertEquals(List.of(ToolContent.text("B completed")), completed.content());
                 assertEquals(List.of(pid), recordedPids(pidFile));
@@ -88,9 +95,10 @@ class NodePublishedCancellationOwnershipTest {
                     .toFuture();
                 var draining = reconciling.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
 
-                awaitToolAdmissionClosed(engine);
+                awaitToolAdmissionClosed(engine, runId, registrationIdentity);
                 assertFalse(disabling.isDone(), "远端取消尚未终态时，实例停用不能完成");
-                assertEquals(identity, draining.engine().instances().get(INSTANCE).identity());
+                assertEquals(instanceIdentity,
+                    draining.engine().instances().get(INSTANCE).identity());
                 assertEquals(List.of(pid), recordedPids(pidFile));
                 assertTrue(alive(pid), "取消排空期间不得终止共享 Node sidecar");
                 assertThrows(TimeoutException.class,
@@ -213,13 +221,14 @@ class NodePublishedCancellationOwnershipTest {
         }
     }
 
-    private static void awaitToolAdmissionClosed(FibraEngine engine) throws Exception {
+    private static void awaitToolAdmissionClosed(FibraEngine engine, ContributionId id,
+                                                  long registrationIdentity) throws Exception {
         var deadline = System.nanoTime() + TIMEOUT.toNanos();
         while (System.nanoTime() < deadline) {
             var current = engine.published().current();
             try {
-                engine.published().invoke(current.viewRevision(), ToolContributions.KIND,
-                    ToolContributions.id(INSTANCE, "run"),
+                engine.published().invoke(current.viewRevision(), registrationIdentity,
+                    ToolContributions.KIND, id,
                     ToolRequest.of(Map.of("command", "complete"))).block(TIMEOUT);
             } catch (ContributionUnavailableException failure) {
                 return;
@@ -233,6 +242,12 @@ class NodePublishedCancellationOwnershipTest {
 
     private static long recordedPid(Path pidFile) throws Exception {
         return recordedPids(pidFile).getFirst();
+    }
+
+    private static long identity(PublishedView view, ContributionKind<?, ?, ?> kind, ContributionId id) {
+        return view.contributions().entries().stream()
+            .filter(entry -> entry.kind().equals(kind.name()) && entry.id().equals(id))
+            .map(entry -> entry.registrationIdentity()).findFirst().orElseThrow();
     }
 
     private static List<Long> recordedPids(Path pidFile) throws Exception {

@@ -22,9 +22,21 @@ public final class ContributionRoutes {
         return directory.acquire(entries, kind, id);
     }
 
+    public <D, I, O> ContributionCall<I, O> acquire(
+        ContributionKind<D, I, O> kind, ContributionId id, long registrationIdentity) {
+        return directory.acquire(entries, kind, id, registrationIdentity);
+    }
+
     public <D, I, O> Mono<O> invoke(Context caller, ContributionKind<D, I, O> kind,
                                     ContributionId id, I input) {
         return Mono.using(() -> acquire(kind, id), call -> call.invoke(caller, input),
+            ContributionCall::close, true);
+    }
+
+    public <D, I, O> Mono<O> invoke(Context caller, ContributionKind<D, I, O> kind,
+                                    ContributionId id, long registrationIdentity, I input) {
+        return Mono.using(() -> acquire(kind, id, registrationIdentity),
+            call -> call.invoke(caller, input),
             ContributionCall::close, true);
     }
 }

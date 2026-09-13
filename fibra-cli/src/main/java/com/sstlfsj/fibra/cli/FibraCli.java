@@ -3,7 +3,20 @@ package com.sstlfsj.fibra.cli;
 import com.sstlfsj.fibra.CancellationSource;
 import com.sstlfsj.fibra.artifact.ArtifactId;
 import com.sstlfsj.fibra.bridge.ContributionId;
+import com.sstlfsj.fibra.bridge.ContributionKind;
 import com.sstlfsj.fibra.bridge.ContributionSnapshotEntry;
+import com.sstlfsj.fibra.bridge.ContributionUnavailableException;
+import com.sstlfsj.fibra.cli.api.CliCommandRequest;
+import com.sstlfsj.fibra.cli.api.CliCommandResult;
+import com.sstlfsj.fibra.cli.api.CliApplication;
+import com.sstlfsj.fibra.cli.api.CliBootstrapCommand;
+import com.sstlfsj.fibra.cli.api.CliInvocation;
+import com.sstlfsj.fibra.cli.api.CliOutput;
+import com.sstlfsj.fibra.cli.api.CliProfile;
+import com.sstlfsj.fibra.cli.api.CliTerminal;
+import com.sstlfsj.fibra.cli.api.CliTerminalLease;
+import com.sstlfsj.fibra.cli.api.CliTerminalUnavailableException;
+import com.sstlfsj.fibra.cli.api.CliTerminalUnavailableReason;
 import com.sstlfsj.fibra.engine.EngineChangeException;
 import com.sstlfsj.fibra.engine.MutationGateClosedException;
 import com.sstlfsj.fibra.engine.PluginInstanceSnapshot;
@@ -62,17 +75,21 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
     @CommandLine.Spec private CommandLine.Model.CommandSpec spec;
 
     private final Function<CliPaths, CliHost> hostFactory;
+    private final CliApplication application;
     private final boolean installShutdownHook;
     private final InputStream input;
     private final PrintWriter output;
     private final PrintWriter error;
     private final LinkedHashSet<CancellationSource> invocations = new LinkedHashSet<>();
+    private CliTerminal terminal = NonInteractiveTerminal.INSTANCE;
     private CliHost host;
     private Thread shutdownHook;
     private boolean closing;
 
-    private FibraCli(Function<CliPaths, CliHost> hostFactory, boolean installShutdownHook,
+    private FibraCli(CliApplication application, Function<CliPaths, CliHost> hostFactory,
+                     boolean installShutdownHook,
                      InputStream input, PrintWriter output, PrintWriter error) {
+        this.application = Objects.requireNonNull(application, "application");
         this.hostFactory = Objects.requireNonNull(hostFactory, "hostFactory");
         this.installShutdownHook = installShutdownHook;
         this.input = Objects.requireNonNull(input, "input");
@@ -81,33 +98,53 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
     }
 
     public static void main(String[] args) {
-        System.exit(execute(args, System.in, new PrintWriter(System.out, true),
+        System.exit(execute(defaultApplication(), args, System.in, new PrintWriter(System.out, true),
             new PrintWriter(System.err, true), CliHost::open, true));
     }
 
     public static int run(String[] args, InputStream in, PrintWriter out, PrintWriter err) {
-        return execute(args, in, out, err, CliHost::open, false);
+        return run(defaultApplication(), args, in, out, err);
+    }
+
+    public static int run(CliApplication application, String[] args, InputStream in,
+                          PrintWriter out, PrintWriter err) {
+        return execute(application, args, in, out, err, CliHost::open, false);
     }
 
     static int run(String[] args, InputStream in, PrintWriter out, PrintWriter err,
                    Function<CliPaths, CliHost> hostFactory) {
-        return execute(args, in, out, err, hostFactory, false);
+        return execute(defaultApplication(), args, in, out, err, hostFactory, false);
     }
 
     static int execute(String[] args, InputStream in, PrintWriter out, PrintWriter err,
                        Function<CliPaths, CliHost> hostFactory, boolean installShutdownHook) {
+        return execute(defaultApplication(), args, in, out, err, hostFactory,
+            installShutdownHook);
+    }
+
+    private static int execute(CliApplication application, String[] args, InputStream in,
+                               PrintWriter out, PrintWriter err,
+                               Function<CliPaths, CliHost> hostFactory,
+                               boolean installShutdownHook) {
+        Objects.requireNonNull(application, "application");
         Objects.requireNonNull(args, "args");
         Objects.requireNonNull(in, "in");
         Objects.requireNonNull(out, "out");
         Objects.requireNonNull(err, "err");
-        var command = new FibraCli(hostFactory, installShutdownHook, in, out, err);
-        var line = new CommandLine(command).setExpandAtFiles(false).setOut(out).setErr(err)
-            .setParameterExceptionHandler(FibraCli::parameterFailure)
-            .setExecutionExceptionHandler(FibraCli::executionFailure);
+        var command = new FibraCli(application, hostFactory, installShutdownHook, in, out, err);
+        var line = command.commandLine(null);
         int result;
         try {
+            if (requiresPublishedGeneration(args, line)) {
+                line.setStopAtUnmatched(true).setUnmatchedArgumentsAllowed(true).parseArgs(args);
+                line = command.commandLine(CommandGeneration.capture(command.host().published()));
+            }
             result = line.execute(args);
-        } catch (RuntimeException | Error failure) {
+        } catch (CommandLine.ParameterException failure) {
+            result = parameterFailure(failure, args);
+        } catch (RuntimeException failure) {
+            result = executionFailure(failure, line, null);
+        } catch (Error failure) {
             try {
                 command.close();
             } catch (RuntimeException closeFailure) {
@@ -122,6 +159,60 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
             return 7;
         }
         return result;
+    }
+
+    private CommandLine commandLine(CommandGeneration generation) {
+        var line = new CommandLine(this).setExpandAtFiles(false).setOut(output).setErr(error)
+            .setParameterExceptionHandler(FibraCli::parameterFailure)
+            .setExecutionExceptionHandler(FibraCli::executionFailure);
+        line.getCommandSpec().name(application.rootName());
+        line.getCommandSpec().usageMessage().description(application.description());
+        line.getCommandSpec().versionProvider(() -> new String[] {
+            application.rootName() + " " + application.version()
+        });
+        CommandGeneration.installBootstrap(line, application.bootstrapCommands(),
+            this::invokeBootstrap);
+        if (generation != null) generation.install(line,
+            (command, arguments, options) -> invokeDynamic(
+                generation, command, arguments, options));
+        return line;
+    }
+
+    private static boolean requiresPublishedGeneration(String[] args, CommandLine base) {
+        var command = rootCommand(args);
+        if (command == null) return false;
+        if (!command.equals("help")) return !base.getSubcommands().containsKey(command);
+        var target = commandAfter(args, "help");
+        return target != null && !base.getSubcommands().containsKey(target);
+    }
+
+    private static String rootCommand(String[] args) {
+        for (var index = 0; index < args.length; index++) {
+            var value = args[index];
+            if (value.equals("--help") || value.equals("-h") || value.equals("--version")
+                || value.equals("-V")) return null;
+            if (isGlobalOption(value)) {
+                if (!value.contains("=") && index + 1 < args.length) index++;
+                continue;
+            }
+            if (!value.startsWith("-")) return value;
+        }
+        return null;
+    }
+
+    private static String commandAfter(String[] args, String command) {
+        for (var index = 0; index < args.length - 1; index++) {
+            if (args[index].equals(command)) return args[index + 1];
+        }
+        return null;
+    }
+
+    private static boolean isGlobalOption(String value) {
+        for (var option : List.of("--home", "--profile", "--config-root", "--plugins-root",
+            "--data-root", "--node")) {
+            if (value.equals(option) || value.startsWith(option + "=")) return true;
+        }
+        return false;
     }
 
     @Override
@@ -204,10 +295,64 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
         invocations.remove(cancellation);
     }
 
-    private int repl(CommandLine commandLine) {
+    private int repl() {
         host();
-        return CliRepl.run(commandLine, input, output, error,
+        return CliRepl.run(this::executeReplLine,
+            input, output, error,
             installShutdownHook && System.console() != null);
+    }
+
+    private int executeReplLine(String[] arguments, CliTerminal invocationTerminal) {
+        terminal = Objects.requireNonNull(invocationTerminal, "invocationTerminal");
+        try {
+            return commandLine(CommandGeneration.capture(host().published())).execute(arguments);
+        } finally {
+            terminal = NonInteractiveTerminal.INSTANCE;
+        }
+    }
+
+    private int invokeDynamic(CommandGeneration generation, CommandGeneration.Command command,
+                              List<String> arguments,
+                              Map<String, String> options) {
+        var cancellation = beginInvocation();
+        try {
+            var request = new CliCommandRequest(arguments, options,
+                new CliInvocation(cancellation.token(), output(), terminal, profile()));
+            var result = generation.invoke(command, request).block();
+            if (result == null) throw new CliFailure(4,
+                "命令调用没有返回结果", null);
+            return result.status().code();
+        } finally {
+            endInvocation(cancellation);
+        }
+    }
+
+    private int invokeBootstrap(CliBootstrapCommand command, List<String> arguments,
+                                Map<String, String> options) throws Exception {
+        var cancellation = beginInvocation();
+        try {
+            var request = new CliCommandRequest(arguments, options,
+                new CliInvocation(cancellation.token(), output(), terminal, profile()));
+            var result = command.handler().invoke(request);
+            if (result == null) throw new CliFailure(4,
+                "命令调用没有返回结果", null);
+            return result.status().code();
+        } finally {
+            endInvocation(cancellation);
+        }
+    }
+
+    private CliOutput output() {
+        return new CliOutput() {
+            @Override public void stdout(String value) { output.println(value); }
+            @Override public void stderr(String value) { error.println(value); }
+        };
+    }
+
+    private CliProfile profile() {
+        var paths = paths();
+        return new CliProfile(paths.profile(), paths.home(), paths.configRoot(),
+            paths.pluginsRoot(), paths.dataRoot());
     }
 
     private void print(Object value) {
@@ -274,11 +419,13 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
     private void invoke(String provider, String name, String input) {
         var arguments = parseObject(input);
         var view = host().published().current();
+        var id = new ContributionId(provider, name);
+        var registrationIdentity = registrationIdentity(view, ToolContributions.KIND, id);
         var cancellation = beginInvocation();
         final ToolOutcome outcome;
         try {
             outcome = ToolOutcomes.normalize(() -> host().published().invoke(view.viewRevision(),
-                ToolContributions.KIND, new ContributionId(provider, name),
+                registrationIdentity, ToolContributions.KIND, id,
                 new ToolRequest(arguments, cancellation.token()))).block();
         } finally {
             endInvocation(cancellation);
@@ -296,6 +443,15 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
                 print(output);
             }
         }
+    }
+
+    private static long registrationIdentity(PublishedView view,
+                                             ContributionKind<?, ?, ?> kind,
+                                             ContributionId id) {
+        return view.contributions().entries().stream()
+            .filter(entry -> entry.kind().equals(kind.name()) && entry.id().equals(id))
+            .findFirst().map(ContributionSnapshotEntry::registrationIdentity)
+            .orElse(Long.MIN_VALUE);
     }
 
     private static List<Map<String, Object>> content(List<ToolContent> content) {
@@ -340,7 +496,8 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
     private static int executionFailure(Exception failure, CommandLine line, CommandLine.ParseResult result) {
         line.getErr().println(message(failure));
         if (failure instanceof CliFailure cli) return cli.code;
-        if (failure instanceof PublishedRevisionConflictException) return 5;
+        if (failure instanceof PublishedRevisionConflictException
+            || failure instanceof ContributionUnavailableException) return 5;
         if (failure instanceof MutationGateClosedException || failure instanceof EngineChangeException) return 6;
         return 4;
     }
@@ -440,13 +597,22 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
         @CommandLine.Spec private CommandLine.Model.CommandSpec spec;
 
         @Override public Integer call() {
-            return ((FibraCli) spec.root().userObject()).repl(spec.root().commandLine());
+            return ((FibraCli) spec.root().userObject()).repl();
         }
     }
 
     private static final class CliFailure extends RuntimeException {
         private final int code;
         private CliFailure(int code, String message, Throwable cause) { super(message, cause); this.code = code; }
+    }
+
+    private enum NonInteractiveTerminal implements CliTerminal {
+        INSTANCE;
+
+        @Override public boolean interactive() { return false; }
+        @Override public CliTerminalLease acquire() {
+            throw new CliTerminalUnavailableException(CliTerminalUnavailableReason.UNSUPPORTED);
+        }
     }
 
     static final class VersionProvider implements CommandLine.IVersionProvider {
@@ -465,5 +631,12 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
             throw new IllegalStateException("cannot read CLI version", exception);
         }
         return "unknown";
+    }
+
+    private static CliApplication defaultApplication() {
+        return CliApplication.builder("fibra")
+            .description("管理 Fibra profile、插件和已发布工具。")
+            .version(version())
+            .build();
     }
 }

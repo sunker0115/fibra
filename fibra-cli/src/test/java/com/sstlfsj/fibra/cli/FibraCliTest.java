@@ -5,6 +5,12 @@ import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.PluginEntrypoint;
 import com.sstlfsj.fibra.PluginInstanceState;
 import com.sstlfsj.fibra.bridge.ContributionServices;
+import com.sstlfsj.fibra.cli.api.CliCommandContributions;
+import com.sstlfsj.fibra.cli.api.CliCommandDescriptor;
+import com.sstlfsj.fibra.cli.api.CliCommandOption;
+import com.sstlfsj.fibra.cli.api.CliCommandResult;
+import com.sstlfsj.fibra.cli.api.CliApplication;
+import com.sstlfsj.fibra.cli.api.CliBootstrapCommand;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.PublicationRequirement;
 import com.sstlfsj.fibra.engine.PluginInstanceSnapshot;
@@ -26,6 +32,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
@@ -62,6 +69,40 @@ class FibraCliTest {
     }
 
     @Test
+    void publicApplicationBuilderDefinesRootMetadataAndBootstrapCommands() {
+        var output = new ByteArrayOutputStream();
+        var error = new ByteArrayOutputStream();
+        var application = CliApplication.builder("agent")
+            .description("组合型 Agent 命令入口。")
+            .version("1.2.3")
+            .addBootstrapCommand(new CliBootstrapCommand(
+                new CliCommandDescriptor(List.of("status"), "输出启动状态。", List.of(),
+                    null, List.of()),
+                request -> {
+                    request.invocation().output().stdout("ready");
+                    return CliCommandResult.success();
+                }))
+            .build();
+
+        assertEquals(0, FibraCli.run(application, new String[] {"status"},
+            new ByteArrayInputStream(new byte[0]), writer(output), writer(error)));
+        assertEquals("ready\n", output.toString(StandardCharsets.UTF_8));
+        assertEquals("", error.toString(StandardCharsets.UTF_8));
+
+        output.reset();
+        assertEquals(0, FibraCli.run(application, new String[] {"--help"},
+            new ByteArrayInputStream(new byte[0]), writer(output), writer(error)));
+        var help = output.toString(StandardCharsets.UTF_8);
+        assertTrue(help.contains("Usage: agent"), help);
+        assertTrue(help.contains("组合型 Agent 命令入口。"), help);
+
+        output.reset();
+        assertEquals(0, FibraCli.run(application, new String[] {"--version"},
+            new ByteArrayInputStream(new byte[0]), writer(output), writer(error)));
+        assertEquals("agent 1.2.3\n", output.toString(StandardCharsets.UTF_8));
+    }
+
+    @Test
     void helpSubcommandUsesTheSameCommandTreeWithoutStartingAHost() {
         var output = new ByteArrayOutputStream();
         var error = new ByteArrayOutputStream();
@@ -76,15 +117,34 @@ class FibraCliTest {
     }
 
     @Test
-    void unknownCommandReturnsUsageExitCode() {
+    void unknownCommandReturnsUsageExitCodeAfterCheckingPublishedCommands(@TempDir Path home)
+        throws Exception {
+        var profiles = Files.createDirectories(home.resolve("config/profiles"));
+        Files.writeString(profiles.resolve("default.yaml"), "[]\n");
+        Files.writeString(profiles.resolve("default.artifacts.yaml"), "[]\n");
         var output = new ByteArrayOutputStream();
         var error = new ByteArrayOutputStream();
 
-        var exitCode = FibraCli.run(new String[] {"unknown"}, new ByteArrayInputStream(new byte[0]),
-            writer(output), writer(error), paths -> failIfHostStarts());
+        var exitCode = FibraCli.run(new String[] {"--home", home.toString(), "unknown"},
+            new ByteArrayInputStream(new byte[0]), writer(output), writer(error));
 
         assertEquals(2, exitCode);
         assertTrue(error.toString(StandardCharsets.UTF_8).contains("unknown"));
+    }
+
+    @Test
+    void dynamicCommandDiscoveryMapsHostStartupFailureToStableExitCode() {
+        var output = new ByteArrayOutputStream();
+        var error = new ByteArrayOutputStream();
+
+        var exitCode = FibraCli.run(new String[] {"dynamic"},
+            new ByteArrayInputStream(new byte[0]), writer(output), writer(error),
+            paths -> { throw new IllegalStateException("simulated startup failure"); });
+
+        assertEquals(3, exitCode);
+        assertEquals("", output.toString(StandardCharsets.UTF_8));
+        assertTrue(error.toString(StandardCharsets.UTF_8)
+            .contains("无法启动宿主: simulated startup failure"));
     }
 
     @Test
@@ -269,6 +329,81 @@ class FibraCliTest {
     }
 
     @Test
+    void publishedJavaCommandRunsAndRendersHelpThroughThePublicCli(@TempDir Path home)
+        throws Exception {
+        dynamicCommandProfile(home);
+        var output = new ByteArrayOutputStream();
+        var error = new ByteArrayOutputStream();
+
+        var exitCode = FibraCli.run(new String[] {
+            "--home", home.toString(), "echo", "--prefix", "hello-", "world"
+        }, new ByteArrayInputStream(new byte[0]), writer(output), writer(error));
+
+        assertEquals(0, exitCode);
+        assertEquals("hello-world\n", output.toString(StandardCharsets.UTF_8));
+        assertEquals("", error.toString(StandardCharsets.UTF_8));
+
+        output.reset();
+        assertEquals(0, FibraCli.run(new String[] {
+            "--home", home.toString(), "help", "echo"
+        }, new ByteArrayInputStream(new byte[0]), writer(output), writer(error)));
+        var help = output.toString(StandardCharsets.UTF_8);
+        assertTrue(help.contains("输出带前缀的参数。"), help);
+        assertTrue(help.contains("--prefix"), help);
+    }
+
+    @Test
+    void dynamicCommandPathConflictReturnsStableExecutionFailure(@TempDir Path home)
+        throws Exception {
+        dynamicCommandProfile(home);
+        Files.writeString(home.resolve("config/profiles/default.yaml"),
+            "- {id: command-a, plugin: command}\n- {id: command-b, plugin: command}\n");
+        var output = new ByteArrayOutputStream();
+        var error = new ByteArrayOutputStream();
+
+        var exitCode = FibraCli.run(new String[] {
+            "--home", home.toString(), "echo"
+        }, new ByteArrayInputStream(new byte[0]), writer(output), writer(error));
+
+        assertEquals(4, exitCode);
+        assertEquals("", output.toString(StandardCharsets.UTF_8));
+        assertTrue(error.toString(StandardCharsets.UTF_8)
+            .contains("duplicate CLI command path: echo"));
+    }
+
+    @Test
+    void replCapturesANewCommandGenerationForEveryLine(@TempDir Path home) throws Exception {
+        dynamicCommandProfile(home);
+        var output = new ByteArrayOutputStream();
+        var error = new ByteArrayOutputStream();
+
+        var exitCode = FibraCli.run(new String[] {"--home", home.toString(), "repl"},
+            new ByteArrayInputStream(("echo first\nplugins disable command\n"
+                + "echo second\nexit\n").getBytes(StandardCharsets.UTF_8)),
+            writer(output), writer(error));
+
+        assertEquals(0, exitCode);
+        assertEquals(1, output.toString(StandardCharsets.UTF_8).split("first", -1).length - 1);
+        assertTrue(error.toString(StandardCharsets.UTF_8).contains("echo"));
+    }
+
+    @Test
+    void replInvocationScopeRestoresALeaseForgottenByADynamicCommand(@TempDir Path home)
+        throws Exception {
+        dynamicCommandProfile(home);
+        var output = new ByteArrayOutputStream();
+        var error = new ByteArrayOutputStream();
+
+        var exitCode = FibraCli.run(new String[] {"--home", home.toString(), "repl"},
+            new ByteArrayInputStream("terminal\nterminal\nexit\n".getBytes(StandardCharsets.UTF_8)),
+            writer(output), writer(error));
+
+        assertEquals(0, exitCode);
+        assertEquals(2, output.toString(StandardCharsets.UTF_8).split("leased", -1).length - 1);
+        assertEquals("", error.toString(StandardCharsets.UTF_8));
+    }
+
+    @Test
     void instanceJsonDistinguishesDisabledAndFailedRuntimeState() {
         var disabled = FibraCli.instance("disabled",
             DesiredInputEntry.builder("disabled", "sample").enabled(false).build(), null);
@@ -344,6 +479,67 @@ class FibraCliTest {
                 jar.write(input.readAllBytes());
             }
             jar.closeEntry();
+        }
+    }
+
+    private static void dynamicCommandProfile(Path home) throws Exception {
+        var profiles = Files.createDirectories(home.resolve("config/profiles"));
+        Files.writeString(profiles.resolve("default.yaml"),
+            "- {id: command, plugin: command}\n");
+        Files.writeString(profiles.resolve("default.artifacts.yaml"), "- command\n");
+        var root = Files.createDirectories(home.resolve("plugins/command"));
+        var lib = Files.createDirectories(root.resolve("lib"));
+        Files.writeString(root.resolve("plugin.properties"), """
+            formatVersion=1
+            runtime=java
+            payload=lib/main.jar
+            """);
+        try (var jar = new JarOutputStream(Files.newOutputStream(lib.resolve("main.jar")))) {
+            jar.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml"));
+            jar.write(("""
+                id: command
+                version: 1.0.0
+                entrypoint: %s
+                requires: []
+                """).formatted(DynamicCommandEntrypoint.class.getName())
+                .getBytes(StandardCharsets.UTF_8));
+            jar.closeEntry();
+            var className = DynamicCommandEntrypoint.class.getName().replace('.', '/') + ".class";
+            jar.putNextEntry(new JarEntry(className));
+            try (var input = FibraCliTest.class.getResourceAsStream('/' + className)) {
+                if (input == null) throw new IllegalStateException("missing test entrypoint class");
+                jar.write(input.readAllBytes());
+            }
+            jar.closeEntry();
+        }
+    }
+
+    public static final class DynamicCommandEntrypoint implements PluginEntrypoint<Void> {
+        @Override public PluginDefinition<Void> definition() {
+            return PluginDefinition.builder("command", Void.class, () -> (context, config) -> {
+                var provider = context.plugins().current().orElseThrow().id();
+                var descriptor = new CliCommandDescriptor(List.of("echo"),
+                    "输出带前缀的参数。", List.of(new CliCommandOption(List.of("--prefix"),
+                    "输出前缀。", false, false, List.of("hello-"))), "TEXT", List.of());
+                var registrar = context.services().require(ContributionServices.REGISTRAR);
+                var echo = registrar.register(context,
+                    CliCommandContributions.KIND, provider, "echo", descriptor,
+                    (invocation, request) -> {
+                        var prefix = request.options().getOrDefault("--prefix", "");
+                        request.invocation().output().stdout(prefix
+                            + String.join(" ", request.arguments()));
+                        return Mono.just(CliCommandResult.success());
+                    });
+                var terminal = registrar.register(context, CliCommandContributions.KIND,
+                    provider, "terminal", new CliCommandDescriptor(List.of("terminal"),
+                        "取得受控终端租约。", List.of(), null, List.of()),
+                    (invocation, request) -> {
+                        request.invocation().terminal().acquire();
+                        request.invocation().output().stdout("leased");
+                        return Mono.just(CliCommandResult.success());
+                    });
+                return Mono.when(echo, terminal);
+            }).require(ContributionServices.REGISTRAR).build();
         }
     }
 

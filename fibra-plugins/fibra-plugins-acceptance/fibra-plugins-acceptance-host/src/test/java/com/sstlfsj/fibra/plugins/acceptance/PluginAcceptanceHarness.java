@@ -6,6 +6,9 @@ import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.DesiredStateRepository;
 import com.sstlfsj.fibra.engine.EngineStateStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
+import com.sstlfsj.fibra.engine.PublishedView;
+import com.sstlfsj.fibra.bridge.ContributionId;
+import com.sstlfsj.fibra.bridge.ContributionKind;
 import com.sstlfsj.fibra.registry.InMemoryPluginAuditRepository;
 import com.sstlfsj.fibra.registry.PluginDeploymentRequest;
 import com.sstlfsj.fibra.registry.PluginInstallRequest;
@@ -66,8 +69,15 @@ final class PluginAcceptanceHarness implements AutoCloseable {
 
     ToolResult invoke(String provider, String localName, Map<String, ?> arguments) {
         var current = engine.published().current();
-        return engine.published().invoke(current.viewRevision(), ToolContributions.KIND,
+        return engine.published().invoke(current.viewRevision(), identity(current, ToolContributions.KIND,
+                ToolContributions.id(provider, localName)), ToolContributions.KIND,
             ToolContributions.id(provider, localName), ToolRequest.of(arguments)).block(TIMEOUT);
+    }
+
+    private static long identity(PublishedView view, ContributionKind<?, ?, ?> kind, ContributionId id) {
+        return view.contributions().entries().stream()
+            .filter(entry -> entry.kind().equals(kind.name()) && entry.id().equals(id))
+            .map(entry -> entry.registrationIdentity()).findFirst().orElseThrow();
     }
 
     FibraEngine engine() {

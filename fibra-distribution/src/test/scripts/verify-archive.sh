@@ -101,10 +101,10 @@ for executable in node rg bash; do
   [[ -x "$install_root/runtime/bin/$executable" ]] || fail "缺少运行件：$executable"
 done
 
-cli_jars=("$install_root"/lib/fibra-cli-*.jar)
-[[ ${#cli_jars[@]} -eq 1 ]] || fail "lib 应恰好包含一个 fibra-cli JAR"
+readonly cli_jar="$install_root/lib/fibra-cli-$version.jar"
+[[ -f "$cli_jar" ]] || fail "lib 缺少版本匹配的 fibra-cli JAR"
 host_entries="$temporary_root/host.entries"
-jar tf "${cli_jars[0]}" > "$host_entries"
+jar tf "$cli_jar" > "$host_entries"
 if grep -Eq '^META-INF/fibra/plugin.yaml$|^com/sstlfsj/fibra/plugins/(fs|subprocess|shell|storage)/' "$host_entries"; then
   fail "正式插件被打入宿主 JAR"
 fi

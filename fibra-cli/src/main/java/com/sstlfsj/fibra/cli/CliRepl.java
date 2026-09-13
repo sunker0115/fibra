@@ -8,8 +8,6 @@ import org.jline.reader.impl.DefaultParser;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 import org.jline.terminal.impl.DumbTerminal;
-import picocli.CommandLine;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,7 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 
-/** 在同一命令树和宿主中连续执行命令的交互入口。 */
+/** 在同一宿主中按行捕获命令代并连续执行命令的交互入口。 */
 final class CliRepl {
     private static final List<String> GLOBAL_OPTIONS = List.of("--home", "--profile", "--config-root",
         "--plugins-root", "--data-root", "--node");
@@ -27,9 +25,9 @@ final class CliRepl {
     private CliRepl() {
     }
 
-    static int run(CommandLine commandLine, InputStream input, PrintWriter output, PrintWriter error,
+    static int run(Dispatcher dispatcher, InputStream input, PrintWriter output, PrintWriter error,
                    boolean useSystemTerminal) {
-        Objects.requireNonNull(commandLine, "commandLine");
+        Objects.requireNonNull(dispatcher, "dispatcher");
         Objects.requireNonNull(input, "input");
         Objects.requireNonNull(output, "output");
         Objects.requireNonNull(error, "error");
@@ -44,15 +42,18 @@ final class CliRepl {
             error.println("无法启动交互终端: " + failure.getMessage());
             return 3;
         }
-        return run(commandLine, terminal, output, error);
+        return run(dispatcher, terminal, output, error);
     }
 
-    static int run(CommandLine commandLine, Terminal terminal, PrintWriter output,
+    static int run(Dispatcher dispatcher, Terminal terminal, PrintWriter output,
                    PrintWriter error) {
         final int result;
         try {
             var reader = LineReaderBuilder.builder().terminal(terminal).build();
-            result = readLines(reader, commandLine, output, error);
+            try (var terminalController = new CliTerminalController(
+                terminal.input(), terminal.writer(), true)) {
+                result = readLines(reader, dispatcher, terminalController, output, error);
+            }
         } catch (RuntimeException | Error failure) {
             try {
                 terminal.close();
@@ -70,8 +71,9 @@ final class CliRepl {
         return result;
     }
 
-    private static int readLines(LineReader reader, CommandLine commandLine, PrintWriter output,
-                                 PrintWriter error) {
+    private static int readLines(LineReader reader, Dispatcher dispatcher,
+                                 CliTerminalController terminalController,
+                                 PrintWriter output, PrintWriter error) {
         var parser = new DefaultParser();
         while (true) {
             final String line;
@@ -93,12 +95,17 @@ final class CliRepl {
                 error.println("不能在 REPL 中递归启动 repl");
                 continue;
             }
-            try {
-                commandLine.execute(arguments);
+            try (var invocationTerminal = terminalController.openInvocation()) {
+                dispatcher.execute(arguments, invocationTerminal);
             } catch (RuntimeException failure) {
                 error.println("命令执行失败: " + failure.getMessage());
             }
         }
+    }
+
+    @FunctionalInterface
+    interface Dispatcher {
+        int execute(String[] arguments, com.sstlfsj.fibra.cli.api.CliTerminal terminal);
     }
 
     private static String[] arguments(DefaultParser parser, String line, PrintWriter error) {

@@ -9,6 +9,9 @@ import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
 import com.sstlfsj.fibra.engine.FileEngineStateStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.PublishedRuntime;
+import com.sstlfsj.fibra.engine.PublishedView;
+import com.sstlfsj.fibra.bridge.ContributionId;
+import com.sstlfsj.fibra.bridge.ContributionKind;
 import com.sstlfsj.fibra.example.sanitizer.ContentSanitizerContribution;
 import com.sstlfsj.fibra.example.sanitizer.SanitizeRequest;
 import com.sstlfsj.fibra.example.sanitizer.SanitizeResult;
@@ -86,9 +89,16 @@ public final class ContentSanitizerScenario implements AutoCloseable {
 
     public SanitizeResult sanitize(SanitizeRequest request) {
         var view = published.current();
-        return published.invoke(view.viewRevision(), ContentSanitizerContribution.KIND,
+        return published.invoke(view.viewRevision(), identity(view, ContentSanitizerContribution.KIND,
+            ContentSanitizerContribution.id(INSTANCE_ID)), ContentSanitizerContribution.KIND,
             ContentSanitizerContribution.id(INSTANCE_ID), request)
             .block(OPERATION_TIMEOUT);
+    }
+
+    private static long identity(PublishedView view, ContributionKind<?, ?, ?> kind, ContributionId id) {
+        return view.contributions().entries().stream()
+            .filter(entry -> entry.kind().equals(kind.name()) && entry.id().equals(id))
+            .map(entry -> entry.registrationIdentity()).findFirst().orElseThrow();
     }
 
     public void remove() {

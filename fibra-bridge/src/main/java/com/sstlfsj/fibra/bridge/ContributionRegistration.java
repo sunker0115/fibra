@@ -4,4 +4,6 @@ import com.sstlfsj.fibra.Disposable;
 
 public interface ContributionRegistration extends Disposable {
     ContributionId id();
+
+    long registrationIdentity();
 }

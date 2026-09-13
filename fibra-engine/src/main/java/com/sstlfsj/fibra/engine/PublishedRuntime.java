@@ -12,6 +12,7 @@ public interface PublishedRuntime {
     Flux<PublishedView> views();
 
     <D, I, O> Mono<O> invoke(String expectedViewRevision,
+                             long expectedRegistrationIdentity,
                              ContributionKind<D, I, O> kind,
                              ContributionId id, I input);
 }

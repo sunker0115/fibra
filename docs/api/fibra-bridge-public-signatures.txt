@@ -98,12 +98,15 @@ public interface com.sstlfsj.fibra.bridge.ContributionRegistrar {
 Compiled from "ContributionRegistration.java"
 public interface com.sstlfsj.fibra.bridge.ContributionRegistration extends com.sstlfsj.fibra.Disposable {
   public abstract com.sstlfsj.fibra.bridge.ContributionId id();
+  public abstract long registrationIdentity();
 }
 ## com.sstlfsj.fibra.bridge.ContributionRoutes
 Compiled from "ContributionRoutes.java"
 public final class com.sstlfsj.fibra.bridge.ContributionRoutes {
   public <D, I, O> com.sstlfsj.fibra.bridge.ContributionCall<I, O> acquire(com.sstlfsj.fibra.bridge.ContributionKind<D, I, O>, com.sstlfsj.fibra.bridge.ContributionId);
+  public <D, I, O> com.sstlfsj.fibra.bridge.ContributionCall<I, O> acquire(com.sstlfsj.fibra.bridge.ContributionKind<D, I, O>, com.sstlfsj.fibra.bridge.ContributionId, long);
   public <D, I, O> reactor.core.publisher.Mono<O> invoke(com.sstlfsj.fibra.Context, com.sstlfsj.fibra.bridge.ContributionKind<D, I, O>, com.sstlfsj.fibra.bridge.ContributionId, I);
+  public <D, I, O> reactor.core.publisher.Mono<O> invoke(com.sstlfsj.fibra.Context, com.sstlfsj.fibra.bridge.ContributionKind<D, I, O>, com.sstlfsj.fibra.bridge.ContributionId, long, I);
 }
 ## com.sstlfsj.fibra.bridge.ContributionServices
 Compiled from "ContributionServices.java"
@@ -123,11 +126,12 @@ public final class com.sstlfsj.fibra.bridge.ContributionSnapshot extends java.la
 ## com.sstlfsj.fibra.bridge.ContributionSnapshotEntry
 Compiled from "ContributionSnapshotEntry.java"
 public final class com.sstlfsj.fibra.bridge.ContributionSnapshotEntry extends java.lang.Record {
-  public com.sstlfsj.fibra.bridge.ContributionSnapshotEntry(com.sstlfsj.fibra.bridge.ContributionId, java.lang.String, java.lang.Object);
+  public com.sstlfsj.fibra.bridge.ContributionSnapshotEntry(com.sstlfsj.fibra.bridge.ContributionId, long, java.lang.String, java.lang.Object);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public com.sstlfsj.fibra.bridge.ContributionId id();
+  public long registrationIdentity();
   public java.lang.String kind();
   public java.lang.Object descriptor();
 }

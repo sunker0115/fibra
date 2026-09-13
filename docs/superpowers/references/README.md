@@ -13,8 +13,9 @@
   定位，以及 Fibra 对每项能力的吸收或拒绝结论。
 - [插件依赖、装载与更新基线](2026-09-09-plugin-dependency-baselines.md)：IDEA、PF4J 与 DeepSeek
   Harness 的依赖图、ClassLoader、配置更新、客户端插件和发布策略证据。
-- [行为验收账本](2026-09-11-behavior-verification-ledger.md)：71 项 Cordis 原始行为与 44 项 Fibra
-  额外回归的逐项方法清单和通过证据；现有 CLI/ZIP 属于 vNext 第 1–10 节，不证明 F1–F4。
+- [行为验收账本](2026-09-11-behavior-verification-ledger.md)：71 项 Cordis 原始行为、44 项 Fibra
+  额外回归、第 1–10 节发行证据与独立 F1 命令代/仓外消费者证据；旧 CLI/ZIP 结果不冒充 F1，F1 结果也
+  不证明 F2–F4。
 - [后续架构真源与外部参考审计](2026-09-13-architecture-source-audit.md)：唯一真源矩阵，DSH/Cordis、
   AgentCLI、PaiCLI、Picocli 4.7.7、JLine 4.4.3 的固定源码证据，外部事实与 Fibra 推导分级，以及本次
   审计级别 P0/P1/P2 闭环。

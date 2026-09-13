@@ -4,9 +4,9 @@
 仓库外真实调用、可复现发布、空 Maven 仓分发门禁、最终全仓与公开 API 复验均已有最终本地证据；平台
 限定证据见第 5、6 节。
 
-状态边界：本账本记录的正式宿主 CLI、REPL 与可运行 ZIP 属于 vNext 架构第 1–10 节已完成范围；它们没有
-公开 `fibra-cli-api`、动态 command contribution、受控终端租约或 F1–F4 的新契约测试，因此不证明
-F1–F4 任一阶段完成。第 11 节 F1–F4 仍全部尚未实施。
+状态边界：第 6 节记录的正式宿主 CLI、REPL 与可运行 ZIP 是 vNext 架构第 1–10 节的历史完成证据；它们
+没有公开 `fibra-cli-api`、动态 command contribution、受控终端租约或命令代竞态测试，不能冒充 F1。
+第 7 节单独记录 F1 新证据。当前第 1–10 节与 F1 已完成，F2–F4 尚未实施。
 
 本账本把两类当前验收对象分开记录：
 
@@ -219,7 +219,7 @@ artifact 与 desired graph 的 `ApplyDeployment` 验证多制品暂存、运行�
 公共签名门禁已纳入 `fibra-tool-api`、四个动态 contract 和 `fibra-api` 取消 API；版本断言读取 Maven 注入的
 `${project.version}`，没有写死 snapshot 版本。
 
-## 6. vNext 最终架构与分发证据
+## 6. vNext 第 1–10 节最终架构与分发证据
 
 | 验收项 | 证据与结论 |
 |---|---|
@@ -236,3 +236,20 @@ artifact 与 desired graph 的 `ApplyDeployment` 验证多制品暂存、运行�
 平台边界：最终 ZIP 实测平台为 macOS 26.6.2 arm64，携带该目标平台的 Node 与 ripgrep。Windows 文件
 发布、Job Object 和 Linux user-systemd 已有实现、注入测试及既有 Ubuntu 构建证据，但本次未在 Windows
 或 Linux 实机解压最终 ZIP，因此不记录为对应平台的最终运行门禁通过。
+
+## 7. F1 公开 CLI 组合边界证据
+
+F1 不复用第 6 节的旧 CLI/ZIP 结果抵扣完成条件；新增证据按公开契约、真实运行路径和仓外发行三层记录：
+
+| 验收项 | F1 证据与结论 |
+|---|---|
+| 注册身份与准入 | `ContributionCallTest`、`ContributionDrainLifecycleTest`、`PublishedRuntimePublicationTest` 与 `PublishedRuntimeLeaseTest` 覆盖单调且不复用的 `registrationIdentity`、错误身份拒绝、revision 冲突、准入后旧 route 持有至 invocation Scope 清理以及受影响变更排空；`PublishedRuntime` 不保留省略注册身份的兼容重载 |
+| 公开 CLI 边界 | 新的 `fibra-cli-api` 只依赖 `fibra-api`/`fibra-bridge`，公开 `CliApplication`、Fibra descriptor/handler、`CliInvocation`、输出、退出状态和终端租约；`ArchitectureBaselineTest` 禁止其依赖 Engine、Registry、Picocli、JLine 或 Spring，`ApiSignatureBaselineTest` 同时冻结 `fibra-cli-api` 与 `FibraCli.run(CliApplication, ...)` |
+| 命令代 | `CommandGenerationTest` 在真实 Engine 和 `ContributionDirectory` 上先捕获并解析旧代，再同名重注册；更新后旧解析、help 与补全仍只见旧 descriptor，未订阅 invocation 以旧 revision/identity 准入失败，旧、新 handler 均未误调用，新代才可调用新 handler。Picocli `CommandSpec` 每次操作重建，不作为并发快照或命令代身份 |
+| 一次性与 REPL | `FibraCliTest` 以标准 Java 插件包经 `RuntimeDomain → ContributionDirectory → PublishedView` 发布动态命令，覆盖一次性执行、动态 help、同一 REPL 下一行重新捕获、停用后消失、动态发现宿主失败稳定返回 3，以及同路径冲突稳定返回 4 且不向调用方抛异常；`CliApplication` bootstrap command 与动态 command 共用结构化请求和退出状态，不取得 `Context`、Engine、Registry 或 `PublishedRuntime` |
+| 终端租约 | `CliTerminalControllerTest`、`CliReplTest` 与 `FibraCliTest` 覆盖非交互 `UNSUPPORTED`、同 lane `BUSY`、关闭后 `CLOSED`，以及动态命令成功、异常或遗忘关闭时由 invocation scope 强制释放、下一行可重新取得。raw mode、resize、`0x03` 和调用级信号仍属 F3/F4，未宣称完成 |
+| 仓外消费者与发行 | `verification/distribution/java-plugin` 仅以 `provided` 依赖发布的 `fibra-cli-api`，同一真实插件继续贡献并调用已发布工具；`scripts/verify-distribution.sh` 从隔离空 Maven 仓构建消费者，再从 ZIP `bin/fibra` 执行动态命令和 `external-cli echo --help`，停用插件后验证命令消失。正式发布集合增至严格 27 个，`fibra-cli-api` 同时进入可复现制品比较 |
+
+F1 的完成不改变 F2–F4 边界：持久安全历史、高亮和完整交互补全属于 F2；普通 REPL `Ctrl+C`、raw
+terminal lease 的 `0x03`、外部 `SIGINT/SIGTERM` 汇流与调用级取消属于 F3；raw/resize/redisplay、兼容性
+规则和 CLI 框架冻结属于 F4。

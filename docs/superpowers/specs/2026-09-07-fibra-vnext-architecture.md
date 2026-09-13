@@ -2,7 +2,7 @@
 
 日期：2026-09-07
 
-状态：第 1–10 节设计、实现、自动化交付验收与独立审核已完成；第 11 节 F1–F4 为尚未实施的后续路线（2026-09-13）
+状态：第 1–10 节与第 11 节 F1 已完成；F2–F4 尚未实施（2026-09-13）
 
 本文是 Fibra vNext 唯一权威设计，定义最终系统边界、运行模型、模块职责和验收标准；不记录旧版本
 迁移过程，也不按参考项目组织正文。外部实现的源码对拍统一收录在
@@ -1149,8 +1149,9 @@ DSH 的插件行为基线构成功能等价门禁；其他来源用于解释取�
 
 ## 11. Fibra CLI 完成路线与上层 Agent 产品边界
 
-本节定义第 1–10 节交付完成后的演进路线。F1–F4 均尚未实施，现有固定管理命令、一次性执行、REPL、
-CLI/ZIP 验收只证明第 1–10 节的封闭 Fibra CLI 与发行范围，不能作为 F1–F4 任一阶段的完成证据。
+本节定义第 1–10 节交付完成后的演进路线。F1 已完成公开 CLI 组合边界；F2–F4 尚未实施。第 1–10 节
+已有的固定管理命令、一次性执行、REPL 与 CLI/ZIP 验收只证明当时的封闭 CLI，不能冒充 F1 证据；F1
+由本节列出的命令代、显式准入身份、动态 Java command、终端租约和仓外消费者测试单独证明。
 后续不再把 DSH 的 Agent 产品能力继续堆入 Fibra 仓库，而采用与 Cordis/DSH 相同的
 上下层关系：Fibra 负责通用运行时、插件宿主和完整 CLI 框架；另建上层 Agent 产品项目，依赖 Fibra
 发布物并组合 Model、Agent、Session、MCP、Skill、Workflow、UI 等产品能力。
@@ -1227,35 +1228,33 @@ Fibra 内部实现。该项目负责：
 ### 11.2 Fibra CLI 框架的完成定义
 
 当前 `fibra-cli` 已有固定管理命令、一次性执行、共享 Engine 的 REPL、稳定 JSON 输出、profile 路径、
-关闭 hook 和真实发行入口，但仍是一个封闭应用：命令树、`CliHost`、REPL 和调用管理没有形成可供上层
-产品组合的公开边界，交互历史、补全、高亮和调用级 `Ctrl+C` 也尚未完成。
+关闭 hook 和真实发行入口。F1 已把应用元数据、bootstrap command、动态 command descriptor、调用上下文、
+输出、退出状态和终端租约提取为公开组合边界；交互历史、高亮、运行时补全体验和调用级 `Ctrl+C` 仍分别
+属于 F2/F3/F4，尚未完成。
 
-CLI 完成后采用以下模块边界：
+F1 起采用以下模块边界：
 
 | 模块 | 类型 | 职责 |
 |---|---|---|
-| `fibra-cli-api` | 新的宿主可见公开 API | CLI 应用构建、bootstrap 命令、动态 command contribution、调用上下文、取消、输出通道和退出状态契约 |
+| `fibra-cli-api` | 宿主可见公开 API | CLI 应用构建、bootstrap 命令、动态 command contribution、调用上下文、取消、输出通道、退出状态和受控终端租约契约 |
 | `fibra-cli` | CLI 实现与参考入口 | Picocli/JLine 实现、Fibra 固定管理命令、REPL、默认宿主创建和 `main` |
 | `fibra-distribution` | Fibra 参考发行 | 通用 Fibra CLI、正式基础插件、默认 profile 和仓库外验证 |
 | 上层产品的 CLI 模块 | 外部消费者 | 依赖 `fibra-cli-api`/`fibra-cli`，只提供产品 `main`、bootstrap 元数据与 renderer 宿主 |
 
-`fibra-cli-api` 不重新抽象 Picocli：bootstrap 命令可以明确使用 Picocli `CommandSpec` 或命令对象，
-Picocli 因此是该场景 API 的受控公开依赖；动态插件不跨 ClassLoader 传递 Picocli 对象，而是发布
-框架定义的命令 descriptor 与结构化 invocation contribution。JLine 类型和 renderer 实现仍是
-`fibra-cli` 私有细节。API 至少提供：
+`fibra-cli-api` 不暴露或重新抽象 Picocli。bootstrap 与动态命令都声明 Fibra 的不可变 descriptor 和
+结构化 handler；`fibra-cli` 为每次操作构造 lane-local Picocli `CommandSpec`。Picocli、JLine 和 renderer
+实现均是 `fibra-cli` 私有细节，不能跨 ClassLoader 或公共 API 传递。F1 公开 API 提供：
 
-- `CliApplication` 或等价 builder，用于选择根命令元数据、添加静态命令模块并启动一次性或 REPL 模式；
-- 每次命令调用独有的 `CliInvocation`，携带 cancellation、deadline、stdout/stderr 模式及只读 profile
+- `CliApplication` builder，用于选择根命令元数据和添加静态 bootstrap command；`FibraCli.run` 启动一次性
+  或 REPL 模式；
+- 每次命令调用独有的 `CliInvocation`，携带 cancellation、stdout/stderr 输出、受控 terminal 及只读 profile
   信息；不能暴露 RuntimeDomain `Context` 或 Engine 内部对象；
-- 受控的宿主能力入口，使产品命令只能取得 `PluginRegistry`、`PublishedRuntime` 和必要的路径视图；
-- contribution kind/Node 映射扩展点，使上层项目能识别自己的宿主可见贡献类型，但不能修改 Fibra 已发布
-  kind 或绕过 `ContributionDirectory`；
-- `CliCommandDescriptor`、结构化参数值和 command contribution kind；Java/Node 插件均可贡献命令路径、
-  参数、帮助、敏感标记和补全来源，执行仍经 `PublishedRuntime.invoke` 获得 revision、取消与排空语义；
-- 不暴露 JLine 类型的终端会话与独占租约：产品命令可查询 TTY/颜色/尺寸能力，在受控范围内暂停 line
-  reader、成为租约期内唯一输入读取者、读取按键/字节、进入和恢复 raw mode、接收 resize/interrupt、
-  写屏并请求 redisplay；关闭 invocation 会取消阻塞读取，非交互环境明确返回不支持，租约关闭或异常时
-  由框架恢复终端属性和提示符；
+- `CliCommandDescriptor`、结构化参数值和本地 command contribution kind；Java 插件可贡献命令路径、参数、
+  帮助、敏感标记和补全事实，执行仍经 `PublishedRuntime.invoke` 获得 revision、取消与排空语义。F1 不为
+  Node 命令臆造 wire codec；只有出现真实 Node command 消费者并冻结版本化协议后才扩展该 kind；
+- 不暴露 JLine 类型的终端会话与单 lane 独占租约：非交互调用稳定返回 `UNSUPPORTED`，同 lane 重入返回
+  `BUSY`，关闭后返回 `CLOSED`；invocation 结束时框架强制释放遗忘的租约。raw mode、resize、interrupt、
+  redisplay 和阻塞读取取消仍由 F3/F4 定义，F1 不冒充已完成；
 - 统一的 usage、启动、业务调用、revision 冲突、关闭和取消退出状态；人类与机器输出走明确分离的通道。
 
 根 help/version、profile 解析和插件管理等 bootstrap 命令静态存在；Agent、Session、MCP 等产品命令由
@@ -1285,7 +1284,7 @@ usage 与补全，只能使用这组已捕获事实，过程中不得重新读�
 | Boot、package、bundle、profile | 环境分层、配置组合、启动审计；安装包、bundle patch、profile 和最终配置分层 | Fibra 已完成 | 继续由 Fibra 提供，上层项目只声明自己的 profile/bundle/package |
 | 插件生命周期 | 依赖驱动激活、异步 effect、服务撤销等待、条件/isolate、局部更新、主动停用 | Fibra 已完成 | 所有上层产品插件复用，不建产品私有容器 |
 | fs、搜索、shell、subprocess、storage | contract/provider/tool 分层；搜索经 subprocess；进程树排空；具名存储与变更事件 | Fibra 已完成本期范围 | 保留 Fibra 正式发布物；图片、Jobs、PTY、Sandbox 不冒充已完成 |
-| CLI 交互 | DSH 的 commands/questions/approval 均为插件；AgentCLI/PaiCLI 有 JLine 历史、补全、高亮和 renderer | Fibra 部分完成 | F1 至 F4 完成 bootstrap 与动态 command contribution；产品 command/questions/approval/renderer 均留上层插件 |
+| CLI 交互 | DSH 的 commands/questions/approval 均为插件；AgentCLI/PaiCLI 有 JLine 历史、补全、高亮和 renderer | Fibra F1 已完成，F2–F4 未完成 | F1 已交付 bootstrap、不可变命令代与动态 Java command；安全历史、交互增强、调用级取消和终端冻结继续由 F2–F4 完成，产品 command/questions/approval/renderer 均留上层插件 |
 | Model | provider 路由、模型发现、配置解析和流式适配 | 未实现 | 上层项目动态 contract/provider 插件 |
 | Agent | Agent factory、轮次/步骤、模型流与工具调度；完整实现依赖 Session | 未实现 | 上层项目 Agent 插件；先以 invocation 内状态闭合 Model/Tool，再按产品架构真源接入独立 Session |
 | Tool 流水线 | schema、作用域、guard、pre/execute/post/result 和多种呈现 | Fibra 已有公开工具调用 | 通用调用留 Fibra；Agent 选择、审批和产品呈现留上层项目 |
@@ -1307,23 +1306,26 @@ usage 与补全，只能使用这组已捕获事实，过程中不得重新读�
 
 ### 11.4 Fibra 仓库实施阶段
 
-后续先完成 F1 至 F4。F4 通过前不创建上层 Agent 产品仓库，以免产品代码反向塑造尚未稳定的 CLI SPI。
+F1 已完成，后续依次完成 F2 至 F4。F4 通过前不创建上层 Agent 产品仓库，以免产品代码反向塑造尚未
+稳定的 CLI SPI。
 
-#### F1：公开 CLI 组合边界
+#### F1：公开 CLI 组合边界（已完成，2026-09-13）
 
-- 新建 `fibra-cli-api`，从当前封闭 `FibraCli`/`CliHost` 中提取最小应用构建、bootstrap 命令、动态
+- 已新建 `fibra-cli-api`，从封闭 `FibraCli`/`CliHost` 中提取最小应用构建、bootstrap 命令、动态
   command contribution、调用上下文、输出、退出状态和受控终端租约；`fibra-cli` 继续提供默认实现和
   现有固定命令。
-- 一次性命令与 REPL 必须经过同一命令代和 invocation 创建路径；CLI 先解析最小启动参数，再从
+- 一次性命令与 REPL 已经过同一命令代和 invocation 创建路径；CLI 先解析最小启动参数，再从
   `PublishedView` 的 command contributions 捕获 descriptor、贡献注册身份和 revision 后建树。解析、
   help、补全固定使用这次捕获；执行前必须以同一身份/revision 经 `PublishedRuntime` 准入。尚未准入即
-  发生代变化时返回 stale/revoked，不调用旧 handler，也不转向同名新 handler。上层命令只能使用
-  Registry、`PublishedRuntime` 和声明的 profile/path 视图。
-- 建立仓库外临时 Maven 消费者，只依赖已安装到隔离仓库的 Fibra 发布物，加载一个真实 Java command
-  插件，执行其动态命令、停用并验证命令消失；同时调用一个已发布工具，并通过 fake/dumb terminal 验证
-  租约恢复，证明无需包私有类型和 reactor。
+  发生代变化时返回 stale/revoked，不调用旧 handler，也不转向同名新 handler。command handler 只取得
+  `CliCommandRequest` 中的参数、取消、输出、terminal 和 profile/path 视图，不取得 `Context`、Engine、
+  Registry 或 `PublishedRuntime`；插件管理仍由 Fibra 固定管理命令和唯一 Host 控制面负责。
+- 已扩展仓库外临时 Maven 消费者，只依赖安装到隔离仓库的 Fibra 发布物，加载真实 Java command
+  插件，执行其动态命令、停用并验证命令消失，同时调用一个已发布工具；仓内公开路径测试通过
+  fake/dumb terminal 验证成功与失败后的租约恢复，证明无需包私有类型和 reactor。
 
-退出条件：公开 API 签名门禁通过；现有 CLI 命令和 distribution 无行为回归；契约测试证明解析中更新、
+完成证据：公开 API 签名门禁覆盖 `fibra-cli-api` 与 `FibraCli` 启动门面；现有 CLI 命令和 distribution
+无行为回归；契约测试证明解析中更新、
 help/补全中更新、执行准入前撤销和同名贡献替换均不跨代，且只有已准入 invocation 持有租约并参与排空；
 外部消费者从空 Maven 依赖仓构建、启动并完成扩展命令与真实工具调用。
 
@@ -1633,15 +1635,14 @@ token/event 多值流、持久游标、重放、慢消费者背压或断线续�
 
 ### 11.8 提交、验证与文档留痕
 
-Fibra 的 F1 至 F4 仍只维护本文和既有行为验收账本，不新建平行 spec/plan。每阶段使用一个“契约、实现与
-测试”提交；只有发行内容变化时再单独提交 distribution/外部验收，只有决定或证据变化时再提交文档。
-提交前运行受影响模块的 `mvn --offline -pl <modules> -am test`；公开 API 变化运行签名门禁，涉及发行时
-追加 `mvn --offline -pl fibra-distribution -am clean verify`。全仓、可复现制品和空 Maven 仓门禁只在
-F4 统一执行一次，不在每个阶段重复下载。
+Fibra 的 F1 至 F4 仍只维护本文和既有行为验收账本，不新建平行 spec/plan。每阶段使用一个包含契约、实现、
+测试、发行适配与证据回填的独立提交，不拆出会暂时制造不一致基线的平行提交。提交前运行受影响模块测试
+和公开 API 签名门禁；涉及发行边界时同时运行全仓、可复现制品和空 Maven 仓分发门禁。F4 仍须再次执行
+完整冻结门禁，不能复用 F1 的历史结果。
 
 上层项目建立后拥有自己的权威架构文档和行为验收账本，不把产品实现证据回填成 Fibra 已实现能力。
 每个 P 阶段同样要求实现与测试同提交、真实 provider 验收、仓库外 ZIP 验收和独立审核；发布里程碑从
 空 Maven 仓先取得 Fibra 正式发布物，再单独构建上层项目，以证明两仓边界真实成立。
 
-下一次实现从 F1 开始。F1 至 F4 完成以前，不创建 Model、Agent、Session、MCP 或其它 DSH 产品模块；
+下一次实现从 F2 开始。F2 至 F4 完成以前，不创建 Model、Agent、Session、MCP 或其它 DSH 产品模块；
 F4 的外部消费者和空仓门禁通过后，才创建上层 Agent 产品项目并进入其权威架构定义的首阶段。

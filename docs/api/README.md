@@ -107,7 +107,7 @@ context 重新派生，不持久化上次进程的宿主环境。
 比较；相同源不会覆盖 `ReplaceDesiredGraph` 等管理变更。源读取或解析失败会公开 `FAILED` 诊断，但
 last-good 目标仍可满足且 mutation gate 保持开放；恢复为相同内容时只清除源错误，不重启实例。
 
-`start()` 返回初始 `PublishedView`。`PublishedRuntime.current()` / `views()` 是状态、诊断和贡献的唯一已发布事实源；`invoke(expectedViewRevision, kind, id, input)` 保证目录选择与调用不跨 revision。托管宿主不能取得 `FibraRuntime`、`Context` 或 `Scope`。
+`start()` 返回初始 `PublishedView`。`PublishedRuntime.current()` / `views()` 是状态、诊断和贡献的唯一已发布事实源；`invoke(expectedViewRevision, expectedRegistrationIdentity, kind, id, input)` 同时校验捕获的 view revision 与非复用贡献注册身份。准入前冲突不调用旧 handler，也不转向同名新 handler；准入后 route 直到 invocation Scope 清理完成才释放。托管宿主不能取得 `FibraRuntime`、`Context` 或 `Scope`。
 
 `EngineSnapshot.instances()` 只包含 Engine 持有的声明实例，其快照提供 `publicationRequirement()` 和
 `requirementSatisfied()`。`RuntimeDiagnostics.plugins()` 则保留全域实例事实，包括没有配置声明的
@@ -132,6 +132,17 @@ ChangeSet 内提交多个 artifact 与完整 desired graph。Registry 只把请�
 并投影 artifact、desired、observed 三类事实。
 
 `ContributionKind` 描述 descriptor、输入、输出和 codec。Java handler 与 Node remote endpoint 登记到长期 `RuntimeDomain` 的 `ContributionDirectory`，名字由场景 adapter 渲染；宿主只使用已发布不可变路由。受影响条目先停止准入再排空，无关条目的调用不必等待。每次宿主调用拥有独立临时 Scope，成功、失败、取消均先清理 Scope，再释放调用租约。
+
+## CLI 组合 API
+
+`fibra-cli-api` 公开 `CliApplication`、bootstrap/dynamic command descriptor、`CliInvocation`、输出、退出状态
+和终端租约，不依赖或暴露 Picocli、JLine、Engine、Registry、`Context` 或 `CommandSpec`。动态 Java 插件以
+`CliCommandContributions.KIND` 注册命令；该 kind 在 F1 是本地贡献，没有 Node wire codec。
+
+`FibraCli.run(CliApplication, ...)` 是公开组合入口。一次性命令与 REPL 每行都捕获 descriptor、
+`registrationIdentity` 和 `viewRevision`，再构造本操作私有的可变 Picocli 树。非交互 terminal 返回
+`UNSUPPORTED`；REPL 单 lane 同时只允许一个租约，invocation 结束会强制回收遗忘的租约。raw mode、resize、
+`0x03` 取消和 redisplay 属 F3/F4，当前 API 不宣称已实现。
 
 ## Java 插件入口
 

@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -27,7 +28,8 @@ class ContributionCallTest {
             var owner = runtime.rootScope().context();
             var registration = directory.register(owner, COMMAND, "plugin", "command",
                 new CommandDescriptor("Command"), (invocation, input) -> Mono.just(input)).block();
-            var call = directory.current().routes().acquire(COMMAND, registration.id());
+            var call = directory.current().routes().acquire(COMMAND, registration.id(),
+                registration.registrationIdentity());
 
             assertEquals("done", call.invoke(owner, "done").block());
             var revoked = registration.dispose().toFuture();
@@ -44,7 +46,8 @@ class ContributionCallTest {
             var owner = runtime.rootScope().context();
             var registration = directory.register(owner, COMMAND, "plugin", "command",
                 new CommandDescriptor("Command"), (invocation, input) -> Mono.just(input)).block();
-            var call = directory.current().routes().acquire(COMMAND, registration.id());
+            var call = directory.current().routes().acquire(COMMAND, registration.id(),
+                registration.registrationIdentity());
 
             call.close();
             call.close();
@@ -60,7 +63,7 @@ class ContributionCallTest {
             var first = directory.register(owner, COMMAND, "plugin", "command",
                 new CommandDescriptor("First"), (invocation, input) -> Mono.just("first")).block();
             var oldRoutes = directory.current().routes();
-            var oldCall = oldRoutes.acquire(COMMAND, first.id());
+            var oldCall = oldRoutes.acquire(COMMAND, first.id(), first.registrationIdentity());
 
             var revoked = first.dispose().toFuture();
             assertFalse(revoked.isDone());
@@ -70,10 +73,32 @@ class ContributionCallTest {
                 new CommandDescriptor("Second"), (invocation, input) -> Mono.just("second")).block();
 
             assertThrows(ContributionUnavailableException.class,
-                () -> oldRoutes.acquire(COMMAND, second.id()));
-            try (var newCall = directory.current().routes().acquire(COMMAND, second.id())) {
+                () -> oldRoutes.acquire(COMMAND, second.id(), second.registrationIdentity()));
+            try (var newCall = directory.current().routes().acquire(COMMAND, second.id(),
+                second.registrationIdentity())) {
                 assertEquals("second", newCall.invoke(owner, "").block());
             }
+        }
+    }
+
+    @Test
+    void aReusedLogicalIdReceivesANewRegistrationIdentity() {
+        try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
+            var owner = runtime.rootScope().context();
+            var first = directory.register(owner, COMMAND, "plugin", "command",
+                new CommandDescriptor("First"), (invocation, input) -> Mono.just("first")).block();
+            var firstEntry = directory.current().snapshot().entries().getFirst();
+
+            first.dispose().block();
+            var second = directory.register(owner, COMMAND, "plugin", "command",
+                new CommandDescriptor("Second"), (invocation, input) -> Mono.just("second")).block();
+            var secondEntry = directory.current().snapshot().entries().getFirst();
+
+            assertNotEquals(firstEntry.registrationIdentity(), secondEntry.registrationIdentity());
+            assertEquals(second.registrationIdentity(), secondEntry.registrationIdentity());
+            assertThrows(ContributionUnavailableException.class, () ->
+                directory.current().routes().acquire(COMMAND, second.id(),
+                    firstEntry.registrationIdentity()));
         }
     }
 
@@ -83,7 +108,8 @@ class ContributionCallTest {
             var owner = runtime.rootScope().context();
             var registration = directory.register(owner, COMMAND, "plugin", "command",
                 new CommandDescriptor("Command"), (invocation, input) -> Mono.never()).block();
-            var call = directory.current().routes().acquire(COMMAND, registration.id());
+            var call = directory.current().routes().acquire(COMMAND, registration.id(),
+                registration.registrationIdentity());
             var invocation = call.invoke(owner, "").toFuture();
             try {
                 invocation.cancel(true);
@@ -108,8 +134,10 @@ class ContributionCallTest {
             var registration = directory.register(owner, COMMAND, "plugin", "command",
                 new CommandDescriptor("Command"), (invocation, input) -> Mono.just(input)).block();
             var routes = directory.current().routes();
-            var failed = routes.acquire(COMMAND, registration.id());
-            var retained = routes.acquire(COMMAND, registration.id());
+            var failed = routes.acquire(COMMAND, registration.id(),
+                registration.registrationIdentity());
+            var retained = routes.acquire(COMMAND, registration.id(),
+                registration.registrationIdentity());
             var draining = registration.dispose().toFuture();
 
             assertEquals(List.of(), directory.current().snapshot().entries());
@@ -123,7 +151,8 @@ class ContributionCallTest {
                 failure.getCause());
             assertEquals("invocation cleanup failed", drainFailure.detail());
             assertThrows(ContributionUnavailableException.class,
-                () -> routes.acquire(COMMAND, registration.id()));
+                () -> routes.acquire(COMMAND, registration.id(),
+                    registration.registrationIdentity()));
             assertTrue(directory.closeAsync().toFuture().isCompletedExceptionally());
             assertRuntimeCloseRetainsContributionFailure(runtime, "invocation cleanup failed");
         } finally {
@@ -141,14 +170,16 @@ class ContributionCallTest {
                     invocations.incrementAndGet();
                     return input;
                 })).block();
-            var call = directory.current().routes().acquire(COMMAND, registration.id());
+            var call = directory.current().routes().acquire(COMMAND, registration.id(),
+                registration.registrationIdentity());
             var delayed = call.invoke(owner, "delayed");
 
             call.close();
             assertThrows(IllegalStateException.class, delayed::block);
             assertEquals(0, invocations.get());
 
-            var once = directory.current().routes().acquire(COMMAND, registration.id());
+            var once = directory.current().routes().acquire(COMMAND, registration.id(),
+                registration.registrationIdentity());
             var invocation = once.invoke(owner, "once");
             assertEquals("once", invocation.block());
             assertThrows(IllegalStateException.class, invocation::block);
@@ -172,8 +203,10 @@ class ContributionCallTest {
             var registrations = directory.registerAll(owner.context(), "plugin", bindings,
                 () -> Mono.fromRunnable(afterDrain::incrementAndGet)).block();
             var routes = directory.current().routes();
-            var failed = routes.acquire(COMMAND, registrations.getFirst().id());
-            var retained = routes.acquire(COMMAND, registrations.get(1).id());
+            var failed = routes.acquire(COMMAND, registrations.getFirst().id(),
+                registrations.getFirst().registrationIdentity());
+            var retained = routes.acquire(COMMAND, registrations.get(1).id(),
+                registrations.get(1).registrationIdentity());
             var closing = owner.closeAsync().toFuture();
 
             assertEquals(List.of(), directory.current().snapshot().entries());

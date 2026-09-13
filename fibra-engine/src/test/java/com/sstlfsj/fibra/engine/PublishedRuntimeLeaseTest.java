@@ -50,7 +50,8 @@ class PublishedRuntimeLeaseTest {
             .catalog(PluginCatalog.of(new PluginCatalogEntry<>(definition, value -> (String) value))).build();
         try {
             var started = engine.start().block(TIMEOUT);
-            var invocation = engine.published().invoke(started.viewRevision(), COMMAND, ID, "value").toFuture();
+            var invocation = engine.published().invoke(started.viewRevision(), identity(started),
+                COMMAND, ID, "value").toFuture();
             assertEquals(1, cleanup.currentSubscriberCount());
             var reconciling = engine.published().views()
                 .filter(view -> view.engineDiagnostics().phase() == ChangePhase.RECONCILING).next().toFuture();
@@ -93,7 +94,7 @@ class PublishedRuntimeLeaseTest {
             var first = engine.start().block(TIMEOUT);
             var shutdown = new CompletableFuture<Void>();
             var invocation = engine.published().invoke(
-                first.viewRevision(), COMMAND, ID, "value")
+                first.viewRevision(), identity(first), COMMAND, ID, "value")
                 .materialize().doOnNext(signal -> {
                     closer.submit(() -> {
                         try {
@@ -130,7 +131,7 @@ class PublishedRuntimeLeaseTest {
         try (var engine = engine(repository, null, cleanup)) {
             var first = engine.start().block(TIMEOUT);
             var invocation = engine.published().invoke(
-                first.viewRevision(), COMMAND, ID, "value").subscribe();
+                first.viewRevision(), identity(first), COMMAND, ID, "value").subscribe();
             assertEquals(1, cleanup.currentSubscriberCount());
             invocation.dispose();
             var entered = new java.util.concurrent.CountDownLatch(1);
@@ -143,7 +144,7 @@ class PublishedRuntimeLeaseTest {
                 assertThrows(java.util.concurrent.TimeoutException.class,
                     () -> closing.get(100, TimeUnit.MILLISECONDS));
                 var rejected = assertThrows(IllegalStateException.class, () ->
-                    engine.published().invoke(first.viewRevision(), COMMAND, ID, "late")
+                    engine.published().invoke(first.viewRevision(), identity(first), COMMAND, ID, "late")
                         .block(TIMEOUT));
                 assertEquals("engine is closing", rejected.getMessage());
             } finally {
@@ -162,7 +163,7 @@ class PublishedRuntimeLeaseTest {
             var first = engine.start().block(TIMEOUT);
             var nextTarget = targetRevision(graph("new-"));
             var invocation = engine.published().invoke(
-                first.viewRevision(), COMMAND, ID, "value").toFuture();
+                first.viewRevision(), identity(first), COMMAND, ID, "value").toFuture();
             var nextView = engine.published().views()
                 .filter(view -> view.engineDiagnostics().phase() == ChangePhase.RECONCILING
                     && nextTarget.equals(view.engineDiagnostics().targetRevision()))
@@ -176,7 +177,7 @@ class PublishedRuntimeLeaseTest {
             assertEquals(nextTarget, reconciling.engineDiagnostics().targetRevision());
             assertConsistentPluginFacts(reconciling);
             assertThrows(PublishedRevisionConflictException.class, () ->
-                engine.published().invoke(first.viewRevision(), COMMAND, ID, "value")
+                engine.published().invoke(first.viewRevision(), identity(first), COMMAND, ID, "value")
                     .block(TIMEOUT));
 
             response.tryEmitValue("release");
@@ -186,7 +187,7 @@ class PublishedRuntimeLeaseTest {
             assertEquals(nextTarget, retired.engineDiagnostics().targetRevision());
             assertEquals(ChangePhase.IDLE, retired.engineDiagnostics().phase());
             assertEquals("new-value", engine.published().invoke(
-                retired.viewRevision(), COMMAND, ID, "value").block(TIMEOUT));
+                retired.viewRevision(), identity(retired), COMMAND, ID, "value").block(TIMEOUT));
         }
     }
 
@@ -200,7 +201,7 @@ class PublishedRuntimeLeaseTest {
             var first = engine.start().block(TIMEOUT);
             var nextTarget = targetRevision(graph("new-"));
             var invocation = engine.published().invoke(
-                first.viewRevision(), COMMAND, ID, "value").toFuture();
+                first.viewRevision(), identity(first), COMMAND, ID, "value").toFuture();
 
             assertEquals(1, cleanup.currentSubscriberCount());
             assertFalse(invocation.isDone());
@@ -229,7 +230,7 @@ class PublishedRuntimeLeaseTest {
             var first = engine.start().block(TIMEOUT);
             var commandIdentity = first.engine().instances().get("command").identity();
             var invocation = engine.published().invoke(
-                first.viewRevision(), COMMAND, ID, "value").toFuture();
+                first.viewRevision(), identity(first), COMMAND, ID, "value").toFuture();
 
             var updated = engine.submit(new ReplaceDesiredGraph(first.viewRevision(),
                 first.engine().desiredSource().revision(),
@@ -252,6 +253,12 @@ class PublishedRuntimeLeaseTest {
             .catalog(PluginCatalog.of(new PluginCatalogEntry<>(
                 definition(response, cleanup), value -> (String) value)))
             .build();
+    }
+
+    private static long identity(PublishedView view) {
+        return view.contributions().entries().stream()
+            .filter(entry -> entry.kind().equals(COMMAND.name()) && entry.id().equals(ID))
+            .findFirst().orElseThrow().registrationIdentity();
     }
 
     private static PluginDefinition<String> definition(Sinks.One<String> response,

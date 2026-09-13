@@ -8,8 +8,9 @@ Fibra 是 Java 21 的通用插件底座。它把生命周期与资源所有权�
 当前开发版本为 `0.5.0-SNAPSHOT`，是无兼容层的 vNext 重构。唯一权威设计是 [Fibra vNext 架构](docs/superpowers/specs/2026-09-07-fibra-vnext-architecture.md)。Java Harness 只是一个接入场景，参考 [Java Harness 集成](docs/superpowers/specs/2026-09-07-fibra-java-harness-integration.md)。
 
 当前快照已经交付长期 `RuntimeDomain`、实例差量更新、首次联合制品启动、provider-managed 子进程范围，
-以及 fs、fs-search、shell、storage 正式插件。正式 `fibra-cli` 宿主与交互命令树已进入仓库；可执行 ZIP
-和仓库外解压启动仍是后续交付项，因此当前 Maven CLI JAR 还不能描述为完整发行包。
+以及 fs、fs-search、shell、storage 正式插件。正式 `fibra-cli`、公开 `fibra-cli-api`、动态 Java command、
+受控终端租约、可执行 ZIP 和仓库外解压启动均已完成 F1 验收；F2–F4 的安全历史、交互增强、调用级取消
+和终端冻结仍未实施。
 
 ## 架构
 
@@ -40,6 +41,7 @@ Fibra 是 Java 21 的通用插件底座。它把生命周期与资源所有权�
 - `fibra-runtime-node`：受限 Node 入口、sidecar、JSON-RPC、心跳和进程树治理；
 - `fibra-bridge`：本地与远程贡献的统一目录、调用适配和 drain；
 - `fibra-registry`：面向管理面的安装、升级、启停、查询、watch 和审计；
+- `fibra-cli-api`：应用元数据、bootstrap/dynamic command、调用上下文、输出、退出状态和终端租约契约；
 - `fibra-cli`：profile 级正式宿主、插件管理、PublishedRuntime 工具调用和长期 REPL；
 - `fibra-spring`、`fibra-spring-boot-starter`：显式 Spring 服务桥接和组合入口；
 - `fibra-plugin-archetype`：生成独立 Java 插件工程，其主 JAR 用作安装包的 payload；
@@ -145,7 +147,8 @@ fibra [全局选项] apply
 fibra [全局选项] repl
 ```
 
-一次性命令和 REPL 使用同一命令树。REPL 在会话期间只创建一个 Engine/Registry 宿主，因此插件实例、
+一次性动态命令和 REPL 使用同一命令代规则与 invocation 准入路径；每次涉及运行时 command
+contribution 的操作从一个捕获视图新建私有 Picocli 解析对象，不跨线程或跨行共享 `CommandSpec`。REPL 在会话期间只创建一个 Engine/Registry 宿主，因此插件实例、
 ClassLoader、Node sidecar、effects 和在途调用不会因每行命令重建。`plugins install/upgrade` 接受明确的
 本地标准插件包路径并把内容复制到当前 profile 的不可变制品库；网络链接下载属于后续市场/来源适配层，
 不伪装成本地安装。`tools list` 与 `tools invoke` 都经过当前不可变 `PublishedView`，调用携带同一
@@ -254,13 +257,13 @@ scripts/verify-reproducible-release.sh
 scripts/verify-distribution.sh
 ```
 
-当前发布边界为 26 个 Maven 制品，其中包含正式 `fibra-cli` 和 12 个动态插件的 Java payload JAR；
-这些制品已纳入发布、可复现和临时仓部署清单；现有仓库外消费者尚不包含 CLI，须由最终 ZIP 分发门禁
-验证 CLI 依赖闭包与启动器。完整 reactor 覆盖真实 JAR、真实 Node 进程、目标恢复、Spring、archetype、
+当前发布边界为 27 个 Maven 制品，其中包含 `fibra-cli-api`、正式 `fibra-cli` 和 12 个动态插件的 Java
+payload JAR；这些制品已纳入发布、可复现和临时仓部署清单。仓库外消费者从 ZIP 启动器加载真实 Java
+command 插件，验证执行、help 与停用后消失。完整 reactor 覆盖真实 JAR、真实 Node 进程、目标恢复、Spring、archetype、
 架构边界和 JMH 编译门禁。
 
-本快照已合入正式 CLI 宿主和命令树，但尚未合入 ZIP 分发结构；最终全仓、公开 API、可复现和空 Maven
-仓及解压启动门禁必须在 ZIP 合入后统一重跑，不能沿用 pre-CLI 结果关闭交付。
+本快照已合入 F1 CLI 组合边界与 ZIP 分发结构；公开 API、全仓、可复现和空 Maven 仓及解压启动门禁
+必须随发行边界变化统一重跑，不能沿用 pre-F1 结果关闭交付。
 可运行示例见 [`fibra-example`](fibra-example/README.md)，公共入口见 [`docs/api`](docs/api/README.md)，
 发布边界见 [`docs/release.md`](docs/release.md)。
 

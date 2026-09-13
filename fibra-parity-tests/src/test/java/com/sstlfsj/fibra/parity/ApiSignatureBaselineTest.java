@@ -3,6 +3,8 @@ package com.sstlfsj.fibra.parity;
 import com.sstlfsj.fibra.Context;
 import com.sstlfsj.fibra.artifact.ArtifactStore;
 import com.sstlfsj.fibra.bridge.ContributionDirectory;
+import com.sstlfsj.fibra.cli.api.CliApplication;
+import com.sstlfsj.fibra.cli.FibraCli;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.plugins.fs.FileSystem;
@@ -47,6 +49,10 @@ class ApiSignatureBaselineTest {
             "com.sstlfsj.fibra.runtime.node."),
         new ModuleApi("fibra-registry", PluginRegistry.class,
             "com.sstlfsj.fibra.registry."),
+        new ModuleApi("fibra-cli-api", CliApplication.class,
+            "com.sstlfsj.fibra.cli.api."),
+        new ModuleApi("fibra-cli", FibraCli.class,
+            "com.sstlfsj.fibra.cli."),
         new ModuleApi("fibra-spring", FibraServiceBridge.class,
             "com.sstlfsj.fibra.spring."),
         new ModuleApi("fibra-spring-boot-starter", FibraAutoConfiguration.class,

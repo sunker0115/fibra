@@ -16,7 +16,7 @@ class ArchitectureBaselineTest {
     private static final List<String> MODULES = List.of(
         "fibra-api", "fibra-core", "fibra-config", "fibra-artifact",
         "fibra-engine", "fibra-bridge", "fibra-runtime-java",
-        "fibra-runtime-node", "fibra-registry", "fibra-cli", "fibra-spring",
+        "fibra-runtime-node", "fibra-registry", "fibra-cli-api", "fibra-cli", "fibra-spring",
         "fibra-spring-boot-starter", "fibra-plugin-archetype",
         "fibra-plugins", "fibra-distribution", "fibra-example", "fibra-parity-tests",
         "fibra-benchmarks");
@@ -87,6 +87,8 @@ class ArchitectureBaselineTest {
             "fibra-runtime-node", List.of("fibra-runtime-java", "fibra-registry",
                 "spring-context"),
             "fibra-registry", List.of("fibra-runtime-java", "fibra-runtime-node",
+                "spring-context"),
+            "fibra-cli-api", List.of("fibra-engine", "fibra-cli", "picocli", "jline",
                 "spring-context"));
 
         for (var entry : forbiddenByModule.entrySet()) {

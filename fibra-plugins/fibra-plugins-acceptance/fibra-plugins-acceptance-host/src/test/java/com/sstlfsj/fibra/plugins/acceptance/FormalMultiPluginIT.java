@@ -2,6 +2,8 @@ package com.sstlfsj.fibra.plugins.acceptance;
 
 import com.sstlfsj.fibra.CancellationSource;
 import com.sstlfsj.fibra.bridge.ContributionUnavailableException;
+import com.sstlfsj.fibra.bridge.ContributionId;
+import com.sstlfsj.fibra.bridge.ContributionKind;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
@@ -115,7 +117,8 @@ class FormalMultiPluginIT {
                 "fibra-tool-fs-search");
 
             var view = harness.engine().published().current();
-            var timed = harness.engine().published().invoke(view.viewRevision(),
+            var timed = harness.engine().published().invoke(view.viewRevision(), identity(view,
+                ToolContributions.KIND, ToolContributions.id("search-tools", "glob")),
                 ToolContributions.KIND, ToolContributions.id("search-tools", "glob"),
                 ToolRequest.of(Map.of("pattern", "*.txt"))).toFuture();
             awaitFile(entered, timed);
@@ -128,7 +131,8 @@ class FormalMultiPluginIT {
             Files.delete(pidFile);
             var cancellation = new CancellationSource();
             view = harness.engine().published().current();
-            var cancelled = harness.engine().published().invoke(view.viewRevision(),
+            var cancelled = harness.engine().published().invoke(view.viewRevision(), identity(view,
+                ToolContributions.KIND, ToolContributions.id("search-tools", "grep")),
                 ToolContributions.KIND, ToolContributions.id("search-tools", "grep"),
                 ToolRequest.of(Map.of("pattern", "needle"), cancellation.token())).toFuture();
             awaitFile(entered, cancelled);
@@ -162,10 +166,20 @@ class FormalMultiPluginIT {
             assertTrue(javaMap(isolated.get("values")).isEmpty());
             assertChanges(harness.invoke("config-c", "changes", Map.of()));
 
+            var captured = harness.engine().published().current();
+            var capturedIdentities = new LinkedHashMap<String, Long>();
+            for (var tool : List.of("load", "put", "remove", "changes")) {
+                capturedIdentities.put(tool, identity(captured, ToolContributions.KIND,
+                    ToolContributions.id("config-b", tool)));
+            }
             harness.registry().disable("config-b").block(PluginAcceptanceHarness.TIMEOUT);
+            var disabledView = harness.engine().published().current();
             for (var tool : List.of("load", "put", "remove", "changes")) {
                 assertThrows(ContributionUnavailableException.class,
-                    () -> harness.invoke("config-b", tool, Map.of()));
+                    () -> harness.engine().published().invoke(disabledView.viewRevision(),
+                        capturedIdentities.get(tool), ToolContributions.KIND,
+                        ToolContributions.id("config-b", tool), ToolRequest.of(Map.of()))
+                        .block(PluginAcceptanceHarness.TIMEOUT));
             }
             harness.invoke("config-a", "put", Map.of("key", "language", "value", "zh-CN"));
             harness.registry().enable("config-b").block(PluginAcceptanceHarness.TIMEOUT);
@@ -234,7 +248,8 @@ class FormalMultiPluginIT {
                 + "; : > " + shellQuote(entered)
                 + "; while [ ! -e " + shellQuote(release) + " ]; do sleep 0.05; done; printf held";
             var heldView = harness.engine().published().current();
-            var held = harness.engine().published().invoke(heldView.viewRevision(),
+            var held = harness.engine().published().invoke(heldView.viewRevision(), identity(heldView,
+                ToolContributions.KIND, ToolContributions.id("shell-tools", "bash")),
                 ToolContributions.KIND, ToolContributions.id("shell-tools", "bash"),
                 ToolRequest.of(Map.of("command", command, "workdir", content.toString(),
                     "timeoutMs", 15_000))).toFuture();
@@ -281,9 +296,11 @@ class FormalMultiPluginIT {
             InMemoryDesiredStateRepository.empty())) {
             harness.deploy(graph, PluginAcceptanceHarness.ALL_ARTIFACTS);
             var current = harness.engine().published().current();
+            var heldIdentity = identity(current, ToolContributions.KIND,
+                ToolContributions.id("shell-tools", "bash"));
             var command = ": > " + shellQuote(entered) + "; while [ ! -e "
                 + shellQuote(release) + " ]; do sleep 0.05; done; printf drained";
-            var held = harness.engine().published().invoke(current.viewRevision(),
+            var held = harness.engine().published().invoke(current.viewRevision(), heldIdentity,
                 ToolContributions.KIND, ToolContributions.id("shell-tools", "bash"),
                 ToolRequest.of(Map.of("command", command, "workdir", content.toString(),
                     "timeoutMs", 15_000))).toFuture();
@@ -301,7 +318,8 @@ class FormalMultiPluginIT {
             var after = harness.engine().published().current();
             assertFalse(after.engine().instances().containsKey("shell-tools"));
             assertThrows(ContributionUnavailableException.class, () ->
-                harness.engine().published().invoke(after.viewRevision(), ToolContributions.KIND,
+                harness.engine().published().invoke(after.viewRevision(), heldIdentity,
+                    ToolContributions.KIND,
                     ToolContributions.id("shell-tools", "bash"), ToolRequest.of(Map.of(
                         "command", "true", "workdir", content.toString(), "timeoutMs", 1_000)))
                     .block(PluginAcceptanceHarness.TIMEOUT));
@@ -392,6 +410,12 @@ class FormalMultiPluginIT {
         var result = new LinkedHashMap<String, Long>();
         for (var id : ids) result.put(id, view.engine().instances().get(id).identity());
         return result;
+    }
+
+    private static long identity(PublishedView view, ContributionKind<?, ?, ?> kind, ContributionId id) {
+        return view.contributions().entries().stream()
+            .filter(entry -> entry.kind().equals(kind.name()) && entry.id().equals(id))
+            .map(entry -> entry.registrationIdentity()).findFirst().orElseThrow();
     }
 
     private static Map<String, String> resourceIdentities(PublishedView view, String... artifactIds) {

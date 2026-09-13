@@ -10,7 +10,7 @@
 | 范围 | 唯一真源 | 当前状态 | 不得误用的证据 |
 |---|---|---|---|
 | Fibra vNext 已交付底座 | [vNext 架构第 1–10 节](../specs/2026-09-07-fibra-vnext-architecture.md) | 已完成 | 不能由历史部分绿色构建替代最终账本 |
-| Fibra CLI 演进 | [vNext 架构第 11 节 F1–F4](../specs/2026-09-07-fibra-vnext-architecture.md) | 全部尚未实施 | 现有固定 CLI、REPL 与 ZIP 只属于第 1–10 节，不能抵扣 F1–F4 |
+| Fibra CLI 演进 | [vNext 架构第 11 节 F1–F4](../specs/2026-09-07-fibra-vnext-architecture.md) | F1 已完成；F2–F4 尚未实施 | F1 之前的固定 CLI、REPL 与 ZIP 只属于第 1–10 节，不能抵扣 F1；F1 证据也不能抵扣 F2–F4 |
 | 上层 Agent 产品 | [CLI + Desktop Agent 产品架构](../specs/2026-09-13-fibra-based-agent-product-architecture.md) | P0–P8 全部尚未实施 | vNext 不再保存第二套产品阶段表；其它文档不能重排或重定义 P0–P8 |
 
 后续架构的 DSH 契约统一固定为 `@deepseek-ai/dsh 0.1.5-rc.2`、提交

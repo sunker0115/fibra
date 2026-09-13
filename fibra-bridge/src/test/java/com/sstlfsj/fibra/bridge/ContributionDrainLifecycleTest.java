@@ -43,7 +43,8 @@ class ContributionDrainLifecycleTest {
                 runtime.rootScope().context().plugins().instances();
                 assertEquals(0, released.get());
                 assertFalse(closing.isDone());
-                assertThrows(ContributionUnavailableException.class, () -> routes.acquire(COMMAND, id));
+                assertThrows(ContributionUnavailableException.class, () ->
+                    routes.acquire(COMMAND, id));
                 assertThrows(RuntimeException.class, () -> child.get().context().plugins()
                     .mount("late-child", childDefinition.prepare(null)));
             } finally {

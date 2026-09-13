@@ -23,6 +23,10 @@
   <dependencies>
     <dependency>
       <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-cli-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
       <artifactId>fibra-engine</artifactId>
     </dependency>
     <dependency>
