@@ -25,6 +25,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CliReplTest {
     @Test
+    void noColorEnvironmentDisablesOnlyAnsiColor() {
+        assertTrue(CliRepl.colorEnabled(java.util.Map.of()));
+        assertFalse(CliRepl.colorEnabled(java.util.Map.of("NO_COLOR", "")));
+        assertFalse(CliRepl.colorEnabled(java.util.Map.of("NO_COLOR", "1")));
+    }
+
+    @Test
     void reusesOneHostForMultipleCommandsAndQuotedInput(@TempDir Path home) throws Exception {
         initialize(home);
         var opened = new AtomicInteger();
@@ -180,16 +187,20 @@ class CliReplTest {
     @Test
     void invocationScopeRestoresALeakedTerminalLeaseBeforeTheNextLine() throws Exception {
         var acquired = new AtomicInteger();
-        var terminal = new TrackingTerminal(false, "first\nsecond\nexit\n");
+        var terminal = new InteractiveTrackingTerminal("first\nsecond\nexit\n");
         var error = new ByteArrayOutputStream();
+        var invocations = new CliInvocationCoordinator();
 
-        var exitCode = CliRepl.run((arguments, invocationTerminal) -> {
-            invocationTerminal.acquire();
-            if (acquired.incrementAndGet() == 1) {
-                throw new IllegalStateException("simulated command failure");
+        var exitCode = CliRepl.run((arguments, terminals) -> {
+            try (var invocation = invocations.begin();
+                 var invocationTerminal = terminals.openInvocation(invocation)) {
+                invocationTerminal.acquire();
+                if (acquired.incrementAndGet() == 1) {
+                    throw new IllegalStateException("simulated command failure");
+                }
+                return 0;
             }
-            return 0;
-        }, terminal, writer(new ByteArrayOutputStream()), writer(error));
+        }, terminal, writer(new ByteArrayOutputStream()), writer(error), null, null);
 
         assertEquals(0, exitCode);
         assertEquals(2, acquired.get());

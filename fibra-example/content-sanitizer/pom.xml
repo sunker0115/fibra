@@ -14,7 +14,6 @@
   <name>Fibra Content Sanitizer Example</name>
   <modules>
     <module>api</module>
-    <module>java-host</module>
     <module>spring-host</module>
   </modules>
 </project>

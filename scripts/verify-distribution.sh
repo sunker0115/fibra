@@ -59,8 +59,26 @@ readonly revision="$(read_property revision)"
 readonly junit_version="$(read_property junit.version)"
 readonly spring_boot_version="$(read_property spring-boot.version)"
 readonly archetype_plugin_version="$(read_property maven-archetype-plugin.version)"
+readonly dependency_plugin_version="$(read_property maven-dependency-plugin.version)"
 readonly temporary_root="$(mktemp -d)"
 trap 'rm -rf "$temporary_root"' EXIT
+
+fibra_java_executable=""
+if [[ -n "${JAVA_HOME:-}" && -x "$JAVA_HOME/bin/java" ]]; then
+  fibra_java_executable="$JAVA_HOME/bin/java"
+else
+  fibra_java_executable="$(command -v java || true)"
+fi
+[[ -n "$fibra_java_executable" ]] || {
+  echo "分发验证需要 Java 可执行文件" >&2
+  exit 1
+}
+readonly fibra_java_executable
+readonly fibra_python_executable="$(command -v python3 || true)"
+[[ -n "$fibra_python_executable" ]] || {
+  echo "分发验证需要 Python 3 运行真实 PTY 门禁" >&2
+  exit 1
+}
 
 readonly remote_repository="$temporary_root/remote"
 readonly build_repository="$temporary_root/build"
@@ -275,6 +293,17 @@ fi
   -Dspring-boot.version="$spring_boot_version" \
   -f "$consumer_project/pom.xml" clean verify
 
+readonly cli_fixture_classpath_file="$temporary_root/cli-fixture.classpath"
+"$maven_executable" --settings "$consumer_project/settings.xml" \
+  --batch-mode --no-transfer-progress \
+  -Dmaven.repo.local="$consumer_repository" \
+  -Dfibra.repository.url="file://$remote_repository" \
+  -Dfibra.version="$revision" -Djunit.version="$junit_version" \
+  -Dspring-boot.version="$spring_boot_version" \
+  -f "$consumer_project/cli-application/pom.xml" \
+  "org.apache.maven.plugins:maven-dependency-plugin:$dependency_plugin_version:build-classpath" \
+  -Dmdep.outputFile="$cli_fixture_classpath_file" -DincludeScope=runtime
+
 verify_generated_plugin "$consumer_project/settings.xml" \
   "$temporary_root/prewarm-generated" prewarmed-plugin
 
@@ -293,6 +322,12 @@ rm -rf "$consumer_repository/com/sstlfsj"
   -Dfibra.version="$revision" -Djunit.version="$junit_version" \
   -Dspring-boot.version="$spring_boot_version" \
   -f "$consumer_project/pom.xml" clean verify
+
+readonly cli_fixture_classpath="$(<"$cli_fixture_classpath_file")"
+"$fibra_python_executable" "$consumer_project/verify-cli-tty.py" session \
+  "$fibra_java_executable" \
+  "$consumer_project/cli-application/target/classes:$cli_fixture_classpath" \
+  "$temporary_root/cli-session-home"
 
 for module in "${production_modules[@]:14}"; do
   artifact_id="$(basename "$module")"
@@ -372,28 +407,8 @@ cmp -s "$external_cli_root/expected.out" "$external_cli_output" || {
   exit 1
 }
 
-readonly external_cli_interrupt_output="$external_cli_root/interrupt.out"
-readonly external_cli_interrupt_error="$external_cli_root/interrupt.err"
-printf 'external-cli read-key\n\003external-cli echo after-cancel\nexit\n' |
-  "$external_cli_launcher" --home "$external_cli_install" repl \
-  > "$external_cli_interrupt_output" 2> "$external_cli_interrupt_error"
-grep -F -- 'ready' "$external_cli_interrupt_output" >/dev/null || {
-  echo "仓外 Java 动态 CLI 终端命令未取得租约" >&2
-  exit 1
-}
-grep -F -- 'cancelled' "$external_cli_interrupt_output" >/dev/null || {
-  echo "仓外 Java 动态 CLI raw Ctrl+C 未取消调用" >&2
-  exit 1
-}
-grep -F -- 'after-cancel' "$external_cli_interrupt_output" >/dev/null || {
-  echo "仓外 Java 动态 CLI 取消后未恢复 REPL" >&2
-  exit 1
-}
-[[ ! -s "$external_cli_interrupt_error" ]] || {
-  echo "仓外 Java 动态 CLI raw Ctrl+C 写入 stderr" >&2
-  cat "$external_cli_interrupt_error" >&2
-  exit 1
-}
+"$fibra_python_executable" "$consumer_project/verify-cli-tty.py" dynamic \
+  "$external_cli_launcher" "$external_cli_install"
 
 readonly external_cli_help="$external_cli_root/help.out"
 readonly external_cli_help_error="$external_cli_root/help.err"

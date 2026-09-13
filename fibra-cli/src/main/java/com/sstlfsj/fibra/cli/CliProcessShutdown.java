@@ -2,7 +2,6 @@ package com.sstlfsj.fibra.cli;
 
 import com.sstlfsj.fibra.cli.api.CliExitStatus;
 
-import java.io.PrintWriter;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -23,30 +22,32 @@ final class CliProcessShutdown implements AutoCloseable {
         }
     }
 
-    private final CliInvocationCoordinator invocations;
+    private final Runnable stopAdmission;
+    private final Runnable closeSession;
     private final Runnable closeHost;
     private final IntConsumer gracefulExit;
     private final IntConsumer forcedExit;
-    private final PrintWriter diagnostics;
     private final Duration deadline;
     private final Executor executor;
     private final CompletableFuture<Integer> result = new CompletableFuture<>();
     private boolean started;
+    private boolean gracefulExitStarted;
+    private boolean forcedExitStarted;
     private boolean closed;
 
-    CliProcessShutdown(CliInvocationCoordinator invocations, Runnable closeHost, IntConsumer exit,
-                       PrintWriter diagnostics, Duration deadline, Executor executor) {
-        this(invocations, closeHost, exit, exit, diagnostics, deadline, executor);
+    CliProcessShutdown(Runnable stopAdmission, Runnable closeSession, Runnable closeHost,
+                       IntConsumer exit, Duration deadline, Executor executor) {
+        this(stopAdmission, closeSession, closeHost, exit, exit, deadline, executor);
     }
 
-    CliProcessShutdown(CliInvocationCoordinator invocations, Runnable closeHost,
+    CliProcessShutdown(Runnable stopAdmission, Runnable closeSession, Runnable closeHost,
                        IntConsumer gracefulExit, IntConsumer forcedExit,
-                       PrintWriter diagnostics, Duration deadline, Executor executor) {
-        this.invocations = Objects.requireNonNull(invocations, "invocations");
+                       Duration deadline, Executor executor) {
+        this.stopAdmission = Objects.requireNonNull(stopAdmission, "stopAdmission");
+        this.closeSession = Objects.requireNonNull(closeSession, "closeSession");
         this.closeHost = Objects.requireNonNull(closeHost, "closeHost");
         this.gracefulExit = Objects.requireNonNull(gracefulExit, "gracefulExit");
         this.forcedExit = Objects.requireNonNull(forcedExit, "forcedExit");
-        this.diagnostics = Objects.requireNonNull(diagnostics, "diagnostics");
         this.deadline = Objects.requireNonNull(deadline, "deadline");
         this.executor = Objects.requireNonNull(executor, "executor");
     }
@@ -58,14 +59,19 @@ final class CliProcessShutdown implements AutoCloseable {
             if (started || closed) return;
             started = true;
             deadlineNanos = System.nanoTime() + deadline.toNanos();
-            invocations.stopAdmission();
         }
         CompletableFuture.delayedExecutor(deadline.toMillis(), TimeUnit.MILLISECONDS)
             .execute(this::timeout);
         try {
+            stopAdmission.run();
+        } catch (RuntimeException failure) {
+            failForced();
+            return;
+        }
+        try {
             executor.execute(() -> finish(signal, deadlineNanos));
         } catch (RuntimeException failure) {
-            failForced("无法启动关闭协调");
+            failForced();
         }
     }
 
@@ -84,12 +90,10 @@ final class CliProcessShutdown implements AutoCloseable {
     }
 
     private void finish(Signal signal, long deadlineNanos) {
-        final CompletableFuture<Void> drained;
         try {
-            drained = invocations.stopAndCancel();
-            drained.join();
+            closeSession.run();
         } catch (RuntimeException exception) {
-            failForced("调用排空失败");
+            failForced();
             return;
         }
         if (expired(deadlineNanos)) {
@@ -101,7 +105,7 @@ final class CliProcessShutdown implements AutoCloseable {
             closeHost.run();
         } catch (RuntimeException exception) {
             if (expired(deadlineNanos)) timeout();
-            else failGracefully("关闭宿主失败", CliExitStatus.CLOSE_ERROR.code());
+            else completeGracefully(CliExitStatus.CLOSE_ERROR.code());
             return;
         }
         if (expired(deadlineNanos)) {
@@ -116,24 +120,35 @@ final class CliProcessShutdown implements AutoCloseable {
     }
 
     private void timeout() {
-        failForced("调用排空超时或宿主关闭超时");
+        failForced();
     }
 
-    private void failGracefully(String diagnostic, int exitCode) {
-        if (!result.complete(exitCode)) return;
-        diagnostics.println(diagnostic);
-        gracefulExit.accept(exitCode);
-    }
-
-    private void failForced(String diagnostic) {
-        if (!result.complete(CliExitStatus.DRAIN_TIMEOUT.code())) return;
-        diagnostics.println(diagnostic);
-        forcedExit.accept(CliExitStatus.DRAIN_TIMEOUT.code());
+    private void failForced() {
+        synchronized (this) {
+            if (forcedExitStarted || result.isDone()) return;
+            forcedExitStarted = true;
+        }
+        try {
+            forcedExit.accept(CliExitStatus.DRAIN_TIMEOUT.code());
+        } finally {
+            result.complete(CliExitStatus.DRAIN_TIMEOUT.code());
+        }
     }
 
     private void completeGracefully(int exitCode) {
-        if (!result.complete(exitCode)) return;
-        gracefulExit.accept(exitCode);
+        synchronized (this) {
+            if (gracefulExitStarted || forcedExitStarted || result.isDone()) return;
+            gracefulExitStarted = true;
+        }
+        try {
+            gracefulExit.accept(exitCode);
+        } catch (RuntimeException | Error failure) {
+            failForced();
+            return;
+        }
+        synchronized (this) {
+            if (!forcedExitStarted) result.complete(exitCode);
+        }
     }
 
     @Override

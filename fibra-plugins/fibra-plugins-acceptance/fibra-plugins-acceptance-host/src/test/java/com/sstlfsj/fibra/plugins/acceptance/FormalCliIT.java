@@ -215,7 +215,6 @@ class FormalCliIT {
         assertEquals(0, code, () -> "stdout:\n" + stdout + "\nstderr:\n" + stderr);
         assertEquals("", stderr, () -> "stdout:\n" + stdout);
         var results = stdout.lines().map(String::strip)
-            .map(line -> line.startsWith("fibra> ") ? line.substring("fibra> ".length()) : line)
             .filter(line -> line.startsWith("{"))
             .map(JSON::readTree).toList();
         assertFalse(results.isEmpty(), () -> "no JSON result in CLI output:\n" + stdout);

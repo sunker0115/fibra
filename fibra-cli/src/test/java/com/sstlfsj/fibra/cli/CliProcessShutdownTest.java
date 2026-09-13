@@ -2,9 +2,6 @@ package com.sstlfsj.fibra.cli;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -23,8 +20,9 @@ class CliProcessShutdownTest {
         var invocations = new CliInvocationCoordinator();
         var queued = new AtomicReference<Runnable>();
         var exited = new CountDownLatch(1);
-        try (var shutdown = new CliProcessShutdown(invocations, () -> { },
-            code -> exited.countDown(), writer(new ByteArrayOutputStream()),
+        try (var shutdown = new CliProcessShutdown(invocations::stopAdmission,
+            cancelAndDrain(invocations), () -> { },
+            code -> exited.countDown(),
             Duration.ofSeconds(5), queued::set)) {
             shutdown.interrupt(CliProcessShutdown.Signal.INT);
 
@@ -41,8 +39,9 @@ class CliProcessShutdownTest {
         var invocations = new CliInvocationCoordinator();
         var exits = new AtomicInteger();
         var executor = Executors.newSingleThreadExecutor();
-        try (var shutdown = new CliProcessShutdown(invocations, () -> { },
-            code -> exits.incrementAndGet(), writer(new ByteArrayOutputStream()),
+        try (var shutdown = new CliProcessShutdown(invocations::stopAdmission,
+            cancelAndDrain(invocations), () -> { },
+            code -> exits.incrementAndGet(),
             Duration.ofMillis(25), executor)) {
             assertTrue(shutdown.tryCompleteNormally());
 
@@ -65,11 +64,12 @@ class CliProcessShutdownTest {
         var exitCode = new AtomicReference<Integer>();
         var exited = new CountDownLatch(1);
         var executor = Executors.newSingleThreadExecutor();
-        try (var shutdown = new CliProcessShutdown(invocations, closed::incrementAndGet,
+        try (var shutdown = new CliProcessShutdown(invocations::stopAdmission,
+            cancelAndDrain(invocations), closed::incrementAndGet,
             code -> {
                 exitCode.set(code);
                 exited.countDown();
-            }, writer(new ByteArrayOutputStream()), Duration.ofSeconds(5), executor)) {
+            }, Duration.ofSeconds(5), executor)) {
             shutdown.interrupt(CliProcessShutdown.Signal.TERM);
 
             assertTrue(exited.await(5, TimeUnit.SECONDS));
@@ -90,11 +90,12 @@ class CliProcessShutdownTest {
         var exitCode = new AtomicReference<Integer>();
         var exited = new CountDownLatch(1);
         var executor = Executors.newSingleThreadExecutor();
-        try (var shutdown = new CliProcessShutdown(invocations, closed::incrementAndGet,
+        try (var shutdown = new CliProcessShutdown(invocations::stopAdmission,
+            cancelAndDrain(invocations), closed::incrementAndGet,
             code -> {
                 exitCode.set(code);
                 exited.countDown();
-            }, writer(new ByteArrayOutputStream()), Duration.ofSeconds(5), executor)) {
+            }, Duration.ofSeconds(5), executor)) {
             shutdown.interrupt(CliProcessShutdown.Signal.INT);
             shutdown.interrupt(CliProcessShutdown.Signal.TERM);
 
@@ -119,23 +120,54 @@ class CliProcessShutdownTest {
         var gracefulExit = new AtomicInteger();
         var exitCode = new AtomicReference<Integer>();
         var exited = new CountDownLatch(1);
-        var diagnostics = new ByteArrayOutputStream();
         var executor = Executors.newSingleThreadExecutor();
-        try (var shutdown = new CliProcessShutdown(invocations, closed::incrementAndGet,
+        try (var shutdown = new CliProcessShutdown(invocations::stopAdmission,
+            cancelAndDrain(invocations), closed::incrementAndGet,
             code -> gracefulExit.incrementAndGet(),
             code -> {
                 exitCode.set(code);
                 exited.countDown();
-            }, writer(diagnostics), Duration.ofMillis(25), executor)) {
+            }, Duration.ofMillis(25), executor)) {
             shutdown.interrupt(CliProcessShutdown.Signal.TERM);
 
             assertTrue(exited.await(5, TimeUnit.SECONDS));
             assertEquals(8, exitCode.get());
             assertEquals(0, gracefulExit.get());
             assertEquals(0, closed.get());
-            assertTrue(diagnostics.toString(StandardCharsets.UTF_8).contains("排空超时"));
         } finally {
             invocation.close();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void forcedResultIsPublishedOnlyAfterTheForcedExitCallbackReturns() throws Exception {
+        var closeEntered = new CountDownLatch(1);
+        var releaseClose = new CountDownLatch(1);
+        var forcedExitEntered = new CountDownLatch(1);
+        var releaseForcedExit = new CountDownLatch(1);
+        var executor = Executors.newSingleThreadExecutor();
+        var observer = Executors.newSingleThreadExecutor();
+        try (var shutdown = new CliProcessShutdown(() -> { }, () -> {
+            closeEntered.countDown();
+            await(releaseClose);
+        }, () -> { }, code -> { }, code -> {
+            forcedExitEntered.countDown();
+            await(releaseForcedExit);
+        }, Duration.ofMillis(25), executor)) {
+            var result = observer.submit(shutdown::awaitResult);
+            shutdown.interrupt(CliProcessShutdown.Signal.TERM);
+
+            assertTrue(closeEntered.await(5, TimeUnit.SECONDS));
+            assertTrue(forcedExitEntered.await(2, TimeUnit.SECONDS));
+            assertFalse(result.isDone(),
+                "退出结果不得先于 Runtime.halt 调用返回而唤醒主退出路径");
+            releaseForcedExit.countDown();
+            assertEquals(8, result.get(5, TimeUnit.SECONDS));
+        } finally {
+            releaseForcedExit.countDown();
+            releaseClose.countDown();
+            observer.shutdownNow();
             executor.shutdownNow();
         }
     }
@@ -154,11 +186,12 @@ class CliProcessShutdownTest {
         var exited = new CountDownLatch(1);
         var shutdownExecutor = Executors.newSingleThreadExecutor();
         var signalExecutor = Executors.newSingleThreadExecutor();
-        try (var shutdown = new CliProcessShutdown(invocations, () -> { },
+        try (var shutdown = new CliProcessShutdown(invocations::stopAdmission,
+            cancelAndDrain(invocations), () -> { },
             code -> { }, code -> {
                 exitCode.set(code);
                 exited.countDown();
-            }, writer(new ByteArrayOutputStream()), Duration.ofMillis(25), shutdownExecutor)) {
+            }, Duration.ofMillis(25), shutdownExecutor)) {
             signalExecutor.submit(() -> shutdown.interrupt(CliProcessShutdown.Signal.INT));
 
             assertTrue(cancelEntered.await(5, TimeUnit.SECONDS));
@@ -181,13 +214,14 @@ class CliProcessShutdownTest {
         var exitCode = new AtomicReference<Integer>();
         var exited = new CountDownLatch(1);
         var executor = Executors.newSingleThreadExecutor();
-        try (var shutdown = new CliProcessShutdown(invocations, () -> {
+        try (var shutdown = new CliProcessShutdown(invocations::stopAdmission,
+            cancelAndDrain(invocations), () -> {
             closeEntered.countDown();
             await(releaseClose);
         }, code -> gracefulExit.incrementAndGet(), code -> {
             exitCode.set(code);
             exited.countDown();
-        }, writer(new ByteArrayOutputStream()), Duration.ofMillis(25), executor)) {
+        }, Duration.ofMillis(25), executor)) {
             shutdown.interrupt(CliProcessShutdown.Signal.TERM);
 
             assertTrue(closeEntered.await(5, TimeUnit.SECONDS));
@@ -205,26 +239,53 @@ class CliProcessShutdownTest {
         var invocations = new CliInvocationCoordinator();
         var exitCode = new AtomicReference<Integer>();
         var exited = new CountDownLatch(1);
-        var diagnostics = new ByteArrayOutputStream();
         var executor = Executors.newSingleThreadExecutor();
-        try (var shutdown = new CliProcessShutdown(invocations,
+        try (var shutdown = new CliProcessShutdown(invocations::stopAdmission,
+            cancelAndDrain(invocations),
             () -> { throw new IllegalStateException("close failed"); },
             code -> {
                 exitCode.set(code);
                 exited.countDown();
-            }, writer(diagnostics), Duration.ofSeconds(5), executor)) {
+            }, Duration.ofSeconds(5), executor)) {
             shutdown.interrupt(CliProcessShutdown.Signal.INT);
 
             assertTrue(exited.await(5, TimeUnit.SECONDS));
             assertEquals(7, exitCode.get());
-            assertTrue(diagnostics.toString(StandardCharsets.UTF_8).contains("关闭宿主失败"));
         } finally {
             executor.shutdownNow();
         }
     }
 
-    private static PrintWriter writer(ByteArrayOutputStream output) {
-        return new PrintWriter(output, true, StandardCharsets.UTF_8);
+    @Test
+    void hostCloseFailureStillReachesTheHardDeadlineWhenGracefulExitBlocks() throws Exception {
+        var gracefulExitEntered = new CountDownLatch(1);
+        var releaseGracefulExit = new CountDownLatch(1);
+        var forcedExitCode = new AtomicReference<Integer>();
+        var forcedExit = new CountDownLatch(1);
+        var executor = Executors.newSingleThreadExecutor();
+        try (var shutdown = new CliProcessShutdown(() -> { }, () -> { },
+            () -> { throw new IllegalStateException("close failed"); },
+            code -> {
+                gracefulExitEntered.countDown();
+                await(releaseGracefulExit);
+            }, code -> {
+                forcedExitCode.set(code);
+                forcedExit.countDown();
+            }, Duration.ofMillis(25), executor)) {
+            shutdown.interrupt(CliProcessShutdown.Signal.TERM);
+
+            assertTrue(gracefulExitEntered.await(5, TimeUnit.SECONDS));
+            assertTrue(forcedExit.await(2, TimeUnit.SECONDS),
+                "System.exit 被 shutdown hook 阻塞时，硬截止仍须调用 Runtime.halt");
+            assertEquals(8, forcedExitCode.get());
+        } finally {
+            releaseGracefulExit.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    private static Runnable cancelAndDrain(CliInvocationCoordinator invocations) {
+        return () -> invocations.cancelActive().join();
     }
 
     private static void await(CountDownLatch latch) {

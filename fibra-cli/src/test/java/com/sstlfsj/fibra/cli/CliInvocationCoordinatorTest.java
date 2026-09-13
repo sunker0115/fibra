@@ -11,20 +11,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CliInvocationCoordinatorTest {
     @Test
-    void terminalInterruptCancelsOnlyTheCurrentInvocationAndKeepsAdmissionOpen() {
+    void callersCancelOnlyTheExactInvocationTheyOwnAndKeepAdmissionOpen() {
         var coordinator = new CliInvocationCoordinator();
-        var unrelated = coordinator.begin();
-        var invocation = coordinator.begin();
+        try (var unrelated = coordinator.begin();
+             var invocation = coordinator.begin()) {
+            assertTrue(invocation.cancel());
+            assertFalse(invocation.cancel());
+            assertTrue(invocation.token().isCancelled());
+            assertFalse(unrelated.token().isCancelled());
+        }
 
-        assertTrue(coordinator.cancelCurrent());
-        assertFalse(coordinator.cancelCurrent());
-        assertTrue(invocation.token().isCancelled());
-        assertFalse(unrelated.token().isCancelled());
-
-        invocation.close();
-        assertTrue(coordinator.cancelCurrent());
-        assertTrue(unrelated.token().isCancelled());
-        unrelated.close();
         var next = coordinator.begin();
         assertFalse(next.token().isCancelled());
         next.close();
@@ -36,9 +32,13 @@ class CliInvocationCoordinatorTest {
         var first = coordinator.begin();
         var second = coordinator.begin();
 
-        var draining = coordinator.stopAndCancel();
+        var draining = coordinator.stopAdmission();
+        assertSame(draining, coordinator.stopAdmission());
+        assertFalse(first.token().isCancelled());
+        assertFalse(second.token().isCancelled());
 
-        assertSame(draining, coordinator.stopAndCancel());
+        assertSame(draining, coordinator.cancelActive());
+
         assertTrue(first.token().isCancelled());
         assertTrue(second.token().isCancelled());
         assertFalse(draining.isDone());

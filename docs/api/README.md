@@ -136,13 +136,46 @@ ChangeSet 内提交多个 artifact 与完整 desired graph。Registry 只把请�
 ## CLI 组合 API
 
 `fibra-cli-api` 公开 `CliApplication`、bootstrap/dynamic command descriptor、`CliInvocation`、输出、退出状态
-和终端租约，不依赖或暴露 Picocli、JLine、Engine、Registry、`Context` 或 `CommandSpec`。动态 Java 插件以
-`CliCommandContributions.KIND` 注册命令；该 kind 在 F1 是本地贡献，没有 Node wire codec。
+和受管终端 renderer 契约，不依赖或暴露 Picocli、JLine、Engine、Registry、`Context`、`CommandSpec`、
+`Terminal` 或 `Display`。动态 Java 插件以 `CliCommandContributions.KIND` 注册命令；该 kind 当前是本地贡献，
+没有 Node wire codec。
 
-`FibraCli.run(CliApplication, ...)` 是公开组合入口。一次性命令与 REPL 每行都捕获 descriptor、
-`registrationIdentity` 和 `viewRevision`，再构造本操作私有的可变 Picocli 树。非交互 terminal 返回
-`UNSUPPORTED`；REPL 单 lane 同时只允许一个租约，invocation 结束会强制回收遗忘的租约。raw mode、resize、
-`0x03` 取消和 redisplay 属 F3/F4，当前 API 不宣称已实现。
+`fibra-cli` 的公开 `CliSession` 是嵌入组合入口。它借用调用方已有的 `PublishedRuntime`、`CliProfile` 和
+streams，拥有一个执行 lane、命令调用协调、REPL、history、物理终端与关闭屏障，但不关闭调用方的 Engine、
+Registry、Host、`PublishedRuntime` 或 streams。`execute(...)` 可执行一次性命令，也可用 `execute("repl")`
+启动同一会话的 REPL；并发 execute、关闭中的新调用以及执行 lane 内自关闭均被稳定拒绝。
+lane 的作用域是该会话拥有的一个物理 terminal，不是进程全局：使用不同 terminal 的多个 `CliSession`
+可借用同一 `PublishedRuntime` 并发运行，关闭或恢复失败只影响对应 terminal；同一个 `System.in` 仍只允许
+一个活动 reader，不能由多个 `systemTerminal()` 会话争抢。
+
+应用未配置 `CliApplication.inputHandler()` 时，REPL 保持命令模式。配置后，每次 JLine 提交的完整原始文本
+在 trim、shell 分词、`exit`/`quit` 判断和命令解析之前直接交给 `CliInputHandler`，并为该次提交创建一个有限
+`CliInvocation`；处理结束即关闭它的输出和 terminal 准入。输入模式不捕获命令代、不安装通用命令补全/
+高亮，也不写通用命令历史；产品 slash command、prompt 历史、对话持久化和重连由上层 Agent/Session
+插件拥有。`CliInputResult` 让应用显式选择继续或退出 REPL，不用保留字、异常或 handler 内自关闭实现退出。
+input handler 只是稳定的应用适配器，不得缓存插件实现或绕过 `PublishedRuntime` 调用动态能力，也不得递归
+调用同一 `CliSession.execute()`。
+
+一次性命令与 REPL 每行都捕获 Fibra descriptor、`registrationIdentity` 和 `viewRevision`，再构造本操作私有
+的可变 Picocli 树。解析、help、补全、高亮和敏感参数识别只使用该次捕获；动态 handler 仍必须用同一 revision
+和注册身份经 `PublishedRuntime` 准入，stale/revoked 不调用旧 handler，也不切换到同名新 handler。Picocli
+`CommandSpec` 不是不可变命令代或并发快照。
+
+非交互 terminal 的 `CliTerminal.acquire()` 返回 `UNSUPPORTED`；同一 terminal lane 已有租约时返回 `BUSY`，
+关闭后返回 `CLOSED`。租约以 `run(CliTerminalRenderer)` 阻塞运行，框架串行调用
+`start -> (resize/input/render)* -> stop`，拥有 raw mode、按键解码、`0x03` 取消、resize 观察、刷新合并、
+`Display` 和属性恢复。renderer 只返回适配最新 `CliTerminalSize` 的完整不可变 `CliTerminalFrame`，并可通过
+线程安全 `CliTerminalControl` 请求 render 或 finish；后台线程不得接触 JLine 或物理终端。
+
+`CliTerminalInput` 明确区分单键和完整 bracketed-paste。粘贴内容作为一个事件交付，`CRLF`/`CR` 统一为
+`LF`，其中的换行、`0x03` 和 slash 都是字面文本，不触发提交、取消或命令路由。只有终端明确编码的修饰键
+序列才进入 `CliTerminalModifier`；当前固定为可验证的 Shift/Control，普通大写字符不推断为 Shift，也不
+预留无法产生的 Alt 事件。框架成对启用/关闭 bracketed paste，任何正常结束、取消或失败都走同一恢复链。
+
+机器结果只写 stdout；prompt、会话摘要、诊断和会话级 `printAbove` 进入 stderr 人类呈现通道。JLine 读行
+期间只使用其明确允许跨线程调用的 `LineReader.printAbove()`，renderer 占有终端时则把消息排入同一 terminal
+lane，暂停画面、写消息并重绘。`CliSession.close()` 停止准入、唤醒编辑器或 renderer、取消并等待本会话
+handler、输出、PublishedRuntime route/Scope 清理及终端恢复；重复关闭等待同一结果。
 
 ## Java 插件入口
 

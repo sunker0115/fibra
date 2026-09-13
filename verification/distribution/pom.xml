@@ -11,6 +11,7 @@
     <module>core-application</module>
     <module>java-plugin</module>
     <module>engine-application</module>
+    <module>cli-application</module>
     <module>spring-boot-application</module>
   </modules>
   <properties>

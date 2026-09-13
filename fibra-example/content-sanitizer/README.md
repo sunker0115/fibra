@@ -1,11 +1,10 @@
 # 内容清洗插件示例
 
-这个场景在业务文本写入日志、发送给 LLM 或外部服务前，清除邮箱、Bearer Token 和 API Key。清洗逻辑由 Node 插件提供，Java 宿主只依赖稳定的贡献契约；同一插件分别接入纯 Java 和 Spring Boot。
+这个场景在业务文本写入日志、发送给 LLM 或外部服务前，清除邮箱、Bearer Token 和 API Key。清洗逻辑由 Node 插件提供，Spring Boot 宿主只依赖稳定的贡献契约并通过 Starter 接入 Fibra。
 
 ```text
 api/          Java 侧贡献契约、类型和跨语言 codec
 node-plugin/  正式 Node 安装包（plugin.properties + payload/）
-java-host/    手工组合 Fibra 的纯 Java 宿主
 spring-host/  通过 Starter 接入并暴露 HTTP API 的宿主
 ```
 
@@ -16,26 +15,10 @@ spring-host/  通过 Starter 接入并暴露 HTTP API 的宿主
 要求 JDK 21、Maven 3.9.9+ 和 Node.js 20+。在仓库根目录执行：
 
 ```bash
-mvn -pl :java-host,:spring-host -am clean verify
+mvn -pl :spring-host -am clean verify
 ```
 
-Node 不在 `PATH` 时增加 `-Dfibra.test.node=/absolute/path/to/node`。集成测试会启动真实 Node sidecar，完成 deploy、贡献调用、disable、uninstall，并验证 Spring HTTP 链路。
-
-## 纯 Java 接入
-
-```bash
-FIBRA_NODE=/absolute/path/to/node \
-java -jar fibra-example/content-sanitizer/java-host/target/fibra-example-java-host.jar \
-  fibra-example/content-sanitizer/node-plugin \
-  'Email alice@example.com with Bearer abcdefghijklmnop or key sk_1234567890abcdef'
-```
-
-建议按以下顺序读：
-
-1. [`ContentSanitizerContribution`](api/src/main/java/com/sstlfsj/fibra/example/sanitizer/ContentSanitizerContribution.java)：定义宿主拥有的贡献类型与协议。
-2. [`plugin.properties`](node-plugin/plugin.properties)、[`fibra-plugin.yaml`](node-plugin/payload/fibra-plugin.yaml) 和 [`index.mjs`](node-plugin/payload/index.mjs)：声明安装包与 Node 贡献。
-3. [`ContentSanitizerScenario`](java-host/src/main/java/com/sstlfsj/fibra/example/ContentSanitizerScenario.java)：组合 Bridge、Node runtime、Engine 与 Registry。
-4. [`JavaHost`](java-host/src/main/java/com/sstlfsj/fibra/example/JavaHost.java)：业务代码的类型化调用入口。
+Node 不在 `PATH` 时增加 `-Dfibra.test.node=/absolute/path/to/node`。集成测试会启动真实 Node sidecar，完成 deploy、贡献调用并验证 Spring HTTP 链路。
 
 ## Spring Boot 接入
 

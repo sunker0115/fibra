@@ -5,7 +5,6 @@ import org.jline.utils.Signals;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
 
 /** 独立于 JLine 行编辑器注册进程级 INT/TERM 信号。 */
 final class CliProcessSignalHandlers implements AutoCloseable {
@@ -36,19 +35,19 @@ final class CliProcessSignalHandlers implements AutoCloseable {
         this.registrations = registrations;
     }
 
-    static CliProcessSignalHandlers install(Consumer<CliProcessShutdown.Signal> receiver) {
-        return install(receiver, SYSTEM);
+    static CliProcessSignalHandlers install(CliProcessShutdown shutdown) {
+        return install(shutdown, SYSTEM);
     }
 
-    static CliProcessSignalHandlers install(Consumer<CliProcessShutdown.Signal> receiver,
+    static CliProcessSignalHandlers install(CliProcessShutdown shutdown,
                                             Registrar registrar) {
-        Objects.requireNonNull(receiver, "receiver");
+        Objects.requireNonNull(shutdown, "shutdown");
         Objects.requireNonNull(registrar, "registrar");
         var registrations = new ArrayList<Registration>();
         registrations.add(register(registrar, "INT",
-            () -> receiver.accept(CliProcessShutdown.Signal.INT)));
+            () -> shutdown.interrupt(CliProcessShutdown.Signal.INT)));
         registrations.add(register(registrar, "TERM",
-            () -> receiver.accept(CliProcessShutdown.Signal.TERM)));
+            () -> shutdown.interrupt(CliProcessShutdown.Signal.TERM)));
         return new CliProcessSignalHandlers(registrar, List.copyOf(registrations));
     }
 

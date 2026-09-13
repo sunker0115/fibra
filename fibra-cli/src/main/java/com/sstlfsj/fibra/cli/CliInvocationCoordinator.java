@@ -12,26 +12,12 @@ final class CliInvocationCoordinator {
     private final LinkedHashSet<Invocation> active = new LinkedHashSet<>();
     private final CompletableFuture<Void> drained = new CompletableFuture<>();
     private boolean stopping;
-    private Invocation current;
 
     synchronized Invocation begin() {
         if (stopping) throw new IllegalStateException("CLI invocation admission is closed");
         var invocation = new Invocation(this);
         active.add(invocation);
-        current = invocation;
         return invocation;
-    }
-
-    boolean cancelCurrent() {
-        final Invocation invocation;
-        synchronized (this) {
-            invocation = current;
-        }
-        return invocation != null && invocation.cancel();
-    }
-
-    synchronized boolean currentCancelled() {
-        return current != null && current.token().isCancelled();
     }
 
     synchronized CompletableFuture<Void> stopAdmission() {
@@ -41,10 +27,12 @@ final class CliInvocationCoordinator {
         return drained;
     }
 
-    CompletableFuture<Void> stopAndCancel() {
+    CompletableFuture<Void> cancelActive() {
         final java.util.List<Invocation> invocations;
         synchronized (this) {
-            stopAdmission();
+            if (!stopping) {
+                throw new IllegalStateException("CLI invocation admission is still open");
+            }
             invocations = new ArrayList<>(active);
         }
         invocations.forEach(Invocation::cancel);
@@ -53,9 +41,6 @@ final class CliInvocationCoordinator {
 
     private synchronized void finish(Invocation invocation) {
         if (!active.remove(invocation)) return;
-        if (current == invocation) {
-            current = active.stream().reduce((ignored, next) -> next).orElse(null);
-        }
         if (stopping && active.isEmpty()) drained.complete(null);
     }
 
@@ -85,4 +70,5 @@ final class CliInvocationCoordinator {
             owner.finish(this);
         }
     }
+
 }

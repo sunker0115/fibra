@@ -8,6 +8,12 @@ import com.sstlfsj.fibra.cli.api.CliCommandContributions;
 import com.sstlfsj.fibra.cli.api.CliCommandDescriptor;
 import com.sstlfsj.fibra.cli.api.CliCommandOption;
 import com.sstlfsj.fibra.cli.api.CliCommandResult;
+import com.sstlfsj.fibra.cli.api.CliTerminalControl;
+import com.sstlfsj.fibra.cli.api.CliTerminalFrame;
+import com.sstlfsj.fibra.cli.api.CliTerminalInput;
+import com.sstlfsj.fibra.cli.api.CliTerminalKey;
+import com.sstlfsj.fibra.cli.api.CliTerminalRenderer;
+import com.sstlfsj.fibra.cli.api.CliTerminalSize;
 import com.sstlfsj.fibra.plugins.storage.ConfigDocument;
 import com.sstlfsj.fibra.plugins.storage.StorageServices;
 import com.sstlfsj.fibra.plugins.tool.ToolContributions;
@@ -20,8 +26,10 @@ import com.sstlfsj.fibra.value.LiteralValue;
 import reactor.core.publisher.Mono;
 
 import java.io.InterruptedIOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public final class Entrypoint implements PluginEntrypoint<Void> {
     @Override
@@ -43,9 +51,10 @@ public final class Entrypoint implements PluginEntrypoint<Void> {
                         List.of("external-cli", "read-key"), "等待一个受控终端按键。",
                         List.of(), null, List.of()), (invocation, request) -> {
                         try (var lease = request.invocation().terminal().acquire()) {
-                            lease.write("ready\n");
-                            lease.flush();
-                            lease.read();
+                            request.invocation().output().stdout("ready");
+                            var renderer = new VerificationRenderer();
+                            lease.run(renderer);
+                            request.invocation().output().stdout(renderer.summary());
                             return Mono.just(CliCommandResult.success());
                         } catch (InterruptedIOException expected) {
                             if (!request.invocation().cancellation().isCancelled()) {
@@ -54,7 +63,7 @@ public final class Entrypoint implements PluginEntrypoint<Void> {
                             }
                             request.invocation().output().stdout("cancelled");
                             return Mono.error(expected);
-                        } catch (java.io.IOException failure) {
+                        } catch (Exception failure) {
                             return Mono.error(failure);
                         }
                     })).then();
@@ -112,5 +121,39 @@ public final class Entrypoint implements PluginEntrypoint<Void> {
 
     private static LiteralValue.ObjectValue object(Map<String, ?> value) {
         return (LiteralValue.ObjectValue) LiteralValue.of(value);
+    }
+
+    private static final class VerificationRenderer implements CliTerminalRenderer {
+        private final List<String> inputs = new ArrayList<>();
+        private CliTerminalControl control;
+        private CliTerminalSize size;
+        private int resizeCount;
+
+        @Override public void start(CliTerminalControl value) {
+            control = value;
+        }
+
+        @Override public void input(CliTerminalInput input) {
+            var key = input.key();
+            inputs.add(input.isPaste() ? "PASTE:" + input.text()
+                : key.orElseThrow() == CliTerminalKey.CHARACTER
+                    ? "CHARACTER:" + input.text() : key.orElseThrow().name());
+            if (key.filter(value -> value == CliTerminalKey.ENTER).isPresent()) control.finish();
+        }
+
+        @Override public void resize(CliTerminalSize value) {
+            size = value;
+            resizeCount++;
+        }
+
+        @Override public CliTerminalFrame render(CliTerminalSize value) {
+            return new CliTerminalFrame(List.of("inputs=" + inputs.size() + " size="
+                + value.columns() + "x" + value.rows()), Optional.empty());
+        }
+
+        private String summary() {
+            return "inputs=" + String.join(",", inputs) + " size=" + size.columns() + "x"
+                + size.rows() + " resizes=" + resizeCount;
+        }
     }
 }

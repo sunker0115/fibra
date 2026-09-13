@@ -4,7 +4,7 @@
 
 | 场景 | 说明 | 入口 |
 | --- | --- | --- |
-| 内容清洗 | Node sidecar 贡献如何接入纯 Java 和 Spring Boot 宿主 | [`content-sanitizer/README.md`](content-sanitizer/README.md) |
+| 内容清洗 | Node sidecar 贡献如何通过 Starter 接入 Spring Boot 宿主 | [`content-sanitizer/README.md`](content-sanitizer/README.md) |
 | 插件依赖 | Java JAR 的契约共享、服务依赖、兼容升级与预检失败 | [`plugin-dependency/README.md`](plugin-dependency/README.md) |
 
 两类示例展示的是同一个底座的不同接入面：`PluginRegistry` 管理制品和期望状态，`FibraEngine` 在长期

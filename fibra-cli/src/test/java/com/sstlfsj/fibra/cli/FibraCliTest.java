@@ -12,6 +12,8 @@ import com.sstlfsj.fibra.cli.api.CliCommandResult;
 import com.sstlfsj.fibra.cli.api.CliExitStatus;
 import com.sstlfsj.fibra.cli.api.CliApplication;
 import com.sstlfsj.fibra.cli.api.CliBootstrapCommand;
+import com.sstlfsj.fibra.cli.api.CliTerminalRenderer;
+import com.sstlfsj.fibra.cli.api.CliTerminalFrame;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.PublicationRequirement;
 import com.sstlfsj.fibra.engine.PluginInstanceSnapshot;
@@ -44,6 +46,16 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FibraCliTest {
+    private static CliTerminalRenderer idleRenderer() {
+        return size -> new CliTerminalFrame(List.of(""), java.util.Optional.empty());
+    }
+
+    @Test
+    void referenceEntryPointIsNotAPublicPicocliCommandContract() {
+        assertFalse(java.util.concurrent.Callable.class.isAssignableFrom(FibraCli.class));
+        assertFalse(Runnable.class.isAssignableFrom(FibraCli.class));
+    }
+
     @Test
     void cancellationOnlyOverridesSuccessfulHandlerResults() {
         assertEquals(130, FibraCli.projectExitStatus(CliCommandResult.success(), true));
@@ -77,40 +89,6 @@ class FibraCliTest {
         assertEquals(0, exitCode);
         assertTrue(output.toString(StandardCharsets.UTF_8).startsWith("fibra "));
         assertEquals("", error.toString(StandardCharsets.UTF_8));
-    }
-
-    @Test
-    void publicApplicationBuilderDefinesRootMetadataAndBootstrapCommands() {
-        var output = new ByteArrayOutputStream();
-        var error = new ByteArrayOutputStream();
-        var application = CliApplication.builder("agent")
-            .description("组合型 Agent 命令入口。")
-            .version("1.2.3")
-            .addBootstrapCommand(new CliBootstrapCommand(
-                new CliCommandDescriptor(List.of("status"), "输出启动状态。", List.of(),
-                    null, List.of()),
-                request -> {
-                    request.invocation().output().stdout("ready");
-                    return CliCommandResult.success();
-                }))
-            .build();
-
-        assertEquals(0, FibraCli.run(application, new String[] {"status"},
-            new ByteArrayInputStream(new byte[0]), writer(output), writer(error)));
-        assertEquals("ready\n", output.toString(StandardCharsets.UTF_8));
-        assertEquals("", error.toString(StandardCharsets.UTF_8));
-
-        output.reset();
-        assertEquals(0, FibraCli.run(application, new String[] {"--help"},
-            new ByteArrayInputStream(new byte[0]), writer(output), writer(error)));
-        var help = output.toString(StandardCharsets.UTF_8);
-        assertTrue(help.contains("Usage: agent"), help);
-        assertTrue(help.contains("组合型 Agent 命令入口。"), help);
-
-        output.reset();
-        assertEquals(0, FibraCli.run(application, new String[] {"--version"},
-            new ByteArrayInputStream(new byte[0]), writer(output), writer(error)));
-        assertEquals("agent 1.2.3\n", output.toString(StandardCharsets.UTF_8));
     }
 
     @Test
@@ -399,46 +377,48 @@ class FibraCliTest {
     }
 
     @Test
-    void replInvocationScopeRestoresALeaseForgottenByADynamicCommand(@TempDir Path home)
+    void nonTtyReplNeverGrantsADynamicTerminalLease(@TempDir Path home)
         throws Exception {
         dynamicCommandProfile(home);
         var output = new ByteArrayOutputStream();
         var error = new ByteArrayOutputStream();
 
         var exitCode = FibraCli.run(new String[] {"--home", home.toString(), "repl"},
-            new ByteArrayInputStream("terminal\nterminal\nexit\n".getBytes(StandardCharsets.UTF_8)),
+            new ByteArrayInputStream("terminal\necho next\nexit\n".getBytes(StandardCharsets.UTF_8)),
             writer(output), writer(error));
 
         assertEquals(0, exitCode);
-        assertEquals(2, output.toString(StandardCharsets.UTF_8).split("leased", -1).length - 1);
-        assertEquals("", error.toString(StandardCharsets.UTF_8));
+        assertFalse(output.toString(StandardCharsets.UTF_8).contains("leased"));
+        assertTrue(output.toString(StandardCharsets.UTF_8).contains("next\n"));
+        assertTrue(error.toString(StandardCharsets.UTF_8).contains("UNSUPPORTED"));
     }
 
     @Test
-    void rawCtrlCCancelsTheAdmittedDynamicInvocationAndThenRestoresTheRepl(@TempDir Path home)
+    void nonTtyLeaseFailureDoesNotReplaceTheAdmittedDynamicGeneration(@TempDir Path home)
         throws Exception {
         dynamicCommandProfile(home);
         var output = new ByteArrayOutputStream();
         var error = new ByteArrayOutputStream();
 
         var exitCode = FibraCli.run(new String[] {"--home", home.toString(), "repl"},
-            new ByteArrayInputStream("plugins list\ninterrupt\n\u0003plugins list\necho next\nexit\n"
+            new ByteArrayInputStream("plugins list\ninterrupt\nplugins list\necho next\nexit\n"
                 .getBytes(StandardCharsets.UTF_8)), writer(output), writer(error));
 
         assertEquals(0, exitCode);
         var rendered = output.toString(StandardCharsets.UTF_8);
-        assertTrue(rendered.contains("cancelled\n"), rendered);
+        assertFalse(rendered.contains("cancelled\n"), rendered);
         assertTrue(rendered.contains("next\n"), rendered);
         var snapshots = rendered.lines().filter(line -> line.contains("\"id\":\"command\""))
             .toList();
         assertEquals(2, snapshots.size(), rendered);
-        assertEquals(snapshots.getFirst(), snapshots.getLast(),
+        assertEquals(snapshots.getFirst().substring(snapshots.getFirst().indexOf('{')),
+            snapshots.getLast().substring(snapshots.getLast().indexOf('{')),
             "取消当前 invocation 不得替换插件实例、ClassLoader 或 effects");
-        assertEquals("", error.toString(StandardCharsets.UTF_8));
+        assertTrue(error.toString(StandardCharsets.UTF_8).contains("UNSUPPORTED"));
     }
 
     @Test
-    void rawCancellationIsProjectedByTheFrameworkForBootstrapHandlers(@TempDir Path home)
+    void nonTtyBootstrapLeaseFailureDoesNotConsumeFollowingCommands(@TempDir Path home)
         throws Exception {
         var profiles = Files.createDirectories(home.resolve("config/profiles"));
         Files.writeString(profiles.resolve("default.yaml"), "[]\n");
@@ -451,7 +431,7 @@ class FibraCliTest {
                 List.of("read-key"), "等待受控终端输入。", List.of(), null, List.of()),
                 request -> {
                     try (var lease = request.invocation().terminal().acquire()) {
-                        lease.read();
+                        lease.run(idleRenderer());
                         return CliCommandResult.success();
                     }
                 }))
@@ -464,7 +444,7 @@ class FibraCliTest {
                 List.of("fail-after-interrupt"), "中断后模拟清理失败。", List.of(), null, List.of()),
                 request -> {
                     try (var lease = request.invocation().terminal().acquire()) {
-                        lease.read();
+                        lease.run(idleRenderer());
                         return CliCommandResult.success();
                     } catch (InterruptedIOException expected) {
                         throw new IllegalStateException("post-cancel cleanup failed");
@@ -477,38 +457,23 @@ class FibraCliTest {
                         throw new IllegalStateException("suppressed cleanup failed");
                     };
                     try (cleanup; var lease = request.invocation().terminal().acquire()) {
-                        lease.read();
+                        lease.run(idleRenderer());
                         return CliCommandResult.success();
                     }
                 }))
             .build();
 
-        var exitCode = FibraCli.run(application,
-            new String[] {"--home", home.toString(), "repl"},
-            new ByteArrayInputStream("read-key\n\u0003status\nexit\n"
+        var exitCode = runApplication(application, new String[] {"repl"}, home,
+            new ByteArrayInputStream(("read-key\nstatus\nfail-after-interrupt\nstatus\n"
+                + "fail-suppressed-after-interrupt\nstatus\nexit\n")
                 .getBytes(StandardCharsets.UTF_8)), writer(output), writer(error));
 
         assertEquals(0, exitCode);
-        assertTrue(output.toString(StandardCharsets.UTF_8).contains("ready\n"));
-        assertEquals("", error.toString(StandardCharsets.UTF_8));
-
-        output.reset();
-        error.reset();
-        assertEquals(0, FibraCli.run(application,
-            new String[] {"--home", home.toString(), "repl"},
-            new ByteArrayInputStream("fail-after-interrupt\n\u0003status\nexit\n"
-                .getBytes(StandardCharsets.UTF_8)), writer(output), writer(error)));
-        assertTrue(output.toString(StandardCharsets.UTF_8).contains("ready\n"));
-        assertTrue(error.toString(StandardCharsets.UTF_8).contains("post-cancel cleanup failed"));
-
-        output.reset();
-        error.reset();
-        assertEquals(0, FibraCli.run(application,
-            new String[] {"--home", home.toString(), "repl"},
-            new ByteArrayInputStream("fail-suppressed-after-interrupt\n\u0003status\nexit\n"
-                .getBytes(StandardCharsets.UTF_8)), writer(output), writer(error)));
-        assertTrue(output.toString(StandardCharsets.UTF_8).contains("ready\n"));
-        assertTrue(error.toString(StandardCharsets.UTF_8).contains("terminal input cancelled"));
+        assertEquals(3, output.toString(StandardCharsets.UTF_8)
+            .split("ready", -1).length - 1);
+        var diagnostics = error.toString(StandardCharsets.UTF_8);
+        assertTrue(diagnostics.contains("UNSUPPORTED"), diagnostics);
+        assertFalse(diagnostics.contains("terminal input cancelled"), diagnostics);
     }
 
     @Test
@@ -535,8 +500,8 @@ class FibraCliTest {
         var error = new ByteArrayOutputStream();
         var secret = "f2-bootstrap-short-secret";
 
-        assertEquals(0, FibraCli.run(sensitiveBootstrapApplication(),
-            new String[] {"--home", home.toString(), "repl"},
+        assertEquals(0, runApplication(sensitiveBootstrapApplication(),
+            new String[] {"repl"}, home,
             new ByteArrayInputStream(("login -s" + secret + "\nexit\n")
                 .getBytes(StandardCharsets.UTF_8)), writer(output), writer(error)));
 
@@ -547,13 +512,13 @@ class FibraCliTest {
     }
 
     @Test
-    void sensitiveBootstrapFailuresDoNotEchoTheSuppliedValue() {
+    void sensitiveBootstrapFailuresDoNotEchoTheSuppliedValue(@TempDir Path home) throws Exception {
         var output = new ByteArrayOutputStream();
         var error = new ByteArrayOutputStream();
         var secret = "f2-bootstrap-diagnostic-secret";
 
-        assertEquals(4, FibraCli.run(sensitiveBootstrapApplication(),
-            new String[] {"login", "-s" + secret}, new ByteArrayInputStream(new byte[0]),
+        assertEquals(4, runApplication(sensitiveBootstrapApplication(),
+            new String[] {"login", "-s" + secret}, home, new ByteArrayInputStream(new byte[0]),
             writer(output), writer(error)));
 
         var diagnostics = error.toString(StandardCharsets.UTF_8);
@@ -562,13 +527,14 @@ class FibraCliTest {
     }
 
     @Test
-    void sensitiveBootstrapDashPrefixedValuesDoNotEchoTheSuppliedValue() {
+    void sensitiveBootstrapDashPrefixedValuesDoNotEchoTheSuppliedValue(@TempDir Path home)
+        throws Exception {
         var output = new ByteArrayOutputStream();
         var error = new ByteArrayOutputStream();
         var secret = "--f2-bootstrap-parse-secret";
 
-        assertEquals(4, FibraCli.run(sensitiveBootstrapApplication(),
-            new String[] {"login", "--secret", secret},
+        assertEquals(4, runApplication(sensitiveBootstrapApplication(),
+            new String[] {"login", "--secret", secret}, home,
             new ByteArrayInputStream(new byte[0]), writer(output), writer(error)));
 
         var diagnostics = error.toString(StandardCharsets.UTF_8);
@@ -577,13 +543,14 @@ class FibraCliTest {
     }
 
     @Test
-    void sensitiveBootstrapParseFailuresDoNotEchoTheSuppliedValue() {
+    void sensitiveBootstrapParseFailuresDoNotEchoTheSuppliedValue(@TempDir Path home)
+        throws Exception {
         var output = new ByteArrayOutputStream();
         var error = new ByteArrayOutputStream();
         var secret = "f2-bootstrap-parse-secret";
 
-        assertEquals(2, FibraCli.run(sensitiveBootstrapApplication(),
-            new String[] {"login", "-s" + secret, "unexpected"},
+        assertEquals(2, runApplication(sensitiveBootstrapApplication(),
+            new String[] {"login", "-s" + secret, "unexpected"}, home,
             new ByteArrayInputStream(new byte[0]), writer(output), writer(error)));
 
         var diagnostics = error.toString(StandardCharsets.UTF_8);
@@ -634,6 +601,20 @@ class FibraCliTest {
         return FibraCli.execute(new String[] {"--home", home.toString(), "plugins", "list"},
             new ByteArrayInputStream(new byte[0]), new PrintWriter(new ByteArrayOutputStream(), true),
             new PrintWriter(new ByteArrayOutputStream(), true), CliHost::open, true);
+    }
+
+    private static int runApplication(CliApplication application, String[] arguments, Path home,
+                                      ByteArrayInputStream input, PrintWriter output,
+                                      PrintWriter error) throws Exception {
+        emptyProfile(home);
+        var paths = CliPaths.resolve(home, "default", null, null, null, null);
+        var profile = new com.sstlfsj.fibra.cli.api.CliProfile(paths.profile(), paths.home(),
+            paths.configRoot(), paths.pluginsRoot(), paths.dataRoot());
+        try (var host = CliHost.open(paths);
+             var session = CliSession.builder(application, host.published(), profile)
+                 .streams(input, output, error).historyFile(paths.replHistoryFile()).build()) {
+            return session.execute(arguments);
+        }
     }
 
     private static CliApplication sensitiveBootstrapApplication() {
@@ -757,7 +738,7 @@ class FibraCliTest {
                         "等待受控终端中断。", List.of(), null, List.of()),
                     (invocation, request) -> {
                         try (var lease = request.invocation().terminal().acquire()) {
-                            lease.read();
+                            lease.run(idleRenderer());
                             return Mono.error(new IllegalStateException("expected terminal interrupt"));
                         } catch (InterruptedIOException expected) {
                             if (!request.invocation().cancellation().isCancelled()) {
@@ -766,7 +747,7 @@ class FibraCliTest {
                             }
                             request.invocation().output().stdout("cancelled");
                             return Mono.error(expected);
-                        } catch (java.io.IOException failure) {
+                        } catch (Exception failure) {
                             return Mono.error(failure);
                         }
                     });
