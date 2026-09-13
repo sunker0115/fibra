@@ -357,6 +357,8 @@ printf '%s\n' \
 
 readonly external_cli_output="$external_cli_root/command.out"
 readonly external_cli_error="$external_cli_root/command.err"
+# JAVA_TOOL_OPTIONS 的 JVM 启动提示会污染应用 stderr，CLI 黑盒验收前移除它。
+unset JAVA_TOOL_OPTIONS
 "$external_cli_launcher" --home "$external_cli_install" external-cli echo \
   --prefix from- distribution > "$external_cli_output" 2> "$external_cli_error"
 printf 'from-distribution\n' > "$external_cli_root/expected.out"
@@ -366,6 +368,7 @@ cmp -s "$external_cli_root/expected.out" "$external_cli_output" || {
 }
 [[ ! -s "$external_cli_error" ]] || {
   echo "仓外 Java 动态 CLI 命令写入 stderr" >&2
+  cat "$external_cli_error" >&2
   exit 1
 }
 
@@ -383,6 +386,7 @@ grep -F -- '--prefix' "$external_cli_help" >/dev/null || {
 }
 [[ ! -s "$external_cli_help_error" ]] || {
   echo "仓外 Java 动态 CLI help 写入 stderr" >&2
+  cat "$external_cli_help_error" >&2
   exit 1
 }
 
@@ -392,6 +396,7 @@ readonly external_cli_disable_error="$external_cli_root/disable.err"
   > "$external_cli_disable" 2> "$external_cli_disable_error"
 [[ ! -s "$external_cli_disable_error" ]] || {
   echo "仓外 Java 动态 CLI 停用写入 stderr" >&2
+  cat "$external_cli_disable_error" >&2
   exit 1
 }
 
