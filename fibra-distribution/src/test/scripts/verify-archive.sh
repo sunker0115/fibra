@@ -75,6 +75,19 @@ await_stopped() {
   fail "受管进程未停止：$pid"
 }
 
+capture_shutdown_diagnostics() {
+  local diagnostics_root=${FIBRA_CI_DIAGNOSTICS_DIR:-}
+  local destination
+  [[ -n "$diagnostics_root" ]] || return
+  destination="$diagnostics_root/distribution-shutdown"
+  mkdir -p "$destination"
+  ps -eo pid=,ppid=,pgid=,sid=,stat=,etime=,args= \
+    > "$destination/processes.txt" 2>&1 || true
+  cp "$process_ids" "$destination/shutdown-pids.txt" 2>/dev/null || true
+  cp "$shutdown_output" "$destination/shutdown.json" 2>/dev/null || true
+  cp "$shutdown_output.stderr" "$destination/shutdown.stderr" 2>/dev/null || true
+}
+
 [[ -f "$archive" ]] || fail "缺少 ZIP：$archive"
 mkdir -p "$(dirname "$archive_copy")" "$extract_root" "$working_directory"
 cp "$archive" "$archive_copy"
@@ -239,8 +252,14 @@ read -r payload_pid supervisor_pid leaf_pid < "$process_ids"
 kill -TERM "$host_pid"
 shutdown_deadline="$temporary_root/shutdown-deadline-exceeded"
 (
-  sleep 10
+  sleep 8
   if kill -0 "$host_pid" 2>/dev/null; then
+    # SIGQUIT 让 JVM 将所有线程栈写入已捕获的 stdout 或 stderr，不改变关闭状态。
+    kill -QUIT "$host_pid" 2>/dev/null || true
+  fi
+  sleep 2
+  if kill -0 "$host_pid" 2>/dev/null; then
+    capture_shutdown_diagnostics
     : > "$shutdown_deadline"
     kill -KILL "$host_pid" 2>/dev/null || true
   fi
@@ -253,7 +272,17 @@ kill "$deadline_pid" 2>/dev/null
 wait "$deadline_pid" 2>/dev/null
 set -e
 host_pid=
-[[ ! -e "$shutdown_deadline" ]] || fail "SIGTERM 后宿主未在 10 秒内排空退出"
+if [[ -e "$shutdown_deadline" ]]; then
+  if [[ -s "$shutdown_output" ]]; then
+    echo "SIGTERM 关闭超时前的宿主 stdout：" >&2
+    cat "$shutdown_output" >&2
+  fi
+  if [[ -s "$shutdown_output.stderr" ]]; then
+    echo "SIGTERM 关闭超时前的宿主 stderr：" >&2
+    cat "$shutdown_output.stderr" >&2
+  fi
+  fail "SIGTERM 后宿主未在 10 秒内排空退出"
+fi
 [[ "$host_status" == 0 || "$host_status" == 143 ]] || fail "SIGTERM 后宿主退出码异常：$host_status"
 await_stopped "$payload_pid"
 await_stopped "$supervisor_pid"
