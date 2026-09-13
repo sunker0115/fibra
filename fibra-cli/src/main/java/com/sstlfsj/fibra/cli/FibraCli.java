@@ -1,6 +1,5 @@
 package com.sstlfsj.fibra.cli;
 
-import com.sstlfsj.fibra.CancellationSource;
 import com.sstlfsj.fibra.artifact.ArtifactId;
 import com.sstlfsj.fibra.bridge.ContributionId;
 import com.sstlfsj.fibra.bridge.ContributionKind;
@@ -9,6 +8,7 @@ import com.sstlfsj.fibra.bridge.ContributionUnavailableException;
 import com.sstlfsj.fibra.cli.api.CliCommandRequest;
 import com.sstlfsj.fibra.cli.api.CliCommandResult;
 import com.sstlfsj.fibra.cli.api.CliCommandDescriptor;
+import com.sstlfsj.fibra.cli.api.CliExitStatus;
 import com.sstlfsj.fibra.cli.api.CliApplication;
 import com.sstlfsj.fibra.cli.api.CliBootstrapCommand;
 import com.sstlfsj.fibra.cli.api.CliInvocation;
@@ -43,16 +43,18 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CancellationException;
 import java.util.function.Function;
 
 @CommandLine.Command(name = "fibra", mixinStandardHelpOptions = true,
@@ -82,10 +84,12 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
     private final InputStream input;
     private final PrintWriter output;
     private final PrintWriter error;
-    private final LinkedHashSet<CancellationSource> invocations = new LinkedHashSet<>();
+    private final CliInvocationCoordinator invocations = new CliInvocationCoordinator();
     private CliTerminal terminal = NonInteractiveTerminal.INSTANCE;
     private CliHost host;
     private Thread shutdownHook;
+    private CliProcessShutdown processShutdown;
+    private CliProcessSignalHandlers signalHandlers;
     private boolean closing;
 
     private FibraCli(CliApplication application, Function<CliPaths, CliHost> hostFactory,
@@ -134,6 +138,7 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
         Objects.requireNonNull(out, "out");
         Objects.requireNonNull(err, "err");
         var command = new FibraCli(application, hostFactory, installShutdownHook, in, out, err);
+        if (installShutdownHook) command.installProcessSignals();
         CommandGeneration generation = null;
         var line = command.commandLine(generation);
         int result;
@@ -156,6 +161,7 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
             }
             throw failure;
         }
+        if (!command.tryCompleteNormally()) result = command.awaitProcessShutdown();
         try {
             command.close();
         } catch (RuntimeException failure) {
@@ -267,6 +273,37 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
         Runtime.getRuntime().addShutdownHook(shutdownHook);
     }
 
+    private synchronized void installProcessSignals() {
+        if (processShutdown != null) return;
+        processShutdown = new CliProcessShutdown(invocations, this::closeHostAfterDrain,
+            System::exit, Runtime.getRuntime()::halt, error,
+            Duration.ofSeconds(5), command -> Thread.ofPlatform().daemon(true)
+                .name("fibra-cli-signal-shutdown").start(command));
+        signalHandlers = CliProcessSignalHandlers.install(processShutdown::interrupt);
+    }
+
+    private synchronized boolean tryCompleteNormally() {
+        return processShutdown == null || processShutdown.tryCompleteNormally();
+    }
+
+    private int awaitProcessShutdown() {
+        final CliProcessShutdown shutdown;
+        synchronized (this) {
+            shutdown = processShutdown;
+        }
+        return shutdown == null ? 0 : shutdown.awaitResult();
+    }
+
+    private void closeHostAfterDrain() {
+        final CliHost current;
+        synchronized (this) {
+            closing = true;
+            current = host;
+            host = null;
+        }
+        if (current != null) current.close();
+    }
+
     private void closeFromShutdown() {
         close();
     }
@@ -274,16 +311,21 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
     private void close() {
         final CliHost current;
         final Thread hook;
-        final java.util.List<CancellationSource> active;
+        final CliProcessSignalHandlers handlers;
+        final CliProcessShutdown process;
         synchronized (this) {
-            if (closing && host == null && shutdownHook == null) return;
+            if (closing && host == null && shutdownHook == null && signalHandlers == null
+                && processShutdown == null) return;
             closing = true;
             current = host;
-            active = java.util.List.copyOf(invocations);
             hook = shutdownHook;
             shutdownHook = null;
+            handlers = signalHandlers;
+            signalHandlers = null;
+            process = processShutdown;
+            processShutdown = null;
         }
-        active.forEach(CancellationSource::cancel);
+        invocations.stopAndCancel();
         try {
             if (current != null) current.close();
         } finally {
@@ -294,21 +336,24 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
                     // JVM 已进入关闭阶段，hook 会继续负责关闭。
                 }
             }
+            if (handlers != null) handlers.close();
+            if (process != null) process.close();
             synchronized (this) {
                 host = null;
             }
         }
     }
 
-    private synchronized CancellationSource beginInvocation() {
-        if (closing) throw new CliFailure(6, "宿主正在关闭", null);
-        var cancellation = new CancellationSource();
-        invocations.add(cancellation);
-        return cancellation;
+    private CliInvocationCoordinator.Invocation beginInvocation() {
+        try {
+            return invocations.begin();
+        } catch (IllegalStateException failure) {
+            throw new CliFailure(6, "宿主正在关闭", failure);
+        }
     }
 
-    private synchronized void endInvocation(CancellationSource cancellation) {
-        invocations.remove(cancellation);
+    private void endInvocation(CliInvocationCoordinator.Invocation invocation) {
+        invocation.close();
     }
 
     private int repl() {
@@ -334,7 +379,8 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
             }
         },
             input, output, error,
-            installShutdownHook && System.console() != null, paths.replHistoryFile(), replSessionSummary(paths));
+            installShutdownHook && System.console() != null, paths.replHistoryFile(), replSessionSummary(paths),
+            invocations);
     }
 
     private String replSessionSummary(CliPaths paths) {
@@ -365,7 +411,12 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
             var result = generation.invoke(command, request).block();
             if (result == null) throw new CliFailure(4,
                 "命令调用没有返回结果", null);
-            return result.status().code();
+            return projectExitStatus(result, cancellation.token().isCancelled());
+        } catch (RuntimeException failure) {
+            if (cancellation.token().isCancelled() && cancellationFailure(failure)) {
+                return CliExitStatus.CANCELLED.code();
+            }
+            throw failure;
         } finally {
             endInvocation(cancellation);
         }
@@ -380,7 +431,12 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
             var result = command.handler().invoke(request);
             if (result == null) throw new CliFailure(4,
                 "命令调用没有返回结果", null);
-            return result.status().code();
+            return projectExitStatus(result, cancellation.token().isCancelled());
+        } catch (Exception failure) {
+            if (cancellation.token().isCancelled() && cancellationFailure(failure)) {
+                return CliExitStatus.CANCELLED.code();
+            }
+            throw failure;
         } finally {
             endInvocation(cancellation);
         }
@@ -566,6 +622,31 @@ public final class FibraCli implements java.util.concurrent.Callable<Integer> {
     private static String message(Throwable failure) {
         return failure.getMessage() == null || failure.getMessage().isBlank()
             ? failure.getClass().getSimpleName() : failure.getMessage();
+    }
+
+    static int projectExitStatus(CliCommandResult result, boolean cancelled) {
+        Objects.requireNonNull(result, "result");
+        return cancelled && result.status() == CliExitStatus.SUCCESS
+            ? CliExitStatus.CANCELLED.code() : result.status().code();
+    }
+
+    private static boolean cancellationFailure(Throwable failure) {
+        var cancelled = false;
+        for (var current = failure; current != null; current = current.getCause()) {
+            for (var suppressed : current.getSuppressed()) {
+                if (!reactorBlockMarker(suppressed)) return false;
+            }
+            if (current instanceof InterruptedIOException
+                || current instanceof CancellationException) cancelled = true;
+            if (current.getCause() == current) return false;
+        }
+        return cancelled;
+    }
+
+    private static boolean reactorBlockMarker(Throwable failure) {
+        return failure.getClass() == Exception.class
+            && "#block terminated with an error".equals(failure.getMessage())
+            && failure.getCause() == null && failure.getSuppressed().length == 0;
     }
 
     private static Map<String, Object> map(Object... values) {

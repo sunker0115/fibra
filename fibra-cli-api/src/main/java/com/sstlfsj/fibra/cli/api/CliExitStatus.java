@@ -8,6 +8,7 @@ public enum CliExitStatus {
     STALE_OR_REVOKED(5),
     CLOSING(6),
     CLOSE_ERROR(7),
+    DRAIN_TIMEOUT(8),
     CANCELLED(130);
 
     private final int code;

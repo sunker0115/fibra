@@ -94,6 +94,7 @@ public final class com.sstlfsj.fibra.cli.api.CliExitStatus extends java.lang.Enu
   public static final com.sstlfsj.fibra.cli.api.CliExitStatus STALE_OR_REVOKED;
   public static final com.sstlfsj.fibra.cli.api.CliExitStatus CLOSING;
   public static final com.sstlfsj.fibra.cli.api.CliExitStatus CLOSE_ERROR;
+  public static final com.sstlfsj.fibra.cli.api.CliExitStatus DRAIN_TIMEOUT;
   public static final com.sstlfsj.fibra.cli.api.CliExitStatus CANCELLED;
   public static com.sstlfsj.fibra.cli.api.CliExitStatus[] values();
   public static com.sstlfsj.fibra.cli.api.CliExitStatus valueOf(java.lang.String);

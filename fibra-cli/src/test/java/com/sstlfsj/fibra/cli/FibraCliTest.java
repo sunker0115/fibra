@@ -9,6 +9,7 @@ import com.sstlfsj.fibra.cli.api.CliCommandContributions;
 import com.sstlfsj.fibra.cli.api.CliCommandDescriptor;
 import com.sstlfsj.fibra.cli.api.CliCommandOption;
 import com.sstlfsj.fibra.cli.api.CliCommandResult;
+import com.sstlfsj.fibra.cli.api.CliExitStatus;
 import com.sstlfsj.fibra.cli.api.CliApplication;
 import com.sstlfsj.fibra.cli.api.CliBootstrapCommand;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
@@ -27,6 +28,7 @@ import reactor.core.publisher.Mono;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.InterruptedIOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -42,6 +44,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FibraCliTest {
+    @Test
+    void cancellationOnlyOverridesSuccessfulHandlerResults() {
+        assertEquals(130, FibraCli.projectExitStatus(CliCommandResult.success(), true));
+        assertEquals(4, FibraCli.projectExitStatus(
+            new CliCommandResult(CliExitStatus.INVOCATION_ERROR), true));
+        assertEquals(7, FibraCli.projectExitStatus(
+            new CliCommandResult(CliExitStatus.CLOSE_ERROR), true));
+    }
+
     @Test
     void helpReturnsSuccessWithoutStartingAHost() {
         var output = new ByteArrayOutputStream();
@@ -404,6 +415,103 @@ class FibraCliTest {
     }
 
     @Test
+    void rawCtrlCCancelsTheAdmittedDynamicInvocationAndThenRestoresTheRepl(@TempDir Path home)
+        throws Exception {
+        dynamicCommandProfile(home);
+        var output = new ByteArrayOutputStream();
+        var error = new ByteArrayOutputStream();
+
+        var exitCode = FibraCli.run(new String[] {"--home", home.toString(), "repl"},
+            new ByteArrayInputStream("plugins list\ninterrupt\n\u0003plugins list\necho next\nexit\n"
+                .getBytes(StandardCharsets.UTF_8)), writer(output), writer(error));
+
+        assertEquals(0, exitCode);
+        var rendered = output.toString(StandardCharsets.UTF_8);
+        assertTrue(rendered.contains("cancelled\n"), rendered);
+        assertTrue(rendered.contains("next\n"), rendered);
+        var snapshots = rendered.lines().filter(line -> line.contains("\"id\":\"command\""))
+            .toList();
+        assertEquals(2, snapshots.size(), rendered);
+        assertEquals(snapshots.getFirst(), snapshots.getLast(),
+            "取消当前 invocation 不得替换插件实例、ClassLoader 或 effects");
+        assertEquals("", error.toString(StandardCharsets.UTF_8));
+    }
+
+    @Test
+    void rawCancellationIsProjectedByTheFrameworkForBootstrapHandlers(@TempDir Path home)
+        throws Exception {
+        var profiles = Files.createDirectories(home.resolve("config/profiles"));
+        Files.writeString(profiles.resolve("default.yaml"), "[]\n");
+        Files.writeString(profiles.resolve("default.artifacts.yaml"), "[]\n");
+        var output = new ByteArrayOutputStream();
+        var error = new ByteArrayOutputStream();
+        var application = CliApplication.builder("agent")
+            .description("测试取消投影。").version("1")
+            .addBootstrapCommand(new CliBootstrapCommand(new CliCommandDescriptor(
+                List.of("read-key"), "等待受控终端输入。", List.of(), null, List.of()),
+                request -> {
+                    try (var lease = request.invocation().terminal().acquire()) {
+                        lease.read();
+                        return CliCommandResult.success();
+                    }
+                }))
+            .addBootstrapCommand(new CliBootstrapCommand(new CliCommandDescriptor(
+                List.of("status"), "输出状态。", List.of(), null, List.of()), request -> {
+                    request.invocation().output().stdout("ready");
+                    return CliCommandResult.success();
+                }))
+            .addBootstrapCommand(new CliBootstrapCommand(new CliCommandDescriptor(
+                List.of("fail-after-interrupt"), "中断后模拟清理失败。", List.of(), null, List.of()),
+                request -> {
+                    try (var lease = request.invocation().terminal().acquire()) {
+                        lease.read();
+                        return CliCommandResult.success();
+                    } catch (InterruptedIOException expected) {
+                        throw new IllegalStateException("post-cancel cleanup failed");
+                    }
+                }))
+            .addBootstrapCommand(new CliBootstrapCommand(new CliCommandDescriptor(
+                List.of("fail-suppressed-after-interrupt"), "中断后模拟 suppressed 清理失败。",
+                List.of(), null, List.of()), request -> {
+                    AutoCloseable cleanup = () -> {
+                        throw new IllegalStateException("suppressed cleanup failed");
+                    };
+                    try (cleanup; var lease = request.invocation().terminal().acquire()) {
+                        lease.read();
+                        return CliCommandResult.success();
+                    }
+                }))
+            .build();
+
+        var exitCode = FibraCli.run(application,
+            new String[] {"--home", home.toString(), "repl"},
+            new ByteArrayInputStream("read-key\n\u0003status\nexit\n"
+                .getBytes(StandardCharsets.UTF_8)), writer(output), writer(error));
+
+        assertEquals(0, exitCode);
+        assertTrue(output.toString(StandardCharsets.UTF_8).contains("ready\n"));
+        assertEquals("", error.toString(StandardCharsets.UTF_8));
+
+        output.reset();
+        error.reset();
+        assertEquals(0, FibraCli.run(application,
+            new String[] {"--home", home.toString(), "repl"},
+            new ByteArrayInputStream("fail-after-interrupt\n\u0003status\nexit\n"
+                .getBytes(StandardCharsets.UTF_8)), writer(output), writer(error)));
+        assertTrue(output.toString(StandardCharsets.UTF_8).contains("ready\n"));
+        assertTrue(error.toString(StandardCharsets.UTF_8).contains("post-cancel cleanup failed"));
+
+        output.reset();
+        error.reset();
+        assertEquals(0, FibraCli.run(application,
+            new String[] {"--home", home.toString(), "repl"},
+            new ByteArrayInputStream("fail-suppressed-after-interrupt\n\u0003status\nexit\n"
+                .getBytes(StandardCharsets.UTF_8)), writer(output), writer(error)));
+        assertTrue(output.toString(StandardCharsets.UTF_8).contains("ready\n"));
+        assertTrue(error.toString(StandardCharsets.UTF_8).contains("terminal input cancelled"));
+    }
+
+    @Test
     void replHistoryAndDiagnosticsRedactDynamicSensitiveOptions(@TempDir Path home) throws Exception {
         dynamicCommandProfile(home);
         var output = new ByteArrayOutputStream();
@@ -644,7 +752,25 @@ class FibraCliTest {
                         request.invocation().output().stdout("leased");
                         return Mono.just(CliCommandResult.success());
                     });
-                return Mono.when(echo, terminal);
+                var interrupt = registrar.register(context, CliCommandContributions.KIND,
+                    provider, "interrupt", new CliCommandDescriptor(List.of("interrupt"),
+                        "等待受控终端中断。", List.of(), null, List.of()),
+                    (invocation, request) -> {
+                        try (var lease = request.invocation().terminal().acquire()) {
+                            lease.read();
+                            return Mono.error(new IllegalStateException("expected terminal interrupt"));
+                        } catch (InterruptedIOException expected) {
+                            if (!request.invocation().cancellation().isCancelled()) {
+                                return Mono.error(new IllegalStateException(
+                                    "terminal and invocation cancellation were not coordinated"));
+                            }
+                            request.invocation().output().stdout("cancelled");
+                            return Mono.error(expected);
+                        } catch (java.io.IOException failure) {
+                            return Mono.error(failure);
+                        }
+                    });
+                return Mono.when(echo, terminal, interrupt);
             }).require(ContributionServices.REGISTRAR).build();
         }
     }

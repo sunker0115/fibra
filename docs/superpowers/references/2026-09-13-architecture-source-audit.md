@@ -10,7 +10,7 @@
 | 范围 | 唯一真源 | 当前状态 | 不得误用的证据 |
 |---|---|---|---|
 | Fibra vNext 已交付底座 | [vNext 架构第 1–10 节](../specs/2026-09-07-fibra-vnext-architecture.md) | 已完成 | 不能由历史部分绿色构建替代最终账本 |
-| Fibra CLI 演进 | [vNext 架构第 11 节 F1–F4](../specs/2026-09-07-fibra-vnext-architecture.md) | F1、F2 已完成；F3–F4 尚未实施 | F1 之前的固定 CLI、REPL 与 ZIP 只属于第 1–10 节，不能抵扣 F1；F1/F2 证据也不能抵扣 F3–F4 |
+| Fibra CLI 演进 | [vNext 架构第 11 节 F1–F4](../specs/2026-09-07-fibra-vnext-architecture.md) | F1–F3 已完成；F4 尚未实施 | F1 之前的固定 CLI、REPL 与 ZIP 只属于第 1–10 节，不能抵扣 F1；F1/F2 证据不抵扣 F3，F1–F3 证据也不抵扣 F4 |
 | 上层 Agent 产品 | [CLI + Desktop Agent 产品架构](../specs/2026-09-13-fibra-based-agent-product-architecture.md) | P0–P8 全部尚未实施 | vNext 不再保存第二套产品阶段表；其它文档不能重排或重定义 P0–P8 |
 
 后续架构的 DSH 契约统一固定为 `@deepseek-ai/dsh 0.1.5-rc.2`、提交
@@ -21,12 +21,12 @@
 
 | 来源 | 固定版本与提交 | 源码位置 | 直接证明 | 不直接证明 / Fibra 自定增强 |
 |---|---|---|---|---|
-| DSH/Cordis | DSH `0.1.5-rc.2`，`c291e7961a515f6d7af9304e7fd1d257929aef26`；内置 Cordis `4.0.2`，同提交 `vendor/cordis` tree `7feb044c43a476591eb6c61e727667c97c0c8f40` | [commands](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/interaction/commands/src/index.ts)、[settings secret redaction](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/settings/settings/src/redact.ts)、[process shutdown](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/apps/cli/src/process-shutdown.ts)、[Fiber](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/vendor/cordis/src/fiber.ts)、[Reflect service](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/vendor/cordis/src/reflect.ts) | command 是插件拥有的注册项，并由 `recordInput: false` 显式决定原始输入不进入 `command/run`；settings 由 schema `role('secret')` 标出秘密位置，并对 `object/dict/array` 可达字段在跨线边界结构化删除；AbortSignal 可使调用方立即停止等待；CLI 有有界、可升级的进程关闭协调；Cordis effect/service 有所有权与清理等待 | DSH redactor 明确不覆盖藏在 union/intersection/transform 中的 secret，也没有证明 Picocli/JLine 命令历史或诊断脱敏；command 的 abort-race 不保证被放弃 handler 已停止，不提供 Fibra 的 PublishedRuntime revision 准入、route 租约或 invocation Scope 排空 |
-| OpenAI Codex CLI | `0.154.0`，tag commit `6b9826e3aa83b1a5947db50f4332cb9c65f1b340` | [message history](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/message-history/src/lib.rs)、[history config](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/config/src/types.rs)、[best-effort sanitizer](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/secrets/src/sanitizer.rs) | `history.jsonl` 只提供 `save-all`/`none`，`append_entry` 原样持久化文本并保留敏感模式检查待办；另一个 sanitizer 仅以固定正则 best-effort 处理少数已知 key/token 形态 | Codex 没有证明 F2 所需的命令 descriptor 敏感语义或安全历史；Fibra 不采用其 `save-all` 默认值，也不把启发式正则当作正确性边界 |
+| DSH/Cordis | DSH `0.1.5-rc.2`，`c291e7961a515f6d7af9304e7fd1d257929aef26`；内置 Cordis `4.0.2`，同提交 `vendor/cordis` tree `7feb044c43a476591eb6c61e727667c97c0c8f40` | [commands](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/interaction/commands/src/index.ts)、[settings secret redaction](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/settings/settings/src/redact.ts)、[process shutdown](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/apps/cli/src/process-shutdown.ts)、[profile boot signals](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/apps/cli/src/profile-boot.ts)、[Fiber](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/vendor/cordis/src/fiber.ts)、[Reflect service](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/vendor/cordis/src/reflect.ts) | command 是插件拥有的注册项，并由 `recordInput: false` 显式决定原始输入不进入 `command/run`；settings 由 schema `role('secret')` 标出秘密位置，并对 `object/dict/array` 可达字段在跨线边界结构化删除；AbortSignal 可使调用方立即停止等待；CLI 让正常完成与 Unix 信号共用同一个 pending shutdown，先启动定时器再异步调用完整 disposer，profile boot 将 `SIGTERM`/`SIGINT` 分别投影为 0/130；重复信号可以升级；Cordis effect/service 有所有权与清理等待 | DSH redactor 明确不覆盖藏在 union/intersection/transform 中的 secret，也没有证明 Picocli/JLine 命令历史或诊断脱敏；command 的 abort-race 不保证被放弃 handler 已停止，不提供 Fibra 的 PublishedRuntime revision 准入、route 租约或 invocation Scope 排空。Fibra 吸收“一个 pending、全链截止、正常/信号共用仲裁”，但按本项目首个信号幂等契约不复制“第二信号立即退出”作为已排空证据 |
+| OpenAI Codex CLI | `0.154.0`，tag commit `6b9826e3aa83b1a5947db50f4332cb9c65f1b340` | [message history](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/message-history/src/lib.rs)、[history config](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/config/src/types.rs)、[best-effort sanitizer](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/secrets/src/sanitizer.rs)、[turn interrupt routing](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/tui/src/app/thread_routing.rs)、[terminal ownership and restore](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/tui/src/tui.rs) | `history.jsonl` 只提供 `save-all`/`none`，`append_entry` 原样持久化文本并保留敏感模式检查待办；另一个 sanitizer 仅以固定正则 best-effort 处理少数已知 key/token 形态。TUI 以 thread/turn 身份记录 pending interrupt 并去重；临时交出终端时先暂停自身事件读取、恢复终端，外部程序返回后重设模式并恢复事件读取 | Codex 没有证明 F2 所需的命令 descriptor 敏感语义或安全历史；Fibra 不采用其 `save-all` 默认值，也不把启发式正则当作正确性边界。Codex 的 interrupt 身份与终端恢复只作为 F3 输入所有权参考，不证明 Fibra Scope、route 或远端资源排空 |
 | AgentCLI | `1.0-SNAPSHOT`，`1962c58a4dcf647d46beeb6fea16b3ed40a26ab5`；JLine `4.0.0` `jdk11` classifier | [pom](https://github.com/WaterDimension/AgentCLI/blob/1962c58a4dcf647d46beeb6fea16b3ed40a26ab5/pom.xml)、[Main](https://github.com/WaterDimension/AgentCLI/blob/1962c58a4dcf647d46beeb6fea16b3ed40a26ab5/src/main/java/com/paicli/cli/Main.java)、[history](https://github.com/WaterDimension/AgentCLI/blob/1962c58a4dcf647d46beeb6fea16b3ed40a26ab5/src/main/java/com/paicli/cli/PaiCliHistory.java)、[completer](https://github.com/WaterDimension/AgentCLI/blob/1962c58a4dcf647d46beeb6fea16b3ed40a26ab5/src/main/java/com/paicli/cli/PaiCliCompleter.java)、[highlighter](https://github.com/WaterDimension/AgentCLI/blob/1962c58a4dcf647d46beeb6fea16b3ed40a26ab5/src/main/java/com/paicli/cli/PaiCliHighlighter.java)、[renderer fallback](https://github.com/WaterDimension/AgentCLI/blob/1962c58a4dcf647d46beeb6fea16b3ed40a26ab5/src/main/java/com/paicli/render/RendererFactory.java) | JLine persistent history、补全、高亮、dumb/ANSI 降级和交互取消的可行组合 | `Future.cancel(true)` 是立即取消请求，不等待 Fibra Scope、route 租约、远端终态或插件资源排空 |
 | PaiCLI | `1.0-SNAPSHOT`，`840f01b53aac798d5a51921a89741c83278d9aac`；JLine `4.0.0` `jdk11` classifier | [pom](https://github.com/WaterDimension/PaiCLI/blob/840f01b53aac798d5a51921a89741c83278d9aac/pom.xml)、[Main](https://github.com/WaterDimension/PaiCLI/blob/840f01b53aac798d5a51921a89741c83278d9aac/src/main/java/com/paicli/cli/Main.java)、[history](https://github.com/WaterDimension/PaiCLI/blob/840f01b53aac798d5a51921a89741c83278d9aac/src/main/java/com/paicli/cli/PaiCliHistory.java)、[completer](https://github.com/WaterDimension/PaiCLI/blob/840f01b53aac798d5a51921a89741c83278d9aac/src/main/java/com/paicli/cli/PaiCliCompleter.java)、[highlighter](https://github.com/WaterDimension/PaiCLI/blob/840f01b53aac798d5a51921a89741c83278d9aac/src/main/java/com/paicli/cli/PaiCliHighlighter.java)、[renderer fallback](https://github.com/WaterDimension/PaiCLI/blob/840f01b53aac798d5a51921a89741c83278d9aac/src/main/java/com/paicli/render/RendererFactory.java) | 与其自身固定提交相符的历史、补全、高亮、renderer 与交互取消实现 | 与 AgentCLI 一样，不证明 Fibra 的受管排空；两个仓库当前实现接近也不构成公共架构基线 |
 | Picocli | `4.7.7`，tag commit `5fcd4415a2cf834a12b4cb1e262a007beaa6b4af` | [CommandLine.java](https://github.com/remkop/picocli/blob/5fcd4415a2cf834a12b4cb1e262a007beaa6b4af/src/main/java/picocli/CommandLine.java) 的 `CommandSpec` mutator 及[短选项解析](https://github.com/remkop/picocli/blob/5fcd4415a2cf834a12b4cb1e262a007beaa6b4af/src/main/java/picocli/CommandLine.java#L13898-L14090) | `CommandSpec` 提供程序化建树、解析与 help 模型；默认 POSIX 短选项语义接受参数附着形式 | mutator 直接证明 `CommandSpec` 是可变解析对象；“不可变命令代”必须由 Fibra descriptor、贡献身份和 revision 定义。Picocli 不提供 Fibra 的敏感历史/诊断保证；该保证由捕获代 descriptor 的 `sensitive=true` 和内置 `tools invoke --input` 契约定义 |
-| JLine | `4.4.3` `jdk11`，tag commit `15f6fdd3b737bec2e876dd7d708f08f9efcfdb32` | [LineReader](https://github.com/jline/jline3/blob/15f6fdd3b737bec2e876dd7d708f08f9efcfdb32/reader/src/main/java/org/jline/reader/LineReader.java)、[LineReaderImpl](https://github.com/jline/jline3/blob/15f6fdd3b737bec2e876dd7d708f08f9efcfdb32/reader/src/main/java/org/jline/reader/impl/LineReaderImpl.java)、[DefaultHistory](https://github.com/jline/jline3/blob/15f6fdd3b737bec2e876dd7d708f08f9efcfdb32/reader/src/main/java/org/jline/reader/impl/history/DefaultHistory.java)、[Terminal](https://github.com/jline/jline3/blob/15f6fdd3b737bec2e876dd7d708f08f9efcfdb32/terminal/src/main/java/org/jline/terminal/Terminal.java)、[Attributes](https://github.com/jline/jline3/blob/15f6fdd3b737bec2e876dd7d708f08f9efcfdb32/terminal/src/main/java/org/jline/terminal/Attributes.java) | `LineReader` 明确非线程安全；`DefaultHistory.attach` 关联 reader 并读取 history 文件；`readLine` 可用 `UserInterruptException` 表达普通 Ctrl+C；Terminal/Attributes 提供 raw mode 与终端属性控制 | 普通 REPL Ctrl+C、raw lease 字节 `0x03`、外部 `SIGINT/SIGTERM` 的三路归并、去重、退出码和 Scope 排空顺序均为 Fibra F3 自定契约 |
+| JLine | `4.4.3` `jdk11`，tag commit `15f6fdd3b737bec2e876dd7d708f08f9efcfdb32` | [LineReader](https://github.com/jline/jline3/blob/15f6fdd3b737bec2e876dd7d708f08f9efcfdb32/reader/src/main/java/org/jline/reader/LineReader.java)、[LineReaderImpl](https://github.com/jline/jline3/blob/15f6fdd3b737bec2e876dd7d708f08f9efcfdb32/reader/src/main/java/org/jline/reader/impl/LineReaderImpl.java)、[DefaultHistory](https://github.com/jline/jline3/blob/15f6fdd3b737bec2e876dd7d708f08f9efcfdb32/reader/src/main/java/org/jline/reader/impl/history/DefaultHistory.java)、[Terminal](https://github.com/jline/jline3/blob/15f6fdd3b737bec2e876dd7d708f08f9efcfdb32/terminal/src/main/java/org/jline/terminal/Terminal.java)、[Attributes](https://github.com/jline/jline3/blob/15f6fdd3b737bec2e876dd7d708f08f9efcfdb32/terminal/src/main/java/org/jline/terminal/Attributes.java)、[AbstractTerminal raw mode](https://github.com/jline/jline3/blob/15f6fdd3b737bec2e876dd7d708f08f9efcfdb32/terminal/src/main/java/org/jline/terminal/impl/AbstractTerminal.java)、[NonBlockingInputStream](https://github.com/jline/jline3/blob/15f6fdd3b737bec2e876dd7d708f08f9efcfdb32/terminal/src/main/java/org/jline/utils/NonBlockingInputStream.java)、[Signals](https://github.com/jline/jline3/blob/15f6fdd3b737bec2e876dd7d708f08f9efcfdb32/terminal/src/main/java/org/jline/utils/Signals.java)、[TerminalBuilder](https://github.com/jline/jline3/blob/15f6fdd3b737bec2e876dd7d708f08f9efcfdb32/terminal/src/main/java/org/jline/terminal/TerminalBuilder.java) | `LineReader` 明确非线程安全；`DefaultHistory.attach` 关联 reader 并读取 history 文件；`readLine` 用 `UserInterruptException` 表达编辑态 Ctrl+C，并在进入/离开行编辑时安装和恢复 terminal signal handler/attributes。`AbstractTerminal.enterRawMode` 清除 `ISIG`/`ICANON`，`NonBlockingInputStream` 支持截止读取，`Signals` 提供 JVM 进程信号注册，`TerminalBuilder.nativeSignals(false)` 允许 Fibra 将进程信号与 terminal handler 分离 | JLine 只提供机制，不定义 Fibra 的三路归并、首次信号语义、5 秒截止、退出码或 Scope 排空顺序；这些都是 Fibra F3 自定契约，并由本项目测试证明 |
 
 ## 3. 命令代、准入与中断结论
 
@@ -38,9 +38,18 @@
    invocation 才持有租约并参与排空；准入前代变化返回 stale/revoked，既不调用旧 handler，也不转向
    同名新 handler。
 4. 普通 REPL `Ctrl+C` 只中断当前行编辑；raw terminal lease 中的 `0x03` 取消持有该 lease 的已准入
-   invocation；外部 `SIGINT/SIGTERM` 进入进程级取消/关闭协调。三者共享幂等协调器，但不能混成同一入口。
-5. AgentCLI/PaiCLI 和 DSH 的立即取消只提供交互参考。Fibra 必须由自己的契约测试证明：取消请求之后仍
-   等待 invocation Scope、route 租约、远端终态和受管资源按所有权排空。
+   invocation；外部 `SIGINT/SIGTERM` 进入进程级取消/关闭协调。F3 已将三者接入同一幂等协调器，但没有
+   混成同一输入入口。
+5. 当前 CLI 进程始终拥有它创建的 `CliHost`；外部 `SIGINT/SIGTERM` 均在 signal handler 返回前同步关闭
+   准入，再由异步 worker 取消并等待 active invocation 完成，最后关闭该 Host，分别投影 130/0。当前不存在
+   attached/shared client，不为假设场景预建 owner/non-owner 抽象。
+6. 进程关闭采用 DSH 已证明的“正常完成与信号共用一个 pending、先启动截止再执行 disposer”模式，但
+   Fibra 的 5 秒截止覆盖同步取消回调、invocation 排空和 Host close 全链；正常完成先以原子仲裁关闭信号
+   准入，已接受信号则独占退出结果。raw terminal 中断由框架在 invocation token 仍可观察时统一投影；只有
+   handler 成功或不带其它失败的纯取消异常成为 130，显式非成功状态、业务异常与 `suppressed` 清理失败保留，
+   不要求插件手写取消状态。
+7. AgentCLI/PaiCLI 和 DSH 的立即取消只提供交互参考。Fibra 已由第 9 节契约测试与发行门禁证明：取消请求
+   之后仍等待 invocation Scope、route 租约、远端终态和受管资源按所有权排空。
 
 ## 4. 产品参照的证据分级
 
@@ -67,7 +76,7 @@
 | 审计 P1 | VS Code/Grafana/Theia 的外部事实与项目推导混栏 | 已分栏；唯一管理面、跨 facet ChangeSet、desired/observed 均标为项目自定契约 |
 | 审计 P2 | 当前架构文档仍沿用 DSH `0.1.2-rc.1` 旧基线 | 已按维护者确认切换到 `0.1.5-rc.2`/`c291e7961`；旧提交仅保留历史证据 |
 | 审计 P2 | VS Code/Grafana/Theia 链接未固定版本 | 接受：已明确降级为非契约灵感；任何契约断言不得依赖其浮动内容 |
-| F2 P2 | 当前自动化宿主没有可受控的真实终端模拟器；`script`/`expect` PTY 缺少 JLine 终端能力协商响应 | 接受：`CommandGenerationTest` 覆盖补全、高亮和同代语义，`CliReplTest` 覆盖非 dumb/dumb reader、历史重启和 stderr 分离，ZIP 仓外验收覆盖管道与敏感历史；直接桌面 TTY 复验留为 F4 冻结前的手工门禁，不能据此宣称 Ctrl+C、raw mode、resize 或 redisplay 已完成 |
+| F2 P2 | F2 当时的自动化宿主没有可受控的真实终端模拟器；`script`/`expect` PTY 缺少 JLine 终端能力协商响应 | 接受范围不变：F2 的 history、补全、高亮、窄终端与重启仍留作 F4 冻结前直接桌面复验。F3 后续已在原生 xterm PTY 单独验证编辑态 `Ctrl+C` 和 raw lease `0x03`，不能反向冒充 F2 当时已完成该验证，也不证明 F4 的 resize/redisplay |
 
 ## 6. 独立只读复审
 
@@ -94,6 +103,24 @@ F2 复审依次发现并关闭：bootstrap descriptor 未参与历史敏感识�
 未进入诊断脱敏集合。对应回归覆盖 bootstrap 与动态 descriptor、附着值、分离且以 `-` 开头的值、解析失败、
 handler 失败和 terminal 关闭；复审同时核对 DSH/Codex 固定源码与证据边界。
 
-最终独立只读复审结论：无未关闭 F2 P0/P1。唯一保留的 P2 是当前自动化宿主不能证明真实桌面 TTY 行为；
-该项按第 5 节理由接受，并作为 F4 冻结前手工门禁，不得据此宣称 F3/F4 的 raw mode、resize、redisplay 或
-信号协调已经完成。
+最终独立只读复审结论：无未关闭 F2 P0/P1。唯一保留的 P2 是 F2 的 history、补全、高亮、窄终端与重启
+尚未在直接桌面 TTY 复验；该项按第 5 节理由接受，并作为 F4 冻结前手工门禁。F3 后续中断证据单独记录，
+不反向改写 F2 复审历史，也不证明 F4 的 resize、redisplay 或兼容性冻结。
+
+## 8. F3 独立只读复审
+
+F3 独立复审共分三次：首轮检查初始实现，第二轮复核修正，最终轮只读确认关闭。复审未发现 P0；发现的
+5 项 P1 均先补确定性失败测试再修复：
+
+| 级别 | 复审发现 | 关闭证据 |
+|---|---|---|
+| F3 P1 | 5 秒截止未覆盖同步取消回调与阻塞 Host close | `CliProcessShutdownTest` 分别阻塞取消 subscriber 与 Host close，证明独立计时器从首次信号开始覆盖全链并强制投影 8 |
+| F3 P1 | 正常完成可能在检查信号后覆盖并发到达的信号结果 | `tryCompleteNormally` 与 `interrupt` 共用原子仲裁；测试证明正常完成先胜时关闭后续信号准入，信号先胜时主线程等待同一退出结果 |
+| F3 P1 | raw handler 需要手写 `CANCELLED`，框架可能看不到 token | 动态与 bootstrap handler 只传播 `InterruptedIOException`；框架在 invocation `finally` 以前统一投影纯取消，发行 fixture 不再返回手写状态 |
+| F3 P1 | 已接受信号到异步 worker 真正运行之间仍可准入新 invocation | signal handler 内同步执行 `stopAdmission`，潜在阻塞取消留在异步 worker；排队但不执行的 Executor 测试证明 `interrupt` 返回前准入已关闭 |
+| F3 P1 | token 已取消时会覆盖显式错误状态，且忽略 `suppressed` 清理失败 | 仅“成功 + 已取消”或无其它失败的纯取消异常投影 130；4/7 显式状态、独立业务失败与 try-with-resources `suppressed` 清理失败回归均保持错误 |
+
+最终独立只读复审结论：无未关闭 F3 P0/P1，无新增 P2，可以提交 F3。复审核对 CLI 100 项测试全绿、
+`git diff --check` 与发行脚本语法通过。F2 保留的桌面 history/补全/高亮/窄终端复验，以及包含最新 F3/F4
+改动的全新 checkout、空 Maven 仓、五类消费者和 archetype 全套隔离门禁，按阶段约定继续作为 F4 最终
+冻结条件，不由 F3 的 xterm 中断实测或历史空仓结果抵扣。

@@ -47,4 +47,11 @@ class CliApiContractTest {
         assertFalse(CliCommandContributions.KIND.codec().isPresent());
         assertEquals(0, CliCommandResult.success().status().code());
     }
+
+    @Test
+    void drainTimeoutHasAStableExitCodeDistinctFromCloseFailureAndCancellation() {
+        assertEquals(8, CliExitStatus.DRAIN_TIMEOUT.code());
+        assertEquals(7, CliExitStatus.CLOSE_ERROR.code());
+        assertEquals(130, CliExitStatus.CANCELLED.code());
+    }
 }

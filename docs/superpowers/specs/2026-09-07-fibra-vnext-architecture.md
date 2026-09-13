@@ -2,7 +2,7 @@
 
 日期：2026-09-07
 
-状态：第 1–10 节与第 11 节 F1、F2 已完成；F3–F4 尚未实施（2026-09-13）
+状态：第 1–10 节与第 11 节 F1–F3 已完成；F4 尚未实施（2026-09-13）
 
 本文是 Fibra vNext 唯一权威设计，定义最终系统边界、运行模型、模块职责和验收标准；不记录旧版本
 迁移过程，也不按参考项目组织正文。外部实现的源码对拍统一收录在
@@ -1150,7 +1150,7 @@ DSH 的插件行为基线构成功能等价门禁；其他来源用于解释取�
 ## 11. Fibra CLI 完成路线与上层 Agent 产品边界
 
 本节定义第 1–10 节交付完成后的演进路线。F1 已完成公开 CLI 组合边界，F2 已完成安全历史、补全与终端
-降级；F3–F4 尚未实施。第 1–10 节
+降级，F3 已完成调用级取消与信号协调；F4 尚未实施。第 1–10 节
 已有的固定管理命令、一次性执行、REPL 与 CLI/ZIP 验收只证明当时的封闭 CLI，不能冒充 F1 证据；F1
 由本节列出的命令代、显式准入身份、动态 Java command、终端租约和仓外消费者测试单独证明。
 后续不再把 DSH 的 Agent 产品能力继续堆入 Fibra 仓库，而采用与 Cordis/DSH 相同的
@@ -1231,7 +1231,8 @@ Fibra 内部实现。该项目负责：
 当前 `fibra-cli` 已有固定管理命令、一次性执行、共享 Engine 的 REPL、稳定 JSON 输出、profile 路径、
 关闭 hook 和真实发行入口。F1 已把应用元数据、bootstrap command、动态 command descriptor、调用上下文、
 输出、退出状态和终端租约提取为公开组合边界；F2 已提供安全持久历史、高亮、运行时补全和 dumb-terminal
-降级。调用级 `Ctrl+C`、raw lease、信号、resize 与 redisplay 仍分别属于 F3/F4，尚未完成。
+降级；F3 已交付调用级 `Ctrl+C`、raw lease `0x03` 与外部信号协调。resize、redisplay 和 CLI 框架兼容性
+冻结仍属于 F4，尚未完成。
 
 F1 起采用以下模块边界：
 
@@ -1285,7 +1286,7 @@ usage 与补全，只能使用这组已捕获事实，过程中不得重新读�
 | Boot、package、bundle、profile | 环境分层、配置组合、启动审计；安装包、bundle patch、profile 和最终配置分层 | Fibra 已完成 | 继续由 Fibra 提供，上层项目只声明自己的 profile/bundle/package |
 | 插件生命周期 | 依赖驱动激活、异步 effect、服务撤销等待、条件/isolate、局部更新、主动停用 | Fibra 已完成 | 所有上层产品插件复用，不建产品私有容器 |
 | fs、搜索、shell、subprocess、storage | contract/provider/tool 分层；搜索经 subprocess；进程树排空；具名存储与变更事件 | Fibra 已完成本期范围 | 保留 Fibra 正式发布物；图片、Jobs、PTY、Sandbox 不冒充已完成 |
-| CLI 交互 | DSH 的 commands/questions/approval 均为插件；AgentCLI/PaiCLI 有 JLine 历史、补全、高亮和 renderer | Fibra F1、F2 已完成，F3–F4 未完成 | F1 已交付 bootstrap、不可变命令代与动态 Java command；F2 已交付安全历史、交互补全、高亮与 dumb-terminal 降级；调用级取消和终端冻结继续由 F3/F4 完成，产品 command/questions/approval/renderer 均留上层插件 |
+| CLI 交互 | DSH 的 commands/questions/approval 均为插件；AgentCLI/PaiCLI 有 JLine 历史、补全、高亮和 renderer | Fibra F1–F3 已完成，F4 未完成 | F1 已交付 bootstrap、不可变命令代与动态 Java command；F2 已交付安全历史、交互补全、高亮与 dumb-terminal 降级；F3 已交付调用级取消、raw lease 与进程信号协调；resize、redisplay 和兼容性冻结由 F4 完成，产品 command/questions/approval/renderer 均留上层插件 |
 | Model | provider 路由、模型发现、配置解析和流式适配 | 未实现 | 上层项目动态 contract/provider 插件 |
 | Agent | Agent factory、轮次/步骤、模型流与工具调度；完整实现依赖 Session | 未实现 | 上层项目 Agent 插件；先以 invocation 内状态闭合 Model/Tool，再按产品架构真源接入独立 Session |
 | Tool 流水线 | schema、作用域、guard、pre/execute/post/result 和多种呈现 | Fibra 已有公开工具调用 | 通用调用留 Fibra；Agent 选择、审批和产品呈现留上层项目 |
@@ -1307,7 +1308,7 @@ usage 与补全，只能使用这组已捕获事实，过程中不得重新读�
 
 ### 11.4 Fibra 仓库实施阶段
 
-F1、F2 已完成，后续依次完成 F3、F4。F4 通过前不创建上层 Agent 产品仓库，以免产品代码反向塑造尚未
+F1–F3 已完成，后续完成 F4。F4 通过前不创建上层 Agent 产品仓库，以免产品代码反向塑造尚未
 稳定的 CLI SPI。
 
 #### F1：公开 CLI 组合边界（已完成，2026-09-13）
@@ -1349,29 +1350,47 @@ help/补全中更新、执行准入前撤销和同名贡献替换均不跨代，
 distribution 回归通过。直接桌面 TTY 在 F4 冻结前仍须复验；本次自动化环境的 P2 接受理由同见账本。不得扫描
 workspace 或 storage 后把用户明确要求保存的内容误判为历史泄漏。
 
-#### F3：调用级取消与信号
+#### F3：调用级取消与信号（已完成，2026-09-13）
 
-三个入口必须分开识别，再汇入同一个幂等 invocation 取消与排空协调器：
+三个入口已经分开识别，再汇入同一个幂等 invocation 取消与排空协调器：
 
-- 普通 REPL 由 JLine `LineReader` 读取命令行时，键入 `Ctrl+C` 产生输入中断，只清空当前编辑缓冲；此时
-  尚无已准入 invocation，不创建 route 租约、不触发 Engine 关闭。
-- 已准入 invocation 持有 raw terminal lease 时，租约读取到字节 `0x03` 必须将其转换为当前 invocation
-  的取消请求，不把该字节交给业务输入。租约停止新读、唤醒阻塞读取并恢复终端属性；invocation Scope
-  排空完成后才释放 route 租约并返回 REPL。若平台把该按键提升为进程信号，信号入口与字节入口必须由
-  同一协调器去重。
-- 外部 `SIGINT` 是进程级中断：停止本 CLI 进程的新 invocation 准入，取消已经准入的当前调用并等待其
-  Scope 排空，随后终止当前 CLI 进程并以 130 退出；是否同时关闭共享 Host 由宿主所有权决定，不能把附着
-  client 的退出扩大为 Host 关闭。外部 `SIGTERM` 进入宿主关闭：owner 全局停止准入，取消并排空全部已
-  准入 invocation，再沿 Engine/Scope 所有权顺序关闭；非 owner 只释放自己的会话/租约。重复信号只能按
-  公开截止升级，不能绕过诊断保存和受管资源清理。
+- 普通 REPL 由 JLine `LineReader` 读取命令行时，键入 `Ctrl+C` 产生输入中断，只清空当前编辑缓冲并继续
+  会话；此时尚无已准入 invocation，不创建 route 租约、不触发 Engine 关闭。
+- 已准入 invocation 持有 raw terminal lease 时，租约进入 raw mode；读取到字节 `0x03` 后将其转换为
+  当前 invocation 的取消请求，不把该字节交给业务输入。租约停止新读，以限时非阻塞读取唤醒等待，并
+  幂等恢复进入 raw mode 前的终端属性；CLI 等待 handler 返回，而 `PublishedRuntime` 继续等待 invocation
+  Scope、route、远端终态和受管资源清理完成，随后才允许 REPL 读取下一条命令。
+- 外部 `SIGINT` 与 `SIGTERM` 都独立于 JLine 行编辑器注册：首次信号原子关闭本进程的新 invocation 准入，
+  且在 signal handler 返回前同步完成该准入屏障；可能阻塞的协作取消则交给异步关闭 worker，覆盖全部
+  已经开始的 CLI invocation。其中只有经 `PublishedRuntime` 准入的调用持有 route 并进入
+  Engine Scope 排空。一个从首次信号开始计时的 5 秒截止覆盖取消发送、完成屏障和当前 CLI 所拥有
+  `CliHost` 的关闭全过程，而不是只限制其中一次 future 等待。正常完成与信号共用原子退出仲裁：正常完成
+  先关闭信号准入后才进入普通 close；已接受的信号则独占退出码和关闭链，不能被主线程的旧结果覆盖。
+  当前 Fibra CLI 只有 owner 运行形态，不存在可附着到共享 Host 的 client 模式，因此不预建 owner/non-owner
+  公共抽象；未来若增加该运行形态，必须另行定义所有权契约。`SIGINT` 成功排空后退出 130，`SIGTERM`
+  成功排空后退出 0；排空超时强制退出 8，宿主关闭失败退出 7。首个信号决定结果，重复或竞态信号只复用
+  同一取消、排空与关闭过程，不二次关闭或跨过完成屏障。
 
-取消、排空超时、业务失败和宿主关闭失败保持不同投影；动态 command contribution 自动获得同一
-invocation 语义。AgentCLI/PaiCLI 的 `Future.cancel(true)` 与 DSH command 的 abort-race 只能证明立即停止
+取消、排空超时、业务失败和宿主关闭失败保持不同投影；bootstrap、动态 command contribution 与工具调用
+都使用同一 CLI invocation 协调器。框架只把“handler 成功但 token 已取消”或不携带其它失败的纯取消异常
+投影为 130；handler 显式返回的非成功状态、业务异常与 `suppressed` 清理失败优先保留，插件无需捕获
+terminal 中断并手写取消状态。动态命令仍只在 `PublishedRuntime` 准入后取得 route 租约。AgentCLI/
+PaiCLI 的 `Future.cancel(true)` 与 DSH command 的 abort-race 只能证明立即停止
 等待/请求取消，不能作为 Fibra 已等待 invocation Scope、route 租约和远端终态排空的证据。
 
-退出条件：真实 TTY 分别覆盖普通 REPL `Ctrl+C` 与 raw lease `0x03`，并证明取消后可继续调用另一命令；
-无关插件实例、ClassLoader、Node PID、effects 和在途调用保持；子进程范围静默；外部 `SIGINT`、
-`SIGTERM`、退出码和产品扩展命令夹具通过。
+完成证据：`CliReplTest`、`CliTerminalControllerTest`、`CliInvocationCoordinatorTest`、
+`CliProcessSignalHandlersTest`、`CliProcessShutdownTest` 与 `FibraCliTest` 覆盖三种入口、raw 属性恢复、阻塞读取
+唤醒、纯取消投影、显式失败状态与 `suppressed` 清理失败保持、signal handler 返回前停止准入、正常/信号
+仲裁、阻塞取消回调与阻塞 Host close 的总截止、重复信号、完成屏障及退出码；
+`PublishedRuntimeLeaseTest` 与既有 Node/Scope 取消测试证明
+route、远端终态和受管资源按所有权排空，不以参考项目的立即取消替代。原生 xterm PTY 实测普通编辑态
+`Ctrl+C` 清行后可执行动态命令，raw lease `0x03` 取消后可再执行动态命令并以 0 退出。发行 ZIP 仓外门禁
+以真实进程信号验证 `SIGINT=130`、`SIGTERM=0`，两者均在截止内停止 shell payload、supervisor 与叶子进程；
+外部 Java 插件 `external-cli read-key` 验证只依赖发布 API 即可取得 raw lease、收到取消并恢复下一条命令。
+受影响模块、公开 API 基线、根 `mvn clean verify`、仓外 ZIP 真实信号与原生 xterm PTY 均通过；包含最新
+F3 改动的空 Maven 仓、五类仓外消费者和 archetype 全套隔离门禁按阶段约定留到 F4 完成后统一执行，
+此前 F1/F2 的空仓结果不抵扣该最终门禁。详细映射见
+[行为验收账本第 9 节](../references/2026-09-11-behavior-verification-ledger.md#9-f3-调用级取消与信号证据)。
 
 #### F4：CLI 框架冻结与交付门禁
 
@@ -1641,13 +1660,13 @@ token/event 多值流、持久游标、重放、慢消费者背压或断线续�
 ### 11.8 提交、验证与文档留痕
 
 Fibra 的 F1 至 F4 仍只维护本文和既有行为验收账本，不新建平行 spec/plan。每阶段使用一个包含契约、实现、
-测试、发行适配与证据回填的独立提交，不拆出会暂时制造不一致基线的平行提交。提交前运行受影响模块测试
-和公开 API 签名门禁；涉及发行边界时同时运行全仓、可复现制品和空 Maven 仓分发门禁。F4 仍须再次执行
-完整冻结门禁，不能复用 F1 的历史结果。
+测试、发行适配与证据回填的独立提交，不拆出会暂时制造不一致基线的平行提交。提交前运行受影响模块测试、
+公开 API 签名与该阶段直接涉及的仓外 ZIP 门禁。F4 完成后统一从全新 checkout 与空 Maven 仓执行全仓、
+可复现制品、五类仓外消费者和 archetype 完整冻结门禁，不能复用 F1/F2 的历史空仓结果。
 
 上层项目建立后拥有自己的权威架构文档和行为验收账本，不把产品实现证据回填成 Fibra 已实现能力。
 每个 P 阶段同样要求实现与测试同提交、真实 provider 验收、仓库外 ZIP 验收和独立审核；发布里程碑从
 空 Maven 仓先取得 Fibra 正式发布物，再单独构建上层项目，以证明两仓边界真实成立。
 
-下一次实现从 F3 开始。F3、F4 完成以前，不创建 Model、Agent、Session、MCP 或其它 DSH 产品模块；
+下一次实现从 F4 开始。F4 完成以前，不创建 Model、Agent、Session、MCP 或其它 DSH 产品模块；
 F4 的外部消费者和空仓门禁通过后，才创建上层 Agent 产品项目并进入其权威架构定义的首阶段。

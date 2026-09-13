@@ -244,55 +244,71 @@ last_fs_tool_state=$(tail -n 1 <<< "$fs_tool_states")
 [[ "$last_fs_tool_state" == *'"enabled":true'* && "$last_fs_tool_state" == *'"observed":true'* ]] ||
   fail "fs-tools 未恢复启用"
 
-entered="$temporary_root/shutdown-entered"
-process_ids="$temporary_root/shutdown-pids"
-shutdown_output="$temporary_root/shutdown.json"
-shutdown_command="sleep 60 & leaf=\$!; printf '%s %s %s\\n' \$\$ \$PPID \$leaf > '$process_ids'; : > '$entered'; wait \$leaf"
-(
-  cd "$working_directory"
-  exec "$launcher" tools invoke shell-tools bash --input \
-    "{\"command\":\"$shutdown_command\",\"workdir\":\"$working_directory\",\"timeoutMs\":60000}"
-) > "$shutdown_output" 2> "$shutdown_output.stderr" &
-host_pid=$!
-await_file "$entered"
-read -r payload_pid supervisor_pid leaf_pid < "$process_ids"
-kill -TERM "$host_pid"
-shutdown_deadline="$temporary_root/shutdown-deadline-exceeded"
-(
-  sleep 8
-  if kill -0 "$host_pid" 2>/dev/null; then
-    # SIGQUIT 让 JVM 将所有线程栈写入已捕获的 stdout 或 stderr，不改变关闭状态。
-    kill -QUIT "$host_pid" 2>/dev/null || true
+verify_signal_shutdown() {
+  local signal=$1
+  local expected_status=$2
+  local label=$3
+  local entered="$temporary_root/shutdown-entered-$label"
+  local process_ids="$temporary_root/shutdown-pids-$label"
+  local shutdown_output="$temporary_root/shutdown-$label.json"
+  local shutdown_deadline="$temporary_root/shutdown-deadline-exceeded-$label"
+  local shutdown_command
+  local deadline_pid
+  local host_status
+  local payload_pid
+  local supervisor_pid
+  local leaf_pid
+  shutdown_command="sleep 60 & leaf=\$!; printf '%s %s %s\\n' \$\$ \$PPID \$leaf > '$process_ids'; : > '$entered'; wait \$leaf"
+  (
+    trap - INT
+    cd "$working_directory"
+    exec "$launcher" tools invoke shell-tools bash --input \
+      "{\"command\":\"$shutdown_command\",\"workdir\":\"$working_directory\",\"timeoutMs\":60000}"
+  ) > "$shutdown_output" 2> "$shutdown_output.stderr" &
+  host_pid=$!
+  await_file "$entered"
+  read -r payload_pid supervisor_pid leaf_pid < "$process_ids"
+  kill -"$signal" "$host_pid"
+  (
+    sleep 8
+    if kill -0 "$host_pid" 2>/dev/null; then
+      # SIGQUIT 让 JVM 将所有线程栈写入已捕获的 stdout 或 stderr，不改变关闭状态。
+      kill -QUIT "$host_pid" 2>/dev/null || true
+    fi
+    sleep 2
+    if kill -0 "$host_pid" 2>/dev/null; then
+      capture_shutdown_diagnostics
+      : > "$shutdown_deadline"
+      kill -KILL "$host_pid" 2>/dev/null || true
+    fi
+  ) &
+  deadline_pid=$!
+  set +e
+  wait "$host_pid"
+  host_status=$?
+  kill "$deadline_pid" 2>/dev/null
+  wait "$deadline_pid" 2>/dev/null
+  set -e
+  host_pid=
+  if [[ -e "$shutdown_deadline" ]]; then
+    if [[ -s "$shutdown_output" ]]; then
+      echo "${signal} 关闭超时前的宿主 stdout：" >&2
+      cat "$shutdown_output" >&2
+    fi
+    if [[ -s "$shutdown_output.stderr" ]]; then
+      echo "${signal} 关闭超时前的宿主 stderr：" >&2
+      cat "$shutdown_output.stderr" >&2
+    fi
+    fail "${signal} 后宿主未在 10 秒内排空退出"
   fi
-  sleep 2
-  if kill -0 "$host_pid" 2>/dev/null; then
-    capture_shutdown_diagnostics
-    : > "$shutdown_deadline"
-    kill -KILL "$host_pid" 2>/dev/null || true
-  fi
-) &
-deadline_pid=$!
-set +e
-wait "$host_pid"
-host_status=$?
-kill "$deadline_pid" 2>/dev/null
-wait "$deadline_pid" 2>/dev/null
-set -e
-host_pid=
-if [[ -e "$shutdown_deadline" ]]; then
-  if [[ -s "$shutdown_output" ]]; then
-    echo "SIGTERM 关闭超时前的宿主 stdout：" >&2
-    cat "$shutdown_output" >&2
-  fi
-  if [[ -s "$shutdown_output.stderr" ]]; then
-    echo "SIGTERM 关闭超时前的宿主 stderr：" >&2
-    cat "$shutdown_output.stderr" >&2
-  fi
-  fail "SIGTERM 后宿主未在 10 秒内排空退出"
-fi
-[[ "$host_status" == 0 || "$host_status" == 143 ]] || fail "SIGTERM 后宿主退出码异常：$host_status"
-await_stopped "$payload_pid"
-await_stopped "$supervisor_pid"
-await_stopped "$leaf_pid"
+  [[ "$host_status" == "$expected_status" ]] ||
+    fail "${signal} 后宿主退出码异常：${host_status}，期望 ${expected_status}"
+  await_stopped "$payload_pid"
+  await_stopped "$supervisor_pid"
+  await_stopped "$leaf_pid"
+}
+
+verify_signal_shutdown TERM 0 sigterm
+verify_signal_shutdown INT 130 sigint
 
 echo "发行 ZIP 仓库外验证通过：$archive"

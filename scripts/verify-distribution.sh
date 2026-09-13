@@ -372,6 +372,29 @@ cmp -s "$external_cli_root/expected.out" "$external_cli_output" || {
   exit 1
 }
 
+readonly external_cli_interrupt_output="$external_cli_root/interrupt.out"
+readonly external_cli_interrupt_error="$external_cli_root/interrupt.err"
+printf 'external-cli read-key\n\003external-cli echo after-cancel\nexit\n' |
+  "$external_cli_launcher" --home "$external_cli_install" repl \
+  > "$external_cli_interrupt_output" 2> "$external_cli_interrupt_error"
+grep -F -- 'ready' "$external_cli_interrupt_output" >/dev/null || {
+  echo "仓外 Java 动态 CLI 终端命令未取得租约" >&2
+  exit 1
+}
+grep -F -- 'cancelled' "$external_cli_interrupt_output" >/dev/null || {
+  echo "仓外 Java 动态 CLI raw Ctrl+C 未取消调用" >&2
+  exit 1
+}
+grep -F -- 'after-cancel' "$external_cli_interrupt_output" >/dev/null || {
+  echo "仓外 Java 动态 CLI 取消后未恢复 REPL" >&2
+  exit 1
+}
+[[ ! -s "$external_cli_interrupt_error" ]] || {
+  echo "仓外 Java 动态 CLI raw Ctrl+C 写入 stderr" >&2
+  cat "$external_cli_interrupt_error" >&2
+  exit 1
+}
+
 readonly external_cli_help="$external_cli_root/help.out"
 readonly external_cli_help_error="$external_cli_root/help.err"
 "$external_cli_launcher" --home "$external_cli_install" external-cli echo --help \

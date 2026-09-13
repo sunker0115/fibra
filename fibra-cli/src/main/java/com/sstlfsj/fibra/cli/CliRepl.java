@@ -38,6 +38,13 @@ final class CliRepl {
 
     static int run(Dispatcher dispatcher, InputStream input, PrintWriter output, PrintWriter error,
                    boolean useSystemTerminal, java.nio.file.Path historyFile, String sessionSummary) {
+        return run(dispatcher, input, output, error, useSystemTerminal, historyFile, sessionSummary,
+            new CliInvocationCoordinator());
+    }
+
+    static int run(Dispatcher dispatcher, InputStream input, PrintWriter output, PrintWriter error,
+                   boolean useSystemTerminal, java.nio.file.Path historyFile, String sessionSummary,
+                   CliInvocationCoordinator invocations) {
         Objects.requireNonNull(dispatcher, "dispatcher");
         Objects.requireNonNull(input, "input");
         Objects.requireNonNull(output, "output");
@@ -45,7 +52,7 @@ final class CliRepl {
         final Terminal terminal;
         try {
             if (useSystemTerminal) {
-                terminal = TerminalBuilder.terminal();
+                terminal = TerminalBuilder.builder().system(true).nativeSignals(false).build();
             } else {
                 terminal = new DumbTerminal(input, new PrintWriterOutputStream(output));
             }
@@ -53,12 +60,13 @@ final class CliRepl {
             error.println("无法启动交互终端: " + failure.getMessage());
             return 3;
         }
-        return run(dispatcher, terminal, output, error, historyFile, sessionSummary);
+        return run(dispatcher, terminal, output, error, historyFile, sessionSummary, invocations);
     }
 
     static int run(Dispatcher dispatcher, Terminal terminal, PrintWriter output,
                    PrintWriter error) {
-        return run(dispatcher, terminal, output, error, null);
+        return run(dispatcher, terminal, output, error, null, null,
+            new CliInvocationCoordinator());
     }
 
     private static int run(Dispatcher dispatcher, Terminal terminal, PrintWriter output,
@@ -68,6 +76,13 @@ final class CliRepl {
 
     static int run(Dispatcher dispatcher, Terminal terminal, PrintWriter output,
                    PrintWriter error, java.nio.file.Path historyFile, String sessionSummary) {
+        return run(dispatcher, terminal, output, error, historyFile, sessionSummary,
+            new CliInvocationCoordinator());
+    }
+
+    static int run(Dispatcher dispatcher, Terminal terminal, PrintWriter output,
+                   PrintWriter error, java.nio.file.Path historyFile, String sessionSummary,
+                   CliInvocationCoordinator invocations) {
         final int result;
         CliHistory history = historyFile == null ? null : new CliHistory(historyFile);
         var completer = new CliCommandCompleter();
@@ -80,8 +95,7 @@ final class CliRepl {
             var reader = builder.build();
             if (history != null) history.attach(reader);
             if (sessionSummary != null && !terminal.getType().equals("dumb")) error.println(sessionSummary);
-            try (var terminalController = new CliTerminalController(
-                terminal.input(), terminal.writer(), true)) {
+            try (var terminalController = new CliTerminalController(terminal, true, invocations)) {
                 result = readLines(reader, dispatcher, terminalController, history, completer, highlighter,
                     output, error);
             }
@@ -138,7 +152,7 @@ final class CliRepl {
             } catch (EndOfFileException ignored) {
                 return 0;
             } catch (UserInterruptException ignored) {
-                return 130;
+                continue;
             }
             var arguments = arguments(parser, line, error);
             if (arguments == null || arguments.length == 0) continue;

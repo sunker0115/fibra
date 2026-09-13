@@ -1,9 +1,9 @@
 # 基于 Fibra 的 CLI + Desktop Agent 产品架构与实施路线
 
-状态：产品 P0–P8 的唯一权威架构与实施顺序；Fibra CLI F1、F2 已完成，F3–F4 与产品 P0–P8 尚未实施。
+状态：产品 P0–P8 的唯一权威架构与实施顺序；Fibra CLI F1–F3 已完成，F4 与产品 P0–P8 尚未实施。
 
 本文件承接 Fibra vNext 第 1–10 节的完成点 `a83174d`，定义后续独立 Agent 产品的双端架构、统一插件模型、
-P0–P8 唯一阶段顺序和验收门禁。Fibra 已完成范围、已交付的 CLI F1/F2 与尚未实施的 F3–F4 仍以
+P0–P8 唯一阶段顺序和验收门禁。Fibra 已完成范围、已交付的 CLI F1–F3 与尚未实施的 F4 仍以
 [Fibra vNext 架构](./2026-09-07-fibra-vnext-architecture.md)为准；本文件不把 F1 之前的封闭 CLI/ZIP 验收
 写成 F1 证据，也不把产品侧规划写成 Fibra 当前已经交付的能力。
 
@@ -36,7 +36,7 @@ P0–P8 唯一阶段顺序和验收门禁。Fibra 已完成范围、已交付的
 | 层次 | 状态 | 内容 |
 |---|---|---|
 | Fibra vNext 第 1–10 节 | 已实现并有发行证据 | RuntimeDomain、Engine、Registry、ArtifactStore、Java/Node runtime、PublishedRuntime、差量更新、调用排空、正式基础插件、封闭 CLI 和发行 ZIP |
-| Fibra CLI F1–F4 | F1、F2 已实现；F3–F4 仍是产品建仓前置 | F1 已交付公开 CLI 组合 API、动态 Java command contribution 和最小终端租约；F2 已交付安全历史、补全、高亮与 dumb-terminal 降级；调用级取消及 CLI API 与发行冻结由 F3/F4 完成 |
+| Fibra CLI F1–F4 | F1–F3 已实现；F4 仍是产品建仓前置 | F1 已交付公开 CLI 组合 API、动态 Java command contribution 和最小终端租约；F2 已交付安全历史、补全、高亮与 dumb-terminal 降级；F3 已交付调用级取消、raw lease 和进程信号协调；CLI API、resize/redisplay 与发行冻结由 F4 完成 |
 | 上层 Agent 产品 P0–P8 | 尚未实施；阶段顺序只由本文定义 | 单 Host 附着、Electron/React Desktop、client runtime adapter、统一逻辑插件包、Model、Agent、Session、MCP、Skill、审批及其它产品插件 |
 
 F4 的空 Maven 仓、仓库外消费者、公开 API 签名和最终发行门禁通过以前，不创建产品代码仓库。现在完成
@@ -404,8 +404,9 @@ CLI ZIP 与 Desktop 安装包是同一产品版本下的不同物理发行：
 
 ### 11.1 前置阶段：完成 Fibra CLI F1–F4
 
-F1、F2 已完成，F3–F4 尚未实施。F1 之前的固定管理命令、REPL 和 ZIP 验收只属于 vNext 第 1–10 节，不能
-抵扣 F1；F1/F2 的新增公开契约、动态 Java command、命令代竞态、终端租约、安全历史和交互辅助证据由 vNext
+F1–F3 已完成，F4 尚未实施。F1 之前的固定管理命令、REPL 和 ZIP 验收只属于 vNext 第 1–10 节，不能
+抵扣 F1；F1–F3 的新增公开契约、动态 Java command、命令代竞态、终端租约、安全历史、交互辅助、调用取消
+和信号协调证据由 vNext
 与行为账本独立记录。F1–F4 的编号、交付、契约测试、退出条件和提交边界只以
 [Fibra vNext 第 11 节](./2026-09-07-fibra-vnext-architecture.md)
 为准；本产品真源只把 F4 通过作为进入 P0 的前置条件，不复制第二套 F 阶段表。
@@ -502,5 +503,5 @@ Desktop 控制切片必须放在 P0，而不是等到 Agent/Session 已复杂后
 - 把受信 UI 插件的约定式隔离描述为恶意 JavaScript 安全沙箱；
 - 因为使用 Electron 就接受第二控制面、两套配置或不可追踪的前端热更新。
 
-下一次实施从 Fibra F3 开始。F4 完成并提交以前，只维护本设计和既有 Fibra 证据，不创建产品源码；
+下一次实施从 Fibra F4 开始。F4 完成并提交以前，只维护本设计和既有 Fibra 证据，不创建产品源码；
 F4 门禁通过后，以 P0 的双端控制切片作为新项目第一个可独立验证的提交阶段。

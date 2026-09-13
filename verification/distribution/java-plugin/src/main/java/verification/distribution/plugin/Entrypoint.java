@@ -19,6 +19,7 @@ import com.sstlfsj.fibra.plugins.tool.ToolResult;
 import com.sstlfsj.fibra.value.LiteralValue;
 import reactor.core.publisher.Mono;
 
+import java.io.InterruptedIOException;
 import java.util.List;
 import java.util.Map;
 
@@ -37,6 +38,25 @@ public final class Entrypoint implements PluginEntrypoint<Void> {
                         request.invocation().output().stdout(prefix
                             + String.join(" ", request.arguments()));
                         return Mono.just(CliCommandResult.success());
+                    })).then(registrar.register(context, CliCommandContributions.KIND,
+                    instanceId, "read-key", new CliCommandDescriptor(
+                        List.of("external-cli", "read-key"), "等待一个受控终端按键。",
+                        List.of(), null, List.of()), (invocation, request) -> {
+                        try (var lease = request.invocation().terminal().acquire()) {
+                            lease.write("ready\n");
+                            lease.flush();
+                            lease.read();
+                            return Mono.just(CliCommandResult.success());
+                        } catch (InterruptedIOException expected) {
+                            if (!request.invocation().cancellation().isCancelled()) {
+                                return Mono.error(new IllegalStateException(
+                                    "terminal cancellation was not propagated"));
+                            }
+                            request.invocation().output().stdout("cancelled");
+                            return Mono.error(expected);
+                        } catch (java.io.IOException failure) {
+                            return Mono.error(failure);
+                        }
                     })).then();
             })
             .require(ContributionServices.REGISTRAR)

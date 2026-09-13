@@ -4,9 +4,13 @@ import com.sstlfsj.fibra.cli.api.CliTerminal;
 import com.sstlfsj.fibra.cli.api.CliTerminalLease;
 import com.sstlfsj.fibra.cli.api.CliTerminalUnavailableException;
 import com.sstlfsj.fibra.cli.api.CliTerminalUnavailableReason;
+import org.jline.terminal.Attributes;
+import org.jline.terminal.Terminal;
+import org.jline.utils.NonBlockingInputStream;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.io.PrintWriter;
 import java.util.Objects;
 
@@ -15,13 +19,33 @@ final class CliTerminalController implements AutoCloseable {
     private final InputStream input;
     private final PrintWriter output;
     private final boolean interactive;
+    private final CliInvocationCoordinator invocations;
+    private final Terminal terminal;
     private Lease current;
     private boolean closed;
 
     CliTerminalController(InputStream input, PrintWriter output, boolean interactive) {
+        this(input, output, interactive, new CliInvocationCoordinator());
+    }
+
+    CliTerminalController(InputStream input, PrintWriter output, boolean interactive,
+                          CliInvocationCoordinator invocations) {
+        this(input, output, interactive, invocations, null);
+    }
+
+    CliTerminalController(Terminal terminal, boolean interactive,
+                          CliInvocationCoordinator invocations) {
+        this(terminal.input(), terminal.writer(), interactive, invocations,
+            Objects.requireNonNull(terminal, "terminal"));
+    }
+
+    private CliTerminalController(InputStream input, PrintWriter output, boolean interactive,
+                                  CliInvocationCoordinator invocations, Terminal terminal) {
         this.input = Objects.requireNonNull(input, "input");
         this.output = Objects.requireNonNull(output, "output");
         this.interactive = interactive;
+        this.invocations = Objects.requireNonNull(invocations, "invocations");
+        this.terminal = terminal;
     }
 
     synchronized InvocationTerminal openInvocation() {
@@ -33,13 +57,20 @@ final class CliTerminalController implements AutoCloseable {
         if (closed || owner.closed) throw unavailable(CliTerminalUnavailableReason.CLOSED);
         if (!interactive) throw unavailable(CliTerminalUnavailableReason.UNSUPPORTED);
         if (current != null) throw unavailable(CliTerminalUnavailableReason.BUSY);
-        current = new Lease(owner);
+        current = new Lease(owner, terminal == null ? null : terminal.enterRawMode());
         return current;
     }
 
     private synchronized void release(Lease lease) {
-        if (current == lease) current = null;
-        lease.closed = true;
+        if (lease.closed) return;
+        try {
+            if (terminal != null && lease.originalAttributes != null) {
+                terminal.setAttributes(lease.originalAttributes);
+            }
+        } finally {
+            if (current == lease) current = null;
+            lease.closed = true;
+        }
     }
 
     private synchronized void closeInvocation(InvocationTerminal owner) {
@@ -87,15 +118,28 @@ final class CliTerminalController implements AutoCloseable {
 
     private final class Lease implements CliTerminalLease {
         private final InvocationTerminal owner;
+        private final Attributes originalAttributes;
         private boolean closed;
 
-        private Lease(InvocationTerminal owner) {
+        private Lease(InvocationTerminal owner, Attributes originalAttributes) {
             this.owner = owner;
+            this.originalAttributes = originalAttributes;
         }
 
         @Override public int read() throws IOException {
             active();
-            return input.read();
+            while (true) {
+                if (invocations.currentCancelled()) return interrupted();
+                var value = input instanceof NonBlockingInputStream nonBlocking
+                    ? nonBlocking.read(100) : input.read();
+                if (value == NonBlockingInputStream.READ_EXPIRED) continue;
+                if (value == 0x03) {
+                    invocations.cancelCurrent();
+                    return interrupted();
+                }
+                if (invocations.currentCancelled()) return interrupted();
+                return value;
+            }
         }
 
         @Override public void write(String value) {
@@ -118,6 +162,11 @@ final class CliTerminalController implements AutoCloseable {
                     throw unavailable(CliTerminalUnavailableReason.CLOSED);
                 }
             }
+        }
+
+        private int interrupted() throws InterruptedIOException {
+            close();
+            throw new InterruptedIOException("terminal input cancelled");
         }
     }
 }

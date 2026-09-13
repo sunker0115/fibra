@@ -8,10 +8,16 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jline.terminal.Terminal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -103,6 +109,29 @@ class CliReplTest {
 
         assertEquals(0, exitCode);
         assertEquals("", error.toString(StandardCharsets.UTF_8));
+    }
+
+    @Test
+    void ctrlCWhileEditingClearsTheLineAndKeepsTheSessionOpen() throws Exception {
+        var dispatched = new AtomicInteger();
+        var input = new PipedInputStream();
+        try (var feeder = new PipedOutputStream(input);
+             var executor = Executors.newSingleThreadExecutor()) {
+            var terminal = new InterruptibleTrackingTerminal(input);
+            var running = executor.submit(() -> CliRepl.run((arguments, invocationTerminal) -> {
+                assertEquals("next", arguments[0]);
+                dispatched.incrementAndGet();
+                return 0;
+            }, terminal, writer(new ByteArrayOutputStream()), writer(new ByteArrayOutputStream())));
+
+            assertTrue(terminal.awaitLineRead());
+            terminal.raise(Terminal.Signal.INT);
+            feeder.write("next\nexit\n".getBytes(StandardCharsets.UTF_8));
+            feeder.flush();
+
+            assertEquals(0, running.get(5, TimeUnit.SECONDS));
+        }
+        assertEquals(1, dispatched.get());
     }
 
     @Test
@@ -270,6 +299,24 @@ class CliReplTest {
 
         @Override public String getType() {
             return "xterm-256color";
+        }
+    }
+
+    private static final class InterruptibleTrackingTerminal extends DumbTerminal {
+        private final CountDownLatch lineRead = new CountDownLatch(1);
+
+        private InterruptibleTrackingTerminal(PipedInputStream input) throws IOException {
+            super(input, new ByteArrayOutputStream());
+        }
+
+        @Override public SignalHandler handle(Signal signal, SignalHandler handler) {
+            var previous = super.handle(signal, handler);
+            if (signal == Signal.INT && handler != SignalHandler.SIG_DFL) lineRead.countDown();
+            return previous;
+        }
+
+        private boolean awaitLineRead() throws InterruptedException {
+            return lineRead.await(5, TimeUnit.SECONDS);
         }
     }
 }

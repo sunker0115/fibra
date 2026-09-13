@@ -6,7 +6,8 @@
 
 状态边界：第 6 节记录的正式宿主 CLI、REPL 与可运行 ZIP 是 vNext 架构第 1–10 节的历史完成证据；它们
 没有公开 `fibra-cli-api`、动态 command contribution、受控终端租约或命令代竞态测试，不能冒充 F1。
-第 7 节单独记录 F1 新证据，第 8 节单独记录 F2 新证据。当前第 1–10 节与 F1、F2 已完成，F3–F4 尚未实施。
+第 7 节单独记录 F1 新证据，第 8 节单独记录 F2 新证据，第 9 节单独记录 F3 新证据。当前第 1–10 节与
+F1–F3 已完成，F4 尚未实施。
 
 本账本把两类当前验收对象分开记录：
 
@@ -250,14 +251,14 @@ F1 不复用第 6 节的旧 CLI/ZIP 结果抵扣完成条件；新增证据按�
 | 终端租约 | `CliTerminalControllerTest`、`CliReplTest` 与 `FibraCliTest` 覆盖非交互 `UNSUPPORTED`、同 lane `BUSY`、关闭后 `CLOSED`，以及动态命令成功、异常或遗忘关闭时由 invocation scope 强制释放、下一行可重新取得。raw mode、resize、`0x03` 和调用级信号仍属 F3/F4，未宣称完成 |
 | 仓外消费者与发行 | `verification/distribution/java-plugin` 仅以 `provided` 依赖发布的 `fibra-cli-api`，同一真实插件继续贡献并调用已发布工具；`scripts/verify-distribution.sh` 从隔离空 Maven 仓构建消费者，再从 ZIP `bin/fibra` 执行动态命令和 `external-cli echo --help`，停用插件后验证命令消失。正式发布集合增至严格 27 个，`fibra-cli-api` 同时进入可复现制品比较 |
 
-F1 的完成不改变 F2–F4 边界：持久安全历史、高亮和完整交互补全属于 F2；普通 REPL `Ctrl+C`、raw
-terminal lease 的 `0x03`、外部 `SIGINT/SIGTERM` 汇流与调用级取消属于 F3；raw/resize/redisplay、兼容性
-规则和 CLI 框架冻结属于 F4。
+F1 证据本身不抵扣 F2–F4：持久安全历史、高亮和完整交互补全由第 8 节证明；普通 REPL `Ctrl+C`、raw
+terminal lease 的 `0x03`、外部 `SIGINT/SIGTERM` 汇流与调用级取消由第 9 节证明；resize/redisplay、
+兼容性规则和 CLI 框架冻结仍属于 F4。
 
 ## 8. F2 安全历史、补全与终端降级证据
 
-F2 不复用第 6 节或 F1 的旧 CLI/ZIP 结果抵扣完成条件；新增证据限定为安全历史、捕获命令代的交互辅助与
-终端降级，不实现 F3/F4 的取消、raw mode、resize、redisplay 或信号协调。
+F2 不复用第 6 节或 F1 的旧 CLI/ZIP 结果抵扣完成条件；本节证据限定为安全历史、捕获命令代的交互辅助与
+终端降级，不抵扣第 9 节的 F3 取消/信号证据，也不证明 F4 的 resize、redisplay 或兼容性冻结。
 
 | 验收项 | F2 证据与结论 |
 |---|---|
@@ -266,3 +267,19 @@ F2 不复用第 6 节或 F1 的旧 CLI/ZIP 结果抵扣完成条件；新增证�
 | 人类/机器终端分离 | `CliReplTest` 验证非 dumb terminal 的 profile/workspace/tool 数量/revision 摘要只写 stderr，dumb terminal JSON stdout 不含 ANSI；一次性命令路径不变。`CliCommandCompleter`/`CliCommandHighlighter` 均为 `fibra-cli` 私有 JLine 实现，`fibra-cli-api` 未引入 JLine 或 Picocli。 |
 | 仓外 ZIP | `fibra-distribution/src/test/scripts/verify-archive.sh` 用仓库外解压 ZIP 跑 REPL、持久化 history，并以不命中工具的敏感 JSON 样本检查 history 与 CLI 诊断都不泄漏原值；同一脚本继续回归 storage、fs、search、shell、配置恢复与分发结构。实际执行通过。 |
 | P2 接受项 | 当前可控自动化表面不允许驱动本机 iTerm，`script`/`expect` PTY 又不模拟 JLine 所需的终端能力协商响应，故未把该环境的伪终端当作真实 TTY 通过。接受理由是 F2 未定义 raw mode、resize、redisplay 或调用级中断，且 `CommandGenerationTest` 覆盖补全/高亮和同代语义，`CliReplTest` 覆盖非 dumb/dumb reader、历史重启与 stderr 分离，仓外 ZIP 覆盖管道与敏感历史；F4 冻结前必须在真实桌面 TTY 重新执行 history、补全、高亮、窄终端与重启手工门禁。 |
+
+## 9. F3 调用级取消与信号证据
+
+F3 不把 JLine、DSH、AgentCLI、PaiCLI 或 Codex 的中断实现当作 Fibra 排空证明。参考源码只证明输入模式、
+取消请求、终端恢复和进程关闭的可行模式；以下 Fibra 测试与发行门禁独立证明三类入口汇入一个幂等协调器，
+并在恢复下一条命令或退出进程前等待本项目自己的 invocation 完成边界。
+
+| 验收项 | F3 证据与结论 |
+|---|---|
+| 普通 REPL `Ctrl+C` | `CliReplTest.ctrlCWhileEditingClearsTheLineAndKeepsTheSessionOpen` 在 JLine 已接管行编辑后触发 `Terminal.Signal.INT`，证明当前缓冲被丢弃、未 dispatch，随后 `next` 正常执行且会话返回 0。原生 xterm PTY 另实测输入未提交的 `partial` 后键入 `Ctrl+C`，新 prompt 出现，动态 `external-cli echo edit-ok` 正常执行；此入口发生在 dispatch 前，不创建 CLI invocation，也不取得 route 租约。 |
+| raw lease `0x03` | `CliTerminalControllerTest` 证明 lease 进入 raw mode 后 `ISIG`/`ICANON` 清除，字节 `0x03` 不交给 handler、当前 token 只取消一次、阻塞的 `NonBlockingInputStream` 在最多 100 ms 轮询周期内返回且不关闭共享输入，租约关闭和重复关闭只恢复一次原属性，下一 invocation 可读取后续字节。`FibraCliTest.rawCtrlCCancelsTheAdmittedDynamicInvocationAndThenRestoresTheRepl` 让动态 handler 只传播 `InterruptedIOException` 而不返回 `CANCELLED`，框架在 token 仍可观察时投影 130，并通过真实 Engine/PublishedRuntime 验证取消后下一条命令执行；`rawCancellationIsProjectedByTheFrameworkForBootstrapHandlers` 对 bootstrap handler 证明相同语义，并证明中断后的独立业务失败和 `suppressed` 清理失败仍按失败呈现。`cancellationOnlyOverridesSuccessfulHandlerResults` 证明 token 已取消也不能覆盖 handler 显式返回的 4/7。原生 xterm PTY 实测 `external-cli read-key` 输出 `ready` 后键入 `Ctrl+C`，输出 `cancelled`，随后 `external-cli echo raw-ok` 成功并以 0 退出。 |
+| 统一准入与完成屏障 | `CliInvocationCoordinatorTest` 证明 raw 中断只取消 current 且保持会话准入，进程 stop 则一次性关闭准入、取消全部 active invocation，并只在每个 invocation 完成后兑现同一个 `drained` future；重复 stop 复用该 future。`CliProcessShutdownTest.signalClosesAdmissionBeforeDeferredShutdownWorkRuns` 用只排队、不执行的 worker 确定性证明 signal handler 返回以前已同步关闭准入，潜在阻塞取消仍由 worker 执行。CLI 的 bootstrap、动态 command 和工具调用都在 `finally` 结束 invocation；动态命令同步等待 `PublishedRuntime.invoke(...).block()` 返回，因此不会在 Engine 清理未完成时提前显示下一 prompt。 |
+| Scope、route、远端与资源排空 | `PublishedRuntimeLeaseTest.cancelledInvocationKeepsItsLeaseUntilCleanupAndRejectsNewCallsDuringShutdown` 已直接证明取消后 route 租约保留至 invocation Scope cleanup 完成；`NodePublishedCancellationOwnershipTest.cancellingOnePublishedToolCallDrainsItBeforeTheNodeInstanceCanStop` 证明远端取消请求未终态时受影响更新继续等待、共享 Node sidecar/PID 与另一条在途调用保持，远端终态后才停止实例；正式 subprocess/shell 取消测试证明受管进程树按所有权停止。`CliInvocationCoordinatorTest` 另证明 raw 中断不取消非 current invocation；`FibraCliTest` 在 raw 取消前后两次读取完整插件快照并断言字节一致，再调用同一动态 handler，证明插件 instance identity、ClassLoader/effects 没有被当前取消替换。以上均为 Fibra 自身证据，不把 DSH abort-race 或 AgentCLI/PaiCLI `Future.cancel(true)` 当成排空证明。 |
+| 外部 `SIGINT/SIGTERM` | `CliProcessSignalHandlersTest` 分开注册并逆序恢复 `INT`/`TERM`；`CliProcessShutdownTest` 证明首个信号决定结果，重复/竞态信号不二次取消、关闭或退出，并在 signal handler 返回前同步关闭准入，随后由异步 worker 取消并等待 active invocation 归零，再关闭当前 CLI 拥有的唯一 `CliHost`。从首次信号启动的独立 5 秒截止覆盖同步取消回调、invocation 排空和阻塞 Host close 全链，任一步不终止均强制投影 8；正常完成以同一原子仲裁关闭后续信号准入，已接受信号则独占退出结果。当前没有 attached/shared client 运行形态。成功的 `SIGINT` 投影 130、`SIGTERM` 投影 0，宿主关闭失败投影 7，普通业务失败继续为 4。 |
+| 发行与仓外消费者 | `fibra-distribution/src/test/scripts/verify-archive.sh` 从仓外解压 ZIP，在 shell tool 的受管 payload、supervisor 和叶子进程仍运行时分别发送真实 `SIGINT`/`SIGTERM`，验证 10 秒观察截止内三层进程均停止，宿主退出码精确为 130/0；后台启动前显式恢复 `INT` trap，避免测试 shell 把继承的忽略 disposition 误作产品行为。`verification/distribution/java-plugin` 已扩展仅依赖发布 API 的 `external-cli read-key` fixture；当前 F3 通过根 `mvn clean verify` 执行 ZIP 信号门禁，并在原生 xterm PTY 实测仓外插件 raw 取消与下一命令恢复。包含最新 F3 改动的空 Maven 仓 clean/deploy、五类消费者和 archetype 全套隔离门禁按阶段约定留到 F4 完成后统一执行；此前 F1/F2 的空仓结果不冒充本项已通过。 |
+| F4 边界 | F3 只实现 raw lease 获得可靠 `0x03` 所必需的模式切换、可取消读取和属性恢复；终端 resize、异步 redisplay、渐进 renderer、公开 API 兼容性规则及完整桌面交互冻结仍属于 F4。F2 保留的 history/补全/高亮/窄终端直接桌面复验 P2 也继续作为 F4 冻结门禁，不由本节的中断 PTY 实测抵扣。 |
