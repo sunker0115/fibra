@@ -73,13 +73,20 @@ class ApplyDeploymentMountFailureRecoveryTest {
             "-cp", System.getProperty("java.class.path"), CrashProcess.class.getName(),
             artifactRoot.toString(), stateRoot.toString(), upgrade.toString());
         var process = new ProcessBuilder(command).redirectErrorStream(true).start();
-        if (!process.waitFor(TIMEOUT.toSeconds(), TimeUnit.SECONDS)) {
-            process.destroyForcibly();
-            fail("子 JVM 未在时限内终止");
+        try {
+            if (!process.waitFor(TIMEOUT.toSeconds(), TimeUnit.SECONDS)) {
+                fail("子 JVM 未在时限内终止");
+            }
+            var output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            assertEquals(73, process.exitValue(), output);
+            return output;
+        } finally {
+            if (process.isAlive()) {
+                process.destroyForcibly();
+                assertTrue(process.waitFor(TIMEOUT.toSeconds(), TimeUnit.SECONDS),
+                    "强制终止后子 JVM 仍未退出");
+            }
         }
-        var output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        assertEquals(73, process.exitValue(), output);
-        return output;
     }
 
     private static FibraEngine engine(ArtifactStore artifacts, FileEngineStateStore state,

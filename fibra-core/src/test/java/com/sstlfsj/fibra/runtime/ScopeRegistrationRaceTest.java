@@ -30,7 +30,8 @@ class ScopeRegistrationRaceTest {
                 try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
                     var registration = executor.submit(() -> {
                         ready.countDown();
-                        start.await();
+                        assertTrue(start.await(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS),
+                            "registration task must be released");
                         try {
                             scope.context().effects().add(
                                 Disposables.from(disposed::incrementAndGet));
@@ -41,13 +42,17 @@ class ScopeRegistrationRaceTest {
                     });
                     var closing = executor.submit(() -> {
                         ready.countDown();
-                        start.await();
+                        assertTrue(start.await(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS),
+                            "close task must be released");
                         scope.closeAsync().block(TIMEOUT);
                         return null;
                     });
-                    assertTrue(ready.await(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS),
-                        "registration and close tasks must both be ready");
-                    start.countDown();
+                    try {
+                        assertTrue(ready.await(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS),
+                            "registration and close tasks must both be ready");
+                    } finally {
+                        start.countDown();
+                    }
                     registration.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
                     closing.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
                 }
