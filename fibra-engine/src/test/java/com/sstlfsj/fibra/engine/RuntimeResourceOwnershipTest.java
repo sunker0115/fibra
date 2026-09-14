@@ -2,6 +2,7 @@ package com.sstlfsj.fibra.engine;
 
 import com.sstlfsj.fibra.Disposables;
 import com.sstlfsj.fibra.PluginDefinition;
+import com.sstlfsj.fibra.artifact.ArtifactException;
 import com.sstlfsj.fibra.artifact.ArtifactId;
 import com.sstlfsj.fibra.artifact.ArtifactRecord;
 import com.sstlfsj.fibra.artifact.ArtifactStore;
@@ -19,6 +20,9 @@ import org.junit.jupiter.api.io.TempDir;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
+import java.io.IOException;
+import java.lang.reflect.Proxy;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -174,6 +178,72 @@ class RuntimeResourceOwnershipTest {
             try { engine.close(); } catch (RuntimeException expectedCleanupFailure) { }
             store.close();
         }
+    }
+
+    @Test
+    void closeFailurePreservesAnExistingChangeFailureAndAppendsCleanupFacts() {
+        var originalFailure = new IllegalStateException("runtime rejected config");
+        var storeCloseFailure = new IllegalStateException("state store close failed later");
+        var stateStore = new EngineStateStore() {
+            private DeploymentManifest target;
+            @Override public java.util.Optional<DeploymentManifest> load() {
+                return java.util.Optional.ofNullable(target);
+            }
+            @Override public void save(DeploymentManifest manifest) { target = manifest; }
+            @Override public void close() { throw storeCloseFailure; }
+        };
+        var definition = PluginDefinition.builder("sample", String.class,
+            () -> (context, config) -> "broken".equals(config)
+                ? Mono.error(originalFailure) : Mono.empty()).build();
+        var engine = FibraEngine.builder(new InMemoryDesiredStateRepository(graph("broken")))
+            .stateStore(stateStore).catalog(PluginCatalog.of(
+                new PluginCatalogEntry<>(definition, value -> (String) value))).build();
+        try {
+            var changeFailure = assertThrows(EngineChangeException.class,
+                () -> engine.start().block(TIMEOUT));
+            var beforeClose = changeFailure.view().engineDiagnostics();
+
+            assertSame(storeCloseFailure, assertThrows(RuntimeException.class, engine::close));
+
+            var afterClose = engine.published().current().engineDiagnostics();
+            assertAll(
+                () -> assertEquals(beforeClose.failure(), afterClose.failure()),
+                () -> assertEquals(beforeClose.failedPhase(), afterClose.failedPhase()),
+                () -> assertEquals(beforeClose.targetSaveState(), afterClose.targetSaveState()),
+                () -> assertTrue(afterClose.cleanupFailures().stream()
+                    .anyMatch(value -> value.contains("state store close failed later"))));
+        } finally {
+            try { engine.close(); } catch (RuntimeException expectedCleanupFailure) { }
+        }
+    }
+
+    @Test
+    void stateAndArtifactStoreCloseFailuresBothRemainInCleanupFacts(@TempDir Path work)
+        throws Exception {
+        var stateStoreFailure = new IllegalStateException("state store close failed");
+        var artifactIoFailure = new IOException("artifact store close failed");
+        var stateStore = new EngineStateStore() {
+            @Override public java.util.Optional<DeploymentManifest> load() {
+                return java.util.Optional.empty();
+            }
+            @Override public void save(DeploymentManifest manifest) { }
+            @Override public void close() { throw stateStoreFailure; }
+        };
+        var artifactStore = artifactStoreWithCloseFailure(
+            work.resolve("artifact-store"), artifactIoFailure);
+        var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty())
+            .stateStore(stateStore).artifactStore(artifactStore).build();
+        engine.start().block(TIMEOUT);
+
+        var closeFailure = assertThrows(RuntimeException.class, engine::close);
+        assertSame(stateStoreFailure, closeFailure);
+        var artifactStoreFailure = java.util.Arrays.stream(closeFailure.getSuppressed())
+            .filter(ArtifactException.class::isInstance).findFirst().orElseThrow();
+
+        var cleanupFailures = engine.published().current().engineDiagnostics().cleanupFailures();
+        assertAll(
+            () -> assertTrue(cleanupFailures.contains(stateStoreFailure.toString())),
+            () -> assertTrue(cleanupFailures.contains(artifactStoreFailure.toString())));
     }
 
     @Test
@@ -337,6 +407,23 @@ class RuntimeResourceOwnershipTest {
         stateStore.save(new DeploymentManifest(Map.of(saved.id(), saved.revision()), graph("old")));
         return FibraEngine.builder(new InMemoryDesiredStateRepository(graph("old")))
             .artifactStore(store).runtimeAdapter(adapter).stateStore(stateStore).build();
+    }
+
+    private static ArtifactStore artifactStoreWithCloseFailure(Path root, IOException failure)
+        throws Exception {
+        var ioType = Class.forName(
+            "com.sstlfsj.fibra.artifact.ArtifactStore$StorageIo");
+        var io = Proxy.newProxyInstance(ioType.getClassLoader(), new Class<?>[] {ioType},
+            (proxy, method, arguments) -> {
+                if (method.getName().equals("close")) {
+                    ((FileChannel) arguments[0]).close();
+                    throw failure;
+                }
+                return null;
+            });
+        var constructor = ArtifactStore.class.getDeclaredConstructor(Path.class, ioType);
+        constructor.setAccessible(true);
+        return (ArtifactStore) constructor.newInstance(root, io);
     }
 
     private static final class Probe implements PluginRuntimeAdapter {

@@ -136,7 +136,6 @@ public final class FibraEngine implements AutoCloseable {
                 if (error instanceof EngineChangeException) return Mono.error(error);
                 state = EngineState.FAILED;
                 failedPhase = ChangePhase.PREPARING;
-                targetSaveState = TargetSaveState.NOT_APPLICABLE;
                 cleanupFailures = List.of();
                 phase = ChangePhase.FAILED;
                 mutationGate = false;
@@ -177,6 +176,8 @@ public final class FibraEngine implements AutoCloseable {
     private Mono<PublishedView> bootstrap() {
         if (closeRequested.get()) return Mono.error(new IllegalStateException("engine is closing"));
         var saved = stateStore.load();
+        targetSaveState = saved.isPresent()
+            ? TargetSaveState.SAVED : TargetSaveState.NOT_SAVED;
         var target = new LinkedHashMap<ArtifactId, ArtifactRecord>();
         DesiredCompilation desired;
         List<DeploymentArtifact> bootstrapArtifacts = List.of();
@@ -745,7 +746,6 @@ public final class FibraEngine implements AutoCloseable {
             cleanupFailures = List.copyOf(observed);
             var cleanupFailure = "runtime cleanup failed: " + captured.domain().cleanupFailures();
             if (failure == null) failure = cleanupFailure;
-            else if (!failure.contains(cleanupFailure)) failure += "; " + cleanupFailure;
             phase = ChangePhase.FAILED;
         }
         var pluginFacts = new LinkedHashMap<Long, RuntimeDomainSnapshot.Plugin>();
@@ -876,10 +876,16 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private Mono<Void> closeInternal() {
+        var previousFailedPhase = failedPhase;
+        var previousTargetSaveState = targetSaveState;
+        var previousCleanupFailures = cleanupFailures;
+        var previousFailure = failure;
         phase = ChangePhase.CLOSING;
-        failedPhase = null;
-        targetSaveState = TargetSaveState.NOT_APPLICABLE;
-        cleanupFailures = List.of();
+        if (previousFailure == null) {
+            failedPhase = null;
+            targetSaveState = TargetSaveState.NOT_APPLICABLE;
+            cleanupFailures = List.of();
+        }
         publishControl();
         if (observation != null) observation.dispose();
         return directory.closeAsync()
@@ -902,12 +908,21 @@ public final class FibraEngine implements AutoCloseable {
                 return Mono.<Void>empty();
             })).onErrorResume(error -> loop.call(() -> {
                 state = EngineState.FAILED;
-                failedPhase = ChangePhase.CLOSING;
-                targetSaveState = TargetSaveState.NOT_APPLICABLE;
-                cleanupFailures = cleanupFailureFacts(error);
+                if (previousFailure == null) {
+                    failedPhase = ChangePhase.CLOSING;
+                    targetSaveState = TargetSaveState.NOT_APPLICABLE;
+                    cleanupFailures = cleanupFailureFacts(error);
+                    failure = "engine cleanup failed: " + error;
+                } else {
+                    failedPhase = previousFailedPhase;
+                    targetSaveState = previousTargetSaveState;
+                    var combined = new LinkedHashSet<>(previousCleanupFailures);
+                    combined.addAll(cleanupFailureFacts(error));
+                    cleanupFailures = List.copyOf(combined);
+                    failure = previousFailure;
+                }
                 phase = ChangePhase.FAILED;
                 mutationGate = false;
-                failure = "engine cleanup failed: " + error;
                 return capture().flatMap(captured -> {
                     publish(captured);
                     views.tryEmitComplete();
@@ -969,11 +984,8 @@ public final class FibraEngine implements AutoCloseable {
     private static void collectCleanupFailureFacts(Throwable failure, List<String> facts,
                                                    Set<Throwable> visited) {
         if (!visited.add(failure)) return;
+        facts.add(failure.toString());
         var suppressed = failure.getSuppressed();
-        if (suppressed.length == 0) {
-            facts.add(failure.toString());
-            return;
-        }
         for (var nested : suppressed) {
             collectCleanupFailureFacts(nested, facts, visited);
         }

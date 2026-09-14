@@ -39,6 +39,7 @@ class EngineContextFailureCorrectionTest {
     @Test
     void contextOnlyChangeCorrectsACleanStableFailureWithoutSavingOrPreparingRuntimeResources(
         @TempDir Path work) throws Exception {
+        var ready = ConfigContextSnapshot.of(Map.of("value", "ready"));
         var broken = ConfigContextSnapshot.of(Map.of("value", "broken"));
         var correctedContext = ConfigContextSnapshot.of(Map.of("value", "corrected"));
         var graph = new DesiredInputGraph(List.of(DesiredInputEntry.builder("sample", "sample")
@@ -51,23 +52,32 @@ class EngineContextFailureCorrectionTest {
             .runtimeId(adapter.id()).version("1.0.0").source(source).build();
         try (var engine = FibraEngine.builder(new InMemoryDesiredStateRepository(graph))
             .artifactStore(artifactStore).stateStore(stateStore).runtimeAdapter(adapter)
-            .configContext(broken).initialArtifacts(() -> List.of(artifact)).build()) {
-            var failure = assertThrows(EngineChangeException.class,
-                () -> engine.start().block(TIMEOUT));
-            var failed = failure.view();
-            var identity = failed.engine().instances().get("sample").identity();
-            var targetRevision = failed.engineDiagnostics().targetRevision();
-            var desiredRevision = failed.engine().desiredSource().revision();
+            .configContext(ready).initialArtifacts(() -> List.of(artifact)).build()) {
+            var started = engine.start().block(TIMEOUT);
+            var identity = started.engine().instances().get("sample").identity();
+            var targetRevision = started.engineDiagnostics().targetRevision();
+            var desiredRevision = started.engine().desiredSource().revision();
             var saves = stateStore.saves.get();
             var runtimeUpdates = adapter.updates.get();
 
+            var failure = assertThrows(EngineChangeException.class,
+                () -> engine.submit(new ReplaceConfigContext(started.viewRevision(),
+                    ready.revision(), broken)).block(TIMEOUT));
+            var failed = failure.view();
+
             assertSame(adapter.startFailure, failure.getCause().getSuppressed()[0]);
             assertEquals(ChangePhase.RECONCILING, failed.engineDiagnostics().failedPhase());
-            assertEquals(TargetSaveState.SAVED, failed.engineDiagnostics().targetSaveState());
-            assertEquals(TargetSaveState.SAVED, failure.targetSaveState());
+            assertEquals(TargetSaveState.NOT_APPLICABLE,
+                failed.engineDiagnostics().targetSaveState());
+            assertEquals(TargetSaveState.NOT_APPLICABLE, failure.targetSaveState());
             assertTrue(failed.engineDiagnostics().cleanupFailures().isEmpty());
             assertTrue(failed.engineDiagnostics().mutationGateOpen());
             assertFalse(failed.engineDiagnostics().targetSatisfied());
+            assertEquals(saves, stateStore.saves.get());
+            assertEquals(runtimeUpdates, adapter.updates.get());
+            assertEquals(targetRevision, failed.engineDiagnostics().targetRevision());
+            assertEquals(desiredRevision, failed.engine().desiredSource().revision());
+            assertEquals(broken.revision(), failed.engineDiagnostics().contextRevision());
             assertEquals(PluginInstanceState.FAILED,
                 failed.engine().instances().get("sample").state());
 
@@ -93,7 +103,7 @@ class EngineContextFailureCorrectionTest {
             assertEquals(identity, corrected.engine().instances().get("sample").identity());
             assertEquals(PluginInstanceState.ACTIVE,
                 corrected.engine().instances().get("sample").state());
-            assertEquals(2, adapter.starts.get());
+            assertEquals(3, adapter.starts.get());
         }
     }
 
