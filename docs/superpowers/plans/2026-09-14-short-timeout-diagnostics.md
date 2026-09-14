@@ -134,7 +134,7 @@ git commit -m "test(ci): bound tty timeout diagnostics"
 - 新建：`verification/ci/HangingJvmFixture.java`
 - 复用：`scripts/run-ci-with-jvm-diagnostics.sh`
 
-- [ ] **步骤 1：先写会因缺少夹具而失败的门禁脚本**
+- [x] **步骤 1：先写会因缺少夹具而失败的门禁脚本**
 
 创建并赋予可执行权限 `scripts/verify-short-timeout-diagnostics.sh`：
 
@@ -230,7 +230,7 @@ FIBRA_CI_DIAGNOSTICS_DIR="$diagnostics_dir" \
 
 预期：失败，明确指出 `HangingJvmFixture.java` 不存在或无法启动；不得先修改诊断包装器来迁就测试。
 
-- [ ] **步骤 2：增加最小挂起 JVM fixture**
+- [x] **步骤 2：增加最小挂起 JVM fixture**
 
 创建 `verification/ci/HangingJvmFixture.java`：
 
@@ -256,7 +256,7 @@ public final class HangingJvmFixture {
 
 fixture 不增加 shutdown hook：它的职责是让包装器证明 `TERM` 宽限和进程组 `KILL` 能清理完整受管树。
 
-- [ ] **步骤 3：运行自验并确认超时、取证和清理全部通过**
+- [x] **步骤 3：运行自验并确认超时、取证和清理全部通过**
 
 ```bash
 bash -n scripts/run-ci-with-jvm-diagnostics.sh \
@@ -269,7 +269,7 @@ FIBRA_CI_DIAGNOSTICS_DIR="$diagnostics_dir" \
 预期：输出 `短超时诊断门禁验证通过`；诊断目录包含 timeout marker、进程快照和非空 JVM dump；脚本
 总退出码为 0，fixture 记录的两个 PID 都已不存在。
 
-- [ ] **步骤 4：提交自验夹具**
+- [x] **步骤 4：提交自验夹具**
 
 ```bash
 git add scripts/verify-short-timeout-diagnostics.sh \
