@@ -33,7 +33,7 @@
 - 新建：`verification/ci/test_verify_cli_tty.py`
 - 修改：`verification/distribution/verify-cli-tty.py:14-15,43-102,160-197`
 
-- [ ] **步骤 1：先新增失败测试**
+- [x] **步骤 1：先新增失败测试**
 
 创建 `verification/ci/test_verify_cli_tty.py`：
 
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **步骤 2：运行测试并确认因缺少函数而失败**
+- [x] **步骤 2：运行测试并确认因缺少函数而失败**
 
 运行：
 
@@ -77,7 +77,7 @@ python3 verification/ci/test_verify_cli_tty.py
 
 预期：失败，错误指出 `verify_cli_tty` 没有 `diagnostic_tail`；不得是导入或路径错误。
 
-- [ ] **步骤 3：实现最小纯函数**
+- [x] **步骤 3：实现最小纯函数**
 
 在 `ANSI` 常量之后增加：
 
@@ -107,7 +107,7 @@ raise AssertionError(f"renderer 未收到完整解码输入：{diagnostic_tail(s
 
 其余包含 `summary`、`stdout` 或 `terminal` 的失败消息采用同一函数；不得改变成功路径和 PTY 时序。
 
-- [ ] **步骤 4：运行定向测试和语法检查**
+- [x] **步骤 4：运行定向测试和语法检查**
 
 运行：
 
@@ -118,7 +118,7 @@ python3 -c 'import ast, pathlib; ast.parse(pathlib.Path("verification/distributi
 
 预期：2 个单元测试通过；AST 解析退出码为 0。
 
-- [ ] **步骤 5：提交这一独立行为**
+- [x] **步骤 5：提交这一独立行为**
 
 ```bash
 git add verification/ci/test_verify_cli_tty.py \
