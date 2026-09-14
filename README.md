@@ -3,14 +3,48 @@
 [![CI](https://github.com/sunker0115/fibra/actions/workflows/ci.yml/badge.svg)](https://github.com/sunker0115/fibra/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-Fibra 是 Java 21 的通用插件底座。它把生命周期与资源所有权、期望状态、不可变制品、运行时适配、贡献目录和管理控制面拆成稳定边界，可直接嵌入 Java 服务，也可用于 Harness、Agent 平台或 Spring Boot 宿主，并作为正式 CLI 宿主的运行底座。
+Fibra 是 Java 21 的通用插件底座。它把生命周期与资源所有权、期望状态、不可变制品、运行时适配、贡献目录
+和管理控制面拆成稳定边界，可直接嵌入 Java 服务，也可支撑 Harness、Agent 平台、Spring Boot 宿主和正式
+CLI 应用。
 
-当前开发版本为 `0.5.0-SNAPSHOT`，是无兼容层的 vNext 重构。唯一权威设计是 [Fibra vNext 架构](docs/superpowers/specs/2026-09-07-fibra-vnext-architecture.md)。Java Harness 只是一个接入场景，参考 [Java Harness 集成](docs/superpowers/specs/2026-09-07-fibra-java-harness-integration.md)。
+当前开发版本为 `0.5.0-SNAPSHOT`，是 vNext 重构后的开发基线，不保留 `0.4.x` 兼容层。长期
+`RuntimeDomain`、实例差量更新、Java/Node runtime、fs/search/shell/storage 正式插件、动态 CLI command、
+安全历史、补全和高亮、调用级取消与信号协调、受控终端租约、渐进 renderer、可执行 ZIP 和仓库外消费均已
+交付。CLI 公共边界已经冻结；同一 `0.5.x` 版本列只接受二进制兼容的增加或修复。
 
-当前快照已经交付长期 `RuntimeDomain`、实例差量更新、首次联合制品启动、provider-managed 子进程范围，
-以及 fs、fs-search、shell、storage 正式插件。正式 `fibra-cli`、公开 `fibra-cli-api`、动态 Java command、
-安全历史、补全和高亮、调用级取消与信号协调、受控终端租约、渐进 renderer、可执行 ZIP 和仓库外消费
-均已通过 F1–F4 验收。F4 已冻结 CLI 公共边界；同一 `0.5.x` 版本列只接受二进制兼容的增加或修复。
+## 快速开始
+
+从源码构建发行包需要 JDK 21、Maven 3.9.9、Node.js、ripgrep 15.0.1，以及当前 POSIX 目标平台的
+`/bin/bash`。Node.js 和 ripgrep 可执行文件可以分别通过 `fibra.distribution.node` 与
+`fibra.distribution.rg` Maven 属性覆盖。
+
+```bash
+mvn -pl fibra-distribution -am package
+
+fibra-distribution/target/fibra-0.5.0-SNAPSHOT/bin/fibra --version
+fibra-distribution/target/fibra-0.5.0-SNAPSHOT/bin/fibra plugins list
+fibra-distribution/target/fibra-0.5.0-SNAPSHOT/bin/fibra tools list
+fibra-distribution/target/fibra-0.5.0-SNAPSHOT/bin/fibra \
+  tools invoke storage-tools load --input '{}'
+fibra-distribution/target/fibra-0.5.0-SNAPSHOT/bin/fibra repl
+```
+
+`package` 同时生成可直接运行的目录和
+`fibra-distribution/target/fibra-0.5.0-SNAPSHOT-bin.zip`。发行目录包含 CLI、宿主依赖、12 个标准 Java
+插件包，以及目标平台的 Node.js、ripgrep 和 Bash 启动代理；`bin/fibra` 自动以所在目录作为安装根目录。
+
+默认 profile 首次启动时从 `config/profiles/default.yaml` 与 `default.artifacts.yaml` 建立完整目标，之后从
+`data/` 恢复已保存目标。修改 profile 输入后显式执行 `fibra apply`；它们不会在重启时静默覆盖运行目标。
+
+## 选择接入方式
+
+| 目标 | 入口 | 继续阅读 |
+|---|---|---|
+| 直接运行和管理插件 | 二进制发行包的 `bin/fibra` | [正式 CLI 宿主](#正式-cli-宿主) |
+| 在 Java 应用内使用生命周期内核 | `fibra-api`、`FibraRuntime` | [最小内核用法](#最小内核用法) |
+| 建立动态插件宿主 | `fibra-engine`、`fibra-registry`、`PublishedRuntime` | [托管与 Spring Boot](#托管与-spring-boot) |
+| 接入 Spring Boot | `fibra-spring-boot-starter` | [托管与 Spring Boot](#托管与-spring-boot) |
+| 编写 Java 或 Node 插件 | 标准插件安装目录包 | [插件安装单元](#插件安装单元) |
 
 ## 架构
 
@@ -103,10 +137,10 @@ runtime.close();
 Job Object；Linux 优先使用 user-systemd transient scope，能力不可用时显式降级到较弱的进程组监督器；
 macOS 使用进程组边界并保留逃逸后代限制。它与 Node sidecar 的进程管理实现相互独立。
 
-当前 Maven 插件 JAR 不捆绑外部可执行文件。宿主须分别为 subprocess、搜索和 Shell provider 配置可执行的
-Node.js、ripgrep 与 Bash 路径；建议使用绝对路径。项目 CI 固定使用 ripgrep 15.0.1，与当前 DSH
-0.1.5-rc.2 锁定的 `@vscode/ripgrep` 1.18.0 一致。未来 CLI/ZIP 发行层可按目标平台携带二进制并注入
-现有配置，不需要改变插件公开 API。
+单独发布的 Maven 插件 JAR 不捆绑外部可执行文件。嵌入式宿主须分别为 subprocess、搜索和 Shell provider
+配置 Node.js、ripgrep 与 Bash 路径，建议使用绝对路径。正式 ZIP 已按目标平台携带 Node.js、ripgrep 和
+Bash 启动代理，并通过默认 profile 注入现有配置，不需要改变插件公开 API。项目 CI 固定使用 ripgrep
+15.0.1，与当前 DSH 0.1.5-rc.2 锁定的 `@vscode/ripgrep` 1.18.0 一致。
 
 ## 插件安装单元
 
@@ -249,7 +283,7 @@ Spring 继续拥有 Bean，运行域关闭与在途排空由 Engine 负责。
 
 默认存储由 Engine 内部持有并关闭；如提供自定义 `ArtifactStore` 或 `EngineStateStore` bean，须声明 `@Bean(destroyMethod = "")`，不能让容器再次独立关闭。
 
-## 构建
+## 构建与验证
 
 ```bash
 mvn clean verify
@@ -262,10 +296,19 @@ payload JAR；这些制品已纳入发布、可复现和临时仓部署清单。
 command 插件，验证执行、help 与停用后消失。完整 reactor 覆盖真实 JAR、真实 Node 进程、目标恢复、Spring、archetype、
 架构边界和 JMH 编译门禁。
 
-本快照已合入 F1 CLI 组合边界与 ZIP 分发结构；公开 API、全仓、可复现和空 Maven 仓及解压启动门禁
-必须随发行边界变化统一重跑，不能沿用 pre-F1 结果关闭交付。
-可运行示例见 [`fibra-example`](fibra-example/README.md)，公共入口见 [`docs/api`](docs/api/README.md)，
-发布边界见 [`docs/release.md`](docs/release.md)。
+CLI 公共 API、全仓、可复现制品、空 Maven 仓消费者和解压启动门禁必须随发行边界变化统一重跑，不能用
+较早提交或本地缓存结果替代当前发布证据。
+
+## 深入阅读
+
+- [公共 API 与嵌入入口](docs/api/README.md)
+- [可运行示例](fibra-example/README.md)
+- [正式插件角色与打包约束](fibra-plugins/README.md)
+- [发布边界与 Maven Central 流程](docs/release.md)
+- [vNext 权威架构与 `0.5.x` 维护边界](docs/superpowers/specs/2026-09-07-fibra-vnext-architecture.md)
+- [行为验收账本](docs/superpowers/references/2026-09-11-behavior-verification-ledger.md)
+- [Java Harness 接入场景](docs/superpowers/specs/2026-09-07-fibra-java-harness-integration.md)
+- [DeepSeek Harness Java 公开架构分析](docs/superpowers/references/2026-09-14-deepseek-harness-java-analysis.md)
 
 ## 许可证
 
