@@ -112,11 +112,11 @@ raise AssertionError(f"renderer 未收到完整解码输入：{diagnostic_tail(s
 运行：
 
 ```bash
-python3 verification/ci/test_verify_cli_tty.py
+PYTHONDONTWRITEBYTECODE=1 python3 verification/ci/test_verify_cli_tty.py
 python3 -c 'import ast, pathlib; ast.parse(pathlib.Path("verification/distribution/verify-cli-tty.py").read_text())'
 ```
 
-预期：2 个单元测试通过；AST 解析退出码为 0。
+预期：4 个单元测试通过，覆盖短输入、截断、零限制和默认 16 KiB 限制；AST 解析退出码为 0。
 
 - [x] **步骤 5：提交这一独立行为**
 
@@ -224,7 +224,9 @@ echo "短超时诊断门禁验证通过"
 ```bash
 chmod 0755 scripts/verify-short-timeout-diagnostics.sh
 diagnostics_dir="$(mktemp -d)"
-FIBRA_CI_DIAGNOSTICS_DIR="$diagnostics_dir" \
+env JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home \
+  PATH="/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home/bin:$PATH" \
+  FIBRA_CI_DIAGNOSTICS_DIR="$diagnostics_dir" \
   scripts/verify-short-timeout-diagnostics.sh
 ```
 
@@ -262,12 +264,14 @@ fixture 不增加 shutdown hook：它的职责是让包装器证明 `TERM` 宽�
 bash -n scripts/run-ci-with-jvm-diagnostics.sh \
   scripts/verify-short-timeout-diagnostics.sh
 diagnostics_dir="$(mktemp -d)"
-FIBRA_CI_DIAGNOSTICS_DIR="$diagnostics_dir" \
+env JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home \
+  PATH="/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home/bin:$PATH" \
+  FIBRA_CI_DIAGNOSTICS_DIR="$diagnostics_dir" \
   scripts/verify-short-timeout-diagnostics.sh
 ```
 
 预期：输出 `短超时诊断门禁验证通过`；诊断目录包含 timeout marker、进程快照和非空 JVM dump；脚本
-总退出码为 0，fixture 记录的两个 PID 都已不存在。
+总退出码为 0，进程快照包含 fixture 记录的两个 PID，且这两个 PID 都已不存在。
 
 - [x] **步骤 4：提交自验夹具**
 
@@ -291,7 +295,9 @@ git commit -m "test(ci): verify short-timeout diagnostic capture"
       - name: 验证短超时诊断门禁
         env:
           FIBRA_CI_DIAGNOSTICS_DIR: ${{ runner.temp }}/fibra-ci-hang-diagnostics
-        run: scripts/verify-short-timeout-diagnostics.sh
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 python3 verification/ci/test_verify_cli_tty.py
+          scripts/verify-short-timeout-diagnostics.sh
 ```
 
 保留后续两次 `run-ci-with-jvm-diagnostics.sh` 的现有环境和默认参数，不把 180 秒全量采样改成 10 秒。
@@ -299,10 +305,11 @@ git commit -m "test(ci): verify short-timeout diagnostic capture"
 - [x] **步骤 2：验证 YAML、脚本和诊断目录上传路径**
 
 ```bash
-ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci.yml", aliases: true)'
+ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci.yml")'
 bash -n scripts/run-ci-with-jvm-diagnostics.sh \
   scripts/verify-short-timeout-diagnostics.sh
-rg -n '验证短超时诊断门禁|fibra-ci-hang-diagnostics' .github/workflows/ci.yml
+rg -n 'test_verify_cli_tty|验证短超时诊断门禁|fibra-ci-hang-diagnostics' \
+  .github/workflows/ci.yml
 ```
 
 预期：YAML 可解析；新步骤和现有失败制品上传共同指向 `fibra-ci-hang-diagnostics`；脚本语法通过。
@@ -324,14 +331,16 @@ git commit -m "ci: enforce short-timeout diagnostic gate"
 - [ ] **步骤 1：运行首项定向门禁**
 
 ```bash
-python3 verification/ci/test_verify_cli_tty.py
+PYTHONDONTWRITEBYTECODE=1 python3 verification/ci/test_verify_cli_tty.py
 diagnostics_dir="$(mktemp -d)"
-FIBRA_CI_DIAGNOSTICS_DIR="$diagnostics_dir" \
+env JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home \
+  PATH="/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home/bin:$PATH" \
+  FIBRA_CI_DIAGNOSTICS_DIR="$diagnostics_dir" \
   scripts/verify-short-timeout-diagnostics.sh
 git diff --check
 ```
 
-预期：Python 2 项通过；短超时门禁通过；无空白错误。
+预期：Python 4 项通过；短超时门禁通过；无空白错误。
 
 - [ ] **步骤 2：运行完整 Maven 与仓外分发回归**
 
