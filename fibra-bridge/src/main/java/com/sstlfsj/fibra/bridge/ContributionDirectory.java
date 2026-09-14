@@ -226,6 +226,11 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
             entry.inflight--;
             if (cleanupFailure != null && entry.cleanupFailure == null) {
                 entry.cleanupFailure = cleanupFailure;
+                if (entry.accepting) {
+                    entry.accepting = false;
+                    entries.remove(entry.id, entry);
+                    publishUnsafe();
+                }
             }
             completeIfDrained(entry);
         }
