@@ -12,6 +12,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
 import java.time.Duration;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -355,6 +356,55 @@ class DrainLifecycleTest {
             assertEquals(0, released.get());
             assertFalse(domain.snapshot().cleanupFailures().isEmpty());
         } finally {
+            runtime.closeAsync().onErrorResume(ignored -> Mono.empty()).block(TIMEOUT);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void concurrentCloseWaitersShareTheDrainOutcome(boolean drainFails) throws Exception {
+        var gate = Sinks.<Void>one();
+        var drainedResourceReleases = new AtomicInteger();
+        var ordinaryReleases = new AtomicInteger();
+        var runtime = FibraRuntime.create();
+        var domain = runtime.openDomain("concurrent-close");
+        var scope = domain.rootScope().openChild("owner");
+        scope.context().effects().add(resource(gate.asMono(), drainedResourceReleases));
+        scope.context().effects().add(() -> Mono.fromRunnable(ordinaryReleases::incrementAndGet));
+        try {
+            var first = scope.closeAsync().toFuture();
+            var second = scope.closeAsync().toFuture();
+
+            assertFalse(first.isDone());
+            assertFalse(second.isDone());
+            assertEquals(0, drainedResourceReleases.get());
+            assertEquals(0, ordinaryReleases.get());
+
+            if (drainFails) {
+                var failure = new IllegalStateException("drain failed");
+                gate.tryEmitError(failure);
+
+                var firstFailure = assertThrows(ExecutionException.class,
+                    () -> first.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
+                var secondFailure = assertThrows(ExecutionException.class,
+                    () -> second.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
+                assertSame(firstFailure.getCause(), secondFailure.getCause());
+                assertSame(failure, firstFailure.getCause().getCause());
+                assertFalse(scope.isClosed());
+                assertEquals(0, drainedResourceReleases.get());
+                assertEquals(0, ordinaryReleases.get());
+                assertFalse(domain.snapshot().cleanupFailures().isEmpty());
+            } else {
+                gate.tryEmitEmpty();
+
+                first.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+                second.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+                assertTrue(scope.isClosed());
+                assertEquals(1, drainedResourceReleases.get());
+                assertEquals(1, ordinaryReleases.get());
+            }
+        } finally {
+            gate.tryEmitEmpty();
             runtime.closeAsync().onErrorResume(ignored -> Mono.empty()).block(TIMEOUT);
         }
     }

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -27,7 +28,7 @@ class ScopeRegistrationRaceTest {
                 var failure = new AtomicReference<Throwable>();
 
                 try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-                    executor.submit(() -> {
+                    var registration = executor.submit(() -> {
                         ready.countDown();
                         start.await();
                         try {
@@ -38,14 +39,17 @@ class ScopeRegistrationRaceTest {
                         }
                         return null;
                     });
-                    executor.submit(() -> {
+                    var closing = executor.submit(() -> {
                         ready.countDown();
                         start.await();
                         scope.closeAsync().block(TIMEOUT);
                         return null;
                     });
-                    ready.await();
+                    assertTrue(ready.await(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS),
+                        "registration and close tasks must both be ready");
                     start.countDown();
+                    registration.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+                    closing.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
                 }
 
                 scope.closeAsync().block(TIMEOUT);
