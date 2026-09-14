@@ -87,22 +87,27 @@ public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
                     new IllegalStateException("Node plugin requires a plugin instance"));
                 var registrar = context.services().require(
                     ContributionServices.REGISTRAR);
-                return NodeSidecar.start(
-                        payload.resolve(manifest.entrypoint()), options,
-                        context.plugins()::requestDisable)
-                    .flatMap(sidecar -> sidecar.request("fibra.start", Map.of(
+                return Mono.defer(() -> {
+                    var acquired = new AtomicReference<NodeSidecar>();
+                    var owned = context.effects().effect(() -> {
+                        var sidecar = NodeSidecar.launch(payload.resolve(manifest.entrypoint()),
+                            options, context.plugins()::requestDisable);
+                        acquired.set(sidecar);
+                        return sidecar::closeAsync;
+                    }, "node-session:" + provider.id());
+                    var sidecar = acquired.get();
+                    return owned.ready().then(sidecar.initialize())
+                        .then(sidecar.request("fibra.start", Map.of(
                             "protocol", manifest.protocol(),
                             "config", config == null ? Map.of() : config),
-                            options.defaultRequestTimeout())
+                            options.defaultRequestTimeout()))
                         .then(registrar.registerAll(context, provider.id(),
                             bindings(manifest, sidecar), closeAfterDrain(sidecar)))
                         .then(Mono.fromRunnable(() -> context.effects().supervise(
                             sidecar.termination(), "node-sidecar:" + provider.id())))
                         .then()
-                        .onErrorResume(failure -> {
-                            sidecar.close();
-                            return Mono.error(failure);
-                        }));
+                        .onErrorResume(failure -> owned.dispose().then(Mono.error(failure)));
+                });
             }).require(ContributionServices.REGISTRAR).build();
         return new PluginCatalogEntry<>(definition, value -> value);
     }
@@ -112,7 +117,7 @@ public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
                 Duration.ofMillis(Math.min(1000,
                     options.defaultRequestTimeout().toMillis())))
             .onErrorResume(ignored -> Mono.empty())
-            .then(Mono.fromRunnable(sidecar::close));
+            .then(sidecar.closeAsync());
     }
 
     private List<ContributionBinding<?, ?, ?>> bindings(
@@ -146,7 +151,7 @@ public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
                     if (cancellation.isCancelled()) {
                         return Mono.error(cancellationFailure);
                     }
-                    var request = new AtomicReference<NodeSidecar.Request>();
+                    var request = new AtomicReference<NodeRpcChannel.Request>();
                     var owned = invocation.effects().effect(() -> {
                         var started = sidecar.beginRequest(endpoint.method(), Map.of(
                             "schemaVersion", codec.schemaVersion(),

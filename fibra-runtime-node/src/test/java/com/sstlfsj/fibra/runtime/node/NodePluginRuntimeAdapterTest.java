@@ -20,13 +20,16 @@ import com.sstlfsj.fibra.plugins.tool.ToolException;
 import com.sstlfsj.fibra.plugins.tool.ToolFailureCode;
 import com.sstlfsj.fibra.plugins.tool.ToolRequest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import reactor.core.publisher.Mono;
 
+import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -37,10 +40,176 @@ import java.util.concurrent.ExecutionException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class NodePluginRuntimeAdapterTest {
+    @Test
+    void cancellingStartSubscriptionRetainsSessionOwnershipUntilCleanup(@TempDir Path work)
+        throws Exception {
+        var source = work.resolve("package");
+        var marker = work.resolve("started.pid");
+        var payload = nodePackage(source);
+        Files.writeString(payload.resolve("fibra-plugin.yaml"), manifest("echo-node"));
+        Files.writeString(payload.resolve("index.mjs"), "import fs from 'node:fs';\n" + script().replace(
+            "else if (method === 'fibra.start') reply(id, {ok:true});",
+            "else if (method === 'fibra.start') fs.writeFileSync("
+                + tools.jackson.databind.json.JsonMapper.builder().build().writeValueAsString(marker.toString())
+                + ", String(process.pid));"));
+        var owner = adapter(work).create();
+        try (var store = new ArtifactStore(work.resolve("store")); var runtime = FibraRuntime.create()) {
+            try (var install = store.prepareInstall(new ArtifactId("echo-node"),
+                NodePluginRuntimeAdapter.RUNTIME_ID, "1.0.0", source)) {
+                var update = owner.createUpdate(List.of(install.save()));
+                update.prepareAsync().block();
+                update.adopt();
+                update.closeAsync().block();
+            }
+            var directory = new ContributionDirectory();
+            runtime.rootScope().context().services().provide(ContributionServices.REGISTRAR, directory);
+            @SuppressWarnings("unchecked")
+            var original = (com.sstlfsj.fibra.PluginDefinition<Object>) owner.catalog().plugins()
+                .find("echo-node").orElseThrow().definition();
+            var stopStartup = reactor.core.publisher.Sinks.empty();
+            var wrapped = com.sstlfsj.fibra.PluginDefinition.builder("cancel-start", Object.class,
+                () -> (context, config) -> original.factory().create().start(context, config)
+                    .takeUntilOther(stopStartup.asMono())).require(ContributionServices.REGISTRAR).build();
+            var instance = runtime.rootScope().context().plugins().mount("cancel-start", wrapped.prepare(Map.of()));
+            var deadline = System.nanoTime() + Duration.ofSeconds(3).toNanos();
+            while (Files.notExists(marker) && System.nanoTime() < deadline) Thread.sleep(10);
+            assertTrue(Files.exists(marker));
+            var pid = Long.parseLong(Files.readString(marker));
+            try {
+                stopStartup.tryEmitEmpty();
+                instance.settled().block(Duration.ofSeconds(3));
+                instance.dispose().block(Duration.ofSeconds(3));
+                assertFalse(ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false));
+                try (var remaining = Files.list(work.resolve("sessions"))) {
+                    assertTrue(remaining.findAny().isEmpty());
+                }
+            } finally {
+                ProcessHandle.of(pid).ifPresent(ProcessHandle::destroyForcibly);
+            }
+        } finally {
+            owner.closeAsync().block();
+        }
+    }
+
+    @Test
+    @Timeout(60)
+    void repeatedRealArtifactUpdatesAndSidecarsReturnToQuiescence(@TempDir Path work) throws Exception {
+        var timeout = Duration.ofSeconds(5);
+        var sources = new ArrayList<Path>();
+        for (var variant : List.of("first", "second")) {
+            var source = work.resolve(variant);
+            var payload = nodePackage(source);
+            Files.writeString(payload.resolve("fibra-plugin.yaml"), manifest("echo-node"));
+            Files.writeString(payload.resolve("index.mjs"), script().replace(
+                "reply(id, message.params.input)",
+                "reply(id, '" + variant + "|' + process.pid + '|' + process.ppid)"));
+            sources.add(source);
+        }
+        var samples = new ArrayList<String>();
+        samples.add("round,variant,node_threads,threads,fd,heap_bytes,update_ns,start_ns,invoke_ns,stop_ns");
+        var baselineThreads = nodeThreads();
+        var runtime = FibraRuntime.create();
+        var directory = new ContributionDirectory();
+        var owner = adapter(work).create();
+        runtime.rootScope().context().services().provide(ContributionServices.REGISTRAR, directory);
+        try (var store = new ArtifactStore(work.resolve("store"))) {
+            String previousRevision = null;
+            Object previousDefinition = null;
+            for (var round = 0; round < 24; round++) {
+                var updateStarted = System.nanoTime();
+                ArtifactRecord artifact;
+                try (var install = store.prepareInstall(new ArtifactId("echo-node"),
+                    NodePluginRuntimeAdapter.RUNTIME_ID, "1.0.0", sources.get(round % 2))) {
+                    artifact = install.save();
+                }
+                var update = owner.createUpdate(List.of(artifact));
+                update.prepareAsync().block(timeout);
+                update.adopt();
+                update.closeAsync().block(timeout);
+                var definition = owner.catalog().plugins().find("echo-node").orElseThrow().definition();
+                if (previousDefinition != null) {
+                    assertNotEquals(previousRevision, artifact.revision());
+                    assertNotSame(previousDefinition, definition);
+                }
+                var updateNanos = System.nanoTime() - updateStarted;
+                try (var repeated = store.prepareInstall(new ArtifactId("echo-node"),
+                    NodePluginRuntimeAdapter.RUNTIME_ID, "1.0.0", sources.get(round % 2))) {
+                    var same = repeated.save();
+                    assertEquals(artifact.revision(), same.revision());
+                    var noop = owner.createUpdate(List.of(same));
+                    noop.prepareAsync().block(timeout);
+                    assertTrue(noop.affectedArtifacts().isEmpty());
+                    noop.adopt();
+                    noop.closeAsync().block(timeout);
+                    assertSame(definition, owner.catalog().plugins().find("echo-node").orElseThrow().definition());
+                }
+                @SuppressWarnings("unchecked")
+                var typed = (com.sstlfsj.fibra.PluginDefinition<Object>) definition;
+                var startStarted = System.nanoTime();
+                var instance = runtime.rootScope().context().plugins()
+                    .mount("echo-instance", typed.prepare(Map.of()));
+                try {
+                    instance.settled().block(timeout);
+                    assertEquals(PluginInstanceState.ACTIVE, instance.state());
+                    var startNanos = System.nanoTime() - startStarted;
+                    var invokeStarted = System.nanoTime();
+                    var result = directory.current().routes().invoke(runtime.rootScope().context(), ECHO,
+                        new ContributionId("echo-instance", "say"), "pid").block(timeout).split("\\|");
+                    var invokeNanos = System.nanoTime() - invokeStarted;
+                    assertEquals(round % 2 == 0 ? "first" : "second", result[0]);
+                    var payloadPid = Long.parseLong(result[1]);
+                    var supervisorPid = Long.parseLong(result[2]);
+                    assertTrue(ProcessHandle.of(payloadPid).orElseThrow().isAlive());
+                    assertTrue(ProcessHandle.of(supervisorPid).orElseThrow().isAlive());
+                    var stopStarted = System.nanoTime();
+                    instance.dispose().block(timeout);
+                    var stopNanos = System.nanoTime() - stopStarted;
+                    assertFalse(ProcessHandle.of(payloadPid).map(ProcessHandle::isAlive).orElse(false));
+                    assertFalse(ProcessHandle.of(supervisorPid).map(ProcessHandle::isAlive).orElse(false));
+                    try (var sessions = Files.list(work.resolve("sessions"))) {
+                        assertTrue(sessions.findAny().isEmpty());
+                    }
+                    var deadline = System.nanoTime() + timeout.toNanos();
+                    while (nodeThreads() > baselineThreads && System.nanoTime() < deadline) Thread.sleep(10);
+                    assertEquals(baselineThreads, nodeThreads());
+                    var os = ManagementFactory.getOperatingSystemMXBean();
+                    var fd = os instanceof com.sun.management.UnixOperatingSystemMXBean unix
+                        ? unix.getOpenFileDescriptorCount() : -1;
+                    samples.add(round + "," + result[0] + "," + nodeThreads() + ","
+                        + ManagementFactory.getThreadMXBean().getThreadCount() + "," + fd + ","
+                        + ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed() + ","
+                        + updateNanos + "," + startNanos + "," + invokeNanos + "," + stopNanos);
+                } finally {
+                    instance.dispose().block(timeout);
+                }
+                previousDefinition = definition;
+                previousRevision = artifact.revision();
+            }
+            assertEquals(2, store.history(new ArtifactId("echo-node")).size());
+        } finally {
+            try {
+                runtime.closeAsync().block(timeout);
+            } finally {
+                try { directory.closeAsync().block(timeout); }
+                finally { owner.closeAsync().block(timeout); }
+            }
+            Files.createDirectories(Path.of("target"));
+            Files.write(Path.of("target/node-stability.csv"), samples);
+        }
+    }
+
+    private static long nodeThreads() {
+        return Thread.getAllStackTraces().keySet().stream()
+            .filter(thread -> thread.isAlive() && thread.getName().startsWith("fibra-node-")).count();
+    }
+
     @Test
     void creatingAndClosingANewHandleDoesNotReadTheArtifact(@TempDir Path work) {
         var missing = ArtifactRecord.builder().id(new ArtifactId("missing"))

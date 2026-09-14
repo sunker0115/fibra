@@ -77,6 +77,16 @@ process.stdin.once('error', error => {
   beginShutdown();
 });
 
+payload.stdin.once('error', error => {
+  process.stdin.unpipe(payload.stdin);
+  process.stdin.pause();
+  if (!shutdown || error.code !== 'EPIPE') {
+    reportFailure(`Fibra Node payload input failed: ${error.message}\n`);
+    process.exitCode = 1;
+  }
+  beginShutdown();
+});
+
 for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) {
   process.once(signal, () => beginShutdown());
 }

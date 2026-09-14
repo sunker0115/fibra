@@ -28,6 +28,33 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NodeProcessUnitTest {
     @Test
+    void blockedPayloadInputStillProducesQuiescenceProofDuringClose(@TempDir Path work)
+        throws Exception {
+        var script = work.resolve("blocked-input.mjs");
+        Files.writeString(script, "process.stdout.write(String(process.pid) + '\\n'); setInterval(() => {}, 1000);");
+        var unit = NodeProcessUnit.launch(script, NodeRuntimeOptions.builder(node(), work.resolve("sessions"))
+            .terminateTimeout(Duration.ofMillis(300)).build());
+        var reader = new java.io.BufferedReader(new java.io.InputStreamReader(unit.output()));
+        var pid = Long.parseLong(reader.readLine());
+        var writing = java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                unit.input().write(new byte[8 * 1024 * 1024]);
+                unit.input().flush();
+            } catch (java.io.IOException expectedAfterClose) { }
+        });
+        try {
+            assertThrows(java.util.concurrent.TimeoutException.class,
+                () -> writing.get(100, TimeUnit.MILLISECONDS));
+            unit.close();
+            writing.get(2, TimeUnit.SECONDS);
+            assertEquals("QUIESCENT", unit.finalState().range());
+            assertFalse(ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false));
+        } finally {
+            ProcessHandle.of(pid).ifPresent(ProcessHandle::destroyForcibly);
+        }
+    }
+
+    @Test
     void settlesActualPayloadSpawnFailureWithoutLeavingStdoutOpen(@TempDir Path work)
         throws Exception {
         var session = Files.createDirectory(work.resolve("session"));

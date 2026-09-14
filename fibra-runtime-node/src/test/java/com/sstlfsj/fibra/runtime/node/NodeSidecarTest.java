@@ -25,6 +25,239 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NodeSidecarTest {
     @Test
+    void naturalHalfFrameEofIsAProtocolFailure(@TempDir Path work) throws Exception {
+        var script = work.resolve("partial.mjs");
+        Files.writeString(script, baseScript("""
+            if (method === 'partial') process.stdout.write('{"jsonrpc":"2.0","id":', () => process.exit(0));
+            """));
+        try (var session = NodeSidecar.start(script,
+            NodeRuntimeOptions.defaults(node(), work.resolve("sessions")), () -> { }).block()) {
+            var failure = assertThrows(NodeRpcException.class,
+                () -> session.request("partial", Map.of()).block(Duration.ofSeconds(5)));
+            assertEquals(NodeRpcPhase.PROTOCOL, failure.phase());
+        }
+    }
+
+    @Test
+    void malformedResponseCannotConfirmCleanupWhenRangeProofIsMissing(@TempDir Path work)
+        throws Exception {
+        var script = work.resolve("malformed.mjs");
+        Files.writeString(script, "import fs from 'node:fs';\n" + baseScript("""
+            if (method === 'malformed') {
+              fs.writeFileSync('termination.status', 'FAILED\\n');
+              process.stdout.write(JSON.stringify({jsonrpc:'2.0', id, error:{message:'missing code'}}) + '\\n');
+            }
+            """));
+        var session = NodeSidecar.start(script,
+            NodeRuntimeOptions.builder(node(), work.resolve("sessions"))
+                .terminateTimeout(Duration.ofMillis(200)).build(), () -> { }).block();
+        var request = session.beginRequest("malformed", Map.of(), CancellationToken.never());
+        try {
+            assertThrows(NodeRpcException.class, () -> request.result().block(Duration.ofSeconds(3)));
+            var failure = assertThrows(NodeRpcException.class,
+                () -> request.drain().block(Duration.ofSeconds(3)));
+            assertEquals(NodeRpcPhase.TERMINATE, failure.phase());
+        } finally {
+            try { session.close(); } catch (NodeRpcException expected) { }
+        }
+    }
+
+    @Test
+    void cancellingHandshakeClosesTheAcquiredSession(@TempDir Path work) throws Exception {
+        var marker = work.resolve("pid");
+        var script = work.resolve("handshake.mjs");
+        Files.writeString(script, "import fs from 'node:fs'; fs.writeFileSync("
+            + jsonPath(marker) + ", String(process.pid)); setInterval(() => {}, 1000);");
+        var sessions = work.resolve("sessions");
+        var subscription = NodeSidecar.start(script,
+            NodeRuntimeOptions.builder(node(), sessions)
+                .handshakeTimeout(Duration.ofSeconds(30))
+                .terminateTimeout(Duration.ofMillis(200)).build(), () -> { }).subscribe();
+        awaitTrue(() -> Files.exists(marker));
+        var pid = Long.parseLong(Files.readString(marker));
+        try {
+            subscription.dispose();
+            awaitTrue(() -> !ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false));
+            awaitTrue(() -> {
+                try (var remaining = Files.list(sessions)) {
+                    return remaining.findAny().isEmpty();
+                }
+            });
+        } finally {
+            ProcessHandle.of(pid).ifPresent(ProcessHandle::destroyForcibly);
+        }
+    }
+
+    @Test
+    void blockedWriteDoesNotBlockRequestAdmissionCancellationOrClose(@TempDir Path work)
+        throws Exception {
+        var script = work.resolve("blocked.mjs");
+        Files.writeString(script, "setInterval(() => {}, 1000);\n" + baseScript("""
+            if (method === 'pause') { process.stdin.pause(); reply(id, [process.pid, process.ppid]); }
+            """));
+        var session = NodeSidecar.start(script, NodeRuntimeOptions.builder(node(), work.resolve("sessions"))
+            .maxMessageBytes(16 * 1024 * 1024).heartbeatInterval(Duration.ofSeconds(30))
+            .requestCancellationTimeout(Duration.ofMillis(100))
+            .terminateTimeout(Duration.ofMillis(200)).build(), () -> { }).block();
+        var pids = (java.util.List<?>) session.request("pause", Map.of()).block();
+        var source = new com.sstlfsj.fibra.CancellationSource();
+        var sending = java.util.concurrent.CompletableFuture.supplyAsync(() ->
+            session.beginRequest("blocked", "x".repeat(8 * 1024 * 1024), source.token()));
+        try {
+            var request = sending.get(1, TimeUnit.SECONDS);
+            awaitTrue(NodeSidecarTest::writerIsBlocked);
+            var cancelling = java.util.concurrent.CompletableFuture.runAsync(source::cancel);
+            cancelling.get(1, TimeUnit.SECONDS);
+            var closing = java.util.concurrent.CompletableFuture.runAsync(session::close);
+            closing.get(3, TimeUnit.SECONDS);
+            request.drain().block(Duration.ofSeconds(1));
+            session.close();
+            for (var pid : pids) {
+                assertFalse(ProcessHandle.of(((Number) pid).longValue()).map(ProcessHandle::isAlive).orElse(false));
+            }
+        } finally {
+            for (var pid : pids) {
+                ProcessHandle.of(((Number) pid).longValue()).ifPresent(ProcessHandle::destroyForcibly);
+            }
+        }
+    }
+
+    @Test
+    void heartbeatDeadlineClosesASessionWhileItsWriterIsBlocked(@TempDir Path work)
+        throws Exception {
+        var script = work.resolve("heartbeat-blocked.mjs");
+        Files.writeString(script, "setInterval(() => {}, 1000);\n" + baseScript("""
+            if (method === 'pause') { process.stdin.pause(); reply(id, process.pid); }
+            """));
+        try (var session = NodeSidecar.start(script,
+            NodeRuntimeOptions.builder(node(), work.resolve("sessions"))
+                .maxMessageBytes(16 * 1024 * 1024).heartbeatInterval(Duration.ofMillis(500))
+                .heartbeatTimeout(Duration.ofMillis(100)).terminateTimeout(Duration.ofMillis(300)).build(),
+            () -> { }).block()) {
+            var pid = ((Number) session.request("pause", Map.of()).block()).longValue();
+            var request = session.beginRequest("blocked", "x".repeat(8 * 1024 * 1024), CancellationToken.never());
+            awaitTrue(NodeSidecarTest::writerIsBlocked);
+            assertThrows(NodeRpcException.class, () -> session.termination().block(Duration.ofSeconds(4)));
+            request.drain().block(Duration.ofSeconds(1));
+            assertFalse(ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false));
+        }
+    }
+
+    @Test
+    void readerAndTimerCallbacksCanRequestTheSameCloseBarrier(@TempDir Path work) throws Exception {
+        var script = work.resolve("callbacks.mjs");
+        Files.writeString(script, baseScript("""
+            if (method === 'disable') {
+              process.stdout.write(JSON.stringify({jsonrpc:'2.0', method:'fibra.disable', params:{}}) + '\\n');
+              reply(id, true);
+            }
+            """));
+        var reference = new java.util.concurrent.atomic.AtomicReference<NodeSidecar>();
+        var callbackDone = new java.util.concurrent.CompletableFuture<Void>();
+        var scheduler = new ScheduledThreadPoolExecutor(1);
+        try (var session = NodeSidecar.start(script,
+            NodeRuntimeOptions.builder(node(), work.resolve("sessions"))
+                .heartbeatInterval(Duration.ofSeconds(30)).build(), () -> {
+                    reference.get().close();
+                    callbackDone.complete(null);
+                }, scheduler).block()) {
+            reference.set(session);
+            var timerDone = new java.util.concurrent.CompletableFuture<Void>();
+            scheduler.schedule(() -> {
+                reference.get().close();
+                timerDone.complete(null);
+            }, 200, TimeUnit.MILLISECONDS);
+            session.request("disable", Map.of()).onErrorResume(ignored -> Mono.empty()).block();
+            callbackDone.get(4, TimeUnit.SECONDS);
+            timerDone.get(4, TimeUnit.SECONDS);
+            assertFalse(session.isAlive());
+        }
+    }
+
+    private static boolean writerIsBlocked() {
+        return Thread.getAllStackTraces().entrySet().stream().anyMatch(entry ->
+            entry.getKey().getName().equals("fibra-node-writer")
+                && java.util.Arrays.stream(entry.getValue()).anyMatch(frame ->
+                    frame.getClassName().equals("java.io.FileOutputStream")
+                        && frame.getMethodName().equals("writeBytes")));
+    }
+
+    @Test
+    void disableCallbackFailureStillTerminatesTheSession(@TempDir Path work) throws Exception {
+        var script = work.resolve("callback-failure.mjs");
+        Files.writeString(script, baseScript("""
+            if (method === 'disable') {
+              process.stdout.write(JSON.stringify({jsonrpc:'2.0', method:'fibra.disable', params:{}}) + '\\n');
+              reply(id, true);
+            }
+            """));
+        try (var session = NodeSidecar.start(script, NodeRuntimeOptions.defaults(node(), work.resolve("sessions")),
+            () -> { throw new IllegalStateException("disable callback failed"); }).block()) {
+            session.request("disable", Map.of()).onErrorResume(ignored -> Mono.empty()).block();
+            var failure = assertThrows(NodeRpcException.class,
+                () -> session.termination().block(Duration.ofSeconds(3)));
+            assertEquals(NodeRpcPhase.PROTOCOL, failure.phase());
+        }
+    }
+
+    @Test
+    void preservesALargeFinalResponseImmediatelyBeforeExit(@TempDir Path work) throws Exception {
+        var script = work.resolve("tail.mjs");
+        Files.writeString(script, baseScript("""
+            if (method === 'last') {
+              process.stdout.write(JSON.stringify({jsonrpc:'2.0', id, result:'x'.repeat(4 * 1024 * 1024)}) + '\\n',
+                () => process.exit(0));
+            }
+            """));
+        try (var session = NodeSidecar.start(script,
+            NodeRuntimeOptions.builder(node(), work.resolve("sessions"))
+                .maxMessageBytes(5 * 1024 * 1024).heartbeatInterval(Duration.ofSeconds(30)).build(),
+            () -> { }).block()) {
+            assertEquals(4 * 1024 * 1024,
+                ((String) session.request("last", Map.of()).block(Duration.ofSeconds(5))).length());
+        }
+    }
+
+    private static String jsonPath(Path path) {
+        return tools.jackson.databind.json.JsonMapper.builder().build().writeValueAsString(path.toString());
+    }
+
+    @Test
+    void acceptsAResponseOnlyAfterItsFragmentedFrameIsComplete(@TempDir Path work) throws Exception {
+        var firstHalf = work.resolve("first-half");
+        var release = work.resolve("release-frame");
+        var script = work.resolve("fragmented.mjs");
+        Files.writeString(script, "import fs from 'node:fs';\n" + baseScript("""
+              if (method === 'fragment') {
+                const frame = JSON.stringify({jsonrpc:'2.0', id, result:'fragmented'}) + '\\n';
+                const split = Math.floor(frame.length / 2);
+                process.stdout.write(frame.slice(0, split), () => {
+                  fs.writeFileSync(%s, 'ready');
+                  const timer = setInterval(() => {
+                    if (!fs.existsSync(%s)) return;
+                    clearInterval(timer);
+                    process.stdout.write(frame.slice(split));
+                  }, 10);
+                });
+              }
+            """.formatted(jsonPath(firstHalf), jsonPath(release))));
+        var options = NodeRuntimeOptions.builder(node(), work.resolve("sessions"))
+            .heartbeatInterval(Duration.ofSeconds(30)).build();
+        try (var session = NodeSidecar.start(script, options, () -> { }).block(Duration.ofSeconds(5))) {
+            var result = session.request("fragment", Map.of(), Duration.ofSeconds(5)).toFuture();
+            try {
+                var deadline = System.nanoTime() + Duration.ofSeconds(3).toNanos();
+                while (Files.notExists(firstHalf) && System.nanoTime() < deadline) Thread.sleep(10);
+                assertTrue(Files.exists(firstHalf));
+                assertFalse(result.isDone());
+            } finally {
+                Files.writeString(release, "release");
+            }
+            assertEquals("fragmented", result.get(5, TimeUnit.SECONDS));
+        }
+    }
+
+    @Test
     void doesNotSendARequestWhoseDeadlineCannotBeOwned(@TempDir Path work)
         throws Exception {
         var marker = work.resolve("handshake-sent");
