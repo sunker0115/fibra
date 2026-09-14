@@ -28,6 +28,14 @@ class DiagnosticTailTest(unittest.TestCase):
             "bytes=3 omitted=3 tail=b''",
         )
 
+    def test_default_limit_keeps_16_kib_tail(self):
+        value = b"a" * (MODULE.DIAGNOSTIC_TAIL_BYTES + 1)
+        expected_tail = b"a" * MODULE.DIAGNOSTIC_TAIL_BYTES
+        self.assertEqual(
+            MODULE.diagnostic_tail(value),
+            f"bytes={len(value)} omitted=1 tail={expected_tail!r}",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
