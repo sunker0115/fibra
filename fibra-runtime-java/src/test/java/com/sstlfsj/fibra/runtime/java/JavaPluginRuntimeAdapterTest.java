@@ -3,16 +3,23 @@ package com.sstlfsj.fibra.runtime.java;
 import com.sstlfsj.fibra.artifact.ArtifactId;
 import com.sstlfsj.fibra.artifact.ArtifactRecord;
 import com.sstlfsj.fibra.artifact.ArtifactState;
+import com.sstlfsj.fibra.artifact.ArtifactStore;
 import com.sstlfsj.fibra.engine.RuntimeResourceOwner;
 import com.sstlfsj.fibra.engine.RuntimeResourceSnapshot;
+import com.sstlfsj.fibra.engine.RuntimeResourceUpdate;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.InputStream;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.time.Duration;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -20,17 +27,301 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class JavaPluginRuntimeAdapterTest {
+    @Test
+    void ownerCloseRetainsTheCatalogUntilCleanupIsSubscribed(@TempDir Path work) throws Exception {
+        var owner = new JavaPluginRuntimeAdapter().create();
+        install(owner, List.of(artifact(work, "a", "1.0.0", List.of())));
+        var catalog = owner.catalog();
+        var close = owner.closeAsync();
+        try {
+            assertSame(catalog, owner.catalog(), "requesting close must not release the active catalog");
+        } finally {
+            close.block(Duration.ofSeconds(5));
+        }
+        assertTrue(owner.catalog().plugins().entries().isEmpty());
+    }
+
+    @Test
+    void updateClosePreservesTheCompletedSnapshotWhenOwnerAlreadyCleanedIt(@TempDir Path work) throws Exception {
+        var owner = new JavaPluginRuntimeAdapter().create();
+        var update = owner.createUpdate(List.of(artifact(work, "a", "1.0.0", List.of())));
+        try {
+            update.prepareAsync().block(Duration.ofSeconds(5));
+            owner.closeAsync().block(Duration.ofSeconds(5));
+            var completed = update.snapshot();
+            assertEquals(1, completed.resources().size());
+            assertEquals(RuntimeResourceSnapshot.State.CLOSED, completed.resources().getFirst().state());
+            update.closeAsync().block(Duration.ofSeconds(5));
+            assertEquals(completed, update.snapshot(), "later update cleanup must preserve completed metadata");
+        } finally {
+            owner.closeAsync().block(Duration.ofSeconds(5));
+        }
+    }
+
+    @Test
+    @Timeout(15)
+    void failedOwnerCloseReleasesIndependentClosedLoadersButKeepsFailedResources(@TempDir Path work)
+        throws Exception {
+        var owner = adapter(loader -> {
+            if (loader.getURLs()[0].getPath().endsWith("b-1.0.0.jar")) {
+                throw new IOException("cannot close b");
+            }
+            loader.close();
+        }).create();
+        install(owner, List.of(artifact(work, "a", "1.0.0", List.of()),
+            artifact(work, "b", "1.0.0", List.of("a")), artifact(work, "d", "1.0.0", List.of())));
+        var original = weakLoaders(owner);
+        try {
+            assertThrows(JavaRuntimeException.class, () -> owner.closeAsync().block(Duration.ofSeconds(5)));
+            assertNotNull(original.get("b_____").get());
+            assertPayload(original.get("a_____").get(), "a", "1.0.0");
+            assertCollected(List.of(original.get("d_____")), "failed Owner retains independent closed loader");
+        } finally {
+            for (var reference : original.values()) {
+                var loader = reference.get();
+                if (loader != null) loader.close();
+            }
+            Reference.reachabilityFence(owner);
+        }
+    }
+
+    @Test
+    @Timeout(15)
+    void cleanedFailedPreparationDoesNotRetainThePluginExceptionOrItsLoader(@TempDir Path work)
+        throws Exception {
+        var closed = new ArrayList<WeakReference<?>>();
+        var owner = adapter(loader -> {
+            loader.close();
+            closed.add(new WeakReference<>(loader));
+        }).create();
+        var update = owner.createUpdate(List.of(artifact(work, "a", "1.0.0", List.of(),
+            "fixture.ThrowingEntrypoint")));
+        var error = failedPreparation(update);
+        try {
+            update.closeAsync().block(Duration.ofSeconds(5));
+            assertEquals(1, closed.size());
+            assertTrue(owner.snapshot().resources().isEmpty());
+            var references = new ArrayList<>(closed);
+            references.add(error);
+            assertCollected(references, "cleaned Update retains plugin preparation exception or loader");
+        } finally {
+            Reference.reachabilityFence(update);
+            owner.closeAsync().block(Duration.ofSeconds(5));
+        }
+    }
+
+    private static WeakReference<?> failedPreparation(RuntimeResourceUpdate update) {
+        var failure = assertThrows(RuntimeException.class, () -> update.prepareAsync().block(Duration.ofSeconds(5)));
+        assertEquals("fixture.ThrowingEntrypoint$PreparationFailure", failure.getClass().getName());
+        return new WeakReference<>(failure);
+    }
+
+    @Test
+    @Timeout(15)
+    void completedUpdatesDoNotRetainRetiredLoadersOrEntriesAcrossRealJarReplacements(@TempDir Path work)
+        throws Exception {
+        var owner = new JavaPluginRuntimeAdapter().create();
+        var completed = new ArrayList<RuntimeResourceUpdate>();
+        var retired = new ArrayList<WeakReference<?>>();
+        var identities = new java.util.HashSet<String>();
+        try {
+            for (var round = 0; round < 4; round++) {
+                retired.addAll(weakCatalog(owner));
+                var update = owner.createUpdate(List.of(artifact(work, "a", "1.0." + round, List.of())));
+                update.prepareAsync().block(Duration.ofSeconds(5));
+                update.adopt();
+                update.closeAsync().block(Duration.ofSeconds(5));
+                completed.add(update);
+                assertTrue(identities.add(owner.snapshot().resources().getFirst().identity()));
+            }
+            var active = weakCatalog(owner);
+            assertAll(
+                () -> assertCollected(retired, "completed Update retains retired loader or entry"),
+                () -> active.forEach(reference -> assertNotNull(reference.get(), "active loader/entry control")));
+        } finally {
+            Reference.reachabilityFence(completed);
+            owner.closeAsync().block(Duration.ofSeconds(5));
+        }
+    }
+
+    @Test
+    @Timeout(15)
+    void failedRetirementReleasesSuccessfulSiblingWhileKeepingTheActualFailedDependencyChain(@TempDir Path work)
+        throws Exception {
+        var owner = adapter(loader -> {
+            if (loader.getURLs()[0].getPath().endsWith("b-1.0.0.jar")) {
+                throw new IOException("cannot close old b");
+            }
+            loader.close();
+        }).create();
+        var initial = List.of(artifact(work, "a", "1.0.0", List.of()),
+            artifact(work, "b", "1.0.0", List.of("a")), artifact(work, "d", "1.0.0", List.of()));
+        install(owner, initial);
+        var original = weakLoaders(owner);
+        var update = owner.createUpdate(List.of(artifact(work, "a", "2.0.0", List.of()),
+            initial.get(1), artifact(work, "d", "2.0.0", List.of())));
+        update.prepareAsync().block(Duration.ofSeconds(5));
+        update.adopt();
+        try {
+            assertThrows(JavaRuntimeException.class, () -> update.closeAsync().block(Duration.ofSeconds(5)));
+            assertNotNull(original.get("b_____").get(), "failed resource must stay owned");
+            assertNotNull(original.get("a_____").get(), "actual old prerequisite must stay owned");
+            assertPayload(original.get("b_____").get(), "a", "1.0.0");
+            assertCollected(List.of(original.get("d_____")), "successful retired sibling remains strongly reachable");
+        } finally {
+            assertThrows(JavaRuntimeException.class, () -> owner.closeAsync().block(Duration.ofSeconds(5)));
+            for (var reference : original.values()) {
+                var loader = reference.get();
+                if (loader != null) loader.close();
+            }
+            Reference.reachabilityFence(update);
+        }
+    }
+
+    private static List<WeakReference<?>> weakCatalog(RuntimeResourceOwner owner) {
+        var references = new ArrayList<WeakReference<?>>();
+        owner.catalog().plugins().entries().forEach(entry -> {
+            references.add(new WeakReference<>(entry));
+            references.add(new WeakReference<>(entry.definition().factory().getClass().getClassLoader()));
+        });
+        return references;
+    }
+
+    private static Map<String, WeakReference<PluginClassLoader>> weakLoaders(RuntimeResourceOwner owner) {
+        return loaders(owner).entrySet().stream().collect(java.util.stream.Collectors.toMap(
+            Map.Entry::getKey, entry -> new WeakReference<>(entry.getValue())));
+    }
+
+    private static void assertCollected(List<WeakReference<?>> references, String message) throws InterruptedException {
+        // 仅受控 JAR fixture 使用有界 GC 探测；close 成功与 collect 是不同断言。
+        for (var attempt = 0; attempt < 60; attempt++) {
+            System.gc();
+            if (references.stream().allMatch(reference -> reference.get() == null)) return;
+            Thread.sleep(25);
+        }
+        assertEquals(0, references.stream().filter(reference -> reference.get() != null).count(), message);
+    }
+
+    @Test
+    @Timeout(30)
+    void sameVersionContentChangesRebuildOnlyTheDependencyClosureAcrossRepeatedUpdates(@TempDir Path work)
+        throws Exception {
+        var firstSource = artifact(work.resolve("first"), "a", "1.0.0", List.of(),
+            fixture.SampleEntrypoint.class.getName(), "first");
+        var secondSource = artifact(work.resolve("second"), "a", "1.0.0", List.of(),
+            fixture.SampleEntrypoint.class.getName(), "second");
+        var dependentSource = artifact(work, "b", "1.0.0", List.of("a"));
+        var unrelatedSource = artifact(work, "c", "1.0.0", List.of());
+        var created = 0;
+        var closed = new AtomicInteger();
+        var owner = adapter(loader -> {
+            loader.close();
+            closed.incrementAndGet();
+        }).create();
+        var samples = new StringBuilder("round,created,closed,activeLoaders,threads,openFd,heapUsedBytes,updateNanos\n");
+        try (var store = new ArtifactStore(work.resolve("store"))) {
+            try {
+                var first = saved(store, firstSource);
+                var second = saved(store, secondSource);
+                assertEquals(first.version(), second.version());
+                assertNotEquals(first.revision(), second.revision());
+                var dependent = saved(store, dependentSource);
+                var unrelated = saved(store, unrelatedSource);
+                install(owner, List.of(first, dependent, unrelated));
+                var previous = loaders(owner);
+                created = previous.size();
+                var unrelatedDefinition = owner.catalog().plugins().find("c_____").orElseThrow().definition();
+                stabilitySample(samples, 0, created, closed.get(), owner, 0);
+
+                for (var round = 1; round <= 24; round++) {
+                    var source = round % 2 == 1 ? secondSource : firstSource;
+                    var selected = saved(store, source);
+                    assertEquals(round % 2 == 1 ? second.revision() : first.revision(), selected.revision());
+                    var started = System.nanoTime();
+                    var update = owner.createUpdate(List.of(selected, dependent, unrelated));
+                    update.prepareAsync().block(Duration.ofSeconds(5));
+                    assertEquals(List.of("a", "b"), update.affectedArtifacts().stream()
+                        .map(ArtifactId::value).sorted().toList());
+                    update.adopt();
+                    update.closeAsync().block(Duration.ofSeconds(5));
+                    var updateNanos = System.nanoTime() - started;
+                    var current = loaders(owner);
+                    for (var name : List.of("a_____", "b_____")) {
+                        assertNotSame(previous.get(name), current.get(name));
+                        created++;
+                    }
+                    assertSame(previous.get("c_____"), current.get("c_____"));
+                    assertSame(unrelatedDefinition,
+                        owner.catalog().plugins().find("c_____").orElseThrow().definition());
+                    assertPayload(current.get("a_____"), "a", round % 2 == 1 ? "second" : "first");
+                    assertPayload(current.get("b_____"), "a", round % 2 == 1 ? "second" : "first");
+                    assertEquals(3, owner.snapshot().resources().size());
+                    assertEquals(3, created - closed.get());
+
+                    var repeated = saved(store, source);
+                    assertEquals(selected.revision(), repeated.revision());
+                    var definitions = owner.catalog().plugins().entries().stream()
+                        .map(entry -> entry.definition()).toList();
+                    var beforeClose = closed.get();
+                    var unchanged = owner.createUpdate(List.of(repeated, dependent, unrelated));
+                    unchanged.prepareAsync().block(Duration.ofSeconds(5));
+                    assertTrue(unchanged.affectedArtifacts().isEmpty());
+                    unchanged.adopt();
+                    unchanged.closeAsync().block(Duration.ofSeconds(5));
+                    assertEquals(beforeClose, closed.get());
+                    var retained = loaders(owner);
+                    current.forEach((name, loader) -> assertSame(loader, retained.get(name)));
+                    var retainedDefinitions = owner.catalog().plugins().entries().stream()
+                        .map(entry -> entry.definition()).toList();
+                    for (var index = 0; index < definitions.size(); index++) {
+                        assertSame(definitions.get(index), retainedDefinitions.get(index));
+                    }
+                    previous = current;
+                    stabilitySample(samples, round, created, closed.get(), owner, updateNanos);
+                }
+            } finally {
+                owner.closeAsync().block(Duration.ofSeconds(5));
+            }
+            assertEquals(created, closed.get());
+            assertTrue(owner.snapshot().resources().isEmpty());
+            stabilitySample(samples, 25, created, closed.get(), owner, 0);
+        } finally {
+            Files.writeString(Path.of("target", "java-runtime-stability.csv"), samples);
+        }
+    }
+
+    private static ArtifactRecord saved(ArtifactStore store, ArtifactRecord source) {
+        try (var transaction = store.prepareInstall(source.id(), source.runtimeId(), source.version(), source.location())) {
+            return transaction.save();
+        }
+    }
+
+    private static void stabilitySample(StringBuilder samples, int round, int created, int closed,
+                                        RuntimeResourceOwner owner, long updateNanos) {
+        var operatingSystem = ManagementFactory.getOperatingSystemMXBean();
+        var descriptors = operatingSystem instanceof com.sun.management.UnixOperatingSystemMXBean unix
+            ? Long.toString(unix.getOpenFileDescriptorCount()) : "unavailable";
+        samples.append(round).append(',').append(created).append(',').append(closed).append(',')
+            .append(owner.snapshot().resources().size()).append(',')
+            .append(ManagementFactory.getThreadMXBean().getThreadCount()).append(',')
+            .append(descriptors).append(',').append(ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed())
+            .append(',').append(updateNanos).append('\n');
+    }
+
     @Test
     void updateRebuildsChangedArtifactAndDependentsButRetainsUnrelatedDefinitions(@TempDir Path work)
         throws Exception {
@@ -271,6 +562,11 @@ class JavaPluginRuntimeAdapterTest {
 
     private static ArtifactRecord artifact(Path work, String id, String version, List<String> requires,
                                            String entrypoint) throws Exception {
+        return artifact(work, id, version, requires, entrypoint, version);
+    }
+
+    private static ArtifactRecord artifact(Path work, String id, String version, List<String> requires,
+                                           String entrypoint, String payload) throws Exception {
         var root = Files.createDirectories(work.resolve(id + '-' + version));
         var jar = Files.createDirectories(root.resolve("lib")).resolve(id + '-' + version + ".jar");
         Files.writeString(root.resolve("plugin.properties"), "formatVersion=1\nruntime=java\npayload=lib/"
@@ -305,6 +601,17 @@ class JavaPluginRuntimeAdapterTest {
                 }
                 output.closeEntry();
             }
+            if (entrypoint.equals("fixture.ThrowingEntrypoint")) {
+                for (var name : List.of("fixture/ThrowingEntrypoint.class",
+                    "fixture/ThrowingEntrypoint$PreparationFailure.class")) {
+                    output.putNextEntry(new JarEntry(name));
+                    try (var input = fixture.ThrowingEntrypoint.class.getResourceAsStream('/' + name)) {
+                        assertNotNull(input);
+                        output.write(input.readAllBytes());
+                    }
+                    output.closeEntry();
+                }
+            }
             var late = "fixture/LateLoaded.class";
             output.putNextEntry(new JarEntry(late));
             try (var input = fixture.LateLoaded.class.getResourceAsStream('/' + late)) {
@@ -312,7 +619,7 @@ class JavaPluginRuntimeAdapterTest {
             }
             output.closeEntry();
             output.putNextEntry(new JarEntry("payload/" + id + ".txt"));
-            output.write(version.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            output.write(payload.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             output.closeEntry();
         }
         return ArtifactRecord.builder().id(new ArtifactId(id)).runtimeId(JavaPluginRuntimeAdapter.RUNTIME_ID)

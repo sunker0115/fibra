@@ -128,12 +128,14 @@ public final class JavaPluginRuntimeAdapter implements PluginRuntimeAdapter {
                     return preparation.then(Mono.<Void>fromRunnable(() -> {
                         synchronized (this) {
                             // 真实引用区分同一制品的新旧 loader，失败时只保护其实际先决资源。
+                            catalog = RuntimeCatalog.empty();
+                            if (pending != null) pending.releasePreparation();
                             var values = new ArrayList<Loaded>(active.values());
                             if (pending != null) values.addAll(pending.owned().values());
                             closeLoaded(values);
                             active.clear();
+                            if (pending != null) pending.finishCleanup();
                             pending = null;
-                            catalog = RuntimeCatalog.empty();
                         }
                     }));
                 }).cache();
@@ -147,9 +149,10 @@ public final class JavaPluginRuntimeAdapter implements PluginRuntimeAdapter {
         private final List<ArtifactRecord> target;
         private final Map<ArtifactId, Loaded> fresh = new LinkedHashMap<>();
         private final Map<ArtifactId, Loaded> old = new LinkedHashMap<>();
-        private final Mono<Void> preparation = Mono.<Void>fromRunnable(this::prepare).cache();
+        private Mono<Void> preparation = Mono.<Void>fromRunnable(this::prepare).cache();
         private Set<ArtifactId> affected = Set.of();
         private RuntimeCatalog catalog;
+        private RuntimeResourceSnapshot completedSnapshot;
         private Mono<Void> close;
         private boolean started;
         private boolean adopted;
@@ -168,8 +171,8 @@ public final class JavaPluginRuntimeAdapter implements PluginRuntimeAdapter {
                         return Mono.error(new IllegalStateException("Java runtime update is closed"));
                     }
                     started = true;
+                    return preparation;
                 }
-                return preparation;
             });
         }
 
@@ -256,7 +259,8 @@ public final class JavaPluginRuntimeAdapter implements PluginRuntimeAdapter {
         @Override
         public RuntimeResourceSnapshot snapshot() {
             synchronized (owner) {
-                return snapshotOf(new ArrayList<>(owned().values()));
+                return completedSnapshot != null ? completedSnapshot
+                    : snapshotOf(new ArrayList<>(owned().values()));
             }
         }
 
@@ -287,7 +291,9 @@ public final class JavaPluginRuntimeAdapter implements PluginRuntimeAdapter {
                     closed = true;
                     close = Mono.defer(this::awaitPreparation).then(Mono.<Void>fromRunnable(() -> {
                         synchronized (owner) {
+                            releasePreparation();
                             closeLoaded(new ArrayList<>(owned().values()));
+                            finishCleanup();
                             if (owner.pending == this) owner.pending = null;
                         }
                     })).cache();
@@ -304,6 +310,18 @@ public final class JavaPluginRuntimeAdapter implements PluginRuntimeAdapter {
 
         private Map<ArtifactId, Loaded> owned() {
             return adopted ? old : fresh;
+        }
+
+        private void releasePreparation() {
+            preparation = Mono.empty();
+            catalog = null;
+            if (adopted) fresh.clear();
+        }
+
+        private void finishCleanup() {
+            if (completedSnapshot == null) completedSnapshot = snapshotOf(new ArrayList<>(owned().values()));
+            old.clear();
+            fresh.clear();
         }
     }
 
@@ -351,6 +369,9 @@ public final class JavaPluginRuntimeAdapter implements PluginRuntimeAdapter {
                 try {
                     closer.close(value.loader);
                     value.state = RuntimeResourceSnapshot.State.CLOSED;
+                    value.loader = null;
+                    value.entry = null;
+                    value.dependencies = List.of();
                 } catch (IOException | RuntimeException failure) {
                     value.closeFailure = failure;
                     value.state = RuntimeResourceSnapshot.State.CLOSE_FAILED;
@@ -388,7 +409,7 @@ public final class JavaPluginRuntimeAdapter implements PluginRuntimeAdapter {
     private static final class Loaded {
         private final ArtifactRecord artifact;
         private final JavaPluginManifest manifest;
-        private final PluginClassLoader loader;
+        private PluginClassLoader loader;
         private final String identity;
         private List<Loaded> dependencies = List.of();
         private PluginCatalogEntry<?> entry;
