@@ -162,10 +162,12 @@ final class NodeSidecar implements AutoCloseable {
                 cause.addSuppressed(original);
             }
         }
-        // Closing admission must not discard complete frames already in the output pipe.
-        rpc.outputCompletion().join();
-        rpc.writeCompletion().join();
-        stderrCompletion.join();
+        if (cleanupFailure == null) {
+            // Confirmed process exit allows draining the complete tail without truncation.
+            rpc.outputCompletion().join();
+            rpc.writeCompletion().join();
+            stderrCompletion.join();
+        }
         var terminal = cleanupFailure != null ? cleanupFailure : failure.get();
         rpc.settle(terminal == null
             ? new NodeRpcException(NodeRpcPhase.TERMINATE, "Node sidecar was closed") : terminal,

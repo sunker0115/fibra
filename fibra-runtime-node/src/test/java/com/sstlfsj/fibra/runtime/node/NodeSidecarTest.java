@@ -25,6 +25,72 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NodeSidecarTest {
     @Test
+    void terminationFailureDoesNotWaitForBlockedSessionStreams(@TempDir Path work) throws Exception {
+        var streamsReleased = new java.util.concurrent.CompletableFuture<Void>();
+        var readersEntered = new java.util.concurrent.CountDownLatch(2);
+        var writerEntered = new java.util.concurrent.CountDownLatch(1);
+        var blockedOutput = new java.io.InputStream() {
+            @Override public int read() {
+                readersEntered.countDown();
+                streamsReleased.join();
+                return -1;
+            }
+        };
+        var process = new Process() {
+            private final java.util.concurrent.CompletableFuture<Process> exit =
+                new java.util.concurrent.CompletableFuture<>();
+            private final java.io.OutputStream input = new java.io.OutputStream() {
+                @Override public void write(int value) {
+                    writerEntered.countDown();
+                    streamsReleased.join();
+                }
+            };
+            @Override public java.io.OutputStream getOutputStream() { return input; }
+            @Override public java.io.InputStream getInputStream() { return blockedOutput; }
+            @Override public java.io.InputStream getErrorStream() { return blockedOutput; }
+            @Override public boolean isAlive() { return true; }
+            @Override public java.util.concurrent.CompletableFuture<Process> onExit() { return exit; }
+            @Override public int waitFor() { exit.join(); return 0; }
+            @Override public int exitValue() { throw new IllegalThreadStateException(); }
+            @Override public void destroy() { }
+            @Override public Process destroyForcibly() { return this; }
+        };
+        var sessionDirectory = Files.createDirectory(work.resolve("session"));
+        var options = NodeRuntimeOptions.builder(node(), work)
+            .terminateTimeout(Duration.ofMillis(20)).build();
+        var unit = new NodeProcessUnit(sessionDirectory, sessionDirectory.resolve("termination.status"),
+            process, options.terminateTimeout());
+        var scheduler = new ScheduledThreadPoolExecutor(1);
+        var constructor = NodeSidecar.class.getDeclaredConstructor(NodeRuntimeOptions.class,
+            NodeProcessUnit.class, Runnable.class, java.util.concurrent.ScheduledExecutorService.class);
+        constructor.setAccessible(true);
+        var session = constructor.newInstance(options, unit, (Runnable) () -> { }, scheduler);
+        try {
+            var request = session.beginRequest("blocked", Map.of(), CancellationToken.never());
+            assertTrue(readersEntered.await(1, TimeUnit.SECONDS));
+            assertTrue(writerEntered.await(1, TimeUnit.SECONDS));
+            var result = request.result().toFuture();
+            var cleanup = request.drain().toFuture();
+            var closing = session.closeAsync().toFuture();
+
+            var failure = assertThrows(java.util.concurrent.ExecutionException.class,
+                () -> closing.get(1, TimeUnit.SECONDS));
+            assertEquals(NodeRpcPhase.TERMINATE, ((NodeRpcException) failure.getCause()).phase());
+            org.junit.jupiter.api.Assertions.assertSame(failure.getCause(),
+                assertThrows(CompletionException.class, result::join).getCause());
+            org.junit.jupiter.api.Assertions.assertSame(failure.getCause(),
+                assertThrows(CompletionException.class, cleanup::join).getCause());
+            org.junit.jupiter.api.Assertions.assertSame(failure.getCause(),
+                assertThrows(NodeRpcException.class, session::close));
+            assertFalse(streamsReleased.isDone(), "cleanup failure 必须在阻塞流释放之前传播");
+            assertTrue(Files.isDirectory(sessionDirectory));
+        } finally {
+            streamsReleased.complete(null);
+            scheduler.shutdownNow();
+        }
+    }
+
+    @Test
     void naturalHalfFrameEofIsAProtocolFailure(@TempDir Path work) throws Exception {
         var script = work.resolve("partial.mjs");
         Files.writeString(script, baseScript("""
