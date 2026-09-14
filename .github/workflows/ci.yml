@@ -66,7 +66,9 @@ jobs:
       - name: 验证短超时诊断门禁
         env:
           FIBRA_CI_DIAGNOSTICS_DIR: ${{ runner.temp }}/fibra-ci-hang-diagnostics
-        run: scripts/verify-short-timeout-diagnostics.sh
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 python3 verification/ci/test_verify_cli_tty.py
+          scripts/verify-short-timeout-diagnostics.sh
 
       - name: 全量构建与兼容性验收
         env:
