@@ -537,33 +537,41 @@ class JavaPluginRuntimeAdapterTest {
     }
 
     @Test
-    void rejectsSameVisibleClassFromExecutableAndItsDependencyLibraries(@TempDir Path work) throws Exception {
+    void sameVersionLibraryInExecutableAndDependencyUsesEachArtifactsLocalDefinition(@TempDir Path work)
+        throws Exception {
         var classes = compileClass(work.resolve("shared"), "shared.Library");
         var dependency = artifact(work, "a", "1.0.0", List.of());
         var executable = artifact(work, "b", "1.0.0", List.of("a"));
         addLibrary(dependency, "shared-a.jar", classes, "shared.Library");
         addLibrary(executable, "shared-b.jar", classes, "shared.Library");
-        var update = new JavaPluginRuntimeAdapter().create().createUpdate(List.of(dependency, executable));
+        var owner = new JavaPluginRuntimeAdapter().create();
 
-        var failure = assertThrows(JavaRuntimeException.class,
-            () -> update.prepareAsync().block(Duration.ofSeconds(5)));
+        install(owner, List.of(dependency, executable));
 
-        assertConflict(failure, "b", "shared.Library", "a", "b", "shared-a.jar", "shared-b.jar");
-        assertTrue(update.snapshot().resources().isEmpty(), "ambiguity must fail before creating loaders");
-        update.closeAsync().block(Duration.ofSeconds(5));
+        var loaders = loaders(owner);
+        assertSame(loaders.get("a_____"), loaders.get("a_____").loadClass("shared.Library").getClassLoader());
+        assertSame(loaders.get("b_____"), loaders.get("b_____").loadClass("shared.Library").getClassLoader());
+        owner.closeAsync().block(Duration.ofSeconds(5));
     }
 
     @Test
-    void contractOnlyDependencyClassesStillParticipateInTheVisibleClosure(@TempDir Path work) throws Exception {
+    void executableLocalClassMayShadowItsContractOnlyDependency(@TempDir Path work) throws Exception {
         var classes = compileClass(work.resolve("shared"), "shared.Contract");
         var contract = contractArtifact(work, "a", "1.0.0", List.of());
         var executable = artifact(work, "b", "1.0.0", List.of("a"));
+        var fallback = artifact(work, "c", "1.0.0", List.of("a"));
         addLibrary(contract, "contract.jar", classes, "shared.Contract");
         addLibrary(executable, "shadow.jar", classes, "shared.Contract");
+        var owner = new JavaPluginRuntimeAdapter().create();
 
-        var failure = prepareFailure(List.of(contract, executable));
+        install(owner, List.of(contract, executable, fallback));
 
-        assertConflict(failure, "b", "shared.Contract", "a", "b", "contract.jar", "shadow.jar");
+        var loaders = loaders(owner);
+        assertSame(loaders.get("b_____"), loaders.get("b_____").loadClass("shared.Contract").getClassLoader());
+        var contractType = loaders.get("c_____").loadClass("shared.Contract");
+        assertTrue(contractType.getClassLoader() instanceof PluginClassLoader);
+        assertNotSame(loaders.get("c_____"), contractType.getClassLoader());
+        owner.closeAsync().block(Duration.ofSeconds(5));
     }
 
     @Test
@@ -583,7 +591,7 @@ class JavaPluginRuntimeAdapterTest {
     }
 
     @Test
-    void rejectsConflictIntroducedThroughATransitiveDependency(@TempDir Path work) throws Exception {
+    void rootLocalClassMayShadowATransitiveDependency(@TempDir Path work) throws Exception {
         var classes = compileClass(work.resolve("shared"), "shared.Transitive");
         var base = artifact(work, "a", "1.0.0", List.of());
         var middle = artifact(work, "b", "1.0.0", List.of("a"));
@@ -591,26 +599,46 @@ class JavaPluginRuntimeAdapterTest {
         addLibrary(base, "base-shared.jar", classes, "shared.Transitive");
         addLibrary(root, "root-shared.jar", classes, "shared.Transitive");
 
-        var failure = prepareFailure(List.of(base, middle, root));
+        var owner = new JavaPluginRuntimeAdapter().create();
 
-        assertConflict(failure, "c", "shared.Transitive", "a", "c",
-            "base-shared.jar", "root-shared.jar");
+        install(owner, List.of(base, middle, root));
+
+        var loaders = loaders(owner);
+        assertSame(loaders.get("a_____"), loaders.get("b_____").loadClass("shared.Transitive").getClassLoader());
+        assertSame(loaders.get("c_____"), loaders.get("c_____").loadClass("shared.Transitive").getClassLoader());
+        owner.closeAsync().block(Duration.ofSeconds(5));
     }
 
     @Test
-    void conflictDiagnosticNamesTheRootWhenTwoDependenciesProvideTheClass(@TempDir Path work) throws Exception {
-        var classes = compileClass(work.resolve("shared"), "shared.Siblings");
-        var first = artifact(work, "a", "1.0.0", List.of());
-        var second = artifact(work, "b", "1.0.0", List.of());
-        var root = artifact(work, "c", "1.0.0", List.of("a", "b"));
-        addLibrary(first, "first-shared.jar", classes, "shared.Siblings");
-        addLibrary(second, "second-shared.jar", classes, "shared.Siblings");
+    void dependencyOrderSelectsTheFirstPathWithoutMergingSameNamedClasses(@TempDir Path work) throws Exception {
+        var type = "shared.Versioned";
+        var firstClasses = compileClass(work.resolve("first"), type,
+            "public static String value() { return \"first\"; }");
+        var secondClasses = compileClass(work.resolve("second"), type,
+            "public static String value() { return \"second\"; }");
+        var first = artifact(work, "b", "1.0.0", List.of());
+        var second = artifact(work, "c", "2.0.0", List.of());
+        var firstRoot = artifact(work, "a", "1.0.0", List.of("b", "c"));
+        var secondRoot = artifact(work, "d", "1.0.0", List.of("c", "b"));
+        addLibrary(first, "versioned.jar", firstClasses, type);
+        addLibrary(second, "versioned.jar", secondClasses, type);
+        var owner = new JavaPluginRuntimeAdapter().create();
 
-        var failure = prepareFailure(List.of(first, second, root));
+        install(owner, List.of(firstRoot, first, second, secondRoot));
 
-        assertConflict(failure, "c", "shared.Siblings", "a", "b",
-            "first-shared.jar", "second-shared.jar");
-        assertTrue(failure.getMessage().contains("root c"), failure.getMessage());
+        var loaders = loaders(owner);
+        var firstType = loaders.get("b_____").loadClass(type);
+        var secondType = loaders.get("c_____").loadClass(type);
+        assertEquals("first", invokeValue(firstType));
+        assertEquals("second", invokeValue(secondType));
+        assertNotSame(firstType, secondType);
+        assertSame(loaders.get("b_____"), firstType.getClassLoader());
+        assertSame(loaders.get("c_____"), secondType.getClassLoader());
+        assertSame(firstType, loaders.get("a_____").loadClass(type));
+        assertSame(secondType, loaders.get("d_____").loadClass(type));
+        assertEquals("first", invokeValue(loaders.get("a_____").loadClass(type)));
+        assertEquals("second", invokeValue(loaders.get("d_____").loadClass(type)));
+        owner.closeAsync().block(Duration.ofSeconds(5));
     }
 
     @Test
@@ -672,9 +700,14 @@ class JavaPluginRuntimeAdapterTest {
             "com.sstlfsj.fibra.dynamic.Shared");
         addLibrary(missingSecond, "missing-d.jar", missingClasses,
             "com.sstlfsj.fibra.dynamic.Shared");
-        var failure = prepareFailure(List.of(missingFirst, missingSecond));
-        assertConflict(failure, "d", "com.sstlfsj.fibra.dynamic.Shared", "c", "d",
-            "missing-c.jar", "missing-d.jar");
+        var missingOwner = new JavaPluginRuntimeAdapter().create();
+        install(missingOwner, List.of(missingFirst, missingSecond));
+        var missingLoaders = loaders(missingOwner);
+        assertSame(missingLoaders.get("c_____"), missingLoaders.get("c_____")
+            .loadClass("com.sstlfsj.fibra.dynamic.Shared").getClassLoader());
+        assertSame(missingLoaders.get("d_____"), missingLoaders.get("d_____")
+            .loadClass("com.sstlfsj.fibra.dynamic.Shared").getClassLoader());
+        missingOwner.closeAsync().block(Duration.ofSeconds(5));
     }
 
     @Test
@@ -730,16 +763,22 @@ class JavaPluginRuntimeAdapterTest {
     }
 
     @Test
-    void parentClassOutsideParentFirstPrefixesDoesNotHidePluginAmbiguity(@TempDir Path work) throws Exception {
+    void parentClassOutsideParentFirstPrefixesDoesNotReplacePluginLocalDefinitions(@TempDir Path work)
+        throws Exception {
         var parentClass = classBytes(JavaPluginRuntimeAdapterTest.class.getClassLoader(), "fixture.LateLoaded");
         var first = artifact(work, "a", "1.0.0", List.of());
         var second = artifact(work, "b", "1.0.0", List.of("a"));
         addLibrary(first, "late-a.jar", Map.of("fixture/LateLoaded.class", parentClass));
         addLibrary(second, "late-b.jar", Map.of("fixture/LateLoaded.class", parentClass));
 
-        var failure = prepareFailure(List.of(first, second));
+        var owner = new JavaPluginRuntimeAdapter().create();
 
-        assertConflict(failure, "b", "fixture.LateLoaded", "a", "b", "late-a.jar", "late-b.jar");
+        install(owner, List.of(first, second));
+
+        var loaders = loaders(owner);
+        assertSame(loaders.get("a_____"), loaders.get("a_____").loadClass("fixture.LateLoaded").getClassLoader());
+        assertSame(loaders.get("b_____"), loaders.get("b_____").loadClass("fixture.LateLoaded").getClassLoader());
+        owner.closeAsync().block(Duration.ofSeconds(5));
     }
 
     @Test
@@ -793,7 +832,7 @@ class JavaPluginRuntimeAdapterTest {
     }
 
     @Test
-    void versionOnlyCurrentClassParticipatesInConflictDetection(@TempDir Path work) throws Exception {
+    void versionOnlyCurrentClassMayCoexistWithAnotherArtifactsRegularClass(@TempDir Path work) throws Exception {
         var classes = compileClass(work.resolve("classes"), "mr.VersionOnly");
         var bytes = Files.readAllBytes(classes.resolve("mr/VersionOnly.class"));
         var versioned = artifact(work, "a", "1.0.0", List.of());
@@ -802,9 +841,14 @@ class JavaPluginRuntimeAdapterTest {
             entries("META-INF/versions/9/mr/VersionOnly.class", bytes));
         addLibrary(regular, "regular.jar", Map.of("mr/VersionOnly.class", bytes));
 
-        var failure = prepareFailure(List.of(versioned, regular));
+        var owner = new JavaPluginRuntimeAdapter().create();
 
-        assertConflict(failure, "b", "mr.VersionOnly", "a", "b", "versioned.jar", "regular.jar");
+        install(owner, List.of(versioned, regular));
+
+        var loaders = loaders(owner);
+        assertSame(loaders.get("a_____"), loaders.get("a_____").loadClass("mr.VersionOnly").getClassLoader());
+        assertSame(loaders.get("b_____"), loaders.get("b_____").loadClass("mr.VersionOnly").getClassLoader());
+        owner.closeAsync().block(Duration.ofSeconds(5));
     }
 
     @Test
@@ -868,6 +912,10 @@ class JavaPluginRuntimeAdapterTest {
             assertNotNull(input);
             assertEquals(version, new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
         }
+    }
+
+    private static String invokeValue(Class<?> type) throws ReflectiveOperationException {
+        return (String) type.getMethod("value").invoke(null);
     }
 
     private static void install(RuntimeResourceOwner owner, List<ArtifactRecord> target) {
@@ -942,13 +990,17 @@ class JavaPluginRuntimeAdapterTest {
     }
 
     private static Path compileClass(Path work, String type) throws IOException {
+        return compileClass(work, type, "");
+    }
+
+    private static Path compileClass(Path work, String type, String members) throws IOException {
         var separator = type.lastIndexOf('.');
         var packageName = type.substring(0, separator);
         var simpleName = type.substring(separator + 1);
         var source = Files.createDirectories(work.resolve("src")
             .resolve(packageName.replace('.', '/'))).resolve(simpleName + ".java");
         Files.writeString(source, "package " + packageName + "; public final class "
-            + simpleName + " { }");
+            + simpleName + " { " + members + " }");
         var classes = Files.createDirectories(work.resolve("classes"));
         var compiler = ToolProvider.getSystemJavaCompiler();
         assertNotNull(compiler);

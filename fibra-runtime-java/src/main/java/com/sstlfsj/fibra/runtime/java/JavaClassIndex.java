@@ -4,10 +4,7 @@ import com.sstlfsj.fibra.artifact.ArtifactId;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayDeque;
-import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.jar.JarFile;
@@ -17,38 +14,13 @@ import java.util.zip.ZipFile;
 final class JavaClassIndex {
     private static final String VERSIONS = "META-INF/versions/";
 
-    private final Map<ArtifactId, Map<String, Path>> definitions;
-
-    private JavaClassIndex(Map<ArtifactId, Map<String, Path>> definitions) {
-        this.definitions = definitions;
+    static void validate(Map<ArtifactId, JavaManifestReader.JavaPackage> packages,
+                         ClassLoader parent, List<String> parentPackages) {
+        packages.forEach((id, artifact) -> validate(id, artifact.jars(), parent, parentPackages));
     }
 
-    static JavaClassIndex read(Map<ArtifactId, JavaManifestReader.JavaPackage> packages,
-                               ClassLoader parent, List<String> parentPackages) {
-        var definitions = new LinkedHashMap<ArtifactId, Map<String, Path>>();
-        packages.forEach((id, artifact) -> definitions.put(id,
-            read(id, artifact.jars(), parent, parentPackages)));
-        return new JavaClassIndex(Collections.unmodifiableMap(definitions));
-    }
-
-    void validate(JavaArtifactGraph graph) {
-        for (var root : graph.dependencyFirst()) {
-            var visible = new LinkedHashMap<String, Definition>();
-            for (var owner : closure(root, graph)) {
-                for (var entry : definitions.get(owner).entrySet()) {
-                    var className = entry.getKey();
-                    var definition = new Definition(owner, entry.getValue());
-                    var previous = visible.putIfAbsent(className, definition);
-                    if (previous != null && !previous.owner().equals(owner)) {
-                        throw conflict(root, className, previous, definition);
-                    }
-                }
-            }
-        }
-    }
-
-    private static Map<String, Path> read(ArtifactId owner, List<Path> jars,
-                                          ClassLoader parent, List<String> parentPackages) {
+    private static void validate(ArtifactId owner, List<Path> jars,
+                                 ClassLoader parent, List<String> parentPackages) {
         var classes = new LinkedHashMap<String, Path>();
         try {
             for (var path : jars) {
@@ -67,8 +39,7 @@ final class JavaClassIndex {
                         }
                         var previous = classes.putIfAbsent(className, path);
                         if (previous != null && !previous.equals(path)) {
-                            throw conflict(owner, className,
-                                new Definition(owner, previous), new Definition(owner, path));
+                            throw conflict(owner, className, previous, path);
                         }
                     });
                 }
@@ -79,7 +50,6 @@ final class JavaClassIndex {
             throw new JavaRuntimeException(JavaRuntimePhase.LOAD, owner,
                 "cannot index Java plugin classes", failure);
         }
-        return Collections.unmodifiableMap(classes);
     }
 
     private static String effectiveName(JarFile jar, String name) {
@@ -92,25 +62,11 @@ final class JavaClassIndex {
         return name.startsWith("META-INF/") ? null : name;
     }
 
-    private static LinkedHashSet<ArtifactId> closure(ArtifactId root, JavaArtifactGraph graph) {
-        var result = new LinkedHashSet<ArtifactId>();
-        var pending = new ArrayDeque<ArtifactId>();
-        pending.add(root);
-        while (!pending.isEmpty()) {
-            var id = pending.removeFirst();
-            if (!result.add(id)) continue;
-            graph.manifest(id).requires().forEach(requirement -> pending.addLast(requirement.artifactId()));
-        }
-        return result;
-    }
-
     private static JavaRuntimeException conflict(ArtifactId root, String className,
-                                                 Definition first, Definition second) {
+                                                 Path first, Path second) {
         return new JavaRuntimeException(JavaRuntimePhase.LOAD, root,
             "Java root " + root.value() + " sees class " + className + " from both artifact "
-                + first.owner().value() + " JAR " + first.jar() + " and artifact "
-                + second.owner().value() + " JAR " + second.jar(), null);
+                + root.value() + " JAR " + first + " and artifact "
+                + root.value() + " JAR " + second, null);
     }
-
-    private record Definition(ArtifactId owner, Path jar) { }
 }

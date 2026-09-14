@@ -190,7 +190,7 @@ public final class JavaPluginRuntimeAdapter implements PluginRuntimeAdapter {
                 next.put(record.id(), artifact.manifest());
             }
             var graph = JavaArtifactGraph.resolve(next.values());
-            JavaClassIndex.read(packages, parent, parentPackages).validate(graph);
+            JavaClassIndex.validate(packages, parent, parentPackages);
             Map<ArtifactId, Loaded> previous;
             synchronized (owner) {
                 previous = new LinkedHashMap<>(owner.active);
