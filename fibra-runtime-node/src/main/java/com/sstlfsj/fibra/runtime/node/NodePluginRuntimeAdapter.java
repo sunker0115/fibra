@@ -105,8 +105,7 @@ public final class NodePluginRuntimeAdapter implements PluginRuntimeAdapter {
                             bindings(manifest, sidecar), closeAfterDrain(sidecar)))
                         .then(Mono.fromRunnable(() -> context.effects().supervise(
                             sidecar.termination(), "node-sidecar:" + provider.id())))
-                        .then()
-                        .onErrorResume(failure -> owned.dispose().then(Mono.error(failure)));
+                        .then();
                 });
             }).require(ContributionServices.REGISTRAR).build();
         return new PluginCatalogEntry<>(definition, value -> value);

@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ExecutionException;
@@ -47,6 +48,68 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class NodePluginRuntimeAdapterTest {
+    @Test
+    void handshakeAndCleanupFailuresAreAggregatedOnceWithoutExceptionCycles(@TempDir Path work)
+        throws Exception {
+        var source = work.resolve("package");
+        var payload = nodePackage(source);
+        Files.writeString(payload.resolve("fibra-plugin.yaml"), manifest("echo-node"));
+        Files.writeString(payload.resolve("index.mjs"), "import fs from 'node:fs';\n" + script().replace(
+            "if (method === 'fibra.handshake') reply(id, {protocol:1});",
+            "if (method === 'fibra.handshake') { fs.writeFileSync('termination.status', 'invalid'); reply(id, {protocol:999}); }"));
+        var owner = adapter(work).create();
+        var runtime = FibraRuntime.create();
+        try (var store = new ArtifactStore(work.resolve("store"))) {
+            try (var install = store.prepareInstall(new ArtifactId("echo-node"),
+                NodePluginRuntimeAdapter.RUNTIME_ID, "1.0.0", source)) {
+                var update = owner.createUpdate(List.of(install.save()));
+                update.prepareAsync().block();
+                update.adopt();
+                update.closeAsync().block();
+            }
+            var directory = new ContributionDirectory();
+            runtime.rootScope().context().services().provide(ContributionServices.REGISTRAR, directory);
+            @SuppressWarnings("unchecked")
+            var definition = (com.sstlfsj.fibra.PluginDefinition<Object>) owner.catalog().plugins()
+                .find("echo-node").orElseThrow().definition();
+            var instance = runtime.rootScope().context().plugins().mount("dual-failure", definition.prepare(Map.of()));
+            var failure = assertThrows(ExecutionException.class,
+                () -> instance.settled().toFuture().get(5, java.util.concurrent.TimeUnit.SECONDS)).getCause();
+            assertEquals(PluginInstanceState.FAILED, instance.state());
+            assertSame(failure, instance.failure().orElseThrow());
+
+            var seen = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<Throwable, Boolean>());
+            var pending = new java.util.ArrayDeque<Throwable>();
+            var phases = java.util.EnumSet.noneOf(NodeRpcPhase.class);
+            var repeated = new AtomicBoolean();
+            pending.add(failure);
+            while (!pending.isEmpty()) {
+                var current = pending.removeFirst();
+                if (!seen.add(current)) {
+                    repeated.set(true);
+                    continue;
+                }
+                if (current instanceof NodeRpcException rpc) phases.add(rpc.phase());
+                if (current.getCause() != null) pending.add(current.getCause());
+                pending.addAll(java.util.Arrays.asList(current.getSuppressed()));
+            }
+            org.junit.jupiter.api.Assertions.assertAll(
+                () -> assertTrue(phases.contains(NodeRpcPhase.HANDSHAKE), "必须保留原握手失败"),
+                () -> assertTrue(phases.contains(NodeRpcPhase.TERMINATE), "必须保留清理失败"),
+                () -> assertFalse(repeated.get(), "cause/suppressed 图不能有对象环或重复引用"));
+            try (var retained = Files.list(work.resolve("sessions"))) {
+                assertTrue(retained.findAny().isPresent(), "清理失败必须保留 session");
+            }
+        } finally {
+            try {
+                assertThrows(RuntimeException.class, () -> runtime.closeAsync().block(Duration.ofSeconds(5)),
+                    "runtime 关闭仍必须报告未完成的清理");
+            } finally {
+                owner.closeAsync().block();
+            }
+        }
+    }
+
     @Test
     void cancellingStartSubscriptionRetainsSessionOwnershipUntilCleanup(@TempDir Path work)
         throws Exception {
