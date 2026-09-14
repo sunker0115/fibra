@@ -72,6 +72,8 @@ done < "$pid_file"
 [[ "${#pids[@]}" -eq 2 ]] || fail "挂起 fixture 未写入两个 PID"
 [[ "${pids[0]}" != "${pids[1]}" ]] || fail "挂起 fixture 写入了重复 PID"
 for pid in "${pids[@]}"; do
+  awk -v expected_pid="$pid" '$1 == expected_pid { found = 1 } END { exit !found }' \
+    "$sample_dir/processes.txt" || fail "进程快照缺少 PID $pid"
   assert_gone "$pid"
 done
 : > "$pid_file"
