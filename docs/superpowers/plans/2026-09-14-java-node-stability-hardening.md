@@ -1,61 +1,95 @@
-# Java/Node 长稳与性能打磨计划
+# Java/Node 与整体底座打磨实施计划
 
-> 执行约束：只使用 superpowers 工作流；保持 `0.5.0-SNAPSHOT`、公开 API、POM、依赖和冻结语义不变；没有可重复红灯或增长曲线，不修改生产实现。
+> **执行者：** 使用 superpowers:subagent-driven-development 逐任务执行；每项先 TDD，再规格审查与质量审查。用户已于本次审查后授权继续，无需重复确认同一方案。
 
-**目标：** 完成权威架构第 11.9 节第 4 项的最小证据闭环：用真实制品 revision 验证 Java 同内容重装、同版本换内容和依赖闭包多轮更新；用真实 Node sidecar 验证多轮启停、调用、PID/线程/会话目录回收；补齐分片帧和半帧 EOF 协议边界，并记录资源与延迟基线。
+**目标：** 在 `codex/0.5.0-hardening`、`0.5.0-SNAPSHOT` 上完成权威架构第 11.9 节六项底座打磨。取消旧兼容护栏，必要重构直接替换；不扩张产品范围。
 
-**边界：** 不建设监控框架，不把一次 GC、绝对堆大小、FD 或单机耗时写成硬阈值；不把制品历史的正常增长算作运行时泄漏；不扩展到容器、远端执行或通用秘密模型。
+**架构：** 唯一依据是 [vNext 权威架构](../specs/2026-09-07-fibra-vnext-architecture.md) 第 4.2、4.4、6.2、6.3、11.9 节。长期 RuntimeDomain、唯一 Engine 控制面、差量受影响闭包和 Scope 所有权不变；Node 明确数据/退出/范围三个事实，Java 明确真实节点所有权与可见类型定义者。不新增 InvocationAuthority、ClassSpace 生命周期、通用 transport 或事务框架。
 
-**技术栈：** Java 21、JUnit 5、Reactor、Maven Surefire、Node.js、现有 JMH。
+**技术栈：** Java 21、JUnit 5、Reactor、Node.js、Maven Surefire、现有 JMH。复用 Maven 缓存，不改版本、依赖或 CI；若确需改变这些输入，先列影响面。
 
-## 已有证据与最小缺口
+## 断点与证据状态
 
-| 范围 | 已有证据 | 本次缺口 |
+本计划覆盖并替换此前仅补长循环测试的计划。当前实现起点为 `e3f83bb`；已有三个未提交的 Java/Node 测试文件必须保留并按本计划修正，不能重置工作树。
+
+| 项目 | 当前状态 | 尚需工作 |
 |---|---|---|
-| Java 依赖闭包 | 单次升级会重建变更制品及依赖者，保留无关 loader；失败清理会保留真实先决资源 | 缺真实 `ArtifactStore` revision 驱动的同版本不同内容与多轮 loader 收口 |
-| Java 重复安装 | 50 次同 records 更新与并发 snapshot 已证明 no-op 路径无锁反转 | records 使用伪 revision；不能证明同版本同内容保持 identity、同版本换内容触发闭包更新 |
-| Node 异常与静默 | 异常退出、心跳失联、顽固子进程、清理失败和调用取消均有真实进程测试 | 缺真实 sidecar 多轮启动、调用、停止后的 PID/线程/会话目录曲线 |
-| Node 帧边界 | 超大帧、格式错误、重复字段和错误对象已有直接测试 | 缺跨多次写入的合法分片帧与无换行半帧 EOF |
-| 性能 | JMH 已覆盖调用热路径和 Engine 事务，且明确排除文件系统/进程路径 | 缺当前 HEAD 的短基线；无依据设置回归阈值 |
+| 1 短超时诊断 | 已有代码与测试证据 | 最终集成回归，不重复建设 |
+| 2 生命周期/恢复 | 已有失败阶段与清理失败证据（`b96837e`、`9431d38`） | 复核稳定失败可纠正、部分 adopt 等不确定失败封锁；诊断事实不可只藏在文本 |
+| 3 准入/排空 | 已有撤销及 Scope 排空证据（`8cb9de7`、`7cb5cf0`、`0b73656`） | Node 请求结果与清理终态分离后再验收，保留 revision + identity |
+| 4 Java/Node 长稳 | 审核完成，实施中 | 依次完成 N1、N2、J1、J2、E1、V1 |
+| 5 仓外扩展契约 | 有既有消费者 | 对最终实现跑真实安装、配置、升级、重装、调用中卸载与回收报告 |
+| 6 安全/供应链 | 有既有门禁 | 对最终实现复验篡改、路径、依赖、脱敏与发行；不实现新隔离后端 |
 
-## 任务 1：Java 多轮 loader 收口与更新基线
+最强模型独立审核已完成，参考固定源码：DSH `c291e7961a515f6d7af9304e7fd1d257929aef26` 的 `managed-owner.ts`/`spawn.ts`（输出观察与范围所有权独立）及 Entry 差量更新；cordis4j `6cfd56e684fb403ded952afc09eddb49a5228494` 的 reconcile/detach 顺序；PF4J 3.15.0 的依赖委派。只借用与本项目约束匹配的边界，不照搬回滚、吞掉关闭失败或依赖首命中行为。
 
-**文件：**
+已经确认的根因：Node 特殊 `process.stdout.end()` 不物理关闭 fd 1，旧关闭标记会丢尾帧，同步 writer 可能阻塞定时器/终止；Java 的长期首个 PublishedView 缓存可经插件自定义 descriptor 保留 loader，完成的 Update 也不应让调用者持有其旧资源图。不能把无永久根的对象环或一次 GC 未回收直接称为泄漏。
 
-- 修改：`fibra-runtime-java/src/test/java/com/sstlfsj/fibra/runtime/java/JavaPluginRuntimeAdapterTest.java`
+## N1：监督器的真实 stdout EOF 与结构化终态
 
-1. 用真实 `ArtifactStore` 保存同版本同内容、同版本不同内容的制品，避免测试伪造 revision。
-2. 保持一个无关插件，循环切换依赖制品内容；每轮断言变更制品及依赖者重建、无关 definition/loader identity 保持不变。
-3. 通过现有 `LoaderCloser` seam 记录已创建和已关闭 loader；每轮活动 loader 数必须保持闭包大小，owner 最终关闭后创建数与关闭数相等。
-4. 同内容重复安装必须是 no-op：revision、definition 和 loader identity 不变，不能多关闭 loader。
-5. 记录线程、FD、堆、更新耗时样本，只把确定的 loader 所有权和最终关闭作为硬断言。
+**文件：** `fibra-runtime-node/src/main/resources/com/sstlfsj/fibra/runtime/node/node-process-supervisor.mjs`、同模块 `src/main/java/com/sstlfsj/fibra/runtime/node/NodeProcessUnit.java`、`src/test/java/com/sstlfsj/fibra/runtime/node/NodeProcessUnitTest.java`。
 
-## 任务 2：Node 多轮真实 sidecar 收口
+- [ ] 先读上述完整实现与测试。新增真实进程测试：payload 写尾部后关闭自己的 stdout，但继续写 stderr/保持存活；Java 必须先见完整尾部及 EOF，同时 supervisor 仍活着。新增大尾部不截断、payload outcome 与 supervisor exit 分离、缺失/损坏/失败终态保留 session 的用例。
+- [ ] 运行定向测试观察预期红灯；旧两次 stdout.end 局部尝试已失败，不重复采用。
+- [ ] 监督器独占 `fs.createWriteStream(null, { fd: 1, autoClose: true })` 一类真实拥有 fd 的流；只由 payload stdout 自然 end 推进 flush/close。禁止同时用 `process.stdout`，range quiescence 不抢先关闭数据流。stderr 独立保持可读。
+- [ ] 内部终态文件改为唯一严格结构化格式，包含 payload outcome 与 range 结果，不兼容旧 `QUIESCENT` 文本；Java 侧校验状态并单独观察 supervisor exit。启动失败也明确结算，不能遗留 pending pipe。
+- [ ] N1 定向测试全绿，回归 NodeProcessUnitTest；只提交上述文件，避免携带其他未完成测试。
 
-**文件：**
+## N2：单一 session 关闭协调与请求资源排空
 
-- 修改：`fibra-runtime-node/src/test/java/com/sstlfsj/fibra/runtime/node/NodePluginRuntimeAdapterTest.java`
+**文件：** `fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeSidecar.java`、`NodePluginRuntimeAdapter.java`；按责任提取同包内部 `NodeRpcChannel.java`，如 process 需要异步终态则改 `NodeProcessUnit.java`；对应 `NodeSidecarTest.java`、`NodePluginRuntimeAdapterTest.java`、`NodeRuntimeResourceOwnerTest.java`，以及现有 `NodePublishedCancellationOwnershipTest`。
 
-1. 用真实 `ArtifactStore` 保存两个同版本、不同内容的 Node 制品；同内容重装必须保持 definition identity，换内容必须更新 definition。
-2. 保持同一个 runtime 和 owner，在有截止的循环中 mount、通过 contribution 调用取得 sidecar PID、dispose。
-3. 每轮断言调用结果属于当前制品 revision；dispose 后 PID 已退出、session 目录为空、`fibra-node-*` 线程数回到循环前基线。
-4. 记录线程、FD、堆、更新、启动、调用和停止耗时；FD、堆和延迟只形成原始基线，不设置未经证明的硬阈值。
+- [ ] RED：分片完整帧、自然半帧 EOF、最后响应紧邻 exit、写端阻塞期间取消/心跳/close 截止、读/定时器回调触发关闭、握手订阅取消、结果失败但范围清理仍未确认。
+- [ ] GREEN：NodeSidecar 作为实例协调器持有唯一异步关闭屏障，RPC 部件管理帧/pending/期限；停止新准入但持续读取。写入在隔离串行执行链中进行，timer 与 terminate 不等待 writer monitor；回调不 block/join 自己的关闭。
+- [ ] 请求 result 和 cleanup 分离；远端原请求终态或范围静默确认后才能成功结束 cleanup；缺失范围证明传播清理失败并保留 session。启动资源登记覆盖取消，不依靠 doOnError。
+- [ ] 回归并修正未提交长循环 Node 用例，JS 路径使用 JSON 编码。验证正常/异常/重复关闭的 PID、线程、session 收口；用现有 PublishedRuntime 真实调用验证租约不会提前释放。
+- [ ] 规格审查通过后再做质量审查；修正高优先级发现并提交。
 
-## 任务 3：Node 分片帧与半帧 EOF
+## J1：退休节点与长期缓存解除插件强引用
 
-**文件：**
+**文件：** `fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaPluginRuntimeAdapter.java`、`JavaClassSpace.java`（仅必要时改为入口物化语义名称）；`fibra-engine/src/main/java/com/sstlfsj/fibra/engine/FibraEngine.java`；`JavaPluginRuntimeAdapterTest.java` 与 Engine 中真实插件 descriptor 生命周期测试。
 
-- 修改：`fibra-runtime-node/src/test/java/com/sstlfsj/fibra/runtime/node/NodeSidecarTest.java`
+- [ ] RED：真实 JAR 多轮更新，记录 loader identity 而不是只比较创建/关闭总数；保留已结束 Update 时旧入口/loader 不再可达。失败节点及其真实先决依赖必须保留，但独立成功节点必须释放。活动 loader 作为 WeakReference 存活对照。
+- [ ] RED：插件定义 descriptor 类型，Engine 存活并完成替换后，第一份启动结果不能被长期启动缓存额外保留；调用者明确持有旧视图的对照仍应保留类型。
+- [ ] GREEN：保持 Owner/Update/Loaded 结构和实际依赖节点 identity，逐节点成功释放强引用；完成 Update 清理 old/fresh/catalog/异常引用，只留下必要元数据。不得 finally 一把清空失败资源。
+- [ ] GREEN：缓存启动完成而非初始 PublishedView；重复 start 等待同一个启动完成事实，再返回当前视图，不重新启动 runtime。
+- [ ] close 与 collect 分开验收；有界重试 GC 只用于受控夹具的引用回收证据，不宣称任意插件的卸载截止，不加全局 Jackson cache flush。
+- [ ] Java/Engine 定向红绿、模块回归、规格与质量审查后提交。
 
-1. 让合法 JSON-RPC 响应拆成两次 stdout 写入，断言 host 在完整换行帧到达后正常完成。
-2. 让 sidecar 写出无换行半帧后主动结束 stdout、暂时保持进程存活，断言请求在截止内以 `PROTOCOL` 失败。
-3. 半帧失败后确认 sidecar 受管进程已退出且 session 目录清空，避免只断言 Java 包装状态。
+## J2：可见闭包的类型定义者唯一性
 
-## 任务 4：验证、基线与审查
+**文件：** `fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/PluginClassLoader.java`、`JavaPluginRuntimeAdapter.java`，同包内部有效类名索引实现及 `PluginClassLoaderTest.java`/`JavaPluginRuntimeAdapterTest.java`。
 
-1. 先运行新增定向测试；若出现产品红灯，保留最小复现并只修根因；若全部通过，不改生产代码。
-2. 运行 Java/Node runtime 模块及上游测试，再运行一次 50 模块 `clean verify`；大日志只写临时文件。
-3. 对现有 `ContributionInvocationBenchmark`、`EngineTransactionBenchmark` 各跑一次短 JMH JSON 基线；记录环境、HEAD 和样本，不以单次结果设阈值。
-4. `git diff --check`；确认 POM、依赖、版本和公开签名未变化。
-5. 安排规格与质量独立复审；Critical/Important 返回对应任务修正。
-6. 更新本计划完成记录；等待用户推送后的同一 HEAD Linux CI。
+- [ ] RED：不同可见 owner 同名类、可执行依赖携带同名 lib、菱形同一依赖、无关插件各自同名私有库、parent-first 命中与 miss、multi-release JAR 的 JVM 有效版本。
+- [ ] GREEN：prepare 汇总主 JAR 与 lib JAR 的当前有效二进制名称，忽略 module-info；按实际可见闭包拒绝歧义，菱形按定义 owner 去重。宿主仅在 parent 真正可解析且 parent-first 的类上拥有优先权。
+- [ ] 不因 entrypoint 缺失推断 exports，不新增 OSGi/export 元模型，不用全仓同名类禁令误伤无关插件。
+- [ ] 定向红绿、模块回归、规格与质量审查后提交。
+
+## E1：失败事实与可纠正门禁
+
+**文件：** `fibra-engine/src/main/java/com/sstlfsj/fibra/engine/FibraEngine.java`、`ChangeSet.java`、`RuntimeResources.java`，现有 `EngineDiagnostics` 契约及 `ApplyDeploymentMountFailureRecoveryTest.java`/`EngineCrashPointRecoveryTest.java`；保存事实的类型位置须遵循现有依赖方向。
+
+- [ ] 先对照源码和既有测试：稳定 FAILED 已完成 adopt/settle/retire 时允许显式纠正；部分 adapter adopt、同步协调异常、未知保存与 cleanup failure 封锁。
+- [ ] 仅为缺口写 RED，再修改结构化失败阶段/保存确认投影；现有控制判断正确的部分不重写。原始失败与 cleanup failure 分别保留，不解析错误字符串控制 gate。
+- [ ] 若改变公开 DTO，架构、签名基线与消费者同一变更更新，删除旧兼容形状；不得引入 Engine → Registry 反向依赖。
+- [ ] 定向红绿、架构门禁、规格与质量审查后提交。
+
+## V1：六项最终集成验收
+
+- [ ] 在最终代码上重跑 Java/Node 多轮真实制品更新与资源曲线，记录环境、HEAD 和原始日志路径。FD、堆和一次耗时不设拍脑袋阈值；不把 artifact 历史留存当泄漏。
+- [ ] 跑现有 `ContributionInvocationBenchmark`、`EngineTransactionBenchmark` 短基线，报告样本不冒充优化证明。
+- [ ] 审核并补齐 `verification/distribution` 的 Java/Node 仓外消费者生命周期契约报告，不允许取得 Engine 内部类型；复用发布依赖缓存，仅隔离消费者自身构建输出。
+- [ ] 跑根 `clean verify`、短超时诊断门禁、篡改/路径/依赖/脱敏安全用例、发行 ZIP、可复现制品比较和最终仓外消费者。
+- [ ] `git diff --check`，最强模型独立最终审查，回填行为验收账本。macOS 结果不能替代 Linux/Windows；不自动 push，待用户推送后取得同一 HEAD Linux CI，Windows 保持未实测声明。
+
+## 统一测试命令与记录规则
+
+本机按 mvn-env 选择 Java 21；Maven 实际可用路径如下，依赖写缓存或启动进程需要时通过工具授权：
+
+```sh
+env JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home /private/tmp/apache-maven-3.9.9/bin/mvn -pl fibra-runtime-node -am test -Dtest=NodeProcessUnitTest -Dsurefire.failIfNoSpecifiedTests=false
+env JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home /private/tmp/apache-maven-3.9.9/bin/mvn -pl fibra-runtime-node,fibra-runtime-java,fibra-engine -am test
+env JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home /private/tmp/apache-maven-3.9.9/bin/mvn clean verify
+```
+
+每项完成时在对应复选框下记录实际失败断言、通过测试数、日志路径和提交，不以旧日志或代理自报代替最终 diff 与验收。相同问题两次尝试仍失败先报告机制与证据，不重复盲改；没有 TaskCreate 能力时本计划复选框即进度载体。

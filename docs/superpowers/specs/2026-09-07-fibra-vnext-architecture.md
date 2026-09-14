@@ -315,6 +315,10 @@ Engine 关闭先在线性化的命令准入边界停止接收新请求，等待�
 目标贡献仍是该注册身份且开放，并登记在途调用。视图检查与条目准入之间的竞争必须重新复核；
 失败返回明确的 stale-revision 或已撤销结果，不能悄悄转向同名的新 handler。旧快照不是永久调用权。
 
+保留 `viewRevision + registrationIdentity` 两项检查，是为了让选择、解析和准入使用同一份已发布事实，
+而不是因为已有实现必须兼容。无关事实更新也可能使尚未准入的调用过期，宿主须重新选择；已准入调用
+不受这类更新影响。没有真实冲突率证据前，不增加独立 InvocationAuthority、策略版本或第二套调用凭证。
+
 一次调用在目标 domain 内创建临时调用 Scope。贡献 handler 必须在注册 owner 的 Context 中解析服务和策略，
 但其 `InvocationContext.effects()` 及通过服务调用创建的资源必须归临时调用 Scope。成功、失败或取消后都必须
 等待该 Scope 的异步清理完成，再释放在途计数，最后异步向宿主交付结果；宿主回调不能占用生命周期线程
@@ -391,6 +395,12 @@ resource update、不写 `EngineStateStore`、不改变 target revision；view r
 - 保存目标前失败只清理新准备的资源；保存后不得因启动、发布或清理错误反写旧目标。清理按资源依赖逐层进行，
   前一层失败时保留后续先决资源；独立同级资源仍全部尝试并聚合失败。
 - 排空与回收不决定保存的目标内容。回收失败进入健康诊断并关闭后续变更准入，不伪造旧路由恢复。
+
+已完成 adopt、运行收敛和旧资源 retire 的目标，即使包含可观察的插件 FAILED 或未满足声明要求，仍可
+通过显式新目标纠正。协调异常、部分 runtime adopt、未确认目标保存或清理失败则不能据“资源仍有 owner”
+推断为安全，必须封锁后续变更并保留实际失败事实。不得用统一 finally retire 或一律重开 gate 掩盖这一区别。
+失败诊断分别表达原始执行阶段、目标保存确认与清理失败，不从拼接后的错误文本反推控制决策；保存事实的
+公共契约不得让 Engine 反向依赖 Registry 实现，也不为此引入通用事务框架。
 
 DSH 的配置 Entry 在应用失败时会尝试恢复旧配置；这里不自动反写已保存目标，是为了让进程内结果与
 重启后读取的目标一致，避免引入第二次可能失败的目标提交。修正配置或恢复旧版本须提交显式新目标；
@@ -767,13 +777,26 @@ CLI 投影使用 `content`、可选 `structuredContent`、`isError`、失败时�
 标准 Java 制品使用 `META-INF/fibra/plugin.yaml`：
 
 - executable 制品显式声明唯一 entrypoint；
-- contract-only 制品省略 entrypoint，只作为依赖图和 ClassSpace 节点；
+- contract-only 制品省略 entrypoint，只作为依赖图和类型装载节点；省略入口不等于声明 exports；
 - 每制品独立 ClassLoader，按显式依赖图委派；父优先前缀先查 parent，父加载器没有该类时再查本制品与
   声明依赖。宿主实际导出的公共契约因此仍由 parent 唯一定义，动态 contract 不因使用同一产品命名空间
   而被误当成宿主必备类；
 - 禁止扫描全部 class 猜入口，不生成 extension index，不维护第二套插件状态机；
 - 替换变化制品及其反向依赖闭包，闭包外装载器保留；旧类型仍被实例、服务槽或调用持有时不得回收；
-- close-and-collect 必须有可观察门禁。ClassLoader 只提供类型隔离，不是安全沙箱。
+- Owner 持有活动 Loaded 图；Update 在 adopt 前拥有新建节点，adopt 后拥有待退休旧节点，未变化节点
+  只是借用。依赖关系记录实际节点 identity，不按 artifact id 把新旧代连在一起，不另建 ClassSpace 生命周期；
+- 排空和旧实例清理完成后按真实依赖逆序关闭。成功关闭的节点立即解除入口、loader 与依赖强引用；失败
+  节点保留自身及必需先决资源，独立成功节点不因同级失败继续被保留。完成的 Update 只保留元数据事实，
+  不经 old/fresh/catalog、已结束的异常或缓存结果长期引用插件对象；
+- Engine 的长期启动缓存只持有启动完成事实，不持有第一份含插件 descriptor 的 PublishedView。当前
+  发布视图仍由正常发布所有权持有；调用方主动保留旧视图、Class 或插件对象不属于框架可回收保证；
+- prepare 按每个 loader 实际可见的依赖闭包校验有效二进制类名：主 JAR 与 lib JAR 一并计入，多 release
+  JAR 按当前 JVM 的有效类解析，忽略 module-info；不同定义 owner 的同名可见类拒绝装载，菱形路径中的
+  同一制品只计一次。无关插件可以各自持有私有同名库；依赖相连的冲突库须提取共同依赖或 shading，
+  不能按依赖顺序任取。父优先仅在 parent 实际可解析时确定宿主所有权，保留 parent miss 的动态回退；
+- close-and-collect 以真实 JAR、loader identity 和 WeakReference/ReferenceQueue 取得回收证据，活动
+  loader 作为存活对照；close 不等于 JVM 已卸载，不对任意插件承诺 GC 截止，不清理未经证明的全局缓存。
+  ClassLoader 只提供类型隔离，不是安全沙箱。
 
 ### 6.3 Node Runtime
 
@@ -785,12 +808,22 @@ Node 插件作为受管 sidecar，通过版本化 JSON-RPC 协议参与同一 `P
   deadline，`requestCancellationTimeout` 是发送逐请求取消后等待原请求终态的宽限，两者不能合并；
 - 单次请求取消或执行超时不能直接关闭共享 sidecar。宽限内远端结算只结束该请求；宽限耗尽才把 sidecar
   标记为实例级故障，停止其准入并沿统一关闭屏障终止全部受影响请求；
-- RPC 与进程所有权分离：`NodeSidecar` 只处理协议，内部 `NodeProcessUnit` 启动监督器并持有一个可等待的
-  受管进程范围；RuntimeDomain 只等待该范围静默，不枚举或缓存瞬时后代 PID；
-- retire 固定执行“停止接入、关闭 RPC stdin、等待协作退出、软终止、强终止、确认范围静默、清理会话目录”；
-  监督器必须在自身退出前写出范围静默终态，Java 侧在进程退出后校验该证明；调用方线程中断不得跳过
-  等待。缺少证明、明确失败或监督器仍未退出均作为清理失败传播到请求 Scope 与实例清理，并保留会话目录，
-  不能完成 pending 请求或 runtime participant 冒充范围已经静默；
+- 一个实例级 session 协调器拥有唯一异步关闭屏障；内部 RPC 部件负责 framing、pending、取消、超时和
+  心跳，`NodeProcessUnit` 负责监督器与受管范围。它们是 Node 后端内部责任，不扩展公共 SPI，也不形成
+  通用 transport 框架。RuntimeDomain 只等待范围静默，不枚举或缓存瞬时后代 PID；
+- 数据通道、payload 退出、supervisor 退出和范围静默是独立事实。监督器独占一个真正可关闭的 fd 1
+  输出流转发原始 payload stdout，禁止混用特殊 `process.stdout` 包装器；自然 stdout end 才 flush 并
+  物理关闭输出，不能由 payload exit 或范围静默提前截断。stderr 独立读到终态；payload outcome 与范围
+  结果写入最终结构化状态，Java 单独观察 supervisor 退出，不引入多路复用 envelope；
+- 停止准入不停止读侧排空。进程退出回调只登记事实，完整尾帧继续交付，残留半帧以协议错误结束；
+  强制截断读取必须呈现 transport 不完整，不能伪装自然 EOF。阻塞 stdin 写入与 flush 不占用定时器、
+  session 状态锁或关闭线程；读、写、定时器回调只触发异步关闭，不同步等待或 join 自身；
+- retire 停止接入并请求协作关闭，独立截止推动软终止、强终止与范围确认，不以先取得 writer 锁为前提。
+  监督器在退出前写出范围终态，Java 在退出后校验；调用方中断不取消这条共享关闭链。缺少证明、明确
+  失败或监督器仍未退出均传播到请求 Scope 与实例清理，并保留会话目录；
+- 请求结果、请求资源清理与 session 清理分别结算。协议结果可以先失败，但原请求终态或受管范围静默
+  尚未证明时，不得成功完成请求资源清理、释放调用租约或 runtime participant。启动与握手的资源所有权
+  必须覆盖启动失败和订阅取消，不能只依赖 doOnError 补清理；
 - POSIX payload 在独立进程组中运行，按 PGID 发信号并检查进程组消失；Windows 使用
   `taskkill /PID <pid> /T /F` 作为公开的较弱后端。后代主动离开进程组、Windows breakaway、监督器不可执行
   清理或机器失效不在本地 sidecar 的保证内，非可信插件必须交给 container、Job Object 或外部 sandbox；
@@ -1484,11 +1517,11 @@ F4 同时统一 help/version、机器 JSON、人类 stderr、颜色/无颜色、
 异步 `printAbove`、调用取消、并发输出、失败恢复与租约释放；同一消费者还验证应用原始输入在未配对引号、
 空白和 `exit` 文本下不被框架改写，证明上层无需取得 JLine 私有对象或旁路框架。
 
-CLI 发布兼容性按同一 Fibra 版本列管理：`fibra-cli-api` 与 `fibra-cli` 使用根 `revision` 同版本发布，动态
+CLI 发布契约按同一 Fibra 版本管理：`fibra-cli-api` 与 `fibra-cli` 使用根 `revision` 同版本发布，动态
 插件与嵌入方对当前 vNext 发布使用精确版本，不用范围或 `*` 掩盖契约错配。两个模块的全部 public/protected
 类型由 `javap -protected` 基线冻结；任何公开签名或语义变化必须在同一提交更新架构、签名基线、契约测试
-和仓外消费者。`0.5.0` 之前的 F1–F3 提取形状不保留兼容层；F4 发布后，同一 `0.5.x` 列只允许二进制兼容
-的增加或修复，删除或改变既有签名/语义必须进入新的 minor 版本。
+和仓外消费者。当前始终使用 `0.5.0-SNAPSHOT`，不为打磨升级版本，也不保留旧 API、协议或模块兼容层。
+签名基线是显式契约变更的检查门禁，不是阻止最终架构重构的护栏；不得为了通过旧基线而保留废弃重载。
 
 更新 Fibra distribution、外部消费者、Spring 宿主和 archetype 证据，证明 CLI API 可嵌入且默认 CLI
 仍可独立运行。跨进程 Host 发现、认证、Host lifetime lease、RPC codec 和远端 terminal 不属于 F4；它们
@@ -1764,12 +1797,14 @@ Fibra 的 F1 至 F4 只维护本文和既有行为验收账本，没有新建平
 Fibra F1–F4 已完成。下一次产品实现从权威产品架构定义的 P0 开始；Model、Agent、Session、MCP 或其它
 DSH 产品模块不回填到 Fibra 仓库。
 
-### 11.9 vNext 收口与 `0.5.x` 底座打磨
+### 11.9 vNext 收口与 `0.5.0-SNAPSHOT` 底座打磨
 
 `codex/fibra-vnext` 完成交付文档收口且同一提交的 Linux CI 全绿后，以保留阶段提交历史的方式合并
 `main`，不 squash；后续底座工作从更新后的 `main` 新建 `codex/0.5.0-hardening`。该分支不继续承载
-Agent 产品 P0，也不重开 F1–F4：公开签名或已冻结语义的删除、改变进入 `0.6.0` 新设计，`0.5.x` 只做
-二进制兼容的性能、诊断、测试、内部实现和文档补强。
+Agent 产品 P0。最终目标是在 `0.5.0-SNAPSHOT` 上完成下列六项底座打磨：以本权威架构和固定参考源码
+为依据，保留长期 RuntimeDomain、唯一控制面、差量更新、四种关系分离与 Scope 所有权；必要时直接重构
+API、协议和模块，不保留兼容层、不以局部补丁替代责任分离。所有变更以真实失败、引用路径、测量或仓外
+消费者证据证明必要性，不因“最终架构”扩张到 Agent 产品、容器/远端实现或通用秘密模型。
 
 打磨顺序由真实风险和测量结果驱动，不为候选能力预建抽象：
 
@@ -1779,13 +1814,15 @@ Agent 产品 P0，也不重开 F1–F4：公开签名或已冻结语义的删除
 | 2 | 生命周期、变更与恢复 | 对 Scope/Effect 晚到资源、注册与清理失败、重复关闭，以及 prepare、artifact/target save、reconcile、retire 的崩溃点做故障注入 | 不发布半成品、不提前释放资源；重启按已保存目标收敛，未确认写关闭 mutation gate，诊断指出失败阶段 |
 | 3 | 调用准入与排空 | 压实 revision、registration identity、in-flight lease、invocation Scope、取消、调用中停用和 cleanup failure 的可观察边界 | stale、revoked、cancelled、cleanup-failed 可稳定区分；无关更新不终止已接受调用，受影响资源等待真实终态 |
 | 4 | Java/Node 长稳与性能 | 重复安装、同版本重装、依赖闭包升级、sidecar 异常、半帧、心跳和进程树；测量 ClassLoader、线程、文件句柄、PID、堆、更新与调用延迟 | 长循环资源曲线不持续增长；受管范围最终静默；优化必须由基线和回归阈值证明，不削弱一致性保证 |
-| 5 | 公共扩展面与兼容套件 | 以 canonical manifest、最小 SPI、typed config、Contribution、稳定错误码和仓外 Java/Node 消费者形成第三方插件套件 | 独立插件可执行安装、配置、启停、升级、重装、调用中卸载和泄漏检查，并输出结构化报告；不取得 Engine 内部类型 |
+| 5 | 公共扩展面与契约套件 | 以 canonical manifest、最小 SPI、typed config、Contribution、稳定错误码和仓外 Java/Node 消费者形成第三方插件套件，不测试废弃版本兼容 | 独立插件可执行安装、配置、启停、升级、重装、调用中卸载和泄漏检查，并输出结构化报告；不取得 Engine 内部类型 |
 | 6 | 安全与供应链边界 | 校验 digest、制品目录、依赖图、诊断脱敏和 trusted Java、受管 sidecar、容器/远端三档执行策略 | 篡改和越界制品 fail-closed；secret 不进入日志与诊断；ClassLoader 不被描述为安全沙箱 |
 
-下一项实施内容固定为第 1 项。现有 `scripts/run-ci-with-jvm-diagnostics.sh` 默认 180 秒后才采首份现场，
-而真实 TTY fixture 的失败截止为 10 秒，短时竞态可能在全局采样前结束。`codex/0.5.0-hardening` 首个变更
-应先建立有界的短超时诊断门禁；它只调整测试与诊断，不改变公共 API。其后按第 2–6 项逐项取得证据，
-没有测量或失败样本的候选不自动升级为实现任务。
+第 1 项短超时门禁，以及第 2–3 项已有失败阶段、清理失败和调用排空证据保留。当前先按第 6.3 节完成
+Node 数据通道、请求终态与 session 关闭协调，再按第 6.2 节完成 Java 退休引用和可见类型归属；随后复核
+Engine 失败事实与恢复门禁，完成第 4–6 项长稳、仓外契约、安全和发行集成验收。执行进度与红绿证据见
+[Java/Node 与整体底座打磨计划](../plans/2026-09-14-java-node-stability-hardening.md)，不得把既有通过结果
+抵扣新契约。只走 superpowers 的计划、TDD、规格审查和质量审查。依赖图未变化时复用本地 Maven 缓存，
+不重复空仓下载；最终变更仍须取得根 verify、可复现制品和仓外消费者证据。
 
 底座可保留一个仓库外的薄上层夹具，验证真实调用方不绕过 `PublishedRuntime`、不取得内部 `Context`；
 该夹具不是 Agent 产品实现。产品 P0–P8 仍在独立项目和独立权威文档中推进。
