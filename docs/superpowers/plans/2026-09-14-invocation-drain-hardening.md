@@ -8,6 +8,16 @@
 
 **技术栈：** Java 21、JUnit 5、Reactor Test、Maven Surefire。
 
+## 完成记录
+
+- [x] 任务 1：复现并修复活跃 contribution 的调用清理失败后仍可准入；bridge 定向 10 项和全模块 22 项通过。
+- [x] 任务 2：真实同名替换验证旧 revision 为 stale、当前 revision + 旧 identity 为 revoked，新 identity 正常调用。
+- [x] 任务 3：handler 执行中取消后停用仍等待 invocation Scope 清理；期间拒绝新准入，完成后 provider 只释放一次。
+- [x] Engine 两个定向测试类 12 项通过；bridge、Engine 及上游模块测试分别为 22 项、170 项通过。
+- [x] 代码 HEAD `7cb5cf0` 的 50 模块 `clean verify` 全部成功，总耗时 2 分 38 秒；版本仍为 `0.5.0-SNAPSHOT`。
+- [x] 规格与质量交叉复审均批准；唯一测试等待截止 Minor 已修正并复审关闭，无 Critical/Important 遗留。
+- [ ] 用户推送后确认包含本计划收口提交的同一代码树 Linux CI 全绿。
+
 ## 已有证据与最小缺口
 
 | 范围 | 已有证据 | 本次缺口 |
