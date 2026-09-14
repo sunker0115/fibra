@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ContributionCallTest {
+    private static final Duration TIMEOUT = Duration.ofSeconds(3);
     private static final ContributionKind<CommandDescriptor, String, String> COMMAND =
         ContributionKind.local("command", CommandDescriptor.class,
             String.class, String.class);
@@ -135,10 +136,10 @@ class ContributionCallTest {
         var binding = new ContributionBinding<>(COMMAND, "command", new CommandDescriptor("Command"),
             (ContributionHandler<String, String>) (invocation, input) -> Mono.just(input));
         var registration = directory.registerAll(owner.context(), "plugin", List.of(binding),
-            () -> Mono.fromRunnable(afterDrain::incrementAndGet)).block();
+            () -> Mono.fromRunnable(afterDrain::incrementAndGet)).block(TIMEOUT);
         var selected = registration.getFirst();
         var other = directory.register(runtime.rootScope().context(), COMMAND, "other", "command",
-            new CommandDescriptor("Other"), (invocation, input) -> Mono.just(input)).block();
+            new CommandDescriptor("Other"), (invocation, input) -> Mono.just(input)).block(TIMEOUT);
         var routes = directory.current().routes();
         var failed = routes.acquire(COMMAND, selected.id(), selected.registrationIdentity());
         var retained = routes.acquire(COMMAND, selected.id(), selected.registrationIdentity());
@@ -155,7 +156,8 @@ class ContributionCallTest {
             assertEquals(List.of(other.id()), current.snapshot().entries().stream()
                 .map(ContributionSnapshotEntry::id).toList());
             try (var unaffected = current.routes().acquire(COMMAND, other.id(), other.registrationIdentity())) {
-                assertEquals("unaffected", unaffected.invoke(runtime.rootScope().context(), "unaffected").block());
+                assertEquals("unaffected",
+                    unaffected.invoke(runtime.rootScope().context(), "unaffected").block(TIMEOUT));
             }
 
             var draining = selected.dispose().toFuture();
@@ -178,8 +180,8 @@ class ContributionCallTest {
         } finally {
             failed.close();
             retained.close();
-            directory.closeAsync().onErrorResume(ignored -> Mono.empty()).block(Duration.ofSeconds(3));
-            runtime.closeAsync().onErrorResume(ignored -> Mono.empty()).block(Duration.ofSeconds(3));
+            directory.closeAsync().onErrorResume(ignored -> Mono.empty()).block(TIMEOUT);
+            runtime.closeAsync().onErrorResume(ignored -> Mono.empty()).block(TIMEOUT);
         }
     }
 
