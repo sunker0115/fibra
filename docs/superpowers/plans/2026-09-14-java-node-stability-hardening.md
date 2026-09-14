@@ -52,23 +52,39 @@ Java/Python 创建的匿名管道提前 EOF。最终实现由 `net.Socket` 承�
 
 **文件：** `fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeSidecar.java`、`NodePluginRuntimeAdapter.java`；按责任提取同包内部 `NodeRpcChannel.java`，如 process 需要异步终态则改 `NodeProcessUnit.java`；对应 `NodeSidecarTest.java`、`NodePluginRuntimeAdapterTest.java`、`NodeRuntimeResourceOwnerTest.java`，以及现有 `NodePublishedCancellationOwnershipTest`。
 
-- [ ] RED：分片完整帧、自然半帧 EOF、最后响应紧邻 exit、写端阻塞期间取消/心跳/close 截止、读/定时器回调触发关闭、握手订阅取消、结果失败但范围清理仍未确认。
-- [ ] GREEN：NodeSidecar 作为实例协调器持有唯一异步关闭屏障，RPC 部件管理帧/pending/期限；停止新准入但持续读取。写入在隔离串行执行链中进行，timer 与 terminate 不等待 writer monitor；回调不 block/join 自己的关闭。
-- [ ] 请求 result 和 cleanup 分离；远端原请求终态或范围静默确认后才能成功结束 cleanup；缺失范围证明传播清理失败并保留 session。启动资源登记覆盖取消，不依靠 doOnError。
-- [ ] 回归并修正未提交长循环 Node 用例，JS 路径使用 JSON 编码。验证正常/异常/重复关闭的 PID、线程、session 收口；用现有 PublishedRuntime 真实调用验证租约不会提前释放。
-- [ ] 规格审查通过后再做质量审查；修正高优先级发现并提交。
+- [x] RED：分片完整帧、自然半帧 EOF、最后响应紧邻 exit、写端阻塞期间取消/心跳/close 截止、读/定时器回调触发关闭、握手订阅取消、结果失败但范围清理仍未确认。
+- [x] GREEN：NodeSidecar 作为实例协调器持有唯一异步关闭屏障，RPC 部件管理帧/pending/期限；停止新准入但持续读取。写入在隔离串行执行链中进行，timer 与 terminate 不等待 writer monitor；回调不 block/join 自己的关闭。
+- [x] 请求 result 和 cleanup 分离；远端原请求终态或范围静默确认后才能成功结束 cleanup；缺失范围证明传播清理失败并保留 session。启动资源登记覆盖取消，不依靠 doOnError。
+- [x] 回归并修正未提交长循环 Node 用例，JS 路径使用 JSON 编码。验证正常/异常/重复关闭的 PID、线程、session 收口；用现有 PublishedRuntime 真实调用验证租约不会提前释放。
+- [x] 规格审查通过后再做质量审查；修正高优先级发现并提交。
+
+N2 已由 `0a9bbf3`、`efb09a9`、`e02d7f7`、`fbf00ee`、`2090fa3`、`3ec1eee` 完成。
+真实 RED 覆盖握手取消遗留、阻塞写、尾响应与 exit 竞态、范围证明失败、监督器 stdin `EPIPE`、
+异步 disable 回调、仍活监督器的有界失败、已退出监督器的尾帧排空、晚到半帧协议失败，以及启动和
+清理共享异常图。最终独立复验为 Node 86/86、相关 core 45/45、PublishedRuntime parity 1/1；24 轮
+真实 Node 制品更新中线程每轮归零、FD 保持 34。规格审查与质量审查均通过，无未关闭问题；Windows 与
+其它 Node/libuv 版本仍留到 V1/CI，不用本机 macOS 结果替代。
 
 ## J1：退休节点与长期缓存解除插件强引用
 
 **文件：** `fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaPluginRuntimeAdapter.java`、`JavaClassSpace.java`（仅必要时改为入口物化语义名称）；`fibra-engine/src/main/java/com/sstlfsj/fibra/engine/FibraEngine.java`；`JavaPluginRuntimeAdapterTest.java`、Engine 的重复启动测试，以及 `fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/JavaPublishedViewRetentionTest.java` 与对应 `fixture`。真实 Engine/Java 集成夹具放在 parity-tests，不能给 Engine 增加反向 runtime-java 依赖。
 
-- [ ] RED：真实 JAR 多轮更新，记录 loader identity 而不是只比较创建/关闭总数；保留已结束 Update 时旧入口/loader 不再可达。失败节点及其真实先决依赖必须保留，但独立成功节点必须释放。活动 loader 作为 WeakReference 存活对照。
-- [ ] RED：插件定义 descriptor 类型，Engine 存活并完成替换后，第一份启动结果不能被长期启动缓存额外保留；调用者明确持有旧视图的对照仍应保留类型。
-- [ ] GREEN：保持 Owner/Update/Loaded 结构和实际依赖节点 identity，逐节点成功释放强引用；完成 Update 清理 old/fresh/catalog/异常引用，只留下必要元数据。不得 finally 一把清空失败资源。
-- [ ] GREEN：缓存启动完成而非初始 PublishedView；重复 start 等待同一个启动完成事实，再返回当前视图，不重新启动 runtime。
-- [ ] 失败启动同样有引用门禁：不能只 `.then().cache()`，因为缓存的 EngineChangeException 仍携带 view/cause；在可纠正的启动失败随后被新目标纠正后，长期启动协调不再持有旧异常对象。
-- [ ] close 与 collect 分开验收；有界重试 GC 只用于受控夹具的引用回收证据，不宣称任意插件的卸载截止，不加全局 Jackson cache flush。
-- [ ] Java/Engine 定向红绿、模块回归、规格与质量审查后提交。
+- [x] RED：真实 JAR 多轮更新，记录 loader identity 而不是只比较创建/关闭总数；保留已结束 Update 时旧入口/loader 不再可达。失败节点及其真实先决依赖必须保留，但独立成功节点必须释放。活动 loader 作为 WeakReference 存活对照。
+- [x] RED：插件定义 descriptor 类型，Engine 存活并完成替换后，第一份启动结果不能被长期启动缓存额外保留；调用者明确持有旧视图的对照仍应保留类型。
+- [x] GREEN：保持 Owner/Update/Loaded 结构和实际依赖节点 identity，逐节点成功释放强引用；完成 Update 清理 old/fresh/catalog/异常引用，只留下必要元数据。不得 finally 一把清空失败资源。
+- [x] GREEN：缓存启动完成而非初始 PublishedView；重复 start 等待同一个启动完成事实，再返回当前视图，不重新启动 runtime。
+- [x] 失败启动同样有引用门禁：不能只 `.then().cache()`，因为缓存的 EngineChangeException 仍携带 view/cause；在可纠正的启动失败随后被新目标纠正后，长期启动协调不再持有旧异常对象。
+- [x] close 与 collect 分开验收；有界重试 GC 只用于受控夹具的引用回收证据，不宣称任意插件的卸载截止，不加全局 Jackson cache flush。
+- [x] Java/Engine 定向红绿、模块回归、规格与质量审查后提交。
+
+J1 已由 `410593d`、`7b64936`、`c8b0e5e` 完成。九条 RED 覆盖完成 Update 的旧资源图、失败
+退休的真实依赖闭包与独立 sibling、准备异常缓存、重复启动当前视图、启动失败异常长期根、真实插件
+descriptor loader，以及关闭订阅惰性和快照幂等。生产实现逐节点释放成功关闭资源，清空完成 Update 的
+插件对象与异常引用；Engine 只缓存启动完成事实。规格审查要求补充的“失败被新目标纠正且 Engine 仍
+存活”真实 JAR 场景首次即通过，证明旧异常与旧 descriptor loader 可回收、当前 loader 仍存活。
+权威模块回归为 Engine 172/172、Java runtime 26/26、parity 126/126；最终独立质量复验 31/31，规格
+与质量审查均通过。24 轮真实更新中活动 loader 固定为 3、线程 9、FD 37，关闭后 loader 0、FD 34；
+GC 证据只适用于受控夹具，不声明任意插件卸载截止。
 
 ## J2：可见闭包的类型定义者唯一性
 
