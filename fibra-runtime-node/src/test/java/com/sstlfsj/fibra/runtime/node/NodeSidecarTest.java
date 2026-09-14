@@ -25,6 +25,88 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NodeSidecarTest {
     @Test
+    void rangeProofFailureRetainsProtocolFailureFromDelayedHalfFrameEof(@TempDir Path work)
+        throws Exception {
+        var tailReleased = new java.util.concurrent.CompletableFuture<Void>();
+        var readerEntered = new java.util.concurrent.CountDownLatch(1);
+        var requestWritten = new java.util.concurrent.CountDownLatch(1);
+        var alive = new AtomicBoolean(true);
+        var exit = new java.util.concurrent.CompletableFuture<Process>();
+        var tail = new java.util.concurrent.atomic.AtomicReference<java.io.InputStream>();
+        var input = new java.io.ByteArrayOutputStream() {
+            @Override public void flush() { requestWritten.countDown(); }
+        };
+        var output = new java.io.InputStream() {
+            @Override public int read() throws java.io.IOException {
+                readerEntered.countDown();
+                tailReleased.join();
+                return tail.get().read();
+            }
+        };
+        var process = new Process() {
+            @Override public java.io.OutputStream getOutputStream() { return input; }
+            @Override public java.io.InputStream getInputStream() { return output; }
+            @Override public java.io.InputStream getErrorStream() { return java.io.InputStream.nullInputStream(); }
+            @Override public boolean isAlive() { return alive.get(); }
+            @Override public java.util.concurrent.CompletableFuture<Process> onExit() { return exit; }
+            @Override public int waitFor() { exit.join(); return 0; }
+            @Override public int exitValue() { return 0; }
+            @Override public void destroy() { }
+            @Override public Process destroyForcibly() { return this; }
+        };
+        var sessionDirectory = Files.createDirectory(work.resolve("session"));
+        var options = NodeRuntimeOptions.builder(node(), work).terminateTimeout(Duration.ofMillis(20)).build();
+        var unit = new NodeProcessUnit(sessionDirectory, sessionDirectory.resolve("termination.status"),
+            process, options.terminateTimeout());
+        var scheduler = new ScheduledThreadPoolExecutor(1);
+        var constructor = NodeSidecar.class.getDeclaredConstructor(NodeRuntimeOptions.class,
+            NodeProcessUnit.class, Runnable.class, java.util.concurrent.ScheduledExecutorService.class);
+        constructor.setAccessible(true);
+        var session = constructor.newInstance(options, unit, (Runnable) () -> { }, scheduler);
+        try {
+            var request = session.beginRequest("last", Map.of(), CancellationToken.never());
+            var result = request.result().toFuture();
+            assertTrue(readerEntered.await(1, TimeUnit.SECONDS));
+            assertTrue(requestWritten.await(1, TimeUnit.SECONDS));
+            var json = tools.jackson.databind.json.JsonMapper.builder().build();
+            var id = json.readValue(input.toByteArray(), Map.class).get("id");
+            tail.set(new java.io.ByteArrayInputStream(("{\"jsonrpc\":\"2.0\",\"id\":" + id)
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            alive.set(false);
+            exit.complete(process);
+            var closing = session.closeAsync().toFuture();
+            var proofFailure = assertThrows(NodeRpcException.class, unit::close);
+            assertEquals(NodeRpcPhase.TERMINATE, proofFailure.phase());
+            assertThrows(java.util.concurrent.TimeoutException.class,
+                () -> closing.get(100, TimeUnit.MILLISECONDS), "必须等到尾部 EOF 才能汇总协议失败");
+
+            tailReleased.complete(null);
+            org.junit.jupiter.api.Assertions.assertSame(proofFailure,
+                assertThrows(java.util.concurrent.ExecutionException.class,
+                    () -> closing.get(1, TimeUnit.SECONDS)).getCause());
+            assertEquals(1, proofFailure.getSuppressed().length);
+            var protocolFailure = (NodeRpcException) proofFailure.getSuppressed()[0];
+            assertEquals(NodeRpcPhase.PROTOCOL, protocolFailure.phase());
+            assertTrue(protocolFailure.getMessage().contains("incomplete frame"));
+            org.junit.jupiter.api.Assertions.assertSame(proofFailure,
+                assertThrows(java.util.concurrent.ExecutionException.class,
+                    () -> result.get(1, TimeUnit.SECONDS)).getCause());
+            org.junit.jupiter.api.Assertions.assertSame(proofFailure,
+                assertThrows(NodeRpcException.class, () -> request.drain().block(Duration.ofSeconds(1))));
+            org.junit.jupiter.api.Assertions.assertSame(proofFailure,
+                assertThrows(NodeRpcException.class, () -> session.termination().block(Duration.ofSeconds(1))));
+            org.junit.jupiter.api.Assertions.assertSame(proofFailure,
+                assertThrows(NodeRpcException.class, session::close));
+            assertEquals(1, java.util.Arrays.stream(proofFailure.getSuppressed())
+                .filter(value -> value == protocolFailure).count());
+            assertTrue(Files.isDirectory(sessionDirectory));
+        } finally {
+            tailReleased.complete(null);
+            scheduler.shutdownNow();
+        }
+    }
+
+    @Test
     void exitedSupervisorStillDeliversTailResponseWhenRangeProofIsMissing(@TempDir Path work)
         throws Exception {
         var tailReleased = new java.util.concurrent.CompletableFuture<Void>();

@@ -157,10 +157,6 @@ final class NodeSidecar implements AutoCloseable {
             processUnit.close();
         } catch (NodeRpcException cause) {
             cleanupFailure = cause;
-            var original = failure.get();
-            if (original != null && original != cause) {
-                cause.addSuppressed(original);
-            }
         }
         if (!processUnit.isAlive()) {
             // Supervisor exit allows tail draining independently of range verification.
@@ -168,7 +164,12 @@ final class NodeSidecar implements AutoCloseable {
             rpc.writeCompletion().join();
             stderrCompletion.join();
         }
-        var terminal = cleanupFailure != null ? cleanupFailure : failure.get();
+        var original = failure.get();
+        if (cleanupFailure != null && original != null && original != cleanupFailure
+            && java.util.Arrays.stream(cleanupFailure.getSuppressed()).noneMatch(value -> value == original)) {
+            cleanupFailure.addSuppressed(original);
+        }
+        var terminal = cleanupFailure != null ? cleanupFailure : original;
         rpc.settle(terminal == null
             ? new NodeRpcException(NodeRpcPhase.TERMINATE, "Node sidecar was closed") : terminal,
             cleanupFailure == null);
