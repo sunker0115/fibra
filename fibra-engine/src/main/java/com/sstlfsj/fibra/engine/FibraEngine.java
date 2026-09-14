@@ -701,7 +701,9 @@ public final class FibraEngine implements AutoCloseable {
     private void publish(ObservedRuntime captured) {
         if (captured.domain() != null && !captured.domain().cleanupFailures().isEmpty()) {
             mutationGate = false;
-            failure = "runtime cleanup failed: " + captured.domain().cleanupFailures();
+            var cleanupFailure = "runtime cleanup failed: " + captured.domain().cleanupFailures();
+            if (failure == null) failure = cleanupFailure;
+            else if (!failure.contains(cleanupFailure)) failure += "; " + cleanupFailure;
             phase = ChangePhase.FAILED;
         }
         var pluginFacts = new LinkedHashMap<Long, RuntimeDomainSnapshot.Plugin>();

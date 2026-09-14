@@ -65,6 +65,10 @@ class PublishedRuntimeLeaseTest {
             assertThrows(java.util.concurrent.ExecutionException.class, () -> changing.get(5, TimeUnit.SECONDS));
             assertEquals(0, providerReleases.get());
             assertFalse(engine.published().current().engineDiagnostics().mutationGateOpen());
+            assertTrue(engine.published().current().engineDiagnostics().failure()
+                .contains(ChangePhase.RECONCILING.name()));
+            assertTrue(engine.published().current().engineDiagnostics().failure()
+                .contains("invocation child could not release its resource"));
             assertTrue(engine.published().current().diagnostics().cleanupFailures().stream()
                 .anyMatch(failure -> failure.failure().contains("invocation child")));
             assertThrows(RuntimeException.class, () -> engine.closeAsync().block(TIMEOUT));
