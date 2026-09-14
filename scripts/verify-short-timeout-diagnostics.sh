@@ -12,9 +12,11 @@ timeout_dir="$diagnostics_root/short-timeout-$run_id"
 normal_dir="$diagnostics_root/normal-exit-$run_id"
 
 cleanup() {
-  while IFS= read -r pid; do
-    [[ "$pid" =~ ^[1-9][0-9]*$ ]] && kill -KILL "$pid" 2>/dev/null || true
-  done < "$pid_file" 2>/dev/null || true
+  if [[ -r "$pid_file" ]]; then
+    while IFS= read -r pid; do
+      [[ "$pid" =~ ^[1-9][0-9]*$ ]] && kill -KILL "$pid" 2>/dev/null || true
+    done < "$pid_file"
+  fi
   rm -rf "$temporary_root"
 }
 trap cleanup EXIT
@@ -36,7 +38,7 @@ wait_for_pid_file() {
 assert_gone() {
   local pid="$1" attempt
   for attempt in {1..30}; do
-    kill -0 "$pid" 2>/dev/null || return
+    kill -0 "$pid" 2>/dev/null || return 0
     sleep 0.1
   done
   fail "短超时清理后仍存在进程 $pid"
