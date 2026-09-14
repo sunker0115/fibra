@@ -283,7 +283,7 @@ git commit -m "test(ci): verify short-timeout diagnostic capture"
 
 - 修改：`.github/workflows/ci.yml:59-74`
 
-- [ ] **步骤 1：在全量构建前增加独立步骤**
+- [x] **步骤 1：在全量构建前增加独立步骤**
 
 在“确认构建与真实插件验收环境”之后增加：
 
@@ -296,7 +296,7 @@ git commit -m "test(ci): verify short-timeout diagnostic capture"
 
 保留后续两次 `run-ci-with-jvm-diagnostics.sh` 的现有环境和默认参数，不把 180 秒全量采样改成 10 秒。
 
-- [ ] **步骤 2：验证 YAML、脚本和诊断目录上传路径**
+- [x] **步骤 2：验证 YAML、脚本和诊断目录上传路径**
 
 ```bash
 ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci.yml", aliases: true)'
@@ -307,7 +307,7 @@ rg -n '验证短超时诊断门禁|fibra-ci-hang-diagnostics' .github/workflows/
 
 预期：YAML 可解析；新步骤和现有失败制品上传共同指向 `fibra-ci-hang-diagnostics`；脚本语法通过。
 
-- [ ] **步骤 3：提交 CI 接线**
+- [x] **步骤 3：提交 CI 接线**
 
 ```bash
 git add .github/workflows/ci.yml
