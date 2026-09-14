@@ -18,7 +18,9 @@ DIAGNOSTIC_TAIL_BYTES = 16 * 1024
 
 def diagnostic_tail(value, limit=DIAGNOSTIC_TAIL_BYTES):
     data = bytes(value)
-    return f"bytes={len(data)} omitted={max(0, len(data) - limit)} tail={data[-limit:]!r}"
+    tail = data[-limit:] if limit else b""
+    omitted = len(data) - len(tail)
+    return f"bytes={len(data)} omitted={omitted} tail={tail!r}"
 
 
 class Session:

@@ -21,3 +21,13 @@ class DiagnosticTailTest(unittest.TestCase):
             MODULE.diagnostic_tail(bytearray(b"abc"), limit=4),
             "bytes=3 omitted=0 tail=b'abc'",
         )
+
+    def test_zero_limit_has_empty_tail(self):
+        self.assertEqual(
+            MODULE.diagnostic_tail(b"abc", limit=0),
+            "bytes=3 omitted=3 tail=b''",
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()
