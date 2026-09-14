@@ -302,6 +302,11 @@ renderer 与 Session 事实应由插件组合。以下项目测试和仓外真�
 | 真实 TTY | `verification/distribution/verify-cli-tty.py` 在原生 xterm PTY 中直接验证历史重启、Tab 补全、已知命令高亮、编辑行上的异步 `printAbove`、32x10 窄终端、真实 `SIGWINCH` resize、bracketed paste、方向键/ESC/Shift-Tab/Ctrl-Enter、渐进 renderer、失败与取消后的恢复。它同时通过发行 ZIP 的动态 Java command 验证 raw `0x03` 取消后下一命令正常执行，关闭了 F2 遗留的直接 TTY P2。 |
 | 兼容性与发行 | `ApiSignatureBaselineTest` 以 `javap -protected` 冻结 `fibra-cli-api` 与 `fibra-cli` 全部 public/protected 类型；仓外 `cli-application` 只依赖发布制品即可创建自定义 `CliApplication`、多次执行和后台消息，不取得 JLine 私有对象。最终工作树投影到临时全新 checkout 后，根 50 模块 `mvn clean verify`、发行 ZIP 仓外验收和三轮 `scripts/verify-reproducible-release.sh` 全部通过，其中 CLI 137 项测试全绿。F4 的 27 个正式制品、依赖坐标、发行脚本和消费者集合冻结后，`scripts/verify-distribution.sh` 已从相互隔离的空 Maven 仓完成部署、发行 ZIP、五类消费者、archetype、删除消费者 Fibra 坐标后的重新解析和两组真实 PTY 门禁；其后最终审查只修正关闭状态机、对应测试和文档，没有改变这些发行输入。按用户明确要求不为未变化的依赖图重复下载空仓。 |
 
-平台边界：本轮真实 TTY 与发行 ZIP 验证平台为 macOS arm64；Windows/Linux 的 JLine 输入、终端尺寸、
-本地进程和安装包仍须由对应平台发布流水线证明，不能由 macOS 结果替代。该限制不影响 Java 公开契约和
-dumb/非 TTY 降级冻结，但对应平台发行时必须重新运行相同门禁。
+Linux 收口证据：`447ef6e` 让验证器只在 PTY 已进入非规范读取时发送 EOF，移除会被 `printAbove` 重绘
+干扰的提示符计数同步；该变更没有修改生产代码或公共契约。GitHub Actions
+[第 29 次全量门禁](https://github.com/sunker0115/fibra/actions/runs/34810039690)在 `ubuntu-latest` 上完成根
+`clean verify`、27 个发布制品可复现检查和仓库外分发验证，包括两组原生 xterm PTY 门禁，结果全绿。
+
+平台边界：F4 最终本地证据来自 macOS arm64，以上远端门禁补齐 Linux；Windows 的 JLine 输入、终端尺寸、
+本地进程和安装包仍须由对应平台发布流水线证明，不能由 macOS/Linux 结果替代。该限制不影响 Java 公开
+契约和 dumb/非 TTY 降级冻结，但对应平台发行时必须重新运行相同门禁。

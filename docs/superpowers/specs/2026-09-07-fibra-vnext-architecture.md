@@ -1763,3 +1763,29 @@ Fibra 的 F1 至 F4 只维护本文和既有行为验收账本，没有新建平
 
 Fibra F1–F4 已完成。下一次产品实现从权威产品架构定义的 P0 开始；Model、Agent、Session、MCP 或其它
 DSH 产品模块不回填到 Fibra 仓库。
+
+### 11.9 vNext 收口与 `0.5.x` 底座打磨
+
+`codex/fibra-vnext` 完成交付文档收口且同一提交的 Linux CI 全绿后，以保留阶段提交历史的方式合并
+`main`，不 squash；后续底座工作从更新后的 `main` 新建 `codex/0.5.0-hardening`。该分支不继续承载
+Agent 产品 P0，也不重开 F1–F4：公开签名或已冻结语义的删除、改变进入 `0.6.0` 新设计，`0.5.x` 只做
+二进制兼容的性能、诊断、测试、内部实现和文档补强。
+
+打磨顺序由真实风险和测量结果驱动，不为候选能力预建抽象：
+
+| 顺序 | 范围 | 主要内容 | 完成证据 |
+|---|---|---|---|
+| 1 | CI 与短超时诊断 | 在现有全量门禁外补齐短时卡死、关闭竞态和真实 TTY 失败的现场捕获；失败清理前保留进程树、JVM 线程栈、终端属性和有限输出尾部 | 故意挂起的有界 fixture 能稳定产出诊断并按截止退出；正常门禁无额外失败或遗留进程 |
+| 2 | 生命周期、变更与恢复 | 对 Scope/Effect 晚到资源、注册与清理失败、重复关闭，以及 prepare、artifact/target save、reconcile、retire 的崩溃点做故障注入 | 不发布半成品、不提前释放资源；重启按已保存目标收敛，未确认写关闭 mutation gate，诊断指出失败阶段 |
+| 3 | 调用准入与排空 | 压实 revision、registration identity、in-flight lease、invocation Scope、取消、调用中停用和 cleanup failure 的可观察边界 | stale、revoked、cancelled、cleanup-failed 可稳定区分；无关更新不终止已接受调用，受影响资源等待真实终态 |
+| 4 | Java/Node 长稳与性能 | 重复安装、同版本重装、依赖闭包升级、sidecar 异常、半帧、心跳和进程树；测量 ClassLoader、线程、文件句柄、PID、堆、更新与调用延迟 | 长循环资源曲线不持续增长；受管范围最终静默；优化必须由基线和回归阈值证明，不削弱一致性保证 |
+| 5 | 公共扩展面与兼容套件 | 以 canonical manifest、最小 SPI、typed config、Contribution、稳定错误码和仓外 Java/Node 消费者形成第三方插件套件 | 独立插件可执行安装、配置、启停、升级、重装、调用中卸载和泄漏检查，并输出结构化报告；不取得 Engine 内部类型 |
+| 6 | 安全与供应链边界 | 校验 digest、制品目录、依赖图、诊断脱敏和 trusted Java、受管 sidecar、容器/远端三档执行策略 | 篡改和越界制品 fail-closed；secret 不进入日志与诊断；ClassLoader 不被描述为安全沙箱 |
+
+下一项实施内容固定为第 1 项。现有 `scripts/run-ci-with-jvm-diagnostics.sh` 默认 180 秒后才采首份现场，
+而真实 TTY fixture 的失败截止为 10 秒，短时竞态可能在全局采样前结束。`codex/0.5.0-hardening` 首个变更
+应先建立有界的短超时诊断门禁；它只调整测试与诊断，不改变公共 API。其后按第 2–6 项逐项取得证据，
+没有测量或失败样本的候选不自动升级为实现任务。
+
+底座可保留一个仓库外的薄上层夹具，验证真实调用方不绕过 `PublishedRuntime`、不取得内部 `Context`；
+该夹具不是 Agent 产品实现。产品 P0–P8 仍在独立项目和独立权威文档中推进。

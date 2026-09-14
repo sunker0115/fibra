@@ -62,9 +62,10 @@ Node 包声明 `runtime=node`，payload 指向包含 `fibra-plugin.yaml` 和 Jav
 裸 JAR 或旧 Node 目录 fallback。`ArtifactStore` 复制完整包，装载和重启从受管包解析 payload。
 插件市场、下载、签名、信任和上传鉴权属于宿主策略，不属于 Fibra 制品协议。
 
-正式 CLI Maven 制品、profile 选择、本地安装命令与 F1 组合边界已实现；Maven 薄 JAR 不等于终端发行包。
-ZIP 已包含启动器、宿主依赖、标准插件目录包、默认 profile 和目标平台 sidecar，并由仓库外解压运行门禁
-验证。F2–F4 的交互与终端能力不得由该发行结果冒充。
+正式 CLI Maven 制品、profile 选择、本地安装命令与 F1–F4 公共边界均已实现；Maven 薄 JAR 不等于终端
+发行包。ZIP 已包含启动器、宿主依赖、标准插件目录包、默认 profile 和目标平台 sidecar；仓库外门禁还
+覆盖动态命令、安全历史、原生 xterm PTY 输入与 resize、调用取消、失败恢复和公开 API 消费。F2–F4 的
+完整结论仍以对应契约测试和行为验收账本为准，不能只由基础解压启动结果替代。
 
 ## Maven Central
 

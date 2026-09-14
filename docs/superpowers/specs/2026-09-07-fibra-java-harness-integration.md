@@ -2,9 +2,11 @@
 
 日期：2026-09-07
 
-状态：非权威参考场景，Java Harness 尚无可核对源码。本文用于验证通用 Fibra 接入面能否自然承载
-一种 Agent Harness，不决定 Fibra 的产品方向、模块边界或发布优先级，也不把草图中的类名、状态名或
-包名视为既有实现。
+状态：非权威参考场景。现已有 DeepSeek Harness Java 官网教程和公开业务插件源码可供核对；公开证据、
+最优实现对比与采用边界见
+[DeepSeek Harness Java 公开架构分析](../references/2026-09-14-deepseek-harness-java-analysis.md)。本文用于
+验证通用 Fibra 接入面能否自然承载一种 Agent Harness，不决定 Fibra 的产品方向、模块边界或发布优先级，
+也不把外部实现中的类名、状态名或包名直接视为 Fibra 契约。
 
 上游唯一权威设计：[`2026-09-07-fibra-vnext-architecture.md`](./2026-09-07-fibra-vnext-architecture.md)；
 长期运行域、已发布视图和外层宿主边界以该文第 4 节为准。
@@ -74,7 +76,7 @@ Fibra vNext 本期必须形成可运行纵向闭环，而不是只预留接口�
 6. 一个不含 Agent 语义的示例贡献，以及 Harness Tool 贡献的契约测试夹具，证明 Java/Node 来源可进入
    同一个目录。
 
-本期不会在 Fibra 仓库实现尚无源码的 Harness 业务模块，也不会实现 Tool/Skill/Model 的业务 DTO、权限
+本期不会在 Fibra 仓库实现 Harness 业务模块，也不会实现 Tool/Skill/Model 的业务 DTO、权限
 运营规则或三种外部 Node 格式导入器。它们属于后续 Harness 项目的场景适配；Fibra 本期必须把其所需的
 通用接入面做完整，不能只写文档或留空 SPI。
 

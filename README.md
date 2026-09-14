@@ -9,8 +9,8 @@ Fibra 是 Java 21 的通用插件底座。它把生命周期与资源所有权�
 
 当前快照已经交付长期 `RuntimeDomain`、实例差量更新、首次联合制品启动、provider-managed 子进程范围，
 以及 fs、fs-search、shell、storage 正式插件。正式 `fibra-cli`、公开 `fibra-cli-api`、动态 Java command、
-受控终端租约、可执行 ZIP 和仓库外解压启动均已完成 F1 验收；F2–F4 的安全历史、交互增强、调用级取消
-和终端冻结仍未实施。
+安全历史、补全和高亮、调用级取消与信号协调、受控终端租约、渐进 renderer、可执行 ZIP 和仓库外消费
+均已通过 F1–F4 验收。F4 已冻结 CLI 公共边界；同一 `0.5.x` 版本列只接受二进制兼容的增加或修复。
 
 ## 架构
 

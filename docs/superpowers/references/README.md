@@ -20,6 +20,9 @@
 - [后续架构真源与外部参考审计](2026-09-13-architecture-source-audit.md)：唯一真源矩阵，DSH/Cordis、
   OpenAI Codex CLI 0.154.0、AgentCLI、PaiCLI、Picocli 4.7.7、JLine 4.4.3 的固定源码证据，外部事实与
   Fibra 推导分级，以及本次审计级别 P0/P1/P2 闭环。
+- [DeepSeek Harness Java 公开架构分析与 Fibra 最优演进建议](2026-09-14-deepseek-harness-java-analysis.md)：
+  官网 18 章、MySQL/Mall/部署公开源码与成熟插件架构的交叉分析，插件/工具/会话/治理证据，以及按 Fibra
+  通用底座与上层 Agent 产品分流的采用、优化和拒绝清单。
 
 ## 用户提供的解读材料
 
