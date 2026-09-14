@@ -162,8 +162,8 @@ final class NodeSidecar implements AutoCloseable {
                 cause.addSuppressed(original);
             }
         }
-        if (cleanupFailure == null) {
-            // Confirmed process exit allows draining the complete tail without truncation.
+        if (!processUnit.isAlive()) {
+            // Supervisor exit allows tail draining independently of range verification.
             rpc.outputCompletion().join();
             rpc.writeCompletion().join();
             stderrCompletion.join();
