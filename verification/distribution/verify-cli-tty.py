@@ -74,7 +74,12 @@ class Session:
         while self.process.poll() is None and time.monotonic() < deadline:
             self.pump(0.1)
         if self.process.poll() is None:
-            raise AssertionError("交互 fixture 未在 10 秒内退出")
+            terminal_attributes = self.terminal_attributes()
+            thread_dump = self.capture_thread_dump()
+            raise AssertionError(
+                f"交互 fixture 未在 10 秒内退出\n"
+                f"SIGQUIT={thread_dump}\nterminal_attributes={terminal_attributes}\n"
+                f"stdout={bytes(self.stdout)!r}\nterminal={bytes(self.terminal)!r}")
         for _ in range(5):
             self.pump(0)
         if self.process.returncode != 0:
@@ -92,6 +97,31 @@ class Session:
                 self.process.kill()
                 self.process.wait(timeout=2)
         self.close_master()
+
+    def capture_thread_dump(self):
+        try:
+            os.kill(self.process.pid, signal.SIGQUIT)
+        except OSError as error:
+            return f"发送失败: {error}"
+        deadline = time.monotonic() + 2
+        while self.process.poll() is None and time.monotonic() < deadline:
+            self.pump(min(0.1, deadline - time.monotonic()))
+        return "已发送"
+
+    def terminal_attributes(self):
+        try:
+            attributes = termios.tcgetattr(self.master)
+            return {
+                "iflag": attributes[0],
+                "oflag": attributes[1],
+                "cflag": attributes[2],
+                "lflag": attributes[3],
+                "veof": attributes[6][termios.VEOF],
+                "vmin": attributes[6][termios.VMIN],
+                "vtime": attributes[6][termios.VTIME],
+            }
+        except termios.error as error:
+            return f"读取失败: {error}"
 
     def close_master(self):
         if not self.closed:
