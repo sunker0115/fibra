@@ -328,7 +328,7 @@ git commit -m "ci: enforce short-timeout diagnostic gate"
 - 审查：任务 1–3 的全部 diff
 - 不新增产品代码或文档范围
 
-- [ ] **步骤 1：运行首项定向门禁**
+- [x] **步骤 1：运行首项定向门禁**
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 verification/ci/test_verify_cli_tty.py
@@ -342,7 +342,7 @@ git diff --check
 
 预期：Python 4 项通过；短超时门禁通过；无空白错误。
 
-- [ ] **步骤 2：运行完整 Maven 与仓外分发回归**
+- [x] **步骤 2：运行完整 Maven 与仓外分发回归**
 
 执行前按 `mvn-env` 规约使用本机 JDK 21 和 Maven 3.9.9：
 
@@ -361,7 +361,7 @@ env JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home \
 
 预期：全 reactor `BUILD SUCCESS`；仓外五类消费者、ZIP 和真实 TTY 验收通过。
 
-- [ ] **步骤 3：进行独立审查**
+- [x] **步骤 3：进行独立审查**
 
 使用 `superpowers:requesting-code-review`，重点确认：
 
@@ -378,7 +378,7 @@ git status --short --branch
 git log -4 --oneline --decorate
 ```
 
-预期：工作区干净，分支只新增本计划列出的三个实现提交。用户推送后，以同一 HEAD 的 Linux CI 全绿
+预期：工作区干净，分支只新增本计划列出的实现、验证与计划跟踪提交。用户推送后，以同一 HEAD 的 Linux CI 全绿
 作为首项最终完成证据；远端失败则保留诊断制品并按实际证据另立修复，不延长 10 秒门限。
 
 ## 计划自检
