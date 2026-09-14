@@ -8,6 +8,16 @@
 
 **技术栈：** Java 21、JUnit 5、Reactor Test、Maven Surefire、子 JVM fixture。
 
+## 完成记录
+
+- [x] 任务 1：生命周期竞态门禁不再吞后台异常，关闭进行中的两个观察者共享成功或失败终态；15 项定向测试通过。
+- [x] 任务 2：最终失败诊断保留 `PREPARING`、`SAVING`、`RECONCILING`、`RETIRING` 来源阶段及原始失败；清理失败不会覆盖阶段；10 项初始定向测试和 7 项清理失败回归测试通过。
+- [x] 任务 3：新增 PREPARE、artifact 已保存但 target 未写、RETIRE 三个真实子 JVM `halt` 场景；连同既有 reconcile 场景共 4 项通过，超时与异常路径均有界清理子进程。
+- [x] 六个相关测试类合计 35 项通过；`fibra-core`、`fibra-engine` 及上游模块合计 168 项通过。
+- [x] 代码 HEAD `9431d38` 的 50 模块 `clean verify` 全部成功，总耗时 2 分 38 秒；版本仍为 `0.5.0-SNAPSHOT`。
+- [x] 两名独立审查者复审后均为 `APPROVED`，无 Critical/Important 遗留。
+- [ ] 用户推送后确认包含本计划收口提交的同一代码树 Linux CI 全绿。
+
 ## 现有证据与缺口
 
 | 范围 | 现有直接证据 | 本次最小缺口 |
