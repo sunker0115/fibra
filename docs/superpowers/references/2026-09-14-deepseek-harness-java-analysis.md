@@ -529,7 +529,7 @@ descriptor。验收必须跑通公开 MySQL、Mall 和样例插件的安装、�
 当前目标是让 Fibra 成为后续产品可以长期依赖的稳定底座，因此不建议立即铺开 DSH Java 的全部 Agent
 能力。下面是建议提交权威 spec 评审的补强候选，不创建新的产品阶段编号，也不自动重开已通过的 F1–F4
 门禁。候选的采用顺序与版本边界已收敛到
-[Fibra vNext 架构第 11.9 节](../specs/2026-09-07-fibra-vnext-architecture.md#119-vnext-收口与-05x-底座打磨)；
+[Fibra vNext 架构第 11.9 节](../specs/2026-09-07-fibra-vnext-architecture.md)；
 只有发现实际缺陷或正式纳入权威 spec 的条目，才成为新的阻断条件。
 
 | 候选 | 打磨内容 | 建议验收 |
@@ -540,7 +540,7 @@ descriptor。验收必须跑通公开 MySQL、Mall 和样例插件的安装、�
 | Node 长期运行 | 握手、半帧、超时、取消、心跳、异常退出、子进程树、平台差异 | 已接受请求真实终结；受管进程范围静默；失败不会让旧 contribution 保持 ready |
 | 调用边界 | revision、registration identity、in-flight lease、invocation Scope、取消 | stale/revoked/cleanup-failed 稳定可区分；无关更新不终止已接受调用 |
 | 公共扩展面 | canonical manifest、最小 SPI、typed config、Contribution、错误码 | API 基线和仓外消费者门禁通过；业务 SDK 只封装 Scope，不泄漏 Engine 内部类型 |
-| 插件兼容套件 | 安装、配置、启停、升级、重装、调用中卸载、资源泄漏 | 第三方 Java/Node 插件可独立运行同一套契约测试并得到结构化报告 |
+| 插件契约套件 | 安装、配置、启停、升级、重装、调用中卸载、资源泄漏 | 第三方 Java/Node 插件可独立运行同一套契约测试并得到结构化报告，不承诺废弃快照兼容 |
 | 运维诊断 | Engine phase、target/view revision、affected closure、in-flight、资源和清理失败 | 用户无需调试器即可判断卡在采集、准备、保存、协调、排空还是回收 |
 | 安全与供应链 | digest、制品目录边界、依赖图、凭据脱敏、可信/非可信执行策略 | 受信 Java、受管 sidecar、容器/远端三档边界明确；ClassLoader 不被宣传为沙箱 |
 | CI 与长稳 | 全量测试、真实 JAR/Node、可复现发行、仓外消费、短超时诊断、压力与资源曲线 | 快速失败能捕获 JVM/进程现场；长稳覆盖重复变更和并发调用；发布物与源码门禁一致 |

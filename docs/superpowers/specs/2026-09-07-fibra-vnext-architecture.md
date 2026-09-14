@@ -792,7 +792,9 @@ CLI 投影使用 `content`、可选 `structuredContent`、`isError`、失败时�
   发布视图仍由正常发布所有权持有；调用方主动保留旧视图、Class 或插件对象不属于框架可回收保证；
 - prepare 按每个 loader 实际可见的依赖闭包校验有效二进制类名：主 JAR 与 lib JAR 一并计入，多 release
   JAR 按当前 JVM 的有效类解析，忽略 module-info；不同定义 owner 的同名可见类拒绝装载，菱形路径中的
-  同一制品只计一次。无关插件可以各自持有私有同名库；依赖相连的冲突库须提取共同依赖或 shading，
+  同一制品只计一次。同一制品的主 JAR/lib JAR 或不同 lib JAR 之间的同名有效类也须拒绝，报告两个
+  来源，不能让 URL 顺序决定代码版本；实际由 parent-first 命中的宿主类仍按宿主归属处理。
+  无关插件可以各自持有私有同名库；依赖相连的冲突库须提取共同依赖或 shading，
   不能按依赖顺序任取。父优先仅在 parent 实际可解析时确定宿主所有权，保留 parent miss 的动态回退；
 - close-and-collect 以真实 JAR、loader identity 和 WeakReference/ReferenceQueue 取得回收证据，活动
   loader 作为存活对照；close 不等于 JVM 已卸载，不对任意插件承诺 GC 截止，不清理未经证明的全局缓存。
@@ -814,7 +816,8 @@ Node 插件作为受管 sidecar，通过版本化 JSON-RPC 协议参与同一 `P
 - 数据通道、payload 退出、supervisor 退出和范围静默是独立事实。监督器独占一个真正可关闭的 fd 1
   输出流转发原始 payload stdout，禁止混用特殊 `process.stdout` 包装器；自然 stdout end 才 flush 并
   物理关闭输出，不能由 payload exit 或范围静默提前截断。stderr 独立读到终态；payload outcome 与范围
-  结果写入最终结构化状态，Java 单独观察 supervisor 退出，不引入多路复用 envelope；
+  结果写入最终结构化状态，Java 单独观察 supervisor 退出，不引入多路复用 envelope。范围失败且 payload
+  尚未结算时 outcome 明确为空，不能捏造启动失败或退出码；已知启动失败且范围静默则可以正常清理；
 - 停止准入不停止读侧排空。进程退出回调只登记事实，完整尾帧继续交付，残留半帧以协议错误结束；
   强制截断读取必须呈现 transport 不完整，不能伪装自然 EOF。阻塞 stdin 写入与 flush 不占用定时器、
   session 状态锁或关闭线程；读、写、定时器回调只触发异步关闭，不同步等待或 join 自身；

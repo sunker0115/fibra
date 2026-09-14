@@ -35,6 +35,22 @@
 - [ ] 内部终态文件改为唯一严格结构化格式，包含 payload outcome 与 range 结果，不兼容旧 `QUIESCENT` 文本；Java 侧校验状态并单独观察 supervisor exit。启动失败也明确结算，不能遗留 pending pipe。
 - [ ] N1 定向测试全绿，回归 NodeProcessUnitTest；只提交上述文件，避免携带其他未完成测试。
 
+N1a 实际进度：`forwardsStdoutTailAndEofWhilePayloadAndSupervisorRemainAlive` 以 payload `fs.closeSync(1)`
+复现旧 supervisor 不传播 EOF，3 秒等待失败（1 tests / 1 failure / 0 errors；`/private/tmp/fibra-n1-eof-red.log`）。
+独占 fd 1 输出流并取消范围结算时提前关闭 stdout/stderr 后，同一用例 1/1、NodeProcessUnitTest 4/4 通过
+（`/private/tmp/fibra-n1a-eof-green.log`、`/private/tmp/fibra-n1a-process-unit-green.log`）。仅证明原始数据 EOF；
+结构化终态、大尾部和 N2 session 协调尚未完成，不能把 N1a 作为整体 Node 关闭已通过。
+
+N1b 当前断点（尚未提交生产实现）：真实大尾部、payload/supervisor 退出分离、ENOENT、严格 JSON、
+输出错误清理与终态缓存一度取得 31/31 定向和 69/69 Node 回归绿灯；规格独立审查通过，质量审查发现
+stdout/stderr 同时断开时日志 EPIPE 会中断清理并遗留 payload。该问题已用正式测试复现并修正，定向
+32/32 通过（`/private/tmp/fibra-n1-stderr-failure-red.log`、`/private/tmp/fibra-n1-stderr-failure-green.log`）。
+但随后离线 Node*Test 两轮均在 `drainsALargeStdoutTailBeforePublishingEof` 失败：
+`/private/tmp/fibra-n1-node-offline-regression.log`、`/private/tmp/fibra-n1-node-offline-diagnostic.log`。
+现按两次失败止损规则暂停测试、复审与提交。清理异常覆盖了主异常，诊断在 close 前求值又只取得仍运行
+状态，尚不足以判断 supervisor 非零退出、范围失败或更早的输出错误。后续先让测试保留主异常、清理异常
+及失败后的 exit/status/stderr 证据，再决定实现修改；不能把早先绿灯作为当前版本已通过，也不能盲目第三次重跑。
+
 ## N2：单一 session 关闭协调与请求资源排空
 
 **文件：** `fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeSidecar.java`、`NodePluginRuntimeAdapter.java`；按责任提取同包内部 `NodeRpcChannel.java`，如 process 需要异步终态则改 `NodeProcessUnit.java`；对应 `NodeSidecarTest.java`、`NodePluginRuntimeAdapterTest.java`、`NodeRuntimeResourceOwnerTest.java`，以及现有 `NodePublishedCancellationOwnershipTest`。
@@ -47,12 +63,13 @@
 
 ## J1：退休节点与长期缓存解除插件强引用
 
-**文件：** `fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaPluginRuntimeAdapter.java`、`JavaClassSpace.java`（仅必要时改为入口物化语义名称）；`fibra-engine/src/main/java/com/sstlfsj/fibra/engine/FibraEngine.java`；`JavaPluginRuntimeAdapterTest.java` 与 Engine 中真实插件 descriptor 生命周期测试。
+**文件：** `fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaPluginRuntimeAdapter.java`、`JavaClassSpace.java`（仅必要时改为入口物化语义名称）；`fibra-engine/src/main/java/com/sstlfsj/fibra/engine/FibraEngine.java`；`JavaPluginRuntimeAdapterTest.java`、Engine 的重复启动测试，以及 `fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/JavaPublishedViewRetentionTest.java` 与对应 `fixture`。真实 Engine/Java 集成夹具放在 parity-tests，不能给 Engine 增加反向 runtime-java 依赖。
 
 - [ ] RED：真实 JAR 多轮更新，记录 loader identity 而不是只比较创建/关闭总数；保留已结束 Update 时旧入口/loader 不再可达。失败节点及其真实先决依赖必须保留，但独立成功节点必须释放。活动 loader 作为 WeakReference 存活对照。
 - [ ] RED：插件定义 descriptor 类型，Engine 存活并完成替换后，第一份启动结果不能被长期启动缓存额外保留；调用者明确持有旧视图的对照仍应保留类型。
 - [ ] GREEN：保持 Owner/Update/Loaded 结构和实际依赖节点 identity，逐节点成功释放强引用；完成 Update 清理 old/fresh/catalog/异常引用，只留下必要元数据。不得 finally 一把清空失败资源。
 - [ ] GREEN：缓存启动完成而非初始 PublishedView；重复 start 等待同一个启动完成事实，再返回当前视图，不重新启动 runtime。
+- [ ] 失败启动同样有引用门禁：不能只 `.then().cache()`，因为缓存的 EngineChangeException 仍携带 view/cause；在可纠正的启动失败随后被新目标纠正后，长期启动协调不再持有旧异常对象。
 - [ ] close 与 collect 分开验收；有界重试 GC 只用于受控夹具的引用回收证据，不宣称任意插件的卸载截止，不加全局 Jackson cache flush。
 - [ ] Java/Engine 定向红绿、模块回归、规格与质量审查后提交。
 
@@ -62,17 +79,27 @@
 
 - [ ] RED：不同可见 owner 同名类、可执行依赖携带同名 lib、菱形同一依赖、无关插件各自同名私有库、parent-first 命中与 miss、multi-release JAR 的 JVM 有效版本。
 - [ ] GREEN：prepare 汇总主 JAR 与 lib JAR 的当前有效二进制名称，忽略 module-info；按实际可见闭包拒绝歧义，菱形按定义 owner 去重。宿主仅在 parent 真正可解析且 parent-first 的类上拥有优先权。
+- [ ] 同一 artifact 跨主/lib 或不同 lib JAR 的同名有效 class 同样拒绝，诊断列类名和两个来源；共享 loader 不等于可以任由 URL 顺序选代码。MR-JAR 先在单 JAR 内选当前有效版本，再跨 JAR 判重；实际 parent-first 宿主命中仍遵守宿主归属。
 - [ ] 不因 entrypoint 缺失推断 exports，不新增 OSGi/export 元模型，不用全仓同名类禁令误伤无关插件。
+- [ ] 现有 `JavaPluginRuntimeAdapterTest.artifact` 给所有制品复制同名 `fixture.SampleEntrypoint`/`LateLoaded`，需改为各制品独立类名；不能为维持旧测试放宽新的真实可见类型唯一性。专测冲突的夹具才主动生成同名定义。
 - [ ] 定向红绿、模块回归、规格与质量审查后提交。
 
 ## E1：失败事实与可纠正门禁
 
-**文件：** `fibra-engine/src/main/java/com/sstlfsj/fibra/engine/FibraEngine.java`、`ChangeSet.java`、`RuntimeResources.java`，现有 `EngineDiagnostics` 契约及 `ApplyDeploymentMountFailureRecoveryTest.java`/`EngineCrashPointRecoveryTest.java`；保存事实的类型位置须遵循现有依赖方向。
+**文件：** `fibra-engine/src/main/java/com/sstlfsj/fibra/engine/FibraEngine.java`（ChangeSet 是其内部类）、`RuntimeResources.java`，现有 `EngineDiagnostics` 契约及 `ApplyDeploymentMountFailureRecoveryTest.java`/`EngineCrashPointRecoveryTest.java`；保存事实的类型位置须遵循现有依赖方向。
 
 - [ ] 先对照源码和既有测试：稳定 FAILED 已完成 adopt/settle/retire 时允许显式纠正；部分 adapter adopt、同步协调异常、未知保存与 cleanup failure 封锁。
 - [ ] 仅为缺口写 RED，再修改结构化失败阶段/保存确认投影；现有控制判断正确的部分不重写。原始失败与 cleanup failure 分别保留，不解析错误字符串控制 gate。
 - [ ] 若改变公开 DTO，架构、签名基线与消费者同一变更更新，删除旧兼容形状；不得引入 Engine → Registry 反向依赖。
 - [ ] 定向红绿、架构门禁、规格与质量审查后提交。
+
+E1 只读核对结论：沿用 EngineDiagnostics，增加原始 `failedPhase`、`targetSaveState` 与
+`cleanupFailures`，不建立平行事务 DTO。`TargetSaveState` 的唯一归属应在 Engine，由 Registry 消费；
+`NOT_APPLICABLE` 区分不写部署目标的 context-only 操作，`NOT_SAVED` 表示部署写入尚未完成，恢复可靠
+已保存目标为 `SAVED`。现有 gate 分支不重写。实现前列清公开 API 迁移影响：EngineChangeException、
+Registry 审计 DTO/repository、CLI/benchmark/依赖验收宿主消费者、engine/registry 两份签名基线及相关
+断言；不保留旧布尔 accessor/旧包别名。缺口测试为第二个 adapter adopt 抛错、原始 prepare/bind 失败
+叠加候选清理失败、context-only 切换后稳定 FAILED 可纠正；已有保存/retire/mount 用例改为结构化断言。
 
 ## V1：六项最终集成验收
 
