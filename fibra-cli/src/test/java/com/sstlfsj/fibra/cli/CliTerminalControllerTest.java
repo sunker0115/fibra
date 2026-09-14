@@ -31,6 +31,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -269,21 +270,31 @@ class CliTerminalControllerTest {
              var invocationTerminal = controller.openInvocation(invocation);
              var lease = invocationTerminal.acquire()) {
             var renderer = new CollectingRenderer(Integer.MAX_VALUE) {
-                @Override public void start(CliTerminalControl candidate) {
-                    super.start(candidate);
-                    updates.submit(() -> {
-                        state = "updated";
-                        control.requestRender();
-                        control.requestRender();
-                        control.finish();
-                    });
+                @Override public CliTerminalFrame render(CliTerminalSize size) {
+                    var frame = super.render(size);
+                    if (renders == 1) {
+                        try {
+                            updates.submit(() -> {
+                                state = "updated";
+                                control.requestRender();
+                                control.requestRender();
+                                control.finish();
+                            }).get(2, TimeUnit.SECONDS);
+                        } catch (InterruptedException failure) {
+                            Thread.currentThread().interrupt();
+                            throw new AssertionError("等待后台终端更新时被中断", failure);
+                        } catch (ExecutionException | TimeoutException failure) {
+                            throw new AssertionError("后台终端更新未完成", failure);
+                        }
+                    }
+                    return frame;
                 }
             };
 
             lease.run(renderer);
 
             assertEquals("updated", renderer.lastRenderedState);
-            assertTrue(renderer.renders <= 2, "重复请求应合并为至多一次追加重绘");
+            assertEquals(2, renderer.renders, "重复请求应合并为一次追加重绘");
             assertFalse(renderer.control.finish());
             assertFalse(input.closed);
         } finally {

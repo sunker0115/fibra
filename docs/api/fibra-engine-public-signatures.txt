@@ -68,9 +68,9 @@ public final class com.sstlfsj.fibra.engine.DesiredBindingException extends java
 ## com.sstlfsj.fibra.engine.EngineChangeException
 Compiled from "EngineChangeException.java"
 public final class com.sstlfsj.fibra.engine.EngineChangeException extends java.lang.RuntimeException {
-  public com.sstlfsj.fibra.engine.EngineChangeException(com.sstlfsj.fibra.engine.PublishedView, boolean, java.lang.Throwable);
+  public com.sstlfsj.fibra.engine.EngineChangeException(com.sstlfsj.fibra.engine.PublishedView, com.sstlfsj.fibra.engine.TargetSaveState, java.lang.Throwable);
   public com.sstlfsj.fibra.engine.PublishedView view();
-  public boolean targetSaved();
+  public com.sstlfsj.fibra.engine.TargetSaveState targetSaveState();
 }
 ## com.sstlfsj.fibra.engine.EngineCommand
 Compiled from "EngineCommand.java"
@@ -90,7 +90,7 @@ public final class com.sstlfsj.fibra.engine.EngineCommandResult extends java.lan
 ## com.sstlfsj.fibra.engine.EngineDiagnostics
 Compiled from "EngineDiagnostics.java"
 public final class com.sstlfsj.fibra.engine.EngineDiagnostics extends java.lang.Record {
-  public com.sstlfsj.fibra.engine.EngineDiagnostics(java.lang.String, java.lang.String, com.sstlfsj.fibra.engine.ChangePhase, java.util.Set<java.lang.String>, java.util.Map<com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.RuntimeResourceSnapshot>, boolean, boolean, java.lang.String);
+  public com.sstlfsj.fibra.engine.EngineDiagnostics(java.lang.String, java.lang.String, com.sstlfsj.fibra.engine.ChangePhase, com.sstlfsj.fibra.engine.ChangePhase, com.sstlfsj.fibra.engine.TargetSaveState, java.util.Set<java.lang.String>, java.util.Map<com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.RuntimeResourceSnapshot>, java.util.List<java.lang.String>, boolean, boolean, java.lang.String);
   public static com.sstlfsj.fibra.engine.EngineDiagnostics$Builder builder();
   public final java.lang.String toString();
   public final int hashCode();
@@ -98,8 +98,11 @@ public final class com.sstlfsj.fibra.engine.EngineDiagnostics extends java.lang.
   public java.lang.String targetRevision();
   public java.lang.String contextRevision();
   public com.sstlfsj.fibra.engine.ChangePhase phase();
+  public com.sstlfsj.fibra.engine.ChangePhase failedPhase();
+  public com.sstlfsj.fibra.engine.TargetSaveState targetSaveState();
   public java.util.Set<java.lang.String> affectedInstances();
   public java.util.Map<com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.RuntimeResourceSnapshot> resources();
+  public java.util.List<java.lang.String> cleanupFailures();
   public boolean targetSatisfied();
   public boolean mutationGateOpen();
   public java.lang.String failure();
@@ -111,8 +114,11 @@ public final class com.sstlfsj.fibra.engine.EngineDiagnostics$Builder {
   public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder targetRevision(java.lang.String);
   public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder contextRevision(java.lang.String);
   public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder phase(com.sstlfsj.fibra.engine.ChangePhase);
+  public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder failedPhase(com.sstlfsj.fibra.engine.ChangePhase);
+  public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder targetSaveState(com.sstlfsj.fibra.engine.TargetSaveState);
   public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder affectedInstances(java.util.Set<java.lang.String>);
   public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder resources(java.util.Map<com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.RuntimeResourceSnapshot>);
+  public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder cleanupFailures(java.util.List<java.lang.String>);
   public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder targetSatisfied(boolean);
   public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder mutationGateOpen(boolean);
   public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder failure(java.lang.String);
@@ -468,6 +474,16 @@ public interface com.sstlfsj.fibra.engine.RuntimeResourceUpdate {
   public abstract com.sstlfsj.fibra.engine.RuntimeResourceSnapshot snapshot();
   public abstract void adopt();
   public abstract reactor.core.publisher.Mono<java.lang.Void> closeAsync();
+}
+## com.sstlfsj.fibra.engine.TargetSaveState
+Compiled from "TargetSaveState.java"
+public final class com.sstlfsj.fibra.engine.TargetSaveState extends java.lang.Enum<com.sstlfsj.fibra.engine.TargetSaveState> {
+  public static final com.sstlfsj.fibra.engine.TargetSaveState NOT_APPLICABLE;
+  public static final com.sstlfsj.fibra.engine.TargetSaveState NOT_SAVED;
+  public static final com.sstlfsj.fibra.engine.TargetSaveState SAVED;
+  public static final com.sstlfsj.fibra.engine.TargetSaveState UNCONFIRMED;
+  public static com.sstlfsj.fibra.engine.TargetSaveState[] values();
+  public static com.sstlfsj.fibra.engine.TargetSaveState valueOf(java.lang.String);
 }
 ## com.sstlfsj.fibra.engine.UninstallArtifact
 Compiled from "UninstallArtifact.java"

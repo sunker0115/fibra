@@ -37,7 +37,7 @@ class EnginePersistenceBoundaryTest {
             var failure = assertThrows(EngineChangeException.class,
                 () -> replace(engine, graph("new")));
 
-            assertFalse(failure.targetSaved());
+            assertEquals(TargetSaveState.NOT_SAVED, failure.targetSaveState());
             assertTrue(failure.view().engineDiagnostics().mutationGateOpen());
             assertEquals(graph("old"), store.load().orElseThrow().desiredGraph());
             assertEquals(graph("old"), failure.view().engine().desiredGraph());
@@ -63,7 +63,7 @@ class EnginePersistenceBoundaryTest {
                 () -> replace(engine, graph("saved")));
 
             assertInstanceOf(EngineStateStore.SaveUnconfirmedException.class, failure.getCause());
-            assertFalse(failure.targetSaved(), "false means not confirmed, not rolled back");
+            assertEquals(TargetSaveState.UNCONFIRMED, failure.targetSaveState());
             assertFalse(failure.view().engineDiagnostics().mutationGateOpen());
             assertEquals(graph("saved"), store.load().orElseThrow().desiredGraph());
             assertEquals(graph("old"), failure.view().engine().desiredGraph());

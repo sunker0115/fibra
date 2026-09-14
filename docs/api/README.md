@@ -107,7 +107,7 @@ context 重新派生，不持久化上次进程的宿主环境。
 比较；相同源不会覆盖 `ReplaceDesiredGraph` 等管理变更。源读取或解析失败会公开 `FAILED` 诊断，但
 last-good 目标仍可满足且 mutation gate 保持开放；恢复为相同内容时只清除源错误，不重启实例。
 
-`start()` 返回初始 `PublishedView`。`PublishedRuntime.current()` / `views()` 是状态、诊断和贡献的唯一已发布事实源；`invoke(expectedViewRevision, expectedRegistrationIdentity, kind, id, input)` 同时校验捕获的 view revision 与非复用贡献注册身份。准入前冲突不调用旧 handler，也不转向同名新 handler；准入后 route 直到 invocation Scope 清理完成才释放。托管宿主不能取得 `FibraRuntime`、`Context` 或 `Scope`。
+`start()` 返回初始 `PublishedView`。`PublishedRuntime.current()` / `views()` 是状态、诊断和贡献的唯一已发布事实源：`current()` 读取当前事实，`views()` 只发布订阅后的变化、不重放历史，慢订阅者允许合并中间状态。需要同时覆盖已完成和后续变化时，应先订阅变化流，再读取 `current()`。`invoke(expectedViewRevision, expectedRegistrationIdentity, kind, id, input)` 同时校验捕获的 view revision 与非复用贡献注册身份。准入前冲突不调用旧 handler，也不转向同名新 handler；准入后 route 直到 invocation Scope 清理完成才释放。托管宿主不能取得 `FibraRuntime`、`Context` 或 `Scope`。
 
 `EngineSnapshot.instances()` 只包含 Engine 持有的声明实例，其快照提供 `publicationRequirement()` 和
 `requirementSatisfied()`。`RuntimeDiagnostics.plugins()` 则保留全域实例事实，包括没有配置声明的
@@ -116,13 +116,13 @@ last-good 目标仍可满足且 mutation gate 保持开放；恢复为相同内�
 
 `PluginRuntimeAdapter.create()` 返回长期 `RuntimeResourceOwner`。制品变化时，Engine 先登记 `createUpdate(target)` 返回的 `RuntimeResourceUpdate`，再执行 `prepareAsync()`；目标集合完整，但 update 只拥有本次新增或被替换资源。`catalog()` 在准备成功后可读，`snapshot()` 在准备或失败期间也能诊断资源。`adopt()` 只交换所有权，不执行 I/O；此前 `closeAsync()` 清理新资源，此后清理被替换的旧资源，借用资源始终归 owner。准备和关闭共享完整终态，关闭后不能重新准备。纯配置变更不创建 runtime update，无变化实例及资源保留。
 
-`FileEngineStateStore` 持久保存单个完整 `DeploymentManifest`。Engine 先保存不可变制品，再保存目标，然后差量协调长期域中的实例。`EngineDiagnostics` 分别公开 target revision、context revision、变更阶段、真实达成情况和 mutation gate；`EngineChangeException.targetSaved()` 表示目标已确认保存。若 cause 为 `SaveUnconfirmedException`，不能把 `targetSaved() == false` 解释成未写入。保存后启动或清理失败不回滚目标；保存结果不确定或资源清理失败会关闭后续变更准入。重启严格读取完整目标，损坏或缺失引用明确报错。
+`FileEngineStateStore` 持久保存单个完整 `DeploymentManifest`。Engine 先保存不可变制品，再保存目标，然后差量协调长期域中的实例。`EngineDiagnostics` 分别公开 target revision、context revision、失败阶段、目标保存状态、清理失败、真实达成情况和 mutation gate；`EngineChangeException.targetSaveState()` 以 `NOT_APPLICABLE`、`NOT_SAVED`、`SAVED`、`UNCONFIRMED` 区分目标保存事实，不能把保存结果不确定解释成未写入。保存后启动或清理失败不回滚目标；保存结果不确定或资源清理失败会关闭后续变更准入。重启严格读取完整目标，损坏或缺失引用明确报错。
 
 `DrainingDisposable` 为受管资源提供排空阶段：先停止准入并等待已接受调用，再执行普通清理。排空沿现有 Scope、插件和 effect 所有权关系传播；provider 资源释放还须等待使用旧激活快照的实际消费者完成清理。失败资源的身份与失败信息保留在 `RuntimeDiagnostics.cleanupFailures()`，不暴露 `ClassLoader`、`Process`、RPC channel 或可变资源句柄。
 
 ## Registry 与 Bridge
 
-审计的 `TargetSaveState` 区分未保存、已保存和保存未确认，不等同于操作成功。投递失败可从 `auditFailures()` 和 Registry 查询/返回快照读取，不改变 Engine 原结果。`watch()` 只跟随 Engine 事实流，不因审计失败单独通知。
+Engine 所有的 `TargetSaveState` 也供 Registry 审计使用；审计区分未保存、已保存和保存未确认，不等同于操作成功。投递失败可从 `auditFailures()` 和 Registry 查询/返回快照读取，不改变 Engine 原结果。`watch()` 只跟随 Engine 事实流，不因审计失败单独通知。
 
 `PluginRegistry` 提供 `install`、`upgrade`、`deploy`、`enable`、`disable`、`move`、`uninstall`、`get`、
 `list`、`watch` 和 `history`。`RegistrySnapshot.desiredGraph()` 保留整个目标树，`get/list` 只投影插件，
@@ -188,8 +188,11 @@ META-INF/fibra/plugin.yaml
 内部 manifest 是 `id`、`version`、可选的 `entrypoint` 和 `requires` 的唯一真源。可运行 artifact
 只有一个入口；只承载共享类型的 contract-only artifact 省略入口，但仍参与 SemVer 依赖解析和
 ClassSpace。同一安装包的主 JAR 与 `lib/` 私有依赖使用同一隔离 ClassLoader，主 JAR 优先，私有 JAR
-按路径顺序读取；插件间依赖仍沿 manifest 声明的图委派。所有包内 classpath JAR 都禁止声明非空
-`Class-Path`。ClassSpace 按 dependency-first 打开并按 dependent-first 关闭。
+按路径顺序读取；不同插件可以各自携带同一库的相同或不同版本。插件间依赖沿 manifest 声明顺序委派，
+依赖方缺类时第一条成功路径胜出；这不让不同 loader 定义的同名类型可以跨方法签名、Service 或 DTO
+互换，共享契约必须由唯一宿主或 contract artifact 定义。所有包内 classpath JAR 都禁止声明非空
+`Class-Path`。同一安装包内的重复有效类直接拒绝；ClassSpace 按 dependency-first 打开并按
+dependent-first 关闭。
 
 ## Node 插件入口
 

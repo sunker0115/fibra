@@ -2,6 +2,11 @@ package com.sstlfsj.fibra.runtime.node;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.core.StreamReadFeature;
+import tools.jackson.core.json.JsonFactory;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,6 +17,8 @@ import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
@@ -21,6 +28,10 @@ final class NodeProcessUnit implements AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger(NodeProcessUnit.class);
     private static final String SUPERVISOR_RESOURCE =
         "/com/sstlfsj/fibra/runtime/node/node-process-supervisor.mjs";
+    private static final JsonMapper JSON = JsonMapper.builder(JsonFactory.builder()
+            .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build())
+        .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+        .build();
 
     private final Path sessionDirectory;
     private final Path terminationStatus;
@@ -28,6 +39,11 @@ final class NodeProcessUnit implements AutoCloseable {
     private final Duration terminateTimeout;
     private final AtomicBoolean closing = new AtomicBoolean();
     private final CompletableFuture<Void> closeCompletion = new CompletableFuture<>();
+    private FinalState finalState;
+
+    record PayloadOutcome(Integer exitCode, String signal, String startFailure) { }
+
+    record FinalState(PayloadOutcome payload, String range) { }
 
     NodeProcessUnit(Path sessionDirectory, Path terminationStatus, Process supervisor,
                     Duration terminateTimeout) {
@@ -95,6 +111,53 @@ final class NodeProcessUnit implements AutoCloseable {
         return supervisor.onExit();
     }
 
+    synchronized FinalState finalState() {
+        if (finalState != null) {
+            return finalState;
+        }
+        if (supervisor.isAlive()) {
+            throw new IllegalStateException("Node process supervisor is still running");
+        }
+        try {
+            Map<String, Object> state = JSON.readValue(Files.readString(terminationStatus),
+                new TypeReference<>() { });
+            if (state == null || !state.keySet().equals(Set.of("payload", "range"))
+                || !(state.get("range") instanceof String range)
+                || !(range.equals("QUIESCENT") || range.equals("FAILED"))) {
+                throw new IllegalArgumentException("Invalid Node process final state fields");
+            }
+            if (state.get("payload") == null && range.equals("FAILED")) {
+                finalState = new FinalState(null, range);
+                return finalState;
+            }
+            if (!(state.get("payload") instanceof Map<?, ?> payload)) {
+                throw new IllegalArgumentException("Missing Node payload outcome");
+            }
+            PayloadOutcome outcome;
+            if ("EXITED".equals(payload.get("kind"))
+                && payload.keySet().equals(Set.of("kind", "exitCode"))
+                && payload.get("exitCode") instanceof Integer exitCode) {
+                outcome = new PayloadOutcome(exitCode, null, null);
+            } else if ("SIGNALLED".equals(payload.get("kind"))
+                && payload.keySet().equals(Set.of("kind", "signal"))
+                && payload.get("signal") instanceof String signal
+                && signal.matches("SIG[A-Z0-9]+")) {
+                outcome = new PayloadOutcome(null, signal, null);
+            } else if ("START_FAILED".equals(payload.get("kind"))
+                && payload.keySet().equals(Set.of("kind", "error"))
+                && payload.get("error") instanceof String error && !error.isBlank()) {
+                outcome = new PayloadOutcome(null, null, error);
+            } else {
+                throw new IllegalArgumentException("Invalid Node payload outcome");
+            }
+            finalState = new FinalState(outcome, range);
+            return finalState;
+        } catch (IOException | RuntimeException failure) {
+            throw new NodeRpcException(NodeRpcPhase.TERMINATE,
+                "Node process supervisor did not provide a valid final state", failure);
+        }
+    }
+
     @Override
     public void close() {
         if (!closing.compareAndSet(false, true)) {
@@ -157,14 +220,8 @@ final class NodeProcessUnit implements AutoCloseable {
     }
 
     private void verifyQuiescence() {
-        final String status;
-        try {
-            status = Files.readString(terminationStatus);
-        } catch (IOException failure) {
-            throw new NodeRpcException(NodeRpcPhase.TERMINATE,
-                "Node process supervisor did not prove managed range quiescence", failure);
-        }
-        if (!"QUIESCENT\n".equals(status)) {
+        var state = finalState();
+        if (!"QUIESCENT".equals(state.range()) || supervisor.exitValue() != 0) {
             throw new NodeRpcException(NodeRpcPhase.TERMINATE,
                 "Node process supervisor reported managed range cleanup failure");
         }

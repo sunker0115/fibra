@@ -5,6 +5,7 @@ import com.sstlfsj.fibra.runtime.FibraRuntime;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -14,10 +15,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ContributionCallTest {
+    private static final Duration TIMEOUT = Duration.ofSeconds(3);
     private static final ContributionKind<CommandDescriptor, String, String> COMMAND =
         ContributionKind.local("command", CommandDescriptor.class,
             String.class, String.class);
@@ -121,6 +124,64 @@ class ContributionCallTest {
             } finally {
                 call.close();
             }
+        }
+    }
+
+    @Test
+    void activeContributionCleanupFailureRevokesAdmissionAndRetainsOtherLeases() throws Exception {
+        var runtime = FibraRuntime.create();
+        var directory = new ContributionDirectory();
+        var owner = runtime.rootScope().openChild("provider");
+        var afterDrain = new AtomicInteger();
+        var binding = new ContributionBinding<>(COMMAND, "command", new CommandDescriptor("Command"),
+            (ContributionHandler<String, String>) (invocation, input) -> Mono.just(input));
+        var registration = directory.registerAll(owner.context(), "plugin", List.of(binding),
+            () -> Mono.fromRunnable(afterDrain::incrementAndGet)).block(TIMEOUT);
+        var selected = registration.getFirst();
+        var other = directory.register(runtime.rootScope().context(), COMMAND, "other", "command",
+            new CommandDescriptor("Other"), (invocation, input) -> Mono.just(input)).block(TIMEOUT);
+        var routes = directory.current().routes();
+        var failed = routes.acquire(COMMAND, selected.id(), selected.registrationIdentity());
+        var retained = routes.acquire(COMMAND, selected.id(), selected.registrationIdentity());
+        try {
+            failed.failCleanup("active invocation cleanup failed");
+
+            assertThrows(ContributionUnavailableException.class, () -> {
+                try (var unexpected = routes.acquire(COMMAND, selected.id(), selected.registrationIdentity())) { }
+            });
+            var current = directory.current();
+            assertThrows(ContributionUnavailableException.class, () -> {
+                try (var unexpected = current.routes().acquire(COMMAND, selected.id(), selected.registrationIdentity())) { }
+            });
+            assertEquals(List.of(other.id()), current.snapshot().entries().stream()
+                .map(ContributionSnapshotEntry::id).toList());
+            try (var unaffected = current.routes().acquire(COMMAND, other.id(), other.registrationIdentity())) {
+                assertEquals("unaffected",
+                    unaffected.invoke(runtime.rootScope().context(), "unaffected").block(TIMEOUT));
+            }
+
+            var draining = selected.dispose().toFuture();
+            var closing = directory.closeAsync().toFuture();
+            assertFalse(draining.isDone());
+            assertFalse(closing.isDone());
+            assertEquals(0, afterDrain.get());
+
+            retained.close();
+            var drainFailure = assertInstanceOf(ContributionDrainException.class,
+                assertThrows(ExecutionException.class, () -> draining.get(3, TimeUnit.SECONDS)).getCause());
+            assertEquals("active invocation cleanup failed", drainFailure.detail());
+            assertSame(drainFailure, assertThrows(ExecutionException.class,
+                () -> closing.get(3, TimeUnit.SECONDS)).getCause());
+            assertSame(drainFailure, assertThrows(ExecutionException.class,
+                () -> selected.dispose().toFuture().get(3, TimeUnit.SECONDS)).getCause());
+            assertThrows(ExecutionException.class,
+                () -> owner.closeAsync().toFuture().get(3, TimeUnit.SECONDS));
+            assertEquals(0, afterDrain.get());
+        } finally {
+            failed.close();
+            retained.close();
+            directory.closeAsync().onErrorResume(ignored -> Mono.empty()).block(TIMEOUT);
+            runtime.closeAsync().onErrorResume(ignored -> Mono.empty()).block(TIMEOUT);
         }
     }
 

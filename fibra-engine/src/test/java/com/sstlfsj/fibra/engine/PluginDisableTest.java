@@ -262,7 +262,9 @@ class PluginDisableTest {
     }
 
     private static PublishedView await(FibraEngine engine, Predicate<PublishedView> condition) {
-        return engine.published().views().filter(condition).next().block(TIMEOUT);
+        // 先订阅后读取当前事实，覆盖调用 await 前已完成的变更且不留下订阅空隙。
+        return reactor.core.publisher.Flux.merge(engine.published().views(),
+            Mono.fromSupplier(engine.published()::current)).filter(condition).next().block(TIMEOUT);
     }
 
     private static final class RecordingStateStore implements EngineStateStore {

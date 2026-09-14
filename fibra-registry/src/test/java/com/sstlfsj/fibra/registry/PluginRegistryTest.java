@@ -25,6 +25,7 @@ import com.sstlfsj.fibra.engine.RuntimeCatalog;
 import com.sstlfsj.fibra.engine.RuntimeResourceOwner;
 import com.sstlfsj.fibra.engine.RuntimeResourceSnapshot;
 import com.sstlfsj.fibra.engine.RuntimeResourceUpdate;
+import com.sstlfsj.fibra.engine.TargetSaveState;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import reactor.core.publisher.Mono;
@@ -164,7 +165,7 @@ class PluginRegistryTest {
                 .doOnError(observed::set).onErrorComplete().block();
 
             var failure = assertInstanceOf(EngineChangeException.class, observed.get());
-            assertTrue(failure.targetSaved());
+            assertEquals(TargetSaveState.SAVED, failure.targetSaveState());
             assertTrue(containsThrowable(failure, startupFailure));
             assertFalse(containsThrowable(failure, auditFailure));
             var diagnostic = registry.auditFailures().getFirst();
@@ -238,7 +239,7 @@ class PluginRegistryTest {
                 .doOnError(observed::set).onErrorComplete().block();
 
             var failure = assertInstanceOf(EngineChangeException.class, observed.get());
-            assertFalse(failure.targetSaved());
+            assertEquals(TargetSaveState.UNCONFIRMED, failure.targetSaveState());
             assertInstanceOf(EngineStateStore.SaveUnconfirmedException.class,
                 failure.getCause());
             assertEquals(TargetSaveState.UNCONFIRMED,

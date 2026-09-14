@@ -44,6 +44,8 @@ class EngineArtifactRecoveryTest {
                 () -> engine.start().block(TIMEOUT));
 
             assertEquals("saved artifact is missing: sample@" + missingRevision, failure.getMessage());
+            assertEquals(TargetSaveState.SAVED,
+                engine.published().current().engineDiagnostics().targetSaveState());
             assertFailedWithMutationGateClosed(engine);
             assertArrayEquals(targetBytes, Files.readAllBytes(stateRoot.resolve("target.json")));
         }
@@ -65,6 +67,8 @@ class EngineArtifactRecoveryTest {
                 () -> engine.start().block(TIMEOUT));
 
             assertEquals(ArtifactPhase.RECOVER, failure.phase());
+            assertEquals(TargetSaveState.SAVED,
+                engine.published().current().engineDiagnostics().targetSaveState());
             assertFailedWithMutationGateClosed(engine);
             assertArrayEquals(targetBytes, Files.readAllBytes(stateRoot.resolve("target.json")));
             assertArrayEquals(corruptContent, Files.readAllBytes(saved.location()));

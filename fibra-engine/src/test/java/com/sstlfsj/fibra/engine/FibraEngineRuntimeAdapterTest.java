@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import reactor.core.publisher.Mono;
 
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -22,10 +24,65 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FibraEngineRuntimeAdapterTest {
+    @Test
+    void repeatedStartSharesBootstrapCompletionButReturnsTheCurrentView() {
+        var loads = new AtomicInteger();
+        try (var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty())
+            .initialArtifacts(() -> {
+                loads.incrementAndGet();
+                return List.of();
+            }).build()) {
+            var signal = engine.start();
+            var initial = signal.block();
+            var current = engine.submit(new ReplaceDesiredGraph(initial.viewRevision(),
+                initial.engine().desiredSource().revision(), new DesiredInputGraph(List.of())))
+                .block().view();
+
+            assertEquals(1, loads.get());
+            assertEquals(current.viewRevision(), signal.block().viewRevision(),
+                "retained start publisher must project the current view");
+            assertEquals(current, engine.start().block());
+            assertEquals(1, loads.get(), "repeat subscriptions must not bootstrap again");
+        }
+    }
+
+    @Test
+    void failedStartupDoesNotCacheTheOriginalExceptionAndItsViewAfterEngineClose() throws Exception {
+        var saves = new AtomicInteger();
+        var stateStore = new EngineStateStore() {
+            @Override public Optional<DeploymentManifest> load() { return Optional.empty(); }
+            @Override public void save(DeploymentManifest manifest) {
+                saves.incrementAndGet();
+                throw new IllegalStateException("startup save failed");
+            }
+        };
+        var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty()).stateStore(stateStore).build();
+        var failure = startupFailure(engine);
+        engine.close();
+        try {
+            var repeated = assertThrows(EngineChangeException.class, () -> engine.start().block());
+            assertEquals(engine.published().current(), repeated.view());
+            assertEquals(TargetSaveState.NOT_SAVED, repeated.targetSaveState());
+            assertEquals(1, saves.get(), "failed startup must not bootstrap again");
+            for (var attempt = 0; attempt < 60 && failure.get() != null; attempt++) {
+                System.gc();
+                Thread.sleep(25);
+            }
+            assertNull(failure.get(), "completed startup cache retains the original EngineChangeException");
+        } finally {
+            Reference.reachabilityFence(engine);
+        }
+    }
+
+    private static WeakReference<EngineChangeException> startupFailure(FibraEngine engine) {
+        return new WeakReference<>(assertThrows(EngineChangeException.class, () -> engine.start().block()));
+    }
+
     @Test
     void desiredOnlyChangeDoesNotCreateAnotherRuntimeUpdate(@TempDir Path work) throws Exception {
         var id = new RuntimeId("fake");
@@ -229,7 +286,7 @@ class FibraEngineRuntimeAdapterTest {
             .initialArtifacts(() -> List.of(first, missing)).build()) {
             var failure = assertThrows(EngineChangeException.class, () -> engine.start().block());
 
-            assertFalse(failure.targetSaved());
+            assertEquals(TargetSaveState.NOT_SAVED, failure.targetSaveState());
             assertTrue(stateStore.load().isEmpty());
             assertTrue(store.history(first.artifactId()).isEmpty());
             assertTransactionsEmpty(artifactRoot);
@@ -255,7 +312,7 @@ class FibraEngineRuntimeAdapterTest {
             .initialArtifacts(() -> List.of(artifact)).build()) {
             var failure = assertThrows(EngineChangeException.class, () -> engine.start().block());
 
-            assertFalse(failure.targetSaved());
+            assertEquals(TargetSaveState.NOT_SAVED, failure.targetSaveState());
             assertTrue(stateStore.load().isEmpty());
             assertTrue(store.history(artifactId).isEmpty());
             assertTransactionsEmpty(artifactRoot);
@@ -281,7 +338,7 @@ class FibraEngineRuntimeAdapterTest {
             .initialArtifacts(() -> List.of(artifact)).build()) {
             var failure = assertThrows(EngineChangeException.class, () -> engine.start().block());
 
-            assertTrue(failure.targetSaved());
+            assertEquals(TargetSaveState.SAVED, failure.targetSaveState());
             assertEquals(1, stateStore.saves.get());
             assertEquals(graph, stateStore.load().orElseThrow().desiredGraph());
             assertEquals(1, store.history(artifactId).size());
@@ -307,7 +364,7 @@ class FibraEngineRuntimeAdapterTest {
                     .runtimeId(new RuntimeId("missing")).version("1.0.0")
                     .source(source).build()).block());
 
-            assertFalse(failure.targetSaved());
+            assertEquals(TargetSaveState.NOT_SAVED, failure.targetSaveState());
             assertTrue(failure.getCause() instanceof UnknownRuntimeException);
             var current = engine.published().current();
             assertEquals(started.engine().state(), current.engine().state());

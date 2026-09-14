@@ -64,11 +64,12 @@ class AutomaticDesiredRefreshTest {
             var initial = engine.start().block(TIMEOUT);
             var identity = initial.engine().instances().get("sample").identity();
 
-            write(root, "two");
-            var refreshed = engine.published().views()
+            var refresh = engine.published().views()
                 .filter(view -> LiteralValue.of("two").equals(
                     view.engine().instances().get("sample").config()))
-                .next().block(TIMEOUT);
+                .next().toFuture();
+            write(root, "two");
+            var refreshed = Mono.fromFuture(refresh).block(TIMEOUT);
 
             assertEquals(identity,
                 refreshed.engine().instances().get("sample").identity());
@@ -86,13 +87,13 @@ class AutomaticDesiredRefreshTest {
             var initial = engine.start().block(TIMEOUT);
             var transaction = repository.prepareReplace(
                 repository.load().snapshot().revision(), graph("two"));
-            transaction.commit();
-            transaction.close();
-
-            var refreshed = engine.published().views()
+            var refresh = engine.published().views()
                 .filter(view -> LiteralValue.of("two").equals(
                     view.engine().instances().get("sample").config()))
-                .next().block(TIMEOUT);
+                .next().toFuture();
+            transaction.commit();
+            transaction.close();
+            var refreshed = Mono.fromFuture(refresh).block(TIMEOUT);
 
             assertEquals(initial.engine().instances().get("sample").identity(),
                 refreshed.engine().instances().get("sample").identity());
@@ -113,10 +114,11 @@ class AutomaticDesiredRefreshTest {
             var initial = engine.start().block(TIMEOUT);
             var identity = initial.engine().instances().get("sample").identity();
 
-            Files.delete(root);
-            var failed = engine.published().views()
+            var failure = engine.published().views()
                 .filter(view -> view.engineDiagnostics().phase() == ChangePhase.FAILED)
-                .next().block(TIMEOUT);
+                .next().toFuture();
+            Files.delete(root);
+            var failed = Mono.fromFuture(failure).block(TIMEOUT);
             assertNotNull(failed.engineDiagnostics().failure());
             assertTrue(failed.engineDiagnostics().targetSatisfied());
             assertTrue(failed.engineDiagnostics().mutationGateOpen());
@@ -125,11 +127,12 @@ class AutomaticDesiredRefreshTest {
             assertEquals(LiteralValue.of("one"),
                 failed.engine().instances().get("sample").config());
 
-            write(root, "one");
-            var recovered = engine.published().views()
+            var recovery = engine.published().views()
                 .filter(view -> view.engineDiagnostics().phase() == ChangePhase.IDLE
                     && view.engineDiagnostics().failure() == null)
-                .next().block(TIMEOUT);
+                .next().toFuture();
+            write(root, "one");
+            var recovered = Mono.fromFuture(recovery).block(TIMEOUT);
             assertNull(recovered.engineDiagnostics().failure());
             assertTrue(recovered.engineDiagnostics().targetSatisfied());
             assertEquals(initial.engine().desiredSource(), recovered.engine().desiredSource());
@@ -161,6 +164,9 @@ class AutomaticDesiredRefreshTest {
             var targetRevision = initial.engineDiagnostics().targetRevision();
             var sourceRevision = initial.engine().desiredSource().revision();
 
+            var failure = engine.published().views()
+                .filter(view -> view.engineDiagnostics().phase() == ChangePhase.FAILED)
+                .next().toFuture();
             Files.writeString(root, """
                 - id: sample
                   plugin: sample
@@ -168,9 +174,7 @@ class AutomaticDesiredRefreshTest {
                   config: {$ref: /value}
                 """);
             var rejectedRevision = repository.load().snapshot().revision();
-            var failed = engine.published().views()
-                .filter(view -> view.engineDiagnostics().phase() == ChangePhase.FAILED)
-                .next().block(TIMEOUT);
+            var failed = Mono.fromFuture(failure).block(TIMEOUT);
 
             assertNotNull(failed.engineDiagnostics().failure());
             assertTrue(failed.engineDiagnostics().targetSatisfied());
@@ -183,6 +187,11 @@ class AutomaticDesiredRefreshTest {
             assertEquals(1, starts.get());
             assertEquals(0, stops.get());
 
+            var recovery = engine.published().views()
+                .filter(view -> view.engineDiagnostics().phase() == ChangePhase.IDLE
+                    && LiteralValue.of("two").equals(
+                    view.engine().instances().get("sample").config()))
+                .next().toFuture();
             Files.writeString(root, """
                 - id: sample
                   plugin: sample
@@ -191,11 +200,7 @@ class AutomaticDesiredRefreshTest {
                   config: {$ref: /value}
                 """);
             var recoveredRevision = repository.load().snapshot().revision();
-            var recovered = engine.published().views()
-                .filter(view -> view.engineDiagnostics().phase() == ChangePhase.IDLE
-                    && LiteralValue.of("two").equals(
-                    view.engine().instances().get("sample").config()))
-                .next().block(TIMEOUT);
+            var recovered = Mono.fromFuture(recovery).block(TIMEOUT);
 
             assertNull(recovered.engineDiagnostics().failure());
             assertTrue(recovered.engineDiagnostics().targetSatisfied());
@@ -249,10 +254,11 @@ class AutomaticDesiredRefreshTest {
                 root, ConfigLimits.defaults()))
             .catalog(catalog(definition)).autoRefresh(Duration.ofMillis(25)).build()) {
             engine.start().block(TIMEOUT);
-            Files.delete(root);
-            var sourceFailed = engine.published().views()
+            var sourceFailure = engine.published().views()
                 .filter(view -> view.engineDiagnostics().phase() == ChangePhase.FAILED)
-                .next().block(TIMEOUT);
+                .next().toFuture();
+            Files.delete(root);
+            var sourceFailed = Mono.fromFuture(sourceFailure).block(TIMEOUT);
             assertTrue(sourceFailed.engineDiagnostics().targetSatisfied());
 
             var failed = assertThrows(EngineChangeException.class,
@@ -285,11 +291,12 @@ class AutomaticDesiredRefreshTest {
                 .engine().instances().get("sample").config());
             assertEquals(managed.viewRevision(), engine.published().current().viewRevision());
 
-            write(root, "next-source");
-            var imported = engine.published().views()
+            var sourceImport = engine.published().views()
                 .filter(view -> LiteralValue.of("next-source").equals(
                     view.engine().instances().get("sample").config()))
-                .next().block(TIMEOUT);
+                .next().toFuture();
+            write(root, "next-source");
+            var imported = Mono.fromFuture(sourceImport).block(TIMEOUT);
             assertTrue(imported.engineDiagnostics().targetSatisfied());
         }
     }
@@ -313,11 +320,12 @@ class AutomaticDesiredRefreshTest {
             assertEquals(LiteralValue.of("saved"), engine.published().current()
                 .engine().instances().get("sample").config());
 
-            write(root, "changed");
-            var imported = engine.published().views()
+            var sourceImport = engine.published().views()
                 .filter(view -> LiteralValue.of("changed").equals(
                     view.engine().instances().get("sample").config()))
-                .next().block(TIMEOUT);
+                .next().toFuture();
+            write(root, "changed");
+            var imported = Mono.fromFuture(sourceImport).block(TIMEOUT);
             assertTrue(imported.engineDiagnostics().targetSatisfied());
         }
     }
@@ -333,11 +341,12 @@ class AutomaticDesiredRefreshTest {
         try (var engine = FibraEngine.builder(unavailable)
             .stateStore(stateStore).catalog(catalog(definition))
             .autoRefresh(Duration.ofHours(1)).build()) {
-            var initial = engine.start().block(TIMEOUT);
-            var failed = engine.published().views()
+            var failure = engine.published().views()
                 .filter(view -> view.engineDiagnostics().phase() == ChangePhase.FAILED
                     && view.engineDiagnostics().failure() != null)
-                .next().block(Duration.ofSeconds(1));
+                .next().toFuture();
+            var initial = engine.start().block(TIMEOUT);
+            var failed = Mono.fromFuture(failure).block(Duration.ofSeconds(1));
 
             assertEquals(LiteralValue.of("saved"), initial.engine().instances()
                 .get("sample").config());
@@ -365,12 +374,13 @@ class AutomaticDesiredRefreshTest {
 
             var transaction = delegate.prepareReplace(
                 delegate.load().snapshot().revision(), graph("changed"));
-            transaction.commit();
-            transaction.close();
-            var imported = engine.published().views()
+            var sourceImport = engine.published().views()
                 .filter(view -> LiteralValue.of("changed").equals(
                     view.engine().instances().get("sample").config()))
-                .next().block(TIMEOUT);
+                .next().toFuture();
+            transaction.commit();
+            transaction.close();
+            var imported = Mono.fromFuture(sourceImport).block(TIMEOUT);
             assertTrue(imported.engineDiagnostics().targetSatisfied());
         }
     }
@@ -385,10 +395,11 @@ class AutomaticDesiredRefreshTest {
         try (var engine = FibraEngine.builder(repository)
             .stateStore(stateStore).catalog(catalog(definition))
             .autoRefresh(Duration.ofHours(1)).build()) {
-            engine.start().block(TIMEOUT);
-            var failed = engine.published().views()
+            var failure = engine.published().views()
                 .filter(view -> view.engineDiagnostics().phase() == ChangePhase.FAILED)
-                .next().block(TIMEOUT);
+                .next().toFuture();
+            engine.start().block(TIMEOUT);
+            var failed = Mono.fromFuture(failure).block(TIMEOUT);
 
             var refreshed = engine.submit(new RefreshDesired(failed.viewRevision()))
                 .block(TIMEOUT).view();

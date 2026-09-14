@@ -7,6 +7,7 @@ import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.PluginCatalog;
 import com.sstlfsj.fibra.engine.PluginCatalogEntry;
+import com.sstlfsj.fibra.engine.TargetSaveState;
 import com.sstlfsj.fibra.registry.PluginAuditEntry;
 import com.sstlfsj.fibra.registry.PluginAuditRepository;
 import com.sstlfsj.fibra.registry.PluginEnableRequest;
@@ -75,7 +76,7 @@ public class EngineTransactionBenchmark {
         @Override
         public PluginAuditEntry append(String operation, String target,
                                        boolean succeeded,
-                                       com.sstlfsj.fibra.registry.TargetSaveState targetSaveState,
+                                       TargetSaveState targetSaveState,
                                        String viewRevision,
                                        String detail) {
             return PluginAuditEntry.builder().sequence(1).timestamp(Instant.EPOCH)

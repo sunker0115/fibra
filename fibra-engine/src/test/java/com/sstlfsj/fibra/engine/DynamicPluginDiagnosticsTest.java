@@ -65,11 +65,14 @@ class DynamicPluginDiagnosticsTest {
             var initial = engine.start().block(Duration.ofSeconds(5));
             var original = parentContext.get().plugins().current().orElseThrow();
             original.dispose().block(Duration.ofSeconds(5));
+            var appeared = engine.published().views().filter(value -> value.diagnostics().plugins().stream()
+                .anyMatch(plugin -> plugin.identity() != original.identity()
+                    && plugin.state() == PluginInstanceState.ACTIVE)).next().toFuture();
             var replacement = parentContext.get().scope().context().plugins().mount("parent", definition.prepare(null));
             replacement.settled().block(Duration.ofSeconds(5));
-            var view = engine.published().views().filter(value -> value.diagnostics().plugins().stream()
-                .anyMatch(plugin -> plugin.identity() == replacement.identity()
-                    && plugin.state() == PluginInstanceState.ACTIVE)).next().block(Duration.ofSeconds(5));
+            var view = Mono.fromFuture(appeared).block(Duration.ofSeconds(5));
+            assertTrue(view.diagnostics().plugins().stream().anyMatch(plugin ->
+                plugin.identity() == replacement.identity() && plugin.state() == PluginInstanceState.ACTIVE));
 
             var managed = view.engine().instances().get("parent");
             assertEquals(initial.engine().instances().get("parent").identity(), managed.identity());

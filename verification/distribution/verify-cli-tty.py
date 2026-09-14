@@ -13,6 +13,14 @@ import time
 
 
 ANSI = re.compile(rb"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\))")
+DIAGNOSTIC_TAIL_BYTES = 16 * 1024
+
+
+def diagnostic_tail(value, limit=DIAGNOSTIC_TAIL_BYTES):
+    data = bytes(value)
+    tail = data[-limit:] if limit else b""
+    omitted = len(data) - len(tail)
+    return f"bytes={len(data)} omitted={omitted} tail={tail!r}"
 
 
 class Session:
@@ -51,7 +59,7 @@ class Session:
         raise AssertionError(
             f"等待交互读取进入非规范模式超时\n"
             f"terminal_attributes={self.terminal_attributes()}\n"
-            f"stdout={bytes(self.stdout)!r}\nterminal={bytes(self.terminal)!r}")
+            f"stdout={diagnostic_tail(self.stdout)}\nterminal={diagnostic_tail(self.terminal)}")
 
     def wait_for(self, stream, expected, count=1, timeout=10):
         deadline = time.monotonic() + timeout
@@ -61,8 +69,8 @@ class Session:
                 return
             self.pump(min(0.1, deadline - time.monotonic()))
         raise AssertionError(
-            f"等待 {stream} 中的 {expected!r} 超时\nstdout={bytes(self.stdout)!r}\n"
-            f"terminal={bytes(self.terminal)!r}")
+            f"等待 {stream} 中的 {expected!r} 超时\nstdout={diagnostic_tail(self.stdout)}\n"
+            f"terminal={diagnostic_tail(self.terminal)}")
 
     def pump(self, timeout):
         descriptors = [self.master]
@@ -92,13 +100,13 @@ class Session:
             raise AssertionError(
                 f"交互 fixture 未在 10 秒内退出\n"
                 f"SIGQUIT={thread_dump}\nterminal_attributes={terminal_attributes}\n"
-                f"stdout={bytes(self.stdout)!r}\nterminal={bytes(self.terminal)!r}")
+                f"stdout={diagnostic_tail(self.stdout)}\nterminal={diagnostic_tail(self.terminal)}")
         for _ in range(5):
             self.pump(0)
         if self.process.returncode != 0:
             raise AssertionError(
                 f"交互 fixture 退出码 {self.process.returncode}\n"
-                f"stdout={bytes(self.stdout)!r}\nterminal={bytes(self.terminal)!r}")
+                f"stdout={diagnostic_tail(self.stdout)}\nterminal={diagnostic_tail(self.terminal)}")
         self.close_master()
 
     def abort(self):
@@ -168,11 +176,11 @@ def first_session(java, classpath, home):
 
         summary = bytes(session.stdout)
         if b"PASTE:a\n/b\x03,UP,ESCAPE,TAB+SHIFT,ENTER+CONTROL" not in summary:
-            raise AssertionError(f"renderer 未收到完整解码输入：{summary!r}")
+            raise AssertionError(f"renderer 未收到完整解码输入：{diagnostic_tail(summary)}")
         resize_match = re.search(rb"resizes=(\d+)", summary)
         if (b"size=32x10" not in summary or resize_match is None
                 or int(resize_match.group(1)) < 2):
-            raise AssertionError(f"renderer 未观察初始尺寸和 WINCH 后尺寸：{summary!r}")
+            raise AssertionError(f"renderer 未观察初始尺寸和 WINCH 后尺寸：{diagnostic_tail(summary)}")
 
         session.send(b"fail-screen\r")
         session.wait_for("terminal", b"expected-render-failure")
@@ -193,7 +201,7 @@ def first_session(java, classpath, home):
 
         if re.search(rb"\x1b\[(?:1;36|36;1)m", session.terminal) is None:
             raise AssertionError(
-                f"真实 TTY 输出未包含已知命令的 cyan/bold 高亮：{bytes(session.terminal)!r}")
+                f"真实 TTY 输出未包含已知命令的 cyan/bold 高亮：{diagnostic_tail(session.terminal)}")
         terminal = session.plain_terminal()
         for expected in (b"background-ready", b"inputs=", b"size=32x10", b"consumer> "):
             if expected not in terminal:

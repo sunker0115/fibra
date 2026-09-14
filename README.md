@@ -10,7 +10,8 @@ CLI 应用。
 当前开发版本为 `0.5.0-SNAPSHOT`，是 vNext 重构后的开发基线，不保留 `0.4.x` 兼容层。长期
 `RuntimeDomain`、实例差量更新、Java/Node runtime、fs/search/shell/storage 正式插件、动态 CLI command、
 安全历史、补全和高亮、调用级取消与信号协调、受控终端租约、渐进 renderer、可执行 ZIP 和仓库外消费均已
-交付。CLI 公共边界已经冻结；同一 `0.5.x` 版本列只接受二进制兼容的增加或修复。
+交付。当前在 `0.5.0-SNAPSHOT` 上按最终架构打磨底座，不为快照迭代升级版本或保留兼容层；公开契约
+变更必须同步更新权威架构、签名基线、契约测试与仓外消费者。
 
 ## 快速开始
 
@@ -245,6 +246,9 @@ contributions:
 
 runtime 从 ArtifactStore 受管包的 payload 解析入口。宿主使用参数数组启动随模块发布的进程监督器，
 再由监督器启动该入口，全程不经过 Shell。
+`node:fs`、`node:net`、`node:child_process` 等 `node:` 引用是 Node 内建模块，不需要随包安装。第三方 npm
+包应在发布前打包进入口文件，或以不含符号链接的生产 `node_modules` 放入 payload；运行时不执行
+`npm install`，也不联网补依赖。
 runtime 内部的 `NodeSidecar` 只处理有界 JSON-RPC、逐请求 deadline/取消、心跳和异常退出；远端请求先登记为
 调用 Scope 的资源，取消只影响该请求并等待原请求终态。取消宽限耗尽、协议故障、心跳失败或异常退出才
 升级为实例级故障。`NodeProcessUnit` 负责一个可等待的受管进程范围，按“stdin EOF、软终止、强终止、
@@ -254,7 +258,14 @@ runtime 内部的 `NodeSidecar` 只处理有界 JSON-RPC、逐请求 deadline/�
 
 ## 托管与 Spring Boot
 
-需要动态安装和管理时依赖 `fibra-engine` 或 `fibra-registry`；宿主只通过 `start()`、`submit(EngineCommand)` 和稳定的 `published()` 门面工作。`PublishedRuntime.current()` / `views()` 返回状态、诊断和贡献一致的不可变视图，能力调用必须携带选择能力时看到的 `viewRevision`。所有外部变更经过同一个命令队列：预检、保存完整目标、差量协调、发布实际结果。目标保存成功不等于插件已经达成目标；保存后的运行故障不会反写旧目标。恢复只按完整目标读取精确制品，不回退旧版本或猜测源文件。仅在没有已保存目标时，宿主提供的初始制品和配置树才进入同一个首次启动 `ChangeSet`；已有持久目标启动时不会被插件目录、默认空配置或 watcher 静默覆盖。
+需要动态安装和管理时依赖 `fibra-engine` 或 `fibra-registry`；宿主只通过 `start()`、
+`submit(EngineCommand)` 和稳定的 `published()` 门面工作。`PublishedRuntime.current()` 读取当前不可变事实，
+`views()` 只发布订阅后的变化、不重放历史，慢订阅者可能合并中间状态；需要同时覆盖当前和后续变化时，
+先订阅 `views()`，再读取 `current()`。能力调用必须携带选择能力时看到的 `viewRevision`。所有外部变更经过
+同一个命令队列：预检、保存完整目标、差量协调、发布实际结果。目标保存成功不等于插件已经达成目标；
+保存后的运行故障不会反写旧目标。恢复只按完整目标读取精确制品，不回退旧版本或猜测源文件。仅在没有
+已保存目标时，宿主提供的初始制品和配置树才进入同一个首次启动 `ChangeSet`；已有持久目标启动时不会被
+插件目录、默认空配置或 watcher 静默覆盖。
 
 Spring Boot 只需引入：
 
@@ -296,8 +307,8 @@ payload JAR；这些制品已纳入发布、可复现和临时仓部署清单。
 command 插件，验证执行、help 与停用后消失。完整 reactor 覆盖真实 JAR、真实 Node 进程、目标恢复、Spring、archetype、
 架构边界和 JMH 编译门禁。
 
-CLI 公共 API、全仓、可复现制品、空 Maven 仓消费者和解压启动门禁必须随发行边界变化统一重跑，不能用
-较早提交或本地缓存结果替代当前发布证据。
+CLI 公共 API、全仓、可复现制品、复用现有 Maven 本地仓库的仓外消费者和解压启动门禁必须随发行边界
+变化统一重跑，不能用较早提交的结果替代当前发布证据。
 
 ## 深入阅读
 

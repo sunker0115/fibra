@@ -36,11 +36,13 @@ scripts/verify-distribution.sh
 PublishedRuntime、PluginRegistry、Spring Boot、archetype、公共 API 和 JMH 编译。
 
 可复现脚本对二十七个发布模块的主 JAR、sources、Javadoc 与展开 POM 逐字节比较。分发脚本把这些制品
-部署到临时文件仓库，再从空 Maven 本地仓库构建仓库外的 core、真实多插件公开 API 调用、Engine、
-Spring Boot 和 archetype 消费场景。仓外 Java 插件以 `provided` 方式消费 `fibra-cli-api`，分发脚本从
-ZIP 启动器执行动态命令与 help，再停用插件并验证命令消失。
+部署到临时文件仓库；所有 Maven 阶段统一复用现有 `~/.m2`，不创建或清空 Maven 本地仓库。仓库外的
+core、真实多插件公开 API 调用、Engine、Spring Boot 和 archetype 消费场景仍在复制出的独立目录构建，
+并核对本机缓存与临时发布目标中的正式制品字节一致。仓外 Java 插件以 `provided` 方式消费
+`fibra-cli-api`，分发脚本从 ZIP 启动器执行动态命令与 help，再停用插件并验证命令消失。
 
-日常逻辑修改使用已有依赖缓存执行 `mvn -o verify`。archetype 集成测试同样复用当前本地仓库，先暂存本次构建的 Fibra API，再生成并验证真实插件；不为每轮验证另建空依赖仓库。空仓外部消费只在最终分发门禁统一执行。
+日常逻辑修改使用已有依赖缓存执行 `mvn -o verify`。archetype 集成测试与最终分发门禁同样复用当前本地
+仓库，不为验证另建空依赖仓库。
 
 ## 插件制品
 

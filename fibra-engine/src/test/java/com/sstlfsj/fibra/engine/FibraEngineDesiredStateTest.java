@@ -170,11 +170,12 @@ class FibraEngineDesiredStateTest {
                 literal -> (String) literal))).build()) {
             var started = engine.start().block();
 
-            health.tryEmitError(new IllegalStateException("process exited"));
-            var failed = engine.published().views()
+            var failure = engine.published().views()
                 .filter(value -> value.engine().instances().get("sample").state()
                     == PluginInstanceState.FAILED)
-                .next().block(Duration.ofSeconds(5));
+                .next().toFuture();
+            health.tryEmitError(new IllegalStateException("process exited"));
+            var failed = Mono.fromFuture(failure).block(Duration.ofSeconds(5));
 
             assertNotEquals(started.viewRevision(), failed.viewRevision());
             assertEquals(EngineState.RUNNING, failed.engine().state());

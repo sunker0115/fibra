@@ -44,7 +44,9 @@ payload=lib/main.jar
 Java 主 JAR 和 `lib/` 中的私有依赖构成同一安装单元；四个动态 contract 仍分别作为独立安装包，
 不能复制到 consumer/provider 的私有依赖中。主 JAR 的 `META-INF/fibra/plugin.yaml` 是
 `id`、`version`、`requires` 和 `entrypoint` 的唯一真源。主 JAR 先于按路径排序的私有 JAR 装载，
-共用同一 ClassLoader，插件间类型沿显式依赖图委派；这些 JAR 禁止通过非空 `Class-Path` 扩展路径。
+共用同一 ClassLoader，插件间类型沿 `requires` 声明顺序委派。不同插件可以分别携带同一库的不同版本；
+同一插件包内不允许重复有效类，跨插件共享类型必须只由一个 contract 或宿主定义。这些 JAR 禁止通过
+非空 `Class-Path` 扩展路径。
 
 Node 安装包使用 `runtime=node`，payload 指向包内独立目录；该目录的 `fibra-plugin.yaml` 是插件
 标识、版本、入口、协议和贡献声明的唯一真源。布局描述不重复这些运行时字段。payload 必须存在且

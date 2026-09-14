@@ -4,6 +4,7 @@ import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.bridge.ContributionId;
 import com.sstlfsj.fibra.bridge.ContributionKind;
 import com.sstlfsj.fibra.bridge.ContributionServices;
+import com.sstlfsj.fibra.bridge.ContributionUnavailableException;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
@@ -16,8 +17,10 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -65,6 +68,10 @@ class PublishedRuntimeLeaseTest {
             assertThrows(java.util.concurrent.ExecutionException.class, () -> changing.get(5, TimeUnit.SECONDS));
             assertEquals(0, providerReleases.get());
             assertFalse(engine.published().current().engineDiagnostics().mutationGateOpen());
+            assertTrue(engine.published().current().engineDiagnostics().failure()
+                .contains(ChangePhase.RECONCILING.name()));
+            assertTrue(engine.published().current().engineDiagnostics().failure()
+                .contains("invocation child could not release its resource"));
             assertTrue(engine.published().current().diagnostics().cleanupFailures().stream()
                 .anyMatch(failure -> failure.failure().contains("invocation child")));
             assertThrows(RuntimeException.class, () -> engine.closeAsync().block(TIMEOUT));
@@ -151,6 +158,74 @@ class PublishedRuntimeLeaseTest {
                 cleanup.tryEmitEmpty();
                 closing.get(5, TimeUnit.SECONDS);
             }
+        }
+    }
+
+    @Test
+    void cancellingAnExecutingHandlerKeepsDisableWaitingForInvocationCleanup() throws Exception {
+        var response = Sinks.<String>one();
+        var cleanup = Sinks.<Void>one();
+        var handlerStarted = new CountDownLatch(1);
+        var handlerCancelled = new CountDownLatch(1);
+        var cleanupStarted = new CountDownLatch(1);
+        var providerReleases = new AtomicInteger();
+        var handlerCalls = new AtomicInteger();
+        var definition = PluginDefinition.builder("command", String.class, () -> (context, config) -> {
+            context.effects().add(() -> Mono.fromRunnable(providerReleases::incrementAndGet));
+            return context.services().require(ContributionServices.REGISTRAR)
+                .register(context, COMMAND, "command", ID.localName(), new Descriptor("Run"),
+                    (invocation, input) -> {
+                        handlerCalls.incrementAndGet();
+                        invocation.effects().add(() -> Mono.defer(() -> {
+                            cleanupStarted.countDown();
+                            return cleanup.asMono();
+                        }));
+                        return response.asMono().doOnSubscribe(ignored -> handlerStarted.countDown())
+                            .doOnCancel(handlerCancelled::countDown);
+                    }).then();
+        }).require(ContributionServices.REGISTRAR).build();
+        var engine = FibraEngine.builder(new InMemoryDesiredStateRepository(graph("old-")))
+            .catalog(PluginCatalog.of(new PluginCatalogEntry<>(definition, value -> (String) value)))
+            .build();
+        reactor.core.Disposable invocation = null;
+        try {
+            var first = engine.start().block(TIMEOUT);
+            invocation = engine.published().invoke(first.viewRevision(), identity(first),
+                COMMAND, ID, "value").subscribe();
+            assertTrue(handlerStarted.await(5, TimeUnit.SECONDS));
+            assertEquals(1, response.currentSubscriberCount());
+            assertEquals(1, cleanupStarted.getCount());
+            invocation.dispose();
+            assertTrue(handlerCancelled.await(5, TimeUnit.SECONDS));
+            assertTrue(cleanupStarted.await(5, TimeUnit.SECONDS));
+
+            var disabledGraph = new DesiredInputGraph(List.of(DesiredInputEntry.builder("command", "command")
+                .enabled(false).config(LiteralValue.of("old-")).build()));
+            var revoked = engine.published().views().filter(view ->
+                targetRevision(disabledGraph).equals(view.engineDiagnostics().targetRevision())
+                    && view.contributions().entries().isEmpty()).next().toFuture();
+            var disabling = engine.submit(new ReplaceDesiredGraph(null,
+                first.engine().desiredSource().revision(), disabledGraph)).toFuture();
+            revoked.get(5, TimeUnit.SECONDS);
+            assertFalse(disabling.isDone());
+            assertEquals(0, providerReleases.get());
+            var draining = engine.published().current();
+            assertThrows(ContributionUnavailableException.class, () -> engine.published()
+                .invoke(draining.viewRevision(), identity(first), COMMAND, ID, "late").block(TIMEOUT));
+            assertEquals(1, handlerCalls.get());
+
+            cleanup.tryEmitEmpty();
+            var disabled = disabling.get(5, TimeUnit.SECONDS).view();
+            assertTrue(disabled.engineDiagnostics().targetSatisfied());
+            assertFalse(disabled.engine().instances().containsKey("command"));
+            assertEquals(1, providerReleases.get());
+            assertThrows(ContributionUnavailableException.class, () -> engine.published()
+                .invoke(disabled.viewRevision(), identity(first), COMMAND, ID, "late").block(TIMEOUT));
+            assertEquals(1, handlerCalls.get());
+        } finally {
+            if (invocation != null) invocation.dispose();
+            cleanup.tryEmitEmpty();
+            engine.closeAsync().block(TIMEOUT);
         }
     }
 

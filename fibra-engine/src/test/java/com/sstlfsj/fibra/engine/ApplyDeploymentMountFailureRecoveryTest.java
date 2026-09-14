@@ -73,13 +73,20 @@ class ApplyDeploymentMountFailureRecoveryTest {
             "-cp", System.getProperty("java.class.path"), CrashProcess.class.getName(),
             artifactRoot.toString(), stateRoot.toString(), upgrade.toString());
         var process = new ProcessBuilder(command).redirectErrorStream(true).start();
-        if (!process.waitFor(TIMEOUT.toSeconds(), TimeUnit.SECONDS)) {
-            process.destroyForcibly();
-            fail("子 JVM 未在时限内终止");
+        try {
+            if (!process.waitFor(TIMEOUT.toSeconds(), TimeUnit.SECONDS)) {
+                fail("子 JVM 未在时限内终止");
+            }
+            var output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            assertEquals(73, process.exitValue(), output);
+            return output;
+        } finally {
+            if (process.isAlive()) {
+                process.destroyForcibly();
+                assertTrue(process.waitFor(TIMEOUT.toSeconds(), TimeUnit.SECONDS),
+                    "强制终止后子 JVM 仍未退出");
+            }
         }
-        var output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        assertEquals(73, process.exitValue(), output);
-        return output;
     }
 
     private static FibraEngine engine(ArtifactStore artifacts, FileEngineStateStore state,
@@ -130,9 +137,18 @@ class ApplyDeploymentMountFailureRecoveryTest {
                 var target = state.load().orElseThrow();
                 var newArtifact = target.artifacts().get(ARTIFACT);
 
-                require(failure.targetSaved(), "target must be confirmed before mount failure");
+                require(failure.targetSaveState() == TargetSaveState.SAVED,
+                    "exception must expose the confirmed target save fact");
+                require(failure.view().engineDiagnostics().failedPhase() == ChangePhase.RECONCILING,
+                    "mount failure must retain the original reconcile phase");
+                require(failure.view().engineDiagnostics().targetSaveState() == TargetSaveState.SAVED,
+                    "diagnostics must expose the confirmed target save fact");
+                require(failure.view().engineDiagnostics().cleanupFailures().isEmpty(),
+                    "mount failure has no cleanup failure");
                 require(!failure.view().engineDiagnostics().mutationGateOpen(),
                     "a committed but unretired update must close mutation gate");
+                require(failure.view().engineDiagnostics().failure().contains(ChangePhase.RECONCILING.name()),
+                    "mount failure diagnostics must identify reconcile as the source stage");
                 require(graph("new").equals(target.desiredGraph()), "new graph was not persisted");
                 require(newArtifact.equals(failure.view().engine().artifacts().get(ARTIFACT).revision()),
                     "published artifact selection must be the persisted new target");

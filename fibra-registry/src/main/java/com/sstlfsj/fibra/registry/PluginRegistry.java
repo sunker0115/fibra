@@ -8,12 +8,12 @@ import com.sstlfsj.fibra.engine.ApplyDeployment;
 import com.sstlfsj.fibra.engine.DeploymentArtifact;
 import com.sstlfsj.fibra.engine.EngineChangeException;
 import com.sstlfsj.fibra.engine.EngineCommandResult;
-import com.sstlfsj.fibra.engine.EngineStateStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.InstallArtifact;
 import com.sstlfsj.fibra.engine.ReplaceDesiredGraph;
 import com.sstlfsj.fibra.engine.UninstallArtifact;
 import com.sstlfsj.fibra.engine.PublishedView;
+import com.sstlfsj.fibra.engine.TargetSaveState;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -130,7 +130,10 @@ public final class PluginRegistry {
             snapshot.desiredGraph().plugins().get(id), snapshot.observed().get(id))).toList();
     }
 
-    /** 跟随 Engine 事实变化；审计投递失败独立查询，不单独触发此流。 */
+    /**
+     * 订阅后跟随 Engine 事实变化，当前事实通过 snapshot() 读取；
+     * 审计投递失败不单独触发此流。
+     */
     public Flux<RegistrySnapshot> watch() {
         return engine.published().views().map(this::project);
     }
@@ -196,14 +199,8 @@ public final class PluginRegistry {
     }
 
     private static TargetSaveState targetSaveState(Throwable failure) {
-        if (!(failure instanceof EngineChangeException change)) {
-            return TargetSaveState.NOT_SAVED;
-        }
-        if (change.targetSaved()) {
-            return TargetSaveState.SAVED;
-        }
-        return change.getCause() instanceof EngineStateStore.SaveUnconfirmedException
-            ? TargetSaveState.UNCONFIRMED : TargetSaveState.NOT_SAVED;
+        return failure instanceof EngineChangeException change
+            ? change.targetSaveState() : TargetSaveState.NOT_SAVED;
     }
 
     private RegistrySnapshot project(PublishedView view) {

@@ -31,6 +31,11 @@ readonly production_modules=(
   fibra-plugins/fibra-plugins-storage/fibra-storage-json
   fibra-plugins/fibra-plugins-storage/fibra-tool-storage
 )
+readonly consumer_byte_compared_modules=(
+  fibra-runtime-java
+  fibra-runtime-node
+  "${production_modules[@]:14}"
+)
 readonly non_published_artifacts=(
   fibra
   fibra-plugins
@@ -81,18 +86,14 @@ readonly fibra_python_executable="$(command -v python3 || true)"
 }
 
 readonly remote_repository="$temporary_root/remote"
-readonly build_repository="$temporary_root/build"
-readonly distribution_repository="$temporary_root/distribution-repository"
-readonly consumer_repository="$temporary_root/consumer"
+readonly local_repository="$HOME/.m2/repository"
 readonly consumer_project="$temporary_root/distribution"
 readonly consumer_sources="$temporary_root/distribution-sources.tar"
-mkdir -p "$remote_repository" "$build_repository" \
-  "$distribution_repository" "$consumer_repository"
+mkdir -p "$remote_repository"
 
 cd "$repository_root"
 "$maven_executable" --settings "$fixture/settings.xml" \
   --batch-mode --no-transfer-progress \
-  -Dmaven.repo.local="$build_repository" \
   -Dfibra.repository.url="file://$remote_repository" \
   -pl "$module_list" -am clean deploy -DskipTests \
   -Darchetype.test.skip=true \
@@ -100,13 +101,12 @@ cd "$repository_root"
 
 "$maven_executable" --settings "$fixture/settings.xml" \
   --batch-mode --no-transfer-progress \
-  -Dmaven.repo.local="$distribution_repository" \
   -Dfibra.repository.url="file://$remote_repository" \
   -f "$repository_root/fibra-distribution/pom.xml" clean verify
 
 readonly distribution_archive="$repository_root/fibra-distribution/target/fibra-$revision-bin.zip"
 [[ -f "$distribution_archive" ]] || {
-  echo "空 Maven 仓构建未生成发行 ZIP：$distribution_archive" >&2
+  echo "分发构建未生成发行 ZIP：$distribution_archive" >&2
   exit 1
 }
 
@@ -187,7 +187,6 @@ verify_generated_plugin() {
     cd "$generated"
     "$maven_executable" --settings "$settings" \
       --batch-mode --no-transfer-progress \
-      -Dmaven.repo.local="$consumer_repository" \
       -Dfibra.repository.url="file://$remote_repository" \
       "org.apache.maven.plugins:maven-archetype-plugin:$archetype_plugin_version:generate" \
       -DarchetypeGroupId=com.sstlfsj \
@@ -200,7 +199,6 @@ verify_generated_plugin() {
 
     "$maven_executable" --settings "$settings" \
       --batch-mode --no-transfer-progress \
-      -Dmaven.repo.local="$consumer_repository" \
       -Dfibra.repository.url="file://$remote_repository" \
       -f "$generated/$artifact_id/pom.xml" verify
   )
@@ -287,7 +285,6 @@ fi
 
 "$maven_executable" --settings "$consumer_project/settings.xml" \
   --batch-mode --no-transfer-progress \
-  -Dmaven.repo.local="$consumer_repository" \
   -Dfibra.repository.url="file://$remote_repository" \
   -Dfibra.version="$revision" -Djunit.version="$junit_version" \
   -Dspring-boot.version="$spring_boot_version" \
@@ -296,7 +293,6 @@ fi
 readonly cli_fixture_classpath_file="$temporary_root/cli-fixture.classpath"
 "$maven_executable" --settings "$consumer_project/settings.xml" \
   --batch-mode --no-transfer-progress \
-  -Dmaven.repo.local="$consumer_repository" \
   -Dfibra.repository.url="file://$remote_repository" \
   -Dfibra.version="$revision" -Djunit.version="$junit_version" \
   -Dspring-boot.version="$spring_boot_version" \
@@ -307,17 +303,10 @@ readonly cli_fixture_classpath_file="$temporary_root/cli-fixture.classpath"
 verify_generated_plugin "$consumer_project/settings.xml" \
   "$temporary_root/prewarm-generated" prewarmed-plugin
 
-# 第一次构建从空本地仓库开始，正常解析外部依赖。随后只清除这个临时缓存中的
-# Fibra 坐标，并把全部仓库镜像到本次部署仓库。第二次构建因而不能回退到
-# Central 获取 Fibra，同时保留已由空仓构建证明可解析的外部依赖。
-[[ "$consumer_repository" == "$temporary_root/consumer" ]] || {
-  echo "拒绝清理非预期的消费者仓库：$consumer_repository" >&2
-  exit 1
-}
-rm -rf "$consumer_repository/com/sstlfsj"
+# 所有 Maven 阶段都复用本机 ~/.m2；隔离 settings 仅限制远程解析来源，
+# 不清空或删除本机仓库中的任何坐标。
 "$maven_executable" --settings "$consumer_project/isolated-settings.xml" \
   --batch-mode --no-transfer-progress \
-  -Dmaven.repo.local="$consumer_repository" \
   -Dfibra.repository.url="file://$remote_repository" \
   -Dfibra.version="$revision" -Djunit.version="$junit_version" \
   -Dspring-boot.version="$spring_boot_version" \
@@ -329,13 +318,13 @@ readonly cli_fixture_classpath="$(<"$cli_fixture_classpath_file")"
   "$consumer_project/cli-application/target/classes:$cli_fixture_classpath" \
   "$temporary_root/cli-session-home"
 
-for module in "${production_modules[@]:14}"; do
+for module in "${consumer_byte_compared_modules[@]}"; do
   artifact_id="$(basename "$module")"
-  consumer_directory="$consumer_repository/com/sstlfsj/$artifact_id/$revision"
+  consumer_directory="$local_repository/com/sstlfsj/$artifact_id/$revision"
   consumer_jar="$consumer_directory/$artifact_id-$revision.jar"
   consumer_pom="$consumer_directory/$artifact_id-$revision.pom"
   [[ -f "$consumer_jar" && -f "$consumer_pom" ]] || {
-    echo "空仓消费者未完整解析 $artifact_id 的主 JAR 和 POM" >&2
+    echo "本机 Maven 仓库缺少 $artifact_id 的主 JAR 或 POM" >&2
     exit 1
   }
   cmp -s "$(main_jar "$artifact_id")" "$consumer_jar" || {

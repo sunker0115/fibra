@@ -158,7 +158,7 @@ class FibraEngineIncrementalTest {
             assertEquals(2, causes.size());
             assertTrue(causes.stream().anyMatch(cause -> cause == firstFailure));
             assertTrue(causes.stream().anyMatch(cause -> cause == secondFailure));
-            assertTrue(failure.targetSaved());
+            assertEquals(TargetSaveState.SAVED, failure.targetSaveState());
             assertTrue(failure.view().engineDiagnostics().mutationGateOpen());
             assertEquals(PluginInstanceState.ACTIVE, failure.view().engine().instances().get("healthy").state());
         }
@@ -205,7 +205,7 @@ class FibraEngineIncrementalTest {
                 initial.engine().desiredSource().revision(), graph(entry("sample", "sample", "invalid-runtime"))))
                 .block(TIMEOUT));
 
-            assertTrue(failure.targetSaved());
+            assertEquals(TargetSaveState.SAVED, failure.targetSaveState());
             assertEquals(PluginInstanceState.FAILED, failure.view().engine().instances().get("sample").state());
             assertEquals(LiteralValue.of("invalid-runtime"), failure.view().engine().instances().get("sample").config());
             assertTrue(failure.view().engineDiagnostics().mutationGateOpen(), "a clean startup failure is not a cleanup failure");
@@ -351,7 +351,7 @@ class FibraEngineIncrementalTest {
             .catalog(catalog).stateStore(new FileEngineStateStore(stateRoot)).build()) {
             var failure = assertThrows(EngineChangeException.class,
                 () -> engine.start().block(TIMEOUT));
-            assertTrue(failure.targetSaved());
+            assertEquals(TargetSaveState.SAVED, failure.targetSaveState());
         }
         try (var store = new FileEngineStateStore(stateRoot)) {
             assertEquals(target, store.load().orElseThrow().desiredGraph());

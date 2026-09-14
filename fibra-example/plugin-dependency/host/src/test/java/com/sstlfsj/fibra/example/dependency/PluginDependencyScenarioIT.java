@@ -4,6 +4,7 @@ import com.sstlfsj.fibra.PluginInstanceState;
 import com.sstlfsj.fibra.artifact.ArtifactId;
 import com.sstlfsj.fibra.engine.EngineChangeException;
 import com.sstlfsj.fibra.engine.PublishedView;
+import com.sstlfsj.fibra.engine.TargetSaveState;
 import com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -58,7 +59,7 @@ class PluginDependencyScenarioIT {
             var failure = assertThrows(EngineChangeException.class,
                 scenario::disableProvider);
             var pending = failure.view();
-            assertTrue(failure.targetSaved());
+            assertEquals(TargetSaveState.SAVED, failure.targetSaveState());
             assertFalse(pending.engineDiagnostics().targetSatisfied());
             assertFalse(pending.engine().desiredGraph().plugins()
                 .get(PluginDependencyScenario.PROVIDER_INSTANCE).enabled());
@@ -103,7 +104,7 @@ class PluginDependencyScenarioIT {
             var failure = assertThrows(EngineChangeException.class,
                 () -> scenario.upgradeContract(contractV2, "2.0.0"));
             var rejected = failure.view();
-            assertFalse(failure.targetSaved());
+            assertEquals(TargetSaveState.NOT_SAVED, failure.targetSaveState());
             assertEquals(selectedArtifactRevisions(beforeRejectedUpgrade),
                 selectedArtifactRevisions(rejected));
             assertEquals(instanceIdentity(beforeRejectedUpgrade,
