@@ -15,9 +15,9 @@
 | 项目 | 当前状态 | 尚需工作 |
 |---|---|---|
 | 1 短超时诊断 | 已有代码与测试证据 | 最终集成回归，不重复建设 |
-| 2 生命周期/恢复 | 已有失败阶段与清理失败证据（`b96837e`、`9431d38`） | 复核稳定失败可纠正、部分 adopt 等不确定失败封锁；诊断事实不可只藏在文本 |
-| 3 准入/排空 | 已有撤销及 Scope 排空证据（`8cb9de7`、`7cb5cf0`、`0b73656`） | Node 请求结果与清理终态分离后再验收，保留 revision + identity |
-| 4 Java/Node 长稳 | N1、N2、J1、J2 已完成 | 继续完成 E1、V1 |
+| 2 生命周期/恢复 | E1 已完成 | 最终集成回归，不重复建设 |
+| 3 准入/排空 | N2/E1 复验完成 | 最终集成回归，保留 revision + identity |
+| 4 Java/Node 长稳 | N1、N2、J1、J2、E1 已完成 | 继续完成 V1 |
 | 5 仓外扩展契约 | 有既有消费者 | 对最终实现跑真实安装、配置、升级、重装、调用中卸载与回收报告 |
 | 6 安全/供应链 | 有既有门禁 | 对最终实现复验篡改、路径、依赖、脱敏与发行；不实现新隔离后端 |
 
@@ -107,10 +107,10 @@ J2 由 `3b5f3dc` 放宽到制品内判重，`0d8eb66` 补齐失败断言下的�
 
 **文件：** `fibra-engine/src/main/java/com/sstlfsj/fibra/engine/FibraEngine.java`（ChangeSet 是其内部类）、`RuntimeResources.java`，现有 `EngineDiagnostics` 契约及 `ApplyDeploymentMountFailureRecoveryTest.java`/`EngineCrashPointRecoveryTest.java`；保存事实的类型位置须遵循现有依赖方向。
 
-- [ ] 先对照源码和既有测试：稳定 FAILED 已完成 adopt/settle/retire 时允许显式纠正；部分 adapter adopt、同步协调异常、未知保存与 cleanup failure 封锁。
-- [ ] 仅为缺口写 RED，再修改结构化失败阶段/保存确认投影；现有控制判断正确的部分不重写。原始失败与 cleanup failure 分别保留，不解析错误字符串控制 gate。
-- [ ] 若改变公开 DTO，架构、签名基线与消费者同一变更更新，删除旧兼容形状；不得引入 Engine → Registry 反向依赖。
-- [ ] 定向红绿、架构门禁、规格与质量审查后提交。
+- [x] 先对照源码和既有测试：稳定 FAILED 已完成 adopt/settle/retire 时允许显式纠正；部分 adapter adopt、同步协调异常、未知保存与 cleanup failure 封锁。
+- [x] 仅为缺口写 RED，再修改结构化失败阶段/保存确认投影；现有控制判断正确的部分不重写。原始失败与 cleanup failure 分别保留，不解析错误字符串控制 gate。
+- [x] 若改变公开 DTO，架构、签名基线与消费者同一变更更新，删除旧兼容形状；不得引入 Engine → Registry 反向依赖。
+- [x] 定向红绿、架构门禁、规格与质量审查后提交。
 
 E1 只读核对结论：沿用 EngineDiagnostics，增加原始 `failedPhase`、`targetSaveState` 与
 `cleanupFailures`，不建立平行事务 DTO。`TargetSaveState` 的唯一归属应在 Engine，由 Registry 消费；
@@ -119,6 +119,14 @@ E1 只读核对结论：沿用 EngineDiagnostics，增加原始 `failedPhase`、
 Registry 审计 DTO/repository、CLI/benchmark/依赖验收宿主消费者、engine/registry 两份签名基线及相关
 断言；不保留旧布尔 accessor/旧包别名。缺口测试为第二个 adapter adopt 抛错、原始 prepare/bind 失败
 叠加候选清理失败、context-only 切换后稳定 FAILED 可纠正；已有保存/retire/mount 用例改为结构化断言。
+
+E1 由 `243f69b` 完成结构化事实与公开 API 直接迁移，`1ee918f` 关闭规格审查发现的恢复前失败、
+关闭覆盖原失败及主/suppressed 清理事实缺口。首轮契约 RED 为 59 个缺失符号；最小 schema 后定向
+41 项有 10 项按预期失败，GREEN 为 41/41。规格修复 RED 为 34 项中 4 项失败，最终 34/34；Engine
+全量 176/176。受影响 21 模块 `clean test` 通过，CLI 137/137、Java runtime 42/42、Node runtime
+86/86、Registry 24/24；API baseline 与 retention 门禁 4/4，插件依赖 example Failsafe 2/2。
+全仓旧 `targetSaved()` 与 Registry 旧枚举引用归零。规格复审和独立质量审查均通过；本地证据为
+macOS/JDK 21，Linux 留待同一 HEAD CI，Windows 保持未实测声明。
 
 ## V1：六项最终集成验收
 
