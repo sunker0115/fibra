@@ -4,6 +4,7 @@ import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.bridge.ContributionId;
 import com.sstlfsj.fibra.bridge.ContributionKind;
 import com.sstlfsj.fibra.bridge.ContributionServices;
+import com.sstlfsj.fibra.bridge.ContributionUnavailableException;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
@@ -15,6 +16,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -103,6 +105,39 @@ class PublishedRuntimePublicationTest {
             assertEquals("new-value", engine.published().invoke(
                 second.viewRevision(), identity(second), COMMAND, ID, "value").block(TIMEOUT));
             assertEquals(second, engine.published().current());
+        }
+    }
+
+    @Test
+    void replacedContributionRejectsItsOldIdentityEvenWithTheCurrentRevision() {
+        var oldCalls = new AtomicInteger();
+        var newCalls = new AtomicInteger();
+        var definition = PluginDefinition.builder("command", String.class, () -> (context, prefix) ->
+            context.services().require(ContributionServices.REGISTRAR)
+                .register(context, COMMAND, "command", ID.localName(), new CommandDescriptor("Run"),
+                    (invocation, input) -> {
+                        ("old-".equals(prefix) ? oldCalls : newCalls).incrementAndGet();
+                        return Mono.just(prefix + input);
+                    }).then()).require(ContributionServices.REGISTRAR).build();
+        try (var engine = FibraEngine.builder(new InMemoryDesiredStateRepository(graph("old-")))
+            .catalog(PluginCatalog.of(new PluginCatalogEntry<>(definition, value -> (String) value)))
+            .build()) {
+            var first = engine.start().block(TIMEOUT);
+            var second = engine.submit(new ReplaceDesiredGraph(first.viewRevision(),
+                first.engine().desiredSource().revision(), graph("new-"))).block(TIMEOUT).view();
+
+            assertNotEquals(identity(first), identity(second));
+            assertThrows(PublishedRevisionConflictException.class, () -> engine.published()
+                .invoke(first.viewRevision(), identity(first), COMMAND, ID, "value").block(TIMEOUT));
+            assertThrows(ContributionUnavailableException.class, () -> engine.published()
+                .invoke(second.viewRevision(), identity(first), COMMAND, ID, "value").block(TIMEOUT));
+            assertEquals(0, oldCalls.get());
+            assertEquals(0, newCalls.get());
+
+            assertEquals("new-value", engine.published().invoke(second.viewRevision(), identity(second),
+                COMMAND, ID, "value").block(TIMEOUT));
+            assertEquals(0, oldCalls.get());
+            assertEquals(1, newCalls.get());
         }
     }
 
