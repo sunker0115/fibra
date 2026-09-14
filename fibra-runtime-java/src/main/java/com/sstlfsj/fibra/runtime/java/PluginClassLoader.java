@@ -32,9 +32,9 @@ final class PluginClassLoader extends URLClassLoader {
     protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
         synchronized (getClassLoadingLock(name)) {
             var loaded = findLoadedClass(name);
-            if (loaded == null && parentFirst(name)) {
+            if (loaded == null) {
                 try {
-                    loaded = getParent().loadClass(name);
+                    loaded = parentClass(name, getParent(), parentPackages);
                 } catch (ClassNotFoundException ignored) {
                     // Parent-first is a preference, not an export whitelist.
                 }
@@ -89,7 +89,20 @@ final class PluginClassLoader extends URLClassLoader {
         return Collections.enumeration(resources);
     }
 
-    private boolean parentFirst(String name) {
-        return parentPackages.stream().anyMatch(name::startsWith);
+    static boolean isParentDefined(String name, ClassLoader parent, List<String> parentPackages) {
+        try {
+            parentClass(name, parent, parentPackages);
+            return true;
+        } catch (ClassNotFoundException ignored) {
+            return false;
+        }
+    }
+
+    private static Class<?> parentClass(String name, ClassLoader parent,
+                                        List<String> parentPackages) throws ClassNotFoundException {
+        if (parentPackages.stream().noneMatch(name::startsWith)) {
+            throw new ClassNotFoundException(name);
+        }
+        return parent.loadClass(name);
     }
 }

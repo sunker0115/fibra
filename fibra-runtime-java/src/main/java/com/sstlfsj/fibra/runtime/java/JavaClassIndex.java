@@ -1,0 +1,113 @@
+package com.sstlfsj.fibra.runtime.java;
+
+import com.sstlfsj.fibra.artifact.ArtifactId;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.ArrayDeque;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.jar.JarFile;
+import java.util.zip.ZipFile;
+
+/** prepare 期间使用的有效类名事实；不持有 Class、loader 或 entrypoint。 */
+final class JavaClassIndex {
+    private static final String VERSIONS = "META-INF/versions/";
+
+    private final Map<ArtifactId, Map<String, Path>> definitions;
+
+    private JavaClassIndex(Map<ArtifactId, Map<String, Path>> definitions) {
+        this.definitions = definitions;
+    }
+
+    static JavaClassIndex read(Map<ArtifactId, JavaManifestReader.JavaPackage> packages) {
+        var definitions = new LinkedHashMap<ArtifactId, Map<String, Path>>();
+        packages.forEach((id, artifact) -> definitions.put(id, read(id, artifact.jars())));
+        return new JavaClassIndex(Collections.unmodifiableMap(definitions));
+    }
+
+    void validate(JavaArtifactGraph graph, ClassLoader parent, List<String> parentPackages) {
+        for (var root : graph.dependencyFirst()) {
+            var visible = new LinkedHashMap<String, Definition>();
+            for (var owner : closure(root, graph)) {
+                for (var entry : definitions.get(owner).entrySet()) {
+                    var className = entry.getKey();
+                    try {
+                        if (PluginClassLoader.isParentDefined(className, parent, parentPackages)) continue;
+                    } catch (LinkageError failure) {
+                        throw new JavaRuntimeException(JavaRuntimePhase.LOAD, root,
+                            "cannot resolve parent-first Java class " + className, failure);
+                    }
+                    var definition = new Definition(owner, entry.getValue());
+                    var previous = visible.putIfAbsent(className, definition);
+                    if (previous != null && !previous.owner().equals(owner)) {
+                        throw conflict(root, className, previous, definition);
+                    }
+                }
+            }
+        }
+    }
+
+    private static Map<String, Path> read(ArtifactId owner, List<Path> jars) {
+        var classes = new LinkedHashMap<String, Path>();
+        try {
+            for (var path : jars) {
+                try (var jar = new JarFile(path.toFile(), true, ZipFile.OPEN_READ, JarFile.runtimeVersion())) {
+                    jar.versionedStream().filter(entry -> !entry.isDirectory()).forEach(entry -> {
+                        var name = effectiveName(jar, entry.getName());
+                        if (name == null || !name.endsWith(".class")) return;
+                        var className = name.substring(0, name.length() - ".class".length())
+                            .replace('/', '.');
+                        if (className.equals("module-info") || className.endsWith(".module-info")) return;
+                        var previous = classes.putIfAbsent(className, path);
+                        if (previous != null && !previous.equals(path)) {
+                            throw conflict(owner, className,
+                                new Definition(owner, previous), new Definition(owner, path));
+                        }
+                    });
+                }
+            }
+        } catch (JavaRuntimeException failure) {
+            throw failure;
+        } catch (IOException failure) {
+            throw new JavaRuntimeException(JavaRuntimePhase.LOAD, owner,
+                "cannot index Java plugin classes", failure);
+        }
+        return Collections.unmodifiableMap(classes);
+    }
+
+    private static String effectiveName(JarFile jar, String name) {
+        if (name.startsWith(VERSIONS)) {
+            if (!jar.isMultiRelease()) return null;
+            var versionEnd = name.indexOf('/', VERSIONS.length());
+            if (versionEnd < 0 || versionEnd + 1 == name.length()) return null;
+            name = name.substring(versionEnd + 1);
+        }
+        return name.startsWith("META-INF/") ? null : name;
+    }
+
+    private static LinkedHashSet<ArtifactId> closure(ArtifactId root, JavaArtifactGraph graph) {
+        var result = new LinkedHashSet<ArtifactId>();
+        var pending = new ArrayDeque<ArtifactId>();
+        pending.add(root);
+        while (!pending.isEmpty()) {
+            var id = pending.removeFirst();
+            if (!result.add(id)) continue;
+            graph.manifest(id).requires().forEach(requirement -> pending.addLast(requirement.artifactId()));
+        }
+        return result;
+    }
+
+    private static JavaRuntimeException conflict(ArtifactId root, String className,
+                                                 Definition first, Definition second) {
+        return new JavaRuntimeException(JavaRuntimePhase.LOAD, root,
+            "Java root " + root.value() + " sees class " + className + " from both artifact "
+                + first.owner().value() + " JAR " + first.jar() + " and artifact "
+                + second.owner().value() + " JAR " + second.jar(), null);
+    }
+
+    private record Definition(ArtifactId owner, Path jar) { }
+}
