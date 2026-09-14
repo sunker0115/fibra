@@ -1,5 +1,6 @@
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import net from 'node:net';
 
 const [, , entrypoint, rawTerminateTimeout, terminationStatus] = process.argv;
 const terminateTimeout = Number.parseInt(rawTerminateTimeout, 10);
@@ -16,67 +17,107 @@ const payload = spawn(process.execPath, [entrypoint], {
   windowsHide: true,
 });
 
-payload.stdout.pipe(process.stdout, { end: false });
+const output = new net.Socket({ fd: 1, readable: false, writable: true });
+output.once('close', () => {
+  try {
+    // libuv 保留 fd 0..2；等 socket handle 关闭后再释放独占的 fd1。
+    fs.closeSync(1);
+  } catch (error) {
+    if (error.code === 'EBADF') return;
+    reportFailure(`Fibra Node supervisor output close failed: ${error.message}\n`);
+    process.exitCode = 1;
+    beginShutdown();
+  }
+});
+payload.stdout.pipe(output, { end: false });
+payload.stdout.once('end', () => output.destroySoon());
 payload.stderr.pipe(process.stderr, { end: false });
 process.stdin.pipe(payload.stdin);
 
 let shutdown;
 let payloadOutcome;
+let resolvePayloadOutcome;
+let stderrFailed = false;
+const payloadCompletion = new Promise(resolve => { resolvePayloadOutcome = resolve; });
+
+process.stderr.on('error', () => {
+  stderrFailed = true;
+  process.exitCode = 1;
+  payload.stderr.unpipe(process.stderr);
+  payload.stderr.resume();
+  beginShutdown();
+});
+
+output.once('error', error => {
+  reportFailure(`Fibra Node supervisor output failed: ${error.message}\n`);
+  process.exitCode = 1;
+  payload.stdout.resume();
+  beginShutdown();
+});
 
 payload.once('error', error => {
-  process.stderr.write(`Fibra Node payload failed to start: ${error.message}\n`);
-  beginShutdown(1);
+  payloadOutcome = { kind: 'START_FAILED', error: error.message };
+  resolvePayloadOutcome();
+  reportFailure(`Fibra Node payload failed to start: ${error.message}\n`);
+  beginShutdown();
 });
 
 payload.once('exit', (code, signal) => {
-  payloadOutcome = code ?? signalExitCode(signal);
-  beginShutdown(payloadOutcome);
+  payloadOutcome = signal
+    ? { kind: 'SIGNALLED', signal }
+    : { kind: 'EXITED', exitCode: code };
+  resolvePayloadOutcome();
+  beginShutdown();
 });
 
-process.stdin.once('end', () => beginShutdown(0));
+process.stdin.once('end', () => beginShutdown());
 process.stdin.once('error', error => {
-  process.stderr.write(`Fibra Node supervisor input failed: ${error.message}\n`);
-  beginShutdown(1);
+  reportFailure(`Fibra Node supervisor input failed: ${error.message}\n`);
+  process.exitCode = 1;
+  beginShutdown();
 });
 
 for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) {
-  process.once(signal, () => beginShutdown(128 + signalNumber(signal)));
+  process.once(signal, () => beginShutdown());
 }
 
-function beginShutdown(exitCode) {
+function beginShutdown() {
   if (shutdown) return shutdown;
   shutdown = terminateManagedRange()
-    .then(quiescent => {
+    .then(async quiescent => {
       if (!quiescent) {
         writeTerminationStatus('FAILED');
-        process.stderr.write('Fibra Node managed process range did not become quiescent\n');
+        reportFailure('Fibra Node managed process range did not become quiescent\n');
         process.exitCode = 1;
       } else {
-        process.exitCode = writeTerminationStatus('QUIESCENT') ? payloadOutcome ?? exitCode : 1;
+        await payloadCompletion;
+        process.exitCode = writeTerminationStatus('QUIESCENT') ? process.exitCode ?? 0 : 1;
       }
       process.stdin.pause();
-      process.stdout.end();
-      process.stderr.end();
     })
     .catch(error => {
-      writeTerminationStatus('FAILED');
-      process.stderr.write(`Fibra Node managed process range termination failed: ${error.message}\n`);
       process.exitCode = 1;
+      reportFailure(`Fibra Node managed process range termination failed: ${error.message}\n`);
+      writeTerminationStatus('FAILED');
       process.stdin.pause();
-      process.stdout.end();
-      process.stderr.end();
     });
   return shutdown;
 }
 
 function writeTerminationStatus(status) {
   try {
-    fs.writeFileSync(terminationStatus, `${status}\n`, { encoding: 'utf8', flag: 'wx' });
+    fs.writeFileSync(terminationStatus,
+      `${JSON.stringify({ payload: payloadOutcome ?? null, range: status })}\n`,
+      { encoding: 'utf8', flag: 'wx' });
     return true;
   } catch (error) {
-    process.stderr.write(`Fibra Node termination status write failed: ${error.message}\n`);
+    reportFailure(`Fibra Node termination status write failed: ${error.message}\n`);
     return false;
   }
+}
+
+function reportFailure(message) {
+  if (!stderrFailed) process.stderr.write(message);
 }
 
 async function terminateManagedRange() {
@@ -134,12 +175,4 @@ function signalProcessGroup(signal) {
 
 function delay(milliseconds) {
   return new Promise(resolve => setTimeout(resolve, milliseconds));
-}
-
-function signalNumber(signal) {
-  return { SIGHUP: 1, SIGINT: 2, SIGKILL: 9, SIGTERM: 15 }[signal] ?? 0;
-}
-
-function signalExitCode(signal) {
-  return signal ? 128 + signalNumber(signal) : 1;
 }
