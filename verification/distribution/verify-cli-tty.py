@@ -30,6 +30,7 @@ class Session:
         os.close(slave)
         self.stdout = bytearray()
         self.terminal = bytearray()
+        self.prompt_counts = {}
 
     def resize(self, columns, rows):
         fcntl.ioctl(self.master, termios.TIOCSWINSZ,
@@ -39,6 +40,12 @@ class Session:
 
     def send(self, value):
         os.write(self.master, value)
+
+    def send_after_prompt(self, prompt, value):
+        count = self.prompt_counts.get(prompt, 0) + 1
+        self.wait_for("terminal", prompt, count=count)
+        self.prompt_counts[prompt] = count
+        self.send(value)
 
     def wait_for(self, stream, expected, count=1, timeout=10):
         deadline = time.monotonic() + timeout
@@ -133,16 +140,15 @@ def first_session(java, classpath, home):
     session = Session(
         [java, "-cp", classpath, "verification.distribution.InteractiveCliFixture", home])
     try:
-        session.wait_for("terminal", b"consumer> ")
-        session.send(b"ec")
+        session.send_after_prompt(b"consumer> ", b"ec")
         session.wait_for("terminal", b"background-ready")
         session.send(b"ho preserved\r")
         session.wait_for("stdout", b"preserved\n")
 
-        session.send(b"ec\tcompleted\r")
+        session.send_after_prompt(b"consumer> ", b"ec\tcompleted\r")
         session.wait_for("stdout", b"completed\n")
 
-        session.send(b"screen\r")
+        session.send_after_prompt(b"consumer> ", b"screen\r")
         session.wait_for("stdout", b"screen-ready\n")
         session.resize(32, 10)
         time.sleep(0.15)
@@ -161,23 +167,21 @@ def first_session(java, classpath, home):
                 or int(resize_match.group(1)) < 2):
             raise AssertionError(f"renderer 未观察初始尺寸和 WINCH 后尺寸：{summary!r}")
 
-        session.send(b"fail-screen\r")
+        session.send_after_prompt(b"consumer> ", b"fail-screen\r")
         session.wait_for("terminal", b"expected-render-failure")
-        session.send(b"echo after-failure\r")
+        session.send_after_prompt(b"consumer> ", b"echo after-failure\r")
         session.wait_for("stdout", b"after-failure\n")
 
-        session.send(b"screen\r")
+        session.send_after_prompt(b"consumer> ", b"screen\r")
         session.wait_for("stdout", b"screen-ready\n", count=2)
         session.send(b"\x03")
         session.wait_for("stdout", b"screen-cancelled\n")
-        session.send(b"echo after-cancel\r")
+        session.send_after_prompt(b"consumer> ", b"echo after-cancel\r")
         session.wait_for("stdout", b"after-cancel\n")
 
-        prompt_count = session.plain_terminal().count(b"consumer> ")
-        session.send(b"echo history-restart\r")
+        session.send_after_prompt(b"consumer> ", b"echo history-restart\r")
         session.wait_for("stdout", b"history-restart\n")
-        session.wait_for("terminal", b"consumer> ", count=prompt_count + 1)
-        session.send(b"\x04")
+        session.send_after_prompt(b"consumer> ", b"\x04")
         session.finish()
 
         if re.search(rb"\x1b\[(?:1;36|36;1)m", session.terminal) is None:
@@ -198,12 +202,9 @@ def restarted_session(java, classpath, home):
     session = Session(
         [java, "-cp", classpath, "verification.distribution.InteractiveCliFixture", home])
     try:
-        session.wait_for("terminal", b"consumer> ")
-        prompt_count = session.plain_terminal().count(b"consumer> ")
-        session.send(b"\x1bOA\r")
+        session.send_after_prompt(b"consumer> ", b"\x1bOA\r")
         session.wait_for("stdout", b"history-restart\n")
-        session.wait_for("terminal", b"consumer> ", count=prompt_count + 1)
-        session.send(b"\x04")
+        session.send_after_prompt(b"consumer> ", b"\x04")
         session.finish()
     except BaseException:
         session.abort()
@@ -216,10 +217,9 @@ def input_session(java, classpath, home):
         [java, "-cp", classpath, "verification.distribution.InteractiveCliFixture",
          input_home, "input"])
     try:
-        session.wait_for("terminal", b"consumer> ")
-        session.send(b'  analyze "project  \r')
+        session.send_after_prompt(b"consumer> ", b'  analyze "project  \r')
         session.wait_for("stdout", b'input:  analyze "project  \n')
-        session.send(b"/exit\r")
+        session.send_after_prompt(b"consumer> ", b"/exit\r")
         session.wait_for("stdout", b"input:/exit\n")
         session.finish()
         if os.path.exists(os.path.join(input_home, "repl.history")):
@@ -232,14 +232,13 @@ def input_session(java, classpath, home):
 def dynamic_plugin_session(launcher, home):
     session = Session([launcher, "--home", home, "repl"])
     try:
-        session.wait_for("terminal", b"fibra> ")
-        session.send(b"external-cli read-key\r")
+        session.send_after_prompt(b"fibra> ", b"external-cli read-key\r")
         session.wait_for("stdout", b"ready\n")
         session.send(b"\x03")
         session.wait_for("stdout", b"cancelled\n")
-        session.send(b"external-cli echo after-cancel\r")
+        session.send_after_prompt(b"fibra> ", b"external-cli echo after-cancel\r")
         session.wait_for("stdout", b"after-cancel\n")
-        session.send(b"exit\r")
+        session.send_after_prompt(b"fibra> ", b"exit\r")
         session.finish()
     except BaseException:
         session.abort()
