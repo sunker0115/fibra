@@ -1,5 +1,7 @@
 package com.sstlfsj.fibra.registry;
 
+import com.sstlfsj.fibra.engine.TargetSaveState;
+
 import java.util.List;
 
 public interface PluginAuditRepository extends AutoCloseable {

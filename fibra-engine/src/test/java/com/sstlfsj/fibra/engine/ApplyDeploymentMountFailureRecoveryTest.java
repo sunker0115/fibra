@@ -137,7 +137,14 @@ class ApplyDeploymentMountFailureRecoveryTest {
                 var target = state.load().orElseThrow();
                 var newArtifact = target.artifacts().get(ARTIFACT);
 
-                require(failure.targetSaved(), "target must be confirmed before mount failure");
+                require(failure.targetSaveState() == TargetSaveState.SAVED,
+                    "exception must expose the confirmed target save fact");
+                require(failure.view().engineDiagnostics().failedPhase() == ChangePhase.RECONCILING,
+                    "mount failure must retain the original reconcile phase");
+                require(failure.view().engineDiagnostics().targetSaveState() == TargetSaveState.SAVED,
+                    "diagnostics must expose the confirmed target save fact");
+                require(failure.view().engineDiagnostics().cleanupFailures().isEmpty(),
+                    "mount failure has no cleanup failure");
                 require(!failure.view().engineDiagnostics().mutationGateOpen(),
                     "a committed but unretired update must close mutation gate");
                 require(failure.view().engineDiagnostics().failure().contains(ChangePhase.RECONCILING.name()),

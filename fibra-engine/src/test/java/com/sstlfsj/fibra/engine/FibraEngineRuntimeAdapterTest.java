@@ -67,7 +67,7 @@ class FibraEngineRuntimeAdapterTest {
         try {
             var repeated = assertThrows(EngineChangeException.class, () -> engine.start().block());
             assertEquals(engine.published().current(), repeated.view());
-            assertFalse(repeated.targetSaved());
+            assertEquals(TargetSaveState.NOT_SAVED, repeated.targetSaveState());
             assertEquals(1, saves.get(), "failed startup must not bootstrap again");
             for (var attempt = 0; attempt < 60 && failure.get() != null; attempt++) {
                 System.gc();
@@ -286,7 +286,7 @@ class FibraEngineRuntimeAdapterTest {
             .initialArtifacts(() -> List.of(first, missing)).build()) {
             var failure = assertThrows(EngineChangeException.class, () -> engine.start().block());
 
-            assertFalse(failure.targetSaved());
+            assertEquals(TargetSaveState.NOT_SAVED, failure.targetSaveState());
             assertTrue(stateStore.load().isEmpty());
             assertTrue(store.history(first.artifactId()).isEmpty());
             assertTransactionsEmpty(artifactRoot);
@@ -312,7 +312,7 @@ class FibraEngineRuntimeAdapterTest {
             .initialArtifacts(() -> List.of(artifact)).build()) {
             var failure = assertThrows(EngineChangeException.class, () -> engine.start().block());
 
-            assertFalse(failure.targetSaved());
+            assertEquals(TargetSaveState.NOT_SAVED, failure.targetSaveState());
             assertTrue(stateStore.load().isEmpty());
             assertTrue(store.history(artifactId).isEmpty());
             assertTransactionsEmpty(artifactRoot);
@@ -338,7 +338,7 @@ class FibraEngineRuntimeAdapterTest {
             .initialArtifacts(() -> List.of(artifact)).build()) {
             var failure = assertThrows(EngineChangeException.class, () -> engine.start().block());
 
-            assertTrue(failure.targetSaved());
+            assertEquals(TargetSaveState.SAVED, failure.targetSaveState());
             assertEquals(1, stateStore.saves.get());
             assertEquals(graph, stateStore.load().orElseThrow().desiredGraph());
             assertEquals(1, store.history(artifactId).size());
@@ -364,7 +364,7 @@ class FibraEngineRuntimeAdapterTest {
                     .runtimeId(new RuntimeId("missing")).version("1.0.0")
                     .source(source).build()).block());
 
-            assertFalse(failure.targetSaved());
+            assertEquals(TargetSaveState.NOT_SAVED, failure.targetSaveState());
             assertTrue(failure.getCause() instanceof UnknownRuntimeException);
             var current = engine.published().current();
             assertEquals(started.engine().state(), current.engine().state());

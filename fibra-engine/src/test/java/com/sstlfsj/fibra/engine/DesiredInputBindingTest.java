@@ -163,7 +163,7 @@ class DesiredInputBindingTest {
         try (var engine = FibraEngine.builder(new FileDesiredStateRepository(root,
             ConfigLimits.defaults())).catalog(catalog).build()) {
             var failed = assertThrows(EngineChangeException.class, () -> engine.start().block(TIMEOUT));
-            assertFalse(failed.targetSaved());
+            assertEquals(TargetSaveState.NOT_SAVED, failed.targetSaveState());
             var binding = assertInstanceOf(DesiredBindingException.class, failed.getCause());
 
             assertEquals("CONFIG_BIND_FAILED", binding.diagnostic().code());
@@ -179,7 +179,7 @@ class DesiredInputBindingTest {
         var graph = new DesiredInputGraph(List.of(DesiredInputEntry.builder("absent", "missing").build()));
         try (var engine = FibraEngine.builder(new InMemoryDesiredStateRepository(graph)).build()) {
             var failed = assertThrows(EngineChangeException.class, () -> engine.start().block(TIMEOUT));
-            assertFalse(failed.targetSaved());
+            assertEquals(TargetSaveState.NOT_SAVED, failed.targetSaveState());
             var binding = assertInstanceOf(DesiredBindingException.class, failed.getCause());
 
             assertEquals("DEFINITION_NOT_FOUND", binding.diagnostic().code());

@@ -1,5 +1,7 @@
 package com.sstlfsj.fibra.registry;
 
+import com.sstlfsj.fibra.engine.TargetSaveState;
+
 import java.time.Instant;
 import java.util.Objects;
 

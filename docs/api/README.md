@@ -116,13 +116,13 @@ last-good 目标仍可满足且 mutation gate 保持开放；恢复为相同内�
 
 `PluginRuntimeAdapter.create()` 返回长期 `RuntimeResourceOwner`。制品变化时，Engine 先登记 `createUpdate(target)` 返回的 `RuntimeResourceUpdate`，再执行 `prepareAsync()`；目标集合完整，但 update 只拥有本次新增或被替换资源。`catalog()` 在准备成功后可读，`snapshot()` 在准备或失败期间也能诊断资源。`adopt()` 只交换所有权，不执行 I/O；此前 `closeAsync()` 清理新资源，此后清理被替换的旧资源，借用资源始终归 owner。准备和关闭共享完整终态，关闭后不能重新准备。纯配置变更不创建 runtime update，无变化实例及资源保留。
 
-`FileEngineStateStore` 持久保存单个完整 `DeploymentManifest`。Engine 先保存不可变制品，再保存目标，然后差量协调长期域中的实例。`EngineDiagnostics` 分别公开 target revision、context revision、变更阶段、真实达成情况和 mutation gate；`EngineChangeException.targetSaved()` 表示目标已确认保存。若 cause 为 `SaveUnconfirmedException`，不能把 `targetSaved() == false` 解释成未写入。保存后启动或清理失败不回滚目标；保存结果不确定或资源清理失败会关闭后续变更准入。重启严格读取完整目标，损坏或缺失引用明确报错。
+`FileEngineStateStore` 持久保存单个完整 `DeploymentManifest`。Engine 先保存不可变制品，再保存目标，然后差量协调长期域中的实例。`EngineDiagnostics` 分别公开 target revision、context revision、失败阶段、目标保存状态、清理失败、真实达成情况和 mutation gate；`EngineChangeException.targetSaveState()` 以 `NOT_APPLICABLE`、`NOT_SAVED`、`SAVED`、`UNCONFIRMED` 区分目标保存事实，不能把保存结果不确定解释成未写入。保存后启动或清理失败不回滚目标；保存结果不确定或资源清理失败会关闭后续变更准入。重启严格读取完整目标，损坏或缺失引用明确报错。
 
 `DrainingDisposable` 为受管资源提供排空阶段：先停止准入并等待已接受调用，再执行普通清理。排空沿现有 Scope、插件和 effect 所有权关系传播；provider 资源释放还须等待使用旧激活快照的实际消费者完成清理。失败资源的身份与失败信息保留在 `RuntimeDiagnostics.cleanupFailures()`，不暴露 `ClassLoader`、`Process`、RPC channel 或可变资源句柄。
 
 ## Registry 与 Bridge
 
-审计的 `TargetSaveState` 区分未保存、已保存和保存未确认，不等同于操作成功。投递失败可从 `auditFailures()` 和 Registry 查询/返回快照读取，不改变 Engine 原结果。`watch()` 只跟随 Engine 事实流，不因审计失败单独通知。
+Engine 所有的 `TargetSaveState` 也供 Registry 审计使用；审计区分未保存、已保存和保存未确认，不等同于操作成功。投递失败可从 `auditFailures()` 和 Registry 查询/返回快照读取，不改变 Engine 原结果。`watch()` 只跟随 Engine 事实流，不因审计失败单独通知。
 
 `PluginRegistry` 提供 `install`、`upgrade`、`deploy`、`enable`、`disable`、`move`、`uninstall`、`get`、
 `list`、`watch` 和 `history`。`RegistrySnapshot.desiredGraph()` 保留整个目标树，`get/list` 只投影插件，

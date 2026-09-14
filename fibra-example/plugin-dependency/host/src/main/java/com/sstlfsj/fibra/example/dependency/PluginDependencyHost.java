@@ -28,8 +28,8 @@ public final class PluginDependencyHost {
                 scenario.disableProvider();
             } catch (EngineChangeException expected) {
                 var view = expected.view();
-                log.info("Provider target saved: {}; consumer state: {}; required target satisfied: {}",
-                    expected.targetSaved(),
+                log.info("Provider target save state: {}; consumer state: {}; required target satisfied: {}",
+                    expected.targetSaveState(),
                     view.engine().instances().get(PluginDependencyScenario.CONSUMER_INSTANCE).state(),
                     view.engineDiagnostics().targetSatisfied());
             }

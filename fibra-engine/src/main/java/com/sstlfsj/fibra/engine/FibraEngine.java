@@ -90,6 +90,9 @@ public final class FibraEngine implements AutoCloseable {
     private boolean mutationGate = true;
     private boolean sourceBaselinePending;
     private boolean sourceFailure;
+    private ChangePhase failedPhase;
+    private TargetSaveState targetSaveState = TargetSaveState.NOT_APPLICABLE;
+    private List<String> cleanupFailures = List.of();
     private String failure;
     private String lastSourceRevision;
 
@@ -132,6 +135,9 @@ public final class FibraEngine implements AutoCloseable {
             .onErrorResume(error -> {
                 if (error instanceof EngineChangeException) return Mono.error(error);
                 state = EngineState.FAILED;
+                failedPhase = ChangePhase.PREPARING;
+                targetSaveState = TargetSaveState.NOT_APPLICABLE;
+                cleanupFailures = List.of();
                 phase = ChangePhase.FAILED;
                 mutationGate = false;
                 failure = error.toString();
@@ -143,9 +149,9 @@ public final class FibraEngine implements AutoCloseable {
                 // 正在等待首次启动的订阅者仍收到原异常；后续订阅只保留失败事实。
                 var detail = error.toString();
                 if (error instanceof EngineChangeException change) {
-                    var targetSaved = change.targetSaved();
+                    var targetSaveState = change.targetSaveState();
                     startSignal = Mono.defer(() -> Mono.error(new EngineChangeException(
-                        published.current(), targetSaved, new IllegalStateException(detail))));
+                        published.current(), targetSaveState, new IllegalStateException(detail))));
                 } else {
                     startSignal = Mono.defer(() -> Mono.error(new IllegalStateException(detail)));
                 }
@@ -198,7 +204,8 @@ public final class FibraEngine implements AutoCloseable {
             .subscribe(ignored -> loop.observe(this::refresh));
         var plan = new ChangeSet(desired, target, configContext);
         plan.bootstrapping = true;
-        plan.targetSaved = saved.isPresent();
+        plan.targetSaveState = saved.isPresent()
+            ? TargetSaveState.SAVED : TargetSaveState.NOT_SAVED;
         plan.committed = saved.isPresent();
         var initialSelection = bootstrapArtifacts;
         return Mono.defer(() -> {
@@ -300,6 +307,7 @@ public final class FibraEngine implements AutoCloseable {
         plan.evaluation = nextEvaluation;
         plan.bound = nextBound;
         plan.saveTarget = false;
+        plan.targetSaveState = TargetSaveState.NOT_APPLICABLE;
         plan.updateResources = false;
         return execute(plan);
     }
@@ -330,7 +338,8 @@ public final class FibraEngine implements AutoCloseable {
             plan.evaluation = nextEvaluation;
             return execute(plan).doOnSuccess(ignored -> acceptSource(desired))
                 .doOnError(error -> {
-                    if (error instanceof EngineChangeException change && change.targetSaved()) {
+                    if (error instanceof EngineChangeException change
+                        && change.targetSaveState() == TargetSaveState.SAVED) {
                         acceptSource(desired);
                     }
                 });
@@ -340,6 +349,9 @@ public final class FibraEngine implements AutoCloseable {
     private Mono<EngineCommandResult> failSourceRefresh(Throwable error) {
         return loop.call(() -> {
             sourceFailure = true;
+            failedPhase = ChangePhase.PREPARING;
+            targetSaveState = TargetSaveState.NOT_APPLICABLE;
+            cleanupFailures = List.of();
             failure = error.toString();
             phase = ChangePhase.FAILED;
             return capture().flatMap(captured -> {
@@ -355,6 +367,9 @@ public final class FibraEngine implements AutoCloseable {
             return Mono.just(new EngineCommandResult(publishedState.get().view(), warnings));
         }
         sourceFailure = false;
+        failedPhase = null;
+        targetSaveState = TargetSaveState.NOT_APPLICABLE;
+        cleanupFailures = List.of();
         failure = null;
         phase = ChangePhase.IDLE;
         affected = Set.of();
@@ -445,6 +460,9 @@ public final class FibraEngine implements AutoCloseable {
         plan.executing = true;
         return loop.call(() -> {
             sourceFailure = false;
+            failedPhase = null;
+            targetSaveState = plan.targetSaveState;
+            cleanupFailures = List.of();
             if (plan.evaluation == null) {
                 plan.evaluation = DesiredEvaluation.evaluate(plan.desired.graph(), plan.context);
             }
@@ -478,8 +496,9 @@ public final class FibraEngine implements AutoCloseable {
                 var selections = new LinkedHashMap<ArtifactId, String>();
                 plan.artifacts.forEach((id, record) -> selections.put(id, record.revision()));
                 var manifest = new DeploymentManifest(selections, plan.desired.graph());
-                if (!plan.targetSaved) stateStore.save(manifest);
-                plan.targetSaved = true;
+                if (plan.targetSaveState != TargetSaveState.SAVED) stateStore.save(manifest);
+                plan.targetSaveState = TargetSaveState.SAVED;
+                targetSaveState = plan.targetSaveState;
                 targetRevision = manifest.revision();
             } else if (!plan.installs.isEmpty()) {
                 throw new IllegalStateException("context-only change cannot install artifacts");
@@ -638,22 +657,29 @@ public final class FibraEngine implements AutoCloseable {
     private Mono<EngineCommandResult> fail(ChangeSet plan, Throwable error) {
         sourceFailure = false;
         boolean unconfirmed = error instanceof EngineStateStore.SaveUnconfirmedException;
+        if (plan.sourcePhase == ChangePhase.RETIRING) {
+            plan.cleanupFailures.addAll(cleanupFailureFacts(error));
+        }
         if (unconfirmed || (plan.committed && !plan.retired)) mutationGate = false;
         var cleanup = (plan.committed || unconfirmed) ? Mono.<Void>empty()
             : (plan.update == null ? Mono.<Void>empty() : plan.update.closeAsync())
                 .then(Mono.fromRunnable(() -> plan.installs.forEach(ArtifactInstallTransaction::rollback)));
         return cleanup.onErrorResume(closeFailure -> {
             mutationGate = false;
+            plan.cleanupFailures.addAll(cleanupFailureFacts(closeFailure));
             if (closeFailure != error) error.addSuppressed(closeFailure);
             return Mono.empty();
         }).then(loop.call(() -> {
+            failedPhase = plan.sourcePhase;
+            targetSaveState = targetSaveState(plan, error);
+            cleanupFailures = List.copyOf(new LinkedHashSet<>(plan.cleanupFailures));
             failure = "[" + plan.sourcePhase + "] " + error;
             phase = ChangePhase.FAILED;
             if (plan.bootstrapping || domain == null || state == EngineState.NEW) state = EngineState.FAILED;
             return capture().flatMap(captured -> {
                 publish(captured);
                 return Mono.error(new EngineChangeException(
-                    publishedState.get().view(), plan.targetSaved, error));
+                    publishedState.get().view(), targetSaveState(plan, error), error));
             });
         }));
     }
@@ -713,6 +739,10 @@ public final class FibraEngine implements AutoCloseable {
     private void publish(ObservedRuntime captured) {
         if (captured.domain() != null && !captured.domain().cleanupFailures().isEmpty()) {
             mutationGate = false;
+            var observed = new LinkedHashSet<>(cleanupFailures);
+            captured.domain().cleanupFailures().stream()
+                .map(RuntimeDomainSnapshot.CleanupFailure::failure).forEach(observed::add);
+            cleanupFailures = List.copyOf(observed);
             var cleanupFailure = "runtime cleanup failed: " + captured.domain().cleanupFailures();
             if (failure == null) failure = cleanupFailure;
             else if (!failure.contains(cleanupFailure)) failure += "; " + cleanupFailure;
@@ -787,7 +817,9 @@ public final class FibraEngine implements AutoCloseable {
             });
         return EngineDiagnostics.builder().targetRevision(targetRevision)
             .contextRevision(configContext.revision()).phase(phase)
+            .failedPhase(failedPhase).targetSaveState(targetSaveState)
             .affectedInstances(affected).resources(snapshot.runtimes()).targetSatisfied(satisfied)
+            .cleanupFailures(cleanupFailures)
             .mutationGateOpen(mutationGate && !closeRequested.get()).failure(failure).build();
     }
 
@@ -845,6 +877,9 @@ public final class FibraEngine implements AutoCloseable {
 
     private Mono<Void> closeInternal() {
         phase = ChangePhase.CLOSING;
+        failedPhase = null;
+        targetSaveState = TargetSaveState.NOT_APPLICABLE;
+        cleanupFailures = List.of();
         publishControl();
         if (observation != null) observation.dispose();
         return directory.closeAsync()
@@ -867,6 +902,9 @@ public final class FibraEngine implements AutoCloseable {
                 return Mono.<Void>empty();
             })).onErrorResume(error -> loop.call(() -> {
                 state = EngineState.FAILED;
+                failedPhase = ChangePhase.CLOSING;
+                targetSaveState = TargetSaveState.NOT_APPLICABLE;
+                cleanupFailures = cleanupFailureFacts(error);
                 phase = ChangePhase.FAILED;
                 mutationGate = false;
                 failure = "engine cleanup failed: " + error;
@@ -913,6 +951,34 @@ public final class FibraEngine implements AutoCloseable {
         return result;
     }
 
+    private static TargetSaveState targetSaveState(ChangeSet plan, Throwable error) {
+        if (!plan.saveTarget) return TargetSaveState.NOT_APPLICABLE;
+        if (error instanceof EngineStateStore.SaveUnconfirmedException) {
+            return TargetSaveState.UNCONFIRMED;
+        }
+        return plan.targetSaveState;
+    }
+
+    private static List<String> cleanupFailureFacts(Throwable failure) {
+        var facts = new ArrayList<String>();
+        collectCleanupFailureFacts(failure, facts,
+            java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>()));
+        return List.copyOf(facts);
+    }
+
+    private static void collectCleanupFailureFacts(Throwable failure, List<String> facts,
+                                                   Set<Throwable> visited) {
+        if (!visited.add(failure)) return;
+        var suppressed = failure.getSuppressed();
+        if (suppressed.length == 0) {
+            facts.add(failure.toString());
+            return;
+        }
+        for (var nested : suppressed) {
+            collectCleanupFailureFacts(nested, facts, visited);
+        }
+    }
+
     public static final class Builder {
         private final DesiredStateRepository desiredRepository;
         private InitialArtifactSource initialArtifacts = List::of;
@@ -954,12 +1020,13 @@ public final class FibraEngine implements AutoCloseable {
         final LinkedHashMap<ArtifactId, ArtifactRecord> artifacts;
         final ConfigContextSnapshot context;
         final List<ArtifactInstallTransaction> installs = new ArrayList<>();
+        final List<String> cleanupFailures = new ArrayList<>();
         DesiredEvaluation evaluation;
         RuntimeResources.Update update;
         Map<String, Bound<?>> bound;
         boolean saveTarget = true;
         boolean updateResources = true;
-        boolean targetSaved;
+        TargetSaveState targetSaveState = TargetSaveState.NOT_SAVED;
         boolean committed;
         boolean retired;
         boolean bootstrapping;

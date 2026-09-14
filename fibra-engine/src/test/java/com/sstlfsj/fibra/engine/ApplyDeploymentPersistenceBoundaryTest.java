@@ -148,7 +148,12 @@ class ApplyDeploymentPersistenceBoundaryTest {
             var installedNew = artifactStore.history(ARTIFACT).stream()
                 .filter(record -> record.version().equals("2.0.0")).findFirst().orElseThrow();
             assertAll(
-                () -> assertFalse(failure.targetSaved()),
+                () -> assertEquals(TargetSaveState.NOT_SAVED, failure.targetSaveState()),
+                () -> assertEquals(ChangePhase.SAVING,
+                    failure.view().engineDiagnostics().failedPhase()),
+                () -> assertEquals(TargetSaveState.NOT_SAVED,
+                    failure.view().engineDiagnostics().targetSaveState()),
+                () -> assertTrue(failure.view().engineDiagnostics().cleanupFailures().isEmpty()),
                 () -> assertTrue(failure.view().engineDiagnostics().mutationGateOpen()),
                 () -> assertTrue(failure.view().engineDiagnostics().failure()
                     .contains(ChangePhase.SAVING.name())),
@@ -195,7 +200,12 @@ class ApplyDeploymentPersistenceBoundaryTest {
 
             assertAll(
                 () -> assertInstanceOf(EngineStateStore.SaveUnconfirmedException.class, failure.getCause()),
-                () -> assertFalse(failure.targetSaved()),
+                () -> assertEquals(TargetSaveState.UNCONFIRMED, failure.targetSaveState()),
+                () -> assertEquals(ChangePhase.SAVING,
+                    failure.view().engineDiagnostics().failedPhase()),
+                () -> assertEquals(TargetSaveState.UNCONFIRMED,
+                    failure.view().engineDiagnostics().targetSaveState()),
+                () -> assertTrue(failure.view().engineDiagnostics().cleanupFailures().isEmpty()),
                 () -> assertFalse(failure.view().engineDiagnostics().mutationGateOpen()),
                 () -> assertTrue(failure.view().engineDiagnostics().failure()
                     .contains(ChangePhase.SAVING.name())),
@@ -245,7 +255,13 @@ class ApplyDeploymentPersistenceBoundaryTest {
                 () -> engine.submit(deployment(initial, graph("new"), upgrade, probe)).block(TIMEOUT));
 
             assertAll(
-                () -> assertTrue(failure.targetSaved()),
+                () -> assertEquals(TargetSaveState.SAVED, failure.targetSaveState()),
+                () -> assertEquals(ChangePhase.RETIRING,
+                    failure.view().engineDiagnostics().failedPhase()),
+                () -> assertEquals(TargetSaveState.SAVED,
+                    failure.view().engineDiagnostics().targetSaveState()),
+                () -> assertTrue(failure.view().engineDiagnostics().cleanupFailures().stream()
+                    .map(Object::toString).anyMatch(value -> value.contains("retirement failed"))),
                 () -> assertFalse(failure.view().engineDiagnostics().mutationGateOpen()),
                 () -> assertTrue(failure.view().engineDiagnostics().failure()
                     .contains(ChangePhase.RETIRING.name())),
@@ -288,7 +304,12 @@ class ApplyDeploymentPersistenceBoundaryTest {
                     artifact(AUXILIARY, missing, "1.0.0", probe)))).block(TIMEOUT));
 
             assertAll(
-                () -> assertFalse(failure.targetSaved()),
+                () -> assertEquals(TargetSaveState.NOT_SAVED, failure.targetSaveState()),
+                () -> assertEquals(ChangePhase.PREPARING,
+                    failure.view().engineDiagnostics().failedPhase()),
+                () -> assertEquals(TargetSaveState.NOT_SAVED,
+                    failure.view().engineDiagnostics().targetSaveState()),
+                () -> assertTrue(failure.view().engineDiagnostics().cleanupFailures().isEmpty()),
                 () -> assertTrue(failure.view().engineDiagnostics().mutationGateOpen()),
                 () -> assertTrue(failure.view().engineDiagnostics().failure()
                     .contains(ChangePhase.PREPARING.name())),
@@ -330,7 +351,12 @@ class ApplyDeploymentPersistenceBoundaryTest {
                     artifact(AUXILIARY, auxiliary, "1.0.0", probe)))).block(TIMEOUT));
 
             assertAll(
-                () -> assertFalse(failure.targetSaved()),
+                () -> assertEquals(TargetSaveState.NOT_SAVED, failure.targetSaveState()),
+                () -> assertEquals(ChangePhase.PREPARING,
+                    failure.view().engineDiagnostics().failedPhase()),
+                () -> assertEquals(TargetSaveState.NOT_SAVED,
+                    failure.view().engineDiagnostics().targetSaveState()),
+                () -> assertTrue(failure.view().engineDiagnostics().cleanupFailures().isEmpty()),
                 () -> assertTrue(failure.view().engineDiagnostics().mutationGateOpen()),
                 () -> assertTrue(failure.view().engineDiagnostics().failure()
                     .contains(ChangePhase.PREPARING.name())),
@@ -374,7 +400,12 @@ class ApplyDeploymentPersistenceBoundaryTest {
             var artifactFailure = assertInstanceOf(ArtifactException.class, failure.getCause());
             assertAll(
                 () -> assertEquals(ArtifactPhase.COMMIT, artifactFailure.phase()),
-                () -> assertFalse(failure.targetSaved()),
+                () -> assertEquals(TargetSaveState.NOT_SAVED, failure.targetSaveState()),
+                () -> assertEquals(ChangePhase.SAVING,
+                    failure.view().engineDiagnostics().failedPhase()),
+                () -> assertEquals(TargetSaveState.NOT_SAVED,
+                    failure.view().engineDiagnostics().targetSaveState()),
+                () -> assertTrue(failure.view().engineDiagnostics().cleanupFailures().isEmpty()),
                 () -> assertTrue(failure.view().engineDiagnostics().failure()
                     .contains(ChangePhase.SAVING.name())),
                 () -> assertTrue(failure.view().engineDiagnostics().failure()

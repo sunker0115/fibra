@@ -1,5 +1,7 @@
 package com.sstlfsj.fibra.registry;
 
+import com.sstlfsj.fibra.engine.TargetSaveState;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;

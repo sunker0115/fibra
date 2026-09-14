@@ -13,6 +13,7 @@ import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.HostServiceRegistry;
 import com.sstlfsj.fibra.engine.InstallArtifact;
 import com.sstlfsj.fibra.engine.PublishedView;
+import com.sstlfsj.fibra.engine.TargetSaveState;
 import com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter;
 import fixture.RetentionJavaEntrypoint;
 import org.junit.jupiter.api.Test;
@@ -70,7 +71,7 @@ class JavaPublishedViewRetentionTest {
     private static List<WeakReference<?>> failAndCorrectStartup(FibraEngine engine, Path work,
                                                                 RuntimeException originalCause) throws Exception {
         var failure = assertThrows(EngineChangeException.class, () -> engine.start().block(TIMEOUT));
-        assertTrue(failure.targetSaved());
+        assertEquals(TargetSaveState.SAVED, failure.targetSaveState());
         assertEquals(1, failure.getCause().getSuppressed().length);
         assertSame(originalCause, failure.getCause().getSuppressed()[0],
             "first startup subscriber must receive the original plugin failure");

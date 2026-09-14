@@ -241,9 +241,31 @@ class RuntimeResourceOwnershipTest {
             .artifacts(List.of(DeploymentArtifact.builder().artifactId(new ArtifactId("sample"))
                 .runtimeId(adapter.id()).version("2.0.0").source(upgraded).build())).build();
         try {
-            assertThrows(EngineChangeException.class, () -> engine.submit(command).block(TIMEOUT));
+            var failure = assertThrows(EngineChangeException.class,
+                () -> engine.submit(command).block(TIMEOUT));
             var current = engine.published().current();
+            var bindingFailure = assertInstanceOf(DesiredBindingException.class, failure.getCause());
+            assertEquals(1, bindingFailure.getSuppressed().length);
+            var cleanupAggregate = assertInstanceOf(IllegalStateException.class,
+                bindingFailure.getSuppressed()[0]);
+            assertEquals(1, cleanupAggregate.getSuppressed().length);
+            var actualCleanupFailure = assertInstanceOf(IllegalStateException.class,
+                cleanupAggregate.getSuppressed()[0]);
             assertAll(
+                () -> assertSame(bindingFailure, failure.getCause(),
+                    "candidate cleanup must not replace the original binding failure"),
+                () -> assertEquals("close failed", actualCleanupFailure.getMessage()),
+                () -> assertEquals(TargetSaveState.NOT_SAVED, failure.targetSaveState()),
+                () -> assertEquals(ChangePhase.PREPARING,
+                    current.engineDiagnostics().failedPhase()),
+                () -> assertEquals(TargetSaveState.NOT_SAVED,
+                    current.engineDiagnostics().targetSaveState()),
+                () -> assertTrue(current.engineDiagnostics().failure()
+                    .contains(bindingFailure.toString())),
+                () -> assertTrue(current.engineDiagnostics().cleanupFailures().stream()
+                    .map(Object::toString).anyMatch(value -> value.contains("close failed"))),
+                () -> assertThrows(UnsupportedOperationException.class,
+                    () -> current.engineDiagnostics().cleanupFailures().clear()),
                 () -> assertTrue(Files.exists(adapter.lastArtifact), "unclosed candidate still owns these bytes"),
                 () -> assertEquals("different content", Files.readString(adapter.lastArtifact)),
                 () -> assertEquals(savedTarget, stateStore.load().orElseThrow()),
@@ -270,7 +292,7 @@ class RuntimeResourceOwnershipTest {
         adapter.closeFails = 2;
         var failure = assertThrows(EngineChangeException.class, () -> engine.submit(
             replaceArtifact(first, graph("new"), work, adapter)).block(TIMEOUT));
-        assertTrue(failure.targetSaved());
+        assertEquals(TargetSaveState.SAVED, failure.targetSaveState());
         var failed = failure.view();
         assertEquals(EngineState.RUNNING, failed.engine().state());
         assertEquals(ChangePhase.FAILED, failed.engineDiagnostics().phase());

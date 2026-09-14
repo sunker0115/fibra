@@ -35,7 +35,7 @@ class PublicationRequirementTest {
                 () -> engine.start().block(TIMEOUT));
             var failed = failure.view();
 
-            assertTrue(failure.targetSaved());
+            assertEquals(TargetSaveState.SAVED, failure.targetSaveState());
             assertEquals(EngineState.FAILED, failed.engine().state());
             assertEquals(PluginInstanceState.PENDING,
                 failed.engine().instances().get("dependent").state());

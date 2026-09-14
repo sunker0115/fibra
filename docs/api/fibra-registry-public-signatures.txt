@@ -3,7 +3,7 @@
 Compiled from "FilePluginAuditRepository.java"
 public final class com.sstlfsj.fibra.registry.FilePluginAuditRepository implements com.sstlfsj.fibra.registry.PluginAuditRepository {
   public com.sstlfsj.fibra.registry.FilePluginAuditRepository(java.nio.file.Path);
-  public synchronized com.sstlfsj.fibra.registry.PluginAuditEntry append(java.lang.String, java.lang.String, boolean, com.sstlfsj.fibra.registry.TargetSaveState, java.lang.String, java.lang.String);
+  public synchronized com.sstlfsj.fibra.registry.PluginAuditEntry append(java.lang.String, java.lang.String, boolean, com.sstlfsj.fibra.engine.TargetSaveState, java.lang.String, java.lang.String);
   public synchronized java.util.List<com.sstlfsj.fibra.registry.PluginAuditEntry> history();
   public synchronized void close();
 }
@@ -11,13 +11,13 @@ public final class com.sstlfsj.fibra.registry.FilePluginAuditRepository implemen
 Compiled from "InMemoryPluginAuditRepository.java"
 public final class com.sstlfsj.fibra.registry.InMemoryPluginAuditRepository implements com.sstlfsj.fibra.registry.PluginAuditRepository {
   public com.sstlfsj.fibra.registry.InMemoryPluginAuditRepository();
-  public synchronized com.sstlfsj.fibra.registry.PluginAuditEntry append(java.lang.String, java.lang.String, boolean, com.sstlfsj.fibra.registry.TargetSaveState, java.lang.String, java.lang.String);
+  public synchronized com.sstlfsj.fibra.registry.PluginAuditEntry append(java.lang.String, java.lang.String, boolean, com.sstlfsj.fibra.engine.TargetSaveState, java.lang.String, java.lang.String);
   public synchronized java.util.List<com.sstlfsj.fibra.registry.PluginAuditEntry> history();
 }
 ## com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure
 Compiled from "PluginAuditDeliveryFailure.java"
 public final class com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure extends java.lang.Record {
-  public com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure(java.time.Instant, java.lang.String, java.lang.String, boolean, com.sstlfsj.fibra.registry.TargetSaveState, java.lang.String, java.lang.String);
+  public com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure(java.time.Instant, java.lang.String, java.lang.String, boolean, com.sstlfsj.fibra.engine.TargetSaveState, java.lang.String, java.lang.String);
   public static com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure$Builder builder();
   public final java.lang.String toString();
   public final int hashCode();
@@ -26,7 +26,7 @@ public final class com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure extends
   public java.lang.String operation();
   public java.lang.String target();
   public boolean succeeded();
-  public com.sstlfsj.fibra.registry.TargetSaveState targetSaveState();
+  public com.sstlfsj.fibra.engine.TargetSaveState targetSaveState();
   public java.lang.String viewRevision();
   public java.lang.String detail();
 }
@@ -37,7 +37,7 @@ public final class com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure$Builder
   public com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure$Builder operation(java.lang.String);
   public com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure$Builder target(java.lang.String);
   public com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure$Builder succeeded(boolean);
-  public com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure$Builder targetSaveState(com.sstlfsj.fibra.registry.TargetSaveState);
+  public com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure$Builder targetSaveState(com.sstlfsj.fibra.engine.TargetSaveState);
   public com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure$Builder viewRevision(java.lang.String);
   public com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure$Builder detail(java.lang.String);
   public com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure build();
@@ -45,7 +45,7 @@ public final class com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure$Builder
 ## com.sstlfsj.fibra.registry.PluginAuditEntry
 Compiled from "PluginAuditEntry.java"
 public final class com.sstlfsj.fibra.registry.PluginAuditEntry extends java.lang.Record {
-  public com.sstlfsj.fibra.registry.PluginAuditEntry(long, java.time.Instant, java.lang.String, java.lang.String, boolean, com.sstlfsj.fibra.registry.TargetSaveState, java.lang.String, java.lang.String);
+  public com.sstlfsj.fibra.registry.PluginAuditEntry(long, java.time.Instant, java.lang.String, java.lang.String, boolean, com.sstlfsj.fibra.engine.TargetSaveState, java.lang.String, java.lang.String);
   public static com.sstlfsj.fibra.registry.PluginAuditEntry$Builder builder();
   public final java.lang.String toString();
   public final int hashCode();
@@ -55,7 +55,7 @@ public final class com.sstlfsj.fibra.registry.PluginAuditEntry extends java.lang
   public java.lang.String operation();
   public java.lang.String target();
   public boolean succeeded();
-  public com.sstlfsj.fibra.registry.TargetSaveState targetSaveState();
+  public com.sstlfsj.fibra.engine.TargetSaveState targetSaveState();
   public java.lang.String viewRevision();
   public java.lang.String detail();
 }
@@ -67,7 +67,7 @@ public final class com.sstlfsj.fibra.registry.PluginAuditEntry$Builder {
   public com.sstlfsj.fibra.registry.PluginAuditEntry$Builder operation(java.lang.String);
   public com.sstlfsj.fibra.registry.PluginAuditEntry$Builder target(java.lang.String);
   public com.sstlfsj.fibra.registry.PluginAuditEntry$Builder succeeded(boolean);
-  public com.sstlfsj.fibra.registry.PluginAuditEntry$Builder targetSaveState(com.sstlfsj.fibra.registry.TargetSaveState);
+  public com.sstlfsj.fibra.registry.PluginAuditEntry$Builder targetSaveState(com.sstlfsj.fibra.engine.TargetSaveState);
   public com.sstlfsj.fibra.registry.PluginAuditEntry$Builder viewRevision(java.lang.String);
   public com.sstlfsj.fibra.registry.PluginAuditEntry$Builder detail(java.lang.String);
   public com.sstlfsj.fibra.registry.PluginAuditEntry build();
@@ -75,7 +75,7 @@ public final class com.sstlfsj.fibra.registry.PluginAuditEntry$Builder {
 ## com.sstlfsj.fibra.registry.PluginAuditRepository
 Compiled from "PluginAuditRepository.java"
 public interface com.sstlfsj.fibra.registry.PluginAuditRepository extends java.lang.AutoCloseable {
-  public abstract com.sstlfsj.fibra.registry.PluginAuditEntry append(java.lang.String, java.lang.String, boolean, com.sstlfsj.fibra.registry.TargetSaveState, java.lang.String, java.lang.String);
+  public abstract com.sstlfsj.fibra.registry.PluginAuditEntry append(java.lang.String, java.lang.String, boolean, com.sstlfsj.fibra.engine.TargetSaveState, java.lang.String, java.lang.String);
   public abstract java.util.List<com.sstlfsj.fibra.registry.PluginAuditEntry> history();
   public default void close();
 }
@@ -182,13 +182,4 @@ public final class com.sstlfsj.fibra.registry.RegistrySnapshot$Builder {
   public com.sstlfsj.fibra.registry.RegistrySnapshot$Builder observed(java.util.Map<java.lang.String, com.sstlfsj.fibra.engine.PluginInstanceSnapshot>);
   public com.sstlfsj.fibra.registry.RegistrySnapshot$Builder auditFailures(java.util.List<com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure>);
   public com.sstlfsj.fibra.registry.RegistrySnapshot build();
-}
-## com.sstlfsj.fibra.registry.TargetSaveState
-Compiled from "TargetSaveState.java"
-public final class com.sstlfsj.fibra.registry.TargetSaveState extends java.lang.Enum<com.sstlfsj.fibra.registry.TargetSaveState> {
-  public static final com.sstlfsj.fibra.registry.TargetSaveState NOT_SAVED;
-  public static final com.sstlfsj.fibra.registry.TargetSaveState SAVED;
-  public static final com.sstlfsj.fibra.registry.TargetSaveState UNCONFIRMED;
-  public static com.sstlfsj.fibra.registry.TargetSaveState[] values();
-  public static com.sstlfsj.fibra.registry.TargetSaveState valueOf(java.lang.String);
 }
