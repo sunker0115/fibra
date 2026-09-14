@@ -29,11 +29,11 @@
 
 **文件：** `fibra-runtime-node/src/main/resources/com/sstlfsj/fibra/runtime/node/node-process-supervisor.mjs`、同模块 `src/main/java/com/sstlfsj/fibra/runtime/node/NodeProcessUnit.java`、`src/test/java/com/sstlfsj/fibra/runtime/node/NodeProcessUnitTest.java`。
 
-- [ ] 先读上述完整实现与测试。新增真实进程测试：payload 写尾部后关闭自己的 stdout，但继续写 stderr/保持存活；Java 必须先见完整尾部及 EOF，同时 supervisor 仍活着。新增大尾部不截断、payload outcome 与 supervisor exit 分离、缺失/损坏/失败终态保留 session 的用例。
-- [ ] 运行定向测试观察预期红灯；旧两次 stdout.end 局部尝试已失败，不重复采用。
-- [ ] 监督器独占 `fs.createWriteStream(null, { fd: 1, autoClose: true })` 一类真实拥有 fd 的流；只由 payload stdout 自然 end 推进 flush/close。禁止同时用 `process.stdout`，range quiescence 不抢先关闭数据流。stderr 独立保持可读。
-- [ ] 内部终态文件改为唯一严格结构化格式，包含 payload outcome 与 range 结果，不兼容旧 `QUIESCENT` 文本；Java 侧校验状态并单独观察 supervisor exit。启动失败也明确结算，不能遗留 pending pipe。
-- [ ] N1 定向测试全绿，回归 NodeProcessUnitTest；只提交上述文件，避免携带其他未完成测试。
+- [x] 先读上述完整实现与测试。新增真实进程测试：payload 写尾部后关闭自己的 stdout，但继续写 stderr/保持存活；Java 必须先见完整尾部及 EOF，同时 supervisor 仍活着。新增大尾部不截断、payload outcome 与 supervisor exit 分离、缺失/损坏/失败终态保留 session 的用例。
+- [x] 运行定向测试观察预期红灯；旧两次 stdout.end 局部尝试已失败，不重复采用。
+- [x] 监督器以 `net.Socket({ fd: 1, readable: false, writable: true })` 独占异步输出，payload stdout 自然结束后用 `destroySoon()` 排空待写队列；socket `close` 后再显式 `fs.closeSync(1)`，补足 libuv 故意保留 fd 0..2 的行为。禁止同时使用 `process.stdout`，range quiescence 不抢先关闭数据流，stderr 独立保持可读。
+- [x] 内部终态文件改为唯一严格结构化格式，包含 payload outcome 与 range 结果，不兼容旧 `QUIESCENT` 文本；Java 侧校验状态并单独观察 supervisor exit。启动失败也明确结算，不能遗留 pending pipe。
+- [x] N1 定向测试全绿，回归 NodeProcessUnitTest；只提交上述文件，避免携带其他未完成测试。
 
 N1a 实际进度：`forwardsStdoutTailAndEofWhilePayloadAndSupervisorRemainAlive` 以 payload `fs.closeSync(1)`
 复现旧 supervisor 不传播 EOF，3 秒等待失败（1 tests / 1 failure / 0 errors；`/private/tmp/fibra-n1-eof-red.log`）。
@@ -41,15 +41,12 @@ N1a 实际进度：`forwardsStdoutTailAndEofWhilePayloadAndSupervisorRemainAlive
 （`/private/tmp/fibra-n1a-eof-green.log`、`/private/tmp/fibra-n1a-process-unit-green.log`）。仅证明原始数据 EOF；
 结构化终态、大尾部和 N2 session 协调尚未完成，不能把 N1a 作为整体 Node 关闭已通过。
 
-N1b 当前断点（尚未提交生产实现）：真实大尾部、payload/supervisor 退出分离、ENOENT、严格 JSON、
-输出错误清理与终态缓存一度取得 31/31 定向和 69/69 Node 回归绿灯；规格独立审查通过，质量审查发现
-stdout/stderr 同时断开时日志 EPIPE 会中断清理并遗留 payload。该问题已用正式测试复现并修正，定向
-32/32 通过（`/private/tmp/fibra-n1-stderr-failure-red.log`、`/private/tmp/fibra-n1-stderr-failure-green.log`）。
-但随后离线 Node*Test 两轮均在 `drainsALargeStdoutTailBeforePublishingEof` 失败：
-`/private/tmp/fibra-n1-node-offline-regression.log`、`/private/tmp/fibra-n1-node-offline-diagnostic.log`。
-现按两次失败止损规则暂停测试、复审与提交。清理异常覆盖了主异常，诊断在 close 前求值又只取得仍运行
-状态，尚不足以判断 supervisor 非零退出、范围失败或更早的输出错误。后续先让测试保留主异常、清理异常
-及失败后的 exit/status/stderr 证据，再决定实现修改；不能把早先绿灯作为当前版本已通过，也不能盲目第三次重跑。
+N1 已由 `ac2a612` 完成。真实大尾部诊断证明 `fs.WriteStream` 在非阻塞管道背压下截断；Node 20 自带
+libuv 的 `uv__stream_close` 又明确不关闭 fd 0..2，因此普通 `end()` 或 `destroySoon()` 单独使用都不能让
+Java/Python 创建的匿名管道提前 EOF。最终实现由 `net.Socket` 承担背压与排空，在 socket `close` 后显式
+关闭 fd1。真实 EOF、4 MiB 尾部、host 关闭单/双输出及 `NodeProcessUnitTest` 32/32 均通过，离线
+`Node*Test` 70/70 通过（`/private/tmp/fibra-n1-explicit-close-node-regression.log`）；第二轮独立质量审查
+无可操作发现。Windows 实机及其它 Node/libuv 版本仍留到 V1/CI 验收，不以 macOS 结果替代。
 
 ## N2：单一 session 关闭协调与请求资源排空
 
