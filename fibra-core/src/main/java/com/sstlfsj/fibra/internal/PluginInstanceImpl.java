@@ -441,12 +441,15 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner, D
         drained.then(consumers).then(Cleanup.allSettled(Cleanup.reversed(resources.snapshot())))
             .publishOn(lifecycle().scheduler())
             .subscribe(ignored -> { }, cleanupFailure -> {
-                failure.addSuppressed(cleanupFailure);
+                var cleanupOwnsStartup = containsFailure(cleanupFailure, failure);
+                if (!cleanupOwnsStartup) {
+                    failure.addSuppressed(cleanupFailure);
+                }
                 if (disposeRequested) {
                     stopFailed(cleanupFailure);
                 } else {
                     activationCleanup.tryEmitError(cleanupFailure);
-                    finishFailed(failure);
+                    finishFailed(cleanupOwnsStartup ? cleanupFailure : failure);
                 }
             }, () -> {
                 if (disposeRequested) {
@@ -456,6 +459,25 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner, D
                     finishFailed(failure);
                 }
             });
+    }
+
+    private static boolean containsFailure(Throwable root, Throwable target) {
+        var visited = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<Throwable, Boolean>());
+        var pending = new java.util.ArrayDeque<Throwable>();
+        pending.add(root);
+        while (!pending.isEmpty()) {
+            var current = pending.removeFirst();
+            if (current == target) {
+                return true;
+            }
+            if (visited.add(current)) {
+                if (current.getCause() != null) {
+                    pending.add(current.getCause());
+                }
+                pending.addAll(java.util.Arrays.asList(current.getSuppressed()));
+            }
+        }
+        return false;
     }
 
     private void startStop() {

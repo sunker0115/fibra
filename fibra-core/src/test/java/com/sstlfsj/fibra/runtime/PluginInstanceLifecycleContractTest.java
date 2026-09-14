@@ -5,6 +5,8 @@ import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.PluginInstanceState;
 import com.sstlfsj.fibra.ServiceKey;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
@@ -23,6 +25,66 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class PluginInstanceLifecycleContractTest {
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
     private static final ServiceKey<Counter> COUNTER = ServiceKey.of("counter", Counter.class);
+
+    @ParameterizedTest
+    @ValueSource(strings = {"same", "suppressed", "cause", "independent"})
+    void startupAndCleanupErrorsHaveOneAggregateOwner(String relation) throws Exception {
+        var startFailure = new IllegalStateException("startup failed");
+        var cleanupFailure = relation.equals("same") ? startFailure
+            : new IllegalStateException("cleanup failed");
+        if (relation.equals("suppressed")) cleanupFailure.addSuppressed(startFailure);
+        if (relation.equals("cause")) cleanupFailure.initCause(startFailure);
+        var definition = PluginDefinition.builder("shared-failure", Void.class, () -> (context, config) -> {
+            context.effects().add(() -> reactor.core.publisher.Mono.error(cleanupFailure));
+            return reactor.core.publisher.Mono.error(startFailure);
+        }).build();
+        var runtime = FibraRuntime.create();
+        try {
+            var instance = runtime.rootScope().context().plugins().mount("shared-failure", definition.prepare(null));
+            var reported = assertThrows(ExecutionException.class,
+                () -> instance.settled().toFuture().get(5, TimeUnit.SECONDS)).getCause();
+            if (relation.equals("independent")) {
+                assertSame(startFailure, reported, "独立失败仍以原启动异常为根");
+            } else {
+                assertFalse(startFailure == reported, "清理聚合已拥有启动异常时必须保留聚合根");
+                assertSame(cleanupFailure, reported.getSuppressed()[0]);
+            }
+            var seen = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<Throwable, Boolean>());
+            var pending = new java.util.ArrayDeque<Throwable>();
+            pending.add(reported);
+            while (!pending.isEmpty()) {
+                var current = pending.removeFirst();
+                assertTrue(seen.add(current), "异常图不能有对象环或重复引用");
+                if (current.getCause() != null) pending.add(current.getCause());
+                pending.addAll(java.util.Arrays.asList(current.getSuppressed()));
+            }
+            assertTrue(seen.contains(startFailure));
+            assertTrue(seen.contains(cleanupFailure));
+        } finally {
+            runtime.closeAsync().toFuture().get(5, TimeUnit.SECONDS);
+        }
+    }
+
+    @Test
+    void anExistingCleanupCauseCycleDoesNotBlockStartupFailureReporting() throws Exception {
+        var startup = new IllegalStateException("startup failed");
+        var cleanup = new IllegalStateException("cleanup failed");
+        cleanup.initCause(new IllegalStateException("preexisting cycle", cleanup));
+        var definition = PluginDefinition.builder("cyclic-cleanup", Void.class, () -> (context, config) -> {
+            context.effects().add(() -> reactor.core.publisher.Mono.error(cleanup));
+            return reactor.core.publisher.Mono.error(startup);
+        }).build();
+        var runtime = FibraRuntime.create();
+        try {
+            var instance = runtime.rootScope().context().plugins().mount("cyclic-cleanup", definition.prepare(null));
+            var reported = assertThrows(ExecutionException.class,
+                () -> instance.settled().toFuture().get(5, TimeUnit.SECONDS)).getCause();
+            assertSame(startup, reported);
+            assertSame(cleanup, reported.getSuppressed()[0].getSuppressed()[0]);
+        } finally {
+            runtime.closeAsync().toFuture().get(5, TimeUnit.SECONDS);
+        }
+    }
 
     @Test
     void preparedMountValidatesOnceWithoutCreatingThePluginUntilMount() {

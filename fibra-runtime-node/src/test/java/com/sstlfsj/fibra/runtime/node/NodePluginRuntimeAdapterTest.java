@@ -22,6 +22,8 @@ import com.sstlfsj.fibra.plugins.tool.ToolRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Mono;
 
 import java.lang.management.ManagementFactory;
@@ -51,12 +53,31 @@ class NodePluginRuntimeAdapterTest {
     @Test
     void handshakeAndCleanupFailuresAreAggregatedOnceWithoutExceptionCycles(@TempDir Path work)
         throws Exception {
+        assertStartupAndCleanupFailures(work, script().replace(
+            "if (method === 'fibra.handshake') reply(id, {protocol:1});",
+            "if (method === 'fibra.handshake') { fs.writeFileSync('termination.status', 'invalid'); reply(id, {protocol:999}); }"),
+            NodeRpcPhase.HANDSHAKE);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"malformed-error", "invalid-json"})
+    void startProtocolAndCleanupFailuresDoNotShareCyclicOwnership(String response, @TempDir Path work)
+        throws Exception {
+        var output = response.equals("malformed-error")
+            ? "JSON.stringify({jsonrpc:'2.0', id, error:{message:'missing code'}})"
+            : "'invalid json'";
+        assertStartupAndCleanupFailures(work, script().replace(
+            "else if (method === 'fibra.start') reply(id, {ok:true});",
+            "else if (method === 'fibra.start') { fs.writeFileSync('termination.status', 'invalid'); "
+                + "process.stdout.write(" + output + " + '\\n'); }"), NodeRpcPhase.PROTOCOL);
+    }
+
+    private void assertStartupAndCleanupFailures(Path work, String script, NodeRpcPhase startPhase)
+        throws Exception {
         var source = work.resolve("package");
         var payload = nodePackage(source);
         Files.writeString(payload.resolve("fibra-plugin.yaml"), manifest("echo-node"));
-        Files.writeString(payload.resolve("index.mjs"), "import fs from 'node:fs';\n" + script().replace(
-            "if (method === 'fibra.handshake') reply(id, {protocol:1});",
-            "if (method === 'fibra.handshake') { fs.writeFileSync('termination.status', 'invalid'); reply(id, {protocol:999}); }"));
+        Files.writeString(payload.resolve("index.mjs"), "import fs from 'node:fs';\n" + script);
         var owner = adapter(work).create();
         var runtime = FibraRuntime.create();
         try (var store = new ArtifactStore(work.resolve("store"))) {
@@ -94,7 +115,7 @@ class NodePluginRuntimeAdapterTest {
                 pending.addAll(java.util.Arrays.asList(current.getSuppressed()));
             }
             org.junit.jupiter.api.Assertions.assertAll(
-                () -> assertTrue(phases.contains(NodeRpcPhase.HANDSHAKE), "必须保留原握手失败"),
+                () -> assertTrue(phases.contains(startPhase), "必须保留原启动失败阶段 " + startPhase),
                 () -> assertTrue(phases.contains(NodeRpcPhase.TERMINATE), "必须保留清理失败"),
                 () -> assertFalse(repeated.get(), "cause/suppressed 图不能有对象环或重复引用"));
             try (var retained = Files.list(work.resolve("sessions"))) {
