@@ -133,6 +133,8 @@ class ApplyDeploymentMountFailureRecoveryTest {
                 require(failure.targetSaved(), "target must be confirmed before mount failure");
                 require(!failure.view().engineDiagnostics().mutationGateOpen(),
                     "a committed but unretired update must close mutation gate");
+                require(failure.view().engineDiagnostics().failure().contains(ChangePhase.RECONCILING.name()),
+                    "mount failure diagnostics must identify reconcile as the source stage");
                 require(graph("new").equals(target.desiredGraph()), "new graph was not persisted");
                 require(newArtifact.equals(failure.view().engine().artifacts().get(ARTIFACT).revision()),
                     "published artifact selection must be the persisted new target");

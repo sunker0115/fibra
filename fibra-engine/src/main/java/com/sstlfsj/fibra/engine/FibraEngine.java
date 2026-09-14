@@ -437,6 +437,7 @@ public final class FibraEngine implements AutoCloseable {
                 plan.evaluation = DesiredEvaluation.evaluate(plan.desired.graph(), plan.context);
             }
             phase = ChangePhase.PREPARING;
+            plan.sourcePhase = phase;
             failure = null;
             publishControl();
             if (!plan.updateResources) return Mono.<Void>empty();
@@ -456,6 +457,7 @@ public final class FibraEngine implements AutoCloseable {
             affected = Set.copyOf(changed);
             if (plan.saveTarget) {
                 phase = ChangePhase.SAVING;
+                plan.sourcePhase = phase;
                 publishControl();
                 plan.installs.forEach(transaction -> {
                     var saved = transaction.save();
@@ -476,12 +478,14 @@ public final class FibraEngine implements AutoCloseable {
             artifacts = Map.copyOf(plan.artifacts);
             plan.committed = true;
             phase = ChangePhase.RECONCILING;
+            plan.sourcePhase = phase;
             publishControl();
             return reconcile(plan);
         })).then(loop.call(() -> domain.settled()))
             .then(loop.call(() -> {
                 assertClean();
                 phase = ChangePhase.RETIRING;
+                plan.sourcePhase = phase;
                 refresh();
                 if (plan.update == null) {
                     plan.retired = true;
@@ -489,6 +493,7 @@ public final class FibraEngine implements AutoCloseable {
                 }
                 return plan.update.closeAsync().doOnSuccess(ignored -> plan.retired = true);
             })).then(loop.call(() -> capture().map(captured -> {
+                plan.sourcePhase = ChangePhase.RECONCILING;
                 phase = ChangePhase.IDLE;
                 affected = Set.of();
                 state = EngineState.RUNNING;
@@ -630,7 +635,7 @@ public final class FibraEngine implements AutoCloseable {
             if (closeFailure != error) error.addSuppressed(closeFailure);
             return Mono.empty();
         }).then(loop.call(() -> {
-            failure = error.toString();
+            failure = "[" + plan.sourcePhase + "] " + error;
             phase = ChangePhase.FAILED;
             if (plan.bootstrapping || domain == null || state == EngineState.NEW) state = EngineState.FAILED;
             return capture().flatMap(captured -> {
@@ -945,6 +950,7 @@ public final class FibraEngine implements AutoCloseable {
         boolean retired;
         boolean bootstrapping;
         boolean executing;
+        ChangePhase sourcePhase = ChangePhase.PREPARING;
         ChangeSet(DesiredCompilation desired, Map<ArtifactId, ArtifactRecord> artifacts,
                   ConfigContextSnapshot context) {
             this.desired = desired;

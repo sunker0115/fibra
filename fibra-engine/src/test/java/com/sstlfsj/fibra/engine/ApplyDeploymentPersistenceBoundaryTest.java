@@ -1,6 +1,7 @@
 package com.sstlfsj.fibra.engine;
 
 import com.sstlfsj.fibra.PluginDefinition;
+import com.sstlfsj.fibra.ServiceKey;
 import com.sstlfsj.fibra.artifact.ArtifactException;
 import com.sstlfsj.fibra.artifact.ArtifactId;
 import com.sstlfsj.fibra.artifact.ArtifactPhase;
@@ -42,6 +43,8 @@ class ApplyDeploymentPersistenceBoundaryTest {
     private static final ContributionKind<String, String, String> COMMAND =
         ContributionKind.local("command", String.class, String.class, String.class);
     private static final ContributionId CONTRIBUTION = new ContributionId("sample", "run");
+    private static final ServiceKey<String> MISSING_SERVICE =
+        ServiceKey.of("missing", String.class);
 
     @Test
     void applyDeploymentReplacesTheCompleteArtifactSelectionAndRemovesDependentInstances(
@@ -106,6 +109,25 @@ class ApplyDeploymentPersistenceBoundaryTest {
     }
 
     @Test
+    void finalTargetCheckFailureIdentifiesReconcileAsItsSourcePhase() {
+        var definition = PluginDefinition.builder("sample", String.class,
+            () -> (context, config) -> Mono.<Void>empty()).require(MISSING_SERVICE).build();
+        var catalog = PluginCatalog.of(new PluginCatalogEntry<>(definition, value -> (String) value));
+        try (var engine = FibraEngine.builder(new InMemoryDesiredStateRepository(graph("new")))
+            .stateStore(EngineStateStore.inMemory()).catalog(catalog).build()) {
+            var failure = assertThrows(EngineChangeException.class,
+                () -> engine.start().block(TIMEOUT));
+
+            assertAll(
+                () -> assertEquals(ChangePhase.FAILED, failure.view().engineDiagnostics().phase()),
+                () -> assertTrue(failure.view().engineDiagnostics().failure()
+                    .contains(ChangePhase.RECONCILING.name())),
+                () -> assertTrue(failure.view().engineDiagnostics().failure()
+                    .contains("deployment target requirements are not satisfied")));
+        }
+    }
+
+    @Test
     void targetSaveFailureRetainsOldRuntimeAndAllowsAnotherApplyDeployment(@TempDir Path work)
         throws Exception {
         var io = new FailingIo();
@@ -128,6 +150,10 @@ class ApplyDeploymentPersistenceBoundaryTest {
             assertAll(
                 () -> assertFalse(failure.targetSaved()),
                 () -> assertTrue(failure.view().engineDiagnostics().mutationGateOpen()),
+                () -> assertTrue(failure.view().engineDiagnostics().failure()
+                    .contains(ChangePhase.SAVING.name())),
+                () -> assertTrue(failure.view().engineDiagnostics().failure()
+                    .contains(failure.getCause().toString())),
                 () -> assertEquals(graph("old"), stateStore.load().orElseThrow().desiredGraph()),
                 () -> assertEquals(old.revision(), stateStore.load().orElseThrow().artifacts().get(ARTIFACT)),
                 () -> assertEquals(old.revision(), failure.view().engine().artifacts()
@@ -171,6 +197,10 @@ class ApplyDeploymentPersistenceBoundaryTest {
                 () -> assertInstanceOf(EngineStateStore.SaveUnconfirmedException.class, failure.getCause()),
                 () -> assertFalse(failure.targetSaved()),
                 () -> assertFalse(failure.view().engineDiagnostics().mutationGateOpen()),
+                () -> assertTrue(failure.view().engineDiagnostics().failure()
+                    .contains(ChangePhase.SAVING.name())),
+                () -> assertTrue(failure.view().engineDiagnostics().failure()
+                    .contains(failure.getCause().toString())),
                 () -> assertEquals(graph("old"), failure.view().engine().desiredGraph()),
                 () -> assertEquals(old.revision(), failure.view().engine().artifacts()
                     .get(ARTIFACT).revision()),
@@ -217,6 +247,10 @@ class ApplyDeploymentPersistenceBoundaryTest {
             assertAll(
                 () -> assertTrue(failure.targetSaved()),
                 () -> assertFalse(failure.view().engineDiagnostics().mutationGateOpen()),
+                () -> assertTrue(failure.view().engineDiagnostics().failure()
+                    .contains(ChangePhase.RETIRING.name())),
+                () -> assertTrue(failure.view().engineDiagnostics().failure()
+                    .contains(failure.getCause().toString())),
                 () -> assertEquals(graph("new"), stateStore.load().orElseThrow().desiredGraph()),
                 () -> assertTrue(artifactStore.history(ARTIFACT).stream()
                     .anyMatch(record -> record.version().equals("2.0.0"))),
@@ -256,6 +290,10 @@ class ApplyDeploymentPersistenceBoundaryTest {
             assertAll(
                 () -> assertFalse(failure.targetSaved()),
                 () -> assertTrue(failure.view().engineDiagnostics().mutationGateOpen()),
+                () -> assertTrue(failure.view().engineDiagnostics().failure()
+                    .contains(ChangePhase.PREPARING.name())),
+                () -> assertTrue(failure.view().engineDiagnostics().failure()
+                    .contains(failure.getCause().toString())),
                 () -> assertEquals(graph("old"), stateStore.load().orElseThrow().desiredGraph()),
                 () -> assertEquals(old.revision(), stateStore.load().orElseThrow().artifacts().get(ARTIFACT)),
                 () -> assertEquals(old.revision(), failure.view().engine().artifacts()
@@ -294,6 +332,10 @@ class ApplyDeploymentPersistenceBoundaryTest {
             assertAll(
                 () -> assertFalse(failure.targetSaved()),
                 () -> assertTrue(failure.view().engineDiagnostics().mutationGateOpen()),
+                () -> assertTrue(failure.view().engineDiagnostics().failure()
+                    .contains(ChangePhase.PREPARING.name())),
+                () -> assertTrue(failure.view().engineDiagnostics().failure()
+                    .contains("auxiliary runtime preparation failed")),
                 () -> assertEquals(graph("old"), stateStore.load().orElseThrow().desiredGraph()),
                 () -> assertEquals(old.revision(), failure.view().engine().artifacts()
                     .get(ARTIFACT).revision()),
@@ -333,6 +375,10 @@ class ApplyDeploymentPersistenceBoundaryTest {
             assertAll(
                 () -> assertEquals(ArtifactPhase.COMMIT, artifactFailure.phase()),
                 () -> assertFalse(failure.targetSaved()),
+                () -> assertTrue(failure.view().engineDiagnostics().failure()
+                    .contains(ChangePhase.SAVING.name())),
+                () -> assertTrue(failure.view().engineDiagnostics().failure()
+                    .contains(artifactFailure.toString())),
                 () -> assertEquals(graph("old"), stateStore.load().orElseThrow().desiredGraph()),
                 () -> assertEquals(old.revision(), stateStore.load().orElseThrow().artifacts().get(ARTIFACT)),
                 () -> assertEquals(old.revision(), failure.view().engine().artifacts()
