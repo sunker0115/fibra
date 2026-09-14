@@ -545,13 +545,15 @@ class JavaPluginRuntimeAdapterTest {
         addLibrary(dependency, "shared-a.jar", classes, "shared.Library");
         addLibrary(executable, "shared-b.jar", classes, "shared.Library");
         var owner = new JavaPluginRuntimeAdapter().create();
+        try {
+            install(owner, List.of(dependency, executable));
 
-        install(owner, List.of(dependency, executable));
-
-        var loaders = loaders(owner);
-        assertSame(loaders.get("a_____"), loaders.get("a_____").loadClass("shared.Library").getClassLoader());
-        assertSame(loaders.get("b_____"), loaders.get("b_____").loadClass("shared.Library").getClassLoader());
-        owner.closeAsync().block(Duration.ofSeconds(5));
+            var loaders = loaders(owner);
+            assertSame(loaders.get("a_____"), loaders.get("a_____").loadClass("shared.Library").getClassLoader());
+            assertSame(loaders.get("b_____"), loaders.get("b_____").loadClass("shared.Library").getClassLoader());
+        } finally {
+            owner.closeAsync().block(Duration.ofSeconds(5));
+        }
     }
 
     @Test
@@ -563,15 +565,17 @@ class JavaPluginRuntimeAdapterTest {
         addLibrary(contract, "contract.jar", classes, "shared.Contract");
         addLibrary(executable, "shadow.jar", classes, "shared.Contract");
         var owner = new JavaPluginRuntimeAdapter().create();
+        try {
+            install(owner, List.of(contract, executable, fallback));
 
-        install(owner, List.of(contract, executable, fallback));
-
-        var loaders = loaders(owner);
-        assertSame(loaders.get("b_____"), loaders.get("b_____").loadClass("shared.Contract").getClassLoader());
-        var contractType = loaders.get("c_____").loadClass("shared.Contract");
-        assertTrue(contractType.getClassLoader() instanceof PluginClassLoader);
-        assertNotSame(loaders.get("c_____"), contractType.getClassLoader());
-        owner.closeAsync().block(Duration.ofSeconds(5));
+            var loaders = loaders(owner);
+            assertSame(loaders.get("b_____"), loaders.get("b_____").loadClass("shared.Contract").getClassLoader());
+            var contractType = loaders.get("c_____").loadClass("shared.Contract");
+            assertTrue(contractType.getClassLoader() instanceof PluginClassLoader);
+            assertNotSame(loaders.get("c_____"), contractType.getClassLoader());
+        } finally {
+            owner.closeAsync().block(Duration.ofSeconds(5));
+        }
     }
 
     @Test
@@ -600,13 +604,15 @@ class JavaPluginRuntimeAdapterTest {
         addLibrary(root, "root-shared.jar", classes, "shared.Transitive");
 
         var owner = new JavaPluginRuntimeAdapter().create();
+        try {
+            install(owner, List.of(base, middle, root));
 
-        install(owner, List.of(base, middle, root));
-
-        var loaders = loaders(owner);
-        assertSame(loaders.get("a_____"), loaders.get("b_____").loadClass("shared.Transitive").getClassLoader());
-        assertSame(loaders.get("c_____"), loaders.get("c_____").loadClass("shared.Transitive").getClassLoader());
-        owner.closeAsync().block(Duration.ofSeconds(5));
+            var loaders = loaders(owner);
+            assertSame(loaders.get("a_____"), loaders.get("b_____").loadClass("shared.Transitive").getClassLoader());
+            assertSame(loaders.get("c_____"), loaders.get("c_____").loadClass("shared.Transitive").getClassLoader());
+        } finally {
+            owner.closeAsync().block(Duration.ofSeconds(5));
+        }
     }
 
     @Test
@@ -623,22 +629,24 @@ class JavaPluginRuntimeAdapterTest {
         addLibrary(first, "versioned.jar", firstClasses, type);
         addLibrary(second, "versioned.jar", secondClasses, type);
         var owner = new JavaPluginRuntimeAdapter().create();
+        try {
+            install(owner, List.of(firstRoot, first, second, secondRoot));
 
-        install(owner, List.of(firstRoot, first, second, secondRoot));
-
-        var loaders = loaders(owner);
-        var firstType = loaders.get("b_____").loadClass(type);
-        var secondType = loaders.get("c_____").loadClass(type);
-        assertEquals("first", invokeValue(firstType));
-        assertEquals("second", invokeValue(secondType));
-        assertNotSame(firstType, secondType);
-        assertSame(loaders.get("b_____"), firstType.getClassLoader());
-        assertSame(loaders.get("c_____"), secondType.getClassLoader());
-        assertSame(firstType, loaders.get("a_____").loadClass(type));
-        assertSame(secondType, loaders.get("d_____").loadClass(type));
-        assertEquals("first", invokeValue(loaders.get("a_____").loadClass(type)));
-        assertEquals("second", invokeValue(loaders.get("d_____").loadClass(type)));
-        owner.closeAsync().block(Duration.ofSeconds(5));
+            var loaders = loaders(owner);
+            var firstType = loaders.get("b_____").loadClass(type);
+            var secondType = loaders.get("c_____").loadClass(type);
+            assertEquals("first", invokeValue(firstType));
+            assertEquals("second", invokeValue(secondType));
+            assertNotSame(firstType, secondType);
+            assertSame(loaders.get("b_____"), firstType.getClassLoader());
+            assertSame(loaders.get("c_____"), secondType.getClassLoader());
+            assertSame(firstType, loaders.get("a_____").loadClass(type));
+            assertSame(secondType, loaders.get("d_____").loadClass(type));
+            assertEquals("first", invokeValue(loaders.get("a_____").loadClass(type)));
+            assertEquals("second", invokeValue(loaders.get("d_____").loadClass(type)));
+        } finally {
+            owner.closeAsync().block(Duration.ofSeconds(5));
+        }
     }
 
     @Test
@@ -687,10 +695,13 @@ class JavaPluginRuntimeAdapterTest {
         addLibrary(first, "parent-a.jar", Map.of("com/sstlfsj/fibra/Context.class", parentClass));
         addLibrary(second, "parent-b.jar", Map.of("com/sstlfsj/fibra/Context.class", parentClass));
         var owner = new JavaPluginRuntimeAdapter().create();
-        install(owner, List.of(first, second));
-        assertSame(com.sstlfsj.fibra.Context.class,
-            loaders(owner).get("b_____").loadClass("com.sstlfsj.fibra.Context"));
-        owner.closeAsync().block(Duration.ofSeconds(5));
+        try {
+            install(owner, List.of(first, second));
+            assertSame(com.sstlfsj.fibra.Context.class,
+                loaders(owner).get("b_____").loadClass("com.sstlfsj.fibra.Context"));
+        } finally {
+            owner.closeAsync().block(Duration.ofSeconds(5));
+        }
 
         var missingClasses = compileClass(work.resolve("miss/classes"),
             "com.sstlfsj.fibra.dynamic.Shared");
@@ -701,13 +712,16 @@ class JavaPluginRuntimeAdapterTest {
         addLibrary(missingSecond, "missing-d.jar", missingClasses,
             "com.sstlfsj.fibra.dynamic.Shared");
         var missingOwner = new JavaPluginRuntimeAdapter().create();
-        install(missingOwner, List.of(missingFirst, missingSecond));
-        var missingLoaders = loaders(missingOwner);
-        assertSame(missingLoaders.get("c_____"), missingLoaders.get("c_____")
-            .loadClass("com.sstlfsj.fibra.dynamic.Shared").getClassLoader());
-        assertSame(missingLoaders.get("d_____"), missingLoaders.get("d_____")
-            .loadClass("com.sstlfsj.fibra.dynamic.Shared").getClassLoader());
-        missingOwner.closeAsync().block(Duration.ofSeconds(5));
+        try {
+            install(missingOwner, List.of(missingFirst, missingSecond));
+            var missingLoaders = loaders(missingOwner);
+            assertSame(missingLoaders.get("c_____"), missingLoaders.get("c_____")
+                .loadClass("com.sstlfsj.fibra.dynamic.Shared").getClassLoader());
+            assertSame(missingLoaders.get("d_____"), missingLoaders.get("d_____")
+                .loadClass("com.sstlfsj.fibra.dynamic.Shared").getClassLoader());
+        } finally {
+            missingOwner.closeAsync().block(Duration.ofSeconds(5));
+        }
     }
 
     @Test
@@ -772,13 +786,15 @@ class JavaPluginRuntimeAdapterTest {
         addLibrary(second, "late-b.jar", Map.of("fixture/LateLoaded.class", parentClass));
 
         var owner = new JavaPluginRuntimeAdapter().create();
+        try {
+            install(owner, List.of(first, second));
 
-        install(owner, List.of(first, second));
-
-        var loaders = loaders(owner);
-        assertSame(loaders.get("a_____"), loaders.get("a_____").loadClass("fixture.LateLoaded").getClassLoader());
-        assertSame(loaders.get("b_____"), loaders.get("b_____").loadClass("fixture.LateLoaded").getClassLoader());
-        owner.closeAsync().block(Duration.ofSeconds(5));
+            var loaders = loaders(owner);
+            assertSame(loaders.get("a_____"), loaders.get("a_____").loadClass("fixture.LateLoaded").getClassLoader());
+            assertSame(loaders.get("b_____"), loaders.get("b_____").loadClass("fixture.LateLoaded").getClassLoader());
+        } finally {
+            owner.closeAsync().block(Duration.ofSeconds(5));
+        }
     }
 
     @Test
@@ -842,13 +858,15 @@ class JavaPluginRuntimeAdapterTest {
         addLibrary(regular, "regular.jar", Map.of("mr/VersionOnly.class", bytes));
 
         var owner = new JavaPluginRuntimeAdapter().create();
+        try {
+            install(owner, List.of(versioned, regular));
 
-        install(owner, List.of(versioned, regular));
-
-        var loaders = loaders(owner);
-        assertSame(loaders.get("a_____"), loaders.get("a_____").loadClass("mr.VersionOnly").getClassLoader());
-        assertSame(loaders.get("b_____"), loaders.get("b_____").loadClass("mr.VersionOnly").getClassLoader());
-        owner.closeAsync().block(Duration.ofSeconds(5));
+            var loaders = loaders(owner);
+            assertSame(loaders.get("a_____"), loaders.get("a_____").loadClass("mr.VersionOnly").getClassLoader());
+            assertSame(loaders.get("b_____"), loaders.get("b_____").loadClass("mr.VersionOnly").getClassLoader());
+        } finally {
+            owner.closeAsync().block(Duration.ofSeconds(5));
+        }
     }
 
     @Test
