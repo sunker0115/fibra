@@ -17,7 +17,7 @@
 | 1 短超时诊断 | 已有代码与测试证据 | 最终集成回归，不重复建设 |
 | 2 生命周期/恢复 | 已有失败阶段与清理失败证据（`b96837e`、`9431d38`） | 复核稳定失败可纠正、部分 adopt 等不确定失败封锁；诊断事实不可只藏在文本 |
 | 3 准入/排空 | 已有撤销及 Scope 排空证据（`8cb9de7`、`7cb5cf0`、`0b73656`） | Node 请求结果与清理终态分离后再验收，保留 revision + identity |
-| 4 Java/Node 长稳 | 审核完成，实施中 | 依次完成 N1、N2、J1、J2、E1、V1 |
+| 4 Java/Node 长稳 | N1、N2、J1、J2 已完成 | 继续完成 E1、V1 |
 | 5 仓外扩展契约 | 有既有消费者 | 对最终实现跑真实安装、配置、升级、重装、调用中卸载与回收报告 |
 | 6 安全/供应链 | 有既有门禁 | 对最终实现复验篡改、路径、依赖、脱敏与发行；不实现新隔离后端 |
 
@@ -90,12 +90,18 @@ GC 证据只适用于受控夹具，不声明任意插件卸载截止。
 
 **文件：** `fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/PluginClassLoader.java`、`JavaPluginRuntimeAdapter.java`，同包内部有效类名索引实现及 `PluginClassLoaderTest.java`/`JavaPluginRuntimeAdapterTest.java`。
 
-- [ ] RED：同一 artifact 主/lib 与 lib/lib 重复；依赖相连的插件分别携带同库同版和异版并完成真实调用；依赖方直接查找按声明顺序首命中；菱形同一依赖、无关插件同名私有库、parent-first 命中与 miss、multi-release JAR 的 JVM 有效版本。
-- [ ] GREEN：prepare 汇总每个 artifact 主 JAR 与 lib JAR 的当前有效二进制名称并忽略 module-info，只拒绝该 artifact 自身的重复定义；不同 owner 的同名类由各自 loader 隔离，依赖方自身缺类时沿 `requires` 声明顺序取得第一条成功路径，不增加版本求解或 package wiring。宿主仅在 parent 真正可解析且 parent-first 的类上拥有优先权。
-- [ ] 同一 artifact 跨主/lib 或不同 lib JAR 的同名有效 class 同样拒绝，诊断列类名和两个来源；共享 loader 不等于可以任由 URL 顺序选代码。MR-JAR 先在单 JAR 内选当前有效版本，再跨 JAR 判重；实际 parent-first 宿主命中仍遵守宿主归属。
-- [ ] 不同 loader 的同名 `Class` 不可互换；跨插件签名、Service 与 DTO 必须由唯一宿主或 contract artifact 定义。调用方需要同时直接操作同 FQCN 的两个不兼容版本时由插件构建做 relocation/shading；不因 entrypoint 缺失推断 exports，不新增 OSGi/export 元模型。
-- [ ] 现有 `JavaPluginRuntimeAdapterTest.artifact` 给所有制品复制同名 `fixture.SampleEntrypoint`/`LateLoaded`，需改为各制品独立类名；不能让正常夹具伪造同一 artifact 的本地重复。专测同包冲突的夹具才主动生成同名定义。
-- [ ] 定向红绿、模块回归、规格与质量审查后提交。
+- [x] RED：同一 artifact 主/lib 与 lib/lib 重复；依赖相连的插件分别携带同库同版和异版并完成真实调用；依赖方直接查找按声明顺序首命中；菱形同一依赖、无关插件同名私有库、parent-first 命中与 miss、multi-release JAR 的 JVM 有效版本。
+- [x] GREEN：prepare 汇总每个 artifact 主 JAR 与 lib JAR 的当前有效二进制名称并忽略 module-info，只拒绝该 artifact 自身的重复定义；不同 owner 的同名类由各自 loader 隔离，依赖方自身缺类时沿 `requires` 声明顺序取得第一条成功路径，不增加版本求解或 package wiring。宿主仅在 parent 真正可解析且 parent-first 的类上拥有优先权。
+- [x] 同一 artifact 跨主/lib 或不同 lib JAR 的同名有效 class 同样拒绝，诊断列类名和两个来源；共享 loader 不等于可以任由 URL 顺序选代码。MR-JAR 先在单 JAR 内选当前有效版本，再跨 JAR 判重；实际 parent-first 宿主命中仍遵守宿主归属。
+- [x] 不同 loader 的同名 `Class` 不可互换；跨插件签名、Service 与 DTO 必须由唯一宿主或 contract artifact 定义。调用方需要同时直接操作同 FQCN 的两个不兼容版本时由插件构建做 relocation/shading；不因 entrypoint 缺失推断 exports，不新增 OSGi/export 元模型。
+- [x] 现有 `JavaPluginRuntimeAdapterTest.artifact` 给所有制品复制同名 `fixture.SampleEntrypoint`/`LateLoaded`，需改为各制品独立类名；不能让正常夹具伪造同一 artifact 的本地重复。专测同包冲突的夹具才主动生成同名定义。
+- [x] 定向红绿、模块回归、规格与质量审查后提交。
+
+J2 由 `3b5f3dc` 放宽到制品内判重，`0d8eb66` 补齐失败断言下的测试资源释放。旧严格实现
+在新增跨制品隔离场景中 7 项按预期 RED；定向复验 32/32，模块回归 42/42。对 `3b5f3dc`
+建立的干净克隆联跑为 Engine 172/172、Java runtime 42/42，相关 parity 9/9；测试清理补丁后的
+定向复验仍为 32/32。独立规格审查与修复后的质量复审均通过。该结论只声明本地优先与
+`requires` 顺序首命中，不声明版本求解；不同 loader 的同名类型仍不得跨契约边界互换。
 
 ## E1：失败事实与可纠正门禁
 
