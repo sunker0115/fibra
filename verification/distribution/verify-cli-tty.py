@@ -143,8 +143,10 @@ def first_session(java, classpath, home):
         session.send(b"echo after-cancel\r")
         session.wait_for("stdout", b"after-cancel\n")
 
+        prompt_count = session.plain_terminal().count(b"consumer> ")
         session.send(b"echo history-restart\r")
         session.wait_for("stdout", b"history-restart\n")
+        session.wait_for("terminal", b"consumer> ", count=prompt_count + 1)
         session.send(b"\x04")
         session.finish()
 
@@ -167,8 +169,10 @@ def restarted_session(java, classpath, home):
         [java, "-cp", classpath, "verification.distribution.InteractiveCliFixture", home])
     try:
         session.wait_for("terminal", b"consumer> ")
+        prompt_count = session.plain_terminal().count(b"consumer> ")
         session.send(b"\x1bOA\r")
         session.wait_for("stdout", b"history-restart\n")
+        session.wait_for("terminal", b"consumer> ", count=prompt_count + 1)
         session.send(b"\x04")
         session.finish()
     except BaseException:
