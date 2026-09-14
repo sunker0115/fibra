@@ -188,8 +188,11 @@ META-INF/fibra/plugin.yaml
 内部 manifest 是 `id`、`version`、可选的 `entrypoint` 和 `requires` 的唯一真源。可运行 artifact
 只有一个入口；只承载共享类型的 contract-only artifact 省略入口，但仍参与 SemVer 依赖解析和
 ClassSpace。同一安装包的主 JAR 与 `lib/` 私有依赖使用同一隔离 ClassLoader，主 JAR 优先，私有 JAR
-按路径顺序读取；插件间依赖仍沿 manifest 声明的图委派。所有包内 classpath JAR 都禁止声明非空
-`Class-Path`。ClassSpace 按 dependency-first 打开并按 dependent-first 关闭。
+按路径顺序读取；不同插件可以各自携带同一库的相同或不同版本。插件间依赖沿 manifest 声明顺序委派，
+依赖方缺类时第一条成功路径胜出；这不让不同 loader 定义的同名类型可以跨方法签名、Service 或 DTO
+互换，共享契约必须由唯一宿主或 contract artifact 定义。所有包内 classpath JAR 都禁止声明非空
+`Class-Path`。同一安装包内的重复有效类直接拒绝；ClassSpace 按 dependency-first 打开并按
+dependent-first 关闭。
 
 ## Node 插件入口
 

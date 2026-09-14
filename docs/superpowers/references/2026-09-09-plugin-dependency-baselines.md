@@ -35,6 +35,13 @@ IDEA 的模块化插件进一步拆分共享、前端、后端模块，并按模
 
 PF4J 的 `DependencyResolver.resolve` 计算依赖图、拓扑序、缺失依赖与版本冲突。`PluginClassLoader.loadClassFromDependencies` 调用依赖加载器的 `loadClass`，因而可以继续沿传递依赖查找。其资源实现查询直接依赖的 `findResource/findResources`，不能声称与递归类委派完全相同。
 
+PF4J、Jenkins 与 IntelliJ 的普通第三方库冲突都不是“整个依赖闭包出现同名类就安装期拒绝”：插件可在
+各自 loader 中携带相同或不同版本，依赖汇聚处按各框架的遍历顺序取得第一条成功定义。该行为支持私有
+实现版本隔离，但不解决不同 loader 同名类型跨 API 边界的身份冲突。Fibra 采用同一能力档位并保留更窄
+的本地 fail-fast：只拒绝同一 artifact 主/lib 或 lib/lib 的重复有效类；不同 artifact 的同名定义允许
+隔离并存，依赖方直接查找沿 `requires` 声明顺序首命中。共享签名类型仍要求唯一 contract owner；不把
+首命中描述为版本求解，也不为此引入 OSGi package wiring。
+
 Fibra 采用每制品加载器、显式依赖和共享类型单一归属。Java 类沿依赖图委派；父优先前缀先查询 parent，
 parent 缺类时继续查询本制品和声明依赖，不能把前缀误作宿主导出白名单。资源采用本地、依赖图、宿主顺序，
 枚举去重。递归资源查找是 Fibra 为同一依赖图确定的契约，并非原样复制 PF4J。宿主实际导出的类仍由

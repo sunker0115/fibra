@@ -86,15 +86,15 @@ descriptor loader，以及关闭订阅惰性和快照幂等。生产实现逐节
 与质量审查均通过。24 轮真实更新中活动 loader 固定为 3、线程 9、FD 37，关闭后 loader 0、FD 34；
 GC 证据只适用于受控夹具，不声明任意插件卸载截止。
 
-## J2：可见闭包的类型定义者唯一性
+## J2：制品内类型唯一性与跨制品版本隔离
 
 **文件：** `fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/PluginClassLoader.java`、`JavaPluginRuntimeAdapter.java`，同包内部有效类名索引实现及 `PluginClassLoaderTest.java`/`JavaPluginRuntimeAdapterTest.java`。
 
-- [ ] RED：不同可见 owner 同名类、可执行依赖携带同名 lib、菱形同一依赖、无关插件各自同名私有库、parent-first 命中与 miss、multi-release JAR 的 JVM 有效版本。
-- [ ] GREEN：prepare 汇总主 JAR 与 lib JAR 的当前有效二进制名称，忽略 module-info；按实际可见闭包拒绝歧义，菱形按定义 owner 去重。宿主仅在 parent 真正可解析且 parent-first 的类上拥有优先权。
+- [ ] RED：同一 artifact 主/lib 与 lib/lib 重复；依赖相连的插件分别携带同库同版和异版并完成真实调用；依赖方直接查找按声明顺序首命中；菱形同一依赖、无关插件同名私有库、parent-first 命中与 miss、multi-release JAR 的 JVM 有效版本。
+- [ ] GREEN：prepare 汇总每个 artifact 主 JAR 与 lib JAR 的当前有效二进制名称并忽略 module-info，只拒绝该 artifact 自身的重复定义；不同 owner 的同名类由各自 loader 隔离，依赖方自身缺类时沿 `requires` 声明顺序取得第一条成功路径，不增加版本求解或 package wiring。宿主仅在 parent 真正可解析且 parent-first 的类上拥有优先权。
 - [ ] 同一 artifact 跨主/lib 或不同 lib JAR 的同名有效 class 同样拒绝，诊断列类名和两个来源；共享 loader 不等于可以任由 URL 顺序选代码。MR-JAR 先在单 JAR 内选当前有效版本，再跨 JAR 判重；实际 parent-first 宿主命中仍遵守宿主归属。
-- [ ] 不因 entrypoint 缺失推断 exports，不新增 OSGi/export 元模型，不用全仓同名类禁令误伤无关插件。
-- [ ] 现有 `JavaPluginRuntimeAdapterTest.artifact` 给所有制品复制同名 `fixture.SampleEntrypoint`/`LateLoaded`，需改为各制品独立类名；不能为维持旧测试放宽新的真实可见类型唯一性。专测冲突的夹具才主动生成同名定义。
+- [ ] 不同 loader 的同名 `Class` 不可互换；跨插件签名、Service 与 DTO 必须由唯一宿主或 contract artifact 定义。调用方需要同时直接操作同 FQCN 的两个不兼容版本时由插件构建做 relocation/shading；不因 entrypoint 缺失推断 exports，不新增 OSGi/export 元模型。
+- [ ] 现有 `JavaPluginRuntimeAdapterTest.artifact` 给所有制品复制同名 `fixture.SampleEntrypoint`/`LateLoaded`，需改为各制品独立类名；不能让正常夹具伪造同一 artifact 的本地重复。专测同包冲突的夹具才主动生成同名定义。
 - [ ] 定向红绿、模块回归、规格与质量审查后提交。
 
 ## E1：失败事实与可纠正门禁

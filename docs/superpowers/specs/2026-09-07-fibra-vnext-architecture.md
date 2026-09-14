@@ -790,12 +790,16 @@ CLI 投影使用 `content`、可选 `structuredContent`、`isError`、失败时�
   不经 old/fresh/catalog、已结束的异常或缓存结果长期引用插件对象；
 - Engine 的长期启动缓存只持有启动完成事实，不持有第一份含插件 descriptor 的 PublishedView。当前
   发布视图仍由正常发布所有权持有；调用方主动保留旧视图、Class 或插件对象不属于框架可回收保证；
-- prepare 按每个 loader 实际可见的依赖闭包校验有效二进制类名：主 JAR 与 lib JAR 一并计入，多 release
-  JAR 按当前 JVM 的有效类解析，忽略 module-info；不同定义 owner 的同名可见类拒绝装载，菱形路径中的
-  同一制品只计一次。同一制品的主 JAR/lib JAR 或不同 lib JAR 之间的同名有效类也须拒绝，报告两个
-  来源，不能让 URL 顺序决定代码版本；实际由 parent-first 命中的宿主类仍按宿主归属处理。
-  无关插件可以各自持有私有同名库；依赖相连的冲突库须提取共同依赖或 shading，
-  不能按依赖顺序任取。父优先仅在 parent 实际可解析时确定宿主所有权，保留 parent miss 的动态回退；
+- prepare 按每个 artifact 的实际本地 classpath 校验有效二进制类名：主 JAR 与 lib JAR 一并计入，多 release
+  JAR 按当前 JVM 的有效类解析，忽略 module-info；同一 artifact 的主 JAR/lib JAR 或不同 lib JAR 之间
+  的同名有效类须拒绝并报告两个来源，不能让本地 URL 顺序决定代码版本。实际由 parent-first 命中的宿主
+  类仍按宿主归属处理，父优先仅在 parent 实际可解析时成立，保留 parent miss 的动态回退；
+- 不同 artifact loader 可以各自定义同名类，包括依赖相连的插件分别携带同一库的相同或不同版本。
+  插件自身代码使用自身 loader 的本地定义；依赖方自身缺类时，继续按 manifest 中 `requires` 的声明顺序
+  查询依赖 loader，第一条成功路径决定该次直接查找。这个确定顺序只提供隔离和解析规则，不是版本求解：
+  不同 loader 定义的同名 `Class` 不可互换，跨插件方法签名、Service 或 DTO 使用的类型必须来自同一个
+  宿主或 contract artifact owner。若一个调用方必须同时直接操作同 FQCN 的两个不兼容版本，应在插件
+  构建时 relocation/shading；本期不增加 OSGi 式 package import/export 或版本 wiring；
 - close-and-collect 以真实 JAR、loader identity 和 WeakReference/ReferenceQueue 取得回收证据，活动
   loader 作为存活对照；close 不等于 JVM 已卸载，不对任意插件承诺 GC 截止，不清理未经证明的全局缓存。
   ClassLoader 只提供类型隔离，不是安全沙箱。
