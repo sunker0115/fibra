@@ -68,9 +68,9 @@ public final class InteractiveCliFixture {
     private static CliBootstrapCommand screenCommand() {
         return new CliBootstrapCommand(new CliCommandDescriptor(List.of("screen"),
             "运行通用渐进式终端画面。", List.of(), null, List.of()), request -> {
-                var renderer = new VerificationRenderer();
+                var renderer = new VerificationRenderer(
+                    () -> request.invocation().output().stdout("screen-ready"));
                 try (var lease = request.invocation().terminal().acquire()) {
-                    request.invocation().output().stdout("screen-ready");
                     lease.run(renderer);
                     request.invocation().output().stdout(renderer.summary());
                     return CliCommandResult.success();
@@ -108,13 +108,19 @@ public final class InteractiveCliFixture {
     }
 
     private static final class VerificationRenderer implements CliTerminalRenderer {
+        private final Runnable started;
         private final List<String> inputs = new ArrayList<>();
         private CliTerminalControl control;
         private CliTerminalSize size;
         private int resizeCount;
 
+        private VerificationRenderer(Runnable started) {
+            this.started = started;
+        }
+
         @Override public void start(CliTerminalControl value) {
             control = value;
+            started.run();
         }
 
         @Override public void input(CliTerminalInput input) {

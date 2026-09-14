@@ -51,8 +51,8 @@ public final class Entrypoint implements PluginEntrypoint<Void> {
                         List.of("external-cli", "read-key"), "等待一个受控终端按键。",
                         List.of(), null, List.of()), (invocation, request) -> {
                         try (var lease = request.invocation().terminal().acquire()) {
-                            request.invocation().output().stdout("ready");
-                            var renderer = new VerificationRenderer();
+                            var renderer = new VerificationRenderer(
+                                () -> request.invocation().output().stdout("ready"));
                             lease.run(renderer);
                             request.invocation().output().stdout(renderer.summary());
                             return Mono.just(CliCommandResult.success());
@@ -124,13 +124,19 @@ public final class Entrypoint implements PluginEntrypoint<Void> {
     }
 
     private static final class VerificationRenderer implements CliTerminalRenderer {
+        private final Runnable started;
         private final List<String> inputs = new ArrayList<>();
         private CliTerminalControl control;
         private CliTerminalSize size;
         private int resizeCount;
 
+        private VerificationRenderer(Runnable started) {
+            this.started = started;
+        }
+
         @Override public void start(CliTerminalControl value) {
             control = value;
+            started.run();
         }
 
         @Override public void input(CliTerminalInput input) {
