@@ -130,11 +130,11 @@ macOS/JDK 21，Linux 留待同一 HEAD CI，Windows 保持未实测声明。
 
 ## V1：六项最终集成验收
 
-- [ ] 在最终代码上重跑 Java/Node 多轮真实制品更新与资源曲线，记录环境、HEAD 和原始日志路径。FD、堆和一次耗时不设拍脑袋阈值；不把 artifact 历史留存当泄漏。
-- [ ] 跑现有 `ContributionInvocationBenchmark`、`EngineTransactionBenchmark` 短基线，报告样本不冒充优化证明。
-- [ ] 审核并补齐 `verification/distribution` 的 Java/Node 仓外消费者生命周期契约报告，不允许取得 Engine 内部类型；复用发布依赖缓存，仅隔离消费者自身构建输出。
-- [ ] 跑根 `clean verify`、短超时诊断门禁、篡改/路径/依赖/脱敏安全用例、发行 ZIP、可复现制品比较和最终仓外消费者。
-- [ ] `git diff --check`，最强模型独立最终审查，回填行为验收账本。macOS 结果不能替代 Linux/Windows；不自动 push，待用户推送后取得同一 HEAD Linux CI，Windows 保持未实测声明。
+- [x] 在最终代码上重跑 Java/Node 多轮真实制品更新与资源曲线，记录环境、HEAD 和原始日志路径。FD、堆和一次耗时不设拍脑袋阈值；不把 artifact 历史留存当泄漏。macOS arm64、Zulu JDK 21.0.2、Node 20.20.2，基于 `3afed85` 的当前工作树；原始日志 `/private/tmp/v1-resource-curves.log`。
+- [x] 跑现有 `ContributionInvocationBenchmark`、`EngineTransactionBenchmark` 短基线，报告样本不冒充优化证明。单 fork、一次 200 ms 预热和一次 200 ms 测量的样本分别为 194.781 ns/op、600.341 us/op；原始日志 `/private/tmp/v1-contribution-benchmark.log`、`/private/tmp/v1-engine-transaction-benchmark.log`。
+- [x] 审核并补齐 `verification/distribution` 的 Java/Node 仓外消费者生命周期契约报告，不允许取得 Engine 内部类型；所有 Maven 阶段复用本机 `~/.m2`，只隔离消费者构建输出与临时发布目标。最终脚本日志 `/private/tmp/v1-verify-distribution-local-m2.log`。
+- [ ] 根 50 模块 `clean verify`、篡改/路径/依赖/脱敏安全用例、发行 ZIP、三轮可复现制品比较和最终仓外消费者均已通过；日志 `/private/tmp/v1-verify-reproducible-release.log` 与 `/private/tmp/v1-verify-distribution-local-m2.log`。短超时脚本单元测试 4/4 通过，但本地沙箱禁止 `/bin/ps`，JVM dump 门禁不记为通过，待同一提交的 Linux CI 验证。
+- [x] `git diff --check` 与脚本语法检查通过；高能力模型独立最终审查未发现 P1/P2；行为验收账本已回填。macOS 结果不能替代 Linux/Windows；不自动 push，待用户推送后取得同一 HEAD Linux CI，Windows 保持未实测声明。
 
 ## 统一测试命令与记录规则
 

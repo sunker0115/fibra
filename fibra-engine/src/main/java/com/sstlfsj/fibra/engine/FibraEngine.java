@@ -66,7 +66,7 @@ public final class FibraEngine implements AutoCloseable {
     private final DesiredSourceMonitor sourceMonitor;
     private final ContributionDirectory directory = new ContributionDirectory();
     private final Map<String, Managed<?>> instances = new LinkedHashMap<>();
-    private final Sinks.Many<PublishedView> views = Sinks.many().replay().latest();
+    private final Sinks.Many<PublishedView> views = Sinks.many().multicast().directBestEffort();
     private final AtomicReference<PublishedState> publishedState = new AtomicReference<>();
     private final AtomicBoolean closeRequested = new AtomicBoolean();
     private final AtomicBoolean sourceRefreshQueued = new AtomicBoolean();
@@ -99,7 +99,8 @@ public final class FibraEngine implements AutoCloseable {
     private final PublishedRuntime published = new PublishedRuntime() {
         @Override public PublishedView current() { return publishedState.get().view(); }
         @Override public Flux<PublishedView> views() {
-            return views.asFlux().publishOn(Schedulers.boundedElastic());
+            return views.asFlux().onBackpressureLatest()
+                .publishOn(Schedulers.boundedElastic(), 1).onBackpressureLatest();
         }
         @Override public <D, I, O> Mono<O> invoke(String revision,
                 long registrationIdentity,

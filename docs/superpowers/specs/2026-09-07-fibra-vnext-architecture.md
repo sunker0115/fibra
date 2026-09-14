@@ -310,6 +310,9 @@ Engine 关闭先在线性化的命令准入边界停止接收新请求，等待�
 `PublishedRuntime` 是稳定宿主对象，内部只原子替换一个不可变 `PublishedView`，其中包含 Engine 状态、
 贡献快照、运行诊断与 Engine 诊断。`viewRevision` 标识任意已发布事实变化；保存的目标 revision
 标识声明内容。运行域 identity 不因局部更新而变化，不再使用 generation revision 表示目标或调用权。
+`current()` 是当前事实的唯一长期强引用；`views()` 是不重放历史的热变化流，慢订阅者可合并中间事实。
+需要无空窗地覆盖“变更已完成”与“后续变化”时，宿主先建立 `views()` 订阅，再读取 `current()`；
+不得以 replay 缓存上一代含插件 descriptor 的快照，否则 Engine 存活期间会额外保留已退役 ClassLoader。
 
 宿主调用必须携带选择贡献时观察到的 expected view revision。准入须同时确认当前视图未过期、
 目标贡献仍是该注册身份且开放，并登记在途调用。视图检查与条目准入之间的竞争必须重新复核；

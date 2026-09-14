@@ -7,10 +7,15 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Sinks;
 
 import java.time.Duration;
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -20,6 +25,71 @@ class ContributionDirectoryTest {
             String.class, String.class);
     private static final ServiceKey<ScopedService> SCOPED_SERVICE =
         ServiceKey.of("scoped-service", ScopedService.class);
+
+    @Test
+    void liveDirectoryReleasesTheLastRevokedDescriptor() throws Exception {
+        try (var directory = new ContributionDirectory()) {
+            var descriptor = registerAndRevoke(directory);
+            for (var attempt = 0; attempt < 60 && descriptor.get() != null; attempt++) {
+                System.gc();
+                Thread.sleep(25);
+            }
+            assertNull(descriptor.get(), "live directory retains the last revoked descriptor");
+            Reference.reachabilityFence(directory);
+        }
+    }
+
+    private static WeakReference<CommandDescriptor> registerAndRevoke(ContributionDirectory directory) {
+        try (var runtime = FibraRuntime.create()) {
+            var descriptor = new CommandDescriptor("Retired");
+            directory.register(runtime.rootScope().context(), COMMAND, "p", "c", descriptor,
+                (invocation, input) -> reactor.core.publisher.Mono.just(input)).block();
+            return new WeakReference<>(descriptor);
+        }
+    }
+
+    @Test
+    void subscribedObserversReceiveRegistrationAndRevocationFacts() {
+        try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
+            var sizes = new ArrayList<Integer>();
+            var subscription = directory.views().subscribe(view -> sizes.add(view.snapshot().entries().size()));
+            try {
+                assertEquals(List.of(), sizes, "current facts are read through current(), not replayed");
+                var registration = directory.register(runtime.rootScope().context(), COMMAND, "p", "c",
+                    new CommandDescriptor("Command"),
+                    (invocation, input) -> reactor.core.publisher.Mono.just(input)).block();
+                registration.dispose().block();
+                assertEquals(List.of(1, 0), sizes);
+            } finally {
+                subscription.dispose();
+            }
+        }
+    }
+
+    @Test
+    void slowObserverReceivesTheLatestFactWhenDemandResumes() {
+        try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
+            var sizes = new ArrayList<Integer>();
+            var subscriber = new reactor.core.publisher.BaseSubscriber<ContributionDirectoryView>() {
+                @Override protected void hookOnSubscribe(org.reactivestreams.Subscription subscription) { }
+                @Override protected void hookOnNext(ContributionDirectoryView view) {
+                    sizes.add(view.snapshot().entries().size());
+                }
+            };
+            directory.views().subscribe(subscriber);
+            try {
+                var registration = directory.register(runtime.rootScope().context(), COMMAND, "p", "c",
+                    new CommandDescriptor("Command"),
+                    (invocation, input) -> reactor.core.publisher.Mono.just(input)).block();
+                registration.dispose().block();
+                assertEquals(List.of(), sizes);
+                subscriber.request(1);
+                assertEquals(List.of(0), sizes);
+            } finally {
+                subscriber.dispose();
+            }
+        }
+    }
 
     @Test
     void handlerUsesRegistrationContextWhileInvocationResourcesBelongToCallerScope() {

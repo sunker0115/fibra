@@ -107,7 +107,7 @@ context 重新派生，不持久化上次进程的宿主环境。
 比较；相同源不会覆盖 `ReplaceDesiredGraph` 等管理变更。源读取或解析失败会公开 `FAILED` 诊断，但
 last-good 目标仍可满足且 mutation gate 保持开放；恢复为相同内容时只清除源错误，不重启实例。
 
-`start()` 返回初始 `PublishedView`。`PublishedRuntime.current()` / `views()` 是状态、诊断和贡献的唯一已发布事实源；`invoke(expectedViewRevision, expectedRegistrationIdentity, kind, id, input)` 同时校验捕获的 view revision 与非复用贡献注册身份。准入前冲突不调用旧 handler，也不转向同名新 handler；准入后 route 直到 invocation Scope 清理完成才释放。托管宿主不能取得 `FibraRuntime`、`Context` 或 `Scope`。
+`start()` 返回初始 `PublishedView`。`PublishedRuntime.current()` / `views()` 是状态、诊断和贡献的唯一已发布事实源：`current()` 读取当前事实，`views()` 只发布订阅后的变化、不重放历史，慢订阅者允许合并中间状态。需要同时覆盖已完成和后续变化时，应先订阅变化流，再读取 `current()`。`invoke(expectedViewRevision, expectedRegistrationIdentity, kind, id, input)` 同时校验捕获的 view revision 与非复用贡献注册身份。准入前冲突不调用旧 handler，也不转向同名新 handler；准入后 route 直到 invocation Scope 清理完成才释放。托管宿主不能取得 `FibraRuntime`、`Context` 或 `Scope`。
 
 `EngineSnapshot.instances()` 只包含 Engine 持有的声明实例，其快照提供 `publicationRequirement()` 和
 `requirementSatisfied()`。`RuntimeDiagnostics.plugins()` 则保留全域实例事实，包括没有配置声明的

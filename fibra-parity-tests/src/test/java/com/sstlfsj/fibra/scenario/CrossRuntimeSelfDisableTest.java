@@ -27,6 +27,7 @@ import com.sstlfsj.fibra.value.LiteralValue;
 import fixture.DisableJavaEntrypoint;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
@@ -132,15 +133,16 @@ class CrossRuntimeSelfDisableTest {
                         assertFalse(held.isDone());
 
                         store.failNextSave();
+                        var nodeDisableFailure = engine.published().views().filter(view ->
+                            view.engineDiagnostics().failure() != null
+                                && view.engine().desiredGraph().plugins().get("self-node").enabled()
+                                && view.engine().instances().containsKey("self-node"))
+                            .next().toFuture();
                         current = engine.published().current();
                         assertEquals("requested", engine.published().invoke(current.viewRevision(),
                             identity(current, CONTROL, new ContributionId("self-node", "control")), CONTROL,
                             new ContributionId("self-node", "control"), "disable").block(TIMEOUT));
-                        var failedNodeDisable = engine.published().views().filter(view ->
-                            view.engineDiagnostics().failure() != null
-                                && view.engine().desiredGraph().plugins().get("self-node").enabled()
-                                && view.engine().instances().containsKey("self-node"))
-                            .next().block(TIMEOUT);
+                        var failedNodeDisable = Mono.fromFuture(nodeDisableFailure).block(TIMEOUT);
                         assertEquals(1, observations.size());
                         assertEquals(raw.withEnabled("self-java", false), store.load().orElseThrow().desiredGraph());
                         assertTrue(alive(selfPid));
@@ -286,7 +288,9 @@ class CrossRuntimeSelfDisableTest {
     }
 
     private static PublishedView awaitDisabled(FibraEngine engine, String id) {
-        return engine.published().views().filter(view ->
+        // 自停用可能在调用返回前完成：先订阅变化再读 current()，不依赖历史重放。
+        return reactor.core.publisher.Flux.merge(engine.published().views(),
+            Mono.fromSupplier(engine.published()::current)).filter(view ->
             !view.engine().desiredGraph().plugins().get(id).enabled()
                 && !view.engine().instances().containsKey(id)
                 && view.engineDiagnostics().targetSatisfied()

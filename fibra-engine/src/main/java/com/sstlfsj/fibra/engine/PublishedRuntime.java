@@ -9,6 +9,7 @@ import reactor.core.publisher.Mono;
 public interface PublishedRuntime {
     PublishedView current();
 
+    /** 订阅后的事实变化；不重放历史，慢订阅者可合并中间状态。当前事实通过 current() 读取。 */
     Flux<PublishedView> views();
 
     <D, I, O> Mono<O> invoke(String expectedViewRevision,

@@ -46,6 +46,32 @@ class JavaPublishedViewRetentionTest {
 
     @Test
     @Timeout(20)
+    void liveEngineReleasesTheLastRemovedDescriptorLoader(@TempDir Path work) throws Exception {
+        try (var engine = engine(work.resolve("removed"));
+             var control = engine(work.resolve("active"))) {
+            var active = new WeakReference<>(descriptorLoader(control.start().block(TIMEOUT)));
+            var retired = startAndRemove(engine);
+            assertAll(() -> awaitCollected(List.of(retired)),
+                () -> assertNotNull(active.get(), "active descriptor loader is the live control"),
+                () -> assertTrue(engine.published().current().contributions().entries().isEmpty()),
+                () -> assertEquals(EngineState.RUNNING, engine.published().current().engine().state()));
+            Reference.reachabilityFence(engine);
+            Reference.reachabilityFence(control);
+        }
+    }
+
+    private static WeakReference<ClassLoader> startAndRemove(FibraEngine engine) {
+        var retired = new WeakReference<>(descriptorLoader(engine.start().block(TIMEOUT)));
+        var current = engine.published().current();
+        engine.submit(ApplyDeployment.builder(new DesiredInputGraph(List.of()))
+            .expectedRevision(current.viewRevision())
+            .expectedDesiredRevision(current.engine().desiredSource().revision())
+            .artifacts(List.of()).build()).block(TIMEOUT);
+        return retired;
+    }
+
+    @Test
+    @Timeout(20)
     void correctedStartupReleasesTheOriginalFailureAndDescriptorLoaderWhileEngineStaysLive(@TempDir Path work)
         throws Exception {
         var originalCause = new IllegalStateException("controlled plugin startup failure");

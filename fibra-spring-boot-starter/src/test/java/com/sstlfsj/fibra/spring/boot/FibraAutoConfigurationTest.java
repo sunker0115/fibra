@@ -215,12 +215,13 @@ class FibraAutoConfigurationTest {
                 var engine = context.getBean(FibraEngine.class);
                 var transaction = repository.prepareReplace(
                     repository.load().snapshot().revision(), graph);
+                var refresh = engine.published().views()
+                    .filter(view -> view.engine().desiredGraph().equals(graph))
+                    .next().toFuture();
                 transaction.commit();
                 transaction.close();
 
-                var refreshed = engine.published().views()
-                    .filter(view -> view.engine().desiredGraph().equals(graph))
-                    .next().block(TIMEOUT);
+                var refreshed = reactor.core.publisher.Mono.fromFuture(refresh).block(TIMEOUT);
                 assertNotNull(refreshed);
                 assertTrue(refreshed.engineDiagnostics().targetSatisfied());
             });

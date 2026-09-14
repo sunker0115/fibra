@@ -130,7 +130,10 @@ public final class PluginRegistry {
             snapshot.desiredGraph().plugins().get(id), snapshot.observed().get(id))).toList();
     }
 
-    /** 跟随 Engine 事实变化；审计投递失败独立查询，不单独触发此流。 */
+    /**
+     * 订阅后跟随 Engine 事实变化，当前事实通过 snapshot() 读取；
+     * 审计投递失败不单独触发此流。
+     */
     public Flux<RegistrySnapshot> watch() {
         return engine.published().views().map(this::project);
     }

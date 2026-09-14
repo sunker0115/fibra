@@ -310,3 +310,16 @@ Linux 收口证据：`447ef6e` 让验证器只在 PTY 已进入非规范读取�
 平台边界：F4 最终本地证据来自 macOS arm64，以上远端门禁补齐 Linux；Windows 的 JLine 输入、终端尺寸、
 本地进程和安装包仍须由对应平台发布流水线证明，不能由 macOS/Linux 结果替代。该限制不影响 Java 公开
 契约和 dumb/非 TTY 降级冻结，但对应平台发行时必须重新运行相同门禁。
+
+## 11. Java/Node 长稳与仓外生命周期收口证据
+
+| 验收项 | 证据与结论 |
+|---|---|
+| 发布视图与旧代回收 | `ContributionDirectory.views()` 与 `FibraEngine.views()` 改为只发布订阅后的变化，当前事实继续由 `current()` 提供；慢订阅者只保留最新变化。`JavaPublishedViewRetentionTest`、`ContributionDirectoryTest` 与 `PublishedRuntimeBackpressureTest` 证明旧 descriptor、Java `PluginClassLoader` 和中间 Engine view 不会被 replay 节点或 `publishOn` 预取队列长期持有；公开文档给出“先订阅、再读 current”的无缝观察顺序。 |
+| Java/Node 仓外生命周期 | `LifecycleConsumerTest` 只通过 Registry、PublishedRuntime 与 contribution 公开 API，对 Java/Node 共同验证探测、安装但不自动启用、启用调用、完整配置更新、停用后配置保留、升级、相同字节幂等升级、同版本内容变更、在途调用排空后的原子移除、重装及停用后卸载。Java fixture 的 `LifecycleEntrypoint` 仅进入独立测试插件 JAR；Node fixture 仅使用 Node 内建模块，并直接核对 payload PID 与 Fibra supervisor PID 的存活和退出。 |
+| 资源曲线与基准样本 | macOS arm64、Zulu JDK 21.0.2、Node 20.20.2 下，Java 25 轮更新后 active loader 从 3 回到 0、FD 从稳定 37 回到 34，创建/关闭资源均为 51；Node 24 轮中 Node 线程始终为 0、FD 始终为 34，全部更新完成。JMH 单 fork 短样本为 contribution 194.781 ns/op、Engine transaction 600.341 us/op，只作为后续对比基线，不作为优化或容量证明。 |
+| 发布门禁 | 根 50 模块 `mvn -o clean verify` 通过；`scripts/verify-reproducible-release.sh` 连续三次构建并通过 27 个正式制品、flattened POM、发行 ZIP 与目录 manifest 的字节比较；`scripts/verify-distribution.sh` 使用现有 `~/.m2`，不创建或清空 Maven 本地仓库，临时部署目标严格包含 27 个正式 artifactId，仓外消费者、archetype、发行 ZIP、`CliSession` 与动态插件真实 TTY 门禁全部通过。core 与 engine 外部测试均使用 test-scope `slf4j-nop`，不再出现“未找到 SLF4J provider”警告，也不进入正式制品。 |
+
+本地短超时脚本单元测试 4/4 通过；真实诊断采样在当前受限沙箱中因 `/bin/ps: Operation not permitted`
+无法生成 JVM dump，因此不记录为本机通过，留待同一提交的 GitHub Actions Linux runner 验证。以上本地结果
+不能替代 Windows 实机门禁；Windows 仍保持未实测声明。

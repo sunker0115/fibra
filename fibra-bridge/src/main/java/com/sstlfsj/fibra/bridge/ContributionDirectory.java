@@ -25,15 +25,11 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
     private final Map<ContributionId, Entry<?, ?, ?>> entries = new LinkedHashMap<>();
     private final Set<Entry<?, ?, ?>> liveEntries = new LinkedHashSet<>();
     private final Sinks.Many<ContributionDirectoryView> views =
-        Sinks.many().replay().latest();
+        Sinks.many().multicast().directBestEffort();
     private long revision;
     private long nextRegistrationIdentity;
     private boolean closed;
     private Mono<Void> closing;
-
-    public ContributionDirectory() {
-        views.tryEmitNext(viewUnsafe());
-    }
 
     @Override
     public <D, I, O> Mono<ContributionRegistration> register(
@@ -87,8 +83,9 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
         }
     }
 
+    /** 订阅后的事实变化；不重放历史，当前事实通过 current() 读取。 */
     public Flux<ContributionDirectoryView> views() {
-        return views.asFlux();
+        return views.asFlux().onBackpressureLatest();
     }
 
     public Mono<Void> closeAsync() {

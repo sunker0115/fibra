@@ -35,10 +35,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -727,13 +729,13 @@ class NodePluginRuntimeAdapterTest {
         update.prepareAsync().block();
         update.adopt();
         update.closeAsync().block();
-        var disabled = new AtomicReference<String>();
+        var disabled = new CompletableFuture<String>();
 
         try (var runtime = FibraRuntime.create()) {
             runtime.rootScope().context().services().provide(
                 ContributionServices.REGISTRAR, new ContributionDirectory());
             runtime.rootScope().context().services().provide(ManagedPluginControl.KEY,
-                instance -> disabled.set(instance.id()));
+                instance -> disabled.complete(instance.id()));
             @SuppressWarnings("unchecked")
             var definition = (com.sstlfsj.fibra.PluginDefinition<Object>) owner.catalog()
                 .plugins().find("disable-node").orElseThrow().definition();
@@ -741,7 +743,7 @@ class NodePluginRuntimeAdapterTest {
                 .mount("disable-instance", definition.prepare(Map.of()));
             instance.settled().block(Duration.ofSeconds(3));
 
-            assertEquals("disable-instance", disabled.get());
+            assertEquals("disable-instance", disabled.get(3, TimeUnit.SECONDS));
         }
         owner.closeAsync().block();
     }
