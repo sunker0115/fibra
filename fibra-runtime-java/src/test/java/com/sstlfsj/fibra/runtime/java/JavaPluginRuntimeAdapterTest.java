@@ -18,6 +18,7 @@ import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.time.Duration;
 import java.util.List;
@@ -677,6 +678,58 @@ class JavaPluginRuntimeAdapterTest {
     }
 
     @Test
+    void parentOwnedClassMayAppearInBothMainAndLib(@TempDir Path work) throws Exception {
+        var type = "com.sstlfsj.fibra.Context";
+        var bytes = classBytes(JavaPluginRuntimeAdapterTest.class.getClassLoader(), type);
+        var artifact = artifact(work, "a", "1.0.0", List.of());
+        addMainClass(artifact, type, bytes);
+        addLibrary(artifact, "duplicate.jar", Map.of(type.replace('.', '/') + ".class", bytes));
+        var owner = new JavaPluginRuntimeAdapter().create();
+
+        install(owner, List.of(artifact));
+
+        assertSame(com.sstlfsj.fibra.Context.class,
+            loaders(owner).get("a_____").loadClass(type));
+        owner.closeAsync().block(Duration.ofSeconds(5));
+    }
+
+    @Test
+    void parentOwnedClassMayAppearInTwoLibrariesOfOneArtifact(@TempDir Path work) throws Exception {
+        var type = "com.sstlfsj.fibra.Context";
+        var bytes = classBytes(JavaPluginRuntimeAdapterTest.class.getClassLoader(), type);
+        var artifact = artifact(work, "a", "1.0.0", List.of());
+        var entry = Map.of(type.replace('.', '/') + ".class", bytes);
+        addLibrary(artifact, "first.jar", entry);
+        addLibrary(artifact, "second.jar", entry);
+        var owner = new JavaPluginRuntimeAdapter().create();
+
+        install(owner, List.of(artifact));
+
+        assertSame(com.sstlfsj.fibra.Context.class,
+            loaders(owner).get("a_____").loadClass(type));
+        owner.closeAsync().block(Duration.ofSeconds(5));
+    }
+
+    @Test
+    void parentMissStillRejectsMainAndLibOrTwoLibraryDuplicates(@TempDir Path work) throws Exception {
+        var type = "com.sstlfsj.fibra.dynamic.Missing";
+        var classes = compileClass(work.resolve("classes"), type);
+        var bytes = Files.readAllBytes(classes.resolve(type.replace('.', '/') + ".class"));
+        var mainAndLib = artifact(work.resolve("main-lib"), "a", "1.0.0", List.of());
+        addMainClass(mainAndLib, type, bytes);
+        addLibrary(mainAndLib, "duplicate.jar", Map.of(type.replace('.', '/') + ".class", bytes));
+        var mainFailure = prepareFailure(mainAndLib);
+        assertConflict(mainFailure, "a", type, "a", "a", "a-1.0.0.jar", "duplicate.jar");
+
+        var libAndLib = artifact(work.resolve("lib-lib"), "b", "1.0.0", List.of());
+        var entry = Map.of(type.replace('.', '/') + ".class", bytes);
+        addLibrary(libAndLib, "first.jar", entry);
+        addLibrary(libAndLib, "second.jar", entry);
+        var libFailure = prepareFailure(libAndLib);
+        assertConflict(libFailure, "b", type, "b", "b", "first.jar", "second.jar");
+    }
+
+    @Test
     void parentClassOutsideParentFirstPrefixesDoesNotHidePluginAmbiguity(@TempDir Path work) throws Exception {
         var parentClass = classBytes(JavaPluginRuntimeAdapterTest.class.getClassLoader(), "fixture.LateLoaded");
         var first = artifact(work, "a", "1.0.0", List.of());
@@ -936,13 +989,40 @@ class JavaPluginRuntimeAdapterTest {
     private static void copyMainClassToLibrary(ArtifactRecord artifact, String type, String library)
         throws IOException {
         var path = type.replace('.', '/') + ".class";
-        var main = artifact.location().resolve("lib")
-            .resolve(artifact.id().value() + '-' + artifact.version() + ".jar");
+        var main = mainJar(artifact);
         try (var jar = new JarFile(main.toFile(), true)) {
             try (var input = jar.getInputStream(jar.getJarEntry(path))) {
                 addLibrary(artifact, library, Map.of(path, input.readAllBytes()));
             }
         }
+    }
+
+    private static void addMainClass(ArtifactRecord artifact, String type, byte[] bytes) throws IOException {
+        var main = mainJar(artifact);
+        var replacement = Files.createTempFile(artifact.location(), "main-", ".jar");
+        try (var jar = new JarFile(main.toFile(), true);
+             var output = new JarOutputStream(Files.newOutputStream(replacement))) {
+            var entries = jar.entries();
+            while (entries.hasMoreElements()) {
+                var entry = entries.nextElement();
+                output.putNextEntry(new JarEntry(entry.getName()));
+                if (!entry.isDirectory()) {
+                    try (var input = jar.getInputStream(entry)) {
+                        input.transferTo(output);
+                    }
+                }
+                output.closeEntry();
+            }
+            output.putNextEntry(new JarEntry(type.replace('.', '/') + ".class"));
+            output.write(bytes);
+            output.closeEntry();
+        }
+        Files.move(replacement, main, StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    private static Path mainJar(ArtifactRecord artifact) {
+        return artifact.location().resolve("lib")
+            .resolve(artifact.id().value() + '-' + artifact.version() + ".jar");
     }
 
     private static LinkedHashMap<String, byte[]> entries(Object... values) {

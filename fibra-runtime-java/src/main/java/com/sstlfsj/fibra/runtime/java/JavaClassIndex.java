@@ -23,24 +23,20 @@ final class JavaClassIndex {
         this.definitions = definitions;
     }
 
-    static JavaClassIndex read(Map<ArtifactId, JavaManifestReader.JavaPackage> packages) {
+    static JavaClassIndex read(Map<ArtifactId, JavaManifestReader.JavaPackage> packages,
+                               ClassLoader parent, List<String> parentPackages) {
         var definitions = new LinkedHashMap<ArtifactId, Map<String, Path>>();
-        packages.forEach((id, artifact) -> definitions.put(id, read(id, artifact.jars())));
+        packages.forEach((id, artifact) -> definitions.put(id,
+            read(id, artifact.jars(), parent, parentPackages)));
         return new JavaClassIndex(Collections.unmodifiableMap(definitions));
     }
 
-    void validate(JavaArtifactGraph graph, ClassLoader parent, List<String> parentPackages) {
+    void validate(JavaArtifactGraph graph) {
         for (var root : graph.dependencyFirst()) {
             var visible = new LinkedHashMap<String, Definition>();
             for (var owner : closure(root, graph)) {
                 for (var entry : definitions.get(owner).entrySet()) {
                     var className = entry.getKey();
-                    try {
-                        if (PluginClassLoader.isParentDefined(className, parent, parentPackages)) continue;
-                    } catch (LinkageError failure) {
-                        throw new JavaRuntimeException(JavaRuntimePhase.LOAD, root,
-                            "cannot resolve parent-first Java class " + className, failure);
-                    }
                     var definition = new Definition(owner, entry.getValue());
                     var previous = visible.putIfAbsent(className, definition);
                     if (previous != null && !previous.owner().equals(owner)) {
@@ -51,7 +47,8 @@ final class JavaClassIndex {
         }
     }
 
-    private static Map<String, Path> read(ArtifactId owner, List<Path> jars) {
+    private static Map<String, Path> read(ArtifactId owner, List<Path> jars,
+                                          ClassLoader parent, List<String> parentPackages) {
         var classes = new LinkedHashMap<String, Path>();
         try {
             for (var path : jars) {
@@ -62,6 +59,12 @@ final class JavaClassIndex {
                         var className = name.substring(0, name.length() - ".class".length())
                             .replace('/', '.');
                         if (className.equals("module-info") || className.endsWith(".module-info")) return;
+                        try {
+                            if (PluginClassLoader.isParentDefined(className, parent, parentPackages)) return;
+                        } catch (LinkageError failure) {
+                            throw new JavaRuntimeException(JavaRuntimePhase.LOAD, owner,
+                                "cannot resolve parent-first Java class " + className, failure);
+                        }
                         var previous = classes.putIfAbsent(className, path);
                         if (previous != null && !previous.equals(path)) {
                             throw conflict(owner, className,
