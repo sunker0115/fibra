@@ -164,7 +164,9 @@
   UTF-8 恰好 1 MiB/超 1 字节、64 层 JSON 容器嵌套的读写对称；不得用本身非法的 JSON 冒充
   大小门禁，也不得将标量叶子多算为一层。`LiteralValue.NumberValue` 覆盖任意精度、超过
   `Long.MAX_VALUE` 和极端指数的 NUMBER tag 规范字符串精确往返，并拒绝原生 JSON number、非规范
-  十进制字符串、错误 tag 和多余字段；业务 ObjectValue 含 `kind/value/values` 键时仍必须无歧义往返。
+  十进制字符串、错误 tag 和多余字段；覆盖规范 decimal 恰好 1000 字符可往返、1001 字符编解码
+  均拒绝，并证明十万字符非规范输入在 `BigDecimal` 构造前命中长度门禁；业务 ObjectValue 含
+  `kind/value/values` 键时仍必须无歧义往返。
   `targetRevision`/`registrationIdentity` 必须覆盖 `Long.MAX_VALUE` 的 wire 字符串往返，并拒绝数字
   token、负数、前导零和越界字符串。
 

@@ -421,9 +421,11 @@ v1 将身份与可计算数值分开编码。`targetRevision`、`registrationIde
 `LiteralValue.NumberValue` 的 Java 语义是精确 `BigDecimal`，因此 wire 不使用原生 JSON number，
 而是编码为 `{"kind":"NUMBER","value":"<canonical-decimal>"}`。`canonical-decimal` 必须等于
 `NumberValue` 归一化后 `BigDecimal.toString()` 的结果；非规范形式、无法解析的字符串和原生 number token
-一律按 `MALFORMED_MESSAGE` 拒绝。string 仍使用原生 JSON string，因此 number/string 类型不会混淆。client core
-只保持精确十进制字符串；具体 contribution 若要计算，再按自己的 schema 显式选择 ECMAScript `Number`、
-`BigInt` 或 decimal library，协议层不静默舍入。
+一律按 `MALFORMED_MESSAGE` 拒绝。规范十进制字符串最多 1000 个字符；解码必须在构造 `BigDecimal` 之前
+检查该上限，编码也必须在生成可能超长的字符串前以 precision 作上界预检，不能让 tagged string
+绕过 JSON parser 的 number 工作量预算。string 仍使用原生 JSON string，因此 number/string 类型不会混淆。
+client core 只保持精确十进制字符串；具体 contribution 若要计算，再按自己的 schema 显式选择
+ECMAScript `Number`、`BigInt` 或 decimal library，协议层不静默舍入。
 
 为避免业务对象与 NUMBER tag 形状冲突，`LiteralValue.ObjectValue` 固定编码为
 `{"kind":"OBJECT","values":{...}}`；null、boolean、string 和 list 仍分别使用原生 JSON null、boolean、string
