@@ -83,7 +83,9 @@ fibra-distribution/target/fibra-0.5.0-SNAPSHOT/bin/fibra repl
 - `fibra-plugins`：正式插件产品的根聚合模块，自身不发布；`fibra-tool-api` 以及 fs、subprocess、shell、
   storage 四个领域在其下分别发布 contract、provider 和 tool consumer。
 
-浏览器/WebView 前端插件、远程市场、非可信插件沙箱和具体 Agent 模型不在本期核心内。
+浏览器 client foundation 已由 [Client Foundation 最终架构](docs/superpowers/specs/2026-09-15-fibra-client-foundation-architecture.md)
+定义为 Fibra 的后续 P0 工作：它提供框架无关的协议、执行协调与 client runtime，不把 Electron、React 或
+产品页面加入框架契约。远程市场、非可信插件沙箱和具体 Agent 模型仍不属于 Fibra 通用底座。
 
 ## 最小内核用法
 
@@ -144,6 +146,11 @@ Bash 启动代理，并通过默认 profile 注入现有配置，不需要改变
 15.0.1，与当前 DSH 0.1.5-rc.2 锁定的 `@vscode/ripgrep` 1.18.0 一致。
 
 ## 插件安装单元
+
+下列 `plugin.properties` 描述的是当前已发布 vNext 制品格式。Client Foundation P0-B1–B3 会在最终合并时硬切为
+`fibra-package.yaml` 逻辑包和多 facet 模型，并拒绝旧单 facet 格式；最终格式、迁移边界和验收条件只以
+[Client Foundation 最终架构](docs/superpowers/specs/2026-09-15-fibra-client-foundation-architecture.md)
+为准。本段不构成新格式的兼容承诺。
 
 Java 与 Node 统一安装目录包，包根的 `plugin.properties` 只允许三个字段：
 
