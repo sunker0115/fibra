@@ -330,5 +330,7 @@ Linux 收口证据：`447ef6e` 让验证器只在 PTY 已进入非规范读取�
 `FibraEngineIncrementalTest.replacementSubmittedDuringStartupWaitsForTheAcceptedInitialTarget` 第 120 行命中
 并发断言失败。根因是启动协调丢弃 bootstrap 的精确视图后异步重读 `published.current()`，已排队替换可在
 读取前发布“旧 Engine 快照 + 新目标诊断”的过渡视图。新增双启动订阅者确定性回归在旧实现稳定失败，修复后
-相关 24/24、Engine 178/178、根 50 模块 `clean verify` 通过；V1 等待修复后同一 HEAD 的 Linux 四项门禁。
+相关 24/24、Engine 178/178、根 50 模块 `clean verify` 通过。修复提交 `98ccd53` 的
+[GitHub Actions #37](https://github.com/sunker0115/fibra/actions/runs/34920221889) 已在同一 HEAD 依次通过短超时
+诊断、根全量构建与兼容性验收、27 制品三轮可复现比较和仓外分发消费者，V1 据此收口。
 macOS/Linux 结果不能替代 Windows 实机门禁；Windows 仍保持未实测声明。
