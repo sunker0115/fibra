@@ -28,7 +28,7 @@ P0–P8 唯一阶段顺序和验收门禁。Fibra 已完成范围与已交付的
 - 显式升级或停用只改变依赖闭包，无关 Java/Node/client 实例、ClassLoader、Node PID、effects、组件和
   在途调用保持；
 - Desktop 安装包可以直接启动并打开页面，CLI 发行可以独立运行，两者都不依赖源码仓库；
-- 仓库外解压、空 data、空 Maven 仓、隔离前端依赖缓存、可复现制品、公开 API、文档和独立审核全部通过；
+- 仓库外解压、空 data、复用 `~/.m2` 的仓外 Maven 构建、隔离前端依赖缓存、可复现制品、公开 API、文档和独立审核全部通过；
 - 所有阶段已经提交但没有自动推送，测试与实现位于同一提交。
 
 ### 1.1 已有、前置与待实现能力
@@ -39,7 +39,7 @@ P0–P8 唯一阶段顺序和验收门禁。Fibra 已完成范围与已交付的
 | Fibra CLI F1–F4 | 已实现并通过最终交付门禁 | F1 已交付公开 CLI 组合 API、动态 Java command contribution 和最小终端租约；F2 已交付安全历史、补全、高亮与 dumb-terminal 降级；F3 已交付调用级取消、raw lease 和进程信号协调；F4 已冻结 `CliSession`、应用原始输入、resize/redisplay、渐进 renderer、终端恢复及 CLI API |
 | 上层 Agent 产品 P0–P8 | 尚未实施；阶段顺序只由本文定义 | 单 Host 附着、Electron/React Desktop、client runtime adapter、统一逻辑插件包、Model、Agent、Session、MCP、Skill、审批及其它产品插件 |
 
-F4 的空 Maven 仓、仓库外消费者、公开 API 签名和最终发行门禁已经通过。现在完成本设计或 F4 不等于
+F4 的仓外消费者、公开 API 签名和最终发行门禁已经通过。现在完成本设计或 F4 不等于
 产品 P0 已经实施。
 
 ## 2. 桌面技术路线与开源参照
@@ -420,7 +420,7 @@ Desktop 控制切片必须放在 P0，而不是等到 Agent/Session 已复杂后
 
 | 阶段 | 最小交付 | 关键真实验收 |
 |---|---|---|
-| P0 产品骨架与双端控制切片 | 独立仓库；极薄 CLI；Electron/React bootstrap；唯一 Host；gateway/client adapter；renderer/slot；一个诊断 client plugin 和一个 full-stack probe plugin | 从空 Maven 仓只消费发布 Fibra；仓库外启动空 data Desktop；CLI 附着同一 Host；一次插件管理同时改变命令与页面；从页面和 CLI 调用真实 Fibra fs/shell 工具；窗口关闭、detach、SIGTERM 无残留 |
+| P0 产品骨架与双端控制切片 | 独立仓库；极薄 CLI；Electron/React bootstrap；唯一 Host；gateway/client adapter；renderer/slot；一个诊断 client plugin 和一个 full-stack probe plugin | 复用 `~/.m2` 并只消费发布 Fibra；仓库外启动空 data Desktop；CLI 附着同一 Host；一次插件管理同时改变命令与页面；从页面和 CLI 调用真实 Fibra fs/shell 工具；窗口关闭、detach、SIGTERM 无残留 |
 | P1 最小真实 Agent | 一个真实 Model provider、invocation 内单 Agent loop、Tool bridge、最小审批；CLI/Desktop 共享单次运行 | 真实模型选择并调用正式 fs 或 shell 工具；双端走同一 Host；取消和 SIGTERM 无 effect/进程泄漏；不冒充 Session 恢复 |
 | P2 Session 与重启恢复 | Session API、追加 journal、JSONL provider、projection、受管 turn、checkpoint/fork | 完成真实模型工具调用后重启恢复；写入前、工具已提交后、终态前三个故障点不产生半完成或伪成功事实 |
 | P3 完整 Desktop 插件与事件流 | conversation、settings、plugin manager、approval、tool renderer 插件；有界游标、断线补读、虚拟列表 | 页面显示真实模型与工具事件；断线从 sequence 补读；慢消费者 checkpoint/resync；全栈插件升级/停用只更新依赖闭包，旧 action 被拒绝 |
@@ -474,10 +474,10 @@ Desktop 控制切片必须放在 P0，而不是等到 Agent/Session 已复杂后
 ### 12.3 发行与隔离
 
 - 每阶段实现、测试和真实验收夹具在同一提交；提交前运行对应离线定向测试；
-- P0 和最终发布从空 Maven 本地仓取得 Fibra 正式发布物，再独立构建产品；
+- P0 和最终发布复用已有 `~/.m2` 取得 Fibra 正式发布物，再在仓外目录独立构建产品并核对制品字节；
 - 前端依赖使用锁文件，并在隔离 package-manager store/cache 中重建，不能读取产品仓库外 link 或全局包；
 - 每阶段在仓库外目录解压当期发行并运行新增能力，不能只使用 reactor classpath；
-- 最终执行全仓验证、公开 API 签名、可复现制品、CLI ZIP、Desktop 安装包、空仓构建和独立审核；
+- 最终执行全仓验证、公开 API 签名、可复现制品、CLI ZIP、Desktop 安装包、仓外构建和独立审核；
 - 不 amend、不 rebase、不改写已有历史、不自动 push；阶段没有实际变更时只记录已有提交与验证证据。
 
 验收账本逐项记录测试类、命令、制品路径、平台、结果和未实测边界。macOS 通过不能写成 Windows/Linux
