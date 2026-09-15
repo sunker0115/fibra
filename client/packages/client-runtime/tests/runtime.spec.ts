@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import type { LifecycleFence } from "@sstlfsj/fibra-client-api";
+import type { LifecycleFence } from "../src/protocol.js";
 import { ClientLifecycleRuntime, ClientRuntimeError } from "../src/runtime.js";
 
 const fence = (targetRevision: string, lifecycleOperationId: string): LifecycleFence => ({
@@ -72,5 +72,50 @@ describe("ClientLifecycleRuntime", () => {
 
     assert.throws(() => runtime.accept(firstA), ClientRuntimeError);
     assert.doesNotThrow(() => runtime.accept(secondA));
+  });
+
+  it("rejects illegal lifecycle transitions", async () => {
+    const runtime = new ClientLifecycleRuntime({ activate: async () => undefined });
+
+    await assert.rejects(runtime.execute("activate", fence("1", "activate")), (error: unknown) => {
+      assert(error instanceof ClientRuntimeError);
+      assert.equal(error.code, "ILLEGAL_LIFECYCLE_TRANSITION");
+      return true;
+    });
+  });
+
+  it("does not block distinct runtime instances behind one pending handler", async () => {
+    let release: (() => void) | undefined;
+    const calls: string[] = [];
+    const runtime = new ClientLifecycleRuntime({
+      prepare: (command) => command.runtimeInstanceId === "runtime-a"
+        ? new Promise<void>((resolve) => { release = resolve; })
+        : void calls.push(command.runtimeInstanceId),
+    });
+    const first = runtime.execute("prepare", { ...fence("1", "a"), runtimeInstanceId: "runtime-a" });
+    const second = runtime.execute("prepare", { ...fence("1", "b"), runtimeInstanceId: "runtime-b" });
+
+    await second;
+    assert.deepEqual(calls, ["runtime-b"]);
+    release?.();
+    await first;
+  });
+
+  it("tracks execute fences and uses collision-free identity tuples", async () => {
+    const runtime = new ClientLifecycleRuntime({ prepare: async () => undefined });
+    const first: LifecycleFence = {
+      session: { hostInstanceId: "a", clientExecutionId: "b\u0000c" },
+      targetRevision: "1", runtimeInstanceId: "runtime", lifecycleOperationId: "one",
+    };
+    const second: LifecycleFence = {
+      session: { hostInstanceId: "a\u0000b", clientExecutionId: "c" },
+      targetRevision: "1", runtimeInstanceId: "runtime", lifecycleOperationId: "two",
+    };
+
+    await runtime.execute("prepare", first);
+    runtime.begin(second);
+    assert.doesNotThrow(() => runtime.accept(first));
+    assert.doesNotThrow(() => runtime.accept(second));
+    assert.throws(() => runtime.accept(first), ClientRuntimeError);
   });
 });

@@ -69,4 +69,42 @@ describe("Scope", () => {
     assert.equal(listenerCleanups, 1);
     assert.equal(timerCleanups, 1);
   });
+
+  it("closes synchronously before listener or timer registration can run", async () => {
+    const scope = new Scope();
+    await scope.close();
+
+    assert.throws(() => scope.listen(() => () => undefined), ClientScopeClosedError);
+    assert.throws(() => scope.timer(() => () => undefined), ClientScopeClosedError);
+  });
+
+  it("waits for a pending effect disposal and rejects reentrant registrations", async () => {
+    const scope = new Scope();
+    let release: (() => void) | undefined;
+    const effect = scope.effect(() => new Promise<void>((resolve) => { release = resolve; }));
+    const disposal = effect.dispose();
+    const close = scope.close();
+
+    assert.equal(effect.dispose(), disposal);
+    assert.throws(() => scope.effect(() => undefined), ClientScopeClosedError);
+    let settled = false;
+    void close.then(() => { settled = true; });
+    await Promise.resolve();
+    assert.equal(settled, false);
+    release?.();
+    await close;
+  });
+
+  it("owns a resource whose listener registration closes its scope", async () => {
+    const scope = new Scope();
+    let cleaned = 0;
+    const registration = scope.listen(() => {
+      void scope.close();
+      return () => { cleaned += 1; };
+    });
+
+    await registration.dispose();
+    await scope.close();
+    assert.equal(cleaned, 1);
+  });
 });

@@ -10,15 +10,19 @@ export class ClientScopeClosedError extends Error {
 type Cleanup = () => void | Promise<void>;
 
 class Effect implements ClientDisposable {
-  private disposed = false;
+  private result: Promise<void> | undefined;
 
   constructor(private readonly cleanup: Cleanup, private readonly remove: () => void) {}
 
-  dispose(): void | Promise<void> {
-    if (this.disposed) return;
-    this.disposed = true;
-    this.remove();
-    return this.cleanup();
+  dispose(): Promise<void> {
+    if (this.result === undefined) {
+      try {
+        this.result = Promise.resolve(this.cleanup()).finally(this.remove);
+      } catch (failure) {
+        this.result = Promise.reject(failure).finally(this.remove);
+      }
+    }
+    return this.result;
   }
 }
 
@@ -26,10 +30,11 @@ class Effect implements ClientDisposable {
 export class Scope implements ClientScope {
   private readonly children: Scope[] = [];
   private readonly effects: Effect[] = [];
+  private closing = false;
   private closeResult: Promise<void> | undefined;
 
   get closed(): boolean {
-    return this.closeResult !== undefined;
+    return this.closing;
   }
 
   child(): Scope {
@@ -52,17 +57,24 @@ export class Scope implements ClientScope {
 
   /** Registers a listener cleanup under this scope. */
   listen(register: () => Cleanup | ClientDisposable): ClientDisposable {
-    return this.effect(register());
+    return this.register(register);
   }
 
   /** Registers a timer cleanup under this scope. */
   timer(register: () => Cleanup | ClientDisposable): ClientDisposable {
-    return this.effect(register());
+    return this.register(register);
   }
 
   close(): Promise<void> {
     if (this.closeResult === undefined) {
-      this.closeResult = this.closeOwned();
+      this.closing = true;
+      let resolve: () => void;
+      let reject: (reason: unknown) => void;
+      this.closeResult = new Promise<void>((success, failure) => {
+        resolve = success;
+        reject = failure;
+      });
+      void this.closeOwned().then(resolve!, reject!);
     }
     return this.closeResult;
   }
@@ -96,7 +108,7 @@ export class Scope implements ClientScope {
   }
 
   private assertOpen(): void {
-    if (this.closeResult !== undefined) throw new ClientScopeClosedError();
+    if (this.closing) throw new ClientScopeClosedError();
   }
 
   private removeChild(child: Scope): void {
@@ -107,5 +119,20 @@ export class Scope implements ClientScope {
   private removeEffect(effect: Effect): void {
     const index = this.effects.indexOf(effect);
     if (index >= 0) this.effects.splice(index, 1);
+  }
+
+  private register(register: () => Cleanup | ClientDisposable): ClientDisposable {
+    this.assertOpen();
+    let resolveCleanup: (cleanup: Cleanup) => void;
+    const ready = new Promise<Cleanup>((resolve) => { resolveCleanup = resolve; });
+    const owned = this.effect(() => ready.then((cleanup) => cleanup()));
+    try {
+      const cleanup = register();
+      resolveCleanup!(typeof cleanup === "function" ? cleanup : () => cleanup.dispose());
+      return owned;
+    } catch (failure) {
+      resolveCleanup!(() => { throw failure; });
+      throw failure;
+    }
   }
 }

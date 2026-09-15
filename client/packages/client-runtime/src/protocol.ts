@@ -1,19 +1,36 @@
-import type {
-  CallFence,
-  ClientError,
-  ContributionId,
-  LifecycleFence,
-  LiteralValue,
-  ProtocolEnvelope,
-  SessionFence,
-} from "@sstlfsj/fibra-client-api";
+import type { ClientError } from "@sstlfsj/fibra-client-api";
+
+export interface SessionFence { readonly hostInstanceId: string; readonly clientExecutionId: string; }
+export interface LifecycleFence { readonly session: SessionFence; readonly targetRevision: string; readonly runtimeInstanceId: string; readonly lifecycleOperationId: string; }
+export interface CallFence { readonly session: SessionFence; readonly expectedViewRevision: string; readonly registrationIdentity: string; }
+export interface ContributionId { readonly providerInstanceId: string; readonly localName: string; }
+export type LiteralValue = null | boolean | string | readonly LiteralValue[] | LiteralNumber | LiteralObject;
+export interface LiteralNumber { readonly kind: "NUMBER"; readonly value: string; }
+export interface LiteralObject { readonly kind: "OBJECT"; readonly values: Readonly<Record<string, LiteralValue>>; }
+export interface ClientCall { readonly call: CallFence; readonly contributionKind: string; readonly contributionId: ContributionId; readonly input: LiteralValue; }
+export interface Assignment { readonly pluginId: string; readonly facetId: string; readonly runtimeInstanceId: string; readonly executionTarget: string; readonly entryModule: string; readonly payloadDigest: string; readonly requiredCapabilities: readonly string[]; readonly resources: readonly Resource[]; }
+export interface Resource { readonly path: string; readonly digest: string; readonly content: { readonly kind: "URL"; readonly url: string } | { readonly kind: "BYTES"; readonly base64: string }; }
+export interface Contribution { readonly contributionKind: string; readonly contributionId: ContributionId; readonly registrationIdentity: string; }
+export type LifecycleOutcome = { readonly kind: "APPLIED" } | { readonly kind: "FAILED"; readonly failure: ClientError };
+export type CallOutcome = { readonly kind: "SUCCESS"; readonly value: LiteralValue } | { readonly kind: "FAILED"; readonly failure: ClientError };
+export interface ExecutionObservation { readonly targetRevision: string; readonly runtimeInstanceId: string; readonly lifecycleOperationId: string; readonly state: "PENDING" | "ACTIVE" | "FAILED"; readonly failure?: ClientError; }
+export interface Envelope<Type extends string, Payload> { readonly protocolVersion: 1; readonly messageId: string; readonly type: Type; readonly payload: Payload; }
+export type ProtocolEnvelope =
+  | Envelope<"client.hello", { readonly identity: { readonly clientNonce: string }; readonly executionTarget: string; readonly capabilities: readonly string[] }>
+  | Envelope<"host.welcome" | "client.detach", { readonly session: SessionFence }>
+  | Envelope<"host.snapshot", { readonly session: SessionFence; readonly viewRevision: string; readonly targetRevision: string; readonly targetDigest: string; readonly assignments: readonly Assignment[]; readonly contributions: readonly Contribution[] }>
+  | Envelope<"host.prepare" | "host.activate" | "host.drain" | "host.stop", { readonly lifecycle: LifecycleFence }>
+  | Envelope<"client.lifecycle-result", { readonly lifecycle: LifecycleFence; readonly outcome: LifecycleOutcome }>
+  | Envelope<"client.observed", { readonly session: SessionFence; readonly executions: readonly ExecutionObservation[] }>
+  | Envelope<"client.call", ClientCall>
+  | Envelope<"host.call-result", { readonly call: CallFence; readonly contributionKind: string; readonly contributionId: ContributionId; readonly outcome: CallOutcome }>;
 
 export const PROTOCOL_VERSION = 1;
 export const MAX_ENVELOPE_BYTES = 1024 * 1024;
 export const MAX_NESTING_DEPTH = 64;
 export const MAX_DECIMAL_CHARACTERS = 1000;
 
-type JsonValue = null | boolean | number | string | JsonValue[] | JsonObject;
+type JsonValue = null | boolean | number | JsonNumber | string | JsonValue[] | JsonObject;
 type JsonObject = { readonly [key: string]: JsonValue };
 type ErrorCode = "MALFORMED_MESSAGE" | "INVALID_IDENTITY" | "UNSUPPORTED_PROTOCOL";
 
@@ -53,7 +70,8 @@ export function encodeEnvelope(envelope: ProtocolEnvelope): string {
 function validateEnvelope(value: JsonValue): ProtocolEnvelope {
   const envelope = object(value, "envelope");
   exact(envelope, ["protocolVersion", "messageId", "type", "payload"]);
-  if (envelope.protocolVersion !== PROTOCOL_VERSION) {
+  const version = protocolVersion(envelope.protocolVersion);
+  if (version !== PROTOCOL_VERSION) {
     throw new ClientProtocolError("UNSUPPORTED_PROTOCOL", "protocolVersion must be 1");
   }
   const messageId = text(envelope, "messageId");
@@ -63,7 +81,7 @@ function validateEnvelope(value: JsonValue): ProtocolEnvelope {
   switch (type) {
     case "client.hello":
       phase(payload, "identity", ["identity", "executionTarget", "capabilities"]);
-      exact(object(payload.identity, "identity"), ["clientNonce"]);
+      exact(object(payload.identity, "identity", "INVALID_IDENTITY"), ["clientNonce"], "INVALID_IDENTITY");
       text(object(payload.identity, "identity"), "clientNonce", "INVALID_IDENTITY");
       strings(payload.capabilities, "capabilities");
       text(payload, "executionTarget");
@@ -103,7 +121,7 @@ function validateEnvelope(value: JsonValue): ProtocolEnvelope {
       phase(payload, "call", ["call", "contributionKind", "contributionId", "input"]);
       call(payload.call);
       contributionFields(payload);
-      literal(payload.input, 3);
+      literal(payload.input, 0);
       break;
     case "host.call-result":
       phase(payload, "call", ["call", "contributionKind", "contributionId", "outcome"]);
@@ -165,7 +183,7 @@ function assignments(value: JsonValue): void {
         exact(content, ["kind", "url"]);
         const url = text(content, "url");
         try {
-          if (new URL(url).protocol === "file:") throw new Error();
+          if (/[\u0000-\u0020]/.test(url) || new URL(url).protocol === "file:") throw new Error();
         } catch {
           throw malformed("url must be a controlled non-file URL");
         }
@@ -217,7 +235,7 @@ function callOutcome(value: JsonValue): void {
   const kind = text(outcome, "kind");
   if (kind === "SUCCESS") {
     exact(outcome, ["kind", "value"]);
-    literal(outcome.value, 4);
+    literal(outcome.value, 0);
   } else if (kind === "FAILED") {
     exact(outcome, ["kind", "failure"]);
     failure(outcome.failure);
@@ -255,10 +273,12 @@ function executions(value: JsonValue): void {
 }
 
 function literal(value: JsonValue, depth: number): LiteralValue {
-  if (depth > MAX_NESTING_DEPTH) throw malformed("literal exceeds nesting depth");
   if (value === null || typeof value === "boolean" || typeof value === "string") return value;
-  if (typeof value === "number") throw malformed("literal numbers require the NUMBER tag");
-  if (Array.isArray(value)) return value.map((item) => literal(item, depth + 1));
+  if (typeof value === "number" || value instanceof JsonNumber) throw malformed("literal numbers require the NUMBER tag");
+  if (Array.isArray(value)) {
+    if (depth >= MAX_NESTING_DEPTH) throw malformed("literal exceeds nesting depth");
+    return value.map((item) => literal(item, depth + 1));
+  }
   const tagged = object(value, "literal");
   const kind = text(tagged, "kind");
   if (kind === "NUMBER") {
@@ -268,6 +288,7 @@ function literal(value: JsonValue, depth: number): LiteralValue {
   }
   if (kind === "OBJECT") {
     exact(tagged, ["kind", "values"]);
+    if (depth + 2 > MAX_NESTING_DEPTH) throw malformed("literal exceeds nesting depth");
     const values = object(tagged.values, "values");
     for (const item of Object.values(values)) literal(item, depth + 2);
     return tagged as unknown as LiteralValue;
@@ -294,11 +315,12 @@ function canonicalizeDecimal(value: string): string | undefined {
   const match = /^(-?)([0-9]+)(?:\.([0-9]+))?(?:E([+-]?[0-9]+))?$/.exec(value);
   if (match === null) return undefined;
   const [, sign, integer, fractional = "", exponentText] = match;
-  const exponent = exponentText === undefined ? 0 : Number(exponentText);
-  if (!Number.isSafeInteger(exponent)) return undefined;
+  const exponent = parseExponent(exponentText);
+  if (exponent === undefined) return undefined;
   let digits = `${integer}${fractional}`.replace(/^0+/, "");
   if (digits.length === 0) return "0";
   let scale = fractional.length - exponent;
+  if (scale < -2147483648 || scale > 2147483647) return undefined;
   while (digits.endsWith("0")) {
     digits = digits.slice(0, -1);
     scale -= 1;
@@ -312,6 +334,15 @@ function canonicalizeDecimal(value: string): string | undefined {
   return `${prefix}${digits[0]}${digits.length === 1 ? "" : `.${digits.slice(1)}`}E${adjusted >= 0 ? "+" : ""}${adjusted}`;
 }
 
+function parseExponent(value: string | undefined): number | undefined {
+  if (value === undefined) return 0;
+  if (!/^[+-]?(?:0|[1-9][0-9]*)$/.test(value)) return undefined;
+  const sign = value.startsWith("-") ? -1 : 1;
+  const digits = value.replace(/^[+-]/, "");
+  if (digits.length > 10 || (digits.length === 10 && digits > "2147484647")) return undefined;
+  return sign * Number(digits);
+}
+
 function phase(payload: JsonObject, identity: string, expected: readonly string[]): void {
   const actual = Object.keys(payload);
   if (same(actual, expected)) return;
@@ -323,7 +354,7 @@ function phase(payload: JsonObject, identity: string, expected: readonly string[
 }
 
 function object(value: JsonValue, name: string, code: ErrorCode = "MALFORMED_MESSAGE"): JsonObject {
-  if (value === null || Array.isArray(value) || typeof value !== "object") {
+  if (value === null || value instanceof JsonNumber || Array.isArray(value) || typeof value !== "object") {
     throw new ClientProtocolError(code, `${name} must be an object`);
   }
   return value;
@@ -361,7 +392,21 @@ function digest(value: JsonValue, name: string): string {
 }
 
 function base64(value: string): void {
-  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) throw malformed("base64 must be valid");
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(value)) throw malformed("base64 must be valid");
+  const padding = value.endsWith("==") ? 2 : value.endsWith("=") ? 1 : 0;
+  const body = value.length - padding;
+  if (body % 4 === 1 || (padding > 0 && (value.length % 4 !== 0 || (padding === 2 && body % 4 !== 2) || (padding === 1 && body % 4 !== 3)))) {
+    throw malformed("base64 must be valid");
+  }
+}
+
+function protocolVersion(value: JsonValue): number {
+  if (value instanceof JsonNumber) {
+    if (!/^(?:0|[1-9][0-9]*)$/.test(value.raw)) throw malformed("protocolVersion must be an integer");
+    return Number(value.raw);
+  }
+  if (typeof value === "number" && Number.isInteger(value)) return value;
+  throw malformed("protocolVersion must be an integer");
 }
 
 function exact(value: JsonObject, expected: readonly string[], code: ErrorCode = "MALFORMED_MESSAGE"): void {
@@ -389,7 +434,7 @@ class StrictJsonReader {
   }
 
   private value(depth: number): JsonValue {
-    if (depth > MAX_NESTING_DEPTH) throw malformed("JSON exceeds nesting depth");
+    if (depth > MAX_NESTING_DEPTH + 4) throw malformed("JSON exceeds nesting depth");
     this.space();
     const start = this.source[this.index];
     if (start === "{") return this.object(depth + 1);
@@ -455,13 +500,11 @@ class StrictJsonReader {
     throw malformed("unterminated string");
   }
 
-  private number(): number {
+  private number(): JsonNumber {
     const match = /-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/.exec(this.source.slice(this.index));
     if (match === null || match.index !== 0) throw malformed("invalid JSON value");
     this.index += match[0].length;
-    const result = Number(match[0]);
-    if (!Number.isFinite(result)) throw malformed("invalid JSON number");
-    return result;
+    return new JsonNumber(match[0]);
   }
 
   private consume(character: string): boolean {
@@ -476,4 +519,9 @@ class StrictJsonReader {
       this.index += 1;
     }
   }
+}
+
+class JsonNumber {
+  constructor(readonly raw: string) {}
+  toJSON(): number { return Number(this.raw); }
 }
