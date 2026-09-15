@@ -72,7 +72,7 @@ public final class FibraEngine implements AutoCloseable {
     private final AtomicBoolean sourceRefreshQueued = new AtomicBoolean();
     private final AtomicBoolean sourceDirty = new AtomicBoolean();
     private final AtomicReference<Throwable> sourceMonitorFailure = new AtomicReference<>();
-    private volatile Mono<Void> startSignal;
+    private volatile Mono<PublishedView> startSignal;
     private final Mono<Void> closeSignal;
 
     private RuntimeDomain domain;
@@ -145,7 +145,11 @@ public final class FibraEngine implements AutoCloseable {
                     publish(captured);
                     return Mono.error(error);
                 });
-            }))).then().doOnError(error -> {
+            }))).doOnSuccess(view -> {
+                // 启动等待者接收本次精确结果；后续订阅读当前视图且不长期保留启动视图。
+                startSignal = Mono.fromSupplier(published::current);
+            })
+            .doOnError(error -> {
                 // 正在等待首次启动的订阅者仍收到原异常；后续订阅只保留失败事实。
                 var detail = error.toString();
                 if (error instanceof EngineChangeException change) {
@@ -161,7 +165,7 @@ public final class FibraEngine implements AutoCloseable {
     public static Builder builder(DesiredStateRepository repository) { return new Builder(repository); }
     public PublishedRuntime published() { return published; }
     public Mono<PublishedView> start() {
-        return Mono.defer(() -> startSignal).then(Mono.fromSupplier(published::current));
+        return Mono.defer(() -> startSignal);
     }
 
     public Mono<EngineCommandResult> submit(EngineCommand command) {

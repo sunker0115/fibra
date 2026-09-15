@@ -1,7 +1,7 @@
 # 行为验收账本
 
-复核日期：2026-09-13。状态：Cordis 原始行为、Fibra 额外回归、正式插件、正式宿主 CLI、可运行 ZIP、
-仓库外真实调用、可复现发布、空 Maven 仓分发门禁、最终全仓与公开 API 复验均已有最终本地证据；平台
+复核日期：2026-09-15。状态：Cordis 原始行为、Fibra 额外回归、正式插件、正式宿主 CLI、可运行 ZIP、
+仓库外真实调用、可复现发布、复用 `~/.m2` 的分发门禁、最终全仓与公开 API 复验均已有最终证据；平台
 限定证据见第 5、6 节。
 
 状态边界：第 6 节记录的正式宿主 CLI、REPL 与可运行 ZIP 是 vNext 架构第 1–10 节的历史完成证据；它们
@@ -321,5 +321,16 @@ Linux 收口证据：`447ef6e` 让验证器只在 PTY 已进入非规范读取�
 | 发布门禁 | 根 50 模块 `mvn -o clean verify` 通过；`scripts/verify-reproducible-release.sh` 连续三次构建并通过 27 个正式制品、flattened POM、发行 ZIP 与目录 manifest 的字节比较；`scripts/verify-distribution.sh` 使用现有 `~/.m2`，不创建或清空 Maven 本地仓库，临时部署目标严格包含 27 个正式 artifactId，仓外消费者、archetype、发行 ZIP、`CliSession` 与动态插件真实 TTY 门禁全部通过。core 与 engine 外部测试均使用 test-scope `slf4j-nop`，不再出现“未找到 SLF4J provider”警告，也不进入正式制品。 |
 
 本地短超时脚本单元测试 4/4 通过；真实诊断采样在当前受限沙箱中因 `/bin/ps: Operation not permitted`
-无法生成 JVM dump，因此不记录为本机通过，留待同一提交的 GitHub Actions Linux runner 验证。以上本地结果
-不能替代 Windows 实机门禁；Windows 仍保持未实测声明。
+无法生成 JVM dump，因此不记录为本机通过。`main` 合并提交 `7a24be5` 的
+[GitHub Actions #35](https://github.com/sunker0115/fibra/actions/runs/34880038160) 已在 Linux 依次通过短超时
+诊断、根全量构建与兼容性验收、27 制品三轮可复现比较和仓外分发消费者；该提交与 `64b2651` 源码树一致，
+作为该源码树的一次完整 Linux 成功证据。同一源码树此前的 [#33](https://github.com/sunker0115/fibra/actions/runs/34877198730)、
+[#34](https://github.com/sunker0115/fibra/actions/runs/34880015113) 以及后续文档提交触发的
+[#36](https://github.com/sunker0115/fibra/actions/runs/34919269182) 均在
+`FibraEngineIncrementalTest.replacementSubmittedDuringStartupWaitsForTheAcceptedInitialTarget` 第 120 行命中
+并发断言失败。根因是启动协调丢弃 bootstrap 的精确视图后异步重读 `published.current()`，已排队替换可在
+读取前发布“旧 Engine 快照 + 新目标诊断”的过渡视图。新增双启动订阅者确定性回归在旧实现稳定失败，修复后
+相关 24/24、Engine 178/178、根 50 模块 `clean verify` 通过。修复提交 `98ccd53` 的
+[GitHub Actions #37](https://github.com/sunker0115/fibra/actions/runs/34920221889) 已在同一 HEAD 依次通过短超时
+诊断、根全量构建与兼容性验收、27 制品三轮可复现比较和仓外分发消费者，V1 据此收口。
+macOS/Linux 结果不能替代 Windows 实机门禁；Windows 仍保持未实测声明。
