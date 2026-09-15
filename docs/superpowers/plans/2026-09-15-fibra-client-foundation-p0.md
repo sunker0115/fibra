@@ -160,7 +160,11 @@
 - [ ] **Step 1: 写严格 codec 失败测试**
 
   覆盖未知字段、重复字段、尾随 token、缺失/错误阶段 identity、未知 message type、协议版本不等于 `1`。断言错误码
-  分别稳定为 `MALFORMED_MESSAGE`、`INVALID_IDENTITY`、`UNSUPPORTED_PROTOCOL`。
+  分别稳定为 `MALFORMED_MESSAGE`、`INVALID_IDENTITY`、`UNSUPPORTED_PROTOCOL`。另以合法 envelope 覆盖
+  UTF-8 恰好 1 MiB/超 1 字节、64 层嵌套读写对称、literal 的 JS safe integer 边界，以及 ECMAScript 不能
+  无损保持的高精度、上溢和下溢 number 拒绝；不得用本身非法的 JSON 冒充大小门禁。
+  `targetRevision`/`registrationIdentity` 必须覆盖 `Long.MAX_VALUE` 的 wire 字符串往返，并拒绝数字
+  token、负数、前导零和越界字符串。
 
 - [ ] **Step 2: 写 A→B→A 围栏测试**
 

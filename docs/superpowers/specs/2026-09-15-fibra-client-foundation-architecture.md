@@ -372,7 +372,7 @@ v1 wire envelope 固定为 `{protocolVersion,messageId,type,payload}`；消息�
 envelope，也不套用 JSON-RPC。为让 wire 形状本身即可拒绝跨阶段身份，payload 身份键固定为：hello 使用
 `identity`，welcome/snapshot/observed/detach 使用 `session`，生命周期命令及结果使用 `lifecycle`，call/result
 使用 `call`。编码后的 UTF-8 envelope 上限为 1 MiB；受控 inline bytes 计入该上限，大资源必须走受控 URL，
-超限消息按 `MALFORMED_MESSAGE` 拒绝。
+JSON 结构嵌套上限为 64 层；编码与解码必须使用相同限制。超限消息按 `MALFORMED_MESSAGE` 拒绝。
 
 `host.welcome` 分配 `clientExecutionId` 并返回完整 `SessionFence`。`targetDigest` 作为 snapshot/target 内容字段，
 不代替生命周期 fence。codec 按 message type 精确校验所需结构：hello 携带 lifecycle 字段、生命周期消息
@@ -412,6 +412,17 @@ client.detach
 `ContributionId(providerInstanceId, localName)` 的两个字段，不使用不可逆或有歧义的拼接字符串。调用输入和
 成功结果使用 Fibra 的递归不可变 literal value，只允许 JSON 的 null、boolean、number、string、list 和
 string-keyed object，不传 Java/JavaScript 对象。
+
+v1 将身份与可计算数值分开编码。`targetRevision`、`registrationIdentity` 在 Java 模型中保持为正
+`long`，在 wire JSON 中只能是无符号、无前导零的规范十进制字符串，范围为 `1..Long.MAX_VALUE`；
+数字 token、负数、前导零和越界字符串一律拒绝。这两个字段是围栏令牌，client 只作不透明字符串
+保持和比较，不对它们做算术。
+
+v1 的原生 JSON number 只接受 Java 与 ECMAScript `number` 能保持数值往返的有限交集，不承诺任意精度。
+literal integer 必须位于 `Number.MIN_SAFE_INTEGER..Number.MAX_SAFE_INTEGER`；非整数必须是 finite，并且经
+ECMAScript number 的十进制往返后数值不变。Host 与 client 任一侧不能精确保持的高精度、上溢或下溢
+number 在 codec 边界直接按 `MALFORMED_MESSAGE` 拒绝。未来若具体 contribution 需要金额或任意精度十进制值，
+由该 contribution schema 明确定义规范字符串形式，不能将其冒充为通用 JSON number，也不能让两端静默舍入。
 
 snapshot 的每个 assignment 至少固定 `pluginId/facetId/runtimeInstanceId/executionTarget/entryModule/
 payloadDigest/requiredCapabilities/resources`。每个资源包含逻辑 `path`、SHA-256 `digest`，以及严格二选一的

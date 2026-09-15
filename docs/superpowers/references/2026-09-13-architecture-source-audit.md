@@ -82,6 +82,18 @@ Codex 最新本地源码 `36f0dbe796d9bb1a18a0fc0640ed08b3e1d54564` 仅作为非
 Fibra 契约或验收断言；
 若未来要把其中行为升级为契约依据，必须先固定发布版本或源码提交并新增对应证据。
 
+### 4.1 Client protocol 数值编码参照
+
+| 来源 | 可直接陈述的事实 | Fibra 取舍 |
+|---|---|---|
+| [RFC 8259 第 6 节](https://www.rfc-editor.org/rfc/rfc8259#section-6) | JSON 可以表达更大或更精确的数，但基于 IEEE 754 binary64 的实现只在 `[-(2^53)+1, (2^53)-1]` 整数范围内能保证数值精确一致 | 通用 literal number 只接受 Java 与 ECMAScript 能无损往返的交集 |
+| [ProtoJSON 格式](https://protobuf.dev/programming-guides/json/#representation-of-each-type) | `int64`/`uint64`/`fixed64` 默认输出十进制字符串，以避免被 double 或 JavaScript number 处理时丢失精度 | 64 位 revision/注册身份在 wire 上用规范十进制字符串；不复制 ProtoJSON 同时接受 number 的兼容分支 |
+| [GraphQL ID](https://spec.graphql.org/October2021/#sec-ID) | ID 即使经常由数字构成，也始终序列化为字符串，因为它是不透明身份而非可计算量 | client 只保持和比较 revision/注册身份，不对它们做算术 |
+| [Google `Decimal`](https://github.com/googleapis/googleapis/blob/master/google/type/decimal.proto) | 任意精度十进制值以字符串承载，再由各语言转换为 `BigDecimal`/`Decimal` 等本地类型 | 金额等任意精度值必须由具体 contribution schema 显式定义字符串形式，不混入通用 JSON number |
+
+上表只证明跨语言协议将“不透明身份、64 位整数、任意精度十进制数”与普通可计算 number 分类的成熟做法。
+Fibra 的单一规范 wire 形式、范围与错误码仍由 Client Foundation 规格和本项目测试自定，不宣称由上述项目直接证明。
+
 ## 5. 本次审计记录
 
 | 级别 | 问题 | 处理 |
