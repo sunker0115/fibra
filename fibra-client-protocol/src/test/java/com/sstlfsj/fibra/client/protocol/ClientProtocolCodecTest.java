@@ -10,8 +10,10 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ClientProtocolCodecTest {
     private final ClientProtocolCodec codec = new ClientProtocolCodec();
@@ -66,22 +68,90 @@ class ClientProtocolCodecTest {
             "{\"protocolVersion\":1,\"messageId\":\"one\",\"type\":\"client.call\","
                 + "\"payload\":{\"call\":{\"session\":{\"hostInstanceId\":\"host\","
                 + "\"clientExecutionId\":\"client\"},\"expectedViewRevision\":\"0\","
-                + "\"registrationIdentity\":9223372036854775808},\"contributionKind\":\"tool\","
+                + "\"registrationIdentity\":9007199254740992},\"contributionKind\":\"tool\","
                 + "\"contributionId\":{\"providerInstanceId\":\"provider\",\"localName\":\"read\"},"
                 + "\"input\":null}}");
     }
 
     @Test
-    void rejectsUtf8EnvelopeLargerThanOneMiB() {
-        assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
-            "你".repeat(ClientProtocolCodec.MAX_ENVELOPE_BYTES / 2));
+    void enforcesExactUtf8EnvelopeByteLimit() {
+        var empty = callEnvelope(new LiteralValue.StringValue(""));
+        var baseLength = codec.encode(empty).getBytes(StandardCharsets.UTF_8).length;
+        var filler = "a".repeat(ClientProtocolCodec.MAX_ENVELOPE_BYTES - baseLength);
+        var exact = callEnvelope(new LiteralValue.StringValue(filler));
+        var exactWire = codec.encode(exact);
+
+        assertEquals(ClientProtocolCodec.MAX_ENVELOPE_BYTES, exactWire.getBytes(StandardCharsets.UTF_8).length);
+        assertEquals(exact, codec.decode(exactWire));
+        assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE, exactWire + " ");
+        assertProtocolCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+            () -> codec.encode(callEnvelope(new LiteralValue.StringValue(filler + "a"))));
+
+        var inlineBytes = snapshotWithBytes("AAAA".repeat((ClientProtocolCodec.MAX_ENVELOPE_BYTES - baseLength) / 4));
+        assertProtocolCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE, () -> codec.encode(inlineBytes));
     }
 
     @Test
-    void roundTripsLiteralNumbersWithoutFloatingPointLoss() {
-        for (var value : List.of("0.12345678901234567890123456789", "1E-400", "1E+400")) {
+    void permitsOnlyJavaScriptInteroperableLiteralNumbers() {
+        for (var value : List.of("0.1", "9007199254740991")) {
             var envelope = callEnvelope(new LiteralValue.NumberValue(new BigDecimal(value)));
             assertEquals(envelope, codec.decode(codec.encode(envelope)));
+        }
+        var nullInput = codec.encode(callEnvelope(LiteralValue.NullValue.INSTANCE));
+        for (var value : List.of("0.12345678901234567890123456789", "1E-400", "1E+400",
+            "9007199254740992", "9007199254740993")) {
+            assertProtocolCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+                () -> codec.encode(callEnvelope(new LiteralValue.NumberValue(new BigDecimal(value)))));
+            assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+                nullInput.replace("\"input\":null", "\"input\":" + value));
+        }
+    }
+
+    @Test
+    void enforcesLiteralDepthBeforeTreeConversion() {
+        var ordinary = callEnvelope(nestedList(4));
+        assertEquals(ordinary, codec.decode(codec.encode(ordinary)));
+        var boundary = callEnvelope(nestedList(61));
+        assertEquals(boundary, codec.decode(codec.encode(boundary)));
+        assertProtocolCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+            () -> codec.encode(callEnvelope(nestedList(62))));
+
+        var wire = codec.encode(callEnvelope(LiteralValue.NullValue.INSTANCE));
+        var tooDeep = "[".repeat(62) + "null" + "]".repeat(62);
+        assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+            wire.replace("\"input\":null", "\"input\":" + tooDeep));
+    }
+
+    @Test
+    void encodesIdentityIntegersAsCanonicalLongStrings() {
+        var maximum = Long.MAX_VALUE;
+        var lifecycle = new ClientEnvelope(1, "prepare", "host.prepare",
+            new ClientMessage.Prepare(new LifecycleFence(new SessionFence("host", "client"), maximum,
+                "runtime", "operation")));
+        var session = new SessionFence("host", "client");
+        var digest = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+        var snapshot = new ClientEnvelope(1, "snapshot", "host.snapshot", new ClientMessage.Snapshot(
+            session, "0", maximum, digest, List.of(), List.of(new ClientMessage.Contribution("tool",
+                new ClientMessage.ContributionId("provider", "read"), maximum))));
+        var call = new ClientEnvelope(1, "call", "client.call", new ClientMessage.Call(
+            new CallFence(session, "0", maximum), "tool", new ClientMessage.ContributionId("provider", "read"),
+            LiteralValue.NullValue.INSTANCE));
+        var observed = new ClientEnvelope(1, "observed", "client.observed", new ClientMessage.Observed(session,
+            List.of(new ClientMessage.ExecutionObservation(maximum, "runtime", "operation",
+                ClientMessage.ObservedState.ACTIVE, null))));
+        for (var envelope : List.of(lifecycle, snapshot, call, observed)) {
+            var wire = codec.encode(envelope);
+            assertEquals(envelope, codec.decode(wire));
+            assertTrue(wire.contains("\"9223372036854775807\""));
+            assertFalse(wire.contains(":9223372036854775807"));
+        }
+        assertThrows(IllegalArgumentException.class,
+            () -> new LifecycleFence(new SessionFence("host", "client"), 0, "runtime", "operation"));
+
+        for (var invalid : List.of("1", "-1", "\"-1\"", "\"01\"", "\"9223372036854775808\"")) {
+            var wire = codec.encode(lifecycle).replace("\"targetRevision\":\"9223372036854775807\"",
+                "\"targetRevision\":" + invalid);
+            assertCode(ClientProtocolCodec.ErrorCode.INVALID_IDENTITY, wire);
         }
     }
 
@@ -130,8 +200,11 @@ class ClientProtocolCodecTest {
     }
 
     private void assertCode(ClientProtocolCodec.ErrorCode expected, String message) {
-        var exception = assertThrows(ClientProtocolCodec.ProtocolException.class,
-            () -> codec.decode(message));
+        assertProtocolCode(expected, () -> codec.decode(message));
+    }
+
+    private void assertProtocolCode(ClientProtocolCodec.ErrorCode expected, Runnable action) {
+        var exception = assertThrows(ClientProtocolCodec.ProtocolException.class, action::run);
         assertEquals(expected, exception.code());
     }
 
@@ -149,5 +222,11 @@ class ClientProtocolCodecTest {
         return new ClientEnvelope(1, "snapshot", "host.snapshot",
             new ClientMessage.Snapshot(new SessionFence("host", "client"), "0", 1, digest,
                 List.of(assignment), List.of()));
+    }
+
+    private static LiteralValue nestedList(int depth) {
+        LiteralValue value = LiteralValue.NullValue.INSTANCE;
+        for (var index = 0; index < depth; index++) value = new LiteralValue.ListValue(List.of(value));
+        return value;
     }
 }
