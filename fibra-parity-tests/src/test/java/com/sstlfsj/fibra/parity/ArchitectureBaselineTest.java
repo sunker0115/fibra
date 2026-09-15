@@ -6,11 +6,15 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.xml.sax.InputSource;
+import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -20,7 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ArchitectureBaselineTest {
     private static final List<String> JAVASCRIPT_ARTIFACT_IDS = List.of(
-        "pnpm", "npm", "npx", "yarn", "bun", "react", "react-dom", "electron");
+        "pnpm", "npm", "npx", "yarn", "bun", "react", "react-dom", "electron",
+        "frontend-maven-plugin");
     private static final List<String> NODE_TOOL_TOKENS = List.of(
         "node", "pnpm", "npm", "npx", "yarn", "bun");
     private static final List<String> EXECUTION_CONFIGURATION_ELEMENTS = List.of(
@@ -119,10 +124,7 @@ class ArchitectureBaselineTest {
             assertTrue(Files.isRegularFile(root.resolve(module).resolve("pom.xml")),
                 () -> module + " must be a dedicated Maven module");
         }
-        var rootPom = root.resolve("pom.xml");
-        assertNoJavaScriptTooling(rootPom.toString(), Files.readString(rootPom));
-        for (var module : MODULES) {
-            var pom = root.resolve(module).resolve("pom.xml");
+        for (var pom : reactorPomFiles(root.resolve("pom.xml"))) {
             assertNoJavaScriptTooling(pom.toString(), Files.readString(pom));
         }
     }
@@ -141,10 +143,55 @@ class ArchitectureBaselineTest {
             <project><dependencies><dependency><groupId>org.webjars.npm</groupId>
             <artifactId>react-dom</artifactId></dependency></dependencies></project>
             """));
+        assertThrows(AssertionError.class, () -> assertNoJavaScriptTooling("frontend fixture", """
+            <project><build><plugins><plugin><groupId>org.codehaus.mojo</groupId>
+            <artifactId>frontend-maven-plugin</artifactId><executions><execution>
+            <goals><goal>install-node-and-pnpm</goal><goal>pnpm</goal></goals>
+            <configuration><arguments>install</arguments></configuration>
+            </execution></executions></plugin></plugins></build></project>
+            """));
         assertDoesNotThrow(() -> assertNoJavaScriptTooling("reactor fixture", """
             <project><dependencies><dependency><groupId>io.projectreactor</groupId>
             <artifactId>reactor-core</artifactId></dependency></dependencies></project>
             """));
+    }
+
+    @Test
+    void reactorPomFilesRecursivelyDiscoversNestedModules(@TempDir Path temporaryDirectory)
+        throws Exception {
+        var rootPom = temporaryDirectory.resolve("pom.xml");
+        var nestedPom = temporaryDirectory.resolve("nested").resolve("pom.xml");
+        var leafPom = temporaryDirectory.resolve("nested").resolve("leaf").resolve("pom.xml");
+        Files.createDirectories(leafPom.getParent());
+        Files.writeString(rootPom, "<project><modules><module>nested</module></modules></project>");
+        Files.writeString(nestedPom, "<project><modules><module>leaf</module></modules></project>");
+        Files.writeString(leafPom, "<project/>");
+
+        assertEquals(List.of(rootPom, nestedPom, leafPom), reactorPomFiles(rootPom));
+    }
+
+    private static List<Path> reactorPomFiles(Path rootPom) throws Exception {
+        var pomFiles = new ArrayList<Path>();
+        collectReactorPomFiles(rootPom.toAbsolutePath().normalize(), new LinkedHashSet<>(), pomFiles);
+        return List.copyOf(pomFiles);
+    }
+
+    private static void collectReactorPomFiles(Path pom, Set<Path> visited, List<Path> pomFiles)
+        throws Exception {
+        if (!visited.add(pom)) {
+            return;
+        }
+        pomFiles.add(pom);
+        var document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(pom.toFile());
+        var modules = document.getElementsByTagName("module");
+        for (int index = 0; index < modules.getLength(); index++) {
+            var modulePom = pom.getParent().resolve(modules.item(index).getTextContent().trim())
+                .resolve("pom.xml").normalize();
+            if (!Files.isRegularFile(modulePom)) {
+                throw new IllegalStateException("cannot locate reactor module POM: " + modulePom);
+            }
+            collectReactorPomFiles(modulePom, visited, pomFiles);
+        }
     }
 
     private static void assertNoJavaScriptTooling(String pomName, String pom) throws Exception {
