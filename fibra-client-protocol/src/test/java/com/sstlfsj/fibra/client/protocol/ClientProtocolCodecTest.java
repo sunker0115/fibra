@@ -4,7 +4,9 @@ import com.sstlfsj.fibra.value.LiteralValue;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -76,6 +78,23 @@ class ClientProtocolCodecTest {
     }
 
     @Test
+    void roundTripsLiteralNumbersWithoutFloatingPointLoss() {
+        for (var value : List.of("0.12345678901234567890123456789", "1E-400", "1E+400")) {
+            var envelope = callEnvelope(new LiteralValue.NumberValue(new BigDecimal(value)));
+            assertEquals(envelope, codec.decode(codec.encode(envelope)));
+        }
+    }
+
+    @Test
+    void roundTripsEmptyBytesAndRejectsInvalidBase64() {
+        var envelope = snapshotWithBytes("");
+        assertEquals(envelope, codec.decode(codec.encode(envelope)));
+
+        assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+            codec.encode(snapshotWithBytes("AQ==")).replace("AQ==", "!"));
+    }
+
+    @Test
     void roundTripsEverySharedV1FixtureAndCoversEveryType() throws IOException {
         var fixtures = getClass().getResourceAsStream("v1-fixtures.json");
         var messages = codec.decodeFixtures(new String(fixtures.readAllBytes(), StandardCharsets.UTF_8));
@@ -114,5 +133,21 @@ class ClientProtocolCodecTest {
         var exception = assertThrows(ClientProtocolCodec.ProtocolException.class,
             () -> codec.decode(message));
         assertEquals(expected, exception.code());
+    }
+
+    private static ClientEnvelope callEnvelope(LiteralValue input) {
+        return new ClientEnvelope(1, "call", "client.call",
+            new ClientMessage.Call(new CallFence(new SessionFence("host", "client"), "0", 1), "tool",
+                new ClientMessage.ContributionId("provider", "read"), input));
+    }
+
+    private static ClientEnvelope snapshotWithBytes(String base64) {
+        var digest = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+        var assignment = new ClientMessage.Assignment("plugin", "facet", "runtime", "client:web", "index.js",
+            digest, List.of(), List.of(new ClientMessage.Resource("index.js", digest,
+                new ClientMessage.BytesContent(base64))));
+        return new ClientEnvelope(1, "snapshot", "host.snapshot",
+            new ClientMessage.Snapshot(new SessionFence("host", "client"), "0", 1, digest,
+                List.of(assignment), List.of()));
     }
 }

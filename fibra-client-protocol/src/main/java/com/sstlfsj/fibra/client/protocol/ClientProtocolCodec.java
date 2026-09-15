@@ -42,6 +42,8 @@ public final class ClientProtocolCodec {
                 .build())
             .enable(DeserializationFeature.FAIL_ON_READING_DUP_TREE_KEY)
             .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+            .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+            .enable(DeserializationFeature.USE_BIG_INTEGER_FOR_INTS)
             .build();
     }
 
@@ -244,7 +246,7 @@ public final class ClientProtocolCodec {
             case "BYTES" -> {
                 exactFields(value, Set.of("kind", "base64"), ErrorCode.MALFORMED_MESSAGE);
                 try {
-                    yield new ClientMessage.BytesContent(text(value, "base64", ErrorCode.MALFORMED_MESSAGE));
+                    yield new ClientMessage.BytesContent(textual(value, "base64", ErrorCode.MALFORMED_MESSAGE));
                 } catch (IllegalArgumentException exception) {
                     throw malformed("invalid base64 resource", exception);
                 }
@@ -385,6 +387,7 @@ public final class ClientProtocolCodec {
     private static ObjectNode object(JsonNode node, String name, ErrorCode code) { if (!(node instanceof ObjectNode value)) throw failure(code, name + " must be an object", null); return value; }
     private static ArrayNode array(JsonNode node, String name, ErrorCode code) { if (!(node instanceof ArrayNode value)) throw failure(code, name + " must be an array", null); return value; }
     private static String text(ObjectNode object, String name, ErrorCode code) { var value = object.get(name); if (value == null || !value.isTextual() || value.textValue().isBlank()) throw failure(code, name + " must be a non-blank string", null); return value.textValue(); }
+    private static String textual(ObjectNode object, String name, ErrorCode code) { var value = object.get(name); if (value == null || !value.isTextual()) throw failure(code, name + " must be a string", null); return value.textValue(); }
     private static int integer(ObjectNode object, String name, ErrorCode code) { var value = object.get(name); if (value == null || !value.isIntegralNumber() || !value.canConvertToInt()) throw failure(code, name + " must be an integer", null); return value.intValue(); }
     private static long longValue(ObjectNode object, String name, ErrorCode code) { var value = object.get(name); if (value == null || !value.isIntegralNumber() || !value.canConvertToLong()) throw failure(code, name + " must be an integer", null); return value.longValue(); }
     private static String digest(ObjectNode object, String name) { var value = text(object, name, ErrorCode.MALFORMED_MESSAGE); if (!value.matches("[0-9a-f]{64}")) throw malformed(name + " must be a lowercase SHA-256 digest", null); return value; }
