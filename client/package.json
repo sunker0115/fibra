@@ -2,11 +2,18 @@
   "name": "fibra-client-workspace",
   "version": "0.5.0-SNAPSHOT",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@11.19.0",
   "engines": {
     "node": ">=20.20.0"
   },
   "scripts": {
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "typecheck": "tsc --noEmit",
+    "lint:boundaries": "rg -n \"from ['\\\"](react|react-dom|electron)|\\b(document|window|HTMLElement)\\b\" packages/client-api packages/client-runtime"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.2",
+    "typescript": "5.9.3"
   }
 }

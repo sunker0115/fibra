@@ -4,6 +4,8 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true,
-    "declaration": true
-  }
+    "declaration": true,
+    "types": ["node"]
+  },
+  "exclude": ["node_modules", "target"]
 }
