@@ -7,6 +7,6 @@
     "node": ">=20.20.0"
   },
   "scripts": {
-    "test": "pnpm -r --if-present test"
+    "test": "pnpm -r test"
   }
 }

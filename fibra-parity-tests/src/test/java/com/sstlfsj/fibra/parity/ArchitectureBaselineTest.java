@@ -3,17 +3,28 @@ package com.sstlfsj.fibra.parity;
 import org.junit.jupiter.api.Test;
 
 import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
+
+import org.xml.sax.InputSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ArchitectureBaselineTest {
+    private static final List<String> JAVASCRIPT_ARTIFACT_IDS = List.of(
+        "pnpm", "npm", "npx", "yarn", "bun", "react", "react-dom", "electron");
+    private static final List<String> NODE_TOOL_TOKENS = List.of(
+        "node", "pnpm", "npm", "npx", "yarn", "bun");
+    private static final List<String> EXECUTION_CONFIGURATION_ELEMENTS = List.of(
+        "executable", "command", "argument", "arguments", "commandlineArgs");
     private static final List<String> MODULES = List.of(
         "fibra-api", "fibra-core", "fibra-config", "fibra-artifact",
         "fibra-engine", "fibra-bridge", "fibra-runtime-java",
@@ -108,13 +119,67 @@ class ArchitectureBaselineTest {
             assertTrue(Files.isRegularFile(root.resolve(module).resolve("pom.xml")),
                 () -> module + " must be a dedicated Maven module");
         }
+        var rootPom = root.resolve("pom.xml");
+        assertNoJavaScriptTooling(rootPom.toString(), Files.readString(rootPom));
         for (var module : MODULES) {
-            var pom = Files.readString(root.resolve(module).resolve("pom.xml"));
-            for (var forbidden : List.of("pnpm", "npm", "react", "electron")) {
-                assertFalse(pom.contains("<artifactId>" + forbidden + "</artifactId>"),
-                    () -> module + " must not depend on " + forbidden);
+            var pom = root.resolve(module).resolve("pom.xml");
+            assertNoJavaScriptTooling(pom.toString(), Files.readString(pom));
+        }
+    }
+
+    @Test
+    void javaToolingBoundaryRejectsJavaScriptBuildConfigurationWithoutRejectingReactor() {
+        assertThrows(AssertionError.class, () -> assertNoJavaScriptTooling("pnpm fixture", """
+            <project><build><plugins><plugin><configuration><executable>pnpm</executable>
+            </configuration></plugin></plugins></build></project>
+            """));
+        assertThrows(AssertionError.class, () -> assertNoJavaScriptTooling("node fixture", """
+            <project><build><plugins><plugin><configuration><executable>node</executable>
+            </configuration></plugin></plugins></build></project>
+            """));
+        assertThrows(AssertionError.class, () -> assertNoJavaScriptTooling("webjar fixture", """
+            <project><dependencies><dependency><groupId>org.webjars.npm</groupId>
+            <artifactId>react-dom</artifactId></dependency></dependencies></project>
+            """));
+        assertDoesNotThrow(() -> assertNoJavaScriptTooling("reactor fixture", """
+            <project><dependencies><dependency><groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId></dependency></dependencies></project>
+            """));
+    }
+
+    private static void assertNoJavaScriptTooling(String pomName, String pom) throws Exception {
+        var document = DocumentBuilderFactory.newInstance().newDocumentBuilder()
+            .parse(new InputSource(new StringReader(pom)));
+        for (var artifactId : JAVASCRIPT_ARTIFACT_IDS) {
+            assertFalse(hasExactElementValue(document, "artifactId", artifactId),
+                () -> pomName + " must not declare " + artifactId);
+        }
+        for (var element : EXECUTION_CONFIGURATION_ELEMENTS) {
+            var nodes = document.getElementsByTagName(element);
+            for (int index = 0; index < nodes.getLength(); index++) {
+                var value = nodes.item(index).getTextContent().trim();
+                for (var tool : NODE_TOOL_TOKENS) {
+                    assertFalse(containsExactToken(value, tool),
+                        () -> pomName + " must not execute " + tool);
+                }
             }
         }
+    }
+
+    private static boolean hasExactElementValue(org.w3c.dom.Document document, String element,
+                                                 String expectedValue) {
+        var nodes = document.getElementsByTagName(element);
+        for (int index = 0; index < nodes.getLength(); index++) {
+            if (expectedValue.equals(nodes.item(index).getTextContent().trim())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean containsExactToken(String value, String token) {
+        return Pattern.compile("(?<![A-Za-z0-9_.-])" + Pattern.quote(token)
+            + "(?![A-Za-z0-9_.-])").matcher(value).find();
     }
 
     private static Path reactorRoot() {

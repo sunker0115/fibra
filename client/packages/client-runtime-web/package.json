@@ -7,5 +7,8 @@
   "dependencies": {
     "@sstlfsj/fibra-client-api": "workspace:*",
     "@sstlfsj/fibra-client-runtime": "workspace:*"
+  },
+  "scripts": {
+    "test": "node -e \"const fs = require('node:fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); const assert = (condition, message) => { if (!condition) throw new Error(message); }; const assertDependencies = (actual, expected, field) => { assert(JSON.stringify(Object.keys(actual ?? {}).sort()) === JSON.stringify(Object.keys(expected).sort()), field + ' keys must match'); for (const [name, version] of Object.entries(expected)) assert(actual?.[name] === version, field + ' version must match for ' + name); }; assertDependencies(pkg.dependencies, {'@sstlfsj/fibra-client-api': 'workspace:*', '@sstlfsj/fibra-client-runtime': 'workspace:*'}, 'dependencies'); assertDependencies(pkg.peerDependencies, {}, 'peerDependencies'); assertDependencies(pkg.optionalDependencies, {}, 'optionalDependencies');\""
   }
 }
