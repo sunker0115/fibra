@@ -410,7 +410,7 @@ client.detach
 `viewRevision` 是包含初始值 `"0"` 在内的不透明非空字符串，`registrationIdentity` 是正整数，必须直接映射
 `PublishedRuntime.invoke(String, long, ...)`，不得在 protocol/runtime 间另做类型转换。`contributionId` 对应
 `ContributionId(providerInstanceId, localName)` 的两个字段，不使用不可逆或有歧义的拼接字符串。调用输入和
-成功结果使用 Fibra 的递归不可变 literal value，只允许 JSON 的 null、boolean、number、string、list 和
+成功结果使用 Fibra 的递归不可变 literal value，逻辑类型只有 null、boolean、number、string、list 和
 string-keyed object，不传 Java/JavaScript 对象。
 
 v1 将身份与可计算数值分开编码。`targetRevision`、`registrationIdentity` 在 Java 模型中保持为正
@@ -418,11 +418,16 @@ v1 将身份与可计算数值分开编码。`targetRevision`、`registrationIde
 数字 token、负数、前导零和越界字符串一律拒绝。这两个字段是围栏令牌，client 只作不透明字符串
 保持和比较，不对它们做算术。
 
-v1 的原生 JSON number 只接受 Java 与 ECMAScript `number` 能保持数值往返的有限交集，不承诺任意精度。
-literal integer 必须位于 `Number.MIN_SAFE_INTEGER..Number.MAX_SAFE_INTEGER`；非整数必须是 finite，并且经
-ECMAScript number 的十进制往返后数值不变。Host 与 client 任一侧不能精确保持的高精度、上溢或下溢
-number 在 codec 边界直接按 `MALFORMED_MESSAGE` 拒绝。未来若具体 contribution 需要金额或任意精度十进制值，
-由该 contribution schema 明确定义规范字符串形式，不能将其冒充为通用 JSON number，也不能让两端静默舍入。
+`LiteralValue.NumberValue` 的 Java 语义是精确 `BigDecimal`，因此 wire 不使用原生 JSON number，
+而是编码为 `{"kind":"NUMBER","value":"<canonical-decimal>"}`。`canonical-decimal` 必须等于
+`NumberValue` 归一化后 `BigDecimal.toString()` 的结果；非规范形式、无法解析的字符串和原生 number token
+一律按 `MALFORMED_MESSAGE` 拒绝。string 仍使用原生 JSON string，因此 number/string 类型不会混淆。client core
+只保持精确十进制字符串；具体 contribution 若要计算，再按自己的 schema 显式选择 ECMAScript `Number`、
+`BigInt` 或 decimal library，协议层不静默舍入。
+
+为避免业务对象与 NUMBER tag 形状冲突，`LiteralValue.ObjectValue` 固定编码为
+`{"kind":"OBJECT","values":{...}}`；null、boolean、string 和 list 仍分别使用原生 JSON null、boolean、string
+和 array。NUMBER 只允许 `kind/value`，OBJECT 只允许 `kind/values`，其它 tag 或多余字段均拒绝。
 
 snapshot 的每个 assignment 至少固定 `pluginId/facetId/runtimeInstanceId/executionTarget/entryModule/
 payloadDigest/requiredCapabilities/resources`。每个资源包含逻辑 `path`、SHA-256 `digest`，以及严格二选一的
