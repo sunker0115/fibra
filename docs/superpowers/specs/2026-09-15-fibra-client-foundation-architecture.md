@@ -61,14 +61,23 @@ renderer adapter 不需要修改 Fibra Engine、Registry、client protocol 或 f
 | 参照 | 可直接借鉴 | 不照搬 | Fibra 取舍 |
 |---|---|---|---|
 | DSH/Cordis `0.1.5-rc.2` / `c291e7961` | Host/client runner 分层、Scope/effect 所有权、动态装载、renderer 后置挂载 | DSH client runner 直接依赖 Cordis slot/React 体系，且部分运行由页面主动编排 | 复用生命周期思想，但由 Fibra Engine 主导 client target，renderer 仅作为可选 adapter |
-| VS Code extension host/web extensions | 同一扩展系统可有多个执行位置，浏览器能力受限 | 不复制 VS Code 的产品协议、扩展清单或进程拓扑 | runtime、execution target、capability 分轴建模 |
+| VS Code extension host/web extensions | 同一扩展系统可有多个执行位置；逻辑资源先经 execution-local service 转成浏览器可加载地址；Web Extension 把运行时代码打成单文件 bundle | 不复制 VS Code 的产品协议、扩展清单、URI 实现、模块 shim 或进程拓扑 | runtime、execution target、capability 分轴；资源交付位置留在 execution adapter；P0 `client:web` 入口采用自包含单文件 bundle |
 | Grafana app/backend plugins | 一个用户安装单位可包含前端与后端能力 | 不把其插件包或后端启动模型当成 Fibra 事务保证 | 逻辑插件统一管理，多 facet 保留独立物理身份 |
 | Eclipse Theia | 前后端插件位置显式、宿主与插件 API 分层 | 不引入其 IDE 专用 widget/layout 体系 | UI composition 留在 renderer adapter |
 | OpenAI Codex app-server | 核心工程拥有协议及多语言导出，进程内与外部传输共享语义 | 不引入其 Agent/Session 业务协议 | Fibra protocol 只承载通用 client 生命周期和 Host contribution 调用 |
+| OCI Image/Distribution specs | descriptor 以 digest 和 size 描述不可变内容，交付地址不是内容身份 | 不引入 media type 体系、镜像 manifest、registry API 或 OCI 兼容承诺 | client 资源按 digest 寻址，控制面只传 P0 所需的稳定 descriptor，具体获取走独立数据面 |
 
 DSH 的 `packages/extensions/cordis-client-runner/src/client/runtime.ts` 证明浏览器装载、精确运行身份、串行替换
 与 effect 级联清理可行；`packages/client/ui-renderer` 同时证明 React renderer 可以是独立包。它不能证明
 React 类型适合作为 Fibra 通用 UI 契约，因此 Fibra 不复制 DSH `SlotMap` 中的 `ReactNode` 边界。
+DSH 的 evaluator 使用模块表和函数注入，只证明依赖显式解析的必要性，不证明 Fibra 的
+verified bytes → Blob → native import 路径；P0 采用 VS Code 同类 Web 入口的单文件 bundle 约束，避免把
+DSH 的模块系统变形移植过来。
+
+浏览器实现只使用平台已有机制：WHATWG URL/Fetch 负责具体 Web provider，Web Crypto `digest` 负责客户端
+SHA-256 复核，File API object URL 负责已验证 bundle 的临时执行地址，HTML module loader 负责执行。Fibra
+不自行实现 URL parser、HTTP cache 或 JavaScript module resolver；P0 用明确 CSP 与真实 Chromium 门禁验证
+这些机制的实际组合。平台 API 只能证明机制可用，不能替 Fibra 证明生命周期、权限或 revision 语义。
 
 ### 3.1 为什么现在下沉到 Fibra
 
@@ -270,7 +279,7 @@ ExecutionRuntime
 `PluginInstance` 生命周期。`HostExecutionRuntime` 同时消费内建 definitions 与 Java prepared artifacts，统一
 在 Host `RuntimeDomain` 中创建和关闭 `PluginInstance`；不再存在第二个 `JavaExecutionRuntime`。Node runtime
 的 execution 是 Host 拥有的 sidecar。`ClientArtifactRuntime` 在 Host 侧校验受管 client facet payload 及
-digest，产出只包含 entry module、受控资源、execution target 和 capability 条件的
+digest，产出只包含 entry module、内容寻址资源 descriptor、execution target 和 capability 条件的
 `ClientPreparedArtifact`；它不连接远端、不启动浏览器，也不拥有 session。`ClientExecutionRuntime` 只消费该
 静态结果并协调外部注册的 renderer/browser/native client。三个 execution runtime 只依赖 Engine SPI，彼此
 不依赖；Engine 只协调统一阶段，不假设所有执行实例都是 JVM `PluginInstance<?>`。
@@ -371,8 +380,8 @@ targetRevision。P0 只启动一个真实 web execution，但模型和协议从�
 v1 wire envelope 固定为 `{protocolVersion,messageId,type,payload}`；消息专属字段只能放在 `payload`，不得摊平到
 envelope，也不套用 JSON-RPC。为让 wire 形状本身即可拒绝跨阶段身份，payload 身份键固定为：hello 使用
 `identity`，welcome/snapshot/observed/detach 使用 `session`，生命周期命令及结果使用 `lifecycle`，call/result
-使用 `call`。编码后的 UTF-8 envelope 上限为 1 MiB；受控 inline bytes 计入该上限，大资源必须走受控 URL，
-JSON 结构嵌套上限为 64 层；编码与解码必须使用相同限制。超限消息按 `MALFORMED_MESSAGE` 拒绝。
+使用 `call`。编码后的 UTF-8 envelope 上限为 1 MiB，JSON 结构嵌套上限为 64 层；编码与解码必须使用相同
+限制。资源字节永不进入 control envelope，超限消息按 `MALFORMED_MESSAGE` 拒绝。
 
 `host.welcome` 分配 `clientExecutionId` 并返回完整 `SessionFence`。`targetDigest` 作为 snapshot/target 内容字段，
 不代替生命周期 fence。codec 按 message type 精确校验所需结构：hello 携带 lifecycle 字段、生命周期消息
@@ -432,8 +441,15 @@ ECMAScript `Number`、`BigInt` 或 decimal library，协议层不静默舍入。
 和 array。NUMBER 只允许 `kind/value`，OBJECT 只允许 `kind/values`，其它 tag 或多余字段均拒绝。
 
 snapshot 的每个 assignment 至少固定 `pluginId/facetId/runtimeInstanceId/executionTarget/entryModule/
-payloadDigest/requiredCapabilities/resources`。每个资源包含逻辑 `path`、SHA-256 `digest`，以及严格二选一的
-受控 URL 或 base64 inline bytes；不得携带 Host 本地路径。snapshot 的 contribution 项包含
+payloadDigest/requiredCapabilities/resources`。每个资源是稳定的 `ResourceDescriptor`，只包含逻辑 `path`、
+SHA-256 `digest` 与规范十进制字符串 `byteLength`；`entryModule` 必须引用同一 assignment 中的
+一个资源 path。descriptor 不携带 URL、base64 bytes、Host 本地路径、临时签名、origin 或 credential。
+`byteLength` 范围为 `0..Long.MAX_VALUE`，client 在实际读取前还必须应用 execution-local 的资源上限。
+protocol v1 的 `client:web` 可执行入口是自包含单文件 ESM bundle：不得保留相对、绝对 URL 或 bare-specifier
+运行时 import。非代码资源可以继续作为独立 descriptor，由插件通过 `ClientContext` 暴露的数据面能力读取；
+不得借 JavaScript import 绕过授权与 digest 校验。P0 React probe 把自身所需 React 与 `client-react` 依赖闭包
+编入同一 facet bundle，只证明 renderer 与 core 的依赖方向，不冒充生产级共享前端模块解析。
+snapshot 的 contribution 项包含
 `contributionKind`、结构化 `contributionId` 和 `registrationIdentity`，client 只能据此构造对应
 `CallFence`。`targetDigest`、`payloadDigest` 与资源 digest 均使用 64 位小写十六进制 SHA-256；
 `targetDigest` 只属于 snapshot 内容，不能进入或代替 lifecycle fence。
@@ -448,14 +464,19 @@ payloadDigest/requiredCapabilities/resources`。每个资源包含逻辑 `path`�
 操作匹配时才应用或确认；成功确认后该 pending operation 必须被消费，重复确认也返回 `STALE_OPERATION`。
 A→B→A 中的迟到 A 回复不能确认新的 A。
 
-snapshot 和资源定位只携带内容摘要及受控 URL/bytes，不携带 Host 本地路径。调用必须携带
+snapshot 只携带内容摘要和稳定 descriptor，不携带资源交付位置。调用必须携带
 `hostInstanceId + expectedViewRevision + registrationIdentity + contribution kind/id`，最终仍由
 `PublishedRuntime.invoke` 准入。client 不得按名称重试到新 handler，也不得重放可能已有副作用的调用。
 
-传输是协议的 adapter。P0 正式发布 `ClientTransport` SPI；内存 transport 只存在于测试源码，真实 Web
-carrier 只用于 verification 浏览器闭环，二者都不是生产 adapter。第一个上层产品确定连接方式后、进入生产
-装配或发布前，必须按第 14.2 节在 Fibra 内另立规格并发布所选 Electron IPC、WebSocket、MessagePort 或其它
-正式 adapter；任何 transport 都不得改变协议状态机。
+控制传输和资源数据面是两个正交 adapter。P0 正式发布只搬运 envelope 的 `ClientTransport` SPI，以及按
+`SessionFence + targetRevision + runtimeInstanceId + ResourceDescriptor` 读取 bytes 的
+`ClientResourceProvider` SPI。provider
+必须在 Host 侧校验 session/assignment 授权；实现可以使用 HTTP、IPC、MessagePort 或内存 bytes，但不得把
+具体 URL 回填进 snapshot。内存 transport/provider 只存在于测试源码，真实 Web carrier/provider 只用于
+verification 浏览器闭环，均不是生产 adapter。第一个上层产品确定连接方式后、进入生产装配或发布前，必须按
+第 14.2 节在 Fibra 内另立规格并发布所选正式 adapter；具体 adapter 使用各语言和平台的原生 URL、HTTP、IPC
+与缓存机制，不要求 Java 与浏览器共享解析器。任何 adapter 都不得改变协议状态机、内容 digest 或 target
+revision。
 
 ## 9. Framework-neutral client runtime
 
@@ -468,10 +489,27 @@ client core 只提供：
 - lifecycle command 串行化和幂等围栏；
 - `host.call`；
 - observed 与结构化错误；
-- 资源装载接口。
+- `ClientResourceProvider` 与按 digest 去重、只接收“读取并校验完成”loader 回调的 single-flight cache。
 
-Web runtime 只增加浏览器 ESM 装载、digest 校验、object URL/受控资源 URL 与页面级清理。它不创建 React
-root，不定义 route/slot/component，不读取 Electron API，也不保存 desired target。
+Web runtime 只增加自包含单文件 ESM 装载、资源大小与 digest 校验回调、object URL 与页面级清理。
+它从 provider 获取 bytes；只有具体 Web provider 可以在 fetch 边界使用浏览器原生 WHATWG URL 并实施
+scheme/origin/redirect/credential policy。core、snapshot 和插件包均不接触该 URL。verified bytes 以 digest
+为键，同一 digest 的并发请求共享一个 pending，成功内容可跨 runtime instance 复用。cache 自身不接受
+未校验 bytes 或公开 `put`；Web runtime 传入的 loader 回调必须在返回前完成 provider 读取、`byteLength` 与
+SHA-256 校验，失败时移除 pending 且不提交缓存。已验证入口以 `text/javascript` 创建 Blob；object URL 只属于当前
+runtime Scope，stop 时撤销。cache 不是 desired/version 真源。该参考 loader 只有在
+execution 的 CSP 允许 module `blob:` 时才可被选中；P0 Web Host 显式设置 `script-src 'self' blob:`、禁止
+`unsafe-eval`，并在 handshake 中声明精确 capability `client.web.module.blob.v1`。CSP 不满足时必须选择未来的其它正式 Web loader，
+不能静默放宽页面策略或让插件自行执行资源。
+
+client lifecycle 采用 session owner 与一次性 instance owner 两级模型。snapshot 先授权
+`SessionFence + targetRevision + runtimeInstanceId`，生命周期命令不得按自身 fence 临时创建状态；同一个
+`runtimeInstanceId` 只表示一次实例生命周期，失败、stop 或替换后的重试必须由 Host 分配新 id。每个 instance
+拥有串行 mailbox、root Scope、当前已提交 phase 和 operation 结果账本；只有 phase handler 完成后才能原子
+提交 `phase + targetRevision`。同 operation 重放复用同一终态，前序失败后排队的后续 phase 不执行。assignment
+撤销或 session detach 后整个 instance 连同幂等账本一起退休，因此历史不随重连和升级无界增长。Host 等待
+`client.lifecycle-result` 的 pending/迟到 ack 围栏只属于 Host `ClientExecutionRuntime`，不放在 codec，也不
+复制到浏览器 command executor。
 
 renderer adapter 在 client-local service/contribution 上定义自己的组件契约：React adapter 可以定义
 React slots，Vue adapter 可以定义 Vue components，原生 DOM adapter 可以定义 element mount factory。
@@ -496,6 +534,11 @@ owner/facet/execution/operation 身份和可选受限诊断；不传任意异常
 6. 收到匹配 operation 的确认后 retire 旧资源；
 7. 某 execution 超时或失败时保留失败 observed，并按公开截止进入有界强制断开；不把断开冒充成功清理。
 
+任何执行过插件代码、资源读取或其它副作用的 phase 失败后，instance 进入 `FAILED`，不得通过回写 phase
+伪装成旧稳定态并原地重试；Host 只能先尽力 stop/清理，再以新的 `runtimeInstanceId` 重建。Scope/Effect/child
+关闭开始即冻结注册，重复关闭共享同一个终态；child/effect 只有清理成功后才从 owner 移除，失败项继续由父
+owner 聚合并阻止不安全替换。
+
 关闭期间控制通道保留到 stop/dispose 结果已经收到或公开截止耗尽。renderer 刷新、transport 断开、窗口
 退出和 Host 退出是不同事件；断线不修改 desired，也不默认取消产品业务任务。
 
@@ -512,7 +555,7 @@ P0 不是完整产品 UI，而是可证伪的架构验证，必须形成真实�
 4. 正式 `ClientArtifactRuntime` 在没有 execution 连接时仍能准备 client facet；非法 entry module、资源或
    digest 在保存 target 前失败，verification carrier 不生成或修补静态描述；
 5. client 未连接时 Host 与 CLI 正常 ready，client facet 明确为 PENDING；
-6. 真实浏览器 execution 握手后按 snapshot 加载 ESM，回报 ACTIVE；
+6. 真实浏览器 execution 握手后按 snapshot descriptor 从资源数据面获取 ESM，校验 size/digest 后回报 ACTIVE；
 7. 纯 DOM probe 与 React probe 通过同一个 client core 和 wire protocol 装载；
 8. 页面与 CLI 都经同一 `PublishedRuntime` 调用一个真实 Fibra fs contribution；
 9. disable/upgrade 只改变依赖闭包，先拒绝旧 action、排空在途调用，再撤销 UI/effects；
@@ -520,7 +563,9 @@ P0 不是完整产品 UI，而是可证伪的架构验证，必须形成真实�
 11. Host 重启、client 重连、A→B→A 和迟到 ack 均由精确身份围栏拒绝；
 12. headless Maven 构建不需要 Node，npm 构建不读取 Maven reactor classpath；
 13. Maven/npm 独立消费者、仓库外运行和真实浏览器验收通过；
-14. UI 模拟测试不能替代最终真实浏览器证据。
+14. 同一 digest 的重复 prepare、重连和 A→B→A 不产生第二次资源下载；资源 endpoint 变化不推进
+    targetRevision；digest/size 不匹配时不得 evaluate；
+15. UI 模拟测试不能替代最终真实浏览器证据。
 
 P0 不包含完整 Electron 产品、Session、Agent、复杂路由/slot、主题、远程市场、多窗口一致性、非可信插件
 沙箱、依赖版本范围求解、自动选版或多版本冲突仲裁。其中产品壳、业务页面、Agent/Session、市场服务与运营、
@@ -534,6 +579,8 @@ P0 不包含完整 Electron 产品、Session、Agent、复杂路由/slot、主�
 - client 需要第二份 Registry、profile、desired target 或版本选择器；
 - 新 renderer adapter 需要修改 Engine 或 lifecycle wire schema；
 - browser 资源必须依赖 Host 本地绝对路径；
+- raw URL、inline bytes、临时签名或 origin 进入 snapshot/desired/targetDigest；
+- 同一 digest 的重复 prepare 或重连必须重新下载资源，或 cache 被当成版本真源；
 - 远端 client 被迫伪装成一个本地 JVM `PluginInstance`，且无法表达按 execution 的 observed；
 - client 离线阻塞 Host ready 或目标保存；
 - 旧 action 可以按名字落到新 handler；
@@ -543,6 +590,8 @@ P0 不包含完整 Electron 产品、Session、Agent、复杂路由/slot、主�
 - package 安装已经逻辑化，但 desired/config 或 Registry 仍能按无归属 definition 绕过 package gate；
 - 把内容 `targetDigest` 当作部署 `targetRevision`，导致 A→B→A 的第二个 A 复用代次；
 - browser execution 只有引入 Agent/Desktop 专用 target、状态或生命周期分支才能接入；
+- 生命周期命令可以绕过 snapshot assignment 创建 instance，或历史 operation/session 状态只能无界保留；
+- npm 包正式入口指向未编译 TypeScript 源码，独立消费者必须依赖 workspace 私有构建路径；
 - 同一问题连续两次验证失败且没有新的根因证据。
 
 ## 13. 对上层产品路线的影响
@@ -564,7 +613,7 @@ Fibra 的隐式依赖或唯一 UI 路线。
 | 层级 | P0 完成时包含 | 验证后处置 |
 |---|---|---|
 | 永久内核不变量 | 唯一 Engine/Registry/desired target、逻辑 `PluginPackage` 多 facet、artifact/execution 双 SPI、严格 revision/identity fence、per-execution observed、统一准入与 drain/stop/retire、Maven/npm 发布边界和 runtime 单向依赖 | 永久保留；新增能力只能扩展，不能建立第二控制面或恢复旧单 facet 模型 |
-| 最小正式实现 | `fibra-package.yaml`、精确 package revision 依赖编译、protocol v1 最小消息集、Host/Java/Node runtimes、`ClientArtifactRuntime`/`ClientExecutionRuntime`、Web ESM loader、真实 fs contract/provider 迁移和独立消费者发行 | 继续作为后续版本基础；能力面可以增加，身份、所有权和保存语义不重写 |
+| 最小正式实现 | `fibra-package.yaml`、精确 package revision 依赖编译、protocol v1 最小消息集、Host/Java/Node runtimes、`ClientArtifactRuntime`/`ClientExecutionRuntime`、资源 descriptor/data-plane SPI、按 digest 去重的 verified bytes cache、CSP 显式的自包含单文件 Web ESM loader、真实 fs contract/provider 迁移和独立消费者发行 | 继续作为后续版本基础；能力面可以增加，身份、所有权和保存语义不重写 |
 | 参考 adapter | `client-react` 及其最小 renderer 接口 | 作为可选发布物保留，但不成为 core 依赖；API 在出现真实消费者并单独冻结前不承诺覆盖完整 route/slot/layout/theme |
 | 仅验证夹具 | P0-A protocol harness、DOM/React probe plugins、synthetic package/provider、`EngineGateHost`、`ClientP0Host`、CLI-like caller、verification Web carrier 与仅测试使用的 in-memory transport | 只保留在 verification/test scope，不得进入生产 composition root，不得被上层产品当成正式 transport 或插件 SDK |
 
@@ -578,11 +627,12 @@ P0 中只启动一个真实 web execution 是验收规模限制，不是模型�
 
 | 能力 | P0 结束时的边界 | 启动条件 | 不得改变的内核约束 |
 |---|---|---|---|
-| 正式 client transport adapters | 发布 `ClientTransport` SPI；内存 transport 和 verification carrier 只负责测试闭环 | 第一个上层产品确定实际连接方式后、进入生产装配或发布前，把所选 WebSocket、MessagePort 或 Electron IPC adapter 做成 Fibra 正式发布物，使上层只选择和装配 | transport 只搬运 protocol envelope，不拥有 desired、revision 或生命周期状态机 |
+| 正式 client transport/resource adapters | 发布 `ClientTransport` 与 `ClientResourceProvider` SPI；内存 adapter 和 verification carrier/provider 只负责测试闭环 | 第一个上层产品确定实际连接方式后、进入生产装配或发布前，把所选 WebSocket、HTTP、MessagePort 或 Electron IPC adapter 做成 Fibra 正式发布物，使上层只选择和装配 | control transport 只搬运 envelope；resource adapter 只按已授权 descriptor 交付 bytes；二者都不拥有 desired、revision 或生命周期状态机 |
 | 协议演进与版本偏差 | protocol v1 精确匹配，不降级兼容 | 需要发布第二个协议版本，或 Host/client 允许独立升级之前 | 版本协商不能放宽消息严格校验，不能按名称重放调用，也不能削弱身份 fence |
 | 多 execution 实证 | 数据模型按 execution，P0 只验一个真实 web execution | 宣称支持多窗口、多浏览器或同一 Host 多 client 之前 | execution 独立 observed；任一断开不修改 desired，也不污染其它 execution |
 | 插件制作与发布工具链 | manifest、archetype 和独立消费者门禁可用，但不是完整第三方开发体验 | 对外承诺第三方 client/full-stack 插件开发之前 | 工具只生成和验证唯一逻辑包格式，不引入私有包格式或旁路安装入口 |
-| client 资源缓存与运维 | 支持受控 bytes/URL、digest 校验和失败 observed | 出现大 payload、离线缓存、远程资源分发或生产 SLA 之前 | cache 不能成为版本真源；清理失败和 orphan execution 必须可诊断、可回收 |
+| client 模块依赖与开发体验 | protocol v1 的 Web facet 只接受自包含单文件 ESM；React probe 把依赖闭包编入自身 bundle，不提供共享 framework runtime、HMR 或跨 facet JavaScript import | 至少两个 client 插件确实需要共享同一 framework/runtime 模块，或第三方插件开发需要 source map/HMR 之前 | 另立模块依赖图与宿主模块解析规格，复用 target 已解析依赖和内容 digest；不得依赖 blob URL 的隐式相对解析、复制 framework 实例或把模块 URL 写入 desired/snapshot |
+| client 资源缓存运维 | P0 已有按 digest 去重、并发合并和校验后写入的最小 verified bytes cache；不承诺持久离线、配额、淘汰或 CDN 运维 | 出现跨进程离线、缓存配额压力、远程资源分发或生产 SLA 之前 | cache 不能成为版本真源；endpoint 变化不推进 targetRevision；失败内容不得污染 cache，orphan execution 必须可诊断、可回收 |
 | 包信任与能力授权协议 | P0 只支持受信插件；capability 是 execution 匹配条件，不是安全授权 | 接受非本地受信来源的 package，或 Host contribution 需要权限控制之前 | Fibra 可定义签名/信任元数据、调用授权、吊销和配额；digest 不能冒充代码信任，具体恶意 JavaScript 沙箱不进入 core |
 | 依赖版本与远程包源协议 | 只解析 target 已选中的精确 package revision，不自动下载或选版 | 出现真实多版本消费者或需要接入远程 registry 之后 | 唯一 `PluginSelection` 仍是部署选择真源，不建立第二 solver/installed database；Fibra 只定义通用包源/获取边界，不实现 marketplace 业务 |
 | 更多 execution target 与 renderer adapter | 正式实现 `client:web`，React 只是参考 adapter | 出现 JavaFX、原生 UI、Vue/Svelte 等真实消费者之后 | 新 adapter/target 不得要求修改 Engine 核心状态模型或把框架对象送上 wire |

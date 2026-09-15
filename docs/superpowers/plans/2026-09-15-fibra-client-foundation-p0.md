@@ -4,9 +4,9 @@
 
 **Goal:** 将 Fibra 重构为拥有框架无关 client foundation 的跨执行域插件内核，并以真实浏览器中的 DOM/React 双适配、CLI/UI 同一控制面和完整生命周期围栏完成 P0 可行性验证。
 
-**Architecture:** Fibra 保持唯一 Engine/Registry/desired target，把逻辑插件编译成 Java、Node、command 与 client facets。Maven 发布 Host 协议与协调器，npm 独立发布 framework-neutral client runtime 和可选 renderer adapters；跨端只使用版本化协议和内容摘要，不共享进程对象或本地路径。
+**Architecture:** Fibra 保持唯一 Engine/Registry/desired target，把逻辑插件编译成 Java、Node、command 与 client facets。Maven 发布 Host 协议与协调器，npm 独立发布 framework-neutral client runtime 和可选 renderer adapters；control wire 只使用版本化协议与内容 descriptor，资源 bytes 由按 digest 寻址的独立数据面获取，不共享进程对象、交付 URL 或本地路径。
 
-**Tech Stack:** Java 21、Reactor、Jackson 3、Maven 3.9.9、TypeScript、pnpm、Vitest、Playwright、React（仅参考 adapter）。
+**Tech Stack:** Java 21、Reactor、Jackson 3、Maven 3.9.9、TypeScript、pnpm、Node test runner、esbuild（仅构建自包含 Web facet）、Playwright、React（仅参考 adapter）。
 
 ---
 
@@ -22,11 +22,11 @@
 - `fibra-engine/.../ExecutionUpdate.java`：先登记后执行的 lifecycle 更新句柄。
 - `fibra-runtime-host/`：统一承接内建 definition 与动态 Java prepared artifact 的
   `PluginInstance/RuntimeDomain` 执行细节。
-- `fibra-client-protocol/`：Java wire 值对象、严格 codec 和协议状态机。
-- `fibra-runtime-client/`：client facet 静态准备，以及 Host 侧 execution 注册、reconcile、调用桥和 observed。
+- `fibra-client-protocol/`：Java wire 值对象与严格无状态 codec。
+- `fibra-runtime-client/`：client facet 静态准备，以及 Host 侧 execution 注册、资源 broker、reconcile、调用桥和 observed。
 - `client/packages/client-api/`：无 DOM/框架依赖的 TypeScript API。
-- `client/packages/client-runtime/`：Scope/effect 与 lifecycle state machine。
-- `client/packages/client-runtime-web/`：浏览器 ESM 与 digest/资源装载。
+- `client/packages/client-runtime/`：Scope/effect、session/instance lifecycle actor、资源 provider 与只提交已校验值的 single-flight cache。
+- `client/packages/client-runtime-web/`：浏览器 ESM、size/digest 校验、verified cache loader 与 object URL 生命周期。
 - `client/packages/client-react/`：React renderer adapter；不得被 core 反向依赖。
 - `verification/client/`：DOM、React、跨语言和真实浏览器 P0 夹具。
 
@@ -157,7 +157,7 @@
 - Test: `fibra-client-protocol/src/test/java/com/sstlfsj/fibra/client/protocol/ClientProtocolCodecTest.java`
 - Test: `fibra-client-protocol/src/test/java/com/sstlfsj/fibra/client/protocol/ClientProtocolFenceTest.java`
 
-- [x] **Step 1: 写严格 codec 失败测试**
+- [ ] **Step 1: 写严格 codec 失败测试**
 
   覆盖未知字段、重复字段、尾随 token、缺失/错误阶段 identity、未知 message type、协议版本不等于 `1`。断言错误码
   分别稳定为 `MALFORMED_MESSAGE`、`INVALID_IDENTITY`、`UNSUPPORTED_PROTOCOL`。另以合法 envelope 覆盖
@@ -170,27 +170,31 @@
   `targetRevision`/`registrationIdentity` 必须覆盖 `Long.MAX_VALUE` 的 wire 字符串往返，并拒绝数字
   token、负数、前导零和越界字符串。
 
-- [x] **Step 2: 写 A→B→A 围栏测试**
+- [ ] **Step 2: 写资源 descriptor 与控制/数据面 RED 测试**
 
-  构造相同 runtime instance 但不同 `lifecycleOperationId` 的两次 A；旧 A ack 必须返回
-  `STALE_OPERATION`，不得完成新 A。
+  snapshot resource 只接受 `path/digest/byteLength`，`entryModule` 必须引用同一 assignment 的资源
+  path；拒绝 raw URL、inline bytes、Host path、负数/非规范/越界 byteLength。codec 不创建可变 pending tracker，
+  也不解析 URL、origin、HTTP 或 IPC。protocol v1 的 Web facet 是自包含单文件 ESM，但该代码闭包由 Task 5
+  的标准构建器和产物检查证明，不让 Java codec 自写 JavaScript parser。资源实际读取和授权由 Task 5/9 的
+  独立数据面验证。
 
-- [x] **Step 3: 写分阶段身份 RED 测试**
+- [ ] **Step 3: 写分阶段身份 RED 测试**
 
   `client.hello` 只接受 `HelloIdentity(clientNonce)`；`host.welcome` 分配
   `SessionFence(hostInstanceId, clientExecutionId)`；生命周期消息必须使用
   `LifecycleFence(SessionFence, targetRevision, runtimeInstanceId, lifecycleOperationId)`；调用消息必须使用
   `CallFence(SessionFence, expectedViewRevision, registrationIdentity)`。跨阶段夹带或缺失字段都严格拒绝。
 
-- [x] **Step 4: 实现不可变协议模型与 codec**
+- [ ] **Step 4: 实现不可变协议模型与 codec**
 
   envelope 只承载 `protocolVersion/messageId/type` 与对应 sealed message；不创建全字段可空的万能 identity。
   `targetDigest` 放在 snapshot/target 内容中，不能代替 lifecycle fence。按架构 §8 的完整 v1 schema 实现
-  snapshot assignments/resources/contributions、调用 input/outcome、结构化 lifecycle failure 与 per-execution
+  snapshot assignments/resource descriptors/contributions、调用 input/outcome、结构化 lifecycle failure 与 per-execution
   observed；这些是 P0 真实装载与调用所需的最小正式字段，不得留给 carrier 私设，也不得暴露可变 Jackson
   tree。`expectedViewRevision/registrationIdentity` 必须直接映射现有 `PublishedRuntime.invoke(String, long, ...)`。
+  删除 codec 内的 `LifecycleFenceTracker`；A→B→A ack 所需的可变 pending 状态归 Task 9 的 Host execution owner。
 
-- [x] **Step 5: 运行模块测试**
+- [ ] **Step 5: 运行模块测试**
 
   Run: `mvn -pl fibra-client-protocol -am test`
 
@@ -204,28 +208,44 @@
 - Create: `client/packages/client-runtime/src/scope.ts`
 - Create: `client/packages/client-runtime/src/runtime.ts`
 - Create: `client/packages/client-runtime/src/protocol.ts`
+- Create: `client/packages/client-runtime/src/resource-cache.ts`
+- Modify: `client/packages/client-api/package.json`
+- Modify: `client/packages/client-runtime/package.json`
+- Create: `client/packages/client-api/tsconfig.json`
+- Create: `client/packages/client-runtime/tsconfig.json`
+- Create: `client/tsconfig.core.json`
+- Create: `client/scripts/check-core-boundaries.mjs`
 - Test: `client/packages/client-runtime/tests/scope.spec.ts`
 - Test: `client/packages/client-runtime/tests/runtime.spec.ts`
 - Test: `client/packages/client-runtime/tests/protocol-fixtures.spec.ts`
+- Test: `client/packages/client-runtime/tests/resource-cache.spec.ts`
 
 - [ ] **Step 1: 写 Scope/effect RED 测试**
 
   测试父子 Scope 反向关闭、失败聚合、重复关闭共享同一终态、关闭后拒绝新 effect、listener/timer 必须通过
-  effect 所有权撤销。
+  effect 所有权撤销。child/effect 只有成功清理后才能脱离 owner；显式关闭失败后，父关闭仍必须聚合同一失败。
 
 - [ ] **Step 2: 写 lifecycle RED 测试**
 
-  测试同 runtime instance 串行 `prepare -> activate -> drain -> stop`、重复命令幂等、不同 operation 的迟到
-  回复拒绝、A→B→A 不串代。
+  以 snapshot 先建立 session/assignment 授权，再测试一次性 runtime instance 的
+  `NEW -> PREPARING -> PREPARED -> ACTIVATING -> ACTIVE -> DRAINING -> DRAINED -> STOPPING -> STOPPED`。
+  命令只在串行 mailbox 内提交状态；同 operation 重放共享终态，前序失败后已排队 phase 不执行，失败实例
+  不得原地 prepare/activate 重试，stop 只负责尽力清理。命令不能凭 fence 创建未授权 instance；assignment
+  撤销和 detach 必须退休实例及幂等账本，循环 100 次后状态数量不随历史增长。Host ack 的 A→B→A 围栏留给
+  Task 9，不在浏览器 executor 复制 `begin/accept`。
 
 - [ ] **Step 3: 实现最小 core**
 
-  `client-api` 只导出 `ClientContext`、`ClientScope`、`ClientDisposable`、`ClientModule`、`HostCaller` 和
-  结构化错误；`client-runtime` 负责状态机，不出现 DOM、React、Vue、Electron 或产品类型。
+  `client-api` 导出 `ClientContext`、`ClientScope`、`ClientDisposable`、`ClientModule`、`HostCaller`、
+  `ClientResourceProvider` 和结构化错误；`client-runtime` 负责 session/instance actor、状态机与按 digest
+  合并并发读取、只接收“读取并校验完成”loader 回调的 cache，不出现 DOM、React、Vue、Electron、URL、fetch
+  或产品类型；cache 不提供写入未验证 bytes 的 `put`。删除现有
+  `scheduled/applied` 回滚和 client 侧 `begin/accept`，失败实例只保留真实失败终态。
 
 - [ ] **Step 4: 双语言读取同一 fixture**
 
-  Java 与 TypeScript 必须读取 Task 3 的相同 wire fixtures；字段和值完全一致。
+  Java 与 TypeScript 必须读取 Task 3 的相同 wire fixtures；字段和值完全一致。共同 fixture 只冻结 wire
+  语义，不要求不同语言共享解析器或运行机制；URL 已不属于该 fixture。
 
 - [ ] **Step 5: 运行依赖禁入与测试**
 
@@ -233,9 +253,15 @@
 
   Expected: 无匹配。
 
+  Run: `pnpm --dir client typecheck:core && pnpm --dir client lint:boundaries`
+
+  Expected: core 使用不含 DOM lib 的独立 TypeScript 配置编译；边界脚本同时检查源码 import、package
+  dependencies/peerDependencies 和 workspace 依赖图，不能只靠文本搜索假装框架无关。
+
   Run: `pnpm --dir client test`
 
-  Expected: PASS。
+  Expected: PASS；包先生成 JavaScript 与 declaration，测试至少一次通过 package `exports` 导入，不得让
+  Node/独立消费者直接执行 `src/*.ts` 或依赖 workspace 私有输出目录。
 
 ## Task 5：完成 P0-A client 技术栈可行性门
 
@@ -251,25 +277,38 @@
 - Create: `verification/client/risk-gate/playwright.config.ts`
 - Create: `verification/client/risk-gate/src/protocol-harness.ts`
 - Create: `verification/client/risk-gate/src/index.html`
+- Create: `verification/client/risk-gate/build.mjs`
 - Create: `verification/client/risk-gate/fixtures/dom-plugin/index.ts`
 - Create: `verification/client/risk-gate/fixtures/react-plugin/index.tsx`
 - Create: `verification/client/risk-gate/tests/client-risk-gate.spec.ts`
 
-- [ ] **Step 1: 写 ESM/digest/释放 RED 测试**
+- [ ] **Step 1: 写 ESM/resource provider/cache/释放 RED 测试**
 
-  digest 不匹配不得 evaluate；相同 runtime instance 重放幂等；替换必须等待旧 Scope 关闭并撤销 object URL、
-  listeners、timers 和 contributions。
+  loader 只接收 `ResourceDescriptor + ClientResourceProvider`。size/digest 不匹配不得 evaluate 或写 cache；同一
+  digest 的串行和并发请求只调用 provider 一次，重复 prepare 与 A→B→A 复用 verified bytes。相同 operation
+  重放幂等；替换必须等待旧 Scope 关闭并撤销 object URL、listeners、timers 和 contributions，bytes cache 不随
+  instance stop 被误删。cache 的 single-flight loader 必须包含“provider 读取 + byteLength/digest 校验”，失败
+  移除 pending 且不能提交未验证 bytes。入口 fixture 必须是自包含单文件 ESM；增加含相对 import、bare import
+  和绝对 URL import 的反例，证明不会把 blob URL 的解析行为当成模块依赖系统。
 
 - [ ] **Step 2: 实现 framework-neutral Web loader 与两个 renderer probes**
 
-  loader 只解析受控 bytes/URL、校验 digest、dynamic import、调用 `activate(ClientContext)` 并持有 disposer；
-  不创建 React root。DOM probe 注册 mount factory；React probe 只通过 `client-react` 注册 adapter。
+  使用 esbuild 的 `bundle=true`、`format=esm`、`splitting=false` 生成 facet；构建后依据 metafile 与 TypeScript
+  AST 断言产物不存在运行时静态、动态或 bare import，不自行实现模块解析器。loader 通过 provider 获取 bytes、
+  校验 byteLength/digest，以 `text/javascript` 创建 Blob、dynamic import、调用 `activate(ClientContext)` 并持有
+  disposer；它不解析 snapshot URL，不创建 React root。verification HTTP provider 才使用浏览器原生
+  `URL/fetch` 并限制 scheme、origin、redirect 和 credentials。DOM probe 注册 mount factory；React probe 只通过
+  `client-react` 注册 adapter，并把 React/adapter 依赖闭包编入该 probe 的单文件 bundle，不依赖运行时 bare
+  specifier 解析或共享 framework instance。
 
 - [ ] **Step 3: 用无持久状态协议 harness 跑真实浏览器**
 
   Playwright 启动真实 Chromium，验证 Java/TypeScript 共用 fixtures、prepare/activate/drain/stop、刷新、
-  A→B→A 迟到 ack 和 DOM/React 共用同一 core。harness 不保存 desired、不提供 Registry、不实现版本选择，
-  其结果不得替代 Task 10 的生产 Engine 证据。
+  A→B→A 迟到 ack、同 digest 下载合并和 DOM/React 共用同一 core。资源从真实 HTTP 数据面读取，但 endpoint
+  只存在于 verification provider，不进入 snapshot。harness 不保存 desired、不提供 Registry、不实现版本选择，
+  其结果不得替代 Task 10 的生产 Engine 证据。测试页必须发送显式 CSP：`script-src 'self' blob:` 且不允许
+  `unsafe-eval`，并声明 capability `client.web.module.blob.v1`；去掉 `blob:` 后 capability 不成立、loader
+  必须拒绝启动，不能静默放宽 CSP。
 
 - [ ] **Step 4: 运行 P0-A client 技术栈门禁并提交 checkpoint**
 
@@ -488,8 +527,9 @@
   runtime-local descriptor 只保存 entrypoint、contribution 声明等本地信息，不再声明逻辑 id、version 或
   requires。`JavaFacetGraph` 只消费精确解析结果，不解析版本；Node sidecar 启动、initialize 与 contribution
   注册不留在 artifact 面。旧 reader/manifest/graph 暂时只供尚未切换的生产路径编译，并在 Task 11 与旧
-  adapter 一次删除。`ClientArtifactRuntime` 从受管 client facet 读取并校验 entry module、受控资源及
-  payload digest，产出携带 execution target 和 capability 条件的 `ClientPreparedArtifact`；prepare 不连接
+  adapter 一次删除。`ClientArtifactRuntime` 从受管 client facet 读取并校验 entry module、资源
+  path/digest/byteLength 及 payload digest，建立 Host 内容存储并产出携带 execution target 和
+  capability 条件的 `ClientPreparedArtifact`；descriptor 不含 URL/inline bytes，prepare 不连接
   transport、不要求 execution 在线，也不启动浏览器，失败必须在 target 保存前暴露。
 
 - [ ] **Step 4: 运行制品面门禁**
@@ -510,7 +550,9 @@
 - Create: `fibra-runtime-client/src/main/java/com/sstlfsj/fibra/runtime/client/ClientExecutionSession.java`
 - Create: `fibra-runtime-client/src/main/java/com/sstlfsj/fibra/runtime/client/ClientExecutionRuntime.java`
 - Create: `fibra-runtime-client/src/main/java/com/sstlfsj/fibra/runtime/client/ClientTransport.java`
+- Create: `fibra-runtime-client/src/main/java/com/sstlfsj/fibra/runtime/client/ClientResourceProvider.java`
 - Test: `fibra-runtime-client/src/test/java/com/sstlfsj/fibra/runtime/client/InMemoryClientTransport.java`
+- Test: `fibra-runtime-client/src/test/java/com/sstlfsj/fibra/runtime/client/InMemoryClientResourceProvider.java`
 - Create: `fibra-runtime-host/src/main/java/com/sstlfsj/fibra/runtime/host/HostExecutionRuntime.java`
 - Create: `fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeExecutionRuntime.java`
 - Modify: `fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/ArchitectureBaselineTest.java`
@@ -530,17 +572,25 @@
   `client.call` 携带错误 host/view/registration identity 时拒绝；正确调用必须进入同一
   `PublishedRuntime.invoke` 并持有原 route lease。
 
-- [ ] **Step 3: 写 drain/stop RED 测试**
+- [ ] **Step 3: 写资源数据面授权 RED 测试**
+
+  resource provider 只允许当前 `SessionFence + targetRevision + runtimeInstanceId` 已获 snapshot assignment 授权
+  的 descriptor；错误 session、已撤销 assignment、path/digest/byteLength 不一致均拒绝。endpoint 或临时签名
+  轮换不修改 prepared artifact、targetDigest 或 targetRevision；相同 digest 可以由不同 execution-local adapter
+  交付相同 bytes。
+
+- [ ] **Step 4: 写 drain/stop RED 测试**
 
   stop 前必须封闭 action、等待在途调用和 matching lifecycle ack；断开不能冒充 stop 成功。
 
-- [ ] **Step 4: 实现 runtime 与测试内存 transport**
+- [ ] **Step 5: 实现 runtime 与测试内存 transport/provider**
 
-  transport 只负责 message carrier；session state machine、身份、能力匹配、deadline 和 observed 全由
-  `ClientExecutionRuntime` 拥有。`InMemoryClientTransport` 只放在 test sources，不能被生产 composition root
-  依赖或作为正式 transport 发布。
+  transport 只负责 message carrier；resource provider 只按已授权 descriptor 读取 bytes；session state
+  machine、身份、能力匹配、deadline 和 observed 全由 `ClientExecutionRuntime` 拥有。A→B→A 的 pending
+  lifecycle ack tracker 在此实现并随 session/runtime retire，不放回 codec。两个 InMemory 实现都只放在 test
+  sources，不能被生产 composition root 依赖或作为正式 adapter 发布。
 
-- [ ] **Step 5: 隔离实现 Host 与 Node execution runtime**
+- [ ] **Step 6: 隔离实现 Host 与 Node execution runtime**
 
   `HostExecutionRuntimeTest` 使用 Engine 契约 fixture 同时覆盖内建 definition 和动态 Java prepared artifact，
   证明二者只由同一个 Host runtime 执行 `PluginDefinition.Prepared/PluginInstance/Scope/RuntimeDomain` 生命周期；
@@ -550,7 +600,7 @@
   `NodeExecutionRuntime` 拥有。此任务不接线 `FibraEngine`；Engine 内旧逻辑的删除、新 runtime 接线与统一封
   准入/排空/stop/retire 顺序全部在 Task 10 的核心路径完成。
 
-- [ ] **Step 6: 锁定 runtime 模块依赖方向**
+- [ ] **Step 7: 锁定 runtime 模块依赖方向**
 
   扩展现有 `ArchitectureBaselineTest`：`fibra-engine` 不得依赖 `fibra-runtime-host`、`fibra-runtime-java`、
   `fibra-runtime-node` 或 `fibra-runtime-client`；四个 runtime 模块单向依赖 Engine SPI，且不得互相依赖。
@@ -560,7 +610,7 @@
   `fibra-engine`。具体实现由 Task 10 的 verification Host 和 Task 11 的 CLI、Spring starter 等
   composition root 装配；Maven reactor 不得出现循环依赖。
 
-- [ ] **Step 7: 运行执行面与模块边界测试**
+- [ ] **Step 8: 运行执行面与模块边界测试**
 
   Run: `mvn -pl fibra-runtime-host,fibra-runtime-java,fibra-runtime-node,fibra-runtime-client,fibra-parity-tests -am test`
 
@@ -606,16 +656,18 @@
   execution I/O 前登记 `ExecutionUpdate`；静态编译成功后才保存 target，再收敛 Host/Node/client。
   client facet 必须由正式 `ClientArtifactRuntime` 产生 `ClientPreparedArtifact`，不得由 verification Host
   或 Web carrier 临时拼装静态描述。
-  测试覆盖非法 client entry module/资源/digest 在 execution 离线时仍导致 prepare 失败且不保存 target、
+  测试覆盖非法 client entry module/resource descriptor/digest 在 execution 离线时仍导致 prepare 失败且不保存 target、
   其它 prepare/compile 失败不保存、保存后 execution 失败保留新 desired、client 离线为 PENDING 且 Host
-  ready、package gate close→drain→stop→retire、执行和在途调用清完前禁止 retire。旧 Engine 协调路径从此
+  ready、资源 endpoint/签名变化不改变 targetDigest/targetRevision、package gate
+  close→drain→stop→retire、执行和在途调用清完前禁止 retire。旧 Engine 协调路径从此
   不再可达；不得用临时 Engine、第二 Registry、协议 harness 或旧新 adapter 代替。
 
 - [ ] **Step 3: 用真实 browser execution 撞击生产 Engine**
 
   `verification/client/host` 是只依赖最终 Maven 模块的 Java fixture Host；Playwright 连接实际
   `FibraEngine`、`ClientArtifactRuntime`、`ClientExecutionRuntime` 和 `PublishedRuntime`。用 synthetic provider 的确定性 contribution
-  验证保存 target、离线 PENDING、连接 ACTIVE、DOM/React 共用 core、CLI-like caller 与 UI 调用同一 route、
+  验证保存 target、离线 PENDING、连接 ACTIVE、descriptor 经真实资源数据面取得 verified bytes、相同 digest
+  重连不重复下载、DOM/React 共用 core、CLI-like caller 与 UI 调用同一 route、
   A→B→A 迟到 ack、drain/stop 和重连收敛。根 `pom.xml` 在现有 `fibra-benchmarks` 之后直接增加
   `<module>verification/client/host</module>`；Host POM 以 `<relativePath>../../../pom.xml</relativePath>` 继承根
   parent，并继承 `maven.deploy.skip=true`，不创建第二个 Maven aggregator，也不作为发布物。此处不冒充
@@ -743,7 +795,8 @@
 
   使用 Task 10 已核对的锁文件执行 `pnpm --dir verification/client install --frozen-lockfile`。Playwright 启动
   真实 Chromium，连接真实 Java Host，验证 PENDING→ACTIVE、DOM/React 渲染、CLI/UI 调用同一真实 fs
-  contribution、刷新重连和当前 target 收敛。
+  contribution、刷新重连和当前 target 收敛；真实 HTTP 资源 provider 不把 endpoint 写入 snapshot，同一 digest
+  在重复 prepare、重连和 A→B→A 中只下载一次，size/digest 错误时不 evaluate。
 
 - [ ] **Step 3: 验证停用、升级、围栏与进程清理**
 
@@ -776,7 +829,9 @@
 
 - [ ] **Step 1: 独立消费者验证**
 
-  从安装后的 Maven/npm 发布物构建，不读取 reactor classpath、workspace link 或全局包。
+  npm packages 先生成并仅发布 JavaScript、declaration、license 与必要 metadata，`exports/types/files` 全部指向
+  包内产物，不指向 `src/*.ts` 或 workspace target。从安装后的 Maven/npm 发布物构建，不读取 reactor
+  classpath、workspace link、源码路径或全局包；Node 20 和真实浏览器都至少一次通过正式 package entry 导入。
 
 - [ ] **Step 2: 执行全仓门禁**
 

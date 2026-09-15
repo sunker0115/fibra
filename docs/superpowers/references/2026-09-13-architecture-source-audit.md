@@ -1,6 +1,6 @@
 # 后续架构真源与外部参考审计
 
-复核日期：2026-09-13。
+首次建立：2026-09-13。最近复核：2026-09-16。
 
 本文件只记录架构真源映射、固定外部证据、证据等级和本次文档审计结果，不定义新的产品架构、阶段顺序
 或实施计划。
@@ -11,7 +11,7 @@
 |---|---|---|---|
 | Fibra vNext 已交付底座 | [vNext 架构第 1–10 节](../specs/2026-09-07-fibra-vnext-architecture.md) | 已完成；其中 client foundation 后续演进不再由该文定义 | 不能由历史部分绿色构建替代最终账本 |
 | Fibra CLI 演进 | [vNext 架构第 11 节 F1–F4](../specs/2026-09-07-fibra-vnext-architecture.md) | F1–F4 已完成 | F1 之前的固定 CLI、REPL 与 ZIP 只属于第 1–10 节，不能抵扣 F1；每个阶段只由该阶段新增契约和直接验收事实证明 |
-| Fibra client foundation 与跨执行域插件模型 | [Client Foundation 最终架构](../specs/2026-09-15-fibra-client-foundation-architecture.md) | P0-A/P0-B1–B3 均未实施 | 不能以产品仓库的 adapter、runner 或传输草案替代 Fibra 协议、唯一 target 或 revision 围栏 |
+| Fibra client foundation 与跨执行域插件模型 | [Client Foundation 最终架构](../specs/2026-09-15-fibra-client-foundation-architecture.md) | P0-A/P0-B1–B3 均未通过；Task 2 边界已建立，Task 3/4 现有代码待按最终契约重构 | 不能以产品仓库的 adapter、runner 或传输草案替代 Fibra 协议、唯一 target 或 revision 围栏 |
 | 上层 Agent 产品业务路线 | [CLI + Desktop Agent 产品架构](../specs/2026-09-13-fibra-based-agent-product-architecture.md) | 产品业务阶段尚未实施；其 client foundation 前置以 2026-09-15 规格为准 | vNext 不再保存第二套产品阶段表；其它文档不能重排或重定义产品业务路线 |
 
 后续架构的 DSH 契约统一固定为 `@deepseek-ai/dsh 0.1.5-rc.2`、提交
@@ -72,14 +72,16 @@ Codex 最新本地源码 `36f0dbe796d9bb1a18a0fc0640ed08b3e1d54564` 仅作为非
 
 | 外部项目 | 可由来源直接陈述的事实 | 来源等级 | Fibra/产品推导 |
 |---|---|---|---|
-| DSH/Cordis | 固定源码中的 host/client runner、UI renderer/slot/layout、业务页面插件注册和 effect 所有权 | `c291e7961` 固定源码：[host runner](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/extensions/cordis-host-runner/src/lifecycle.ts)、[client runner](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/extensions/cordis-client-runner/src/client/runtime.ts)、[renderer](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/client/ui-renderer/src/client/registry.ts)、[slots](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/client/ui-slots/src/index.ts)、[layout](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/client/ui-layout/src/client/index.ts)、[conversation](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/client/ui-conversation/src/client/index.ts)、[settings](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/client/ui-settings/src/client/index.ts)、[tool renderer](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/client/ui-tool/src/client/index.ts) | 是否采用以及如何接入 Fibra `ChangeSet`、PublishedRuntime 与排空由本项目定义 |
-| VS Code | 官方文档描述 local/web/remote extension host 和 web extension 入口 | [Extension Host](https://code.visualstudio.com/api/advanced-topics/extension-host)、[Web Extensions](https://code.visualstudio.com/api/extension-guides/web-extensions)；浮动、非契约 | 唯一管理面、多 facet 逻辑包和同一 desired target 是本项目契约 |
+| DSH/Cordis | 固定源码中的 host/client runner、模块表 evaluator、UI renderer/slot/layout、业务页面插件注册和 effect 所有权 | `c291e7961` 固定源码：[host runner](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/extensions/cordis-host-runner/src/lifecycle.ts)、[client runner](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/extensions/cordis-client-runner/src/client/runtime.ts)、[module evaluator](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/extensions/cordis-client-runner/src/client/evaluator.ts)、[renderer](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/client/ui-renderer/src/client/registry.ts)、[slots](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/client/ui-slots/src/index.ts)、[layout](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/client/ui-layout/src/client/index.ts)、[conversation](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/client/ui-conversation/src/client/index.ts)、[settings](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/client/ui-settings/src/client/index.ts)、[tool renderer](https://github.com/deepseek-ai/deepseek-harness/blob/c291e7961a515f6d7af9304e7fd1d257929aef26/packages/client/ui-tool/src/client/index.ts) | DSH evaluator 使用模块表与函数注入，不证明 Fibra 的 Blob/native import；是否采用以及如何接入 Fibra `ChangeSet`、PublishedRuntime 与排空由本项目定义 |
+| VS Code | 官方文档描述 local/web/remote extension host、web extension 入口以及浏览器代码必须打成单文件；固定源码中 Web Extension Host 先让主线程把逻辑 URI 转成 execution-local browser URI，再在 worker fetch，origin/CSP 由 Web Host 约束 | [Extension Host](https://code.visualstudio.com/api/advanced-topics/extension-host)；Web Extensions 文档固定提交 `81d76c22e9a4f5c63733c38e4ccedaf8c9f051bf`：[single-file bundle](https://github.com/microsoft/vscode-docs/blob/81d76c22e9a4f5c63733c38e4ccedaf8c9f051bf/api/extension-guides/web-extensions.md)；资源边界固定提交 `28a499366afd2a052ca33ffadd47f33fc78594f5`：[URI DTO](https://github.com/microsoft/vscode/blob/28a499366afd2a052ca33ffadd47f33fc78594f5/src/vs/base/common/uri.ts#L426-L432)、[worker 转换后 fetch](https://github.com/microsoft/vscode/blob/28a499366afd2a052ca33ffadd47f33fc78594f5/src/vs/workbench/api/worker/extHostExtensionService.ts#L66-L71)、[主线程转换](https://github.com/microsoft/vscode/blob/28a499366afd2a052ca33ffadd47f33fc78594f5/src/vs/workbench/api/browser/mainThreadExtensionService.ts#L192-L194)、[Web Host CSP](https://github.com/microsoft/vscode/blob/28a499366afd2a052ca33ffadd47f33fc78594f5/src/vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html#L4-L8)、[origin 校验](https://github.com/microsoft/vscode/blob/28a499366afd2a052ca33ffadd47f33fc78594f5/src/vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html#L24-L36) | Fibra 只借鉴“稳定逻辑资源与 execution-local 交付地址分离”及单文件浏览器入口约束；唯一管理面、多 facet、digest cache 和同一 desired target 是本项目契约，不复制 VS Code URI/RPC/module shim |
 | Grafana | 官方文档描述 App Plugin 的页面/UI extension/backend 组成及 backend 启动模型 | [App Plugin](https://grafana.com/developers/plugin-tools/key-concepts/anatomy-of-a-plugin)、[Backend Plugin](https://grafana.com/developers/plugin-tools/key-concepts/backend-plugins)；浮动、非契约 | 跨 facet `ChangeSet`、统一准入和排空是本项目契约 |
 | Eclipse Theia | 官方文档区分运行时插件与编译期扩展及其运行位置 | [扩展模型](https://theia-ide.org/docs/extensions/)；浮动、非契约 | client execution session、desired/observed 协调和唯一控制面是本项目契约 |
 | OpenAI Codex app-server | 核心 crate 定义 app-server protocol 类型并导出 TypeScript/JSON Schema；同一 server 可由 stdio 进程入口或 in-process transport 驱动 | `0.154.0`，tag commit `6b9826e3aa83b1a5947db50f4332cb9c65f1b340`：[protocol exports](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/app-server-protocol/src/lib.rs)、[common protocol types](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/app-server-protocol/src/protocol/common.rs)、[in-process transport](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/app-server/src/in_process.rs)、[CLI process entry](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/cli/src/main.rs) | 只支持“核心拥有协议与多语言导出、进程内外复用协议语义”的取舍；不证明 Fibra 的 revision 围栏、插件生命周期、`ChangeSet`、Agent/Session 协议或资源排空 |
+| OCI Image/Distribution specs | descriptor 用 `digest`、`size`、`mediaType` 描述内容；distribution 按 digest 拉取 blob 并要求消费方核对内容摘要 | Image spec 固定提交 `af26a05fba5ee648512f4ea3c9fda1fcc1b6d6dc`：[Descriptor](https://github.com/opencontainers/image-spec/blob/af26a05fba5ee648512f4ea3c9fda1fcc1b6d6dc/descriptor.md#L4-L42)；Distribution spec `v1.1.1`、提交 `a139cc423184af6078077b9b7ee336eddbd03f8f`：[pulling blobs](https://github.com/opencontainers/distribution-spec/blob/a139cc423184af6078077b9b7ee336eddbd03f8f/spec.md#pulling-blobs) | Fibra 只借鉴内容 descriptor、digest 寻址与消费端校验，不声明 OCI 兼容，不复制 registry API，也不把 OCI 可选 `urls/data` 带入 lifecycle control snapshot |
+| Web Platform | WHATWG URL/Fetch、Web Crypto digest、File API object URL 和 HTML module loader 是浏览器原生机制；object URL 的执行受页面 CSP 约束 | Living Standards：[URL](https://url.spec.whatwg.org/)、[Fetch](https://fetch.spec.whatwg.org/)、[Web Crypto digest](https://w3c.github.io/webcrypto/#SubtleCrypto-method-digest)、[File API object URL](https://w3c.github.io/FileAPI/#dfn-createObjectURL)、[HTML modules](https://html.spec.whatwg.org/multipage/webappapis.html#integration-with-the-javascript-module-system)；当前作为权威但浮动的机制依据，P0 将由 lockfile 固定的 Playwright/Chromium 门禁验证实际组合 | Fibra 不自写 URL parser、HTTP cache 或 module resolver；P0 loader 只执行已验 digest 的自包含单文件 ESM，并显式要求 `script-src 'self' blob:`、禁止 `unsafe-eval`。平台标准不证明 Fibra 的生命周期和授权语义 |
 
-保留 VS Code、Grafana、Theia 三组浮动链接的理由是只将其用作术语和设计灵感，不以其当前页面内容建立
-Fibra 契约或验收断言；
+保留 VS Code、Grafana、Theia 三组文档链接的理由是用作术语和设计背景；只有 VS Code 上表固定提交列出的
+资源转换事实参与本次资源边界取舍，其余浮动页面不建立 Fibra 契约或验收断言；
 若未来要把其中行为升级为契约依据，必须先固定发布版本或源码提交并新增对应证据。
 
 ### 4.1 Client protocol 数值编码参照
@@ -111,6 +113,10 @@ Fibra 的单一规范 wire 形式、范围与错误码仍由 Client Foundation �
 | 审计 P2 | 当前架构文档仍沿用 DSH `0.1.2-rc.1` 旧基线 | 已按维护者确认切换到 `0.1.5-rc.2`/`c291e7961`；旧提交仅保留历史证据 |
 | 审计 P2 | VS Code/Grafana/Theia 链接未固定版本 | 接受：已明确降级为非契约灵感；任何契约断言不得依赖其浮动内容 |
 | 审计 P1 | Client Foundation 引用 Codex app-server，但审计中没有对应固定证据 | 已补 `0.154.0` 固定源码，只支持协议所有权、多语言导出和进程内外 transport 复用语义，不把 Fibra 自定生命周期契约归因于 Codex |
+| 审计 P1 | client snapshot 把 raw URL/inline bytes 混入控制面，URI 校验被迫在 Java 与浏览器间追求错误的一致实现，且交付地址会污染 target 内容身份与 digest cache | 已改为稳定 `ResourceDescriptor` 与独立 `ClientResourceProvider` 数据面；固定 VS Code execution-local 资源转换与 OCI descriptor/digest 证据。URL/HTTP/IPC 只属于具体 adapter，各语言使用原生实现，不作为跨语言协议契约 |
+| 审计 P0 | `blob:` 动态 import 被误当成完整模块依赖系统，未约束相对/bare import，React probe 也可能隐式依赖共享 React；同时未声明 object URL 所需 CSP | protocol v1 的 `client:web` 入口冻结为自包含单文件 ESM，P0 React probe 将依赖闭包编入自身 bundle；共享前端模块解析单列 P0 后能力。P0 Web Host 显式使用 `script-src 'self' blob:` 且禁止 `unsafe-eval`，并验证 capability 不满足时拒绝装载 |
+| 审计 P0 | verified bytes cache 在 core/Web 两处表述不同，可能先缓存未校验 provider bytes | core 只提供 single-flight cache，且不暴露原始 `put`；Web loader 回调必须完成读取、byteLength/SHA-256 校验后才能返回可提交值，失败移除 pending 且不污染 cache |
+| 审计 P1 | framework-neutral 门禁只搜索 `react/document/window` 文本，无法证明 package 依赖图与 TypeScript lib 没泄漏 | 增加不含 DOM lib 的 core 编译门禁和 package/workspace 依赖图检查；文本搜索仅作为补充信号 |
 | 审计 P1 | P0-A 只验证隔离 harness，却被命名为整体风险门，真实 Engine 状态机直到外围迁移后才碰撞 | 已把 P0-A 降为 client 技术栈门，并将 P0-B 拆成 Engine 核心风险门、管理面/调用方迁移和真实 fs 最终证据；中间按模块前沿验证，最终合并仍禁止兼容层和双模型 |
 | 审计 P1 | client foundation 下沉只由架构自证，未说明为何不等待第二个外部产品消费者 | 已明确驱动力是同一逻辑插件跨 Host/CLI/browser execution 的一致生命周期，并补首批场景、用户收益、时机与可证伪退回边界；CLI/Desktop 和 DOM/React probe 均不冒充第二产品 |
 | 审计 P2 | 产品表把 `host-java`/`host-node` 写在 `facet role` 列，混淆 role 与 runtime | 已将列名改为 `facet 形态`，保留 `role=host/command/client` 与 `runtime=java/node/client` 两根正交轴 |
@@ -132,10 +138,11 @@ Git object 复核后由审阅者撤回：
 | 复审更正 | 质疑 AgentCLI/PaiCLI 的 JLine `jdk11` classifier 标注 | 固定 Git object 中两个 `pom.xml` 均明确声明 JLine `4.0.0` 与 `jdk11` classifier；审阅者重核后撤回该项，第 2 节另增加固定 pom 链接 |
 | 审计 P2 | Cordis 行为文档仍把旧 DSH 提交称为固定真源 | 已区分当前架构契约 `0.1.5-rc.2`/`c291e7961` 与既有 71 项历史验收快照；相同 `vendor/cordis/src` tree 只证明语料未漂移 |
 
-第二轮独立只读复审结论：无未关闭的审计 P0/P1/P2。复审确认 `git diff --check`、全仓状态与语义扫描、
-Markdown 本地链接和 79 个外部链接检查均通过；新增 8 个 DSH UI 固定源码链接均返回 HTTP 200。固定 Git
-object 再次确认 DSH `0.1.5-rc.2`/`c291e7961`、Cordis `4.0.2`/tree `7feb044c43a4`、AgentCLI/PaiCLI 的
-JLine `4.0.0` `jdk11` classifier；远端 tag 再次确认 Picocli `4.7.7` 与 JLine `4.4.3` 的固定提交。
+2026-09-16 第三轮独立只读复审发现 Web 入口缺少模块闭包/CSP、cache 所有权歧义及 core 边界门禁不足；
+对应问题已经回填到第 5 节，并同步修正 Client Foundation 架构和计划。固定 Git ref 已确认 VS Code Docs
+`81d76c22e9a4f5c63733c38e4ccedaf8c9f051bf` 与 OCI Distribution `v1.1.1` peeled commit
+`a139cc423184af6078077b9b7ee336eddbd03f8f`；本轮新增的 VS Code Docs、VS Code CSP 与 OCI 源码链接均返回
+HTTP 200。P0 实现完成后的最终架构/代码复审仍由计划 Task 13 承担，不能由本次文档复审抵扣。
 
 ## 7. F2 独立只读复审
 
