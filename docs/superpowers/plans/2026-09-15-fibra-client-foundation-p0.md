@@ -145,6 +145,7 @@
 
 **Files:**
 
+- Modify: `fibra-client-protocol/pom.xml`
 - Create: `fibra-client-protocol/src/main/java/com/sstlfsj/fibra/client/protocol/ClientEnvelope.java`
 - Create: `fibra-client-protocol/src/main/java/com/sstlfsj/fibra/client/protocol/HelloIdentity.java`
 - Create: `fibra-client-protocol/src/main/java/com/sstlfsj/fibra/client/protocol/SessionFence.java`
@@ -176,7 +177,10 @@
 - [ ] **Step 4: 实现不可变协议模型与 codec**
 
   envelope 只承载 `protocolVersion/messageId/type` 与对应 sealed message；不创建全字段可空的万能 identity。
-  `targetDigest` 放在 snapshot/target 内容中，不能代替 lifecycle fence。
+  `targetDigest` 放在 snapshot/target 内容中，不能代替 lifecycle fence。按架构 §8 的完整 v1 schema 实现
+  snapshot assignments/resources/contributions、调用 input/outcome、结构化 lifecycle failure 与 per-execution
+  observed；这些是 P0 真实装载与调用所需的最小正式字段，不得留给 carrier 私设，也不得暴露可变 Jackson
+  tree。`expectedViewRevision/registrationIdentity` 必须直接映射现有 `PublishedRuntime.invoke(String, long, ...)`。
 
 - [ ] **Step 5: 运行模块测试**
 

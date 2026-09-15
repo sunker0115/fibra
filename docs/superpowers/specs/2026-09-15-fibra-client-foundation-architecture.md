@@ -371,8 +371,8 @@ targetRevision。P0 只启动一个真实 web execution，但模型和协议从�
 v1 wire envelope 固定为 `{protocolVersion,messageId,type,payload}`；消息专属字段只能放在 `payload`，不得摊平到
 envelope，也不套用 JSON-RPC。为让 wire 形状本身即可拒绝跨阶段身份，payload 身份键固定为：hello 使用
 `identity`，welcome/snapshot/observed/detach 使用 `session`，生命周期命令及结果使用 `lifecycle`，call/result
-使用 `call`。编码后的 UTF-8 envelope 上限为 1 MiB；资源正文不通过 envelope 搬运，超限消息按
-`MALFORMED_MESSAGE` 拒绝。
+使用 `call`。编码后的 UTF-8 envelope 上限为 1 MiB；受控 inline bytes 计入该上限，大资源必须走受控 URL，
+超限消息按 `MALFORMED_MESSAGE` 拒绝。
 
 `host.welcome` 分配 `clientExecutionId` 并返回完整 `SessionFence`。`targetDigest` 作为 snapshot/target 内容字段，
 不代替生命周期 fence。codec 按 message type 精确校验所需结构：hello 携带 lifecycle 字段、生命周期消息
@@ -393,9 +393,42 @@ host.call-result
 client.detach
 ```
 
+这 12 种消息的 v1 payload 不是只含 fence 的占位结构，而是能独立跑通 P0 的最小正式 schema：
+
+| 消息 | `payload` 的完整责任 |
+|---|---|
+| `client.hello` | `identity + executionTarget + capabilities` |
+| `host.welcome` | Host 分配的 `session` |
+| `host.snapshot` | `session + targetRevision + targetDigest + viewRevision + assignments + contributions` |
+| `host.prepare/activate/drain/stop` | 本次命令的 `lifecycle`；prepare 所需静态描述已由同一 target 的 snapshot 给出 |
+| `client.lifecycle-result` | `lifecycle + outcome`；outcome 是 applied，或带结构化 failure 的 failed |
+| `client.observed` | `session + executions[]`；每项含 target/runtime/operation、状态及仅失败态存在的 failure |
+| `client.call` | `call + contributionKind + contributionId + input` |
+| `host.call-result` | `call + contributionKind + contributionId + outcome`；outcome 是 value 或结构化 failure |
+| `client.detach` | 本次断开的 `session` |
+
+`viewRevision` 是包含初始值 `"0"` 在内的不透明非空字符串，`registrationIdentity` 是正整数，必须直接映射
+`PublishedRuntime.invoke(String, long, ...)`，不得在 protocol/runtime 间另做类型转换。`contributionId` 对应
+`ContributionId(providerInstanceId, localName)` 的两个字段，不使用不可逆或有歧义的拼接字符串。调用输入和
+成功结果使用 Fibra 的递归不可变 literal value，只允许 JSON 的 null、boolean、number、string、list 和
+string-keyed object，不传 Java/JavaScript 对象。
+
+snapshot 的每个 assignment 至少固定 `pluginId/facetId/runtimeInstanceId/executionTarget/entryModule/
+payloadDigest/requiredCapabilities/resources`。每个资源包含逻辑 `path`、SHA-256 `digest`，以及严格二选一的
+受控 URL 或 base64 inline bytes；不得携带 Host 本地路径。snapshot 的 contribution 项包含
+`contributionKind`、结构化 `contributionId` 和 `registrationIdentity`，client 只能据此构造对应
+`CallFence`。`targetDigest`、`payloadDigest` 与资源 digest 均使用 64 位小写十六进制 SHA-256；
+`targetDigest` 只属于 snapshot 内容，不能进入或代替 lifecycle fence。
+
+跨线 failure 固定为稳定 `code/message` 和受限的字符串 diagnostics；owner/facet/execution/operation 由其
+所在 assignment、call 或 lifecycle/observed 项提供，不复制一套可空身份。`client.observed` 的每个 execution
+项使用 `targetRevision + runtimeInstanceId + lifecycleOperationId`；Host 以 session 和 snapshot assignment
+映射回逻辑 facet。`FAILED` 必须携带 failure，非失败态禁止夹带 failure。
+
 `hello` 声明 protocol version、execution target 与 capabilities；Host 选择精确支持版本，不做降级兼容。
 不匹配直接拒绝并保留诊断。每条 Host 生命周期命令携带完整围栏身份；client 只有在所有身份与当前待处理
-操作匹配时才应用或确认。A→B→A 中的迟到 A 回复不能确认新的 A。
+操作匹配时才应用或确认；成功确认后该 pending operation 必须被消费，重复确认也返回 `STALE_OPERATION`。
+A→B→A 中的迟到 A 回复不能确认新的 A。
 
 snapshot 和资源定位只携带内容摘要及受控 URL/bytes，不携带 Host 本地路径。调用必须携带
 `hostInstanceId + expectedViewRevision + registrationIdentity + contribution kind/id`，最终仍由
