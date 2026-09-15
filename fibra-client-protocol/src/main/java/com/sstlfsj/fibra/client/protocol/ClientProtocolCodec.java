@@ -325,27 +325,48 @@ public final class ClientProtocolCodec {
     }
 
     private LiteralValue literal(JsonNode node, int depth) {
-        enforceDepth(depth);
         if (node == null) throw malformed("literal must be present", null);
         if (node.isNull()) return LiteralValue.NullValue.INSTANCE;
         if (node.isBoolean()) return new LiteralValue.BooleanValue(node.booleanValue());
         if (node.isTextual()) return new LiteralValue.StringValue(node.textValue());
-        if (node.isNumber()) {
-            var value = new BigDecimal(node.asString());
-            validateInteropNumber(value);
-            return new LiteralValue.NumberValue(value);
-        }
+        if (node.isNumber()) throw malformed("literal numbers require the NUMBER tag", null);
         if (node instanceof ArrayNode array) {
+            enforceDepth(depth);
             var result = new ArrayList<LiteralValue>(array.size());
             for (var item : array) result.add(literal(item, depth + 1));
             return new LiteralValue.ListValue(result);
         }
         if (node instanceof ObjectNode object) {
-            var result = new HashMap<String, LiteralValue>();
-            object.properties().forEach(entry -> result.put(entry.getKey(), literal(entry.getValue(), depth + 1)));
-            return new LiteralValue.ObjectValue(result);
+            enforceDepth(depth);
+            var kind = text(object, "kind", ErrorCode.MALFORMED_MESSAGE);
+            if (kind.equals("NUMBER")) return taggedNumber(object);
+            if (kind.equals("OBJECT")) return taggedObject(object, depth);
+            throw malformed("invalid literal kind", null);
         }
         throw malformed("unsupported literal", null);
+    }
+
+    private LiteralValue.NumberValue taggedNumber(ObjectNode object) {
+        exactFields(object, Set.of("kind", "value"), ErrorCode.MALFORMED_MESSAGE);
+        var wireValue = textual(object, "value", ErrorCode.MALFORMED_MESSAGE);
+        try {
+            var number = new LiteralValue.NumberValue(new BigDecimal(wireValue));
+            if (!wireValue.equals(number.value().toString())) {
+                throw malformed("NUMBER value must be canonical", null);
+            }
+            return number;
+        } catch (NumberFormatException exception) {
+            throw malformed("NUMBER value must be a decimal", exception);
+        }
+    }
+
+    private LiteralValue.ObjectValue taggedObject(ObjectNode object, int depth) {
+        exactFields(object, Set.of("kind", "values"), ErrorCode.MALFORMED_MESSAGE);
+        var values = object(object.get("values"), "values", ErrorCode.MALFORMED_MESSAGE);
+        enforceDepth(depth + 1);
+        var result = new HashMap<String, LiteralValue>();
+        values.properties().forEach(entry -> result.put(entry.getKey(), literal(entry.getValue(), depth + 2)));
+        return new LiteralValue.ObjectValue(result);
     }
 
     private ObjectNode encodeEnvelope(ClientEnvelope envelope) {
@@ -464,23 +485,30 @@ public final class ClientProtocolCodec {
     private ObjectNode failure(ClientMessage.Failure failure) { var value = json.createObjectNode(); value.put("code", failure.code()); value.put("message", failure.message()); var diagnostics = value.putObject("diagnostics"); failure.diagnostics().forEach(diagnostics::put); return value; }
     private void executions(ObjectNode payload, List<ClientMessage.ExecutionObservation> values) { var array = payload.putArray("executions"); for (var value : values) { var node = array.addObject(); node.put("targetRevision", Long.toString(value.targetRevision())); node.put("runtimeInstanceId", value.runtimeInstanceId()); node.put("lifecycleOperationId", value.lifecycleOperationId()); node.put("state", value.state().name()); if (value.failure() != null) node.set("failure", failure(value.failure())); } }
     private JsonNode literal(LiteralValue value, int depth) {
-        enforceDepth(depth);
         return switch (value) {
             case LiteralValue.NullValue ignored -> json.getNodeFactory().nullNode();
             case LiteralValue.BooleanValue scalar -> json.getNodeFactory().booleanNode(scalar.value());
             case LiteralValue.StringValue scalar -> json.getNodeFactory().stringNode(scalar.value());
             case LiteralValue.NumberValue scalar -> {
-                validateInteropNumber(scalar.value());
-                yield json.getNodeFactory().numberNode(scalar.value());
+                enforceDepth(depth);
+                var result = json.createObjectNode();
+                result.put("kind", "NUMBER");
+                result.put("value", scalar.value().toString());
+                yield result;
             }
             case LiteralValue.ListValue list -> {
+                enforceDepth(depth);
                 var array = json.createArrayNode();
                 list.values().forEach(item -> array.add(literal(item, depth + 1)));
                 yield array;
             }
             case LiteralValue.ObjectValue object -> {
+                enforceDepth(depth);
                 var result = json.createObjectNode();
-                object.values().forEach((key, item) -> result.set(key, literal(item, depth + 1)));
+                result.put("kind", "OBJECT");
+                var values = result.putObject("values");
+                enforceDepth(depth + 1);
+                object.values().forEach((key, item) -> values.set(key, literal(item, depth + 2)));
                 yield result;
             }
         };
@@ -501,19 +529,6 @@ public final class ClientProtocolCodec {
             return Long.parseLong(value);
         } catch (NumberFormatException exception) {
             throw failure(code, name + " exceeds signed long range", exception);
-        }
-    }
-    private static void validateInteropNumber(BigDecimal value) {
-        var normalized = value.stripTrailingZeros();
-        if (normalized.scale() <= 0) {
-            if (normalized.abs().compareTo(BigDecimal.valueOf(9007199254740991L)) > 0) {
-                throw malformed("literal integer exceeds JavaScript safe range", null);
-            }
-            return;
-        }
-        var doubleValue = normalized.doubleValue();
-        if (!Double.isFinite(doubleValue) || BigDecimal.valueOf(doubleValue).compareTo(normalized) != 0) {
-            throw malformed("literal decimal is not losslessly interoperable", null);
         }
     }
     private static void enforceDepth(int depth) {

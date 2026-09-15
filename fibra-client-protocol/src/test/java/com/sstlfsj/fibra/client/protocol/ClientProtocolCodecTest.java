@@ -92,34 +92,62 @@ class ClientProtocolCodecTest {
     }
 
     @Test
-    void permitsOnlyJavaScriptInteroperableLiteralNumbers() {
-        for (var value : List.of("0.1", "9007199254740991")) {
+    void roundTripsTaggedArbitraryPrecisionNumbersAndRejectsNativeNumbers() {
+        for (var value : List.of("0.12345678901234567890123456789", "1E-400", "1E+400",
+            "9223372036854775808")) {
             var envelope = callEnvelope(new LiteralValue.NumberValue(new BigDecimal(value)));
-            assertEquals(envelope, codec.decode(codec.encode(envelope)));
+            var wire = codec.encode(envelope);
+            assertEquals(envelope, codec.decode(wire));
+            assertTrue(wire.contains("\"kind\":\"NUMBER\""));
+            var number = (LiteralValue.NumberValue) ((ClientMessage.Call) envelope.message()).input();
+            assertTrue(wire.contains("\"value\":\"" + number.value() + "\""));
         }
         var nullInput = codec.encode(callEnvelope(LiteralValue.NullValue.INSTANCE));
-        for (var value : List.of("0.12345678901234567890123456789", "1E-400", "1E+400",
-            "9007199254740992", "9007199254740993")) {
-            assertProtocolCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
-                () -> codec.encode(callEnvelope(new LiteralValue.NumberValue(new BigDecimal(value)))));
+        for (var value : List.of("0", "0.1", "1E+400", "9223372036854775808")) {
             assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
                 nullInput.replace("\"input\":null", "\"input\":" + value));
         }
+        for (var input : List.of(
+            "{\"kind\":\"NUMBER\",\"value\":1}",
+            "{\"kind\":\"NUMBER\",\"value\":\"1.0\"}",
+            "{\"kind\":\"NUMBER\",\"value\":\"not-a-number\"}",
+            "{\"kind\":\"NUMBER\",\"value\":\"1\",\"extra\":true}",
+            "{\"kind\":\"OBJECT\",\"values\":[]}",
+            "{\"kind\":\"OBJECT\",\"values\":{},\"extra\":true}",
+            "{\"kind\":\"UNKNOWN\",\"values\":{}}")) {
+            assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+                nullInput.replace("\"input\":null", "\"input\":" + input));
+        }
+
+        var businessObject = new LiteralValue.ObjectValue(java.util.Map.of(
+            "kind", new LiteralValue.StringValue("business"),
+            "value", new LiteralValue.NumberValue(new BigDecimal("1E+400"))));
+        var businessEnvelope = callEnvelope(businessObject);
+        assertEquals(businessEnvelope, codec.decode(codec.encode(businessEnvelope)));
     }
 
     @Test
     void enforcesLiteralDepthBeforeTreeConversion() {
         var ordinary = callEnvelope(nestedList(4));
         assertEquals(ordinary, codec.decode(codec.encode(ordinary)));
-        var boundary = callEnvelope(nestedList(61));
+        var boundary = callEnvelope(nestedList(62));
         assertEquals(boundary, codec.decode(codec.encode(boundary)));
         assertProtocolCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
-            () -> codec.encode(callEnvelope(nestedList(62))));
+            () -> codec.encode(callEnvelope(nestedList(63))));
 
         var wire = codec.encode(callEnvelope(LiteralValue.NullValue.INSTANCE));
-        var tooDeep = "[".repeat(62) + "null" + "]".repeat(62);
+        var tooDeep = "[".repeat(63) + "null" + "]".repeat(63);
         assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
             wire.replace("\"input\":null", "\"input\":" + tooDeep));
+
+        var resultBoundary = callResultEnvelope(nestedList(61));
+        assertEquals(resultBoundary, codec.decode(codec.encode(resultBoundary)));
+        assertProtocolCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+            () -> codec.encode(callResultEnvelope(nestedList(62))));
+        var resultWire = codec.encode(callResultEnvelope(LiteralValue.NullValue.INSTANCE));
+        var tooDeepResult = "[".repeat(62) + "null" + "]".repeat(62);
+        assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+            resultWire.replace("\"value\":null", "\"value\":" + tooDeepResult));
     }
 
     @Test
@@ -212,6 +240,13 @@ class ClientProtocolCodecTest {
         return new ClientEnvelope(1, "call", "client.call",
             new ClientMessage.Call(new CallFence(new SessionFence("host", "client"), "0", 1), "tool",
                 new ClientMessage.ContributionId("provider", "read"), input));
+    }
+
+    private static ClientEnvelope callResultEnvelope(LiteralValue value) {
+        return new ClientEnvelope(1, "result", "host.call-result",
+            new ClientMessage.CallResult(new CallFence(new SessionFence("host", "client"), "0", 1), "tool",
+                new ClientMessage.ContributionId("provider", "read"),
+                new ClientMessage.CallOutcome.Success(value)));
     }
 
     private static ClientEnvelope snapshotWithBytes(String base64) {
