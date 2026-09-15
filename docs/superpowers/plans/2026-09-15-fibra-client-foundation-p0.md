@@ -88,7 +88,7 @@
   明确标注“已废弃”，以及产品 Session 章节保留的“通用 streaming contribution 仍等待第二个非 Agent
   消费者”独立边界。
 
-- [ ] **Step 4: 提交架构决策**
+- [x] **Step 4: 提交架构决策**
 
   ```bash
   git add README.md docs/superpowers
@@ -112,28 +112,28 @@
 - Create: `client/packages/client-runtime-web/package.json`
 - Create: `client/packages/client-react/package.json`
 
-- [ ] **Step 1: 写 Maven 模块边界测试**
+- [x] **Step 1: 写 Maven 模块边界测试**
 
   在 `fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/ArchitectureBaselineTest.java` 增加断言：Java
   protocol/runtime 模块存在，现有纯 Java 模块不依赖 npm、React 或 Electron。
 
-- [ ] **Step 2: 运行测试并确认 RED**
+- [x] **Step 2: 运行测试并确认 RED**
 
   Run: `mvn -pl fibra-parity-tests -am test -Dtest=ArchitectureBaselineTest -Dsurefire.failIfNoSpecifiedTests=false`
 
   Expected: FAIL，缺少新模块。
 
-- [ ] **Step 3: 新建最小模块与 workspace**
+- [x] **Step 3: 新建最小模块与 workspace**
 
   Maven 聚合只包含两个 Java 模块；`client/` 使用独立 workspace，根 Maven 生命周期不调用 pnpm。
 
-- [ ] **Step 4: 首次解析依赖并提交锁文件**
+- [x] **Step 4: 首次解析依赖并提交锁文件**
 
   Run: `pnpm --dir client install`
 
   Expected: 生成 `client/pnpm-lock.yaml`；人工核对只含计划内依赖后纳入同一提交。
 
-- [ ] **Step 5: 运行 Maven 与 npm 边界测试**
+- [x] **Step 5: 运行 Maven 与 npm 边界测试**
 
   Run: `mvn -pl fibra-client-protocol,fibra-runtime-client,fibra-parity-tests -am test`
 
