@@ -26,14 +26,24 @@ export class ClientLifecycleRuntime {
     const state = this.state(fence);
     const existing = state.commands.find((command) => command.phase === phase && sameFence(command.fence, fence));
     if (existing !== undefined) return existing.promise;
-    if (nextPhase(state.phase) !== phase) {
-      return Promise.reject(new ClientRuntimeError("ILLEGAL_LIFECYCLE_TRANSITION", `cannot ${phase} after ${state.phase ?? "initial"}`));
+    if (!canSchedule(state, phase, fence)) {
+      return Promise.reject(new ClientRuntimeError("ILLEGAL_LIFECYCLE_TRANSITION", `cannot ${phase} after ${state.scheduled ?? "initial"}`));
     }
-    state.phase = phase;
+    state.scheduled = phase;
+    if (phase === "prepare") state.targetRevision = fence.targetRevision;
+    this.begin(fence);
     const handler = this.handlers[phase];
     const command = state.queue.then(() => {
-      state.pending = fence;
+      if (!canApply(state, phase, fence)) {
+        throw new ClientRuntimeError("ILLEGAL_LIFECYCLE_TRANSITION", `cannot apply ${phase}`);
+      }
       return handler?.(fence);
+    }).then(() => {
+      state.applied = phase;
+    }, (failure) => {
+      state.scheduled = state.applied;
+      if (state.applied === undefined || state.applied === "stop") state.targetRevision = undefined;
+      throw failure;
     });
     state.queue = command.catch(() => undefined);
     state.commands.push({ phase, fence, promise: command });
@@ -69,18 +79,34 @@ export class ClientLifecycleRuntime {
 
 interface RuntimeState {
   queue: Promise<void>;
-  phase?: LifecyclePhase;
+  scheduled?: LifecyclePhase;
+  applied?: LifecyclePhase;
+  targetRevision?: string;
   pending?: LifecycleFence;
   commands: Array<{ phase: LifecyclePhase; fence: LifecycleFence; promise: Promise<void> }>;
 }
 
-function nextPhase(phase: LifecyclePhase | undefined): LifecyclePhase {
-  switch (phase) {
-    case undefined:
-    case "stop": return "prepare";
-    case "prepare": return "activate";
-    case "activate": return "drain";
-    case "drain": return "stop";
+function canSchedule(state: RuntimeState, phase: LifecyclePhase, fence: LifecycleFence): boolean {
+  if (phase === "prepare") {
+    return state.scheduled === undefined || (state.scheduled === "stop" && state.applied === "stop");
+  }
+  if (state.targetRevision !== fence.targetRevision) return false;
+  switch (state.scheduled) {
+    case "prepare": return phase === "activate";
+    case "activate": return phase === "drain";
+    case "drain": return phase === "stop";
+    default: return false;
+  }
+}
+
+function canApply(state: RuntimeState, phase: LifecyclePhase, fence: LifecycleFence): boolean {
+  if (phase === "prepare") return state.applied === undefined || state.applied === "stop";
+  if (state.targetRevision !== fence.targetRevision) return false;
+  switch (state.applied) {
+    case "prepare": return phase === "activate";
+    case "activate": return phase === "drain";
+    case "drain": return phase === "stop";
+    default: return false;
   }
 }
 

@@ -121,7 +121,7 @@ function validateEnvelope(value: JsonValue): ProtocolEnvelope {
       phase(payload, "call", ["call", "contributionKind", "contributionId", "input"]);
       call(payload.call);
       contributionFields(payload);
-      literal(payload.input, 0);
+      literal(payload.input, 3);
       break;
     case "host.call-result":
       phase(payload, "call", ["call", "contributionKind", "contributionId", "outcome"]);
@@ -132,7 +132,7 @@ function validateEnvelope(value: JsonValue): ProtocolEnvelope {
     default:
       throw malformed(`unknown message type ${type}`);
   }
-  return envelope as unknown as ProtocolEnvelope;
+  return { ...envelope, protocolVersion: PROTOCOL_VERSION } as unknown as ProtocolEnvelope;
 }
 
 function session(value: JsonValue): SessionFence {
@@ -183,7 +183,7 @@ function assignments(value: JsonValue): void {
         exact(content, ["kind", "url"]);
         const url = text(content, "url");
         try {
-          if (/[\u0000-\u0020]/.test(url) || new URL(url).protocol === "file:") throw new Error();
+          if (!validUri(url) || new URL(url).protocol === "file:") throw new Error();
         } catch {
           throw malformed("url must be a controlled non-file URL");
         }
@@ -235,7 +235,7 @@ function callOutcome(value: JsonValue): void {
   const kind = text(outcome, "kind");
   if (kind === "SUCCESS") {
     exact(outcome, ["kind", "value"]);
-    literal(outcome.value, 0);
+    literal(outcome.value, 4);
   } else if (kind === "FAILED") {
     exact(outcome, ["kind", "failure"]);
     failure(outcome.failure);
@@ -276,19 +276,20 @@ function literal(value: JsonValue, depth: number): LiteralValue {
   if (value === null || typeof value === "boolean" || typeof value === "string") return value;
   if (typeof value === "number" || value instanceof JsonNumber) throw malformed("literal numbers require the NUMBER tag");
   if (Array.isArray(value)) {
-    if (depth >= MAX_NESTING_DEPTH) throw malformed("literal exceeds nesting depth");
+    if (depth > MAX_NESTING_DEPTH) throw malformed("literal exceeds nesting depth");
     return value.map((item) => literal(item, depth + 1));
   }
   const tagged = object(value, "literal");
   const kind = text(tagged, "kind");
   if (kind === "NUMBER") {
+    if (depth > MAX_NESTING_DEPTH) throw malformed("literal exceeds nesting depth");
     exact(tagged, ["kind", "value"]);
     canonicalDecimal(textual(tagged, "value"));
     return tagged as unknown as LiteralValue;
   }
   if (kind === "OBJECT") {
     exact(tagged, ["kind", "values"]);
-    if (depth + 2 > MAX_NESTING_DEPTH) throw malformed("literal exceeds nesting depth");
+    if (depth + 1 > MAX_NESTING_DEPTH) throw malformed("literal exceeds nesting depth");
     const values = object(tagged.values, "values");
     for (const item of Object.values(values)) literal(item, depth + 2);
     return tagged as unknown as LiteralValue;
@@ -319,28 +320,31 @@ function canonicalizeDecimal(value: string): string | undefined {
   if (exponent === undefined) return undefined;
   let digits = `${integer}${fractional}`.replace(/^0+/, "");
   if (digits.length === 0) return "0";
-  let scale = fractional.length - exponent;
-  if (scale < -2147483648 || scale > 2147483647) return undefined;
+  let scale = BigInt(fractional.length) - exponent;
+  if (!validScale(scale)) return undefined;
   while (digits.endsWith("0")) {
     digits = digits.slice(0, -1);
-    scale -= 1;
+    scale -= 1n;
   }
-  const adjusted = -scale + digits.length - 1;
+  if (!validScale(scale)) return undefined;
+  const adjusted = -scale + BigInt(digits.length) - 1n;
   const prefix = sign === "-" ? "-" : "";
-  if (scale >= 0 && adjusted >= -6) {
-    if (scale >= digits.length) return `${prefix}0.${"0".repeat(scale - digits.length)}${digits}`;
-    return `${prefix}${digits.slice(0, digits.length - scale)}${scale === 0 ? "" : `.${digits.slice(digits.length - scale)}`}`;
+  if (scale >= 0n && adjusted >= -6n) {
+    const plainScale = Number(scale);
+    if (plainScale >= digits.length) return `${prefix}0.${"0".repeat(plainScale - digits.length)}${digits}`;
+    return `${prefix}${digits.slice(0, digits.length - plainScale)}${plainScale === 0 ? "" : `.${digits.slice(digits.length - plainScale)}`}`;
   }
-  return `${prefix}${digits[0]}${digits.length === 1 ? "" : `.${digits.slice(1)}`}E${adjusted >= 0 ? "+" : ""}${adjusted}`;
+  return `${prefix}${digits[0]}${digits.length === 1 ? "" : `.${digits.slice(1)}`}E${adjusted >= 0n ? "+" : ""}${adjusted}`;
 }
 
-function parseExponent(value: string | undefined): number | undefined {
-  if (value === undefined) return 0;
+function parseExponent(value: string | undefined): bigint | undefined {
+  if (value === undefined) return 0n;
   if (!/^[+-]?(?:0|[1-9][0-9]*)$/.test(value)) return undefined;
-  const sign = value.startsWith("-") ? -1 : 1;
-  const digits = value.replace(/^[+-]/, "");
-  if (digits.length > 10 || (digits.length === 10 && digits > "2147484647")) return undefined;
-  return sign * Number(digits);
+  return BigInt(value);
+}
+
+function validScale(value: bigint): boolean {
+  return value >= -2147483648n && value <= 2147483647n;
 }
 
 function phase(payload: JsonObject, identity: string, expected: readonly string[]): void {
@@ -400,10 +404,23 @@ function base64(value: string): void {
   }
 }
 
+function validUri(value: string): boolean {
+  if (!/^[A-Za-z][A-Za-z0-9+.-]*:/.test(value)
+    || /[\u0000-\u0020\\<>"{}|^`]/.test(value)
+    || /%(?![0-9A-Fa-f]{2})/.test(value)) return false;
+  const authority = /^[A-Za-z][A-Za-z0-9+.-]*:\/\/([^/?#]*)/.exec(value)?.[1];
+  if (/[\[\]]/.test(value.replace(/^[A-Za-z][A-Za-z0-9+.-]*:\/\/[^/?#]*/, ""))) return false;
+  if (authority !== undefined && /[\[\]]/.test(authority)
+    && !/^(?:[^\[\]]*\[[0-9A-Fa-f:.]+\][^\[\]]*)$/.test(authority)) return false;
+  return true;
+}
+
 function protocolVersion(value: JsonValue): number {
   if (value instanceof JsonNumber) {
-    if (!/^(?:0|[1-9][0-9]*)$/.test(value.raw)) throw malformed("protocolVersion must be an integer");
-    return Number(value.raw);
+    if (!/^-?(?:0|[1-9][0-9]*)$/.test(value.raw)) throw malformed("protocolVersion must be an integer");
+    const integer = BigInt(value.raw);
+    if (integer < -2147483648n || integer > 2147483647n) throw malformed("protocolVersion must be an integer");
+    return Number(integer);
   }
   if (typeof value === "number" && Number.isInteger(value)) return value;
   throw malformed("protocolVersion must be an integer");
@@ -434,7 +451,7 @@ class StrictJsonReader {
   }
 
   private value(depth: number): JsonValue {
-    if (depth > MAX_NESTING_DEPTH + 4) throw malformed("JSON exceeds nesting depth");
+    if (depth > MAX_NESTING_DEPTH) throw malformed("JSON exceeds nesting depth");
     this.space();
     const start = this.source[this.index];
     if (start === "{") return this.object(depth + 1);

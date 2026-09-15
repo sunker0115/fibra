@@ -23,6 +23,8 @@ describe("v1 protocol codec", () => {
       "host.call-result", "client.detach",
     ]);
     assert.deepEqual(decoded.map((message) => JSON.parse(encodeEnvelope(message))), fixtures);
+    assert.equal(decoded[0]?.protocolVersion, 1);
+    assert.equal(typeof decoded[0]?.protocolVersion, "number");
   });
 
   it("requires canonical positive decimal strings for identity tokens", () => {
@@ -46,7 +48,7 @@ describe("v1 protocol codec", () => {
 
   it("distinguishes raw protocol version tokens and hello identity failures", () => {
     const hello = '{"protocolVersion":VERSION,"messageId":"one","type":"client.hello","payload":{"identity":{"clientNonce":"nonce"},"executionTarget":"client:web","capabilities":[]}}';
-    for (const version of ['"1"', "1.0"]) {
+    for (const version of ['"1"', "1.0", "1e0", "2147483648"]) {
       assert.throws(() => decodeEnvelope(hello.replace("VERSION", version)), (error: unknown) => {
         assert(error instanceof ClientProtocolError);
         assert.equal(error.code, "MALFORMED_MESSAGE");
@@ -54,6 +56,11 @@ describe("v1 protocol codec", () => {
       });
     }
     assert.throws(() => decodeEnvelope(hello.replace("VERSION", "2")), (error: unknown) => {
+      assert(error instanceof ClientProtocolError);
+      assert.equal(error.code, "UNSUPPORTED_PROTOCOL");
+      return true;
+    });
+    assert.throws(() => decodeEnvelope(hello.replace("VERSION", "-1")), (error: unknown) => {
       assert(error instanceof ClientProtocolError);
       assert.equal(error.code, "UNSUPPORTED_PROTOCOL");
       return true;
@@ -73,10 +80,10 @@ describe("v1 protocol codec", () => {
       for (let index = 0; index < count; index += 1) value = `{"kind":"OBJECT","values":{"value":${value}}}`;
       return value;
     };
-    assert.doesNotThrow(() => decodeEnvelope(template.replace("INPUT", nested(64))));
-    assert.throws(() => decodeEnvelope(template.replace("INPUT", nested(65))), ClientProtocolError);
-    assert.doesNotThrow(() => decodeEnvelope(template.replace("INPUT", nestedObject(32))));
-    assert.throws(() => decodeEnvelope(template.replace("INPUT", nestedObject(33))), ClientProtocolError);
+    assert.doesNotThrow(() => decodeEnvelope(template.replace("INPUT", nested(62))));
+    assert.throws(() => decodeEnvelope(template.replace("INPUT", nested(63))), ClientProtocolError);
+    assert.doesNotThrow(() => decodeEnvelope(template.replace("INPUT", nestedObject(31))));
+    assert.throws(() => decodeEnvelope(template.replace("INPUT", nestedObject(32))), ClientProtocolError);
     assert.throws(() => decodeEnvelope(template.replace("INPUT", '{"kind":"NUMBER","value":"1E-2147483648"}')), ClientProtocolError);
     assert.doesNotThrow(() => decodeEnvelope(template.replace("INPUT", '{"kind":"NUMBER","value":"1E+2147483648"}')));
 
@@ -84,5 +91,12 @@ describe("v1 protocol codec", () => {
     assert.doesNotThrow(() => decodeEnvelope(snapshot.replace("CONTENT", '{"kind":"BYTES","base64":"YQ"}')));
     assert.doesNotThrow(() => decodeEnvelope(snapshot.replace("CONTENT", '{"kind":"BYTES","base64":"YQ=="}')));
     assert.throws(() => decodeEnvelope(snapshot.replace("CONTENT", '{"kind":"URL","url":"https://example.test/a b"}')), ClientProtocolError);
+    assert.throws(() => decodeEnvelope(snapshot.replace("CONTENT", '{"kind":"URL","url":"https://example.test/%GG"}')), ClientProtocolError);
+    assert.throws(() => decodeEnvelope(snapshot.replace("CONTENT", '{"kind":"URL","url":"https://example.test/a[b]"}')), ClientProtocolError);
+    assert.throws(() => decodeFixtures("[".repeat(65) + "]".repeat(65)), ClientProtocolError);
+
+    const result = '{"protocolVersion":1,"messageId":"one","type":"host.call-result","payload":{"call":{"session":{"hostInstanceId":"host","clientExecutionId":"client"},"expectedViewRevision":"0","registrationIdentity":"1"},"contributionKind":"tool","contributionId":{"providerInstanceId":"provider","localName":"read"},"outcome":{"kind":"SUCCESS","value":INPUT}}}';
+    assert.doesNotThrow(() => decodeEnvelope(result.replace("INPUT", nested(61))));
+    assert.throws(() => decodeEnvelope(result.replace("INPUT", nested(62))), ClientProtocolError);
   });
 });

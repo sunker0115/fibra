@@ -16,11 +16,22 @@ class Effect implements ClientDisposable {
 
   dispose(): Promise<void> {
     if (this.result === undefined) {
-      try {
-        this.result = Promise.resolve(this.cleanup()).finally(this.remove);
-      } catch (failure) {
-        this.result = Promise.reject(failure).finally(this.remove);
-      }
+      let resolve: () => void;
+      let reject: (reason: unknown) => void;
+      this.result = new Promise<void>((success, failure) => {
+        resolve = success;
+        reject = failure;
+      });
+      queueMicrotask(() => {
+        try {
+          Promise.resolve(this.cleanup()).then(
+            () => { this.remove(); resolve!(); },
+            (failure) => { reject!(failure); },
+          );
+        } catch (failure) {
+          reject!(failure);
+        }
+      });
     }
     return this.result;
   }

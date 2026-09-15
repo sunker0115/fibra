@@ -43,6 +43,7 @@ describe("Scope", () => {
     const first = scope.close();
     const second = scope.close();
     assert.equal(second, first);
+    await Promise.resolve();
     release?.();
     await first;
     assert.equal(scope.close(), first);
@@ -82,7 +83,7 @@ describe("Scope", () => {
     const scope = new Scope();
     let release: (() => void) | undefined;
     const effect = scope.effect(() => new Promise<void>((resolve) => { release = resolve; }));
-    const disposal = effect.dispose();
+    const disposal = effect.dispose() as Promise<void>;
     const close = scope.close();
 
     assert.equal(effect.dispose(), disposal);
@@ -106,5 +107,22 @@ describe("Scope", () => {
     await registration.dispose();
     await scope.close();
     assert.equal(cleaned, 1);
+  });
+
+  it("shares a disposal promise during cleanup reentry and retains failures for close", async () => {
+    const scope = new Scope();
+    let effect: ReturnType<Scope["effect"]>;
+    effect = scope.effect(() => {
+      assert.equal(effect.dispose(), disposal);
+      throw new Error("dispose failed");
+    });
+    const disposal = effect.dispose() as Promise<void>;
+    assert.equal(effect.dispose(), disposal);
+    await assert.rejects(disposal, /dispose failed/);
+    await assert.rejects(scope.close(), (error: unknown) => {
+      assert(error instanceof AggregateError);
+      assert.equal(error.errors.length, 1);
+      return true;
+    });
   });
 });
