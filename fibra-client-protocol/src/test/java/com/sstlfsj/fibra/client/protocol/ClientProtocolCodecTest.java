@@ -127,6 +127,23 @@ class ClientProtocolCodecTest {
     }
 
     @Test
+    void enforcesTaggedDecimalCharacterLimitBeforeParsing() {
+        var boundary = "1".repeat(ClientProtocolCodec.MAX_DECIMAL_CHARACTERS);
+        var boundaryEnvelope = callEnvelope(new LiteralValue.NumberValue(new BigDecimal(boundary)));
+        assertEquals(boundaryEnvelope, codec.decode(codec.encode(boundaryEnvelope)));
+
+        var tooLong = "1".repeat(ClientProtocolCodec.MAX_DECIMAL_CHARACTERS + 1);
+        assertProtocolCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+            () -> codec.encode(callEnvelope(new LiteralValue.NumberValue(new BigDecimal(tooLong)))));
+
+        var nullInput = codec.encode(callEnvelope(LiteralValue.NullValue.INSTANCE));
+        assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+            taggedNumberWire(nullInput, tooLong));
+        assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+            taggedNumberWire(nullInput, "1" + "0".repeat(100_000)));
+    }
+
+    @Test
     void enforcesLiteralDepthBeforeTreeConversion() {
         var ordinary = callEnvelope(nestedList(4));
         assertEquals(ordinary, codec.decode(codec.encode(ordinary)));
@@ -247,6 +264,11 @@ class ClientProtocolCodecTest {
             new ClientMessage.CallResult(new CallFence(new SessionFence("host", "client"), "0", 1), "tool",
                 new ClientMessage.ContributionId("provider", "read"),
                 new ClientMessage.CallOutcome.Success(value)));
+    }
+
+    private static String taggedNumberWire(String nullInputWire, String value) {
+        return nullInputWire.replace("\"input\":null",
+            "\"input\":{\"kind\":\"NUMBER\",\"value\":\"" + value + "\"}");
     }
 
     private static ClientEnvelope snapshotWithBytes(String base64) {

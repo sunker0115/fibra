@@ -26,6 +26,7 @@ public final class ClientProtocolCodec {
     public static final int VERSION = 1;
     public static final int MAX_ENVELOPE_BYTES = 1024 * 1024;
     public static final int MAX_NESTING_DEPTH = 64;
+    public static final int MAX_DECIMAL_CHARACTERS = 1000;
 
     private static final Set<String> ENVELOPE_FIELDS = Set.of(
         "protocolVersion", "messageId", "type", "payload");
@@ -36,6 +37,7 @@ public final class ClientProtocolCodec {
         var constraints = StreamReadConstraints.builder()
             .maxNestingDepth(MAX_NESTING_DEPTH)
             .maxStringLength(MAX_ENVELOPE_BYTES)
+            .maxNumberLength(MAX_DECIMAL_CHARACTERS)
             .build();
         var writeConstraints = StreamWriteConstraints.builder()
             .maxNestingDepth(MAX_NESTING_DEPTH)
@@ -349,6 +351,9 @@ public final class ClientProtocolCodec {
     private LiteralValue.NumberValue taggedNumber(ObjectNode object) {
         exactFields(object, Set.of("kind", "value"), ErrorCode.MALFORMED_MESSAGE);
         var wireValue = textual(object, "value", ErrorCode.MALFORMED_MESSAGE);
+        if (wireValue.length() > MAX_DECIMAL_CHARACTERS) {
+            throw malformed("NUMBER value exceeds character limit", null);
+        }
         try {
             var number = new LiteralValue.NumberValue(new BigDecimal(wireValue));
             if (!wireValue.equals(number.value().toString())) {
@@ -490,10 +495,17 @@ public final class ClientProtocolCodec {
             case LiteralValue.BooleanValue scalar -> json.getNodeFactory().booleanNode(scalar.value());
             case LiteralValue.StringValue scalar -> json.getNodeFactory().stringNode(scalar.value());
             case LiteralValue.NumberValue scalar -> {
+                if (scalar.value().precision() > MAX_DECIMAL_CHARACTERS) {
+                    throw malformed("NUMBER value exceeds character limit", null);
+                }
                 enforceDepth(depth);
+                var wireValue = scalar.value().toString();
+                if (wireValue.length() > MAX_DECIMAL_CHARACTERS) {
+                    throw malformed("NUMBER value exceeds character limit", null);
+                }
                 var result = json.createObjectNode();
                 result.put("kind", "NUMBER");
-                result.put("value", scalar.value().toString());
+                result.put("value", wireValue);
                 yield result;
             }
             case LiteralValue.ListValue list -> {
