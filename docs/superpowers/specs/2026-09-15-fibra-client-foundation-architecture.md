@@ -368,6 +368,12 @@ targetRevision。P0 只启动一个真实 web execution，但模型和协议从�
 | `LifecycleFence` | `SessionFence + targetRevision + runtimeInstanceId + lifecycleOperationId` | prepare/activate/drain/stop 及其结果 |
 | `CallFence` | `SessionFence + expectedViewRevision + registrationIdentity` | contribution call/result |
 
+v1 wire envelope 固定为 `{protocolVersion,messageId,type,payload}`；消息专属字段只能放在 `payload`，不得摊平到
+envelope，也不套用 JSON-RPC。为让 wire 形状本身即可拒绝跨阶段身份，payload 身份键固定为：hello 使用
+`identity`，welcome/snapshot/observed/detach 使用 `session`，生命周期命令及结果使用 `lifecycle`，call/result
+使用 `call`。编码后的 UTF-8 envelope 上限为 1 MiB；资源正文不通过 envelope 搬运，超限消息按
+`MALFORMED_MESSAGE` 拒绝。
+
 `host.welcome` 分配 `clientExecutionId` 并返回完整 `SessionFence`。`targetDigest` 作为 snapshot/target 内容字段，
 不代替生命周期 fence。codec 按 message type 精确校验所需结构：hello 携带 lifecycle 字段、生命周期消息
 缺 operation、或 session 消息夹带 runtime identity 都必须拒绝。P0 最小消息集：
