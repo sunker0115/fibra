@@ -135,6 +135,40 @@ class FibraEngineIncrementalTest {
     }
 
     @Test
+    void concurrentStartupSubscribersReceiveTheAcceptedInitialViewBeforeQueuedReplacement() throws Exception {
+        var entered = Sinks.<Void>one();
+        var release = Sinks.<Void>one();
+        var old = PluginDefinition.builder("old", Void.class, () -> (context, config) -> {
+            entered.tryEmitEmpty();
+            return release.asMono();
+        }).build();
+        var initial = graph(entry("old", "old", null));
+        var target = graph();
+        var repository = new InMemoryDesiredStateRepository(initial);
+        var initialRevision = repository.load().snapshot().revision();
+        try (var engine = FibraEngine.builder(repository)
+            .catalog(PluginCatalog.of(new PluginCatalogEntry<>(old, ignored -> null))).build()) {
+            var first = engine.start().doOnSuccess(ignored -> engine.submit(
+                new ReplaceDesiredGraph(null, initialRevision, target)).block(TIMEOUT)).toFuture();
+            var second = engine.start().toFuture();
+            try {
+                entered.asMono().block(TIMEOUT);
+                release.tryEmitEmpty();
+
+                var firstView = first.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+                var secondView = second.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+                assertEquals(initial, firstView.engine().desiredGraph());
+                assertTrue(firstView.engineDiagnostics().targetSatisfied());
+                assertEquals(initial, secondView.engine().desiredGraph());
+                assertTrue(secondView.engineDiagnostics().targetSatisfied());
+                assertEquals(target, engine.published().current().engine().desiredGraph());
+            } finally {
+                release.tryEmitEmpty();
+            }
+        }
+    }
+
+    @Test
     void reportsEveryNewInstanceStartupFailureAfterTheDomainSettles() {
         var firstFailure = new IllegalStateException("first startup failed");
         var secondFailure = new IllegalStateException("second startup failed");

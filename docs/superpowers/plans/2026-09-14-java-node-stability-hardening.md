@@ -133,8 +133,8 @@ macOS/JDK 21，Linux 由最终同树 GitHub Actions #35 补齐，Windows 保持�
 - [x] 在最终代码上重跑 Java/Node 多轮真实制品更新与资源曲线，记录环境、HEAD 和原始日志路径。FD、堆和一次耗时不设拍脑袋阈值；不把 artifact 历史留存当泄漏。macOS arm64、Zulu JDK 21.0.2、Node 20.20.2，基于 `3afed85` 的当前工作树；原始日志 `/private/tmp/v1-resource-curves.log`。
 - [x] 跑现有 `ContributionInvocationBenchmark`、`EngineTransactionBenchmark` 短基线，报告样本不冒充优化证明。单 fork、一次 200 ms 预热和一次 200 ms 测量的样本分别为 194.781 ns/op、600.341 us/op；原始日志 `/private/tmp/v1-contribution-benchmark.log`、`/private/tmp/v1-engine-transaction-benchmark.log`。
 - [x] 审核并补齐 `verification/distribution` 的 Java/Node 仓外消费者生命周期契约报告，不允许取得 Engine 内部类型；所有 Maven 阶段复用本机 `~/.m2`，只隔离消费者构建输出与临时发布目标。最终脚本日志 `/private/tmp/v1-verify-distribution-local-m2.log`。
-- [x] 根 50 模块 `clean verify`、篡改/路径/依赖/脱敏安全用例、发行 ZIP、三轮可复现制品比较和最终仓外消费者均已通过；本地日志 `/private/tmp/v1-verify-reproducible-release.log` 与 `/private/tmp/v1-verify-distribution-local-m2.log`。本地沙箱禁止 `/bin/ps`，因此 JVM dump 门禁只以 Linux [GitHub Actions #35](https://github.com/sunker0115/fibra/actions/runs/34880038160) 为通过证据；该次运行在 `main` 合并提交 `7a24be5` 上依次通过短超时诊断、全量构建与兼容性验收、27 制品三轮可复现比较和仓外分发消费者。合并提交与被合并的 `64b2651` 源码树一致。
-- [x] `git diff --check` 与脚本语法检查通过；高能力模型独立最终审查未发现 P1/P2；行为验收账本已回填。用户已推送并合并，最终同树 Linux CI 已由 #35 取得；macOS/Linux 结果不能替代 Windows，Windows 保持未实测声明。
+- [ ] 根 50 模块 `clean verify`、篡改/路径/依赖/脱敏安全用例、发行 ZIP、三轮可复现制品比较和最终仓外消费者均已通过；本地日志 `/private/tmp/v1-verify-reproducible-release.log` 与 `/private/tmp/v1-verify-distribution-local-m2.log`。Linux [GitHub Actions #35](https://github.com/sunker0115/fibra/actions/runs/34880038160) 曾在 `main` 合并提交 `7a24be5` 上通过全部四项门禁，但后续同源码树 #36 再次命中启动结果投影竞态。当前确定性回归已先红后绿，Engine 178/178、根 50 模块 `clean verify` 通过；仍需取得包含该修复的同一 HEAD Linux CI。
+- [x] `git diff --check` 与脚本语法检查通过；高能力模型独立最终审查未发现 P1/P2；行为验收账本已回填。macOS/Linux 结果不能替代 Windows，Windows 保持未实测声明。
 
 ## 统一测试命令与记录规则
 

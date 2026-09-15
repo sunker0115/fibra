@@ -324,8 +324,11 @@ Linux 收口证据：`447ef6e` 让验证器只在 PTY 已进入非规范读取�
 无法生成 JVM dump，因此不记录为本机通过。`main` 合并提交 `7a24be5` 的
 [GitHub Actions #35](https://github.com/sunker0115/fibra/actions/runs/34880038160) 已在 Linux 依次通过短超时
 诊断、根全量构建与兼容性验收、27 制品三轮可复现比较和仓外分发消费者；该提交与 `64b2651` 源码树一致，
-作为 V1 的最终 Linux 证据。同一源码树此前的 [#33](https://github.com/sunker0115/fibra/actions/runs/34877198730)
-和 [#34](https://github.com/sunker0115/fibra/actions/runs/34880015113) 均在
+作为该源码树的一次完整 Linux 成功证据。同一源码树此前的 [#33](https://github.com/sunker0115/fibra/actions/runs/34877198730)、
+[#34](https://github.com/sunker0115/fibra/actions/runs/34880015113) 以及后续文档提交触发的
+[#36](https://github.com/sunker0115/fibra/actions/runs/34919269182) 均在
 `FibraEngineIncrementalTest.replacementSubmittedDuringStartupWaitsForTheAcceptedInitialTarget` 第 120 行命中
-并发断言失败，继续作为历史失败记录，不计为通过。macOS/Linux 结果不能替代 Windows 实机门禁；Windows
-仍保持未实测声明。
+并发断言失败。根因是启动协调丢弃 bootstrap 的精确视图后异步重读 `published.current()`，已排队替换可在
+读取前发布“旧 Engine 快照 + 新目标诊断”的过渡视图。新增双启动订阅者确定性回归在旧实现稳定失败，修复后
+相关 24/24、Engine 178/178、根 50 模块 `clean verify` 通过；V1 等待修复后同一 HEAD 的 Linux 四项门禁。
+macOS/Linux 结果不能替代 Windows 实机门禁；Windows 仍保持未实测声明。

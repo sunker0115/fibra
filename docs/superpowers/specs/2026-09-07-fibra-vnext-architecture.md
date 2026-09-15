@@ -1828,13 +1828,14 @@ API、协议和模块，不保留兼容层、不以局部补丁替代责任分�
 | 5 | 公共扩展面与契约套件 | 以 canonical manifest、最小 SPI、typed config、Contribution、稳定错误码和仓外 Java/Node 消费者形成第三方插件套件，不测试废弃版本兼容 | 独立插件可执行安装、配置、启停、升级、重装、调用中卸载和泄漏检查，并输出结构化报告；不取得 Engine 内部类型 |
 | 6 | 安全与供应链边界 | 校验 digest、制品目录、依赖图、诊断脱敏和 trusted Java、受管 sidecar、容器/远端三档执行策略 | 篡改和越界制品 fail-closed；secret 不进入日志与诊断；ClassLoader 不被描述为安全沙箱 |
 
-六项底座打磨均已收口：N1/N2/J1/J2/E1 的实现、测试与证据已经提交；V1 的本地全量构建、安全用例、
-发行 ZIP、27 制品三轮可复现比较和仓外消费者通过，`main` 合并提交 `7a24be5` 的
-[GitHub Actions #35](https://github.com/sunker0115/fibra/actions/runs/34880038160) 又在 Linux 通过短超时诊断及
-其余三项完整门禁。执行进度与红绿证据见
+N1/N2/J1/J2/E1 的实现、测试与证据已经提交。V1 的本地全量构建、安全用例、发行 ZIP、27 制品三轮
+可复现比较和仓外消费者已通过；`main` 合并提交 `7a24be5` 的
+[GitHub Actions #35](https://github.com/sunker0115/fibra/actions/runs/34880038160) 曾在 Linux 通过全部四项门禁，
+但 #33/#34/#36 暴露的启动结果投影竞态必须以确定性回归修复，并在修复后的同一 HEAD 重新取得 Linux
+四项门禁后，才能把 V1 与六项底座打磨标为全部收口。执行进度与红绿证据见
 [Java/Node 与整体底座打磨计划](../plans/2026-09-14-java-node-stability-hardening.md)。所有 Maven 阶段统一
-复用已有 `~/.m2`，不创建或清空本地仓库；Windows 仍保持未实测声明。底座侧下一步不是新增能力，产品
-P0–P8 仍在独立项目和独立权威文档中推进。
+复用已有 `~/.m2`，不创建或清空本地仓库；Windows 仍保持未实测声明。底座侧下一步仍是 V1 收口，不新增
+能力；产品 P0–P8 仍在独立项目和独立权威文档中推进。
 
 底座可保留一个仓库外的薄上层夹具，验证真实调用方不绕过 `PublishedRuntime`、不取得内部 `Context`；
 该夹具不是 Agent 产品实现。产品 P0–P8 仍在独立项目和独立权威文档中推进。
