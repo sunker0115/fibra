@@ -1,0 +1,10 @@
+{
+  "name": "@sstlfsj/fibra-client-runtime",
+  "version": "0.5.0-SNAPSHOT",
+  "description": "Fibra framework-neutral client lifecycle runtime.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "dependencies": {
+    "@sstlfsj/fibra-client-api": "workspace:*"
+  }
+}

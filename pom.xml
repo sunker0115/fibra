@@ -64,6 +64,8 @@
     <module>fibra-example</module>
     <module>fibra-parity-tests</module>
     <module>fibra-benchmarks</module>
+    <module>fibra-client-protocol</module>
+    <module>fibra-runtime-client</module>
   </modules>
 
   <properties>
@@ -219,6 +221,16 @@
       <dependency>
         <groupId>com.sstlfsj</groupId>
         <artifactId>fibra-runtime-node</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-client-protocol</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-runtime-client</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

@@ -11,6 +11,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ArchitectureBaselineTest {
     private static final List<String> MODULES = List.of(
@@ -19,7 +20,7 @@ class ArchitectureBaselineTest {
         "fibra-runtime-node", "fibra-registry", "fibra-cli-api", "fibra-cli", "fibra-spring",
         "fibra-spring-boot-starter", "fibra-plugin-archetype",
         "fibra-plugins", "fibra-distribution", "fibra-example", "fibra-parity-tests",
-        "fibra-benchmarks");
+        "fibra-benchmarks", "fibra-client-protocol", "fibra-runtime-client");
 
     @Test
     void rootDeclaresOnlyTheVNextArchitecture() throws Exception {
@@ -96,6 +97,22 @@ class ArchitectureBaselineTest {
             for (var forbidden : entry.getValue()) {
                 assertFalse(pom.contains("<artifactId>" + forbidden + "</artifactId>"),
                     () -> entry.getKey() + " must not depend on " + forbidden);
+            }
+        }
+    }
+
+    @Test
+    void clientFoundationUsesDedicatedJavaModulesWithoutJavaScriptTooling() throws Exception {
+        var root = reactorRoot();
+        for (var module : List.of("fibra-client-protocol", "fibra-runtime-client")) {
+            assertTrue(Files.isRegularFile(root.resolve(module).resolve("pom.xml")),
+                () -> module + " must be a dedicated Maven module");
+        }
+        for (var module : MODULES) {
+            var pom = Files.readString(root.resolve(module).resolve("pom.xml"));
+            for (var forbidden : List.of("pnpm", "npm", "react", "electron")) {
+                assertFalse(pom.contains("<artifactId>" + forbidden + "</artifactId>"),
+                    () -> module + " must not depend on " + forbidden);
             }
         }
     }

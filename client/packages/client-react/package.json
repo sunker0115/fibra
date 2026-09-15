@@ -1,0 +1,14 @@
+{
+  "name": "@sstlfsj/fibra-client-react",
+  "version": "0.5.0-SNAPSHOT",
+  "description": "Fibra React client renderer adapter.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "dependencies": {
+    "@sstlfsj/fibra-client-api": "workspace:*",
+    "@sstlfsj/fibra-client-runtime": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0"
+  }
+}

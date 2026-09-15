@@ -1,0 +1,12 @@
+{
+  "name": "fibra-client-workspace",
+  "version": "0.5.0-SNAPSHOT",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=20.20.0"
+  },
+  "scripts": {
+    "test": "pnpm -r --if-present test"
+  }
+}

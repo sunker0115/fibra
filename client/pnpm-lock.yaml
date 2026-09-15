@@ -1,0 +1,48 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .: {}
+
+  packages/client-api: {}
+
+  packages/client-react:
+    dependencies:
+      '@sstlfsj/fibra-client-api':
+        specifier: workspace:*
+        version: link:../client-api
+      '@sstlfsj/fibra-client-runtime':
+        specifier: workspace:*
+        version: link:../client-runtime
+      react:
+        specifier: ^19.2.0
+        version: 19.3.0
+
+  packages/client-runtime:
+    dependencies:
+      '@sstlfsj/fibra-client-api':
+        specifier: workspace:*
+        version: link:../client-api
+
+  packages/client-runtime-web:
+    dependencies:
+      '@sstlfsj/fibra-client-api':
+        specifier: workspace:*
+        version: link:../client-api
+      '@sstlfsj/fibra-client-runtime':
+        specifier: workspace:*
+        version: link:../client-runtime
+
+packages:
+
+  react@19.3.0:
+    resolution: {integrity: sha512-E8LUcbtBWt20bbl2YoHfx4ZDBdxVTfOKtCZn9cDSJ4l6/nuoApcpIBcj47t2wZoVX8g2ZHuMHbiShgCR1T5Sog==}
+    engines: {node: '>=0.10.0'}
+
+snapshots:
+
+  react@19.3.0: {}
