@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ClientProtocolFenceTest {
     @Test
-    void rejectsLateLifecycleAcknowledgementAcrossAToBToA() {
+    void atomicallyConsumesLifecycleAcknowledgementsAndRejectsOldOrRepeatedOnes() {
         var session = new SessionFence("host-1", "client-1");
         var firstA = new LifecycleFence(session, 7, "runtime-a", "operation-a-first");
         var b = new LifecycleFence(session, 8, "runtime-b", "operation-b");
@@ -19,9 +19,13 @@ class ClientProtocolFenceTest {
         tracker.begin(b);
         tracker.begin(secondA);
 
-        var stale = assertThrows(ClientProtocolCodec.ProtocolException.class,
-            () -> tracker.accept(firstA));
-        assertEquals(ClientProtocolCodec.ErrorCode.STALE_OPERATION, stale.code());
+        assertStale(() -> tracker.accept(firstA));
         assertDoesNotThrow(() -> tracker.accept(secondA));
+        assertStale(() -> tracker.accept(secondA));
+    }
+
+    private static void assertStale(Runnable action) {
+        var stale = assertThrows(ClientProtocolCodec.ProtocolException.class, action::run);
+        assertEquals(ClientProtocolCodec.ErrorCode.STALE_OPERATION, stale.code());
     }
 }
