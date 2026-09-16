@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /** 严格编解码固定的 protocol v1 envelope，不承担任何 transport 责任。 */
 public final class ClientProtocolCodec {
@@ -231,35 +230,16 @@ public final class ClientProtocolCodec {
         return List.copyOf(result);
     }
 
-    private List<ClientMessage.Resource> resources(JsonNode node) {
+    private List<ClientMessage.ResourceDescriptor> resources(JsonNode node) {
         var array = array(node, "resources", ErrorCode.MALFORMED_MESSAGE);
-        var result = new ArrayList<ClientMessage.Resource>(array.size());
+        var result = new ArrayList<ClientMessage.ResourceDescriptor>(array.size());
         for (var item : array) {
             var value = object(item, "resource", ErrorCode.MALFORMED_MESSAGE);
-            exactFields(value, Set.of("path", "digest", "content"), ErrorCode.MALFORMED_MESSAGE);
-            result.add(new ClientMessage.Resource(text(value, "path", ErrorCode.MALFORMED_MESSAGE), digest(value, "digest"), resourceContent(value.get("content"))));
+            exactFields(value, Set.of("path", "digest", "byteLength"), ErrorCode.MALFORMED_MESSAGE);
+            result.add(new ClientMessage.ResourceDescriptor(text(value, "path", ErrorCode.MALFORMED_MESSAGE),
+                digest(value, "digest"), canonicalNonNegativeLong(value, "byteLength", ErrorCode.MALFORMED_MESSAGE)));
         }
         return List.copyOf(result);
-    }
-
-    private ClientMessage.ResourceContent resourceContent(JsonNode node) {
-        var value = object(node, "content", ErrorCode.MALFORMED_MESSAGE);
-        var kind = text(value, "kind", ErrorCode.MALFORMED_MESSAGE);
-        return switch (kind) {
-            case "URL" -> {
-                exactFields(value, Set.of("kind", "url"), ErrorCode.MALFORMED_MESSAGE);
-                yield new ClientMessage.UrlContent(text(value, "url", ErrorCode.MALFORMED_MESSAGE));
-            }
-            case "BYTES" -> {
-                exactFields(value, Set.of("kind", "base64"), ErrorCode.MALFORMED_MESSAGE);
-                try {
-                    yield new ClientMessage.BytesContent(textual(value, "base64", ErrorCode.MALFORMED_MESSAGE));
-                } catch (IllegalArgumentException exception) {
-                    throw malformed("invalid base64 resource", exception);
-                }
-            }
-            default -> throw malformed("invalid resource content kind", null);
-        };
     }
 
     private List<ClientMessage.Contribution> contributions(JsonNode node) {
@@ -469,8 +449,26 @@ public final class ClientProtocolCodec {
     }
     private void strings(ObjectNode object, String name, List<String> values) { var array = object.putArray(name); values.forEach(array::add); }
     private List<String> strings(JsonNode node, String name) { var array = array(node, name, ErrorCode.MALFORMED_MESSAGE); var values = new ArrayList<String>(array.size()); for (var item : array) { if (!item.isTextual() || item.textValue().isBlank()) throw malformed(name + " must contain non-blank strings", null); values.add(item.textValue()); } return List.copyOf(values); }
-    private void assignments(ObjectNode payload, List<ClientMessage.Assignment> values) { var array = payload.putArray("assignments"); for (var value : values) { var item = array.addObject(); item.put("pluginId", value.pluginId()); item.put("facetId", value.facetId()); item.put("runtimeInstanceId", value.runtimeInstanceId()); item.put("executionTarget", value.executionTarget()); item.put("entryModule", value.entryModule()); item.put("payloadDigest", value.payloadDigest()); strings(item, "requiredCapabilities", value.requiredCapabilities()); var resources = item.putArray("resources"); for (var resource : value.resources()) { var node = resources.addObject(); node.put("path", resource.path()); node.put("digest", resource.digest()); node.set("content", resourceContent(resource.content())); } } }
-    private ObjectNode resourceContent(ClientMessage.ResourceContent content) { var value = json.createObjectNode(); value.put("kind", content.kind()); switch (content) { case ClientMessage.UrlContent url -> value.put("url", url.url()); case ClientMessage.BytesContent bytes -> value.put("base64", bytes.base64()); } return value; }
+    private void assignments(ObjectNode payload, List<ClientMessage.Assignment> values) {
+        var array = payload.putArray("assignments");
+        for (var value : values) {
+            var item = array.addObject();
+            item.put("pluginId", value.pluginId());
+            item.put("facetId", value.facetId());
+            item.put("runtimeInstanceId", value.runtimeInstanceId());
+            item.put("executionTarget", value.executionTarget());
+            item.put("entryModule", value.entryModule());
+            item.put("payloadDigest", value.payloadDigest());
+            strings(item, "requiredCapabilities", value.requiredCapabilities());
+            var resources = item.putArray("resources");
+            for (var resource : value.resources()) {
+                var node = resources.addObject();
+                node.put("path", resource.path());
+                node.put("digest", resource.digest());
+                node.put("byteLength", Long.toString(resource.byteLength()));
+            }
+        }
+    }
     private void contributions(ObjectNode payload, List<ClientMessage.Contribution> values) { var array = payload.putArray("contributions"); for (var value : values) { var node = array.addObject(); node.put("contributionKind", value.contributionKind()); node.set("contributionId", contributionId(value.contributionId())); node.put("registrationIdentity", Long.toString(value.registrationIdentity())); } }
     private ObjectNode lifecycleOutcome(ClientMessage.LifecycleOutcome outcome) { var value = json.createObjectNode(); switch (outcome) { case ClientMessage.LifecycleOutcome.Applied ignored -> value.put("kind", "APPLIED"); case ClientMessage.LifecycleOutcome.Failed failed -> { value.put("kind", "FAILED"); value.set("failure", failure(failed.failure())); } } return value; }
     private ObjectNode callOutcome(ClientMessage.CallOutcome outcome) {
@@ -543,6 +541,17 @@ public final class ClientProtocolCodec {
             throw failure(code, name + " exceeds signed long range", exception);
         }
     }
+    private static long canonicalNonNegativeLong(ObjectNode object, String name, ErrorCode code) {
+        var value = textual(object, name, code);
+        if (value.length() > 19 || !value.matches("0|[1-9][0-9]*")) {
+            throw failure(code, name + " must be a canonical non-negative decimal string", null);
+        }
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException exception) {
+            throw failure(code, name + " exceeds signed long range", exception);
+        }
+    }
     private static void enforceDepth(int depth) {
         if (depth > MAX_NESTING_DEPTH) throw malformed("literal exceeds nesting depth", null);
     }
@@ -554,14 +563,6 @@ public final class ClientProtocolCodec {
     private static ProtocolException invalidIdentity(String message, Throwable cause) { return failure(ErrorCode.INVALID_IDENTITY, message, cause); }
     private static ProtocolException failure(ErrorCode code, String message, Throwable cause) { return new ProtocolException(code, message, cause); }
 
-    public enum ErrorCode { MALFORMED_MESSAGE, INVALID_IDENTITY, UNSUPPORTED_PROTOCOL, STALE_OPERATION }
+    public enum ErrorCode { MALFORMED_MESSAGE, INVALID_IDENTITY, UNSUPPORTED_PROTOCOL }
     public static final class ProtocolException extends RuntimeException { private final ErrorCode code; ProtocolException(ErrorCode code, String message, Throwable cause) { super(message, cause); this.code = Objects.requireNonNull(code, "code"); } public ErrorCode code() { return code; } }
-
-    /** 每次成功接收都会原子消费 pending operation，迟到或重复回复均被拒绝。 */
-    public static final class LifecycleFenceTracker {
-        private final ConcurrentHashMap<RuntimeKey, LifecycleFence> current = new ConcurrentHashMap<>();
-        public void begin(LifecycleFence fence) { fence = Objects.requireNonNull(fence, "fence"); current.put(new RuntimeKey(fence.session(), fence.runtimeInstanceId()), fence); }
-        public void accept(LifecycleFence response) { response = Objects.requireNonNull(response, "response"); if (!current.remove(new RuntimeKey(response.session(), response.runtimeInstanceId()), response)) throw new ProtocolException(ErrorCode.STALE_OPERATION, "lifecycle response does not match the current operation", null); }
-        private record RuntimeKey(SessionFence session, String runtimeInstanceId) { }
-    }
 }

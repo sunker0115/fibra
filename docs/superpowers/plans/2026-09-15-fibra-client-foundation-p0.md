@@ -157,7 +157,7 @@
 - Test: `fibra-client-protocol/src/test/java/com/sstlfsj/fibra/client/protocol/ClientProtocolCodecTest.java`
 - Test: `fibra-client-protocol/src/test/java/com/sstlfsj/fibra/client/protocol/ClientProtocolFenceTest.java`
 
-- [ ] **Step 1: 写严格 codec 失败测试**
+- [x] **Step 1: 写严格 codec 失败测试**
 
   覆盖未知字段、重复字段、尾随 token、缺失/错误阶段 identity、未知 message type、协议版本不等于 `1`。断言错误码
   分别稳定为 `MALFORMED_MESSAGE`、`INVALID_IDENTITY`、`UNSUPPORTED_PROTOCOL`。另以合法 envelope 覆盖
@@ -170,7 +170,7 @@
   `targetRevision`/`registrationIdentity` 必须覆盖 `Long.MAX_VALUE` 的 wire 字符串往返，并拒绝数字
   token、负数、前导零和越界字符串。
 
-- [ ] **Step 2: 写资源 descriptor 与控制/数据面 RED 测试**
+- [x] **Step 2: 写资源 descriptor 与控制/数据面 RED 测试**
 
   snapshot resource 只接受 `path/digest/byteLength`，`entryModule` 必须引用同一 assignment 的资源
   path；拒绝 raw URL、inline bytes、Host path、负数/非规范/越界 byteLength。codec 不创建可变 pending tracker，
@@ -178,14 +178,14 @@
   的标准构建器和产物检查证明，不让 Java codec 自写 JavaScript parser。资源实际读取和授权由 Task 5/9 的
   独立数据面验证。
 
-- [ ] **Step 3: 写分阶段身份 RED 测试**
+- [x] **Step 3: 写分阶段身份 RED 测试**
 
   `client.hello` 只接受 `HelloIdentity(clientNonce)`；`host.welcome` 分配
   `SessionFence(hostInstanceId, clientExecutionId)`；生命周期消息必须使用
   `LifecycleFence(SessionFence, targetRevision, runtimeInstanceId, lifecycleOperationId)`；调用消息必须使用
   `CallFence(SessionFence, expectedViewRevision, registrationIdentity)`。跨阶段夹带或缺失字段都严格拒绝。
 
-- [ ] **Step 4: 实现不可变协议模型与 codec**
+- [x] **Step 4: 实现不可变协议模型与 codec**
 
   envelope 只承载 `protocolVersion/messageId/type` 与对应 sealed message；不创建全字段可空的万能 identity。
   `targetDigest` 放在 snapshot/target 内容中，不能代替 lifecycle fence。按架构 §8 的完整 v1 schema 实现
@@ -194,7 +194,7 @@
   tree。`expectedViewRevision/registrationIdentity` 必须直接映射现有 `PublishedRuntime.invoke(String, long, ...)`。
   删除 codec 内的 `LifecycleFenceTracker`；A→B→A ack 所需的可变 pending 状态归 Task 9 的 Host execution owner。
 
-- [ ] **Step 5: 运行模块测试**
+- [x] **Step 5: 运行模块测试**
 
   Run: `mvn -pl fibra-client-protocol -am test`
 

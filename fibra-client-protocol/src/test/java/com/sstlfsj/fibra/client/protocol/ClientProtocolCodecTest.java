@@ -40,9 +40,11 @@ class ClientProtocolCodecTest {
         assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
             "{\"protocolVersion\":1,\"messageId\":\"one\",\"type\":\"host.snapshot\",\"payload\":{"
                 + "\"session\":{\"hostInstanceId\":\"host\",\"clientExecutionId\":\"client\"},"
-                + "\"viewRevision\":\"0\",\"targetRevision\":1,\"targetDigest\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\","
+                + "\"viewRevision\":\"0\",\"targetRevision\":\"1\",\"targetDigest\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\","
                 + "\"assignments\":[{\"pluginId\":\"plugin\",\"facetId\":\"facet\",\"runtimeInstanceId\":\"runtime\",\"executionTarget\":\"client:web\",\"entryModule\":\"index.js\","
-                + "\"payloadDigest\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\"requiredCapabilities\":[],\"resources\":[],\"unknown\":true}],\"contributions\":[]}}");
+                + "\"payloadDigest\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\"requiredCapabilities\":[],"
+                + "\"resources\":[{\"path\":\"index.js\",\"digest\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\"byteLength\":\"0\"}],"
+                + "\"unknown\":true}],\"contributions\":[]}}");
         assertCode(ClientProtocolCodec.ErrorCode.UNSUPPORTED_PROTOCOL,
             "{\"protocolVersion\":2,\"messageId\":\"one\",\"type\":\"client.hello\","
                 + "\"payload\":{\"identity\":{\"clientNonce\":\"nonce\"},"
@@ -87,8 +89,12 @@ class ClientProtocolCodecTest {
         assertProtocolCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
             () -> codec.encode(callEnvelope(new LiteralValue.StringValue(filler + "a"))));
 
-        var inlineBytes = snapshotWithBytes("AAAA".repeat((ClientProtocolCodec.MAX_ENVELOPE_BYTES - baseLength) / 4));
-        assertProtocolCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE, () -> codec.encode(inlineBytes));
+        var oversizedResourceList = snapshotWithResources(java.util.stream.IntStream.range(0, 20_000)
+            .mapToObj(index -> new ClientMessage.ResourceDescriptor("asset-" + index + ".js",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", 0))
+            .toList(), "asset-0.js");
+        assertProtocolCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+            () -> codec.encode(oversizedResourceList));
     }
 
     @Test
@@ -201,12 +207,78 @@ class ClientProtocolCodecTest {
     }
 
     @Test
-    void roundTripsEmptyBytesAndRejectsInvalidBase64() {
-        var envelope = snapshotWithBytes("");
-        assertEquals(envelope, codec.decode(codec.encode(envelope)));
+    void roundTripsResourceDescriptorsAndRejectsControlDataPlaneLeakage() {
+        var zero = snapshotWithResourceLength(0);
+        var maximum = snapshotWithResourceLength(Long.MAX_VALUE);
+        for (var envelope : List.of(zero, maximum)) {
+            var wire = codec.encode(envelope);
+            assertEquals(envelope, codec.decode(wire));
+            assertTrue(wire.contains("\"byteLength\":\""));
+            assertFalse(wire.contains("\"content\""));
+            assertFalse(wire.contains("\"url\""));
+            assertFalse(wire.contains("\"base64\""));
+        }
+        assertTrue(codec.encode(maximum).contains("\"byteLength\":\"9223372036854775807\""));
 
+        var wire = codec.encode(zero);
+        for (var replacement : List.of("-1", "0", "1.0", "1e2", "\"-1\"", "\"-0\"",
+            "\"00\"", "\"01\"", "\"+1\"", "\"1.0\"", "\"1e2\"", "\"\"", "\" \"",
+            "\"9223372036854775808\"")) {
+            assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+                wire.replace("\"byteLength\":\"0\"", "\"byteLength\":" + replacement));
+        }
+        for (var leakedField : List.of(
+            "\"content\":{\"kind\":\"BYTES\",\"base64\":\"\"}",
+            "\"url\":\"https://example.test/index.js\"",
+            "\"base64\":\"AA==\"")) {
+            assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+                wire.replace("\"byteLength\":\"0\"", "\"byteLength\":\"0\"," + leakedField));
+        }
         assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
-            codec.encode(snapshotWithBytes("AQ==")).replace("AQ==", "!"));
+            wire.replace(",\"byteLength\":\"0\"", ""));
+        assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+            wire.replace("\"byteLength\":\"0\"", "\"byteLength\":\"0\",\"byteLength\":\"0\""));
+        for (var leakedField : List.of("origin", "credential")) {
+            assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+                wire.replace("\"byteLength\":\"0\"",
+                    "\"byteLength\":\"0\",\"" + leakedField + "\":\"forbidden\""));
+        }
+        assertThrows(IllegalArgumentException.class,
+            () -> new ClientMessage.ResourceDescriptor("index.js",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", -1));
+    }
+
+    @Test
+    void requiresEntryModuleToReferenceAResourceAndRejectsHostPaths() {
+        var wire = codec.encode(snapshotWithResourceLength(1));
+        assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+            wire.replace("\"entryModule\":\"index.js\"", "\"entryModule\":\"missing.js\""));
+        assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+            wire.replaceFirst("\"resources\":\\[\\{[^]]*}]", "\"resources\":[]"));
+
+        var resource = "{\"path\":\"index.js\",\"digest\":"
+            + "\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\","
+            + "\"byteLength\":\"1\"}";
+        assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+            wire.replace("\"resources\":[" + resource + "]", "\"resources\":[" + resource + "," + resource + "]"));
+        assertThrows(IllegalArgumentException.class,
+            () -> snapshotWithResources(List.of(
+                new ClientMessage.ResourceDescriptor("index.js",
+                    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", 1),
+                new ClientMessage.ResourceDescriptor("index.js",
+                    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", 1)),
+                "index.js"));
+
+        for (var path : List.of("/tmp/index.js", "C:/tmp/index.js", "file:/tmp/index.js",
+            "https://example.test/index.js",
+            "../index.js", "assets/../index.js", "./index.js", "assets//index.js")) {
+            assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+                wire.replace("\"entryModule\":\"index.js\"", "\"entryModule\":\"" + path + "\"")
+                    .replace("\"path\":\"index.js\"", "\"path\":\"" + path + "\""));
+        }
+        assertThrows(IllegalArgumentException.class,
+            () -> new ClientMessage.ResourceDescriptor("C:\\tmp\\index.js",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", 1));
     }
 
     @Test
@@ -271,11 +343,17 @@ class ClientProtocolCodecTest {
             "\"input\":{\"kind\":\"NUMBER\",\"value\":\"" + value + "\"}");
     }
 
-    private static ClientEnvelope snapshotWithBytes(String base64) {
+    private static ClientEnvelope snapshotWithResourceLength(long byteLength) {
         var digest = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-        var assignment = new ClientMessage.Assignment("plugin", "facet", "runtime", "client:web", "index.js",
-            digest, List.of(), List.of(new ClientMessage.Resource("index.js", digest,
-                new ClientMessage.BytesContent(base64))));
+        return snapshotWithResources(List.of(new ClientMessage.ResourceDescriptor("index.js", digest, byteLength)),
+            "index.js");
+    }
+
+    private static ClientEnvelope snapshotWithResources(List<ClientMessage.ResourceDescriptor> resources,
+                                                        String entryModule) {
+        var digest = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+        var assignment = new ClientMessage.Assignment("plugin", "facet", "runtime", "client:web", entryModule,
+            digest, List.of(), resources);
         return new ClientEnvelope(1, "snapshot", "host.snapshot",
             new ClientMessage.Snapshot(new SessionFence("host", "client"), "0", 1, digest,
                 List.of(assignment), List.of()));

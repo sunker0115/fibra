@@ -2,30 +2,18 @@ package com.sstlfsj.fibra.client.protocol;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import java.lang.reflect.Modifier;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ClientProtocolFenceTest {
     @Test
-    void atomicallyConsumesLifecycleAcknowledgementsAndRejectsOldOrRepeatedOnes() {
-        var session = new SessionFence("host-1", "client-1");
-        var firstA = new LifecycleFence(session, 7, "runtime-a", "operation-a-first");
-        var b = new LifecycleFence(session, 8, "runtime-b", "operation-b");
-        var secondA = new LifecycleFence(session, 9, "runtime-a", "operation-a-second");
-        var tracker = new ClientProtocolCodec.LifecycleFenceTracker();
-
-        tracker.begin(firstA);
-        tracker.begin(b);
-        tracker.begin(secondA);
-
-        assertStale(() -> tracker.accept(firstA));
-        assertDoesNotThrow(() -> tracker.accept(secondA));
-        assertStale(() -> tracker.accept(secondA));
-    }
-
-    private static void assertStale(Runnable action) {
-        var stale = assertThrows(ClientProtocolCodec.ProtocolException.class, action::run);
-        assertEquals(ClientProtocolCodec.ErrorCode.STALE_OPERATION, stale.code());
+    void codecOwnsNoMutableLifecyclePendingState() {
+        assertTrue(java.util.Arrays.stream(ClientProtocolCodec.class.getDeclaredFields())
+            .filter(field -> !Modifier.isStatic(field.getModifiers()))
+            .allMatch(field -> Modifier.isFinal(field.getModifiers())));
+        assertFalse(java.util.Arrays.stream(ClientProtocolCodec.class.getDeclaredClasses())
+            .anyMatch(type -> type.getSimpleName().equals("LifecycleFenceTracker")));
     }
 }

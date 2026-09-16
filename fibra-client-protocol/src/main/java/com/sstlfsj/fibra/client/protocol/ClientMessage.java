@@ -2,8 +2,6 @@ package com.sstlfsj.fibra.client.protocol;
 
 import com.sstlfsj.fibra.value.LiteralValue;
 
-import java.util.Base64;
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -105,7 +103,7 @@ public sealed interface ClientMessage permits ClientMessage.Hello, ClientMessage
 
     record Assignment(String pluginId, String facetId, String runtimeInstanceId, String executionTarget,
                       String entryModule, String payloadDigest, List<String> requiredCapabilities,
-                      List<Resource> resources) {
+                      List<ResourceDescriptor> resources) {
         public Assignment {
             pluginId = required(pluginId, "pluginId");
             facetId = required(facetId, "facetId");
@@ -115,48 +113,24 @@ public sealed interface ClientMessage permits ClientMessage.Hello, ClientMessage
             payloadDigest = digest(payloadDigest, "payloadDigest");
             requiredCapabilities = frozenStrings(requiredCapabilities, "requiredCapabilities");
             resources = List.copyOf(Objects.requireNonNull(resources, "resources"));
+            if (resources.stream().map(ResourceDescriptor::path).distinct().count() != resources.size()) {
+                throw new IllegalArgumentException("resource paths must be unique within an assignment");
+            }
+            var entryPath = entryModule;
+            if (resources.stream().noneMatch(resource -> resource.path().equals(entryPath))) {
+                throw new IllegalArgumentException("entryModule must reference a resource in the assignment");
+            }
         }
     }
 
-    record Resource(String path, String digest, ResourceContent content) {
-        public Resource {
-            path = required(path, "path");
-            if (path.startsWith("/") || path.contains("\\") || path.equals("..") || path.startsWith("../")
-                || path.contains("/../")) {
-                throw new IllegalArgumentException("path must be a relative logical resource path");
-            }
+    record ResourceDescriptor(String path, String digest, long byteLength) {
+        public ResourceDescriptor {
+            path = resourcePath(path);
             digest = ClientMessage.digest(digest, "digest");
-            content = Objects.requireNonNull(content, "content");
-        }
-    }
-
-    sealed interface ResourceContent permits UrlContent, BytesContent {
-        String kind();
-    }
-    record UrlContent(String url) implements ResourceContent {
-        public UrlContent {
-            url = required(url, "url");
-            try {
-                var uri = URI.create(url);
-                if (uri.getScheme() == null || uri.getScheme().equalsIgnoreCase("file")) {
-                    throw new IllegalArgumentException("url must be a controlled non-file URL");
-                }
-            } catch (IllegalArgumentException exception) {
-                throw new IllegalArgumentException("url must be a controlled non-file URL", exception);
+            if (byteLength < 0) {
+                throw new IllegalArgumentException("byteLength must be non-negative");
             }
         }
-        @Override public String kind() { return "URL"; }
-    }
-    record BytesContent(String base64) implements ResourceContent {
-        public BytesContent {
-            base64 = Objects.requireNonNull(base64, "base64");
-            try {
-                Base64.getDecoder().decode(base64);
-            } catch (IllegalArgumentException exception) {
-                throw new IllegalArgumentException("base64 must be valid", exception);
-            }
-        }
-        @Override public String kind() { return "BYTES"; }
     }
 
     record Contribution(String contributionKind, ContributionId contributionId, long registrationIdentity) {
@@ -238,6 +212,24 @@ public sealed interface ClientMessage permits ClientMessage.Hello, ClientMessage
     private static String required(String value, String name) {
         value = Objects.requireNonNull(value, name);
         if (value.isBlank()) throw new IllegalArgumentException(name + " must not be blank");
+        return value;
+    }
+
+    private static String resourcePath(String value) {
+        value = required(value, "path");
+        if (value.startsWith("/") || value.contains("\\")) {
+            throw new IllegalArgumentException("path must be a relative logical resource path");
+        }
+        var segments = value.split("/", -1);
+        if (java.util.Arrays.stream(segments).anyMatch(segment -> segment.isEmpty()
+            || segment.equals(".") || segment.equals(".."))) {
+            throw new IllegalArgumentException("path must use normalized logical segments");
+        }
+        var first = segments[0];
+        var colon = first.indexOf(':');
+        if (colon > 0 && first.substring(0, colon).matches("[A-Za-z][A-Za-z0-9+.-]*")) {
+            throw new IllegalArgumentException("path must not be a URI or host path");
+        }
         return value;
     }
 }
