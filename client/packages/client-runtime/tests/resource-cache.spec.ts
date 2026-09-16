@@ -18,9 +18,26 @@ describe("VerifiedResourceCache", () => {
       cache.loadVerified({ ...descriptor(), path: "nested/index.js" }, load),
     ]);
 
-    assert.equal(first, second);
+    assert.deepEqual(first, second);
+    assert.notEqual(first.bytes, second.bytes);
     assert.equal(loads, 1);
     await assert.rejects(cache.loadVerified(descriptor("1"), load), /byteLength/);
+  });
+
+  it("isolates cache-owned bytes from loader and concurrent consumer mutations", async () => {
+    const cache = new VerifiedResourceCache();
+    const source = new Uint8Array([1, 2, 3]);
+    let loads = 0;
+    const load = async () => { loads += 1; return { bytes: source, byteLength: "3" }; };
+    const [first, concurrent] = await Promise.all([
+      cache.loadVerified(descriptor("3"), load), cache.loadVerified(descriptor("3"), load),
+    ]);
+    source.fill(7);
+    first.bytes.fill(9);
+    assert.deepEqual(concurrent.bytes, new Uint8Array([1, 2, 3]));
+    concurrent.bytes.fill(8);
+    assert.deepEqual((await cache.loadVerified(descriptor("3"), load)).bytes, new Uint8Array([1, 2, 3]));
+    assert.equal(loads, 1);
   });
 
   it("removes failed pending loads so a later request retries", async () => {

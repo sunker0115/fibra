@@ -3,6 +3,13 @@ target/
 *.class
 .flattened-pom.xml
 
+# Node / browser 构建缓存
+node_modules/
+dist/
+.pnpm-store/
+test-results/
+playwright-report/
+
 # IntelliJ IDEA
 .idea/
 *.iml

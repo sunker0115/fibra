@@ -224,6 +224,8 @@
 
   测试父子 Scope 反向关闭、失败聚合、重复关闭共享同一终态、关闭后拒绝新 effect、listener/timer 必须通过
   effect 所有权撤销。child/effect 只有成功清理后才能脱离 owner；显式关闭失败后，父关闭仍必须聚合同一失败。
+  插件可见的 root Scope 必须是运行时也没有 `close/dispose` 的登记视图，只有 instance actor 能关闭
+  root；`child()` 返回插件可独立关闭的 owned child Scope。
 
 - [x] **Step 2: 写 lifecycle RED 测试**
 
@@ -282,16 +284,19 @@
 - Create: `verification/client/risk-gate/fixtures/react-plugin/index.tsx`
 - Create: `verification/client/risk-gate/tests/client-risk-gate.spec.ts`
 
-- [ ] **Step 1: 写 ESM/resource provider/cache/释放 RED 测试**
+- [x] **Step 1: 写 ESM/resource provider/cache/释放 RED 测试**
 
   loader 只接收 `ResourceDescriptor + ClientResourceProvider`。size/digest 不匹配不得 evaluate 或写 cache；同一
   digest 的串行和并发请求只调用 provider 一次，重复 prepare 与 A→B→A 复用 verified bytes。相同 operation
   重放幂等；替换必须等待旧 Scope 关闭并撤销 object URL、listeners、timers 和 contributions，bytes cache 不随
-  instance stop 被误删。cache 的 single-flight loader 必须包含“provider 读取 + byteLength/digest 校验”，失败
+  instance stop 被误删。异步 activate 的 disposer 必须在 handler 调用前被 root 拥有，并发 root 关闭要等待
+  handler settle 后恰好清理一次；同时插件只能关闭自己创建的 child Scope，不能在类型或 JavaScript
+  运行时获得 root `close/dispose`，以免自等待。cache 的 single-flight loader 必须包含“provider 读取 +
+  byteLength/digest 校验”，失败
   移除 pending 且不能提交未验证 bytes。入口 fixture 必须是自包含单文件 ESM；增加含相对 import、bare import
   和绝对 URL import 的反例，证明不会把 blob URL 的解析行为当成模块依赖系统。
 
-- [ ] **Step 2: 实现 framework-neutral Web loader 与两个 renderer probes**
+- [x] **Step 2: 实现 framework-neutral Web loader 与两个 renderer probes**
 
   使用 esbuild 的 `bundle=true`、`format=esm`、`splitting=false` 生成 facet；构建后依据 metafile 与 TypeScript
   AST 断言产物不存在运行时静态、动态或 bare import，不自行实现模块解析器。loader 通过 provider 获取 bytes、
@@ -301,7 +306,7 @@
   `client-react` 注册 adapter，并把 React/adapter 依赖闭包编入该 probe 的单文件 bundle，不依赖运行时 bare
   specifier 解析或共享 framework instance。
 
-- [ ] **Step 3: 用无持久状态协议 harness 跑真实浏览器**
+- [x] **Step 3: 用无持久状态协议 harness 跑真实浏览器**
 
   Playwright 启动真实 Chromium，验证 Java/TypeScript 共用 fixtures、prepare/activate/drain/stop、刷新、
   A→B→A 迟到 ack、同 digest 下载合并和 DOM/React 共用同一 core。资源从真实 HTTP 数据面读取，但 endpoint
@@ -310,7 +315,7 @@
   `unsafe-eval`，并声明 capability `client.web.module.blob.v1`；去掉 `blob:` 后 capability 不成立、loader
   必须拒绝启动，不能静默放宽 CSP。
 
-- [ ] **Step 4: 运行 P0-A client 技术栈门禁并提交 checkpoint**
+- [x] **Step 4: 运行 P0-A client 技术栈门禁并提交 checkpoint**
 
   Run: `pnpm --dir verification/client/risk-gate install`
 
@@ -544,6 +549,13 @@
 **Files:**
 
 - Modify: `pom.xml`
+- Create: `fibra-api/src/main/java/com/sstlfsj/fibra/ScopeView.java`
+- Modify: `fibra-api/src/main/java/com/sstlfsj/fibra/Scope.java`
+- Modify: `fibra-api/src/main/java/com/sstlfsj/fibra/Context.java`
+- Modify: `fibra-api/src/main/java/com/sstlfsj/fibra/InvocationContext.java`
+- Modify: `fibra-core/src/main/java/com/sstlfsj/fibra/internal/DefaultScope.java`
+- Modify: `fibra-core/src/main/java/com/sstlfsj/fibra/internal/DefaultContext.java`
+- Test: `fibra-core/src/test/java/com/sstlfsj/fibra/runtime/ScopeOwnershipBoundaryTest.java`
 - Create: `fibra-runtime-host/pom.xml`
 - Modify: `fibra-parity-tests/pom.xml`
 - Create: `fibra-runtime-client/src/main/java/com/sstlfsj/fibra/runtime/client/ClientExecutionRegistry.java`
@@ -591,6 +603,12 @@
   sources，不能被生产 composition root 依赖或作为正式 adapter 发布。
 
 - [ ] **Step 6: 隔离实现 Host 与 Node execution runtime**
+
+  先硬切 Host Java root Scope 所有权：`Context.scope()` 返回不实现 `Scope/AutoCloseable`、无
+  `close/closeAsync` 的稳定 `ScopeView` facade，`openChild()` 才返回插件可关闭的 owned `Scope`。
+  RED 测试必须证明 root view 无法在类型或运行时下转为可关闭 Scope，child 可独立关闭，
+  并覆盖原 `Plugin.start(context -> context.scope().closeAsync())` 自等待反例；不保留旧的可关闭
+  `Context.scope()` 公开签名或运行时代理。
 
   `HostExecutionRuntimeTest` 使用 Engine 契约 fixture 同时覆盖内建 definition 和动态 Java prepared artifact，
   证明二者只由同一个 Host runtime 执行 `PluginDefinition.Prepared/PluginInstance/Scope/RuntimeDomain` 生命周期；

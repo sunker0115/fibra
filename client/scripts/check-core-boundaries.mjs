@@ -5,6 +5,7 @@ import ts from "typescript";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const corePackages = ["client-api", "client-runtime"];
+const rendererNeutralPackages = [...corePackages, "client-runtime-web"];
 const allowedWorkspaceDependencies = {
   "client-api": [],
   "client-runtime": ["@sstlfsj/fibra-client-api"],
@@ -22,7 +23,7 @@ for (const [name, allowed] of Object.entries(allowedWorkspaceDependencies)) {
       if (dependency.startsWith("@sstlfsj/fibra-client-") && !allowed.includes(dependency)) {
         throw new Error(`${name} has an invalid workspace dependency ${field}.${dependency}`);
       }
-      if (corePackages.includes(name) && !allowed.includes(dependency)) {
+      if (rendererNeutralPackages.includes(name) && !allowed.includes(dependency)) {
         throw new Error(`${name} must not declare ${field}.${dependency}`);
       }
     }
@@ -60,7 +61,7 @@ function validateImport(owner, sourcePath, specifier) {
   if (specifier.startsWith("@sstlfsj/fibra-client-") && !allowedWorkspaceDependencies[owner].includes(specifier)) {
     throw new Error(`${owner} imports forbidden workspace package ${specifier}`);
   }
-  if (corePackages.includes(owner) && /^(react|react-dom|electron|vue)(\/|$)/.test(specifier)) {
+  if (rendererNeutralPackages.includes(owner) && /^(react|react-dom|electron|vue)(\/|$)/.test(specifier)) {
     throw new Error(`${owner} imports renderer package ${specifier}`);
   }
 }

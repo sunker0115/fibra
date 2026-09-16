@@ -502,6 +502,15 @@ execution 的 CSP 允许 module `blob:` 时才可被选中；P0 Web Host 显式�
 `unsafe-eval`，并在 handshake 中声明精确 capability `client.web.module.blob.v1`。CSP 不满足时必须选择未来的其它正式 Web loader，
 不能静默放宽页面策略或让插件自行执行资源。
 
+`ClientContext.scope` 只是 instance root Scope 的资源登记视图，只公开 `closed/child/effect/listen/timer`；
+它在运行时也不得携带 `close/dispose`，不能只靠 TypeScript 类型隐藏。instance actor 独占 root Scope
+的关闭权，避免 lifecycle handler 等待关闭自己所在的 owner 而形成自等待；`child()` 返回插件自己
+可关闭的 child Scope，并继续由 root 级联所有。异步 `activate` 返回的 disposer 必须在调用 handler
+前预登记；外部 root 关闭必须等它 settle 并且恰好清理一次。
+同一不变量适用于 Host Java：插件 `Context` 只获得实际不实现 `Scope/AutoCloseable` 的 root
+`ScopeView`，`openChild()` 才返回调用者可关闭的 owned `Scope`。Host execution runtime 独占 root Scope
+关闭权；不得让 `Plugin.start` 通过 `context.scope().closeAsync()` 等待销毁正在启动的自己。
+
 client lifecycle 采用 session owner 与一次性 instance owner 两级模型。snapshot 先授权
 `SessionFence + targetRevision + runtimeInstanceId`，生命周期命令不得按自身 fence 临时创建状态；同一个
 `runtimeInstanceId` 只表示一次实例生命周期，失败、stop 或替换后的重试必须由 Host 分配新 id。每个 instance

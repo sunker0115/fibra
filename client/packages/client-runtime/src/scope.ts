@@ -1,4 +1,4 @@
-import type { ClientDisposable, ClientScope } from "@sstlfsj/fibra-client-api";
+import type { ClientDisposable, ClientScope, OwnedClientScope } from "@sstlfsj/fibra-client-api";
 
 export class ClientScopeClosedError extends Error {
   constructor() {
@@ -38,7 +38,8 @@ class Effect implements ClientDisposable {
 }
 
 /** Hierarchical owner for framework-neutral client resources. */
-export class Scope implements ClientScope {
+export class Scope implements OwnedClientScope {
+  readonly view: ClientScope;
   private readonly children: Scope[] = [];
   private readonly effects: Effect[] = [];
   private closing = false;
@@ -108,7 +109,16 @@ export class Scope implements ClientScope {
     this.parentRemove?.();
   }
 
-  constructor(private readonly parentRemove?: () => void) {}
+  constructor(private readonly parentRemove?: () => void) {
+    const owner = this;
+    this.view = Object.freeze({
+      get closed() { return owner.closed; },
+      child: () => owner.child(),
+      effect: (cleanup: Cleanup | ClientDisposable) => owner.effect(cleanup),
+      listen: (register: () => Cleanup | ClientDisposable) => owner.listen(register),
+      timer: (register: () => Cleanup | ClientDisposable) => owner.timer(register),
+    });
+  }
 
   private async capture(cleanup: Cleanup, failures: unknown[]): Promise<void> {
     try {

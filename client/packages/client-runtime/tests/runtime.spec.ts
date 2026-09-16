@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import type { Assignment, ClientResourceRequest, LifecycleFence, SessionFence } from "@sstlfsj/fibra-client-api";
+import type { Assignment, ClientResourceRequest, ClientScope, LifecycleFence, SessionFence } from "@sstlfsj/fibra-client-api";
 import { ClientRuntimeError, ClientSessionRuntime } from "../src/runtime.js";
 
 const session: SessionFence = { hostInstanceId: "host-1", clientExecutionId: "client-1" };
@@ -16,6 +16,148 @@ const fence = (phase: string, runtimeInstanceId = "runtime-1", targetRevision = 
 });
 
 describe("ClientSessionRuntime", () => {
+  it("gives plugins a stable registration-only root and independently closable children", async () => {
+    const views: ClientScope[] = [];
+    let childCleanups = 0;
+    let rootCleanups = 0;
+    const observe = (scope: ClientScope) => {
+      assert.equal("close" in scope, false);
+      assert.equal("dispose" in scope, false);
+      views.push(scope);
+    };
+    const runtime = new ClientSessionRuntime({ session, createModule: async (_item, context) => {
+      observe(context.scope);
+      context.scope.effect(() => { rootCleanups += 1; });
+      return {
+        prepare: (context) => { observe(context.scope); },
+        activate: async (context) => {
+          observe(context.scope);
+          const child = context.scope.child();
+          child.effect(() => { childCleanups += 1; });
+          await child.close();
+          await child.dispose();
+          assert.equal(child.closed, true);
+          assert.equal(context.scope.closed, false);
+          assert.equal(childCleanups, 1);
+          assert.equal(rootCleanups, 0);
+        },
+        drain: (context) => { observe(context.scope); },
+        stop: (context) => { observe(context.scope); },
+      };
+    } });
+    await runtime.applySnapshot({ session, viewRevision: "0", targetRevision: "5", assignments: [assignment()], contributions: [] });
+    for (const phase of ["prepare", "activate", "drain", "stop"] as const) await runtime.execute(phase, fence(phase));
+    assert.equal(views.length, 5);
+    assert(views.every((view) => view === views[0]));
+    assert.equal(views[0]?.closed, true);
+    assert.equal(childCleanups, 1);
+    assert.equal(rootCleanups, 1);
+  });
+
+  it("keeps verified bytes intact after a consumer mutates its result across A→B→A", async () => {
+    const source = new Uint8Array([1, 2, 3]);
+    let loads = 0;
+    const observed: number[][] = [];
+    const runtime = new ClientSessionRuntime({
+      session,
+      verifiedResourceLoader: { loadVerified: async () => { loads += 1; return { bytes: source, byteLength: "3" }; } },
+      createModule: async (_assignment, context) => {
+        const resource = await context.resources.load("index.js");
+        observed.push(Array.from(resource.bytes));
+        resource.bytes.fill(9);
+        return {};
+      },
+    });
+    for (const [index, name] of ["A", "B", "A"].entries()) {
+      const id = `${name}-${index}`;
+      const item = assignment(id);
+      await runtime.applySnapshot({ session, viewRevision: String(index), targetRevision: String(index + 1),
+        assignments: [{ ...item, resources: [{ ...item.resources[0]!, byteLength: "3" }] }], contributions: [] });
+      await runtime.execute("prepare", fence(`prepare-${id}`, id, String(index + 1)));
+      source.fill(7);
+    }
+    assert.deepEqual(observed, [[1, 2, 3], [1, 2, 3], [1, 2, 3]]);
+    assert.equal(loads, 1);
+  });
+
+  it("revokes an in-flight module before prepare and waits for its scope before replacement", async () => {
+    let releaseImport!: () => void;
+    let releaseCleanup!: () => void;
+    let imported!: () => void;
+    let closing!: () => void;
+    const started = new Promise<void>((resolve) => { imported = resolve; });
+    const closeStarted = new Promise<void>((resolve) => { closing = resolve; });
+    const importGate = new Promise<void>((resolve) => { releaseImport = resolve; });
+    const cleanupGate = new Promise<void>((resolve) => { releaseCleanup = resolve; });
+    let prepares = 0;
+    const runtime = new ClientSessionRuntime({ session, createModule: async (_item, context) => {
+      context.scope.effect(async () => { closing(); await cleanupGate; });
+      imported(); await importGate;
+      return { prepare: () => { prepares += 1; } };
+    } });
+    await runtime.applySnapshot({ session, viewRevision: "0", targetRevision: "5", assignments: [assignment()], contributions: [] });
+    const prepare = runtime.execute("prepare", fence("prepare"));
+    await started;
+    const replacement = runtime.applySnapshot({ session, viewRevision: "1", targetRevision: "6", assignments: [assignment("new")], contributions: [] });
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    releaseImport();
+    await assert.rejects(prepare, ClientRuntimeError);
+    await closeStarted;
+    assert.equal(prepares, 0);
+    assert.equal(runtime.phaseOf("runtime-1"), "FAILED");
+    assert.equal(runtime.phaseOf("new"), undefined);
+    releaseCleanup();
+    await replacement;
+    assert.equal(runtime.phaseOf("new"), "NEW");
+  });
+
+  for (const phase of ["prepare", "activate", "drain", "stop"] as const) {
+    it(`does not acknowledge ${phase} after authorization is revoked during its handler`, async () => {
+      let release!: () => void;
+      let entered!: () => void;
+      const started = new Promise<void>((resolve) => { entered = resolve; });
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      let cleanups = 0;
+      const runtime = new ClientSessionRuntime({ session, createModule: async (_item, context) => {
+        context.scope.effect(() => { cleanups += 1; });
+        return { [phase]: async () => { entered(); await gate; } };
+      } });
+      await runtime.applySnapshot({ session, viewRevision: "0", targetRevision: "5", assignments: [assignment()], contributions: [] });
+      for (const earlier of ["prepare", "activate", "drain", "stop"] as const) {
+        if (earlier === phase) break;
+        await runtime.execute(earlier, fence(earlier));
+      }
+      const pending = runtime.execute(phase, fence(phase));
+      await started;
+      const replacement = runtime.applySnapshot({ session, viewRevision: "1", targetRevision: "6", assignments: [assignment("next")], contributions: [] });
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      release();
+      await assert.rejects(pending, ClientRuntimeError);
+      await replacement;
+      assert.equal(cleanups, 1);
+      assert.equal(runtime.phaseOf("next"), "NEW");
+    });
+  }
+
+  it("does not poison successful stop cleanup with a stale acknowledgement", async () => {
+    let release!: () => void;
+    let entered!: () => void;
+    const started = new Promise<void>((resolve) => { entered = resolve; });
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    let stops = 0;
+    const runtime = new ClientSessionRuntime({ session, createModule: async () => ({ stop: async () => { stops += 1; entered(); await gate; } }) });
+    await runtime.applySnapshot({ session, viewRevision: "0", targetRevision: "5", assignments: [assignment()], contributions: [] });
+    for (const phase of ["prepare", "activate", "drain"] as const) await runtime.execute(phase, fence(phase));
+    const stop = runtime.execute("stop", fence("stop"));
+    await started;
+    await runtime.applySnapshot({ session, viewRevision: "1", targetRevision: "6", assignments: [assignment()], contributions: [] });
+    release();
+    await assert.rejects(stop, ClientRuntimeError);
+    await runtime.applySnapshot({ session, viewRevision: "2", targetRevision: "7", assignments: [assignment("new")], contributions: [] });
+    assert.equal(stops, 1);
+    assert.equal(runtime.phaseOf("new"), "NEW");
+  });
+
   it("authorizes actors only from snapshots and commits the complete lifecycle after handlers succeed", async () => {
     const calls: string[] = [];
     const runtime = new ClientSessionRuntime({ session, createModule: async () => ({

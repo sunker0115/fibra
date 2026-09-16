@@ -280,8 +280,9 @@ class ClientInstanceActor {
       this._phase = "PREPARING";
       try {
         this.module = await this.options.createModule(this.assignment, this.context());
+        this.assertCurrent(fence);
         await this.module.prepare?.(this.context());
-        if (this.targetRevision !== fence.targetRevision) throw new ClientRuntimeError("STALE_OPERATION", "lifecycle authorization changed during handler execution");
+        this.assertCurrent(fence);
         this._phase = "PREPARED";
         this.committedPhaseRevision = fence.targetRevision;
       } catch (failure) {
@@ -298,12 +299,12 @@ class ClientInstanceActor {
       this.stopResult = (async () => {
         try { await this.module?.stop?.(this.context()); } catch (failure) { failures.push(failure); }
         try { await this.scope.close(); } catch (failure) { failures.push(failure); }
-        if (this.targetRevision !== fence.targetRevision) throw new ClientRuntimeError("STALE_OPERATION", "lifecycle authorization changed during handler execution");
         if (failures.length === 1) throw failures[0];
         if (failures.length > 1) throw new AggregateError(failures, "runtime stop failed");
       })();
       try {
         await this.stopResult;
+        this.assertCurrent(fence);
       } catch (failure) {
         this._phase = "FAILED";
         throw failure;
@@ -317,7 +318,7 @@ class ClientInstanceActor {
     this._phase = transitional;
     try {
       await this.module?.[phase]?.(this.context());
-      if (this.targetRevision !== fence.targetRevision) throw new ClientRuntimeError("STALE_OPERATION", "lifecycle authorization changed during handler execution");
+      this.assertCurrent(fence);
       this._phase = committed;
       this.committedPhaseRevision = fence.targetRevision;
     } catch (failure) {
@@ -362,13 +363,18 @@ class ClientInstanceActor {
         }).then((value) => { this.assertUsable(); return value; });
       },
     };
-    return { scope: this.scope, host, resources: view };
+    return { scope: this.scope.view, host, resources: view };
   }
 
   private assertUsable(): void {
     if (!this._authorized || this._phase === "STOPPED" || this.scope.closed) {
       throw new ClientRuntimeError("UNAUTHORIZED_RUNTIME", "runtime context is retired");
     }
+  }
+
+  private assertCurrent(fence: LifecycleFence): void {
+    if (!this._authorized) throw new ClientRuntimeError("UNAUTHORIZED_RUNTIME", "runtime assignment was revoked during handler execution");
+    if (this.targetRevision !== fence.targetRevision) throw new ClientRuntimeError("STALE_OPERATION", "lifecycle authorization changed during handler execution");
   }
 
   private releaseStopReservation(): void {

@@ -9,7 +9,7 @@ export class VerifiedResourceCache {
     const result = existing ?? this.start(descriptor, loader);
     return result.then((value) => {
       this.verify(descriptor, value);
-      return value;
+      return { bytes: Uint8Array.from(value.bytes), byteLength: value.byteLength };
     });
   }
 
@@ -20,7 +20,7 @@ export class VerifiedResourceCache {
   private start(descriptor: ResourceDescriptor, loader: () => Promise<VerifiedResource>): Promise<VerifiedResource> {
     const pending = Promise.resolve().then(loader).then((value) => {
       this.verify(descriptor, value);
-      return value;
+      return { bytes: Uint8Array.from(value.bytes), byteLength: value.byteLength };
     });
     this.values.set(descriptor.digest, pending);
     void pending.catch(() => {

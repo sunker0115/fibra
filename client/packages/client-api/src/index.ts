@@ -4,13 +4,18 @@ export interface ClientDisposable {
   dispose(): void | Promise<void>;
 }
 
-export interface ClientScope extends ClientDisposable {
+/** Plugin-facing registration view; only the runtime owns the root lifetime. */
+export interface ClientScope {
   readonly closed: boolean;
-  close(): Promise<void>;
-  child(): ClientScope;
+  child(): OwnedClientScope;
   effect(cleanup: ClientDisposable | (() => void | Promise<void>)): ClientDisposable;
   listen(register: () => ClientDisposable | (() => void | Promise<void>)): ClientDisposable;
   timer(register: () => ClientDisposable | (() => void | Promise<void>)): ClientDisposable;
+}
+
+/** A child lifetime created and owned by the caller. */
+export interface OwnedClientScope extends ClientScope, ClientDisposable {
+  close(): Promise<void>;
 }
 
 export interface ClientError {
