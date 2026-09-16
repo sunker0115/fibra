@@ -55,6 +55,23 @@ public final class ManagedPluginPackage {
     public String packageRevision() { return packageRevision; }
     public List<ManagedFacet> facets() { return facets; }
 
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) {
+            return true;
+        }
+        if (!(other instanceof ManagedPluginPackage that)) {
+            return false;
+        }
+        return pluginId.equals(that.pluginId) && version.equals(that.version)
+            && packageRevision.equals(that.packageRevision) && facets.equals(that.facets);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(pluginId, version, packageRevision, facets);
+    }
+
     private List<ManagedFacet> freezeFacets(Collection<ManagedFacet> values) {
         Objects.requireNonNull(values, "facets");
         var byId = new LinkedHashMap<FacetId, ManagedFacet>();

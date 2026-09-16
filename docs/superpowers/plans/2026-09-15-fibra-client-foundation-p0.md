@@ -343,34 +343,37 @@
 - Create: `fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/FacetDependency.java`
 - Test: `fibra-artifact/src/test/java/com/sstlfsj/fibra/artifact/PluginPackageTest.java`
 
-- [ ] **Step 1: 写 canonical 三 facet 包测试**
+- [x] **Step 1: 写 canonical 三 facet 包测试**
 
   fixture 根只接受 `fibra-package.yaml`，字段为 `format/id/version/facets`。每个 facet 只接受
   `id/role/runtime/target/payload/dependencies/capabilities`，拒绝未知、重复、空、重复 facet id、越界路径、
   符号链接和 digest 不一致。每个 dependency 严格为 `pluginId/facetId`，不接受物理 `ArtifactId`、
   `packageRevision`、`versionConstraint` 或其它未实现字段。
 
-- [ ] **Step 2: 写旧格式拒绝测试**
+- [x] **Step 2: 写旧格式拒绝测试**
 
   新 `PluginPackage.read` 对只有 `plugin.properties` 的旧单 facet 包必须失败；不得在新 API 内存在 fallback、
   迁移读取或双写。旧生产入口暂不连接新模型，并在 Task 11 删除；这不是可发布 checkpoint。
 
-- [ ] **Step 3: 实现 PluginPackage 与内容身份**
+- [x] **Step 3: 实现 PluginPackage 与内容身份**
 
   `PluginPackage` 是用户安装单位；package/facet digest 由内容计算，不接受 manifest 自报覆盖。
 
-- [ ] **Step 4: 冻结 manifest 依赖引用边界**
+- [x] **Step 4: 冻结 manifest 依赖引用边界**
 
   `fibra-artifact` 只解析和保存稳定的逻辑依赖引用，不读取 target、选择 package revision 或执行跨包解析；
   同包与跨包统一使用 `FacetDependency(pluginId, facetId)`。精确选择解析、缺失目标和环检测属于 Engine
   target compiler，在 Task 7 实现。P0 不加入版本范围解析、自动选版、多版本冲突仲裁或占位字段。
 
-- [ ] **Step 5: 运行隔离模型测试**
+- [x] **Step 5: 运行隔离模型测试**
 
   Run: `mvn -pl fibra-artifact -am test -Dtest=PluginPackageTest -Dsurefire.failIfNoSpecifiedTests=false`
 
   Expected: PASS；新模型不调用旧 `ArtifactPackage`，也不包含兼容读取器。旧生产路径只在未发布的硬切工作
   包内暂时存在，Task 11 必须删除。
+
+**检查点：** 已提交 `bd1747c`（`feat: add logical plugin package model`）。`fibra-artifact` 84 项测试通过，
+规格复核与质量复核均通过；候选目录双快照、`fibra-content-v1` 摘要和旧格式拒绝已落地。
 
 ## Task 7：冻结生产硬切契约与 Engine 全量处置
 
@@ -395,38 +398,38 @@
 - Test: `fibra-engine/src/test/java/com/sstlfsj/fibra/engine/RuntimeOwnershipContractTest.java`
 - Test: `fibra-engine/src/test/java/com/sstlfsj/fibra/engine/BuiltInPluginPackageTest.java`
 
-- [ ] **Step 1: 写逻辑 target 与部署代次纯契约测试**
+- [x] **Step 1: 写逻辑 target 与部署代次纯契约测试**
 
   `DeploymentTarget` 的 canonical digest 只由 package selections 与 desired 决定；`targetRevision` 是独立的
   持久代次。纯值对象测试证明连续相同 digest 可判定 no-op，A→B→A 的两个 A digest 相同但由 revision
   分配器获得不同代次。真实保存前后失败矩阵移至 Task 10。
 
-- [ ] **Step 2: 写精确依赖编译 RED 测试**
+- [x] **Step 2: 写精确依赖编译 RED 测试**
 
   给定 canonical 动态包和一个已选中的最终格式合成 provider fixture，目标编译器必须把同包、跨包
   `FacetDependency(pluginId, facetId)` 解析为携带精确 `packageRevision/facetId/artifactId` 的
   `ResolvedFacetDependency`。缺失、未启用、重复边和依赖环必须在 target 保存前失败；编译器不解析版本
   范围、不下载或另选 package，也不维护第二份版本选择状态。
 
-- [ ] **Step 3: 写 execution observation 纯聚合测试**
+- [x] **Step 3: 写 execution observation 纯聚合测试**
 
   没有匹配 execution 时 client facet 聚合为 PENDING；不同 capabilities 的 execution 明细独立。Host
   start/deploy 不受离线影响的生产行为测试移至 Task 10。
 
-- [ ] **Step 4: 写 package gate 与 definition 归属值对象测试**
+- [x] **Step 4: 写 package gate 与 definition 归属值对象测试**
 
   `PluginDefinitionRef` 构造时必须同时具备 plugin/definition；内建 definitions 必须来自带稳定
   plugin/version/digest 的 `BuiltInPluginPackage`，且不能与动态包冲突。`DesiredInputEntry` 改造、package
   gate 撤销全部 executions/instances 及匿名 catalog 删除的生产行为测试移至 Task 10。
 
-- [ ] **Step 5: 冻结先登记后 I/O 的双更新契约**
+- [x] **Step 5: 冻结先登记后 I/O 的双更新契约**
 
   `PreparedArtifactUpdate` 必须在 prepare I/O 前创建并进入 ChangeSet；prepare 完成后，纯
   `ExecutionRuntime.compile` 产出 plan，`ExecutionUpdate` 再在执行 I/O、启动进程或发送远端命令前创建并
   登记。两个 `createUpdate` 自身均不得执行 I/O。测试取消、prepare 部分失败、adopt 前后关闭、不变资源借用、
   清理失败保留及 execution 清完前禁止 retire artifact。
 
-- [ ] **Step 6: 冻结 Engine 43 个生产类的最终处置**
+- [x] **Step 6: 冻结 Engine 43 个生产类的最终处置**
 
   表中“保留”表示责任与公开语义保留，仍需回归；Engine 核心项必须在 Task 10 收口，其余“修改/替换”项
   必须在 Task 11 完成前全部收口，不能留下新旧模型转换层。当前 43 个文件均位于
@@ -479,33 +482,42 @@
 | 42 | `UninstallArtifact` | 删除，以 `UninstallPackage` 替代 | 撤销逻辑插件所有 facets |
 | 43 | `UnknownRuntimeException` | 修改 | 区分 artifact runtime 与 execution target；离线不是未知 runtime |
 
-- [ ] **Step 7: 运行契约与分类门禁**
+- [x] **Step 7: 运行契约与分类门禁**
 
   Run: `mvn -pl fibra-engine -am test -Dtest=DeploymentTargetContractTest,DeploymentTargetCompilerTest,RuntimeOwnershipContractTest,BuiltInPluginPackageTest -Dsurefire.failIfNoSpecifiedTests=false`
 
   Expected: 新契约测试 PASS；43 类均有对应实施项，不存在未归类的生产类。旧生产路径尚未引用新类型，
   也不存在旧新互转 adapter；Task 13 前不可发布。
 
+**检查点：** 已提交 `22fc84a`（`feat: freeze deployment runtime contracts`）。Task 7 契约测试 23 项、
+`fibra-engine` 201 项和全 reactor 486 项测试通过，两路独立复审均无剩余 P0/P1/P2；生产硬切仍按
+Task 8–11 的阶段门继续，不能把本检查点视为可发布状态。
+
 ## Task 8：迁移制品面与 Java/Node/client 静态准备
+
+**当前状态：进行中。** `PluginPackageStore` 原子事务子阶段已完成，store 定向测试 15 项、
+`fibra-artifact` 全模块 99 项测试通过；Step 1 仍待补 Engine 侧“任一 facet inspect 失败不发布 package”的
+协调测试，Step 2–4 尚未完成。只有通过对应门禁并形成独立检查点后才能勾选。
 
 **Files:**
 
 - Create: `fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginPackageStore.java`
 - Create: `fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginPackageInstallTransaction.java`
 - Create: `fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginPackageRecord.java`
-- Create: `fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/ManagedPluginPackage.java`
-- Create: `fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/ManagedFacet.java`
+- Modify: `fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/ManagedPluginPackage.java`
 - Create: `fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaArtifactRuntime.java`
 - Create: `fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaFacetDescriptor.java`
 - Create: `fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaFacetDescriptorReader.java`
 - Create: `fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaFacetGraph.java`
+- Modify: `fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaClassIndex.java`
+- Modify: `fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaClassSpace.java`
 - Create: `fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeArtifactRuntime.java`
 - Create: `fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeFacetDescriptor.java`
 - Create: `fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeFacetDescriptorReader.java`
 - Modify: `fibra-runtime-client/pom.xml`
 - Create: `fibra-runtime-client/src/main/java/com/sstlfsj/fibra/runtime/client/ClientArtifactRuntime.java`
 - Create: `fibra-runtime-client/src/main/java/com/sstlfsj/fibra/runtime/client/ClientPreparedArtifact.java`
-- Create: `fibra-engine/src/main/java/com/sstlfsj/fibra/engine/ArtifactResources.java`
+- Modify: `fibra-engine/src/main/java/com/sstlfsj/fibra/engine/ArtifactResources.java`
 - Test: `fibra-artifact/src/test/java/com/sstlfsj/fibra/artifact/PluginPackageStoreTest.java`
 - Test: `fibra-engine/src/test/java/com/sstlfsj/fibra/engine/ArtifactResourcesTest.java`
 - Test: `fibra-runtime-java/src/test/java/com/sstlfsj/fibra/runtime/java/JavaArtifactRuntimeTest.java`
