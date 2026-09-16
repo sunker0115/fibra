@@ -18,6 +18,7 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -283,6 +284,38 @@ class RuntimeOwnershipContractTest {
             () -> resources.createUpdate(firstCompilation));
     }
 
+    @Test
+    void affectedArtifactsIncludeCrossRuntimeReverseDependencyClosure() {
+        var node = new ProbeRuntime("node");
+        var java = new ProbeRuntime("java");
+        var resources = new ArtifactResources(Map.of(node.id(), node, java.id(), java));
+        var contractV1 = managedPackage("contract", "c".repeat(64), "node",
+            "contract-v1");
+        var provider = managedPackage("provider", "b".repeat(64), "java",
+            "provider", List.of(new FacetDependency(
+                new PluginId("contract"), new FacetId("main"))));
+        var consumer = managedPackage("consumer", "a".repeat(64), "node",
+            "consumer", List.of(new FacetDependency(
+                new PluginId("provider"), new FacetId("main"))));
+        var first = resources.createUpdate(compilation(
+            consumer, provider, contractV1));
+        first.prepareAsync().block();
+        first.adopt();
+        first.closeAsync().block();
+
+        var contractV2 = managedPackage("contract", "d".repeat(64), "node",
+            "contract-v2");
+        var second = resources.createUpdate(compilation(
+            consumer, provider, contractV2));
+        second.prepareAsync().block();
+
+        assertEquals(Set.of(
+            new ArtifactId("contract-v1"), new ArtifactId("contract-v2"),
+            new ArtifactId("provider"), new ArtifactId("consumer")),
+            second.affectedArtifacts());
+        second.closeAsync().block();
+    }
+
     private static DeploymentTargetCompiler.Compilation compilation(
         ManagedPluginPackage... packages) {
         var selections = java.util.Arrays.stream(packages)
@@ -390,8 +423,12 @@ class RuntimeOwnershipContractTest {
                 }
                 @Override public Set<ArtifactId> affectedArtifacts() {
                     var result = new java.util.LinkedHashSet<ArtifactId>();
-                    result.addAll(active.keySet());
-                    if (candidate != null) result.addAll(candidate.keySet());
+                    var ids = new java.util.LinkedHashSet<ArtifactId>();
+                    ids.addAll(active.keySet());
+                    if (candidate != null) ids.addAll(candidate.keySet());
+                    ids.stream().filter(id -> !Objects.equals(active.get(id),
+                        candidate == null ? null : candidate.get(id)))
+                        .forEach(result::add);
                     return Set.copyOf(result);
                 }
                 @Override public void adopt() {

@@ -9,6 +9,23 @@ import tools.jackson.dataformat.yaml.YAMLMapper;
 final class JavaClassSpace {
     private JavaClassSpace() { }
 
+    /** 静态检查不运行初始化器、入口构造器或 definition。 */
+    static void validate(ArtifactId id, JavaFacetDescriptor descriptor, PluginClassLoader loader) {
+        if (descriptor.entrypoint().isEmpty()) return;
+        try {
+            var type = Class.forName(descriptor.entrypoint().orElseThrow(), false, loader);
+            if (!PluginEntrypoint.class.isAssignableFrom(type)
+                || java.lang.reflect.Modifier.isAbstract(type.getModifiers())
+                || !java.lang.reflect.Modifier.isPublic(type.getModifiers())
+                || !java.lang.reflect.Modifier.isPublic(type.getDeclaredConstructor().getModifiers())) {
+                throw new JavaRuntimeException(JavaRuntimePhase.LOAD, id,
+                    "entrypoint must be a concrete public PluginEntrypoint with a public no-arg constructor", null);
+            }
+        } catch (ReflectiveOperationException | LinkageError failure) {
+            throw new JavaRuntimeException(JavaRuntimePhase.LOAD, id, "cannot load Java facet entrypoint", failure);
+        }
+    }
+
     static PluginCatalogEntry<?> entry(ArtifactId id, JavaPluginManifest manifest, PluginClassLoader loader) {
         if (manifest.entrypoint().isEmpty()) return null;
         try {

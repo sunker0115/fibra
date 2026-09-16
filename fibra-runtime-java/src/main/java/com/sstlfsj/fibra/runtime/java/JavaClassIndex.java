@@ -19,7 +19,7 @@ final class JavaClassIndex {
         packages.forEach((id, artifact) -> validate(id, artifact.jars(), parent, parentPackages));
     }
 
-    private static void validate(ArtifactId owner, List<Path> jars,
+    static void validate(ArtifactId owner, List<Path> jars,
                                  ClassLoader parent, List<String> parentPackages) {
         var classes = new LinkedHashMap<String, Path>();
         try {

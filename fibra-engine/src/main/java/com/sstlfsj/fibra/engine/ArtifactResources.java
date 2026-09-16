@@ -1,6 +1,10 @@
 package com.sstlfsj.fibra.engine;
 
 import com.sstlfsj.fibra.artifact.ArtifactId;
+import com.sstlfsj.fibra.artifact.ManagedFacet;
+import com.sstlfsj.fibra.artifact.ManagedPluginPackage;
+import com.sstlfsj.fibra.artifact.PluginPackageInstallTransaction;
+import com.sstlfsj.fibra.artifact.PluginPackageRecord;
 import com.sstlfsj.fibra.artifact.RuntimeId;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -65,6 +69,61 @@ final class ArtifactResources {
         return active;
     }
 
+    Mono<PluginPackageRecord> inspectAndSave(
+        PluginPackageInstallTransaction transaction) {
+        Objects.requireNonNull(transaction, "transaction");
+        return Mono.usingWhen(
+            Mono.just(transaction),
+            current -> Mono.defer(() -> inspectPackage(
+                    current.candidate().managedPackage()))
+                .then(Mono.fromCallable(() -> Objects.requireNonNull(
+                    current.save(), "installed package record"))),
+            ignored -> Mono.empty(),
+            ArtifactResources::rollbackAfterFailure,
+            current -> Mono.fromRunnable(current::rollback));
+    }
+
+    private Mono<Void> inspectPackage(ManagedPluginPackage managedPackage) {
+        Objects.requireNonNull(managedPackage, "managedPackage");
+        var facets = managedPackage.facets().stream()
+            .sorted(Comparator.comparing(value -> value.artifactId().value()))
+            .toList();
+        return Flux.fromIterable(facets)
+            .concatMap(this::inspectFacet)
+            .then();
+    }
+
+    private Mono<RuntimeArtifactInspection> inspectFacet(ManagedFacet facet) {
+        var runtime = runtimes.get(facet.facet().runtimeId());
+        if (runtime == null) {
+            return Mono.error(new IllegalArgumentException(
+                "unknown artifact runtime " + facet.facet().runtimeId()));
+        }
+        return Mono.defer(() -> Objects.requireNonNull(
+                runtime.probe(facet.facet()), "artifact runtime probe"))
+            .then(Mono.defer(() -> Objects.requireNonNull(
+                runtime.inspect(facet), "artifact runtime inspection")))
+            .switchIfEmpty(Mono.error(new IllegalArgumentException(
+                "artifact runtime inspection is empty")))
+            .map(inspection -> {
+                if (!runtime.id().equals(inspection.runtimeId())
+                    || !facet.artifactId().equals(inspection.artifactId())) {
+                    throw new IllegalArgumentException(
+                        "artifact runtime inspection identity mismatch");
+                }
+                return inspection;
+            });
+    }
+
+    private static Mono<Void> rollbackAfterFailure(
+        PluginPackageInstallTransaction transaction, Throwable failure) {
+        return Mono.<Void>fromRunnable(transaction::rollback)
+            .onErrorResume(rollbackFailure -> {
+                failure.addSuppressed(rollbackFailure);
+                return Mono.<Void>empty();
+            });
+    }
+
     synchronized Map<RuntimeId, ArtifactRuntime.Snapshot> snapshots() {
         var result = new LinkedHashMap<RuntimeId, ArtifactRuntime.Snapshot>();
         runtimes.forEach((id, runtime) -> {
@@ -88,6 +147,7 @@ final class ArtifactResources {
         private final Map<RuntimeId, Map<ArtifactId, PreparedArtifact>>
             preparedChanges = new LinkedHashMap<>();
         private Map<ArtifactId, PreparedArtifact> prepared;
+        private Set<ArtifactId> affected = Set.of();
         private boolean started;
         private boolean preparedSuccessfully;
         private boolean adopted;
@@ -171,6 +231,11 @@ final class ArtifactResources {
                         }
                     }
                     prepared = Collections.unmodifiableMap(next);
+                    var directlyAffected = new LinkedHashSet<ArtifactId>();
+                    changes.values().forEach(update ->
+                        directlyAffected.addAll(update.affectedArtifacts()));
+                    affected = affectedClosure(directlyAffected,
+                        active.values(), target.facets().values());
                     preparedSuccessfully = true;
                 }
             }));
@@ -188,10 +253,7 @@ final class ArtifactResources {
         public Set<ArtifactId> affectedArtifacts() {
             synchronized (ArtifactResources.this) {
                 requirePrepared();
-                var result = new LinkedHashSet<ArtifactId>();
-                changes.values().forEach(update ->
-                    result.addAll(update.affectedArtifacts()));
-                return Set.copyOf(result);
+                return affected;
             }
         }
 
@@ -274,6 +336,34 @@ final class ArtifactResources {
         });
         next.putAll(replacement);
         return Collections.unmodifiableMap(next);
+    }
+
+    private static Set<ArtifactId> affectedClosure(
+        Set<ArtifactId> directlyAffected,
+        Collection<PreparedArtifact> previous,
+        Collection<DeploymentTargetCompiler.CompiledFacet> target) {
+        var reverse = new LinkedHashMap<ArtifactId, Set<ArtifactId>>();
+        previous.forEach(value -> addReverseDependencies(
+            reverse, value.facet().artifactId(), value.dependencies()));
+        target.forEach(value -> addReverseDependencies(
+            reverse, value.facet().artifactId(), value.dependencies()));
+        var affected = new LinkedHashSet<>(directlyAffected);
+        var queue = new java.util.ArrayDeque<>(affected);
+        while (!queue.isEmpty()) {
+            reverse.getOrDefault(queue.removeFirst(), Set.of()).forEach(dependent -> {
+                if (affected.add(dependent)) queue.add(dependent);
+            });
+        }
+        return Set.copyOf(affected);
+    }
+
+    private static void addReverseDependencies(
+        Map<ArtifactId, Set<ArtifactId>> reverse,
+        ArtifactId dependent,
+        List<ResolvedFacetDependency> dependencies) {
+        dependencies.forEach(dependency -> reverse
+            .computeIfAbsent(dependency.artifactId(), ignored -> new LinkedHashSet<>())
+            .add(dependent));
     }
 
     private static void validatePrepared(
