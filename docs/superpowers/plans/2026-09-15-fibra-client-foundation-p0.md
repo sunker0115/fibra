@@ -495,9 +495,10 @@ Task 8–11 的阶段门继续，不能把本检查点视为可发布状态。
 
 ## Task 8：迁移制品面与 Java/Node/client 静态准备
 
-**当前状态：进行中。** `PluginPackageStore` 原子事务子阶段已完成，store 定向测试 15 项、
-`fibra-artifact` 全模块 99 项测试通过；Step 1 仍待补 Engine 侧“任一 facet inspect 失败不发布 package”的
-协调测试，Step 2–4 尚未完成。只有通过对应门禁并形成独立检查点后才能勾选。
+**当前状态：已完成。** 检查点 `7d6aa3e` 完成 `PluginPackageStore` 原子事务，`de2386e` 完成
+Engine inspect-before-save 门禁、跨 runtime 受影响闭包，以及 Java/Node/client 静态准备。最终组合门禁中
+`fibra-artifact` 99 项、`fibra-engine` 206 项、`fibra-runtime-java` 54 项、`fibra-runtime-node` 93 项、
+`fibra-runtime-client` 12 项测试全部通过；两路独立复审均无剩余 P0/P1/P2。
 
 **Files:**
 
@@ -524,20 +525,21 @@ Task 8–11 的阶段门继续，不能把本检查点视为可发布状态。
 - Test: `fibra-runtime-java/src/test/java/com/sstlfsj/fibra/runtime/java/JavaFacetGraphTest.java`
 - Test: `fibra-runtime-node/src/test/java/com/sstlfsj/fibra/runtime/node/NodeArtifactRuntimeTest.java`
 - Test: `fibra-runtime-client/src/test/java/com/sstlfsj/fibra/runtime/client/ClientArtifactRuntimeTest.java`
+- Test: `fibra-runtime-client/src/test/java/com/sstlfsj/fibra/engine/ClientArtifactInstallGateTest.java`
 
-- [ ] **Step 1: 写 package 原子事务与受影响闭包 RED 测试**
+- [x] **Step 1: 写 package 原子事务与受影响闭包 RED 测试**
 
   `PluginPackageStore` 一次提交一个 package record 并导出受管 facet records；任一 facet stage/digest/inspect 失败不发布
   package。覆盖候选取消、partial prepare、adopt、retained failure、无关资源身份保持。
 
-- [ ] **Step 2: 实现 ArtifactRuntime 与 ArtifactResources**
+- [x] **Step 2: 实现 ArtifactRuntime 与 ArtifactResources**
 
   在不连接旧 Engine 的隔离实现中迁入现有 `PluginRuntimeAdapter.probe/inspect`、owner/update 的资源责任。
   保留创建即登记、prepare 失败可关闭、反向释放、失败依赖保留和 cached terminal；新路径不产生
   `RuntimeCatalog`。旧实现只供尚未切换的生产路径编译，Task 11 在最后一个调用点迁移后删除，不写互转
   adapter。
 
-- [ ] **Step 3: 迁移 Java/Node 并实现 client 静态描述**
+- [x] **Step 3: 迁移 Java/Node 并实现 client 静态描述**
 
   Java 的 class space/index/loader 算法保留，Node 的 payload 准备保留。二者从可信外层 `PluginFacet` 和
   Engine 已解析的 `ResolvedFacetDependency` 获得 plugin/facet/package revision/dependency wiring；
@@ -549,7 +551,7 @@ Task 8–11 的阶段门继续，不能把本检查点视为可发布状态。
   capability 条件的 `ClientPreparedArtifact`；descriptor 不含 URL/inline bytes，prepare 不连接
   transport、不要求 execution 在线，也不启动浏览器，失败必须在 target 保存前暴露。
 
-- [ ] **Step 4: 运行制品面门禁**
+- [x] **Step 4: 运行制品面门禁**
 
   Run: `mvn -pl fibra-artifact,fibra-engine,fibra-runtime-java,fibra-runtime-node,fibra-runtime-client -am test`
 
