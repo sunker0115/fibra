@@ -182,6 +182,12 @@ runtime 定义；即使沿用已有 `plugin.yaml` 或 `package.json`，它也不
 `requiredCapabilities`。顶层 `format` 只表示 manifest 格式版本。`packageDigest` 与 `payloadDigest` 均由受控内容
 计算，不在 manifest 中自报。
 
+两类内容摘要统一使用版本化的 `fibra-content-v1` SHA-256 framing：文件与目录条目携带显式类型，目录按规范化
+UTF-8 相对路径字节序排列，路径和文件内容均带长度边界；mtime、权限和本机绝对路径不进入摘要。该 framing
+避免裸拼接文件内容造成目录树歧义，并作为后续 package store 重新校验内容身份的唯一算法。直接读取可变候选
+目录时必须进行双快照一致性检查，manifest、facet 摘要或 package 摘要任一变化都按摘要失败拒绝；package
+store 在 Task 8 的私有 staging tree 上仍须用同一算法重新计算，不能把候选源路径当作已冻结内容。
+
 每个 facet 的 `dependencies[]` 使用唯一结构
 `FacetDependency(pluginId, facetId)`：来源 facet 由所在数组确定，目标始终是一个逻辑 plugin 的稳定 facet，
 不引用物理 `ArtifactId`。同包依赖也完整填写当前 `pluginId`。Engine 的目标编译器在保存前只针对唯一 target
