@@ -220,12 +220,12 @@
 - Test: `client/packages/client-runtime/tests/protocol-fixtures.spec.ts`
 - Test: `client/packages/client-runtime/tests/resource-cache.spec.ts`
 
-- [ ] **Step 1: 写 Scope/effect RED 测试**
+- [x] **Step 1: 写 Scope/effect RED 测试**
 
   测试父子 Scope 反向关闭、失败聚合、重复关闭共享同一终态、关闭后拒绝新 effect、listener/timer 必须通过
   effect 所有权撤销。child/effect 只有成功清理后才能脱离 owner；显式关闭失败后，父关闭仍必须聚合同一失败。
 
-- [ ] **Step 2: 写 lifecycle RED 测试**
+- [x] **Step 2: 写 lifecycle RED 测试**
 
   以 snapshot 先建立 session/assignment 授权，再测试一次性 runtime instance 的
   `NEW -> PREPARING -> PREPARED -> ACTIVATING -> ACTIVE -> DRAINING -> DRAINED -> STOPPING -> STOPPED`。
@@ -234,7 +234,7 @@
   撤销和 detach 必须退休实例及幂等账本，循环 100 次后状态数量不随历史增长。Host ack 的 A→B→A 围栏留给
   Task 9，不在浏览器 executor 复制 `begin/accept`。
 
-- [ ] **Step 3: 实现最小 core**
+- [x] **Step 3: 实现最小 core**
 
   `client-api` 导出 `ClientContext`、`ClientScope`、`ClientDisposable`、`ClientModule`、`HostCaller`、
   `ClientResourceProvider` 和结构化错误；`client-runtime` 负责 session/instance actor、状态机与按 digest
@@ -242,12 +242,12 @@
   或产品类型；cache 不提供写入未验证 bytes 的 `put`。删除现有
   `scheduled/applied` 回滚和 client 侧 `begin/accept`，失败实例只保留真实失败终态。
 
-- [ ] **Step 4: 双语言读取同一 fixture**
+- [x] **Step 4: 双语言读取同一 fixture**
 
   Java 与 TypeScript 必须读取 Task 3 的相同 wire fixtures；字段和值完全一致。共同 fixture 只冻结 wire
   语义，不要求不同语言共享解析器或运行机制；URL 已不属于该 fixture。
 
-- [ ] **Step 5: 运行依赖禁入与测试**
+- [x] **Step 5: 运行依赖禁入与测试**
 
   Run: `rg -n "from ['\"](react|react-dom|electron)|\b(document|window|HTMLElement)\b" client/packages/client-api client/packages/client-runtime`
 

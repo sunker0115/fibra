@@ -22,7 +22,7 @@ class Effect implements ClientDisposable {
         resolve = success;
         reject = failure;
       });
-      queueMicrotask(() => {
+      void Promise.resolve().then(() => {
         try {
           Promise.resolve(this.cleanup()).then(
             () => { this.remove(); resolve!(); },
@@ -102,10 +102,10 @@ export class Scope implements ClientScope {
     for (const effect of [...this.effects].reverse()) {
       await this.capture(() => effect.dispose(), failures);
     }
-    this.parentRemove?.();
     if (failures.length > 0) {
       throw new AggregateError(failures, "client scope cleanup failed");
     }
+    this.parentRemove?.();
   }
 
   constructor(private readonly parentRemove?: () => void) {}

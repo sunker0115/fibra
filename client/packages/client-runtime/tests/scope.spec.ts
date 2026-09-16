@@ -125,4 +125,25 @@ describe("Scope", () => {
       return true;
     });
   });
+
+  it("retains a failed child in its owner so the owner reports the same failure", async () => {
+    const parent = new Scope();
+    const child = parent.child();
+    const failure = new Error("child cleanup failed");
+    child.effect(() => { throw failure; });
+
+    const childClose = child.close();
+    await assert.rejects(childClose, (error: unknown) => {
+      assert(error instanceof AggregateError);
+      assert.equal(error.errors[0], failure);
+      return true;
+    });
+    assert.equal(child.close(), childClose);
+    await assert.rejects(parent.close(), (error: unknown) => {
+      assert(error instanceof AggregateError);
+      assert(error.errors[0] instanceof AggregateError);
+      assert.equal(error.errors[0].errors[0], failure);
+      return true;
+    });
+  });
 });

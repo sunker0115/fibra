@@ -1,16 +1,6 @@
-import type { ClientError } from "@sstlfsj/fibra-client-api";
+import type { Assignment, CallFence, ClientCall, ClientError, Contribution, ContributionId, LifecycleFence, LiteralValue, SessionFence } from "@sstlfsj/fibra-client-api";
 
-export interface SessionFence { readonly hostInstanceId: string; readonly clientExecutionId: string; }
-export interface LifecycleFence { readonly session: SessionFence; readonly targetRevision: string; readonly runtimeInstanceId: string; readonly lifecycleOperationId: string; }
-export interface CallFence { readonly session: SessionFence; readonly expectedViewRevision: string; readonly registrationIdentity: string; }
-export interface ContributionId { readonly providerInstanceId: string; readonly localName: string; }
-export type LiteralValue = null | boolean | string | readonly LiteralValue[] | LiteralNumber | LiteralObject;
-export interface LiteralNumber { readonly kind: "NUMBER"; readonly value: string; }
-export interface LiteralObject { readonly kind: "OBJECT"; readonly values: Readonly<Record<string, LiteralValue>>; }
-export interface ClientCall { readonly call: CallFence; readonly contributionKind: string; readonly contributionId: ContributionId; readonly input: LiteralValue; }
-export interface Assignment { readonly pluginId: string; readonly facetId: string; readonly runtimeInstanceId: string; readonly executionTarget: string; readonly entryModule: string; readonly payloadDigest: string; readonly requiredCapabilities: readonly string[]; readonly resources: readonly Resource[]; }
-export interface Resource { readonly path: string; readonly digest: string; readonly content: { readonly kind: "URL"; readonly url: string } | { readonly kind: "BYTES"; readonly base64: string }; }
-export interface Contribution { readonly contributionKind: string; readonly contributionId: ContributionId; readonly registrationIdentity: string; }
+export type { Assignment, CallFence, ClientCall, Contribution, ContributionId, LifecycleFence, LiteralValue, SessionFence } from "@sstlfsj/fibra-client-api";
 export type LifecycleOutcome = { readonly kind: "APPLIED" } | { readonly kind: "FAILED"; readonly failure: ClientError };
 export type CallOutcome = { readonly kind: "SUCCESS"; readonly value: LiteralValue } | { readonly kind: "FAILED"; readonly failure: ClientError };
 export interface ExecutionObservation { readonly targetRevision: string; readonly runtimeInstanceId: string; readonly lifecycleOperationId: string; readonly state: "PENDING" | "ACTIVE" | "FAILED"; readonly failure?: ClientError; }
@@ -42,7 +32,7 @@ export class ClientProtocolError extends Error {
 }
 
 export function decodeEnvelope(wire: string): ProtocolEnvelope {
-  if (new TextEncoder().encode(wire).byteLength > MAX_ENVELOPE_BYTES) {
+  if (utf8ByteLength(wire) > MAX_ENVELOPE_BYTES) {
     throw malformed("envelope exceeds 1 MiB");
   }
   return validateEnvelope(new StrictJsonReader(wire).read());
@@ -52,7 +42,7 @@ export function decodeFixtures(wire: string): readonly ProtocolEnvelope[] {
   const root = new StrictJsonReader(wire).read();
   if (!Array.isArray(root)) throw malformed("fixtures must be an array");
   return root.map((item) => {
-    if (new TextEncoder().encode(JSON.stringify(item)).byteLength > MAX_ENVELOPE_BYTES) {
+    if (utf8ByteLength(JSON.stringify(item)) > MAX_ENVELOPE_BYTES) {
       throw malformed("envelope exceeds 1 MiB");
     }
     return validateEnvelope(item);
@@ -61,7 +51,7 @@ export function decodeFixtures(wire: string): readonly ProtocolEnvelope[] {
 
 export function encodeEnvelope(envelope: ProtocolEnvelope): string {
   const result = JSON.stringify(validateEnvelope(envelope as unknown as JsonValue));
-  if (new TextEncoder().encode(result).byteLength > MAX_ENVELOPE_BYTES) {
+  if (utf8ByteLength(result) > MAX_ENVELOPE_BYTES) {
     throw malformed("envelope exceeds 1 MiB");
   }
   return result;
@@ -169,31 +159,19 @@ function assignments(value: JsonValue): void {
     for (const name of ["pluginId", "facetId", "runtimeInstanceId", "executionTarget", "entryModule"]) text(assignment, name);
     digest(assignment.payloadDigest, "payloadDigest");
     strings(assignment.requiredCapabilities, "requiredCapabilities");
+    const paths = new Set<string>();
     for (const resourceValue of array(assignment.resources, "resources")) {
       const resource = object(resourceValue, "resource");
-      exact(resource, ["path", "digest", "content"]);
+      exact(resource, ["path", "digest", "byteLength"]);
       const path = text(resource, "path");
-      if (path.startsWith("/") || path.includes("\\") || path === ".." || path.startsWith("../") || path.includes("/../")) {
+      if (!normalizedPath(path) || paths.has(path)) {
         throw malformed("path must be a relative logical resource path");
       }
+      paths.add(path);
       digest(resource.digest, "digest");
-      const content = object(resource.content, "content");
-      const kind = text(content, "kind");
-      if (kind === "URL") {
-        exact(content, ["kind", "url"]);
-        const url = text(content, "url");
-        try {
-          if (!validUri(url) || new URL(url).protocol === "file:") throw new Error();
-        } catch {
-          throw malformed("url must be a controlled non-file URL");
-        }
-      } else if (kind === "BYTES") {
-        exact(content, ["kind", "base64"]);
-        base64(textual(content, "base64"));
-      } else {
-        throw malformed("invalid resource content kind");
-      }
+      nonNegativeLong(resource.byteLength, "byteLength");
     }
+    if (!paths.has(text(assignment, "entryModule"))) throw malformed("entryModule must reference an assignment resource");
   }
 }
 
@@ -307,6 +285,16 @@ function positiveLong(value: JsonValue, name: string, code: ErrorCode = "MALFORM
   return result;
 }
 
+function nonNegativeLong(value: JsonValue, name: string): string {
+  const result = typeof value === "string" ? value : "";
+  if (!/^(0|[1-9][0-9]*)$/.test(result)
+    || result.length > 19
+    || (result.length === 19 && result > "9223372036854775807")) {
+    throw malformed(`${name} must be a canonical non-negative signed-long decimal string`);
+  }
+  return result;
+}
+
 function canonicalDecimal(value: string): void {
   if (value.length > MAX_DECIMAL_CHARACTERS) throw malformed("NUMBER value exceeds character limit");
   if (canonicalizeDecimal(value) !== value) throw malformed("NUMBER value must be canonical");
@@ -395,24 +383,25 @@ function digest(value: JsonValue, name: string): string {
   return value;
 }
 
-function base64(value: string): void {
-  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(value)) throw malformed("base64 must be valid");
-  const padding = value.endsWith("==") ? 2 : value.endsWith("=") ? 1 : 0;
-  const body = value.length - padding;
-  if (body % 4 === 1 || (padding > 0 && (value.length % 4 !== 0 || (padding === 2 && body % 4 !== 2) || (padding === 1 && body % 4 !== 3)))) {
-    throw malformed("base64 must be valid");
-  }
+function normalizedPath(path: string): boolean {
+  return path.length > 0 && !path.startsWith("/") && !path.endsWith("/") && !path.includes("\\")
+    && !/^[A-Za-z][A-Za-z0-9+.-]*:/.test(path)
+    && path.split("/").every((segment) => segment.length > 0 && segment !== "." && segment !== "..");
 }
 
-function validUri(value: string): boolean {
-  if (!/^[A-Za-z][A-Za-z0-9+.-]*:/.test(value)
-    || /[\u0000-\u0020\\<>"{}|^`]/.test(value)
-    || /%(?![0-9A-Fa-f]{2})/.test(value)) return false;
-  const authority = /^[A-Za-z][A-Za-z0-9+.-]*:\/\/([^/?#]*)/.exec(value)?.[1];
-  if (/[\[\]]/.test(value.replace(/^[A-Za-z][A-Za-z0-9+.-]*:\/\/[^/?#]*/, ""))) return false;
-  if (authority !== undefined && /[\[\]]/.test(authority)
-    && !/^(?:[^\[\]]*\[[0-9A-Fa-f:.]+\][^\[\]]*)$/.test(authority)) return false;
-  return true;
+function utf8ByteLength(value: string): number {
+  let result = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code < 0x80) result += 1;
+    else if (code < 0x800) result += 2;
+    else if (code >= 0xd800 && code <= 0xdbff && index + 1 < value.length
+      && value.charCodeAt(index + 1) >= 0xdc00 && value.charCodeAt(index + 1) <= 0xdfff) {
+      result += 4;
+      index += 1;
+    } else result += 3;
+  }
+  return result;
 }
 
 function protocolVersion(value: JsonValue): number {

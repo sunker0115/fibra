@@ -8,9 +8,11 @@
     "node": ">=20.20.0"
   },
   "scripts": {
+    "build:core": "pnpm --filter @sstlfsj/fibra-client-api build && pnpm --filter @sstlfsj/fibra-client-runtime build",
+    "typecheck:core": "pnpm run build:core",
     "test": "pnpm -r test",
     "typecheck": "tsc --noEmit",
-    "lint:boundaries": "rg -n \"from ['\\\"](react|react-dom|electron)|\\b(document|window|HTMLElement)\\b\" packages/client-api packages/client-runtime; status=$?; if [ $status -eq 0 ]; then exit 1; elif [ $status -ne 1 ]; then exit $status; fi"
+    "lint:boundaries": "node scripts/check-core-boundaries.mjs"
   },
   "devDependencies": {
     "@types/node": "22.20.2",

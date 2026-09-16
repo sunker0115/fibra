@@ -72,7 +72,7 @@ describe("v1 protocol codec", () => {
     });
   });
 
-  it("matches Java literal depth, decimal scale, base64 and URI rules", () => {
+  it("matches Java literal depth, decimal scale, and resource descriptor rules", () => {
     const template = '{"protocolVersion":1,"messageId":"one","type":"client.call","payload":{"call":{"session":{"hostInstanceId":"host","clientExecutionId":"client"},"expectedViewRevision":"0","registrationIdentity":"1"},"contributionKind":"tool","contributionId":{"providerInstanceId":"provider","localName":"read"},"input":INPUT}}';
     const nested = (count: number) => "[".repeat(count) + "null" + "]".repeat(count);
     const nestedObject = (count: number) => {
@@ -87,12 +87,14 @@ describe("v1 protocol codec", () => {
     assert.throws(() => decodeEnvelope(template.replace("INPUT", '{"kind":"NUMBER","value":"1E-2147483648"}')), ClientProtocolError);
     assert.doesNotThrow(() => decodeEnvelope(template.replace("INPUT", '{"kind":"NUMBER","value":"1E+2147483648"}')));
 
-    const snapshot = '{"protocolVersion":1,"messageId":"one","type":"host.snapshot","payload":{"session":{"hostInstanceId":"host","clientExecutionId":"client"},"viewRevision":"0","targetRevision":"1","targetDigest":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","assignments":[{"pluginId":"plugin","facetId":"facet","runtimeInstanceId":"runtime","executionTarget":"client:web","entryModule":"index.js","payloadDigest":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","requiredCapabilities":[],"resources":[{"path":"index.js","digest":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","content":CONTENT}]}],"contributions":[]}}';
-    assert.doesNotThrow(() => decodeEnvelope(snapshot.replace("CONTENT", '{"kind":"BYTES","base64":"YQ"}')));
-    assert.doesNotThrow(() => decodeEnvelope(snapshot.replace("CONTENT", '{"kind":"BYTES","base64":"YQ=="}')));
-    assert.throws(() => decodeEnvelope(snapshot.replace("CONTENT", '{"kind":"URL","url":"https://example.test/a b"}')), ClientProtocolError);
-    assert.throws(() => decodeEnvelope(snapshot.replace("CONTENT", '{"kind":"URL","url":"https://example.test/%GG"}')), ClientProtocolError);
-    assert.throws(() => decodeEnvelope(snapshot.replace("CONTENT", '{"kind":"URL","url":"https://example.test/a[b]"}')), ClientProtocolError);
+    const snapshot = '{"protocolVersion":1,"messageId":"one","type":"host.snapshot","payload":{"session":{"hostInstanceId":"host","clientExecutionId":"client"},"viewRevision":"0","targetRevision":"1","targetDigest":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","assignments":[{"pluginId":"plugin","facetId":"facet","runtimeInstanceId":"runtime","executionTarget":"client:web","entryModule":"index.js","payloadDigest":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","requiredCapabilities":[],"resources":[{"path":"index.js","digest":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","byteLength":"0"}]}],"contributions":[]}}';
+    assert.doesNotThrow(() => decodeEnvelope(snapshot));
+    assert.throws(() => decodeEnvelope(snapshot.replace('"byteLength":"0"', '"byteLength":"01"')), ClientProtocolError);
+    assert.throws(() => decodeEnvelope(snapshot.replace('"path":"index.js"', '"path":"../index.js"')), ClientProtocolError);
+    for (const path of ["file:secret", "C:/secret", "https:secret"]) {
+      assert.throws(() => decodeEnvelope(snapshot.replace('"path":"index.js"', `"path":"${path}"`)), ClientProtocolError);
+    }
+    assert.throws(() => decodeEnvelope(snapshot.replace('"entryModule":"index.js"', '"entryModule":"missing.js"')), ClientProtocolError);
     assert.throws(() => decodeFixtures("[".repeat(65) + "]".repeat(65)), ClientProtocolError);
 
     const result = '{"protocolVersion":1,"messageId":"one","type":"host.call-result","payload":{"call":{"session":{"hostInstanceId":"host","clientExecutionId":"client"},"expectedViewRevision":"0","registrationIdentity":"1"},"contributionKind":"tool","contributionId":{"providerInstanceId":"provider","localName":"read"},"outcome":{"kind":"SUCCESS","value":INPUT}}}';

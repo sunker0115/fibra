@@ -4,8 +4,11 @@
   "description": "Fibra framework-neutral client API contracts.",
   "license": "Apache-2.0",
   "type": "module",
-  "exports": "./src/index.ts",
+  "exports": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
   "scripts": {
+    "build": "tsc --project tsconfig.json",
     "test": "node -e \"const fs = require('node:fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); const assert = (condition, message) => { if (!condition) throw new Error(message); }; const assertKeys = (actual, expected, field) => assert(JSON.stringify(Object.keys(actual ?? {}).sort()) === JSON.stringify(expected), field + ' keys must match'); assertKeys(pkg.dependencies, [], 'dependencies'); assertKeys(pkg.peerDependencies, [], 'peerDependencies'); assertKeys(pkg.optionalDependencies, [], 'optionalDependencies');\""
   }
 }
