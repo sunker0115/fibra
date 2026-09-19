@@ -1,51 +1,40 @@
 package com.sstlfsj.fibra.engine;
 
+import com.sstlfsj.fibra.config.ConfigContextSnapshot;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
-
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Replaces the complete desired graph and dynamic artifact selection atomically.
- * An empty artifact list removes every dynamic artifact from the target deployment.
- */
+/** 一次完整 selections、raw desired 和 configContext 的原子 replacement。 */
 public final class ApplyDeployment implements EngineCommand {
-    private final String expectedRevision;
-    private final String expectedDesiredRevision;
-    private final List<DeploymentArtifact> artifacts;
+    private final long expectedRevision;
+    private final List<PluginSelection> selections;
     private final DesiredInputGraph graph;
+    private final ConfigContextSnapshot configContext;
 
     private ApplyDeployment(Builder builder) {
+        if (builder.expectedRevision < 0) throw new IllegalArgumentException("expected revision must not be negative");
         expectedRevision = builder.expectedRevision;
-        if (builder.expectedDesiredRevision == null
-            || builder.expectedDesiredRevision.isBlank()) {
-            throw new IllegalArgumentException("expectedDesiredRevision must not be blank");
-        }
-        expectedDesiredRevision = builder.expectedDesiredRevision;
-        artifacts = List.copyOf(builder.artifacts);
+        selections = List.copyOf(builder.selections);
         graph = Objects.requireNonNull(builder.graph, "graph");
+        configContext = Objects.requireNonNull(builder.configContext, "configContext");
     }
-
     public static Builder builder(DesiredInputGraph graph) { return new Builder(graph); }
-    @Override public String expectedRevision() { return expectedRevision; }
-    public String expectedDesiredRevision() { return expectedDesiredRevision; }
-    public List<DeploymentArtifact> artifacts() { return artifacts; }
+    public long expectedRevision() { return expectedRevision; }
+    public List<PluginSelection> selections() { return selections; }
     public DesiredInputGraph graph() { return graph; }
+    public ConfigContextSnapshot configContext() { return configContext; }
 
     public static final class Builder {
-        private String expectedRevision;
-        private String expectedDesiredRevision;
-        private List<DeploymentArtifact> artifacts = List.of();
+        private long expectedRevision;
+        private List<PluginSelection> selections = List.of();
         private final DesiredInputGraph graph;
-
+        private ConfigContextSnapshot configContext;
         private Builder(DesiredInputGraph graph) { this.graph = graph; }
-        public Builder expectedRevision(String value) { expectedRevision = value; return this; }
-        public Builder expectedDesiredRevision(String value) {
-            expectedDesiredRevision = value; return this;
-        }
-        public Builder artifacts(List<DeploymentArtifact> value) {
-            artifacts = Objects.requireNonNull(value, "artifacts"); return this;
-        }
+        public Builder expectedRevision(long value) { expectedRevision = value; return this; }
+        public Builder selections(Collection<PluginSelection> value) { selections = List.copyOf(value); return this; }
+        public Builder configContext(ConfigContextSnapshot value) { configContext = value; return this; }
         public ApplyDeployment build() { return new ApplyDeployment(this); }
     }
 }

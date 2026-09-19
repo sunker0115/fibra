@@ -8,8 +8,8 @@
     "node": ">=20.20.0"
   },
   "scripts": {
-    "build": "pnpm run build:core && pnpm --filter @sstlfsj/fibra-client-runtime-web build && pnpm --filter @sstlfsj/fibra-client-react build",
-    "build:core": "pnpm --filter @sstlfsj/fibra-client-api build && pnpm --filter @sstlfsj/fibra-client-runtime build",
+    "build": "pnpm run build:core",
+    "build:core": "pnpm --filter @sstlfsj/fibra-client-api build && pnpm --filter @sstlfsj/fibra-client-protocol build",
     "typecheck:core": "pnpm run build:core",
     "test": "pnpm -r test",
     "typecheck": "tsc --noEmit",

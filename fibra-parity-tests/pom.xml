@@ -35,6 +35,11 @@
     </dependency>
     <dependency>
       <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-client-protocol</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
       <artifactId>fibra-bridge</artifactId>
       <scope>test</scope>
     </dependency>

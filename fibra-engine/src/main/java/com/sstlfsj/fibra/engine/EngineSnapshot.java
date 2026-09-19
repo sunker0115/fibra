@@ -1,26 +1,15 @@
 package com.sstlfsj.fibra.engine;
 
-import com.sstlfsj.fibra.artifact.ArtifactId;
-import com.sstlfsj.fibra.artifact.ArtifactRecord;
-import com.sstlfsj.fibra.artifact.RuntimeId;
-import com.sstlfsj.fibra.config.DesiredInputGraph;
-import com.sstlfsj.fibra.config.DesiredSourceSnapshot;
-
 import java.util.Map;
-import java.util.Objects;
+import java.util.Optional;
 
-public record EngineSnapshot(EngineState state, DesiredSourceSnapshot desiredSource,
-                             DesiredInputGraph desiredGraph,
-                             Map<String, PluginInstanceSnapshot> instances,
-                             Map<ArtifactId, ArtifactRecord> artifacts,
-                             Map<RuntimeId, RuntimeResourceSnapshot> runtimes,
-                             String failure) {
+public record EngineSnapshot(EngineState state, String hostInstanceId,
+                             DurableTargetState durableState, Optional<DeploymentTarget> target,
+                             Optional<AttemptSnapshot> candidate, Optional<AttemptSnapshot> current,
+                             Map<ExecutionUnitKey, ExecutionObservation> retiring,
+                             Map<ExecutionUnitKey, ExecutionObservation> units, String failure) {
     public EngineSnapshot {
-        Objects.requireNonNull(state, "state");
-        Objects.requireNonNull(desiredSource, "desiredSource");
-        Objects.requireNonNull(desiredGraph, "desiredGraph");
-        instances = Map.copyOf(instances);
-        artifacts = Map.copyOf(artifacts);
-        runtimes = Map.copyOf(runtimes);
+        retiring = Map.copyOf(retiring);
+        units = Map.copyOf(units);
     }
 }

@@ -4,11 +4,11 @@
 
 ```text
 api/          Java 侧贡献契约、类型和跨语言 codec
-node-plugin/  正式 Node 安装包（plugin.properties + payload/）
+node-plugin/  正式 Node package（fibra-package.yaml + payload/）
 spring-host/  通过 Starter 接入并暴露 HTTP API 的宿主
 ```
 
-`node-plugin` 不是 Maven 模块。它是可独立复制、安装和升级的 Node 安装包：根目录的 `plugin.properties` 声明 runtime 与 payload，`payload/fibra-plugin.yaml` 和 `payload/index.mjs` 是 Node 运行时内容。本例没有 npm 依赖。
+`node-plugin` 不是 Maven 模块。它是可独立复制、安装和升级的逻辑 package：根目录的 `fibra-package.yaml` 声明精确的 Node facet、执行位置与 payload，`payload/fibra-plugin.yaml` 只声明 Node 本地 definition 和 contribution endpoint。宿主把 contribution kind 注册到不可变 `ContributionKindRegistry`，Registry 安装 package 后再提交 desired entry；不探测旧格式，也不持有 sidecar。本例没有 npm 依赖。
 
 ## 构建与验证
 

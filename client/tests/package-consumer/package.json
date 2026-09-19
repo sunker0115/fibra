@@ -1,0 +1,6 @@
+{
+  "name": "fibra-client-package-consumer",
+  "private": true,
+  "type": "module",
+  "dependencies": {}
+}

@@ -27,7 +27,7 @@ class ClientProtocolCodecTest {
         assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
             "{\"protocolVersion\":1,\"messageId\":\"one\",\"type\":\"client.observed\","
                 + "\"payload\":{\"session\":{\"hostInstanceId\":\"host\","
-                + "\"clientExecutionId\":\"client\"},\"executions\":[{\"targetRevision\":1,"
+                + "\"clientExecutionId\":\"client\"},\"executions\":[{\"unitTargetRevision\":1,"
                 + "\"runtimeInstanceId\":\"runtime\",\"runtimeInstanceId\":\"duplicate\","
                 + "\"lifecycleOperationId\":\"op\",\"state\":\"ACTIVE\"}]}}" );
         assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
@@ -41,7 +41,7 @@ class ClientProtocolCodecTest {
             "{\"protocolVersion\":1,\"messageId\":\"one\",\"type\":\"host.snapshot\",\"payload\":{"
                 + "\"session\":{\"hostInstanceId\":\"host\",\"clientExecutionId\":\"client\"},"
                 + "\"viewRevision\":\"0\",\"targetRevision\":\"1\",\"targetDigest\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\","
-                + "\"assignments\":[{\"pluginId\":\"plugin\",\"facetId\":\"facet\",\"runtimeInstanceId\":\"runtime\",\"executionTarget\":\"client:web\",\"entryModule\":\"index.js\","
+                + "\"assignments\":[{\"pluginId\":\"plugin\",\"facetId\":\"facet\",\"desiredEntryId\":\"entry\",\"definitionId\":\"definition\",\"runtimeInstanceId\":\"runtime\",\"unitTargetRevision\":\"1\",\"executionTarget\":\"client:web\",\"config\":null,\"entryModule\":\"index.js\","
                 + "\"payloadDigest\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\"requiredCapabilities\":[],"
                 + "\"resources\":[{\"path\":\"index.js\",\"digest\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\"byteLength\":\"0\"}],"
                 + "\"unknown\":true}],\"contributions\":[]}}");
@@ -59,7 +59,7 @@ class ClientProtocolCodecTest {
         assertCode(ClientProtocolCodec.ErrorCode.INVALID_IDENTITY,
             "{\"protocolVersion\":1,\"messageId\":\"one\",\"type\":\"host.prepare\","
                 + "\"payload\":{\"lifecycle\":{\"session\":{\"hostInstanceId\":\"host\"},"
-                + "\"targetRevision\":1,\"runtimeInstanceId\":\"runtime\","
+                + "\"unitTargetRevision\":1,\"runtimeInstanceId\":\"runtime\","
                 + "\"lifecycleOperationId\":\"operation\"}}}");
         assertCode(ClientProtocolCodec.ErrorCode.INVALID_IDENTITY,
             "{\"protocolVersion\":1,\"messageId\":\"one\",\"type\":\"client.hello\","
@@ -200,10 +200,64 @@ class ClientProtocolCodecTest {
             () -> new LifecycleFence(new SessionFence("host", "client"), 0, "runtime", "operation"));
 
         for (var invalid : List.of("1", "-1", "\"-1\"", "\"01\"", "\"9223372036854775808\"")) {
-            var wire = codec.encode(lifecycle).replace("\"targetRevision\":\"9223372036854775807\"",
-                "\"targetRevision\":" + invalid);
+            var wire = codec.encode(lifecycle).replace("\"unitTargetRevision\":\"9223372036854775807\"",
+                "\"unitTargetRevision\":" + invalid);
             assertCode(ClientProtocolCodec.ErrorCode.INVALID_IDENTITY, wire);
         }
+    }
+
+    @Test
+    void keepsGlobalSnapshotRevisionAndHardCutsUnitRevisionFields() {
+        var session = new SessionFence("host", "client");
+        var lifecycle = new ClientEnvelope(1, "prepare", "host.prepare",
+            new ClientMessage.Prepare(new LifecycleFence(session, 10, "runtime", "operation")));
+        var observed = new ClientEnvelope(1, "observed", "client.observed", new ClientMessage.Observed(session,
+            List.of(new ClientMessage.ExecutionObservation(9, "runtime", "operation",
+                ClientMessage.ObservedState.ACTIVE, null))));
+        var snapshot = new ClientEnvelope(1, "snapshot", "host.snapshot", new ClientMessage.Snapshot(
+            session, "0", 11, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            List.of(), List.of()));
+
+        var lifecycleWire = codec.encode(lifecycle);
+        var observedWire = codec.encode(observed);
+        var snapshotWire = codec.encode(snapshot);
+        assertTrue(lifecycleWire.contains("\"unitTargetRevision\":\"10\""));
+        assertTrue(observedWire.contains("\"unitTargetRevision\":\"9\""));
+        assertTrue(snapshotWire.contains("\"targetRevision\":\"11\""));
+        assertEquals(lifecycle, codec.decode(lifecycleWire));
+        assertEquals(observed, codec.decode(observedWire));
+        assertEquals(snapshot, codec.decode(snapshotWire));
+
+        assertCode(ClientProtocolCodec.ErrorCode.INVALID_IDENTITY,
+            lifecycleWire.replace("\"unitTargetRevision\"", "\"targetRevision\""));
+        assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+            observedWire.replace("\"unitTargetRevision\"", "\"targetRevision\""));
+        assertCode(ClientProtocolCodec.ErrorCode.MALFORMED_MESSAGE,
+            snapshotWire.replace("\"targetRevision\"", "\"unitTargetRevision\""));
+    }
+
+    @Test
+    void assignmentsPreservePerEntryDefinitionAndResolvedConfigForSharedFacets() {
+        var digest = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+        var resource = new ClientMessage.ResourceDescriptor("index.js", digest, 0);
+        var first = new ClientMessage.Assignment("plugin", "client", "first", "main",
+            "runtime-first", 5, "client:web", LiteralValue.of(java.util.Map.of("mode", "one")),
+            "index.js", digest, List.of(), List.of(resource));
+        var second = new ClientMessage.Assignment("plugin", "client", "second", "main",
+            "runtime-second", 5, "client:web", LiteralValue.of(java.util.Map.of("mode", "two")),
+            "index.js", digest, List.of(), List.of(resource));
+        var envelope = new ClientEnvelope(1, "snapshot", "host.snapshot",
+            new ClientMessage.Snapshot(new SessionFence("host", "client"), "0", 5, digest,
+                List.of(first, second), List.of()));
+
+        assertEquals(envelope, codec.decode(codec.encode(envelope)));
+        var assignments = ((ClientMessage.Snapshot) codec.decode(codec.encode(envelope)).message())
+            .assignments();
+        assertEquals(List.of("first", "second"), assignments.stream()
+            .map(ClientMessage.Assignment::desiredEntryId).toList());
+        assertEquals(List.of("one", "two"), assignments.stream()
+            .map(ClientMessage.Assignment::config)
+            .map(value -> ((java.util.Map<?, ?>) value.toJava()).get("mode").toString()).toList());
     }
 
     @Test
@@ -352,8 +406,9 @@ class ClientProtocolCodecTest {
     private static ClientEnvelope snapshotWithResources(List<ClientMessage.ResourceDescriptor> resources,
                                                         String entryModule) {
         var digest = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-        var assignment = new ClientMessage.Assignment("plugin", "facet", "runtime", "client:web", entryModule,
-            digest, List.of(), resources);
+        var assignment = new ClientMessage.Assignment("plugin", "facet", "entry", "definition",
+            "runtime", 1, "client:web", LiteralValue.of(java.util.Map.of("mode", "one")),
+            entryModule, digest, List.of(), resources);
         return new ClientEnvelope(1, "snapshot", "host.snapshot",
             new ClientMessage.Snapshot(new SessionFence("host", "client"), "0", 1, digest,
                 List.of(assignment), List.of()));

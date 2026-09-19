@@ -1,6 +1,0 @@
-id: external
-version: 1.0.0
-entrypoint: verification.distribution.plugin.Entrypoint
-requires:
-  - id: fibra-storage
-    version: ${fibra.version}

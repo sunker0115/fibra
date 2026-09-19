@@ -6,18 +6,12 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.jar.JarFile;
 import java.util.zip.ZipFile;
 
 /** prepare 期间使用的有效类名事实；不持有 Class、loader 或 entrypoint。 */
 final class JavaClassIndex {
     private static final String VERSIONS = "META-INF/versions/";
-
-    static void validate(Map<ArtifactId, JavaManifestReader.JavaPackage> packages,
-                         ClassLoader parent, List<String> parentPackages) {
-        packages.forEach((id, artifact) -> validate(id, artifact.jars(), parent, parentPackages));
-    }
 
     static void validate(ArtifactId owner, List<Path> jars,
                                  ClassLoader parent, List<String> parentPackages) {

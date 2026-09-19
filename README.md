@@ -3,20 +3,17 @@
 [![CI](https://github.com/sunker0115/fibra/actions/workflows/ci.yml/badge.svg)](https://github.com/sunker0115/fibra/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-Fibra 是 Java 21 的通用插件底座。它把生命周期与资源所有权、期望状态、不可变制品、运行时适配、贡献目录
-和管理控制面拆成稳定边界，可直接嵌入 Java 服务，也可支撑 Harness、Agent 平台、Spring Boot 宿主和正式
-CLI 应用。
+Fibra 是面向 Java 21 宿主的通用插件底座。它把插件 package、期望状态、运行时执行、生命周期资源所有权、
+贡献目录和管理控制面拆成稳定边界，可嵌入 Java 服务、Spring Boot 应用和正式 CLI 宿主。
 
-当前开发版本为 `0.5.0-SNAPSHOT`，是 vNext 重构后的开发基线，不保留 `0.4.x` 兼容层。长期
-`RuntimeDomain`、实例差量更新、Java/Node runtime、fs/search/shell/storage 正式插件、动态 CLI command、
-安全历史、补全和高亮、调用级取消与信号协调、受控终端租约、渐进 renderer、可执行 ZIP 和仓库外消费均已
-交付。当前在 `0.5.0-SNAPSHOT` 上按最终架构打磨底座，不为快照迭代升级版本或保留兼容层；公开契约
-变更必须同步更新权威架构、签名基线、契约测试与仓外消费者。
+当前开发版本为 `0.5.0-SNAPSHOT`。该版本采用新的 package、部署目标和 runtime SPI，不保留旧模型的兼容入口。
+浏览器端执行器、Web 资源装载器、前端渲染框架绑定、连接层实现和产品会话恢复属于产品仓；Fibra 只发布
+transport-neutral 的 client API 和协议契约。
 
 ## 快速开始
 
-从源码构建发行包需要 JDK 21、Maven 3.9.9、Node.js、ripgrep 15.0.1，以及当前 POSIX 目标平台的
-`/bin/bash`。Node.js 和 ripgrep 可执行文件可以分别通过 `fibra.distribution.node` 与
+构建正式发行包需要 JDK 21、Maven 3.9.9、Node.js 20.20 或更高版本、pnpm 11.19.0、Python 3、`unzip`，以及当前
+POSIX 目标平台的 `/bin/bash` 和 ripgrep 15.0.1。Node.js 和 ripgrep 路径可分别通过 `fibra.distribution.node` 与
 `fibra.distribution.rg` Maven 属性覆盖。
 
 ```bash
@@ -25,165 +22,152 @@ mvn -pl fibra-distribution -am package
 fibra-distribution/target/fibra-0.5.0-SNAPSHOT/bin/fibra --version
 fibra-distribution/target/fibra-0.5.0-SNAPSHOT/bin/fibra plugins list
 fibra-distribution/target/fibra-0.5.0-SNAPSHOT/bin/fibra tools list
-fibra-distribution/target/fibra-0.5.0-SNAPSHOT/bin/fibra \
-  tools invoke storage-tools load --input '{}'
 fibra-distribution/target/fibra-0.5.0-SNAPSHOT/bin/fibra repl
 ```
 
-`package` 同时生成可直接运行的目录和
-`fibra-distribution/target/fibra-0.5.0-SNAPSHOT-bin.zip`。发行目录包含 CLI、宿主依赖、12 个标准 Java
-插件包，以及目标平台的 Node.js、ripgrep 和 Bash 启动代理；`bin/fibra` 自动以所在目录作为安装根目录。
+`package` 同时生成可运行目录和 `fibra-0.5.0-SNAPSHOT-bin.zip`。发行目录包含 CLI、宿主依赖、12 个标准
+Java 插件 package，以及目标平台使用的 Node.js、ripgrep 和 Bash 启动代理。
 
-默认 profile 首次启动时从 `config/profiles/default.yaml` 与 `default.artifacts.yaml` 建立完整目标，之后从
-`data/` 恢复已保存目标。修改 profile 输入后显式执行 `fibra apply`；它们不会在重启时静默覆盖运行目标。
+默认 profile 使用：
 
-## 选择接入方式
+- `config/profiles/default.yaml`：期望条目树；
+- `config/profiles/default.packages.yaml`：相对 `plugins/` 的完整 package 列表；
+- `data/profiles/default/`：不可变 package、部署目标和审计数据。
 
-| 目标 | 入口 | 继续阅读 |
-|---|---|---|
-| 直接运行和管理插件 | 二进制发行包的 `bin/fibra` | [正式 CLI 宿主](#正式-cli-宿主) |
-| 在 Java 应用内使用生命周期内核 | `fibra-api`、`FibraRuntime` | [最小内核用法](#最小内核用法) |
-| 建立动态插件宿主 | `fibra-engine`、`fibra-registry`、`PublishedRuntime` | [托管与 Spring Boot](#托管与-spring-boot) |
-| 接入 Spring Boot | `fibra-spring-boot-starter` | [托管与 Spring Boot](#托管与-spring-boot) |
-| 编写 Java 或 Node 插件 | 标准插件安装目录包 | [插件安装单元](#插件安装单元) |
+首次启动从两份 profile 输入建立完整目标；之后从已保存目标恢复。修改输入后执行 `fibra apply`，重启不会
+用目录现状静默覆盖已确认目标。
 
 ## 架构
 
 ```text
-业务场景 / Harness / Spring Boot
-        │                         │
- PluginRegistry             PublishedRuntime
- 安装、升级、启停、审计        单一 PublishedView 与带 revision 调用
-        └──────────┬──────────────┘
-               FibraEngine        唯一串行变更入口
-                    ├── EngineStateStore       单个完整目标
-                    ├── PublishedState         一致事实与调用路由
-                    ├── RuntimeDomain          长期运行域
-                    │    ├── Scope 所有权树
-                    │    ├── 插件及实际服务依赖
-                    │    └── ContributionDirectory
-                    └── Java / Node owners     仅替换受影响资源
+管理请求 / CLI / Spring Boot
+            |
+      PluginRegistry
+            |
+      FibraEngine             唯一串行 command lane
+       |    |    |
+       |    |    +-- PublishedRuntime：不可变事实与带 fence 调用
+       |    +------- DeploymentTargetStore：完整 durable target
+       +------------ PluginPackageStore：不可变逻辑 package
+            |
+   RuntimeProvider -> RuntimeDriver -> generation -> execution unit
+            |
+      Java / Node / 外部 runtime provider
+            |
+      RuntimeDomain + ContributionDirectory
 ```
+
+一次 `ApplyDeployment` 原子提交完整 package selections、raw desired graph 和 `ConfigContextSnapshot`。
+Engine 先编译并按 runtime slice prepare/validate/seal 完整 candidate，再以 CAS 保存新的 `DeploymentTarget`，
+随后原子 promote、关闭旧准入、drain/stop 旧 units、activate 新 units，最后 retire 旧资源并发布实际观察结果。
+保存前不会启动执行；运行时故障不会伪装成目标未保存；重启只从已确认的完整目标和精确 package revision
+恢复。
 
 模块职责：
 
-- `fibra-api`：`Scope`、`Context`、插件、服务、事件和 effect 公共契约；
-- `fibra-core`：唯一 lifecycle lane 与资源所有权实现；
-- `fibra-config`：期望状态解析、校验、编译和写回事务；
-- `fibra-artifact`：运行时中立的不可变制品存储、摘要与精确 revision 读取；
-- `fibra-engine`：runtime port、串行命令、完整目标保存、差量协调和一致 `PublishedView`；
-- `fibra-runtime-java`：单一 manifest、依赖图和按制品管理的隔离 ClassLoader；
-- `fibra-runtime-node`：受限 Node 入口、sidecar、JSON-RPC、心跳和进程树治理；
-- `fibra-bridge`：本地与远程贡献的统一目录、调用适配和 drain；
-- `fibra-registry`：面向管理面的安装、升级、启停、查询、watch 和审计；
-- `fibra-cli-api`：应用元数据、bootstrap/dynamic command、调用上下文、输出、退出状态和终端租约契约；
-- `fibra-cli`：profile 级正式宿主、插件管理、PublishedRuntime 工具调用和长期 REPL；
-- `fibra-spring`、`fibra-spring-boot-starter`：显式 Spring 服务桥接和组合入口；
-- `fibra-plugin-archetype`：生成独立 Java 插件工程，其主 JAR 用作安装包的 payload；
-- `fibra-plugins`：正式插件产品的根聚合模块，自身不发布；`fibra-tool-api` 以及 fs、subprocess、shell、
-  storage 四个领域在其下分别发布 contract、provider 和 tool consumer。
+- `fibra-api`、`fibra-core`：Scope、插件、服务、事件、effect 和唯一生命周期所有权实现；
+- `fibra-config`：期望状态采集、校验、条件求值和配置绑定；
+- `fibra-artifact`：`PluginPackage`、`PluginPackageStore`、内容摘要和 package revision；
+- `fibra-engine`：完整目标、runtime SPI、串行变更、观察事实和 `PublishedRuntime`；
+- `fibra-runtime-java`、`fibra-runtime-node`：Java 与 Node 的 `RuntimeProvider` 实现；
+- `fibra-bridge`：贡献目录、调用适配、注册身份和排空；
+- `fibra-registry`：安装、升级、启停、部署、查询和审计用例；
+- `fibra-cli-api`、`fibra-cli`：CLI 契约、profile 宿主、动态命令和 REPL；
+- `fibra-spring`、`fibra-spring-boot-starter`：显式宿主服务桥接和默认组合；
+- `fibra-client-protocol`：Java 侧、传输中立的 client wire value 与 codec；
+- `client/packages/client-api`、`client/packages/client-protocol`：正式 npm client 契约；
+- `fibra-plugin-archetype`：独立 Java 插件工程骨架；
+- `fibra-plugins`：fs、subprocess、shell、storage 及 tool consumer 的正式插件产品。
 
-client foundation 已由 [Client Foundation 权威架构](docs/superpowers/specs/2026-09-15-fibra-client-foundation-architecture.md)
-定义为 Fibra 的后续 P0 工作：它提供统一 `RuntimeDriver` SPI、transport-neutral protocol/API 和执行协调，
-Java/Node 由 Fibra 实现；具体 browser client RuntimeDriver、adapter、runner、transport、Web loader、
-renderer 及 Electron/React 页面属于产品仓。远程市场、非可信插件沙箱和具体 Agent 模型仍不属于 Fibra
-通用底座。
+## 插件 package
 
-## 最小内核用法
+安装、升级、持久化和恢复的原子单位是逻辑目录 package。根目录必须包含唯一 `fibra-package.yaml`：
 
-```java
-var runtime = FibraRuntime.create();
-var scope = runtime.rootScope().openChild("application");
-var greeting = ServiceKey.of("greeting", Greeting.class);
-
-var provider = PluginDefinition.builder("provider", String.class,
-    () -> (context, prefix) -> {
-        context.services().provide(greeting, name -> prefix + ", " + name);
-        return Mono.empty();
-    })
-    .provide(greeting)
-    .build();
-
-var instance = scope.context().plugins().mount("provider", provider.prepare("你好"));
-instance.settled().block();
-var text = scope.context().services().reference(greeting)
-    .invoke((invocation, service) -> service.greet("Fibra"));
-
-scope.close();
-runtime.close();
+```yaml
+format: 1
+id: example-plugin
+version: 1.0.0
+facets:
+  - id: host
+    role: host
+    runtime: java
+    target: host
+    payload: host/main.jar
+    dependencies: []
+    capabilities: []
+  - id: client
+    role: client
+    runtime: client
+    target: client:web
+    payload: client
+    dependencies:
+      - pluginId: example-contract
+        facetId: host
+    capabilities:
+      - client.module
 ```
 
-注册到插件 `Context` 的服务、事件和 effect 自动归当前插件实例所有；关闭实例或 `Scope` 会按逆序撤销，不要求插件手工返回 registration 列表。
+一个 package 可声明多个 facet。每个 facet 独立声明 `role`、`runtime`、`target`、包内 `payload`、精确 facet
+依赖和所需宿主能力；逻辑插件身份与版本只在 package 根声明一次。payload 必须位于 package 真实目录内，
+package 禁止符号链接。`PluginPackage` 对受控文件树计算内容身份，`PluginPackageStore` 以完整 package 为事务
+单位保存不可变副本。
 
-`InvocationContext` 明确分开能力语境和资源语境：`caller()` 决定 realm、intercept、logger、
-`plugins()` 与服务解析，`effects()` 及嵌套 `ServiceRef` 沿内部资源 `Context` 保留实际 owner；`scope()`
-返回该 owner 所在的生命周期 Scope。普通服务调用的资源语境就是 caller，因此插件内调用创建的 effect
-仍归插件实例；贡献调用的 `caller()` 是注册插件 owner，资源语境则是宿主为该次调用创建的临时 Scope
-`Context`。两者必须位于同一 `RuntimeDomain`，调用结束会先排空临时 Scope，再释放贡献的在途计数。
+Java facet 的 payload 是主 JAR。JAR 中的 `META-INF/fibra/plugin.yaml` 只描述 Java 本地定义和入口；
+contract-only JAR 可使用空对象，不复制 package 身份、版本和 facet 依赖。Node facet 的 payload 目录包含
+Node 本地 descriptor 和入口。runtime 只能从 store 管理的 package 读取 payload，不能从安装候选路径执行。
 
-## 正式插件
+## Runtime SPI
 
-正式插件和宿主主程序分离，每个插件都是独立制品；provider 与 consumer 是运行时角色，不是两套插件
-格式。provider 向 `RuntimeDomain` 提供服务，consumer 只依赖 contract，并把工具注册到长期
-`ContributionDirectory`。当前产品模块如下：
+宿主通过 `FibraEngine.Builder.runtimeProvider(...)` 注册 runtime。一个 `RuntimeProvider` 提供唯一 runtime id、
+contract identity、内建 package，并作为不可变、可复用 factory 为每次 Host 创建一个全新、独立的长期
+`RuntimeDriver`。provider 不保存 Host/driver 可变状态，Engine 独占 driver 与 package/target stores 的关闭权。
+driver 负责：
 
-- 宿主工具契约：`fibra-tool-api`；
-- 文件：`fibra-fs`、`fibra-fs-local`、`fibra-tool-fs`、`fibra-tool-fs-search`；
-- 子进程：`fibra-subprocess`、`fibra-subprocess-local`；
-- Shell：`fibra-shell`、`fibra-shell-local`、`fibra-tool-shell`；
-- 配置存储：`fibra-storage`、`fibra-storage-json`、`fibra-tool-storage`。
+1. 探测和检查 facet；
+2. 从完整 `RuntimeTargetSlice` 创建 candidate；
+3. 准备 candidate，并以已编译 slice 封存 generation；
+4. 按 `ExecutionUnitKey` 返回 execution unit；
+5. 在同一生命周期 lane 上 reconcile、关闭准入、drain、stop 和采样观察事实。
 
-除宿主使用的 `fibra-tool-api` 外，以上包含 12 个动态插件的 Maven JAR 发布物。每个 JAR 是对应 Java
-安装目录包的 payload；实际安装、升级和持久化均以完整包根目录为单位。它们通过真实制品图和
-公开 `PublishedRuntime` 联合验收，不进入宿主 classpath，也不打入 Engine 或宿主 JAR。完整角色关系、
-依赖和打包约束见 [正式插件说明](fibra-plugins/README.md)。
+Engine 只理解这组中立协议，不按 Java、Node 或 browser 类型分支。Java 和 Node provider 在本仓实现；产品侧
+可基于公开 SPI 实现其他 runtime。浏览器端代码执行、页面渲染绑定、连接载体和产品重连状态机不得进入
+Fibra 正式发布物。
 
-`fibra-subprocess-local` 是文件搜索和 Shell 共用的独立 Java provider。Windows 使用 kill-on-close
-Job Object；Linux 优先使用 user-systemd transient scope，能力不可用时显式降级到较弱的进程组监督器；
-macOS 使用进程组边界并保留逃逸后代限制。它与 Node sidecar 的进程管理实现相互独立。
+## 身份与调用
 
-单独发布的 Maven 插件 JAR 不捆绑外部可执行文件。嵌入式宿主须分别为 subprocess、搜索和 Shell provider
-配置 Node.js、ripgrep 与 Bash 路径，建议使用绝对路径。正式 ZIP 已按目标平台携带 Node.js、ripgrep 和
-Bash 启动代理，并通过默认 profile 注入现有配置，不需要改变插件公开 API。项目 CI 固定使用 ripgrep
-15.0.1，与当前 DSH 0.1.5-rc.2 锁定的 `@vscode/ripgrep` 1.18.0 一致。
+`desiredEntryId` 是同一 facet 多实例化时的稳定期望身份；package revision、runtime instance、unit target
+revision 和 lifecycle operation id 分别约束制品、运行单元代次和单次操作。依赖变化会进入受影响闭包，即使
+某个 facet 自身 payload 未变化，也不会错误保留基于旧依赖准备的 generation。
 
-## 插件安装单元
+贡献的业务身份是 `ContributionId(providerInstanceId, localName)`，可跨宿主重启保持稳定。调用准入必须同时
+携带捕获时的 `viewRevision` 和 `registrationIdentity`；后两者是进程内 fence，重启或重新注册后不能复用。
+因此同名能力更新不会把旧调用静默路由到新 handler。
 
-下列 `plugin.properties` 描述的是当前已发布 vNext 制品格式。Client Foundation P0-A–P0-D 会在最终合并时硬切为
-`fibra-package.yaml` 逻辑包和多 facet 模型，并拒绝旧单 facet 格式；最终格式、迁移边界和验收条件只以
-[Client Foundation 权威架构](docs/superpowers/specs/2026-09-15-fibra-client-foundation-architecture.md)
-为准。本段不构成新格式的兼容承诺。
+## Client 契约边界
 
-Java 与 Node 统一安装目录包，包根的 `plugin.properties` 只允许三个字段：
+Fibra 正式发布两份 npm 包：
 
-```properties
-formatVersion=1
-runtime=java
-payload=lib/main.jar
-```
+- `@sstlfsj/fibra-client-api`：client scope、module 生命周期和宿主调用门面；
+- `@sstlfsj/fibra-client-protocol`：协议消息、身份 fence、assignment、resource descriptor 和严格 codec。
 
-Java 包的 `lib/main.jar` 为主 payload，`lib/` 中的其他 JAR 是包内私有依赖。Node 包使用
-`runtime=node`，`payload` 指向包内独立目录，例如 `payload/`。payload 必须存在且位于包根内，
-不能是绝对路径、包根本身或越界路径；整个安装包禁止符号链接。裸 JAR 和直接在根目录放置
-`fibra-plugin.yaml` 的旧 Node 目录都不作为安装输入。
+Java 侧的 `fibra-client-protocol` 与 TypeScript 协议包共享版本 1 fixture。资源只以相对路径、SHA-256 digest
+和十进制 byte length 描述；协议不指定 WebSocket、IPC 或其他连接方式，也不提供浏览器端执行器、Web
+资源装载器或前端渲染框架绑定。产品仓负责获取并复核资源、建立 session、选择连接方式、执行模块和恢复
+产品状态。
 
-`plugin.properties` 仅描述布局和 runtime 路由，不重复声明插件标识、版本、依赖或入口。
-`PluginArtifactProbe` 调用对应 runtime 读取内部 manifest，返回的 `DeploymentArtifact.source()`
-始终是整个包根。`ArtifactStore` 复制完整包并计算内容摘要，runtime 从受管副本解析 payload。
+每个 `Assignment` 显式携带 `desiredEntryId`、`definitionId`、`unitTargetRevision`、`runtimeInstanceId` 和
+resolved `config`。产品 runner 从 entry module 的 `definitions[]` 精确选择一个 definition，并为每个
+assignment 调用一次 `create(ClientInstanceContext)`；返回 module 的生命周期方法无参数。Fibra 不提供全局
+definition registry、实例缓存、loader 或 runner。
 
-## 正式 CLI 宿主
+## 正式 CLI 与 Spring Boot
 
-CLI 的默认目录是 `${fibra.home}/config`、`${fibra.home}/plugins` 和 `${fibra.home}/data`。每个 profile
-使用 `config/profiles/<profile>.yaml` 作为配置条目树，并使用相邻的
-`<profile>.artifacts.yaml` 显式列出相对 `plugins/` 的完整插件包集合。首次启动从两份输入建立并保存一个
-完整目标；后续启动直接恢复该目标，只有 `apply` 会重新导入两份 profile 输入。
-
-命令面如下：
+CLI 的主要命令面：
 
 ```text
 fibra [--home DIR] [--profile NAME] plugins list
 fibra [全局选项] plugins install|upgrade PACKAGE
-fibra [全局选项] plugins uninstall ARTIFACT_ID
+fibra [全局选项] plugins uninstall PLUGIN_ID
 fibra [全局选项] plugins enable|disable INSTANCE_ID
 fibra [全局选项] tools list
 fibra [全局选项] tools invoke PROVIDER LOCAL_NAME --input JSON
@@ -191,145 +175,37 @@ fibra [全局选项] apply
 fibra [全局选项] repl
 ```
 
-一次性动态命令和 REPL 使用同一命令代规则与 invocation 准入路径；每次涉及运行时 command
-contribution 的操作从一个捕获视图新建私有 Picocli 解析对象，不跨线程或跨行共享 `CommandSpec`。REPL 在会话期间只创建一个 Engine/Registry 宿主，因此插件实例、
-ClassLoader、Node sidecar、effects 和在途调用不会因每行命令重建。`plugins install/upgrade` 接受明确的
-本地标准插件包路径并把内容复制到当前 profile 的不可变制品库；网络链接下载属于后续市场/来源适配层，
-不伪装成本地安装。`tools list` 与 `tools invoke` 都经过当前不可变 `PublishedView`，调用携带同一
-view revision；关闭和 JVM shutdown 会先取消 CLI 发起的在途调用，再由 Engine 排空受管资源。
-工具成功与失败都使用带 `isError` 的判别式 JSON。成功包含有序 `content` 与可选
-`structuredContent`；失败包含同样可直接展示的 `content` 以及稳定 `error.code/message`，调用方不需要
-解析易变文案。例如：
+动态命令和工具调用都从当前 `PublishedView` 捕获 descriptor、view revision 和 registration identity，再经过
+同一准入路径执行。长期 REPL 只持有一个 Engine/Registry 宿主，不按输入行重建 runtime。
 
-```json
-{"content":[{"type":"text","text":"saved"}],"isError":false,"structuredContent":{"revision":1},"viewRevision":"..."}
-{"content":[{"type":"text","text":"Error: timed out"}],"error":{"code":"TIMEOUT","message":"timed out"},"isError":true,"viewRevision":"..."}
-```
-
-该形状由 `fibra-tool-api` 的成功产物与调用终态统一投影，可适配最新 MCP `2026-07-28`，但 CLI JSON
-不是 MCP JSON-RPC response；`resultType`、`input_required` 和协议 `_meta` 由未来 MCP bridge 管理。
-直接 `tools invoke` 失败仍以进程退出码 4 表达 CLI 业务失败，不为每个工具错误码再造一套退出码。
-
-## Java 插件 payload
-
-Java 制品 JAR 中只声明一个 `META-INF/fibra/plugin.yaml`。可运行插件实现
-`PluginEntrypoint<C>` 并声明唯一 `entrypoint`：
-
-```yaml
-id: greeting
-version: 1.0.0
-entrypoint: org.example.GreetingEntrypoint
-requires: []
-```
-
-内部 manifest 是 `id`、`version`、`requires` 和 `entrypoint` 的唯一真源。只承载共享 SPI/DTO 的
-contract-only JAR 省略 `entrypoint`，仍参与 SemVer 依赖图，但不会生成可挂载的 `PluginDefinition`。
-插件工程仅以 `provided` 方式依赖 `fibra-api` 及其契约制品。`fibra-runtime-java` 校验 manifest、解析
-SemVer 依赖图，为每个安装包建立隔离 `URLClassLoader`：主 JAR 优先，随后按路径顺序读取 `lib/` 中的
-私有 JAR，插件间类型仍沿显式依赖图委派。主 JAR 和私有 JAR 均不得通过 manifest 的 `Class-Path`
-扩展装载路径。升级替换变化制品及其旧新依赖图中的反向依赖闭包，无关 ClassLoader 保留；旧资源在
-相关调用和实例清理完成后关闭。不扫描注解或全部 class 猜测入口，也不生成扩展索引。
-
-## Node 插件
-
-Node 安装包根声明 `runtime=node` 和 `payload=payload`；其 `payload/` 目录包含
-`fibra-plugin.yaml` 和目录内的 `.js`、`.mjs` 或 `.cjs` 入口。内部 manifest 是插件标识、版本、
-入口、协议和贡献声明的唯一真源：
-
-```yaml
-id: echo-node
-version: 1.0.0
-protocol: 1
-entrypoint: index.mjs
-contributions:
-  - name: echo
-    kind: fibra.tool
-    schemaVersion: 2
-    method: echo
-    descriptor:
-      displayName: Echo
-      description: Echo arguments from the Node sidecar
-      inputSchema: { type: object }
-      outputSchema: { type: object }
-```
-
-runtime 从 ArtifactStore 受管包的 payload 解析入口。宿主使用参数数组启动随模块发布的进程监督器，
-再由监督器启动该入口，全程不经过 Shell。
-`node:fs`、`node:net`、`node:child_process` 等 `node:` 引用是 Node 内建模块，不需要随包安装。第三方 npm
-包应在发布前打包进入口文件，或以不含符号链接的生产 `node_modules` 放入 payload；运行时不执行
-`npm install`，也不联网补依赖。
-runtime 内部的 `NodeSidecar` 只处理有界 JSON-RPC、逐请求 deadline/取消、心跳和异常退出；远端请求先登记为
-调用 Scope 的资源，取消只影响该请求并等待原请求终态。取消宽限耗尽、协议故障、心跳失败或异常退出才
-升级为实例级故障。`NodeProcessUnit` 负责一个可等待的受管进程范围，按“stdin EOF、软终止、强终止、
-范围静默、目录清理”收口。POSIX 使用独立进程组，Windows 使用系统进程树终止后端；主动逃离受管范围
-不属于本地 sidecar 的安全保证。Node 贡献和 Java 本地贡献登记到长期运行域的 `ContributionDirectory`，
-只由 Engine 当前发布的 `PublishedRuntime` 对外调用，不向宿主公开 sidecar 或协议请求入口。
-
-## 托管与 Spring Boot
-
-需要动态安装和管理时依赖 `fibra-engine` 或 `fibra-registry`；宿主只通过 `start()`、
-`submit(EngineCommand)` 和稳定的 `published()` 门面工作。`PublishedRuntime.current()` 读取当前不可变事实，
-`views()` 只发布订阅后的变化、不重放历史，慢订阅者可能合并中间状态；需要同时覆盖当前和后续变化时，
-先订阅 `views()`，再读取 `current()`。能力调用必须携带选择能力时看到的 `viewRevision`。所有外部变更经过
-同一个命令队列：预检、保存完整目标、差量协调、发布实际结果。目标保存成功不等于插件已经达成目标；
-保存后的运行故障不会反写旧目标。恢复只按完整目标读取精确制品，不回退旧版本或猜测源文件。仅在没有
-已保存目标时，宿主提供的初始制品和配置树才进入同一个首次启动 `ChangeSet`；已有持久目标启动时不会被
-插件目录、默认空配置或 watcher 静默覆盖。
-
-Spring Boot 只需引入：
-
-```xml
-<dependency>
-  <groupId>com.sstlfsj</groupId>
-  <artifactId>fibra-spring-boot-starter</artifactId>
-  <version>0.5.0-SNAPSHOT</version>
-</dependency>
-```
-
-```yaml
-fibra:
-  storage-root: ./.fibra
-  source:
-    refresh-interval: 1s
-```
-
-starter 自动组合 `ArtifactStore`、持久化 `FileEngineStateStore`、Java runtime、Engine 与 Registry。
-初始化阶段仅将标注 `@FibraService` 的宿主 Bean 收集为显式 host binding，不扫描或托管动态插件对象。
-Engine 启动时冻结并复制这些 binding；bridge 返回的 `ServiceRegistration.dispose()` 仅能在启动前取消
-待收集 binding，启动后不会动态撤销已发布服务。
-Spring 继续拥有 Bean，运行域关闭与在途排空由 Engine 负责。
-
-`fibra.source.refresh-interval` 默认 `0s`，即不自动导入配置源；设置为正值后，文件事件只触发可合并的 dirty signal，周期 resync 负责发现丢失通知。无效源保留 last-good 目标和运行实例并公开失败诊断，修正后自动恢复。已有持久目标启动时只建立源观察基线，不会被源文件静默覆盖。
-
-默认存储由 Engine 内部持有并关闭；如提供自定义 `ArtifactStore` 或 `EngineStateStore` bean，须声明 `@Bean(destroyMethod = "")`，不能让容器再次独立关闭。
+Spring Boot 引入 `fibra-spring-boot-starter` 后，默认建立 `PluginPackageStore`、
+`FileDeploymentTargetStore`、Java/Node provider、Engine、Registry、审计仓库和 `PublishedRuntime`。
+`fibra.storage-root` 默认为 `.fibra`。使用 `@FibraService` 显式导出宿主 Bean；动态插件对象不会被 Spring
+扫描或托管。
 
 ## 构建与验证
 
 ```bash
 mvn clean verify
+
+corepack enable
+corepack prepare pnpm@11.19.0 --activate
+pnpm --dir client install --frozen-lockfile
+scripts/verify-client-packages.sh
 scripts/verify-reproducible-release.sh
-scripts/verify-distribution.sh
+scripts/verify-architecture-boundaries.sh
 ```
 
-当前发布边界为 27 个 Maven 制品，其中包含 `fibra-cli-api`、正式 `fibra-cli` 和 12 个动态插件的 Java
-payload JAR；这些制品已纳入发布、可复现和临时仓部署清单。仓库外消费者从 ZIP 启动器加载真实 Java
-command 插件，验证执行、help 与停用后消失。完整 reactor 覆盖真实 JAR、真实 Node 进程、目标恢复、Spring、archetype、
-架构边界和 JMH 编译门禁。
-
-CLI 公共 API、全仓、可复现制品、复用现有 Maven 本地仓库的仓外消费者和解压启动门禁必须随发行边界
-变化统一重跑，不能用较早提交的结果替代当前发布证据。
+正式发布边界为 28 个 Maven 制品和 2 个 npm 制品。门禁覆盖公共签名、Java/Node 真实执行、package 与 durable
+target 恢复、Spring、archetype、独立 Maven/npm 消费者、发行 ZIP、可复现性和正式归档内容。详细发布清单与
+流程见 [发布与构建基线](docs/release.md)。`verify-distribution.sh` 会创建唯一一次全新 Maven 消费仓库，本地开发
+与 PR 事件不执行该空仓门禁，每次 push 由 GitHub Actions 自动执行。
 
 ## 深入阅读
 
 - [公共 API 与嵌入入口](docs/api/README.md)
-- [可运行示例](fibra-example/README.md)
 - [正式插件角色与打包约束](fibra-plugins/README.md)
-- [发布边界与 Maven Central 流程](docs/release.md)
-- [vNext 权威架构与 `0.5.x` 维护边界](docs/superpowers/specs/2026-09-07-fibra-vnext-architecture.md)
-- [行为验收账本](docs/superpowers/references/2026-09-11-behavior-verification-ledger.md)
-- [Java Harness 接入场景](docs/superpowers/specs/2026-09-07-fibra-java-harness-integration.md)
-- [DeepSeek Harness Java 公开架构分析](docs/superpowers/references/2026-09-14-deepseek-harness-java-analysis.md)
-
-## 许可证
-
-Fibra 使用 [Apache License 2.0](LICENSE)。Cordis 行为参考和其他依赖的归属见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+- [可运行示例](fibra-example/README.md)
+- [Client Foundation 权威架构](docs/superpowers/specs/2026-09-15-fibra-client-foundation-architecture.md)
+- [发布与构建基线](docs/release.md)
+- [贡献指南](CONTRIBUTING.md)

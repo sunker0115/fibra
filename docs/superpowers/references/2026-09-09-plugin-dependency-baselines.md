@@ -257,10 +257,11 @@ RuntimeDomain 等待的 participant，payload 在 POSIX 独立进程组内运行
 | 单独停用 provider | 内核使实际消费者清理旧快照并进入 PENDING，Engine 报告目标是否达成 | 不暗改 desired graph；逐 entry 要求区分合法等待与未达成，仍发布实际运行事实 |
 | 前后端共同交付 | 后续独立 Web 集成消费版本化图 | 浏览器实际状态必须独立报告，不能与服务端提交视为一个原子事务 |
 
-源码入口见 [plugin-dependency](../../../fibra-example/plugin-dependency/README.md)、`JavaArtifactGraphTest`、
-`PluginClassLoaderTest` 与 `PluginDependencyScenarioIT`。图约束、真实 JAR 委派及旧整代示例不能单独
-证明最终差量更新已实现；验收还必须验证无关实例/装载器保持身份、provider 停用后的真实 PENDING
-以及局部失败结果。版本匹配仅证明声明兼容，不证明二进制或业务行为兼容。
+源码入口见正式插件验收
+[`FormalMultiPluginIT`](../../../fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/src/test/java/com/sstlfsj/fibra/plugins/acceptance/FormalMultiPluginIT.java)
+与 `PluginClassLoaderTest`。正式验收以真实插件 JAR 验证无关实例/装载器保持身份、provider package
+停用后的真实 PENDING、契约 package 升级的静态反向依赖传播以及局部失败结果。版本匹配仅证明声明
+兼容，不证明二进制或业务行为兼容。
 
 ## 补充设计参照
 

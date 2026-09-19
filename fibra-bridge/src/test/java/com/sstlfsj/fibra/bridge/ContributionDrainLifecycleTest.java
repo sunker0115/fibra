@@ -24,7 +24,7 @@ class ContributionDrainLifecycleTest {
         var child = new AtomicReference<PluginInstance<Void>>();
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var childDefinition = PluginDefinition.builder("child", Void.class,
-                () -> (context, config) -> directory.register(context, COMMAND, "child", "call", "child",
+                () -> (context, config) -> directory.openAdmission("child").register(context, COMMAND, "call", "child",
                     (invocation, input) -> Mono.just(input)).then()).build();
             var definition = PluginDefinition.builder("parent", Void.class,
                 () -> (context, config) -> {

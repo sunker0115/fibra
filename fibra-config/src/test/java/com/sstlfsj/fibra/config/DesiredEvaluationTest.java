@@ -15,12 +15,12 @@ class DesiredEvaluationTest {
     @Test
     void localContextMakesTheSameReferenceResolveDifferentlyAndInjectsEntryMetadata() {
         var expression = LiteralValue.of(Map.of("$ref", "/value"));
-        var first = DesiredInputEntry.builder("first", "sample")
+        var first = DesiredInputEntry.builder("first", ref("sample"))
             .context(Map.of("value", LiteralValue.of("one")))
             .config(LiteralValue.of(Map.of("value", expression,
                 "id", Map.of("$ref", "/entry/id"),
                 "parent", Map.of("$ref", "/entry/parentId")))).build();
-        var second = DesiredInputEntry.builder("second", "sample")
+        var second = DesiredInputEntry.builder("second", ref("sample"))
             .context(Map.of("value", LiteralValue.of("two")))
             .config(expression).build();
         var graph = new DesiredInputGraph(List.of(
@@ -37,7 +37,7 @@ class DesiredEvaluationTest {
 
     @Test
     void groupConditionConjoinsWithChildrenAndCanBeReevaluatedWithoutChangingRawGraph() {
-        var child = DesiredInputEntry.builder("worker", "sample")
+        var child = DesiredInputEntry.builder("worker", ref("sample"))
             .when(LiteralValue.of(Map.of("$ref", "/child")))
             .config(LiteralValue.of(Map.of("$ref", "/missing"))).build();
         var group = DesiredInputGroup.builder("group")
@@ -46,7 +46,7 @@ class DesiredEvaluationTest {
         var graph = new DesiredInputGraph(List.of(group));
 
         var stopped = DesiredEvaluation.evaluate(graph,
-            ConfigContextSnapshot.of(Map.of("group", false)));
+            snapshot(Map.of("group", false)));
 
         assertFalse(stopped.require("group").effective().enabled());
         assertFalse(stopped.require("worker").effective().enabled());
@@ -54,12 +54,12 @@ class DesiredEvaluationTest {
         assertEquals(group, graph.require("group"));
 
         var failure = assertThrows(ConfigException.class, () -> DesiredEvaluation.evaluate(graph,
-            ConfigContextSnapshot.of(Map.of("group", true, "child", true))));
+            snapshot(Map.of("group", true, "child", true))));
         assertEquals("CONTEXT_REFERENCE_MISSING", failure.diagnostic().code());
         assertEquals("worker", failure.diagnostic().entryId());
 
         var recovered = DesiredEvaluation.evaluate(graph,
-            ConfigContextSnapshot.of(Map.of("group", true, "child", true, "missing", "ready")));
+            snapshot(Map.of("group", true, "child", true, "missing", "ready")));
         assertTrue(recovered.require("worker").effective().enabled());
         assertEquals(LiteralValue.of("ready"),
             recovered.require("worker").resolvedConfig().orElseThrow());
@@ -67,7 +67,7 @@ class DesiredEvaluationTest {
 
     @Test
     void disabledAncestorSkipsInvalidDescendantConditionAndConfig() {
-        var child = DesiredInputEntry.builder("worker", "sample")
+        var child = DesiredInputEntry.builder("worker", ref("sample"))
             .when(LiteralValue.of(Map.of("$ref", "/missing-condition")))
             .config(LiteralValue.of(Map.of("$ref", "/missing-config"))).build();
         var graph = new DesiredInputGraph(List.of(
@@ -84,7 +84,7 @@ class DesiredEvaluationTest {
         var when = LiteralValue.of(Map.of("$ref", "/enabled"));
         var context = Map.of("enabled", LiteralValue.of(true));
         var group = DesiredInputGroup.builder("group").when(when).context(context)
-            .children(List.of(DesiredInputEntry.builder("worker", "sample").build())).build();
+            .children(List.of(DesiredInputEntry.builder("worker", ref("sample")).build())).build();
         var include = DesiredInputInclude.builder("include").enabled(false).when(when).context(context)
             .content(new DesiredIncludeContent.Collected(List.of())).build();
         var graph = new DesiredInputGraph(List.of(group, include));
@@ -95,7 +95,7 @@ class DesiredEvaluationTest {
         assertEquals(context, changed.require("group").context());
         assertEquals(when, changed.require("include").when());
         assertEquals(context, changed.require("include").context());
-        assertThrows(IllegalArgumentException.class, () -> DesiredInputEntry.builder("bad", "sample")
+        assertThrows(IllegalArgumentException.class, () -> DesiredInputEntry.builder("bad", ref("sample"))
             .context(Map.of("entry", LiteralValue.of("forged"))).build());
     }
 
@@ -109,8 +109,16 @@ class DesiredEvaluationTest {
                 .when(LiteralValue.of(Map.of("$eq", List.of(1)))).build())
             .diagnostic().code());
         assertEquals("EXPRESSION_SHAPE_INVALID", assertThrows(ConfigException.class, () ->
-            DesiredInputEntry.builder("entry", "sample")
+            DesiredInputEntry.builder("entry", ref("sample"))
                 .config(LiteralValue.of(Map.of("$if", List.of(true, "one")))).build())
             .diagnostic().code());
+    }
+
+    private static ConfigContextSnapshot snapshot(Map<String, ?> values) {
+        return ConfigContextSnapshot.of((LiteralValue.ObjectValue) LiteralValue.of(values));
+    }
+
+    private static PluginDefinitionRef ref(String definitionId) {
+        return new PluginDefinitionRef("sample-plugin", "main", definitionId);
     }
 }

@@ -10,11 +10,11 @@ JMH 只测可在单 JVM 内稳定重复的路径：
 - `ServiceResolutionBenchmark`：服务直接解析、绑定引用调用，以及生命周期线程内批量解析。
 - `EventDispatchBenchmark`：1、8、64 个监听器下的广播和 waterfall 调用。
 - `ContributionInvocationBenchmark`：已注册本地贡献从冻结路由查找、类型校验、调用到 inflight 释放的完整 `ContributionRoutes.invoke` 路径。
-- `EngineTransactionBenchmark`：从 `PluginRegistry` 发起 disable/enable，经 Engine 单写通道、期望状态事务、代际发布和旧 Scope 退役的完整控制面路径。该用例使用丢弃型 journal/audit，排除存储介质差异。
+- `EngineTransactionBenchmark`：将 noop definition 作为 `JavaRuntimeProvider` 私有的 built-in package，从 `PluginRegistry` 发起 desired entry disable/enable，经 Engine 单写通道、完整 `DeploymentTarget` CAS、代际发布和旧 Scope 退役的完整控制面路径。该用例使用内存 target store 和丢弃型 audit，排除存储介质差异。
 
 以下能力不放入 JMH：
 
-- 插件制品复制、校验与目录落盘；
+- package 复制、校验与目录落盘；
 - Java JAR 扫描、`ClassLoader` 创建与关闭；
 - Node sidecar 进程启动、握手、JSON-RPC 和进程终止；
 - Spring Boot 启动与 HTTP 请求。

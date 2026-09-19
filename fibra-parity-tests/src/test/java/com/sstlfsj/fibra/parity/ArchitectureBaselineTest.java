@@ -36,7 +36,7 @@ class ArchitectureBaselineTest {
         "fibra-runtime-node", "fibra-registry", "fibra-cli-api", "fibra-cli", "fibra-spring",
         "fibra-spring-boot-starter", "fibra-plugin-archetype",
         "fibra-plugins", "fibra-distribution", "fibra-example", "fibra-parity-tests",
-        "fibra-benchmarks", "fibra-client-protocol", "fibra-runtime-client");
+        "fibra-benchmarks", "fibra-client-protocol");
 
     @Test
     void rootDeclaresOnlyTheVNextArchitecture() throws Exception {
@@ -75,7 +75,7 @@ class ArchitectureBaselineTest {
             assertThrows(ClassNotFoundException.class,
                 () -> Class.forName("com.sstlfsj.fibra.config." + type));
         }
-        for (var type : List.of("PreparedRuntimeGeneration", "RuntimeChangeRequest",
+        for (var type : List.of("RuntimeChangeRequest",
             "RuntimeGeneration", "RuntimeGenerationRequest", "RuntimeGenerationSnapshot",
             "TransactionJournal", "FileTransactionJournal",
             "ChangeParticipant", "PreparedChange", "ChangeSet", "ChangeSetResult",
@@ -83,6 +83,18 @@ class ArchitectureBaselineTest {
             assertThrows(ClassNotFoundException.class,
                 () -> Class.forName("com.sstlfsj.fibra.engine." + type));
         }
+        for (var type : List.of("ArtifactInstallTransaction", "ArtifactPackage",
+            "ArtifactRecord", "ArtifactStore")) {
+            assertThrows(ClassNotFoundException.class,
+                () -> Class.forName("com.sstlfsj.fibra.artifact." + type));
+        }
+        for (var type : List.of("PluginRuntimeAdapter", "ArtifactRuntime",
+            "RuntimeCatalog", "RuntimeResourceOwner")) {
+            assertThrows(ClassNotFoundException.class,
+                () -> Class.forName("com.sstlfsj.fibra.engine." + type));
+        }
+        assertThrows(ClassNotFoundException.class,
+            () -> Class.forName("com.sstlfsj.fibra.runtime.client.ClientArtifactRuntime"));
     }
 
     @Test
@@ -120,7 +132,7 @@ class ArchitectureBaselineTest {
     @Test
     void clientFoundationUsesDedicatedJavaModulesWithoutJavaScriptTooling() throws Exception {
         var root = reactorRoot();
-        for (var module : List.of("fibra-client-protocol", "fibra-runtime-client")) {
+        for (var module : List.of("fibra-client-protocol")) {
             assertTrue(Files.isRegularFile(root.resolve(module).resolve("pom.xml")),
                 () -> module + " must be a dedicated Maven module");
         }

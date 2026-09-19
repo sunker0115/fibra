@@ -21,7 +21,7 @@ final class JavaFacetDescriptorReader {
         .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build()).build();
 
     JavaFacetDescriptor read(PluginFacet facet) {
-        if (!JavaArtifactRuntime.RUNTIME_ID.equals(facet.runtimeId())) {
+        if (!JavaRuntimeProvider.RUNTIME_ID.equals(facet.runtimeId())) {
             throw new IllegalArgumentException("facet runtime is not Java");
         }
         var payload = facet.payload();

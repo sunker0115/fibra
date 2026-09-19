@@ -1,19 +1,19 @@
 package com.sstlfsj.fibra.plugins.acceptance;
 
+import com.sstlfsj.fibra.artifact.PluginPackage;
 import com.sstlfsj.fibra.plugins.tool.ToolRequest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.jar.JarFile;
-import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -21,12 +21,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FormalPluginArtifactsIT {
-    private static final Pattern ID = Pattern.compile("(?m)^id: ([^\\s]+)$");
-    private static final Pattern VERSION = Pattern.compile("(?m)^[ \\t]*version: ([^\\s]+)$");
-    private static final Pattern REQUIREMENT = Pattern.compile("(?m)^  - id: ([^\\s]+)$");
+    private static final Set<String> CONTRACT_PACKAGES = Set.of(
+        "fibra-fs", "fibra-subprocess", "fibra-shell", "fibra-storage");
 
     @Test
-    void manifestsUseExactReleaseVersionsAndOnlyDeclaredDependencyEdges() {
+    void packagesUseExactReleaseVersionsAndOnlyDeclaredFacetDependencyEdges(@TempDir Path packageSources) {
         var expected = new LinkedHashMap<String, List<String>>();
         expected.put("fibra-fs", List.of());
         expected.put("fibra-fs-local", List.of("fibra-fs"));
@@ -40,21 +39,34 @@ class FormalPluginArtifactsIT {
         expected.put("fibra-storage", List.of());
         expected.put("fibra-storage-json", List.of("fibra-storage"));
         expected.put("fibra-tool-storage", List.of("fibra-storage"));
-        var releaseVersion = first(VERSION, PluginAcceptanceHarness.manifest(
-            PluginAcceptanceHarness.stagedJar("fibra-fs")));
+        var releaseVersion = version("fibra-fs");
 
-        expected.forEach((artifactId, requirements) -> {
-            var artifact = PluginAcceptanceHarness.stagedJar(artifactId);
-            var manifest = PluginAcceptanceHarness.manifest(artifact);
-            assertEquals(artifactId, first(ID, manifest));
-            assertFalse(manifest.contains("${"), artifactId + " contains an unresolved placeholder");
-            var versions = all(VERSION, manifest);
-            assertFalse(versions.isEmpty(), artifactId + " has no version");
-            assertTrue(versions.stream().allMatch(releaseVersion::equals),
-                artifactId + " does not use one exact release column");
-            assertEquals(artifactId + '-' + releaseVersion + ".jar",
-                artifact.getFileName().toString());
-            assertEquals(requirements, all(REQUIREMENT, manifest));
+        expected.forEach((pluginId, dependencies) -> {
+            var jar = PluginAcceptanceHarness.stagedJar(pluginId);
+            var request = PluginAcceptanceHarness.installRequest(packageSources, jar);
+            var pluginPackage = PluginPackage.read(request.source());
+            assertEquals(pluginId, pluginPackage.pluginId().value());
+            assertEquals(releaseVersion, pluginPackage.version());
+            assertEquals(pluginId + '-' + releaseVersion + ".jar", jar.getFileName().toString());
+            assertEquals(1, pluginPackage.facets().size());
+            var facet = pluginPackage.facets().getFirst();
+            assertEquals("main", facet.facetId().value());
+            assertEquals("host", facet.role().value());
+            assertEquals("java", facet.runtimeId().value());
+            assertEquals("host", facet.executionTarget().value());
+            assertTrue(facet.requiredCapabilities().isEmpty());
+            assertEquals(dependencies, facet.dependencies().stream()
+                .map(value -> value.pluginId().value()).toList());
+            assertTrue(facet.dependencies().stream()
+                .allMatch(value -> value.facetId().value().equals("main")));
+            var descriptor = PluginAcceptanceHarness.manifest(jar);
+            assertFalse(descriptor.contains("id:"));
+            assertFalse(descriptor.contains("version:"));
+            assertFalse(descriptor.contains("requires:"));
+            if (CONTRACT_PACKAGES.contains(pluginId)) {
+                assertEquals("{}\n", descriptor,
+                    pluginId + " contract facet descriptor must be empty");
+            }
         });
     }
 
@@ -160,17 +172,9 @@ class FormalPluginArtifactsIT {
         }
     }
 
-    private static String first(Pattern pattern, String input) {
-        var matcher = pattern.matcher(input);
-        assertTrue(matcher.find(), () -> "missing " + pattern + " in\n" + input);
-        return matcher.group(1);
-    }
-
-    private static List<String> all(Pattern pattern, String input) {
-        var values = new ArrayList<String>();
-        var matcher = pattern.matcher(input);
-        while (matcher.find()) values.add(matcher.group(1));
-        return List.copyOf(values);
+    private static String version(String pluginId) {
+        var fileName = PluginAcceptanceHarness.stagedJar(pluginId).getFileName().toString();
+        return fileName.substring(pluginId.length() + 1, fileName.length() - 4);
     }
 
     private static Set<String> classEntries(Path jar) {

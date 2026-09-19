@@ -1,28 +1,31 @@
 package com.sstlfsj.fibra.scenario;
 
-import com.sstlfsj.fibra.PluginInstanceState;
 import com.sstlfsj.fibra.ServiceKey;
-import com.sstlfsj.fibra.artifact.ArtifactId;
-import com.sstlfsj.fibra.artifact.ArtifactStore;
-import com.sstlfsj.fibra.artifact.RuntimeId;
+import com.sstlfsj.fibra.artifact.PluginPackageRecord;
+import com.sstlfsj.fibra.artifact.PluginPackageStore;
 import com.sstlfsj.fibra.bridge.ContributionCodec;
 import com.sstlfsj.fibra.bridge.ContributionId;
 import com.sstlfsj.fibra.bridge.ContributionKind;
+import com.sstlfsj.fibra.bridge.ContributionKindRegistry;
+import com.sstlfsj.fibra.config.ConfigContextSnapshot;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
-import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
+import com.sstlfsj.fibra.config.PluginDefinitionRef;
 import com.sstlfsj.fibra.engine.ApplyDeployment;
-import com.sstlfsj.fibra.engine.DeploymentArtifact;
-import com.sstlfsj.fibra.engine.DeploymentManifest;
-import com.sstlfsj.fibra.engine.EngineStateStore;
+import com.sstlfsj.fibra.engine.AttemptPhase;
+import com.sstlfsj.fibra.engine.DeploymentTarget;
+import com.sstlfsj.fibra.engine.DeploymentTargetStore;
+import com.sstlfsj.fibra.engine.DurableTargetToken;
+import com.sstlfsj.fibra.engine.ExecutionObservation;
+import com.sstlfsj.fibra.engine.ExecutionUnitKey;
 import com.sstlfsj.fibra.engine.FibraEngine;
-import com.sstlfsj.fibra.engine.FileEngineStateStore;
+import com.sstlfsj.fibra.engine.FileDeploymentTargetStore;
 import com.sstlfsj.fibra.engine.HostServiceRegistry;
+import com.sstlfsj.fibra.engine.PluginSelection;
 import com.sstlfsj.fibra.engine.PublishedView;
-import com.sstlfsj.fibra.engine.RuntimeResourceSnapshot;
-import com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter;
-import com.sstlfsj.fibra.runtime.node.NodePluginRuntimeAdapter;
+import com.sstlfsj.fibra.runtime.java.JavaRuntimeProvider;
 import com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions;
+import com.sstlfsj.fibra.runtime.node.NodeRuntimeProvider;
 import com.sstlfsj.fibra.value.LiteralValue;
 import fixture.DisableJavaEntrypoint;
 import org.junit.jupiter.api.Test;
@@ -58,12 +61,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CrossRuntimeSelfDisableTest {
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
     private static final ContributionKind<String, String, String> CONTROL =
-        ContributionKind.remote("control", String.class, String.class, String.class, new ControlCodec());
-    private static final ContributionId STABLE_CONTROL = new ContributionId("stable-node", "control");
+        ContributionKind.remote("control", String.class, String.class,
+            String.class, new ControlCodec());
 
     @Test
-    void selfDisablePersistsCompleteTargetAndPreservesUnrelatedRuntimeAndInflightCall(@TempDir Path work)
-        throws Exception {
+    void selfDisablePersistsCompleteTargetAndPreservesUnrelatedRuntimeAndInflightCall(
+        @TempDir Path work) throws Exception {
         var starts = new CopyOnWriteArrayList<JavaLifecycle>();
         var cleanups = new CopyOnWriteArrayList<JavaLifecycle>();
         var services = hostServices(starts, cleanups);
@@ -71,209 +74,234 @@ class CrossRuntimeSelfDisableTest {
         var stablePidFile = work.resolve("stable.pid");
         var holdEntered = work.resolve("hold-entered");
         var raw = rawTarget(selfPidFile, stablePidFile, holdEntered);
-        var artifacts = List.of(
-            artifact("self-java", javaArtifact(work, "self-java", "fixture.DisableJavaEntrypoint"),
-                JavaPluginRuntimeAdapter.RUNTIME_ID),
-            artifact("stable-java", javaArtifact(work, "stable-java", "fixture.DisableJavaEntrypoint$Stable"),
-                JavaPluginRuntimeAdapter.RUNTIME_ID),
-            artifact("self-node", nodeArtifact(work, "self-node"), NodePluginRuntimeAdapter.RUNTIME_ID),
-            artifact("stable-node", nodeArtifact(work, "stable-node"), NodePluginRuntimeAdapter.RUNTIME_ID));
+        var packageRoot = work.resolve("packages");
+        var packages = new PluginPackageStore(packageRoot);
+        var selections = List.of(
+            selection(install(packages, javaPackage(work, "self-java",
+                "fixture.DisableJavaEntrypoint"))),
+            selection(install(packages, javaPackage(work, "stable-java",
+                "fixture.DisableJavaEntrypoint$Stable"))),
+            selection(install(packages, nodePackage(work, "self-node"))),
+            selection(install(packages, nodePackage(work, "stable-node"))));
         var observations = new CopyOnWriteArrayList<SaveObservation>();
         var stateRoot = work.resolve("state");
-        var store = new RecordingStateStore(new FileEngineStateStore(stateRoot));
-        DeploymentManifest disabledTarget;
-        try {
-            try (var engine = engine(work, services, store)) {
-                var empty = engine.start().block(TIMEOUT);
-                var deployed = engine.submit(ApplyDeployment.builder(raw)
-                    .expectedRevision(empty.viewRevision())
-                    .expectedDesiredRevision(empty.engine().desiredSource().revision())
-                    .artifacts(artifacts).build()).block(TIMEOUT).view();
-                assertEquals(raw.plugins().keySet(), deployed.engine().instances().keySet());
-                deployed.engine().instances().values().forEach(instance ->
-                    assertEquals(PluginInstanceState.ACTIVE, instance.state()));
-                assertHealthy(deployed);
-                var selfPid = recordedPids(selfPidFile).getFirst();
-                var stablePid = recordedPids(stablePidFile).getFirst();
-                assertTrue(alive(selfPid));
-                assertTrue(alive(stablePid));
-                assertEquals(2, starts.size());
-                var selfLoader = loader(starts, "self-java");
-                var stableLoader = loader(starts, "stable-java");
-                assertNotSame(DisableJavaEntrypoint.class.getClassLoader(), selfLoader);
-                assertNotSame(DisableJavaEntrypoint.class.getClassLoader(), stableLoader);
-                assertNotSame(selfLoader, stableLoader);
-                var initialTarget = store.load().orElseThrow();
-                store.afterSave = target -> observations.add(new SaveObservation(target,
-                    cleanups.size(), alive(selfPid), alive(stablePid)));
+        var store = new RecordingTargetStore(
+            new FileDeploymentTargetStore(stateRoot));
+        DeploymentTarget disabledTarget;
 
-                try (var watcher = FileSystems.getDefault().newWatchService()) {
-                    work.register(watcher, StandardWatchEventKinds.ENTRY_CREATE,
-                        StandardWatchEventKinds.ENTRY_MODIFY);
-                    var held = engine.published().invoke(deployed.viewRevision(), identity(deployed, CONTROL,
-                        STABLE_CONTROL), CONTROL,
-                        STABLE_CONTROL, "hold").toFuture();
-                    try {
-                        awaitFile(watcher, holdEntered);
-                        var current = engine.published().current();
-                        assertEquals("requested", engine.published().invoke(current.viewRevision(),
-                            identity(current, CONTROL, new ContributionId("self-java", "control")), CONTROL,
-                            new ContributionId("self-java", "control"), "disable").block(TIMEOUT));
-                        var javaDisabled = awaitDisabled(engine, "self-java");
-                        assertTarget(initialTarget, raw.withEnabled("self-java", false), store, javaDisabled);
-                        assertEquals(1, observations.size());
-                        assertEquals(0, observations.getFirst().javaCleanups());
-                        assertTrue(observations.getFirst().selfNodeAlive());
-                        assertTrue(observations.getFirst().stableNodeAlive());
-                        assertEquals(store.load().orElseThrow(), observations.getFirst().target());
-                        assertEquals(List.of(new JavaLifecycle("self-java", selfLoader)), cleanups);
-                        assertStable(deployed, javaDisabled, starts, cleanups, stableLoader,
-                            stablePidFile, stablePid);
-                        assertHealthy(javaDisabled);
-                        assertFalse(held.isDone());
+        try (var engine = engine(work, packages, services, store)) {
+            engine.startAsync().block(TIMEOUT);
+            var deployed = engine.submit(ApplyDeployment.builder(raw)
+                .expectedRevision(0).selections(selections)
+                .configContext(ConfigContextSnapshot.empty()).build())
+                .block(TIMEOUT).view();
+            assertEquals(raw.plugins().keySet(), deployed.engine().units().keySet()
+                .stream().map(ExecutionUnitKey::value)
+                .collect(java.util.stream.Collectors.toSet()));
+            deployed.engine().units().values().forEach(unit ->
+                assertEquals(ExecutionObservation.State.ACTIVE,
+                    unit.aggregateState()));
+            assertHealthy(deployed);
+            var selfPid = recordedPids(selfPidFile).getFirst();
+            var stablePid = recordedPids(stablePidFile).getFirst();
+            assertTrue(alive(selfPid));
+            assertTrue(alive(stablePid));
+            assertEquals(2, starts.size());
+            var selfLoader = loader(starts, "self-java");
+            var stableLoader = loader(starts, "stable-java");
+            assertNotSame(DisableJavaEntrypoint.class.getClassLoader(), selfLoader);
+            assertNotSame(DisableJavaEntrypoint.class.getClassLoader(), stableLoader);
+            assertNotSame(selfLoader, stableLoader);
+            var initialTarget = target(store);
+            store.afterSave = target -> observations.add(new SaveObservation(target,
+                cleanups.size(), alive(selfPid), alive(stablePid)));
 
-                        store.failNextSave();
-                        var nodeDisableFailure = engine.published().views().filter(view ->
-                            view.engineDiagnostics().failure() != null
-                                && view.engine().desiredGraph().plugins().get("self-node").enabled()
-                                && view.engine().instances().containsKey("self-node"))
-                            .next().toFuture();
-                        current = engine.published().current();
-                        assertEquals("requested", engine.published().invoke(current.viewRevision(),
-                            identity(current, CONTROL, new ContributionId("self-node", "control")), CONTROL,
-                            new ContributionId("self-node", "control"), "disable").block(TIMEOUT));
-                        var failedNodeDisable = Mono.fromFuture(nodeDisableFailure).block(TIMEOUT);
-                        assertEquals(1, observations.size());
-                        assertEquals(raw.withEnabled("self-java", false), store.load().orElseThrow().desiredGraph());
-                        assertTrue(alive(selfPid));
-                        assertStable(deployed, failedNodeDisable, starts, cleanups, stableLoader,
-                            stablePidFile, stablePid);
-                        assertFalse(failedNodeDisable.engineDiagnostics().targetSatisfied());
-                        assertTrue(failedNodeDisable.engineDiagnostics().mutationGateOpen());
-                        assertFalse(held.isDone());
+            try (var watcher = FileSystems.getDefault().newWatchService()) {
+                work.register(watcher, StandardWatchEventKinds.ENTRY_CREATE,
+                    StandardWatchEventKinds.ENTRY_MODIFY);
+                var stableControl = controlId(deployed, "stable-node");
+                var held = engine.published().invoke(deployed.viewRevision(),
+                    identity(deployed, stableControl), CONTROL,
+                    stableControl, "hold").toFuture();
+                try {
+                    awaitFile(watcher, holdEntered);
+                    invokeControl(engine, "self-java", "disable");
+                    var javaDisabled = awaitDisabled(engine, "self-java");
+                    assertTarget(initialTarget, raw.withEnabled("self-java", false),
+                        store, javaDisabled);
+                    assertEquals(1, observations.size());
+                    assertEquals(0, observations.getFirst().javaCleanups());
+                    assertTrue(observations.getFirst().selfNodeAlive());
+                    assertTrue(observations.getFirst().stableNodeAlive());
+                    assertEquals(target(store), observations.getFirst().target());
+                    assertEquals(List.of(new JavaLifecycle("self-java", selfLoader)),
+                        cleanups);
+                    assertStable(deployed, javaDisabled, starts, cleanups,
+                        stableLoader, stablePidFile, stablePid);
+                    assertHealthy(javaDisabled);
+                    assertFalse(held.isDone());
 
-                        current = engine.published().current();
-                        assertEquals("requested", engine.published().invoke(current.viewRevision(),
-                            identity(current, CONTROL, new ContributionId("self-node", "control")), CONTROL,
-                            new ContributionId("self-node", "control"), "disable").block(TIMEOUT));
-                        var bothDisabled = awaitDisabled(engine, "self-node");
-                        var expectedRaw = raw.withEnabled("self-java", false).withEnabled("self-node", false);
-                        assertTarget(initialTarget, expectedRaw, store, bothDisabled);
-                        assertEquals(2, observations.size());
-                        assertEquals(1, observations.get(1).javaCleanups());
-                        assertTrue(observations.get(1).selfNodeAlive());
-                        assertTrue(observations.get(1).stableNodeAlive());
-                        assertEquals(store.load().orElseThrow(), observations.get(1).target());
-                        assertFalse(alive(selfPid), "停用完成时 self Node 必须已经退出");
-                        assertFalse(bothDisabled.engine().instances().containsKey("self-java"));
-                        assertStable(deployed, bothDisabled, starts, cleanups, stableLoader,
-                            stablePidFile, stablePid);
-                        assertHealthy(bothDisabled);
-                        assertFalse(held.isDone());
-                        current = engine.published().current();
-                        assertEquals("released", engine.published().invoke(current.viewRevision(),
-                            identity(current, CONTROL, STABLE_CONTROL), CONTROL, STABLE_CONTROL,
-                            "release").block(TIMEOUT));
-                        assertEquals("held", held.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
-                        disabledTarget = store.load().orElseThrow();
-                    } finally {
-                        held.cancel(true);
-                    }
+                    store.failNextSave();
+                    var nodeDisableFailure = engine.published().views().filter(view ->
+                        view.engineDiagnostics().phase() == AttemptPhase.FAILED
+                            && view.engineDiagnostics().failure() != null
+                            && view.engine().target().orElseThrow().desiredGraph()
+                                .plugins().get("self-node").enabled()
+                            && view.engine().units().containsKey(
+                                new ExecutionUnitKey("self-node")))
+                        .next().toFuture();
+                    invokeControl(engine, "self-node", "disable");
+                    var failedNodeDisable = Mono.fromFuture(nodeDisableFailure)
+                        .block(TIMEOUT);
+                    assertEquals(1, observations.size());
+                    assertEquals(raw.withEnabled("self-java", false),
+                        target(store).desiredGraph());
+                    assertTrue(alive(selfPid));
+                    assertStable(deployed, failedNodeDisable, starts, cleanups,
+                        stableLoader, stablePidFile, stablePid);
+                    assertTrue(failedNodeDisable.engineDiagnostics().mutationGateOpen());
+                    assertFalse(held.isDone());
+
+                    invokeControl(engine, "self-node", "disable");
+                    var bothDisabled = awaitDisabled(engine, "self-node");
+                    var expectedRaw = raw.withEnabled("self-java", false)
+                        .withEnabled("self-node", false);
+                    assertTarget(initialTarget, expectedRaw, store, bothDisabled);
+                    assertEquals(2, observations.size());
+                    assertEquals(1, observations.get(1).javaCleanups());
+                    assertTrue(observations.get(1).selfNodeAlive());
+                    assertTrue(observations.get(1).stableNodeAlive());
+                    assertEquals(target(store), observations.get(1).target());
+                    assertFalse(alive(selfPid),
+                        "停用完成时 self Node 必须已经退出");
+                    assertFalse(bothDisabled.engine().units().containsKey(
+                        new ExecutionUnitKey("self-java")));
+                    assertStable(deployed, bothDisabled, starts, cleanups,
+                        stableLoader, stablePidFile, stablePid);
+                    assertHealthy(bothDisabled);
+                    assertFalse(held.isDone());
+
+                    var current = engine.published().current();
+                    var currentStableControl = controlId(current, "stable-node");
+                    assertEquals("released", engine.published().invoke(
+                        current.viewRevision(), identity(current, currentStableControl),
+                        CONTROL, currentStableControl, "release").block(TIMEOUT));
+                    assertEquals("held", held.get(TIMEOUT.toMillis(),
+                        TimeUnit.MILLISECONDS));
+                    disabledTarget = target(store);
+                } finally {
+                    held.cancel(true);
                 }
             }
-            assertEquals(starts, cleanups);
-            assertRecordedPidsStopped(selfPidFile, stablePidFile);
-
-            // 用新的文件仓库对象重开，验证恢复来自磁盘完整目标。
-            try (var reopenedStore = new FileEngineStateStore(stateRoot);
-                 var reopened = engine(work, services, reopenedStore)) {
-                assertEquals(disabledTarget, reopenedStore.load().orElseThrow());
-                var restored = reopened.start().block(TIMEOUT);
-                assertEquals(disabledTarget.desiredGraph(), restored.engine().desiredGraph());
-                assertEquals(disabledTarget.revision(), restored.engineDiagnostics().targetRevision());
-                assertEquals(Set.of("stable-java", "stable-node"), restored.engine().instances().keySet());
-                restored.engine().instances().values().forEach(instance ->
-                    assertEquals(PluginInstanceState.ACTIVE, instance.state()));
-                assertHealthy(restored);
-                assertEquals(1, starts.stream().filter(event -> event.id().equals("self-java")).count());
-                assertEquals(2, starts.stream().filter(event -> event.id().equals("stable-java")).count());
-                assertEquals(1, recordedPids(selfPidFile).size());
-                var stablePids = recordedPids(stablePidFile);
-                assertEquals(2, stablePids.size());
-                assertNotEquals(stablePids.getFirst(), stablePids.getLast());
-                assertTrue(alive(stablePids.getLast()));
-                assertNotSame(loader(starts, "stable-java"), starts.getLast().loader());
-                assertEquals("released", reopened.published().invoke(restored.viewRevision(), identity(restored, CONTROL,
-                    STABLE_CONTROL), CONTROL,
-                    STABLE_CONTROL, "release").block(TIMEOUT));
-            }
-            assertEquals(starts, cleanups);
-        } finally {
-            store.close();
-            assertRecordedPidsStopped(selfPidFile, stablePidFile);
         }
+        assertEquals(starts, cleanups);
+        assertRecordedPidsStopped(selfPidFile, stablePidFile);
+
+        var reopenedPackages = new PluginPackageStore(packageRoot);
+        var reopenedStore = new FileDeploymentTargetStore(stateRoot);
+        assertEquals(disabledTarget, reopenedStore.load().orElseThrow().target());
+        try (var reopened = engine(work, reopenedPackages, services,
+            reopenedStore)) {
+            var restored = reopened.startAsync().block(TIMEOUT);
+            assertEquals(disabledTarget,
+                restored.engine().target().orElseThrow());
+            assertEquals(Set.of(new ExecutionUnitKey("stable-java"),
+                new ExecutionUnitKey("stable-node")),
+                restored.engine().units().keySet());
+            restored.engine().units().values().forEach(unit ->
+                assertEquals(ExecutionObservation.State.ACTIVE,
+                    unit.aggregateState()));
+            assertHealthy(restored);
+            assertEquals(1, starts.stream()
+                .filter(event -> event.id().equals("self-java")).count());
+            assertEquals(2, starts.stream()
+                .filter(event -> event.id().equals("stable-java")).count());
+            assertEquals(1, recordedPids(selfPidFile).size());
+            var stablePids = recordedPids(stablePidFile);
+            assertEquals(2, stablePids.size());
+            assertNotEquals(stablePids.getFirst(), stablePids.getLast());
+            assertTrue(alive(stablePids.getLast()));
+            assertNotSame(loader(starts, "stable-java"), starts.getLast().loader());
+            var stableControl = controlId(restored, "stable-node");
+            assertEquals("released", reopened.published().invoke(
+                restored.viewRevision(), identity(restored, stableControl),
+                CONTROL, stableControl, "release").block(TIMEOUT));
+        }
+        assertEquals(starts, cleanups);
+        assertRecordedPidsStopped(selfPidFile, stablePidFile);
     }
 
-    private static FibraEngine engine(Path work, HostServiceRegistry services, EngineStateStore store) {
-        return FibraEngine.builder(InMemoryDesiredStateRepository.empty())
-            .artifactStore(new ArtifactStore(work.resolve("artifacts"))).stateStore(store)
-            .hostServices(services).runtimeAdapter(new JavaPluginRuntimeAdapter())
-            .runtimeAdapter(new NodePluginRuntimeAdapter(name -> "control".equals(name)
-                ? Optional.of(CONTROL) : Optional.empty(), NodeRuntimeOptions.defaults(
-                    Path.of(System.getProperty("fibra.test.node", "node")), work.resolve("node-sessions"))))
-            .build();
+    private static FibraEngine engine(Path work, PluginPackageStore packages,
+                                      HostServiceRegistry services,
+                                      DeploymentTargetStore store) {
+        return FibraEngine.builder(packages, store)
+            .hostServices(services)
+            .runtimeProvider(new JavaRuntimeProvider(List.of()))
+            .runtimeProvider(new NodeRuntimeProvider(NodeRuntimeOptions.defaults(
+                Path.of(System.getProperty("fibra.test.node", "node")),
+                work.resolve("node-sessions"))))
+            .contributionKinds(ContributionKindRegistry.of(CONTROL))
+            .hostTerminationPort(ignored -> { }).build();
     }
 
-    private static HostServiceRegistry hostServices(List<JavaLifecycle> starts, List<JavaLifecycle> cleanups) {
+    private static HostServiceRegistry hostServices(List<JavaLifecycle> starts,
+                                                    List<JavaLifecycle> cleanups) {
         var services = new HostServiceRegistry();
-        services.register(ServiceKey.of("disable-control-kind", ContributionKind.class), CONTROL);
+        services.register(ServiceKey.of("disable-control-kind", ContributionKind.class),
+            CONTROL);
         services.register(ServiceKey.of("disable-java-start", BiConsumer.class),
-            (BiConsumer<String, ClassLoader>) (id, loader) -> starts.add(new JavaLifecycle(id, loader)));
+            (BiConsumer<String, ClassLoader>) (id, loader) ->
+                starts.add(new JavaLifecycle(id, loader)));
         services.register(ServiceKey.of("disable-java-cleanup", BiConsumer.class),
-            (BiConsumer<String, ClassLoader>) (id, loader) -> cleanups.add(new JavaLifecycle(id, loader)));
+            (BiConsumer<String, ClassLoader>) (id, loader) ->
+                cleanups.add(new JavaLifecycle(id, loader)));
         return services;
     }
 
     private static ClassLoader loader(List<JavaLifecycle> events, String id) {
-        return events.stream().filter(event -> event.id().equals(id)).findFirst().orElseThrow().loader();
+        return events.stream().filter(event -> event.id().equals(id))
+            .findFirst().orElseThrow().loader();
     }
 
     private static void assertStable(PublishedView before, PublishedView after,
-                                     List<JavaLifecycle> starts, List<JavaLifecycle> cleanups,
-                                     ClassLoader stableLoader, Path stablePidFile, long stablePid) throws Exception {
+                                     List<JavaLifecycle> starts,
+                                     List<JavaLifecycle> cleanups,
+                                     ClassLoader stableLoader,
+                                     Path stablePidFile, long stablePid)
+        throws Exception {
         for (var id : List.of("stable-java", "stable-node")) {
-            assertEquals(before.engine().instances().get(id).identity(),
-                after.engine().instances().get(id).identity());
-            assertEquals(PluginInstanceState.ACTIVE, after.engine().instances().get(id).state());
-        }
-        for (var runtime : List.of(JavaPluginRuntimeAdapter.RUNTIME_ID, NodePluginRuntimeAdapter.RUNTIME_ID)) {
-            var id = runtime.equals(JavaPluginRuntimeAdapter.RUNTIME_ID) ? "stable-java" : "stable-node";
-            var previous = resource(before, runtime, id);
-            var current = resource(after, runtime, id);
-            assertEquals(previous.identity(), current.identity());
-            assertEquals(RuntimeResourceSnapshot.State.ACTIVE, current.state());
+            assertSameExecution(detail(before, id), detail(after, id));
+            assertEquals(ExecutionObservation.State.ACTIVE,
+                after.engine().units().get(new ExecutionUnitKey(id))
+                    .aggregateState());
         }
         assertEquals(2, starts.size());
         assertSame(stableLoader, loader(starts, "stable-java"));
         assertEquals(1, cleanups.size());
-        assertTrue(cleanups.stream().noneMatch(event -> event.id().equals("stable-java")));
+        assertTrue(cleanups.stream().noneMatch(event ->
+            event.id().equals("stable-java")));
         assertEquals(List.of(stablePid), recordedPids(stablePidFile));
         assertTrue(alive(stablePid));
     }
 
-    private static RuntimeResourceSnapshot.Resource resource(PublishedView view, RuntimeId runtime, String id) {
-        return view.engine().runtimes().get(runtime).resources().stream()
-            .filter(resource -> resource.artifact().id().equals(new ArtifactId(id))).findFirst().orElseThrow();
+    private static void assertSameExecution(ExecutionObservation.Detail before,
+                                            ExecutionObservation.Detail after) {
+        assertEquals(before.unitTargetRevision(), after.unitTargetRevision());
+        assertEquals(before.runtimeInstanceId(), after.runtimeInstanceId());
+        assertEquals(before.lifecycleOperationId(), after.lifecycleOperationId());
     }
 
-    private static void assertTarget(DeploymentManifest initial, DesiredInputGraph expected,
-                                     RecordingStateStore store, PublishedView view) {
-        var persisted = store.load().orElseThrow();
-        assertEquals(initial.artifacts(), persisted.artifacts());
-        assertEquals(4, persisted.artifacts().size());
+    private static void assertTarget(DeploymentTarget initial,
+                                     DesiredInputGraph expected,
+                                     RecordingTargetStore store,
+                                     PublishedView view) {
+        var persisted = target(store);
+        assertEquals(initial.selections(), persisted.selections());
+        assertEquals(4, persisted.selections().size());
         assertEquals(expected, persisted.desiredGraph());
-        assertEquals(expected, view.engine().desiredGraph());
-        assertEquals(persisted.revision(), view.engineDiagnostics().targetRevision());
+        assertEquals(expected, view.engine().target().orElseThrow().desiredGraph());
+        assertEquals(persisted.targetRevision(),
+            view.engine().target().orElseThrow().targetRevision());
     }
 
     private static void assertHealthy(PublishedView view) {
@@ -281,60 +309,99 @@ class CrossRuntimeSelfDisableTest {
         assertTrue(view.engineDiagnostics().mutationGateOpen());
     }
 
-    private static long identity(PublishedView view, ContributionKind<?, ?, ?> kind, ContributionId id) {
+    private static void invokeControl(FibraEngine engine, String unit,
+                                      String command) {
+        var current = engine.published().current();
+        var id = controlId(current, unit);
+        assertEquals("requested", engine.published().invoke(
+            current.viewRevision(), identity(current, id), CONTROL, id,
+            command).block(TIMEOUT));
+    }
+
+    private static ContributionId controlId(PublishedView view, String unit) {
         return view.contributions().entries().stream()
-            .filter(entry -> entry.kind().equals(kind.name()) && entry.id().equals(id))
+            .filter(entry -> entry.kind().equals(CONTROL.name()))
+            .map(entry -> entry.id())
+            .filter(id -> id.providerInstanceId().equals(unit))
+            .findFirst().orElseThrow();
+    }
+
+    private static long identity(PublishedView view, ContributionId id) {
+        return view.contributions().entries().stream()
+            .filter(entry -> entry.kind().equals(CONTROL.name())
+                && entry.id().equals(id))
             .map(entry -> entry.registrationIdentity()).findFirst().orElseThrow();
     }
 
     private static PublishedView awaitDisabled(FibraEngine engine, String id) {
-        // 自停用可能在调用返回前完成：先订阅变化再读 current()，不依赖历史重放。
         return reactor.core.publisher.Flux.merge(engine.published().views(),
             Mono.fromSupplier(engine.published()::current)).filter(view ->
-            !view.engine().desiredGraph().plugins().get(id).enabled()
-                && !view.engine().instances().containsKey(id)
-                && view.engineDiagnostics().targetSatisfied()
-                && view.engineDiagnostics().mutationGateOpen()).next().block(TIMEOUT);
+                !view.engine().target().orElseThrow().desiredGraph()
+                    .plugins().get(id).enabled()
+                    && !view.engine().units().containsKey(new ExecutionUnitKey(id))
+                    && !view.engine().retiring().containsKey(new ExecutionUnitKey(id))
+                    && view.engineDiagnostics().phase() == AttemptPhase.SETTLED
+                    && view.engineDiagnostics().targetSatisfied()
+                    && view.engineDiagnostics().mutationGateOpen())
+            .next().block(TIMEOUT);
     }
 
-    private static DesiredInputGraph rawTarget(Path selfPid, Path stablePid, Path holdEntered) {
+    private static ExecutionObservation.Detail detail(PublishedView view,
+                                                       String id) {
+        return view.engine().units().get(new ExecutionUnitKey(id))
+            .executions().getFirst();
+    }
+
+    private static DesiredInputGraph rawTarget(Path selfPid, Path stablePid,
+                                               Path holdEntered) {
         return new DesiredInputGraph(List.of(
-            DesiredInputEntry.builder("self-java", "self-java").build(),
-            DesiredInputEntry.builder("stable-java", "stable-java").build(),
-            DesiredInputEntry.builder("self-node", "self-node")
+            entry("self-java", "self-java").build(),
+            entry("stable-java", "stable-java").build(),
+            entry("self-node", "self-node")
                 .config(nodeConfig(selfPid, holdEntered)).build(),
-            DesiredInputEntry.builder("stable-node", "stable-node")
+            entry("stable-node", "stable-node")
                 .config(nodeConfig(stablePid, holdEntered)).build()));
     }
 
+    private static DesiredInputEntry.Builder entry(String id, String pluginId) {
+        return DesiredInputEntry.builder(id,
+            new PluginDefinitionRef(pluginId, "main", pluginId));
+    }
+
     private static LiteralValue nodeConfig(Path probe, Path holdEntered) {
-        return LiteralValue.of(Map.of("probe", probe.toString(), "holdEntered", holdEntered.toString()));
+        return LiteralValue.of(Map.of("probe", probe.toString(),
+            "holdEntered", holdEntered.toString()));
     }
 
-    private static DeploymentArtifact artifact(String id, Path source, RuntimeId runtime) {
-        return DeploymentArtifact.builder().artifactId(new ArtifactId(id)).runtimeId(runtime)
-            .version("1.0.0").source(source).build();
+    private static PluginPackageRecord install(PluginPackageStore store,
+                                                Path source) {
+        try (var transaction = store.prepareInstall(source)) {
+            return transaction.save();
+        }
     }
 
-    private static Path javaArtifact(Path work, String id, String entrypoint) throws Exception {
+    private static PluginSelection selection(PluginPackageRecord value) {
+        return new PluginSelection(value.pluginId(), value.packageRevision(), true);
+    }
+
+    private static Path javaPackage(Path work, String id, String entrypoint)
+        throws Exception {
         var root = Files.createDirectory(work.resolve(id + "-package"));
-        var lib = Files.createDirectory(root.resolve("lib"));
-        var jar = lib.resolve("main.jar");
-        Files.writeString(root.resolve("plugin.properties"), """
-            formatVersion=1
-            runtime=java
-            payload=lib/main.jar
-            """);
+        var jar = root.resolve("main.jar");
+        Files.writeString(root.resolve("fibra-package.yaml"),
+            packageManifest(id, "java", "main.jar"));
         try (var output = new JarOutputStream(Files.newOutputStream(jar))) {
             output.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml"));
-            output.write(("id: " + id + "\nversion: 1.0.0\nentrypoint: " + entrypoint
-                + "\nrequires: []\n").getBytes(StandardCharsets.UTF_8));
+            output.write(("entrypoint: " + entrypoint + '\n')
+                .getBytes(StandardCharsets.UTF_8));
             output.closeEntry();
             for (var name : List.of("fixture/DisableJavaEntrypoint.class",
                 "fixture/DisableJavaEntrypoint$Stable.class")) {
                 output.putNextEntry(new JarEntry(name));
-                try (var input = CrossRuntimeSelfDisableTest.class.getResourceAsStream('/' + name)) {
-                    if (input == null) throw new IllegalStateException("missing test fixture " + name);
+                try (var input = CrossRuntimeSelfDisableTest.class
+                    .getResourceAsStream('/' + name)) {
+                    if (input == null) throw new IllegalStateException(
+                        "missing test fixture " + name);
                     output.write(input.readAllBytes());
                 }
                 output.closeEntry();
@@ -343,18 +410,14 @@ class CrossRuntimeSelfDisableTest {
         return root;
     }
 
-    private static Path nodeArtifact(Path work, String id) throws Exception {
+    private static Path nodePackage(Path work, String id) throws Exception {
         var root = Files.createDirectory(work.resolve(id));
         var payload = Files.createDirectory(root.resolve("payload"));
-        Files.writeString(root.resolve("plugin.properties"), """
-            formatVersion=1
-            runtime=node
-            payload=payload
-            """);
+        Files.writeString(root.resolve("fibra-package.yaml"),
+            packageManifest(id, "node", "payload"));
         Files.writeString(payload.resolve("fibra-plugin.yaml"), """
-            id: %s
-            version: 1.0.0
             protocol: 1
+            definitionId: %s
             entrypoint: index.mjs
             contributions:
               - name: control
@@ -398,60 +461,106 @@ class CrossRuntimeSelfDisableTest {
         return root;
     }
 
-    private static void awaitFile(WatchService watcher, Path expected) throws Exception {
+    private static String packageManifest(String id, String runtime,
+                                          String payload) {
+        return """
+            format: 1
+            id: %s
+            version: 1.0.0
+            facets:
+              - id: main
+                role: host
+                runtime: %s
+                target: host
+                payload: %s
+                dependencies: []
+                capabilities: []
+            """.formatted(id, runtime, payload);
+    }
+
+    private static void awaitFile(WatchService watcher, Path expected)
+        throws Exception {
         var deadline = System.nanoTime() + TIMEOUT.toNanos();
         while (!Files.exists(expected)) {
             var remaining = deadline - System.nanoTime();
-            if (remaining <= 0) throw new AssertionError("等待在途调用进入超时");
+            if (remaining <= 0) throw new AssertionError(
+                "等待在途调用进入超时");
             var key = watcher.poll(remaining, TimeUnit.NANOSECONDS);
-            if (key == null) throw new AssertionError("等待在途调用进入超时");
+            if (key == null) throw new AssertionError(
+                "等待在途调用进入超时");
             key.pollEvents();
             key.reset();
         }
     }
 
     private static List<Long> recordedPids(Path probe) throws Exception {
-        return Files.exists(probe) ? Files.readAllLines(probe).stream().map(Long::parseLong).toList() : List.of();
+        return Files.exists(probe)
+            ? Files.readAllLines(probe).stream().map(Long::parseLong).toList()
+            : List.of();
     }
 
     private static boolean alive(long pid) {
         return ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false);
     }
 
-    private static void assertRecordedPidsStopped(Path... probes) throws Exception {
+    private static void assertRecordedPidsStopped(Path... probes)
+        throws Exception {
         for (var probe : probes) {
-            for (var pid : recordedPids(probe)) assertFalse(alive(pid), "Node 进程仍在运行: " + pid);
+            for (var pid : recordedPids(probe)) {
+                assertFalse(alive(pid), "Node 进程仍在运行: " + pid);
+            }
         }
     }
 
+    private static DeploymentTarget target(RecordingTargetStore store) {
+        return store.load().orElseThrow().target();
+    }
+
     private record JavaLifecycle(String id, ClassLoader loader) { }
-    private record SaveObservation(DeploymentManifest target, int javaCleanups,
-                                   boolean selfNodeAlive, boolean stableNodeAlive) { }
+    private record SaveObservation(DeploymentTarget target, int javaCleanups,
+                                   boolean selfNodeAlive,
+                                   boolean stableNodeAlive) { }
 
-    private static final class RecordingStateStore implements EngineStateStore {
-        private final FileEngineStateStore delegate;
+    private static final class RecordingTargetStore
+        implements DeploymentTargetStore {
+        private final DeploymentTargetStore delegate;
         private final AtomicBoolean failNextSave = new AtomicBoolean();
-        private Consumer<DeploymentManifest> afterSave = ignored -> { };
+        private Consumer<DeploymentTarget> afterSave = ignored -> { };
 
-        private RecordingStateStore(FileEngineStateStore delegate) { this.delegate = delegate; }
+        private RecordingTargetStore(DeploymentTargetStore delegate) {
+            this.delegate = delegate;
+        }
         private void failNextSave() { failNextSave.set(true); }
-        @Override public Optional<DeploymentManifest> load() { return delegate.load(); }
-        @Override public void save(DeploymentManifest target) {
+        @Override public Optional<StoredTarget> load() { return delegate.load(); }
+        @Override public DurableTargetToken save(long expectedRevision,
+                                                  DeploymentTarget target) {
             if (failNextSave.compareAndSet(true, false)) {
                 throw new IllegalStateException("injected save failure");
             }
-            delegate.save(target);
-            afterSave.accept(delegate.load().orElseThrow());
+            var token = delegate.save(expectedRevision, target);
+            afterSave.accept(delegate.load().orElseThrow().target());
+            return token;
         }
         @Override public void close() { delegate.close(); }
     }
 
-    private static final class ControlCodec implements ContributionCodec<String, String, String> {
+    private static final class ControlCodec
+        implements ContributionCodec<String, String, String> {
         @Override public int schemaVersion() { return 1; }
-        @Override public String decodeDescriptor(Object descriptor) { return descriptor.toString(); }
-        @Override public Object encodeInput(String input) { return input; }
-        @Override public String decodeInput(Object input) { return input.toString(); }
-        @Override public Object encodeOutput(String output) { return output; }
-        @Override public String decodeOutput(Object output) { return output.toString(); }
+        @Override public String decodeDescriptor(LiteralValue descriptor) {
+            return descriptor.toJava().toString();
+        }
+        @Override public LiteralValue encodeInput(String input) {
+            return LiteralValue.of(input);
+        }
+        @Override public String decodeInput(LiteralValue input) {
+            return input.toJava().toString();
+        }
+        @Override public LiteralValue encodeOutput(String output) {
+            return LiteralValue.of(output);
+        }
+        @Override public String decodeOutput(LiteralValue output) {
+            return output.toJava().toString();
+        }
     }
 }

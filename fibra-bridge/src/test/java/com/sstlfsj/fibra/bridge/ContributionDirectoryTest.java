@@ -42,7 +42,7 @@ class ContributionDirectoryTest {
     private static WeakReference<CommandDescriptor> registerAndRevoke(ContributionDirectory directory) {
         try (var runtime = FibraRuntime.create()) {
             var descriptor = new CommandDescriptor("Retired");
-            directory.register(runtime.rootScope().context(), COMMAND, "p", "c", descriptor,
+            directory.openAdmission("p").register(runtime.rootScope().context(), COMMAND, "c", descriptor,
                 (invocation, input) -> reactor.core.publisher.Mono.just(input)).block();
             return new WeakReference<>(descriptor);
         }
@@ -55,7 +55,7 @@ class ContributionDirectoryTest {
             var subscription = directory.views().subscribe(view -> sizes.add(view.snapshot().entries().size()));
             try {
                 assertEquals(List.of(), sizes, "current facts are read through current(), not replayed");
-                var registration = directory.register(runtime.rootScope().context(), COMMAND, "p", "c",
+                var registration = directory.openAdmission("p").register(runtime.rootScope().context(), COMMAND, "c",
                     new CommandDescriptor("Command"),
                     (invocation, input) -> reactor.core.publisher.Mono.just(input)).block();
                 registration.dispose().block();
@@ -78,7 +78,7 @@ class ContributionDirectoryTest {
             };
             directory.views().subscribe(subscriber);
             try {
-                var registration = directory.register(runtime.rootScope().context(), COMMAND, "p", "c",
+                var registration = directory.openAdmission("p").register(runtime.rootScope().context(), COMMAND, "c",
                     new CommandDescriptor("Command"),
                     (invocation, input) -> reactor.core.publisher.Mono.just(input)).block();
                 registration.dispose().block();
@@ -101,7 +101,7 @@ class ContributionDirectoryTest {
                 invocation.effects().add(Disposables.from(disposed::incrementAndGet));
                 return "resolved";
             });
-            var registration = directory.register(owner, COMMAND, "p", "c",
+            var registration = directory.openAdmission("p").register(owner, COMMAND, "c",
                 new CommandDescriptor("Command"), (invocation, input) -> {
                     assertSame(owner, invocation.caller());
                     return reactor.core.publisher.Mono.fromSupplier(() ->
@@ -125,7 +125,7 @@ class ContributionDirectoryTest {
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var owner = runtime.rootScope().context();
             var calls = new java.util.concurrent.atomic.AtomicInteger();
-            var registration = directory.register(owner, COMMAND, "p", "c",
+            var registration = directory.openAdmission("p").register(owner, COMMAND, "c",
                 new CommandDescriptor("Command"), (invocation, input) -> {
                     calls.incrementAndGet();
                     return reactor.core.publisher.Mono.just(input);
@@ -144,7 +144,7 @@ class ContributionDirectoryTest {
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var owner = runtime.rootScope().openChild("provider");
             var calls = new java.util.concurrent.atomic.AtomicInteger();
-            var registration = directory.register(owner.context(), COMMAND, "p", "c",
+            var registration = directory.openAdmission("p").register(owner.context(), COMMAND, "c",
                 new CommandDescriptor("Command"), (invocation, input) -> {
                     calls.incrementAndGet();
                     return reactor.core.publisher.Mono.just(input);
@@ -164,7 +164,7 @@ class ContributionDirectoryTest {
     void neverSubscribedCallDoesNotDelayProviderDisposal() {
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var owner = runtime.rootScope().openChild("provider");
-            var registration = directory.register(owner.context(), COMMAND, "p", "c",
+            var registration = directory.openAdmission("p").register(owner.context(), COMMAND, "c",
                 new CommandDescriptor("Command"), (invocation, input) ->
                     reactor.core.publisher.Mono.never()).block();
             var call = directory.current().routes().invoke(runtime.rootScope().context(),
@@ -180,7 +180,7 @@ class ContributionDirectoryTest {
     void cancellationReleasesTheCallBeforeRevokedProviderFinishesClosing() throws Exception {
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var owner = runtime.rootScope().openChild("provider");
-            var registration = directory.register(owner.context(), COMMAND, "p", "c",
+            var registration = directory.openAdmission("p").register(owner.context(), COMMAND, "c",
                 new CommandDescriptor("Command"), (invocation, input) ->
                     reactor.core.publisher.Mono.never()).block();
             var call = directory.current().routes().invoke(runtime.rootScope().context(),
@@ -200,7 +200,7 @@ class ContributionDirectoryTest {
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var owner = runtime.rootScope().openChild("provider");
             var failure = new IllegalStateException("handler failed");
-            var registration = directory.register(owner.context(), COMMAND, "p", "c",
+            var registration = directory.openAdmission("p").register(owner.context(), COMMAND, "c",
                 new CommandDescriptor("Command"), (invocation, input) -> {
                     throw failure;
                 }).block();
@@ -220,7 +220,7 @@ class ContributionDirectoryTest {
             var cleanupInvocations = new java.util.concurrent.atomic.AtomicInteger();
             var binding = new ContributionBinding<>(COMMAND, "c", new CommandDescriptor("Command"),
                 (ContributionHandler<String, String>) (invocation, input) -> response.asMono());
-            var registrations = directory.registerAll(owner.context(), "p", java.util.List.of(binding),
+            var registrations = directory.openAdmission("p").registerAll(owner.context(), java.util.List.of(binding),
                 () -> {
                     cleanupInvocations.incrementAndGet();
                     return reactor.core.publisher.Mono.empty();
@@ -245,7 +245,7 @@ class ContributionDirectoryTest {
         var response = Sinks.<String>one();
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var owner = runtime.rootScope().context();
-            var registration = directory.register(owner, COMMAND, "p", "c",
+            var registration = directory.openAdmission("p").register(owner, COMMAND, "c",
                 new CommandDescriptor("Command"), (invocation, input) -> response.asMono()).block();
             var call = directory.current().routes().invoke(owner, COMMAND, registration.id(), "").toFuture();
             var revoked = registration.dispose().toFuture();
@@ -272,8 +272,8 @@ class ContributionDirectoryTest {
             var provider = runtime.rootScope().openChild("provider");
             var caller = runtime.rootScope().openChild("caller");
             var response = Sinks.<String>one();
-            var registration = directory.register(provider.context(), COMMAND,
-                "plugin-a", "greet", new CommandDescriptor("Greet"),
+            var registration = directory.openAdmission("plugin-a").register(
+                provider.context(), COMMAND, "greet", new CommandDescriptor("Greet"),
                 (invocation, input) -> response.asMono().map(value -> value + input)).block();
             var id = new ContributionId("plugin-a", "greet");
             var published = directory.current();
@@ -299,12 +299,12 @@ class ContributionDirectoryTest {
         try (var runtime = FibraRuntime.create();
              var directory = new ContributionDirectory()) {
             var owner = runtime.rootScope().context();
-            directory.register(owner, COMMAND, "plugin-a", "first",
+            directory.openAdmission("plugin-a").register(owner, COMMAND, "first",
                 new CommandDescriptor("First"),
                 (invocation, input) -> reactor.core.publisher.Mono.just("first"))
                 .block();
             var first = directory.current();
-            directory.register(owner, COMMAND, "plugin-a", "second",
+            directory.openAdmission("plugin-a").register(owner, COMMAND, "second",
                 new CommandDescriptor("Second"),
                 (invocation, input) -> reactor.core.publisher.Mono.just("second"))
                 .block();

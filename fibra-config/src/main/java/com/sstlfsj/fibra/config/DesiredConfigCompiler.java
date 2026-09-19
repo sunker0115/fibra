@@ -96,7 +96,7 @@ public final class DesiredConfigCompiler {
             if (kind == Kind.PLUGIN) {
                 var config = LiteralValue.of(value.get("config"));
                 validateExpression(config, false, source, fullId);
-                return DesiredInputEntry.builder(rawId, text(value.get("plugin"), "plugin", source, fullId))
+                return DesiredInputEntry.builder(rawId, definitionRef(value.get("plugin"), source, fullId))
                     .enabled(localEnabled).when(when).context(context)
                     .publicationRequirement(publicationRequirement(value.get("publication"),
                         source, fullId)).config(config).realms(realms)
@@ -146,6 +146,23 @@ public final class DesiredConfigCompiler {
             "CONTEXT_ENTRY_RESERVED", "top-level context key 'entry' is reserved",
             source, entryId, null);
         return result;
+    }
+
+    private static PluginDefinitionRef definitionRef(Object value, Path source, String entryId) {
+        if (!(value instanceof Map<?, ?> raw)) {
+            throw error(ConfigStage.VALIDATE, "FIELD_NOT_OBJECT", "plugin must be an object", source,
+                entryId, null);
+        }
+        var fields = LiteralValues.freezeMap(raw);
+        var unknown = fields.keySet().stream()
+            .filter(key -> !Set.of("id", "facet", "definition").contains(key)).toList();
+        if (!unknown.isEmpty()) {
+            throw error(ConfigStage.VALIDATE, "PLUGIN_REFERENCE_FIELDS_INVALID",
+                "unknown plugin reference fields " + unknown, source, entryId, null);
+        }
+        return new PluginDefinitionRef(text(fields.get("id"), "plugin.id", source, entryId),
+            text(fields.get("facet"), "plugin.facet", source, entryId),
+            text(fields.get("definition"), "plugin.definition", source, entryId));
     }
 
     private static void validateExpression(LiteralValue value, boolean condition,

@@ -31,38 +31,39 @@ final class ToolContributionCodec
     }
 
     @Override
-    public ToolDescriptor decodeDescriptor(Object value) {
-        var fields = object(value, "descriptor", DESCRIPTOR_FIELDS);
+    public ToolDescriptor decodeDescriptor(LiteralValue value) {
+        var fields = object(value.toJava(), "descriptor", DESCRIPTOR_FIELDS);
         return new ToolDescriptor(text(fields, "displayName"), text(fields, "description"),
             objectLiteral(fields, "inputSchema"), objectLiteral(fields, "outputSchema"));
     }
 
     @Override
-    public Object encodeInput(ToolRequest input) {
+    public LiteralValue encodeInput(ToolRequest input) {
         Objects.requireNonNull(input, "input");
-        return Map.of("arguments", input.arguments().toJava());
+        return LiteralValue.of(Map.of("arguments", input.arguments().toJava()));
     }
 
     @Override
-    public ToolRequest decodeInput(Object value) {
-        var fields = object(value, "input", INPUT_FIELDS);
+    public ToolRequest decodeInput(LiteralValue value) {
+        var fields = object(value.toJava(), "input", INPUT_FIELDS);
         return new ToolRequest(objectLiteral(fields, "arguments"), CancellationToken.never());
     }
 
     @Override
-    public Object encodeOutput(ToolResult output) {
+    public LiteralValue encodeOutput(ToolResult output) {
         Objects.requireNonNull(output, "output");
         var fields = new LinkedHashMap<String, Object>();
         fields.put("content", output.content().stream().map(content -> switch (content) {
             case ToolContent.Text text -> Map.of("type", "text", "text", text.text());
         }).toList());
         output.structuredContent().ifPresent(value -> fields.put("structuredContent", value.toJava()));
-        return fields;
+        return LiteralValue.of(fields);
     }
 
     @Override
-    public ToolResult decodeOutput(Object value) {
-        var fields = object(value, "output", value instanceof Map<?, ?> raw && raw.containsKey("structuredContent")
+    public ToolResult decodeOutput(LiteralValue value) {
+        var javaValue = value.toJava();
+        var fields = object(javaValue, "output", javaValue instanceof Map<?, ?> raw && raw.containsKey("structuredContent")
             ? STRUCTURED_OUTPUT_FIELDS : OUTPUT_FIELDS);
         if (!(fields.get("content") instanceof List<?> blocks)) {
             throw new IllegalArgumentException("invalid tool content");

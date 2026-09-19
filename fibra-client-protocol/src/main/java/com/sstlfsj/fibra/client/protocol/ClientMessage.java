@@ -101,14 +101,19 @@ public sealed interface ClientMessage permits ClientMessage.Hello, ClientMessage
         @Override public String type() { return "client.detach"; }
     }
 
-    record Assignment(String pluginId, String facetId, String runtimeInstanceId, String executionTarget,
-                      String entryModule, String payloadDigest, List<String> requiredCapabilities,
+    record Assignment(String pluginId, String facetId, String desiredEntryId, String definitionId,
+                      String runtimeInstanceId, long unitTargetRevision, String executionTarget,
+                      LiteralValue config, String entryModule, String payloadDigest, List<String> requiredCapabilities,
                       List<ResourceDescriptor> resources) {
         public Assignment {
             pluginId = required(pluginId, "pluginId");
             facetId = required(facetId, "facetId");
+            desiredEntryId = required(desiredEntryId, "desiredEntryId");
+            definitionId = required(definitionId, "definitionId");
             runtimeInstanceId = required(runtimeInstanceId, "runtimeInstanceId");
+            if (unitTargetRevision < 1) throw new IllegalArgumentException("unitTargetRevision must be positive");
             executionTarget = required(executionTarget, "executionTarget");
+            config = Objects.requireNonNull(config, "config");
             entryModule = required(entryModule, "entryModule");
             payloadDigest = digest(payloadDigest, "payloadDigest");
             requiredCapabilities = frozenStrings(requiredCapabilities, "requiredCapabilities");
@@ -178,10 +183,10 @@ public sealed interface ClientMessage permits ClientMessage.Hello, ClientMessage
         }
     }
 
-    record ExecutionObservation(long targetRevision, String runtimeInstanceId, String lifecycleOperationId,
+    record ExecutionObservation(long unitTargetRevision, String runtimeInstanceId, String lifecycleOperationId,
                                 ObservedState state, Failure failure) {
         public ExecutionObservation {
-            if (targetRevision < 1) throw new IllegalArgumentException("targetRevision must be positive");
+            if (unitTargetRevision < 1) throw new IllegalArgumentException("unitTargetRevision must be positive");
             runtimeInstanceId = required(runtimeInstanceId, "runtimeInstanceId");
             lifecycleOperationId = required(lifecycleOperationId, "lifecycleOperationId");
             state = Objects.requireNonNull(state, "state");

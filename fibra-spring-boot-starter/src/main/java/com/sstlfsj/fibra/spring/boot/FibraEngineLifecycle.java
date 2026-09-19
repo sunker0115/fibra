@@ -15,7 +15,7 @@ final class FibraEngineLifecycle implements SmartLifecycle {
 
     @Override
     public void start() {
-        engine.start().block();
+        engine.startAsync().block();
     }
 
     @Override

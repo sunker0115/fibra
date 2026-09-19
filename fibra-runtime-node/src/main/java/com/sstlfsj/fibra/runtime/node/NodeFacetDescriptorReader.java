@@ -22,7 +22,7 @@ import java.util.Set;
 final class NodeFacetDescriptorReader {
     static final String FILE_NAME = "fibra-plugin.yaml";
     private static final Set<String> FIELDS = Set.of(
-        "protocol", "entrypoint", "contributions");
+        "protocol", "definitionId", "entrypoint", "contributions");
     private static final Set<String> ENDPOINT_FIELDS = Set.of(
         "name", "kind", "schemaVersion", "method", "descriptor");
 
@@ -52,9 +52,10 @@ final class NodeFacetDescriptorReader {
             var values = map(raw, owner, "Node facet descriptor");
             rejectUnknown(values, FIELDS, owner, "descriptor");
             var protocol = positiveInteger(values.get("protocol"), "protocol", owner);
+            var definitionId = text(values.get("definitionId"), "definitionId", owner);
             var entrypoint = text(values.get("entrypoint"), "entrypoint", owner);
             validateEntrypoint(payload, owner, entrypoint);
-            return new NodeFacetDescriptor(protocol, entrypoint,
+            return new NodeFacetDescriptor(protocol, definitionId, entrypoint,
                 contributions(values.get("contributions"), owner));
         } catch (NodeRuntimeException failure) {
             throw failure;

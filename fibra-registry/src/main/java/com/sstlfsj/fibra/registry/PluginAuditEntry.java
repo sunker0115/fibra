@@ -21,8 +21,9 @@ public record PluginAuditEntry(long sequence, Instant timestamp, String operatio
             throw new IllegalArgumentException("target must not be blank");
         }
         Objects.requireNonNull(targetSaveState, "targetSaveState");
-        if (succeeded && targetSaveState != TargetSaveState.SAVED) {
-            throw new IllegalArgumentException("successful audit entry must have a saved target");
+        if (succeeded && targetSaveState != TargetSaveState.SAVED
+            && targetSaveState != TargetSaveState.NOT_APPLICABLE) {
+            throw new IllegalArgumentException("accepted command must save its target or require no save");
         }
     }
 

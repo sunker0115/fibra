@@ -72,10 +72,13 @@ final class ConfigPatchApplier {
                 warn(warnings, "PATCH_TARGET_MISSING", prefix + "target not found: " + id, path, includeId);
                 continue;
             }
-            var plugin = optionalText(patch.get("plugin"), "plugin", path, includeId);
-            if (plugin != null && !plugin.equals(target.get("plugin"))) {
-                warn(warnings, "PATCH_NAME_MISMATCH", prefix + "plugin mismatch for " + id
-                    + " (expected " + target.get("plugin") + ", got " + plugin + ")", path, includeId);
+            var patchRef = patch.containsKey("plugin")
+                ? definitionRef(patch.get("plugin"), path, includeId) : null;
+            if (patchRef != null && !patchRef.equals(definitionRef(target.get("plugin"), path,
+                includeId))) {
+                warn(warnings, "PATCH_DEFINITION_REF_MISMATCH", prefix + "plugin reference mismatch for "
+                    + id + " (expected " + target.get("plugin") + ", got " + patch.get("plugin") + ")",
+                    path, includeId);
                 continue;
             }
             patch.forEach((field, value) -> {
@@ -118,13 +121,38 @@ final class ConfigPatchApplier {
         return result;
     }
 
+    private static PluginDefinitionRef definitionRef(Object value, Path path, String entryId) {
+        if (!(value instanceof Map<?, ?> raw)) {
+            throw error("PATCH_FIELD_INVALID", "plugin must be an object", path, entryId);
+        }
+        var fields = LiteralValues.freezeMap(raw);
+        var unknown = fields.keySet().stream()
+            .filter(key -> !Set.of("id", "facet", "definition").contains(key)).toList();
+        if (!unknown.isEmpty()) {
+            throw error("PATCH_FIELD_INVALID", "unknown plugin reference fields " + unknown,
+                path, entryId);
+        }
+        try {
+            return new PluginDefinitionRef(text(fields.get("id")), text(fields.get("facet")),
+                text(fields.get("definition")));
+        } catch (IllegalArgumentException failure) {
+            throw error("PATCH_FIELD_INVALID", failure.getMessage(), path, entryId);
+        }
+    }
+
+    private static String text(Object value) {
+        if (!(value instanceof String text) || text.isBlank()) {
+            throw new IllegalArgumentException("plugin reference values must be non-blank strings");
+        }
+        return text;
+    }
+
     private static String optionalText(Object value, String field, Path path, String entryId) {
         if (value == null || "".equals(value)) {
             return null;
         }
         if (!(value instanceof String text) || text.isBlank()) {
-            throw error("PATCH_FIELD_INVALID", field + " must be a non-blank string",
-                path, entryId);
+            throw error("PATCH_FIELD_INVALID", field + " must be a non-blank string", path, entryId);
         }
         return text;
     }

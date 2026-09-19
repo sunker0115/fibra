@@ -68,7 +68,7 @@ public final class PluginPackage {
     public String packageDigest() { return packageDigest; }
     public List<PluginFacet> facets() { return facets; }
 
-    /** 只读取新格式根清单；不探测或迁移旧 plugin.properties。 */
+    /** 只读取当前根清单格式。 */
     public static PluginPackage read(Path source) {
         return read(source, () -> { });
     }

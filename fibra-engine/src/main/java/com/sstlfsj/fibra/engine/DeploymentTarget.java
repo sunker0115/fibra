@@ -1,6 +1,7 @@
 package com.sstlfsj.fibra.engine;
 
 import com.sstlfsj.fibra.artifact.PluginId;
+import com.sstlfsj.fibra.config.ConfigContextSnapshot;
 import com.sstlfsj.fibra.config.DesiredIncludeContent;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
@@ -27,38 +28,49 @@ public final class DeploymentTarget {
     private final String targetDigest;
     private final Map<PluginId, PluginSelection> selections;
     private final DesiredInputGraph desiredGraph;
+    private final ConfigContextSnapshot configContext;
 
     private DeploymentTarget(long targetRevision, Collection<PluginSelection> selections,
-                             DesiredInputGraph desiredGraph) {
+                             DesiredInputGraph desiredGraph,
+                             ConfigContextSnapshot configContext) {
         if (targetRevision < 1) {
             throw new IllegalArgumentException("target revision must be positive");
         }
         this.targetRevision = targetRevision;
         this.selections = index(selections);
         this.desiredGraph = Objects.requireNonNull(desiredGraph, "desiredGraph");
-        targetDigest = digest(canonicalBytes(this.selections.values(), desiredGraph));
+        this.configContext = Objects.requireNonNull(configContext, "configContext");
+        targetDigest = digest(canonicalBytes(this.selections.values(), desiredGraph,
+            configContext));
     }
 
     public static DeploymentTarget of(long targetRevision,
                                       Collection<PluginSelection> selections,
-                                      DesiredInputGraph desiredGraph) {
-        return new DeploymentTarget(targetRevision, selections, desiredGraph);
+                                      DesiredInputGraph desiredGraph,
+                                      ConfigContextSnapshot configContext) {
+        return new DeploymentTarget(targetRevision, selections, desiredGraph,
+            configContext);
     }
 
     public long targetRevision() { return targetRevision; }
     public String targetDigest() { return targetDigest; }
     public Map<PluginId, PluginSelection> selections() { return selections; }
     public DesiredInputGraph desiredGraph() { return desiredGraph; }
+    public ConfigContextSnapshot configContext() { return configContext; }
 
     public boolean hasSameContent(Collection<PluginSelection> candidateSelections,
-                                  DesiredInputGraph candidateDesired) {
-        return targetDigest.equals(digestOf(candidateSelections, candidateDesired));
+                                  DesiredInputGraph candidateDesired,
+                                  ConfigContextSnapshot candidateContext) {
+        return targetDigest.equals(digestOf(candidateSelections, candidateDesired,
+            candidateContext));
     }
 
     public static String digestOf(Collection<PluginSelection> selections,
-                                  DesiredInputGraph desiredGraph) {
+                                  DesiredInputGraph desiredGraph,
+                                  ConfigContextSnapshot configContext) {
         return digest(canonicalBytes(index(selections).values(),
-            Objects.requireNonNull(desiredGraph, "desiredGraph")));
+            Objects.requireNonNull(desiredGraph, "desiredGraph"),
+            Objects.requireNonNull(configContext, "configContext")));
     }
 
     @Override
@@ -68,23 +80,27 @@ public final class DeploymentTarget {
         return targetRevision == other.targetRevision
             && targetDigest.equals(other.targetDigest)
             && selections.equals(other.selections)
-            && desiredGraph.equals(other.desiredGraph);
+            && desiredGraph.equals(other.desiredGraph)
+            && configContext.equals(other.configContext);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(targetRevision, targetDigest, selections, desiredGraph);
+        return Objects.hash(targetRevision, targetDigest, selections, desiredGraph,
+            configContext);
     }
 
     @Override
     public String toString() {
         return "DeploymentTarget[targetRevision=" + targetRevision
             + ", targetDigest=" + targetDigest + ", selections=" + selections
-            + ", desiredGraph=" + desiredGraph + ']';
+            + ", desiredGraph=" + desiredGraph + ", configContext="
+            + configContext.values() + ']';
     }
 
     static byte[] canonicalBytes(Collection<PluginSelection> selections,
-                                 DesiredInputGraph desiredGraph) {
+                                 DesiredInputGraph desiredGraph,
+                                 ConfigContextSnapshot configContext) {
         var canonicalSelections = selections.stream()
             .sorted(Comparator.comparing(selection -> selection.pluginId().value()))
             .map(selection -> Map.of(
@@ -95,7 +111,8 @@ public final class DeploymentTarget {
         return LiteralValue.of(Map.of(
             "format", 1,
             "selections", canonicalSelections,
-            "desired", encodeNodes(desiredGraph.roots())))
+            "desired", encodeNodes(desiredGraph.roots()),
+            "configContext", configContext.values()))
             .canonicalJson().getBytes(StandardCharsets.UTF_8);
     }
 
@@ -132,7 +149,10 @@ public final class DeploymentTarget {
         switch (node) {
             case DesiredInputEntry entry -> {
                 fields.put("kind", "plugin");
-                fields.put("definitionName", entry.definitionName());
+                fields.put("definition", Map.of(
+                    "pluginId", entry.definitionRef().pluginId(),
+                    "facetId", entry.definitionRef().facetId(),
+                    "definitionId", entry.definitionRef().definitionId()));
                 fields.put("config", entry.config());
                 fields.put("publicationRequirement",
                     entry.publicationRequirement().name());

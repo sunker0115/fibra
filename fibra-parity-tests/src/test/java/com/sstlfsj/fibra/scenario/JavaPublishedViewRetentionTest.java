@@ -1,25 +1,28 @@
 package com.sstlfsj.fibra.scenario;
 
-import com.sstlfsj.fibra.artifact.ArtifactId;
-import com.sstlfsj.fibra.artifact.ArtifactStore;
+import com.sstlfsj.fibra.artifact.PluginPackageRecord;
+import com.sstlfsj.fibra.artifact.PluginPackageStore;
+import com.sstlfsj.fibra.config.ConfigContextSnapshot;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
-import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
+import com.sstlfsj.fibra.config.PluginDefinitionRef;
 import com.sstlfsj.fibra.engine.ApplyDeployment;
-import com.sstlfsj.fibra.engine.DeploymentArtifact;
-import com.sstlfsj.fibra.engine.EngineChangeException;
+import com.sstlfsj.fibra.engine.DeploymentTarget;
+import com.sstlfsj.fibra.engine.DeploymentTargetStore;
 import com.sstlfsj.fibra.engine.EngineState;
+import com.sstlfsj.fibra.engine.ExecutionObservation;
+import com.sstlfsj.fibra.engine.ExecutionUnitKey;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.HostServiceRegistry;
-import com.sstlfsj.fibra.engine.InstallArtifact;
+import com.sstlfsj.fibra.engine.PluginSelection;
 import com.sstlfsj.fibra.engine.PublishedView;
-import com.sstlfsj.fibra.engine.TargetSaveState;
-import com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter;
+import com.sstlfsj.fibra.runtime.java.JavaRuntimeProvider;
 import fixture.RetentionJavaEntrypoint;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.InputStream;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
@@ -31,25 +34,27 @@ import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class JavaPublishedViewRetentionTest {
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
-    private static final ArtifactId ARTIFACT = new ArtifactId("retention");
+    private static final String PLUGIN = "retention";
 
     @Test
     @Timeout(20)
-    void liveEngineReleasesTheLastRemovedDescriptorLoader(@TempDir Path work) throws Exception {
-        try (var engine = engine(work.resolve("removed"));
-             var control = engine(work.resolve("active"))) {
-            var active = new WeakReference<>(descriptorLoader(control.start().block(TIMEOUT)));
+    void liveEngineReleasesTheLastRemovedDescriptorLoader(@TempDir Path work)
+        throws Exception {
+        try (var fixture = fixture(work.resolve("removed"));
+             var controlFixture = fixture(work.resolve("active"))) {
+            var engine = fixture.engine();
+            var control = controlFixture.engine();
+            var active = new WeakReference<>(descriptorLoader(control.startAsync().block(TIMEOUT)));
             var retired = startAndRemove(engine);
             assertAll(() -> awaitCollected(List.of(retired)),
                 () -> assertNotNull(active.get(), "active descriptor loader is the live control"),
@@ -61,68 +66,71 @@ class JavaPublishedViewRetentionTest {
     }
 
     private static WeakReference<ClassLoader> startAndRemove(FibraEngine engine) {
-        var retired = new WeakReference<>(descriptorLoader(engine.start().block(TIMEOUT)));
-        var current = engine.published().current();
+        var retired = new WeakReference<>(descriptorLoader(engine.startAsync().block(TIMEOUT)));
         engine.submit(ApplyDeployment.builder(new DesiredInputGraph(List.of()))
-            .expectedRevision(current.viewRevision())
-            .expectedDesiredRevision(current.engine().desiredSource().revision())
-            .artifacts(List.of()).build()).block(TIMEOUT);
+            .expectedRevision(1).selections(List.of())
+            .configContext(ConfigContextSnapshot.empty()).build()).block(TIMEOUT);
         return retired;
     }
 
     @Test
     @Timeout(20)
-    void correctedStartupReleasesTheOriginalFailureAndDescriptorLoaderWhileEngineStaysLive(@TempDir Path work)
-        throws Exception {
-        var originalCause = new IllegalStateException("controlled plugin startup failure");
+    void correctedStartupReleasesTheFailedDescriptorLoaderWhileEngineStaysLive(
+        @TempDir Path work) throws Exception {
+        var originalFailure = new IllegalStateException(
+            "controlled plugin startup failure");
         var services = new HostServiceRegistry();
-        services.register(RetentionJavaEntrypoint.STARTUP_FAILURE, originalCause);
-        var initial = List.of(artifact(work, 0), artifact(work, 0, new ArtifactId("retention-failure"),
+        services.register(RetentionJavaEntrypoint.STARTUP_FAILURE, originalFailure);
+        var packages = new PluginPackageStore(work.resolve("packages"));
+        var active = install(packages, pluginPackage(work, 0, PLUGIN,
+            "fixture.RetentionJavaEntrypoint"));
+        var failing = install(packages, pluginPackage(work, 0, "retention-failure",
             "fixture.RetentionJavaEntrypoint$Failing"));
-        var graph = new DesiredInputGraph(List.of(
-            DesiredInputEntry.builder("retention", "retention").build(),
-            DesiredInputEntry.builder("failing", "retention-failure").build()));
-        try (var engine = FibraEngine.builder(new InMemoryDesiredStateRepository(graph))
-            .artifactStore(new ArtifactStore(work.resolve("artifacts"))).hostServices(services)
-            .runtimeAdapter(new JavaPluginRuntimeAdapter()).initialArtifacts(() -> initial).build()) {
-            var retired = failAndCorrectStartup(engine, work, originalCause);
-            var active = new WeakReference<>(descriptorLoader(engine.published().current()));
-            assertAll(() -> awaitCollected(retired),
-                () -> assertNotNull(active.get(), "corrected descriptor loader is the live control"),
-                () -> assertEquals(EngineState.RUNNING, engine.published().current().engine().state()));
+        var graph = new DesiredInputGraph(List.of(entry(PLUGIN, PLUGIN),
+            entry("failing", "retention-failure")));
+        var targets = DeploymentTargetStore.inMemory();
+        targets.save(0, DeploymentTarget.of(1,
+            List.of(selection(active), selection(failing)), graph,
+            ConfigContextSnapshot.empty()));
+
+        try (var engine = FibraEngine.builder(packages, targets)
+            .hostServices(services).runtimeProvider(new JavaRuntimeProvider(List.of()))
+            .hostTerminationPort(ignored -> { }).build()) {
+            var retired = correctStartup(engine, packages, work);
+            awaitCollected(retired);
             Reference.reachabilityFence(engine);
         }
     }
 
-    private static List<WeakReference<?>> failAndCorrectStartup(FibraEngine engine, Path work,
-                                                                RuntimeException originalCause) throws Exception {
-        var failure = assertThrows(EngineChangeException.class, () -> engine.start().block(TIMEOUT));
-        assertEquals(TargetSaveState.SAVED, failure.targetSaveState());
-        assertEquals(1, failure.getCause().getSuppressed().length);
-        assertSame(originalCause, failure.getCause().getSuppressed()[0],
-            "first startup subscriber must receive the original plugin failure");
-        assertEquals(EngineState.FAILED, failure.view().engine().state());
-        assertTrue(failure.view().engineDiagnostics().mutationGateOpen());
-        var oldLoader = descriptorLoader(failure.view());
-        var current = engine.published().current();
-        var corrected = engine.submit(ApplyDeployment.builder(new DesiredInputGraph(List.of(
-                DesiredInputEntry.builder("retention", "retention").build())))
-            .expectedRevision(current.viewRevision())
-            .expectedDesiredRevision(current.engine().desiredSource().revision())
-            .artifacts(List.of(artifact(work, 1))).build()).block(TIMEOUT).view();
+    private static List<WeakReference<ClassLoader>> correctStartup(
+        FibraEngine engine, PluginPackageStore packages, Path work)
+        throws Exception {
+        var failed = engine.startAsync().block(TIMEOUT);
+        assertEquals(ExecutionObservation.State.FAILED,
+            failed.engine().units().get(new ExecutionUnitKey("failing")).aggregateState());
+        assertTrue(failed.engineDiagnostics().mutationGateOpen());
+        assertTrue(!failed.engineDiagnostics().targetSatisfied());
+        var oldLoader = descriptorLoader(failed);
+        var replacement = install(packages, pluginPackage(work, 1, PLUGIN,
+            "fixture.RetentionJavaEntrypoint"));
+        var corrected = engine.submit(ApplyDeployment.builder(
+                new DesiredInputGraph(List.of(entry(PLUGIN, PLUGIN))))
+            .expectedRevision(1).selections(List.of(selection(replacement)))
+            .configContext(ConfigContextSnapshot.empty()).build()).block(TIMEOUT).view();
         assertTrue(corrected.engineDiagnostics().targetSatisfied());
         assertEquals(EngineState.RUNNING, corrected.engine().state());
-        assertEquals(1, corrected.engine().runtimes().get(JavaPluginRuntimeAdapter.RUNTIME_ID).resources().size());
+        assertEquals(1, corrected.engine().units().size());
         assertNotSame(oldLoader, descriptorLoader(corrected));
-        return List.of(new WeakReference<>(failure), new WeakReference<>(oldLoader));
+        return List.of(new WeakReference<>(oldLoader));
     }
 
     @Test
     @Timeout(20)
-    void liveEngineDoesNotRetainTheFirstPublishedDescriptorLoaderAfterRepeatedReplacements(@TempDir Path work)
-        throws Exception {
-        try (var engine = engine(work)) {
-            var retired = startAndReplace(engine, work);
+    void liveEngineDoesNotRetainTheFirstPublishedDescriptorLoaderAfterRepeatedReplacements(
+        @TempDir Path work) throws Exception {
+        try (var fixture = fixture(work)) {
+            var engine = fixture.engine();
+            var retired = startAndReplace(fixture);
             var active = new WeakReference<>(descriptorLoader(engine.published().current()));
             assertAll(() -> awaitCollected(retired),
                 () -> assertNotNull(active.get(), "active descriptor loader is the live control"));
@@ -131,13 +139,62 @@ class JavaPublishedViewRetentionTest {
     }
 
     @Test
+    @Timeout(20)
+    void partialReplacementReleasesStoppedUnitWhileItsOriginalGenerationStaysLive(
+        @TempDir Path work) throws Exception {
+        var packages = new PluginPackageStore(work.resolve("packages"));
+        var replaceableV1 = install(packages, pluginPackage(work, 0, PLUGIN,
+            "fixture.RetentionJavaEntrypoint"));
+        var replaceableV2 = install(packages, pluginPackage(work, 1, PLUGIN,
+            "fixture.RetentionJavaEntrypoint"));
+        var peer = install(packages, pluginPackage(work, 0, "retention-peer",
+            "fixture.RetentionJavaEntrypoint$Peer"));
+        var graph = new DesiredInputGraph(List.of(
+            entry("replaceable", PLUGIN), entry("retained", "retention-peer")));
+        var targets = DeploymentTargetStore.inMemory();
+        targets.save(0, DeploymentTarget.of(1,
+            List.of(selection(replaceableV1), selection(peer)), graph,
+            ConfigContextSnapshot.empty()));
+        try (var engine = FibraEngine.builder(packages, targets)
+            .runtimeProvider(new JavaRuntimeProvider(List.of()))
+            .hostTerminationPort(ignored -> { }).build()) {
+            var references = startAndPartiallyReplace(engine, graph,
+                replaceableV2, peer);
+            assertAll(() -> awaitCollected(List.of(references.retired())),
+                () -> assertNotNull(references.retained().get(),
+                    "retained unit keeps its own loader while the old generation stays live"));
+            Reference.reachabilityFence(engine);
+        }
+    }
+
+    private static LoaderReferences startAndPartiallyReplace(
+        FibraEngine engine, DesiredInputGraph graph,
+        PluginPackageRecord replaceableV2, PluginPackageRecord peer) {
+        var started = engine.startAsync().block(TIMEOUT);
+        var retiredLoader = descriptorLoader(started, "replaceable");
+        var retainedLoader = descriptorLoader(started, "retained");
+        var retainedInstance = detail(started, "retained").runtimeInstanceId();
+        var replaced = engine.submit(ApplyDeployment.builder(graph)
+            .expectedRevision(1)
+            .selections(List.of(selection(replaceableV2), selection(peer)))
+            .configContext(ConfigContextSnapshot.empty()).build()).block(TIMEOUT).view();
+        assertNotSame(retiredLoader, descriptorLoader(replaced, "replaceable"));
+        assertSame(retainedLoader, descriptorLoader(replaced, "retained"));
+        assertEquals(retainedInstance,
+            detail(replaced, "retained").runtimeInstanceId());
+        return new LoaderReferences(new WeakReference<>(retiredLoader),
+            new WeakReference<>(retainedLoader));
+    }
+
+    @Test
     @Timeout(15)
-    void callerRetainingAnOldPublishedViewKeepsItsPluginDefinedDescriptorType(@TempDir Path work)
-        throws Exception {
-        try (var engine = engine(work)) {
-            var retained = engine.start().block(TIMEOUT);
+    void callerRetainingAnOldPublishedViewKeepsItsPluginDefinedDescriptorType(
+        @TempDir Path work) throws Exception {
+        try (var fixture = fixture(work)) {
+            var engine = fixture.engine();
+            var retained = engine.startAsync().block(TIMEOUT);
             var old = new WeakReference<>(descriptorLoader(retained));
-            replace(engine, work, 1);
+            replace(engine, fixture.revisions().get(1), 1);
             for (var attempt = 0; attempt < 8; attempt++) {
                 System.gc();
                 Thread.sleep(25);
@@ -149,17 +206,18 @@ class JavaPublishedViewRetentionTest {
         }
     }
 
-    private static List<WeakReference<ClassLoader>> startAndReplace(FibraEngine engine, Path work)
+    private static List<WeakReference<ClassLoader>> startAndReplace(TestEngine fixture)
         throws Exception {
+        var engine = fixture.engine();
         var retired = new ArrayList<WeakReference<ClassLoader>>();
-        retired.add(new WeakReference<>(descriptorLoader(engine.start().block(TIMEOUT))));
+        var started = engine.startAsync().block(TIMEOUT);
+        retired.add(new WeakReference<>(descriptorLoader(started)));
+        var before = detail(started);
         for (var round = 1; round <= 3; round++) {
-            var before = engine.published().current().engine().runtimes()
-                .get(JavaPluginRuntimeAdapter.RUNTIME_ID).resources().getFirst().identity();
-            replace(engine, work, round);
+            replace(engine, fixture.revisions().get(round), round);
             var current = engine.published().current();
-            assertNotEquals(before, current.engine().runtimes()
-                .get(JavaPluginRuntimeAdapter.RUNTIME_ID).resources().getFirst().identity());
+            assertNotEquals(before.runtimeInstanceId(), detail(current).runtimeInstanceId());
+            before = detail(current);
             if (round < 3) retired.add(new WeakReference<>(descriptorLoader(current)));
         }
         return retired;
@@ -167,59 +225,117 @@ class JavaPublishedViewRetentionTest {
 
     private static ClassLoader descriptorLoader(PublishedView view) {
         var descriptor = view.contributions().entries().getFirst().descriptor();
-        assertEquals("fixture.RetentionJavaEntrypoint$Descriptor", descriptor.getClass().getName());
+        assertEquals("fixture.RetentionJavaEntrypoint$Descriptor",
+            descriptor.getClass().getName());
         var loader = descriptor.getClass().getClassLoader();
         assertNotSame(RetentionJavaEntrypoint.class.getClassLoader(), loader);
         return loader;
     }
 
-    private static FibraEngine engine(Path work) throws Exception {
-        var initial = artifact(work, 0);
-        var graph = new DesiredInputGraph(List.of(DesiredInputEntry.builder("retention", "retention").build()));
-        return FibraEngine.builder(new InMemoryDesiredStateRepository(graph))
-            .artifactStore(new ArtifactStore(work.resolve("artifacts")))
-            .runtimeAdapter(new JavaPluginRuntimeAdapter()).initialArtifacts(() -> List.of(initial)).build();
+    private static ClassLoader descriptorLoader(PublishedView view,
+                                                 String provider) {
+        var matches = view.contributions().entries().stream()
+            .filter(entry -> entry.id().providerInstanceId().equals(provider))
+            .toList();
+        assertEquals(1, matches.size());
+        var loader = matches.getFirst().descriptor().getClass().getClassLoader();
+        assertNotSame(RetentionJavaEntrypoint.class.getClassLoader(), loader);
+        return loader;
     }
 
-    private static void replace(FibraEngine engine, Path work, int round) throws Exception {
-        var next = artifact(work, round);
-        engine.submit(InstallArtifact.builder().expectedRevision(engine.published().current().viewRevision())
-            .artifactId(ARTIFACT).runtimeId(JavaPluginRuntimeAdapter.RUNTIME_ID)
-            .version(next.version()).source(next.source()).build()).block(TIMEOUT);
+    private static ExecutionObservation.Detail detail(PublishedView view) {
+        return view.engine().units().get(new ExecutionUnitKey(PLUGIN))
+            .executions().getFirst();
     }
 
-    private static DeploymentArtifact artifact(Path work, int round) throws Exception {
-        return artifact(work, round, ARTIFACT, "fixture.RetentionJavaEntrypoint");
+
+    private static ExecutionObservation.Detail detail(PublishedView view,
+                                                       String entry) {
+        return view.engine().units().get(new ExecutionUnitKey(entry))
+            .executions().getFirst();
     }
 
-    private static DeploymentArtifact artifact(Path work, int round, ArtifactId id, String entrypoint)
-        throws Exception {
+    private static TestEngine fixture(Path work) throws Exception {
+        var packages = new PluginPackageStore(work.resolve("packages"));
+        var revisions = new ArrayList<PluginPackageRecord>();
+        for (var round = 0; round <= 3; round++) {
+            revisions.add(install(packages, pluginPackage(work, round, PLUGIN,
+                "fixture.RetentionJavaEntrypoint")));
+        }
+        var graph = new DesiredInputGraph(List.of(entry(PLUGIN, PLUGIN)));
+        var targets = DeploymentTargetStore.inMemory();
+        targets.save(0, DeploymentTarget.of(1, List.of(selection(revisions.getFirst())), graph,
+            ConfigContextSnapshot.empty()));
+        var engine = FibraEngine.builder(packages, targets)
+            .runtimeProvider(new JavaRuntimeProvider(List.of()))
+            .hostTerminationPort(ignored -> { }).build();
+        return new TestEngine(engine, List.copyOf(revisions));
+    }
+
+    private static void replace(FibraEngine engine, PluginPackageRecord next,
+                                int round) {
+        engine.submit(ApplyDeployment.builder(new DesiredInputGraph(List.of(entry(PLUGIN, PLUGIN))))
+            .expectedRevision(round).selections(List.of(selection(next)))
+            .configContext(ConfigContextSnapshot.empty()).build()).block(TIMEOUT);
+    }
+
+    private static DesiredInputEntry entry(String id, String pluginId) {
+        return DesiredInputEntry.builder(id,
+            new PluginDefinitionRef(pluginId, "main", pluginId)).build();
+    }
+
+    private static PluginSelection selection(PluginPackageRecord value) {
+        return new PluginSelection(value.pluginId(), value.packageRevision(), true);
+    }
+
+    private static PluginPackageRecord install(PluginPackageStore store,
+                                                Path source) {
+        try (var transaction = store.prepareInstall(source)) {
+            return transaction.save();
+        }
+    }
+
+    private static Path pluginPackage(Path work, int round, String pluginId,
+                                      String entrypoint) throws Exception {
         var version = "1.0." + round;
-        var root = Files.createDirectories(work.resolve(id.value() + "-source-" + round));
-        Files.writeString(root.resolve("plugin.properties"),
-            "formatVersion=1\nruntime=java\npayload=plugin.jar\n");
-        try (var jar = new JarOutputStream(Files.newOutputStream(root.resolve("plugin.jar")))) {
-            jar.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml"));
-            jar.write(("id: " + id.value() + "\nversion: " + version
-                + "\nentrypoint: " + entrypoint + "\nrequires: []\n")
+        var root = Files.createDirectories(work.resolve(pluginId + "-source-" + round));
+        var jar = root.resolve("plugin.jar");
+        try (var output = new JarOutputStream(Files.newOutputStream(jar))) {
+            output.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml"));
+            output.write(("entrypoint: " + entrypoint + "\n")
                 .getBytes(StandardCharsets.UTF_8));
-            jar.closeEntry();
+            output.closeEntry();
             for (var name : List.of("fixture/RetentionJavaEntrypoint.class",
-                "fixture/RetentionJavaEntrypoint$Descriptor.class", "fixture/RetentionJavaEntrypoint$Failing.class")) {
-                jar.putNextEntry(new JarEntry(name));
-                try (var input = RetentionJavaEntrypoint.class.getResourceAsStream('/' + name)) {
+                "fixture/RetentionJavaEntrypoint$Descriptor.class",
+                "fixture/RetentionJavaEntrypoint$Failing.class",
+                "fixture/RetentionJavaEntrypoint$Peer.class")) {
+                output.putNextEntry(new JarEntry(name));
+                try (InputStream input = RetentionJavaEntrypoint.class
+                    .getResourceAsStream('/' + name)) {
                     assertNotNull(input);
-                    jar.write(input.readAllBytes());
+                    output.write(input.readAllBytes());
                 }
-                jar.closeEntry();
+                output.closeEntry();
             }
         }
-        return DeploymentArtifact.builder().artifactId(id).runtimeId(JavaPluginRuntimeAdapter.RUNTIME_ID)
-            .version(version).source(root).build();
+        Files.writeString(root.resolve("fibra-package.yaml"), """
+            format: 1
+            id: %s
+            version: %s
+            facets:
+              - id: main
+                role: host
+                runtime: java
+                target: host
+                payload: plugin.jar
+                dependencies: []
+                capabilities: []
+            """.formatted(pluginId, version));
+        return root;
     }
 
-    private static void awaitCollected(List<? extends WeakReference<?>> references) throws InterruptedException {
-        // 只对无外部副作用的受控 fixture 进行有界回收探测。
+    private static void awaitCollected(List<? extends WeakReference<?>> references)
+        throws InterruptedException {
         for (var attempt = 0; attempt < 60; attempt++) {
             System.gc();
             if (references.stream().allMatch(reference -> reference.get() == null)) return;
@@ -230,4 +346,13 @@ class JavaPublishedViewRetentionTest {
                 + java.util.stream.IntStream.range(0, references.size())
                     .filter(index -> references.get(index).get() != null).boxed().toList());
     }
+
+    private record TestEngine(FibraEngine engine,
+                              List<PluginPackageRecord> revisions)
+        implements AutoCloseable {
+        @Override public void close() { engine.close(); }
+    }
+
+    private record LoaderReferences(WeakReference<ClassLoader> retired,
+                                    WeakReference<ClassLoader> retained) { }
 }

@@ -3,67 +3,254 @@
 Compiled from "ApplyDeployment.java"
 public final class com.sstlfsj.fibra.engine.ApplyDeployment implements com.sstlfsj.fibra.engine.EngineCommand {
   public static com.sstlfsj.fibra.engine.ApplyDeployment$Builder builder(com.sstlfsj.fibra.config.DesiredInputGraph);
-  public java.lang.String expectedRevision();
-  public java.lang.String expectedDesiredRevision();
-  public java.util.List<com.sstlfsj.fibra.engine.DeploymentArtifact> artifacts();
+  public long expectedRevision();
+  public java.util.List<com.sstlfsj.fibra.engine.PluginSelection> selections();
   public com.sstlfsj.fibra.config.DesiredInputGraph graph();
+  public com.sstlfsj.fibra.config.ConfigContextSnapshot configContext();
 }
 ## com.sstlfsj.fibra.engine.ApplyDeployment$Builder
 Compiled from "ApplyDeployment.java"
 public final class com.sstlfsj.fibra.engine.ApplyDeployment$Builder {
-  public com.sstlfsj.fibra.engine.ApplyDeployment$Builder expectedRevision(java.lang.String);
-  public com.sstlfsj.fibra.engine.ApplyDeployment$Builder expectedDesiredRevision(java.lang.String);
-  public com.sstlfsj.fibra.engine.ApplyDeployment$Builder artifacts(java.util.List<com.sstlfsj.fibra.engine.DeploymentArtifact>);
+  public com.sstlfsj.fibra.engine.ApplyDeployment$Builder expectedRevision(long);
+  public com.sstlfsj.fibra.engine.ApplyDeployment$Builder selections(java.util.Collection<com.sstlfsj.fibra.engine.PluginSelection>);
+  public com.sstlfsj.fibra.engine.ApplyDeployment$Builder configContext(com.sstlfsj.fibra.config.ConfigContextSnapshot);
   public com.sstlfsj.fibra.engine.ApplyDeployment build();
 }
-## com.sstlfsj.fibra.engine.ChangePhase
-Compiled from "ChangePhase.java"
-public final class com.sstlfsj.fibra.engine.ChangePhase extends java.lang.Enum<com.sstlfsj.fibra.engine.ChangePhase> {
-  public static final com.sstlfsj.fibra.engine.ChangePhase IDLE;
-  public static final com.sstlfsj.fibra.engine.ChangePhase PREPARING;
-  public static final com.sstlfsj.fibra.engine.ChangePhase SAVING;
-  public static final com.sstlfsj.fibra.engine.ChangePhase RECONCILING;
-  public static final com.sstlfsj.fibra.engine.ChangePhase RETIRING;
-  public static final com.sstlfsj.fibra.engine.ChangePhase FAILED;
-  public static final com.sstlfsj.fibra.engine.ChangePhase CLOSING;
-  public static final com.sstlfsj.fibra.engine.ChangePhase CLOSED;
-  public static com.sstlfsj.fibra.engine.ChangePhase[] values();
-  public static com.sstlfsj.fibra.engine.ChangePhase valueOf(java.lang.String);
+## com.sstlfsj.fibra.engine.AttemptPhase
+Compiled from "AttemptPhase.java"
+public final class com.sstlfsj.fibra.engine.AttemptPhase extends java.lang.Enum<com.sstlfsj.fibra.engine.AttemptPhase> {
+  public static final com.sstlfsj.fibra.engine.AttemptPhase REGISTERED;
+  public static final com.sstlfsj.fibra.engine.AttemptPhase PREPARING;
+  public static final com.sstlfsj.fibra.engine.AttemptPhase VALIDATING;
+  public static final com.sstlfsj.fibra.engine.AttemptPhase READY_TO_SAVE;
+  public static final com.sstlfsj.fibra.engine.AttemptPhase SAVING;
+  public static final com.sstlfsj.fibra.engine.AttemptPhase PROMOTING;
+  public static final com.sstlfsj.fibra.engine.AttemptPhase RECONCILING;
+  public static final com.sstlfsj.fibra.engine.AttemptPhase DRAINING;
+  public static final com.sstlfsj.fibra.engine.AttemptPhase STOPPING;
+  public static final com.sstlfsj.fibra.engine.AttemptPhase RELEASING;
+  public static final com.sstlfsj.fibra.engine.AttemptPhase SETTLED;
+  public static final com.sstlfsj.fibra.engine.AttemptPhase FAILED;
+  public static com.sstlfsj.fibra.engine.AttemptPhase[] values();
+  public static com.sstlfsj.fibra.engine.AttemptPhase valueOf(java.lang.String);
 }
-## com.sstlfsj.fibra.engine.DeploymentArtifact
-Compiled from "DeploymentArtifact.java"
-public final class com.sstlfsj.fibra.engine.DeploymentArtifact {
-  public static com.sstlfsj.fibra.engine.DeploymentArtifact$Builder builder();
-  public com.sstlfsj.fibra.artifact.ArtifactId artifactId();
-  public com.sstlfsj.fibra.artifact.RuntimeId runtimeId();
-  public java.lang.String version();
-  public java.nio.file.Path source();
+## com.sstlfsj.fibra.engine.AttemptRole
+Compiled from "AttemptRole.java"
+public final class com.sstlfsj.fibra.engine.AttemptRole extends java.lang.Enum<com.sstlfsj.fibra.engine.AttemptRole> {
+  public static final com.sstlfsj.fibra.engine.AttemptRole CANDIDATE;
+  public static final com.sstlfsj.fibra.engine.AttemptRole CURRENT;
+  public static final com.sstlfsj.fibra.engine.AttemptRole RETIRING;
+  public static final com.sstlfsj.fibra.engine.AttemptRole RETIRED;
+  public static com.sstlfsj.fibra.engine.AttemptRole[] values();
+  public static com.sstlfsj.fibra.engine.AttemptRole valueOf(java.lang.String);
 }
-## com.sstlfsj.fibra.engine.DeploymentArtifact$Builder
-Compiled from "DeploymentArtifact.java"
-public final class com.sstlfsj.fibra.engine.DeploymentArtifact$Builder {
-  public com.sstlfsj.fibra.engine.DeploymentArtifact$Builder();
-  public com.sstlfsj.fibra.engine.DeploymentArtifact$Builder artifactId(com.sstlfsj.fibra.artifact.ArtifactId);
-  public com.sstlfsj.fibra.engine.DeploymentArtifact$Builder runtimeId(com.sstlfsj.fibra.artifact.RuntimeId);
-  public com.sstlfsj.fibra.engine.DeploymentArtifact$Builder version(java.lang.String);
-  public com.sstlfsj.fibra.engine.DeploymentArtifact$Builder source(java.nio.file.Path);
-  public com.sstlfsj.fibra.engine.DeploymentArtifact build();
-}
-## com.sstlfsj.fibra.engine.DeploymentManifest
-Compiled from "DeploymentManifest.java"
-public final class com.sstlfsj.fibra.engine.DeploymentManifest extends java.lang.Record {
-  public com.sstlfsj.fibra.engine.DeploymentManifest(java.util.Map<com.sstlfsj.fibra.artifact.ArtifactId, java.lang.String>, com.sstlfsj.fibra.config.DesiredInputGraph);
-  public java.lang.String revision();
+## com.sstlfsj.fibra.engine.AttemptSnapshot
+Compiled from "AttemptSnapshot.java"
+public final class com.sstlfsj.fibra.engine.AttemptSnapshot extends java.lang.Record {
+  public com.sstlfsj.fibra.engine.AttemptSnapshot(java.lang.String, com.sstlfsj.fibra.engine.AttemptRole, com.sstlfsj.fibra.engine.AttemptPhase, long, java.lang.String, java.util.Set<com.sstlfsj.fibra.engine.ExecutionUnitKey>);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
-  public java.util.Map<com.sstlfsj.fibra.artifact.ArtifactId, java.lang.String> artifacts();
+  public java.lang.String attemptId();
+  public com.sstlfsj.fibra.engine.AttemptRole role();
+  public com.sstlfsj.fibra.engine.AttemptPhase phase();
+  public long targetRevision();
+  public java.lang.String compiledFingerprint();
+  public java.util.Set<com.sstlfsj.fibra.engine.ExecutionUnitKey> unitKeys();
+}
+## com.sstlfsj.fibra.engine.BuiltInFacet
+Compiled from "BuiltInFacet.java"
+public final class com.sstlfsj.fibra.engine.BuiltInFacet {
+  public static com.sstlfsj.fibra.engine.BuiltInFacet$Builder builder(com.sstlfsj.fibra.artifact.FacetId, com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.artifact.ExecutionTarget);
+  public com.sstlfsj.fibra.artifact.FacetId facetId();
+  public com.sstlfsj.fibra.artifact.RuntimeId runtimeId();
+  public com.sstlfsj.fibra.artifact.ExecutionTarget executionTarget();
+  public java.util.List<com.sstlfsj.fibra.artifact.FacetDependency> dependencies();
+  public java.util.Set<java.lang.String> requiredCapabilities();
+  public java.util.Set<java.lang.String> definitionIds();
+}
+## com.sstlfsj.fibra.engine.BuiltInFacet$Builder
+Compiled from "BuiltInFacet.java"
+public final class com.sstlfsj.fibra.engine.BuiltInFacet$Builder {
+  public com.sstlfsj.fibra.engine.BuiltInFacet$Builder dependencies(java.util.List<com.sstlfsj.fibra.artifact.FacetDependency>);
+  public com.sstlfsj.fibra.engine.BuiltInFacet$Builder requiredCapabilities(java.util.Set<java.lang.String>);
+  public com.sstlfsj.fibra.engine.BuiltInFacet$Builder definitionIds(java.util.Set<java.lang.String>);
+  public com.sstlfsj.fibra.engine.BuiltInFacet build();
+}
+## com.sstlfsj.fibra.engine.BuiltInPluginPackage
+Compiled from "BuiltInPluginPackage.java"
+public final class com.sstlfsj.fibra.engine.BuiltInPluginPackage {
+  public static com.sstlfsj.fibra.engine.BuiltInPluginPackage$Builder builder();
+  public com.sstlfsj.fibra.artifact.PluginId pluginId();
+  public java.lang.String version();
+  public java.lang.String packageDigest();
+  public java.util.List<com.sstlfsj.fibra.engine.BuiltInFacet> facets();
+  public com.sstlfsj.fibra.artifact.ArtifactId artifactId(com.sstlfsj.fibra.artifact.FacetId);
+  public com.sstlfsj.fibra.engine.PluginSelection selection(boolean);
+}
+## com.sstlfsj.fibra.engine.BuiltInPluginPackage$Builder
+Compiled from "BuiltInPluginPackage.java"
+public final class com.sstlfsj.fibra.engine.BuiltInPluginPackage$Builder {
+  public com.sstlfsj.fibra.engine.BuiltInPluginPackage$Builder pluginId(com.sstlfsj.fibra.artifact.PluginId);
+  public com.sstlfsj.fibra.engine.BuiltInPluginPackage$Builder version(java.lang.String);
+  public com.sstlfsj.fibra.engine.BuiltInPluginPackage$Builder packageDigest(java.lang.String);
+  public com.sstlfsj.fibra.engine.BuiltInPluginPackage$Builder facets(java.util.List<com.sstlfsj.fibra.engine.BuiltInFacet>);
+  public com.sstlfsj.fibra.engine.BuiltInPluginPackage build();
+}
+## com.sstlfsj.fibra.engine.CompiledDeployment
+Compiled from "CompiledDeployment.java"
+public final class com.sstlfsj.fibra.engine.CompiledDeployment {
+  public static com.sstlfsj.fibra.engine.CompiledDeployment$Builder builder(com.sstlfsj.fibra.engine.DeploymentTarget, java.lang.String);
+  public com.sstlfsj.fibra.engine.DeploymentTarget target();
+  public java.lang.String compiledFingerprint();
+  public com.sstlfsj.fibra.engine.DeploymentTargetCompiler$Compilation facetGraph();
+  public com.sstlfsj.fibra.config.DesiredEvaluation desired();
+  public java.util.Map<com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.RuntimePlan> runtimePlans();
+  public java.util.List<com.sstlfsj.fibra.engine.ExecutionUnitKey> dependencyFirst();
+  public java.util.List<com.sstlfsj.fibra.engine.ExecutionUnitKey> reverseDependency();
+  public java.util.Set<com.sstlfsj.fibra.engine.ExecutionUnitKey> affectedUnits();
+  public java.util.Set<com.sstlfsj.fibra.engine.ExecutionUnitKey> retainedUnits();
+}
+## com.sstlfsj.fibra.engine.CompiledDeployment$Builder
+Compiled from "CompiledDeployment.java"
+public final class com.sstlfsj.fibra.engine.CompiledDeployment$Builder {
+  public com.sstlfsj.fibra.engine.CompiledDeployment$Builder facetGraph(com.sstlfsj.fibra.engine.DeploymentTargetCompiler$Compilation);
+  public com.sstlfsj.fibra.engine.CompiledDeployment$Builder desired(com.sstlfsj.fibra.config.DesiredEvaluation);
+  public com.sstlfsj.fibra.engine.CompiledDeployment$Builder runtimePlans(java.util.Map<com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.RuntimePlan>);
+  public com.sstlfsj.fibra.engine.CompiledDeployment$Builder dependencyFirst(java.util.List<com.sstlfsj.fibra.engine.ExecutionUnitKey>);
+  public com.sstlfsj.fibra.engine.CompiledDeployment$Builder affectedUnits(java.util.Set<com.sstlfsj.fibra.engine.ExecutionUnitKey>);
+  public com.sstlfsj.fibra.engine.CompiledDeployment$Builder retainedUnits(java.util.Set<com.sstlfsj.fibra.engine.ExecutionUnitKey>);
+  public com.sstlfsj.fibra.engine.CompiledDeployment build();
+}
+## com.sstlfsj.fibra.engine.CompiledRuntimeSlice
+Compiled from "CompiledRuntimeSlice.java"
+public final class com.sstlfsj.fibra.engine.CompiledRuntimeSlice {
+  public static com.sstlfsj.fibra.engine.CompiledRuntimeSlice of(com.sstlfsj.fibra.engine.RuntimePlan, java.util.List<com.sstlfsj.fibra.engine.ExecutionUnitKey>);
+  public com.sstlfsj.fibra.artifact.RuntimeId runtimeId();
+  public com.sstlfsj.fibra.engine.RuntimePlan plan();
+  public java.util.List<com.sstlfsj.fibra.engine.ExecutionUnitKey> dependencyFirst();
+  public java.util.List<com.sstlfsj.fibra.engine.ExecutionUnitKey> reverseDependency();
+  public java.util.Set<com.sstlfsj.fibra.engine.ExecutionUnitKey> unitKeys();
+}
+## com.sstlfsj.fibra.engine.DefinitionBindingPlan
+Compiled from "DefinitionBindingPlan.java"
+public final class com.sstlfsj.fibra.engine.DefinitionBindingPlan {
+  public static com.sstlfsj.fibra.engine.DefinitionBindingPlan$Builder builder(com.sstlfsj.fibra.config.PluginDefinitionRef, java.lang.String);
+  public com.sstlfsj.fibra.config.PluginDefinitionRef definition();
+  public java.lang.String desiredEntryId();
+  public com.sstlfsj.fibra.engine.ExecutionUnitKey unitKey();
+  public com.sstlfsj.fibra.config.PublicationRequirement publicationRequirement();
+}
+## com.sstlfsj.fibra.engine.DefinitionBindingPlan$Builder
+Compiled from "DefinitionBindingPlan.java"
+public final class com.sstlfsj.fibra.engine.DefinitionBindingPlan$Builder {
+  public com.sstlfsj.fibra.engine.DefinitionBindingPlan$Builder unitKey(com.sstlfsj.fibra.engine.ExecutionUnitKey);
+  public com.sstlfsj.fibra.engine.DefinitionBindingPlan$Builder publicationRequirement(com.sstlfsj.fibra.config.PublicationRequirement);
+  public com.sstlfsj.fibra.engine.DefinitionBindingPlan build();
+}
+## com.sstlfsj.fibra.engine.DeploymentCandidate
+Compiled from "DeploymentCandidate.java"
+public final class com.sstlfsj.fibra.engine.DeploymentCandidate {
+  public com.sstlfsj.fibra.engine.DeploymentTarget target();
+  public com.sstlfsj.fibra.engine.CompiledDeployment compiled();
+  public java.util.Map<com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.PreparedRuntimeGeneration> generations();
+  public java.util.Map<com.sstlfsj.fibra.engine.ExecutionUnitKey, com.sstlfsj.fibra.engine.RuntimeUnitGeneration> units();
+}
+## com.sstlfsj.fibra.engine.DeploymentTarget
+Compiled from "DeploymentTarget.java"
+public final class com.sstlfsj.fibra.engine.DeploymentTarget {
+  public static com.sstlfsj.fibra.engine.DeploymentTarget of(long, java.util.Collection<com.sstlfsj.fibra.engine.PluginSelection>, com.sstlfsj.fibra.config.DesiredInputGraph, com.sstlfsj.fibra.config.ConfigContextSnapshot);
+  public long targetRevision();
+  public java.lang.String targetDigest();
+  public java.util.Map<com.sstlfsj.fibra.artifact.PluginId, com.sstlfsj.fibra.engine.PluginSelection> selections();
   public com.sstlfsj.fibra.config.DesiredInputGraph desiredGraph();
+  public com.sstlfsj.fibra.config.ConfigContextSnapshot configContext();
+  public boolean hasSameContent(java.util.Collection<com.sstlfsj.fibra.engine.PluginSelection>, com.sstlfsj.fibra.config.DesiredInputGraph, com.sstlfsj.fibra.config.ConfigContextSnapshot);
+  public static java.lang.String digestOf(java.util.Collection<com.sstlfsj.fibra.engine.PluginSelection>, com.sstlfsj.fibra.config.DesiredInputGraph, com.sstlfsj.fibra.config.ConfigContextSnapshot);
+  public boolean equals(java.lang.Object);
+  public int hashCode();
+  public java.lang.String toString();
+}
+## com.sstlfsj.fibra.engine.DeploymentTargetCodec
+Compiled from "DeploymentTargetCodec.java"
+public final class com.sstlfsj.fibra.engine.DeploymentTargetCodec {
+  public static byte[] encode(com.sstlfsj.fibra.engine.DeploymentTarget);
+  public static com.sstlfsj.fibra.engine.DeploymentTarget decode(byte[]);
+}
+## com.sstlfsj.fibra.engine.DeploymentTargetCompiler
+Compiled from "DeploymentTargetCompiler.java"
+public final class com.sstlfsj.fibra.engine.DeploymentTargetCompiler {
+  public com.sstlfsj.fibra.engine.DeploymentTargetCompiler();
+  public com.sstlfsj.fibra.engine.DeploymentTargetCompiler$Compilation compile(com.sstlfsj.fibra.engine.DeploymentTarget, java.util.Collection<com.sstlfsj.fibra.artifact.ManagedPluginPackage>, java.util.Collection<com.sstlfsj.fibra.engine.BuiltInPluginPackage>);
+}
+## com.sstlfsj.fibra.engine.DeploymentTargetCompiler$Compilation
+Compiled from "DeploymentTargetCompiler.java"
+public final class com.sstlfsj.fibra.engine.DeploymentTargetCompiler$Compilation {
+  public com.sstlfsj.fibra.engine.DeploymentTarget target();
+  public java.util.Map<com.sstlfsj.fibra.artifact.ArtifactId, com.sstlfsj.fibra.engine.DeploymentTargetCompiler$CompiledFacet> facets();
+  public java.util.Map<com.sstlfsj.fibra.artifact.ArtifactId, com.sstlfsj.fibra.engine.DeploymentTargetCompiler$CompiledBuiltInFacet> builtInFacets();
+  public java.util.List<com.sstlfsj.fibra.artifact.ArtifactId> dependencyFirst();
+}
+## com.sstlfsj.fibra.engine.DeploymentTargetCompiler$CompiledBuiltInFacet
+Compiled from "DeploymentTargetCompiler.java"
+public final class com.sstlfsj.fibra.engine.DeploymentTargetCompiler$CompiledBuiltInFacet {
+  public com.sstlfsj.fibra.engine.BuiltInPluginPackage pluginPackage();
+  public com.sstlfsj.fibra.engine.BuiltInFacet facet();
+  public com.sstlfsj.fibra.artifact.ArtifactId artifactId();
+  public java.util.List<com.sstlfsj.fibra.engine.ResolvedFacetDependency> dependencies();
+}
+## com.sstlfsj.fibra.engine.DeploymentTargetCompiler$CompiledFacet
+Compiled from "DeploymentTargetCompiler.java"
+public final class com.sstlfsj.fibra.engine.DeploymentTargetCompiler$CompiledFacet {
+  public com.sstlfsj.fibra.artifact.ManagedFacet facet();
+  public java.util.List<com.sstlfsj.fibra.engine.ResolvedFacetDependency> dependencies();
+}
+## com.sstlfsj.fibra.engine.DeploymentTargetStore
+Compiled from "DeploymentTargetStore.java"
+public interface com.sstlfsj.fibra.engine.DeploymentTargetStore extends java.lang.AutoCloseable {
+  public abstract java.util.Optional<com.sstlfsj.fibra.engine.DeploymentTargetStore$StoredTarget> load();
+  public abstract com.sstlfsj.fibra.engine.DurableTargetToken save(long, com.sstlfsj.fibra.engine.DeploymentTarget);
+  public default void close();
+  public static com.sstlfsj.fibra.engine.DeploymentTargetStore inMemory();
+  public static void checkRevision(long, long, com.sstlfsj.fibra.engine.DeploymentTarget);
+}
+## com.sstlfsj.fibra.engine.DeploymentTargetStore$SaveUnconfirmedException
+Compiled from "DeploymentTargetStore.java"
+public final class com.sstlfsj.fibra.engine.DeploymentTargetStore$SaveUnconfirmedException extends java.lang.RuntimeException {
+  public com.sstlfsj.fibra.engine.DeploymentTargetStore$SaveUnconfirmedException(java.nio.file.Path, java.lang.Throwable);
+  public java.nio.file.Path path();
+}
+## com.sstlfsj.fibra.engine.DeploymentTargetStore$StoredTarget
+Compiled from "DeploymentTargetStore.java"
+public final class com.sstlfsj.fibra.engine.DeploymentTargetStore$StoredTarget {
+  public com.sstlfsj.fibra.engine.DeploymentTarget target();
+  public com.sstlfsj.fibra.engine.DurableTargetToken token();
+}
+## com.sstlfsj.fibra.engine.DeploymentTargetStoreException
+Compiled from "DeploymentTargetStoreException.java"
+public final class com.sstlfsj.fibra.engine.DeploymentTargetStoreException extends java.lang.RuntimeException {
+  public com.sstlfsj.fibra.engine.DeploymentTargetStoreException(java.lang.String, java.nio.file.Path, java.lang.Throwable);
+  public java.nio.file.Path path();
 }
 ## com.sstlfsj.fibra.engine.DesiredBindingException
 Compiled from "DesiredBindingException.java"
 public final class com.sstlfsj.fibra.engine.DesiredBindingException extends java.lang.IllegalArgumentException {
   public com.sstlfsj.fibra.config.ConfigDiagnostic diagnostic();
+}
+## com.sstlfsj.fibra.engine.DurableTargetState
+Compiled from "DurableTargetState.java"
+public final class com.sstlfsj.fibra.engine.DurableTargetState extends java.lang.Enum<com.sstlfsj.fibra.engine.DurableTargetState> {
+  public static final com.sstlfsj.fibra.engine.DurableTargetState ABSENT;
+  public static final com.sstlfsj.fibra.engine.DurableTargetState PRESENT;
+  public static final com.sstlfsj.fibra.engine.DurableTargetState UNCERTAIN;
+  public static com.sstlfsj.fibra.engine.DurableTargetState[] values();
+  public static com.sstlfsj.fibra.engine.DurableTargetState valueOf(java.lang.String);
+}
+## com.sstlfsj.fibra.engine.DurableTargetToken
+Compiled from "DurableTargetToken.java"
+public final class com.sstlfsj.fibra.engine.DurableTargetToken {
+  public long targetRevision();
+  public java.lang.String targetDigest();
 }
 ## com.sstlfsj.fibra.engine.EngineChangeException
 Compiled from "EngineChangeException.java"
@@ -75,7 +262,6 @@ public final class com.sstlfsj.fibra.engine.EngineChangeException extends java.l
 ## com.sstlfsj.fibra.engine.EngineCommand
 Compiled from "EngineCommand.java"
 public interface com.sstlfsj.fibra.engine.EngineCommand {
-  public abstract java.lang.String expectedRevision();
 }
 ## com.sstlfsj.fibra.engine.EngineCommandResult
 Compiled from "EngineCommandResult.java"
@@ -90,53 +276,34 @@ public final class com.sstlfsj.fibra.engine.EngineCommandResult extends java.lan
 ## com.sstlfsj.fibra.engine.EngineDiagnostics
 Compiled from "EngineDiagnostics.java"
 public final class com.sstlfsj.fibra.engine.EngineDiagnostics extends java.lang.Record {
-  public com.sstlfsj.fibra.engine.EngineDiagnostics(java.lang.String, java.lang.String, com.sstlfsj.fibra.engine.ChangePhase, com.sstlfsj.fibra.engine.ChangePhase, com.sstlfsj.fibra.engine.TargetSaveState, java.util.Set<java.lang.String>, java.util.Map<com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.RuntimeResourceSnapshot>, java.util.List<java.lang.String>, boolean, boolean, java.lang.String);
-  public static com.sstlfsj.fibra.engine.EngineDiagnostics$Builder builder();
+  public com.sstlfsj.fibra.engine.EngineDiagnostics(com.sstlfsj.fibra.engine.AttemptPhase, com.sstlfsj.fibra.engine.TargetSaveState, boolean, boolean, boolean, java.util.List<java.lang.String>, java.util.Optional<com.sstlfsj.fibra.engine.HostTerminationRequest>, java.lang.String);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
-  public java.lang.String targetRevision();
-  public java.lang.String contextRevision();
-  public com.sstlfsj.fibra.engine.ChangePhase phase();
-  public com.sstlfsj.fibra.engine.ChangePhase failedPhase();
+  public com.sstlfsj.fibra.engine.AttemptPhase phase();
   public com.sstlfsj.fibra.engine.TargetSaveState targetSaveState();
-  public java.util.Set<java.lang.String> affectedInstances();
-  public java.util.Map<com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.RuntimeResourceSnapshot> resources();
-  public java.util.List<java.lang.String> cleanupFailures();
   public boolean targetSatisfied();
   public boolean mutationGateOpen();
+  public boolean contributionAdmissionOpen();
+  public java.util.List<java.lang.String> cleanupFailures();
+  public java.util.Optional<com.sstlfsj.fibra.engine.HostTerminationRequest> terminationRequest();
   public java.lang.String failure();
-}
-## com.sstlfsj.fibra.engine.EngineDiagnostics$Builder
-Compiled from "EngineDiagnostics.java"
-public final class com.sstlfsj.fibra.engine.EngineDiagnostics$Builder {
-  public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder();
-  public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder targetRevision(java.lang.String);
-  public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder contextRevision(java.lang.String);
-  public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder phase(com.sstlfsj.fibra.engine.ChangePhase);
-  public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder failedPhase(com.sstlfsj.fibra.engine.ChangePhase);
-  public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder targetSaveState(com.sstlfsj.fibra.engine.TargetSaveState);
-  public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder affectedInstances(java.util.Set<java.lang.String>);
-  public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder resources(java.util.Map<com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.RuntimeResourceSnapshot>);
-  public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder cleanupFailures(java.util.List<java.lang.String>);
-  public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder targetSatisfied(boolean);
-  public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder mutationGateOpen(boolean);
-  public com.sstlfsj.fibra.engine.EngineDiagnostics$Builder failure(java.lang.String);
-  public com.sstlfsj.fibra.engine.EngineDiagnostics build();
 }
 ## com.sstlfsj.fibra.engine.EngineSnapshot
 Compiled from "EngineSnapshot.java"
 public final class com.sstlfsj.fibra.engine.EngineSnapshot extends java.lang.Record {
-  public com.sstlfsj.fibra.engine.EngineSnapshot(com.sstlfsj.fibra.engine.EngineState, com.sstlfsj.fibra.config.DesiredSourceSnapshot, com.sstlfsj.fibra.config.DesiredInputGraph, java.util.Map<java.lang.String, com.sstlfsj.fibra.engine.PluginInstanceSnapshot>, java.util.Map<com.sstlfsj.fibra.artifact.ArtifactId, com.sstlfsj.fibra.artifact.ArtifactRecord>, java.util.Map<com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.RuntimeResourceSnapshot>, java.lang.String);
+  public com.sstlfsj.fibra.engine.EngineSnapshot(com.sstlfsj.fibra.engine.EngineState, java.lang.String, com.sstlfsj.fibra.engine.DurableTargetState, java.util.Optional<com.sstlfsj.fibra.engine.DeploymentTarget>, java.util.Optional<com.sstlfsj.fibra.engine.AttemptSnapshot>, java.util.Optional<com.sstlfsj.fibra.engine.AttemptSnapshot>, java.util.Map<com.sstlfsj.fibra.engine.ExecutionUnitKey, com.sstlfsj.fibra.engine.ExecutionObservation>, java.util.Map<com.sstlfsj.fibra.engine.ExecutionUnitKey, com.sstlfsj.fibra.engine.ExecutionObservation>, java.lang.String);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public com.sstlfsj.fibra.engine.EngineState state();
-  public com.sstlfsj.fibra.config.DesiredSourceSnapshot desiredSource();
-  public com.sstlfsj.fibra.config.DesiredInputGraph desiredGraph();
-  public java.util.Map<java.lang.String, com.sstlfsj.fibra.engine.PluginInstanceSnapshot> instances();
-  public java.util.Map<com.sstlfsj.fibra.artifact.ArtifactId, com.sstlfsj.fibra.artifact.ArtifactRecord> artifacts();
-  public java.util.Map<com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.RuntimeResourceSnapshot> runtimes();
+  public java.lang.String hostInstanceId();
+  public com.sstlfsj.fibra.engine.DurableTargetState durableState();
+  public java.util.Optional<com.sstlfsj.fibra.engine.DeploymentTarget> target();
+  public java.util.Optional<com.sstlfsj.fibra.engine.AttemptSnapshot> candidate();
+  public java.util.Optional<com.sstlfsj.fibra.engine.AttemptSnapshot> current();
+  public java.util.Map<com.sstlfsj.fibra.engine.ExecutionUnitKey, com.sstlfsj.fibra.engine.ExecutionObservation> retiring();
+  public java.util.Map<com.sstlfsj.fibra.engine.ExecutionUnitKey, com.sstlfsj.fibra.engine.ExecutionObservation> units();
   public java.lang.String failure();
 }
 ## com.sstlfsj.fibra.engine.EngineState
@@ -149,32 +316,105 @@ public final class com.sstlfsj.fibra.engine.EngineState extends java.lang.Enum<c
   public static com.sstlfsj.fibra.engine.EngineState[] values();
   public static com.sstlfsj.fibra.engine.EngineState valueOf(java.lang.String);
 }
-## com.sstlfsj.fibra.engine.EngineStateStore
-Compiled from "EngineStateStore.java"
-public interface com.sstlfsj.fibra.engine.EngineStateStore extends java.lang.AutoCloseable {
-  public abstract java.util.Optional<com.sstlfsj.fibra.engine.DeploymentManifest> load();
-  public abstract void save(com.sstlfsj.fibra.engine.DeploymentManifest);
-  public default void close();
-  public static com.sstlfsj.fibra.engine.EngineStateStore inMemory();
+## com.sstlfsj.fibra.engine.ExecutionObservation
+Compiled from "ExecutionObservation.java"
+public final class com.sstlfsj.fibra.engine.ExecutionObservation {
+  public static com.sstlfsj.fibra.engine.ExecutionObservation of(com.sstlfsj.fibra.artifact.PluginId, com.sstlfsj.fibra.artifact.FacetId, com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.artifact.ExecutionTarget, java.util.List<com.sstlfsj.fibra.engine.ExecutionObservation$Detail>);
+  public com.sstlfsj.fibra.artifact.PluginId pluginId();
+  public com.sstlfsj.fibra.artifact.FacetId facetId();
+  public com.sstlfsj.fibra.artifact.RuntimeId runtimeId();
+  public com.sstlfsj.fibra.artifact.ExecutionTarget executionTarget();
+  public com.sstlfsj.fibra.engine.ExecutionObservation$State aggregateState();
+  public java.util.List<com.sstlfsj.fibra.engine.ExecutionObservation$Detail> executions();
+  public boolean equals(java.lang.Object);
+  public int hashCode();
 }
-## com.sstlfsj.fibra.engine.EngineStateStore$SaveUnconfirmedException
-Compiled from "EngineStateStore.java"
-public final class com.sstlfsj.fibra.engine.EngineStateStore$SaveUnconfirmedException extends java.lang.RuntimeException {
-  public com.sstlfsj.fibra.engine.EngineStateStore$SaveUnconfirmedException(java.nio.file.Path, java.lang.Throwable);
-  public java.nio.file.Path path();
+## com.sstlfsj.fibra.engine.ExecutionObservation$Detail
+Compiled from "ExecutionObservation.java"
+public final class com.sstlfsj.fibra.engine.ExecutionObservation$Detail {
+  public static com.sstlfsj.fibra.engine.ExecutionObservation$Detail$Builder builder();
+  public long unitTargetRevision();
+  public java.lang.String executionId();
+  public java.lang.String runtimeInstanceId();
+  public java.lang.String lifecycleOperationId();
+  public java.util.Set<java.lang.String> capabilities();
+  public com.sstlfsj.fibra.engine.ExecutionObservation$State state();
+  public com.sstlfsj.fibra.engine.ExecutionObservation$Failure failure();
+  public boolean equals(java.lang.Object);
+  public int hashCode();
 }
-## com.sstlfsj.fibra.engine.EngineStateStoreException
-Compiled from "EngineStateStoreException.java"
-public final class com.sstlfsj.fibra.engine.EngineStateStoreException extends java.lang.RuntimeException {
-  public com.sstlfsj.fibra.engine.EngineStateStoreException(java.lang.String, java.nio.file.Path, java.lang.Throwable);
-  public java.nio.file.Path path();
+## com.sstlfsj.fibra.engine.ExecutionObservation$Detail$Builder
+Compiled from "ExecutionObservation.java"
+public final class com.sstlfsj.fibra.engine.ExecutionObservation$Detail$Builder {
+  public com.sstlfsj.fibra.engine.ExecutionObservation$Detail$Builder unitTargetRevision(long);
+  public com.sstlfsj.fibra.engine.ExecutionObservation$Detail$Builder executionId(java.lang.String);
+  public com.sstlfsj.fibra.engine.ExecutionObservation$Detail$Builder runtimeInstanceId(java.lang.String);
+  public com.sstlfsj.fibra.engine.ExecutionObservation$Detail$Builder lifecycleOperationId(java.lang.String);
+  public com.sstlfsj.fibra.engine.ExecutionObservation$Detail$Builder capabilities(java.util.Set<java.lang.String>);
+  public com.sstlfsj.fibra.engine.ExecutionObservation$Detail$Builder state(com.sstlfsj.fibra.engine.ExecutionObservation$State);
+  public com.sstlfsj.fibra.engine.ExecutionObservation$Detail$Builder failure(com.sstlfsj.fibra.engine.ExecutionObservation$Failure);
+  public com.sstlfsj.fibra.engine.ExecutionObservation$Detail build();
+}
+## com.sstlfsj.fibra.engine.ExecutionObservation$Failure
+Compiled from "ExecutionObservation.java"
+public final class com.sstlfsj.fibra.engine.ExecutionObservation$Failure extends java.lang.Record {
+  public com.sstlfsj.fibra.engine.ExecutionObservation$Failure(java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String code();
+  public java.lang.String message();
+  public java.util.Map<java.lang.String, java.lang.String> diagnostics();
+}
+## com.sstlfsj.fibra.engine.ExecutionObservation$State
+Compiled from "ExecutionObservation.java"
+public final class com.sstlfsj.fibra.engine.ExecutionObservation$State extends java.lang.Enum<com.sstlfsj.fibra.engine.ExecutionObservation$State> {
+  public static final com.sstlfsj.fibra.engine.ExecutionObservation$State PENDING;
+  public static final com.sstlfsj.fibra.engine.ExecutionObservation$State ACTIVE;
+  public static final com.sstlfsj.fibra.engine.ExecutionObservation$State FAILED;
+  public static com.sstlfsj.fibra.engine.ExecutionObservation$State[] values();
+  public static com.sstlfsj.fibra.engine.ExecutionObservation$State valueOf(java.lang.String);
+}
+## com.sstlfsj.fibra.engine.ExecutionUnitKey
+Compiled from "ExecutionUnitKey.java"
+public final class com.sstlfsj.fibra.engine.ExecutionUnitKey extends java.lang.Record implements java.lang.Comparable<com.sstlfsj.fibra.engine.ExecutionUnitKey> {
+  public com.sstlfsj.fibra.engine.ExecutionUnitKey(java.lang.String);
+  public int compareTo(com.sstlfsj.fibra.engine.ExecutionUnitKey);
+  public java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String value();
+  public int compareTo(java.lang.Object);
+}
+## com.sstlfsj.fibra.engine.ExecutionUnitPlan
+Compiled from "ExecutionUnitPlan.java"
+public final class com.sstlfsj.fibra.engine.ExecutionUnitPlan {
+  public static com.sstlfsj.fibra.engine.ExecutionUnitPlan$Builder builder(com.sstlfsj.fibra.engine.ExecutionUnitKey, com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.artifact.ExecutionTarget);
+  public com.sstlfsj.fibra.engine.ExecutionUnitKey key();
+  public com.sstlfsj.fibra.artifact.RuntimeId runtimeId();
+  public com.sstlfsj.fibra.artifact.ExecutionTarget executionTarget();
+  public com.sstlfsj.fibra.artifact.ArtifactId artifactId();
+  public com.sstlfsj.fibra.artifact.PluginId pluginId();
+  public com.sstlfsj.fibra.artifact.FacetId facetId();
+  public java.lang.String packageRevision();
+  public java.util.List<com.sstlfsj.fibra.engine.ExecutionUnitKey> dependencies();
+}
+## com.sstlfsj.fibra.engine.ExecutionUnitPlan$Builder
+Compiled from "ExecutionUnitPlan.java"
+public final class com.sstlfsj.fibra.engine.ExecutionUnitPlan$Builder {
+  public com.sstlfsj.fibra.engine.ExecutionUnitPlan$Builder artifactIdentity(java.lang.String);
+  public com.sstlfsj.fibra.engine.ExecutionUnitPlan$Builder artifactId(com.sstlfsj.fibra.artifact.ArtifactId);
+  public com.sstlfsj.fibra.engine.ExecutionUnitPlan$Builder provenance(java.lang.String, java.lang.String, java.lang.String);
+  public com.sstlfsj.fibra.engine.ExecutionUnitPlan$Builder dependencies(java.util.List<com.sstlfsj.fibra.engine.ExecutionUnitKey>);
+  public com.sstlfsj.fibra.engine.ExecutionUnitPlan build();
 }
 ## com.sstlfsj.fibra.engine.FibraEngine
 Compiled from "FibraEngine.java"
 public final class com.sstlfsj.fibra.engine.FibraEngine implements java.lang.AutoCloseable {
-  public static com.sstlfsj.fibra.engine.FibraEngine$Builder builder(com.sstlfsj.fibra.config.DesiredStateRepository);
+  public static com.sstlfsj.fibra.engine.FibraEngine$Builder builder(com.sstlfsj.fibra.artifact.PluginPackageStore, com.sstlfsj.fibra.engine.DeploymentTargetStore);
   public com.sstlfsj.fibra.engine.PublishedRuntime published();
-  public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.PublishedView> start();
+  public com.sstlfsj.fibra.engine.EngineSnapshot snapshot();
+  public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.PublishedView> startAsync();
   public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.EngineCommandResult> submit(com.sstlfsj.fibra.engine.EngineCommand);
   public reactor.core.publisher.Mono<java.lang.Void> closeAsync();
   public void close();
@@ -182,23 +422,32 @@ public final class com.sstlfsj.fibra.engine.FibraEngine implements java.lang.Aut
 ## com.sstlfsj.fibra.engine.FibraEngine$Builder
 Compiled from "FibraEngine.java"
 public final class com.sstlfsj.fibra.engine.FibraEngine$Builder {
-  public com.sstlfsj.fibra.engine.FibraEngine$Builder initialArtifacts(com.sstlfsj.fibra.engine.InitialArtifactSource);
-  public com.sstlfsj.fibra.engine.FibraEngine$Builder catalog(com.sstlfsj.fibra.engine.PluginCatalog);
-  public com.sstlfsj.fibra.engine.FibraEngine$Builder stateStore(com.sstlfsj.fibra.engine.EngineStateStore);
-  public com.sstlfsj.fibra.engine.FibraEngine$Builder artifactStore(com.sstlfsj.fibra.artifact.ArtifactStore);
+  public com.sstlfsj.fibra.engine.FibraEngine$Builder runtimeProvider(com.sstlfsj.fibra.engine.RuntimeProvider);
   public com.sstlfsj.fibra.engine.FibraEngine$Builder hostServices(com.sstlfsj.fibra.engine.HostServiceRegistry);
-  public com.sstlfsj.fibra.engine.FibraEngine$Builder configContext(com.sstlfsj.fibra.config.ConfigContextSnapshot);
-  public com.sstlfsj.fibra.engine.FibraEngine$Builder autoRefresh(java.time.Duration);
-  public com.sstlfsj.fibra.engine.FibraEngine$Builder runtimeAdapter(com.sstlfsj.fibra.engine.PluginRuntimeAdapter);
+  public com.sstlfsj.fibra.engine.FibraEngine$Builder contributionKinds(com.sstlfsj.fibra.bridge.ContributionKindRegistry);
+  public com.sstlfsj.fibra.engine.FibraEngine$Builder hostTerminationPort(com.sstlfsj.fibra.engine.HostTerminationPort);
+  public com.sstlfsj.fibra.engine.FibraEngine$Builder capabilities(java.util.function.Supplier<com.sstlfsj.fibra.engine.HostCapabilitySnapshot>);
+  public com.sstlfsj.fibra.engine.FibraEngine$Builder lifecycleTimeout(java.time.Duration);
   public com.sstlfsj.fibra.engine.FibraEngine build();
 }
-## com.sstlfsj.fibra.engine.FileEngineStateStore
-Compiled from "FileEngineStateStore.java"
-public final class com.sstlfsj.fibra.engine.FileEngineStateStore implements com.sstlfsj.fibra.engine.EngineStateStore {
-  public com.sstlfsj.fibra.engine.FileEngineStateStore(java.nio.file.Path);
-  public synchronized java.util.Optional<com.sstlfsj.fibra.engine.DeploymentManifest> load();
-  public synchronized void save(com.sstlfsj.fibra.engine.DeploymentManifest);
+## com.sstlfsj.fibra.engine.FileDeploymentTargetStore
+Compiled from "FileDeploymentTargetStore.java"
+public final class com.sstlfsj.fibra.engine.FileDeploymentTargetStore implements com.sstlfsj.fibra.engine.DeploymentTargetStore {
+  public com.sstlfsj.fibra.engine.FileDeploymentTargetStore(java.nio.file.Path);
+  public synchronized java.util.Optional<com.sstlfsj.fibra.engine.DeploymentTargetStore$StoredTarget> load();
+  public synchronized com.sstlfsj.fibra.engine.DurableTargetToken save(long, com.sstlfsj.fibra.engine.DeploymentTarget);
   public synchronized void close();
+}
+## com.sstlfsj.fibra.engine.HostCapabilitySnapshot
+Compiled from "HostCapabilitySnapshot.java"
+public final class com.sstlfsj.fibra.engine.HostCapabilitySnapshot {
+  public static com.sstlfsj.fibra.engine.HostCapabilitySnapshot empty();
+  public static com.sstlfsj.fibra.engine.HostCapabilitySnapshot of(java.util.Map<java.lang.String, ?>);
+  public com.sstlfsj.fibra.value.LiteralValue$ObjectValue values();
+  public java.util.Set<java.lang.String> availableNames();
+  public java.lang.String fingerprint();
+  public boolean equals(java.lang.Object);
+  public int hashCode();
 }
 ## com.sstlfsj.fibra.engine.HostServiceRegistry
 Compiled from "HostServiceRegistry.java"
@@ -206,41 +455,26 @@ public final class com.sstlfsj.fibra.engine.HostServiceRegistry {
   public com.sstlfsj.fibra.engine.HostServiceRegistry();
   public synchronized <T> com.sstlfsj.fibra.ServiceRegistration<T> register(com.sstlfsj.fibra.ServiceKey<T>, T);
 }
-## com.sstlfsj.fibra.engine.InitialArtifactSource
-Compiled from "InitialArtifactSource.java"
-public interface com.sstlfsj.fibra.engine.InitialArtifactSource {
-  public abstract java.util.List<com.sstlfsj.fibra.engine.DeploymentArtifact> load();
+## com.sstlfsj.fibra.engine.HostTerminationPort
+Compiled from "HostTerminationPort.java"
+public interface com.sstlfsj.fibra.engine.HostTerminationPort {
+  public abstract void requestTermination(com.sstlfsj.fibra.engine.HostTerminationRequest);
 }
-## com.sstlfsj.fibra.engine.InstallArtifact
-Compiled from "InstallArtifact.java"
-public final class com.sstlfsj.fibra.engine.InstallArtifact implements com.sstlfsj.fibra.engine.EngineCommand {
-  public static com.sstlfsj.fibra.engine.InstallArtifact$Builder builder();
-  public java.lang.String expectedRevision();
-  public com.sstlfsj.fibra.artifact.ArtifactId artifactId();
-  public com.sstlfsj.fibra.artifact.RuntimeId runtimeId();
-  public java.lang.String version();
-  public java.nio.file.Path source();
-}
-## com.sstlfsj.fibra.engine.InstallArtifact$Builder
-Compiled from "InstallArtifact.java"
-public final class com.sstlfsj.fibra.engine.InstallArtifact$Builder {
-  public com.sstlfsj.fibra.engine.InstallArtifact$Builder();
-  public com.sstlfsj.fibra.engine.InstallArtifact$Builder expectedRevision(java.lang.String);
-  public com.sstlfsj.fibra.engine.InstallArtifact$Builder artifactId(com.sstlfsj.fibra.artifact.ArtifactId);
-  public com.sstlfsj.fibra.engine.InstallArtifact$Builder runtimeId(com.sstlfsj.fibra.artifact.RuntimeId);
-  public com.sstlfsj.fibra.engine.InstallArtifact$Builder version(java.lang.String);
-  public com.sstlfsj.fibra.engine.InstallArtifact$Builder source(java.nio.file.Path);
-  public com.sstlfsj.fibra.engine.InstallArtifact build();
+## com.sstlfsj.fibra.engine.HostTerminationRequest
+Compiled from "HostTerminationRequest.java"
+public final class com.sstlfsj.fibra.engine.HostTerminationRequest extends java.lang.Record {
+  public com.sstlfsj.fibra.engine.HostTerminationRequest(java.lang.String, java.lang.String, java.lang.String, java.util.OptionalLong);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String hostInstanceId();
+  public java.lang.String reason();
+  public java.lang.String phase();
+  public java.util.OptionalLong targetRevision();
 }
 ## com.sstlfsj.fibra.engine.MutationGateClosedException
 Compiled from "MutationGateClosedException.java"
 public final class com.sstlfsj.fibra.engine.MutationGateClosedException extends java.lang.IllegalStateException {
-}
-## com.sstlfsj.fibra.engine.PluginArtifactProbe
-Compiled from "PluginArtifactProbe.java"
-public final class com.sstlfsj.fibra.engine.PluginArtifactProbe {
-  public com.sstlfsj.fibra.engine.PluginArtifactProbe(java.util.List<? extends com.sstlfsj.fibra.engine.PluginRuntimeAdapter>);
-  public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.DeploymentArtifact> probe(java.nio.file.Path);
 }
 ## com.sstlfsj.fibra.engine.PluginCatalog
 Compiled from "PluginCatalog.java"
@@ -257,6 +491,16 @@ public final class com.sstlfsj.fibra.engine.PluginCatalogEntry<C> {
   public com.sstlfsj.fibra.engine.PluginCatalogEntry(com.sstlfsj.fibra.PluginDefinition<C>, java.util.function.Function<java.lang.Object, C>);
   public com.sstlfsj.fibra.PluginDefinition<C> definition();
   public com.sstlfsj.fibra.PluginDefinition$Prepared<C> bind(com.sstlfsj.fibra.value.LiteralValue);
+}
+## com.sstlfsj.fibra.engine.PluginFacetSource
+Compiled from "PluginFacetSource.java"
+public final class com.sstlfsj.fibra.engine.PluginFacetSource extends java.lang.Record {
+  public com.sstlfsj.fibra.engine.PluginFacetSource(com.sstlfsj.fibra.artifact.ManagedFacet, java.util.List<com.sstlfsj.fibra.engine.ResolvedFacetDependency>);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public com.sstlfsj.fibra.artifact.ManagedFacet facet();
+  public java.util.List<com.sstlfsj.fibra.engine.ResolvedFacetDependency> dependencies();
 }
 ## com.sstlfsj.fibra.engine.PluginInstanceSnapshot
 Compiled from "PluginInstanceSnapshot.java"
@@ -287,13 +531,23 @@ public final class com.sstlfsj.fibra.engine.PluginInstanceSnapshot$Builder {
   public com.sstlfsj.fibra.engine.PluginInstanceSnapshot$Builder failure(java.lang.String);
   public com.sstlfsj.fibra.engine.PluginInstanceSnapshot build();
 }
-## com.sstlfsj.fibra.engine.PluginRuntimeAdapter
-Compiled from "PluginRuntimeAdapter.java"
-public interface com.sstlfsj.fibra.engine.PluginRuntimeAdapter {
-  public abstract com.sstlfsj.fibra.artifact.RuntimeId id();
-  public abstract reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.DeploymentArtifact> probe(com.sstlfsj.fibra.artifact.ArtifactPackage);
-  public abstract reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.RuntimeArtifactInspection> inspect(com.sstlfsj.fibra.artifact.ArtifactRecord);
-  public abstract com.sstlfsj.fibra.engine.RuntimeResourceOwner create();
+## com.sstlfsj.fibra.engine.PluginSelection
+Compiled from "PluginSelection.java"
+public final class com.sstlfsj.fibra.engine.PluginSelection extends java.lang.Record {
+  public com.sstlfsj.fibra.engine.PluginSelection(com.sstlfsj.fibra.artifact.PluginId, java.lang.String, boolean);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public com.sstlfsj.fibra.artifact.PluginId pluginId();
+  public java.lang.String packageRevision();
+  public boolean enabled();
+}
+## com.sstlfsj.fibra.engine.PreparedRuntimeGeneration
+Compiled from "PreparedRuntimeGeneration.java"
+public interface com.sstlfsj.fibra.engine.PreparedRuntimeGeneration {
+  public abstract java.util.Map<com.sstlfsj.fibra.engine.ExecutionUnitKey, com.sstlfsj.fibra.engine.RuntimeUnitGeneration> units();
+  public abstract reactor.core.publisher.Mono<java.lang.Void> abortAsync();
+  public abstract reactor.core.publisher.Mono<java.lang.Void> retireAsync();
 }
 ## com.sstlfsj.fibra.engine.PublishedRevisionConflictException
 Compiled from "PublishedRevisionConflictException.java"
@@ -334,58 +588,64 @@ public final class com.sstlfsj.fibra.engine.PublishedView$Builder {
   public com.sstlfsj.fibra.engine.PublishedView$Builder engineDiagnostics(com.sstlfsj.fibra.engine.EngineDiagnostics);
   public com.sstlfsj.fibra.engine.PublishedView build();
 }
-## com.sstlfsj.fibra.engine.RefreshDesired
-Compiled from "RefreshDesired.java"
-public final class com.sstlfsj.fibra.engine.RefreshDesired extends java.lang.Record implements com.sstlfsj.fibra.engine.EngineCommand {
-  public com.sstlfsj.fibra.engine.RefreshDesired(java.lang.String);
+## com.sstlfsj.fibra.engine.ReconcileCurrent
+Compiled from "ReconcileCurrent.java"
+public final class com.sstlfsj.fibra.engine.ReconcileCurrent extends java.lang.Record implements com.sstlfsj.fibra.engine.EngineCommand {
+  public com.sstlfsj.fibra.engine.ReconcileCurrent();
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
-  public java.lang.String expectedRevision();
 }
-## com.sstlfsj.fibra.engine.ReplaceConfigContext
-Compiled from "ReplaceConfigContext.java"
-public final class com.sstlfsj.fibra.engine.ReplaceConfigContext extends java.lang.Record implements com.sstlfsj.fibra.engine.EngineCommand {
-  public com.sstlfsj.fibra.engine.ReplaceConfigContext(java.lang.String, java.lang.String, com.sstlfsj.fibra.config.ConfigContextSnapshot);
-  public final java.lang.String toString();
-  public final int hashCode();
-  public final boolean equals(java.lang.Object);
-  public java.lang.String expectedRevision();
-  public java.lang.String expectedContextRevision();
-  public com.sstlfsj.fibra.config.ConfigContextSnapshot context();
+## com.sstlfsj.fibra.engine.RemoteContributionInvocationException
+Compiled from "RemoteContributionInvocationException.java"
+public final class com.sstlfsj.fibra.engine.RemoteContributionInvocationException extends java.lang.RuntimeException {
+  public com.sstlfsj.fibra.engine.RemoteContributionInvocationException$Code code();
 }
-## com.sstlfsj.fibra.engine.ReplaceDesiredGraph
-Compiled from "ReplaceDesiredGraph.java"
-public final class com.sstlfsj.fibra.engine.ReplaceDesiredGraph extends java.lang.Record implements com.sstlfsj.fibra.engine.EngineCommand {
-  public com.sstlfsj.fibra.engine.ReplaceDesiredGraph(java.lang.String, java.lang.String, com.sstlfsj.fibra.config.DesiredInputGraph);
+## com.sstlfsj.fibra.engine.RemoteContributionInvocationException$Code
+Compiled from "RemoteContributionInvocationException.java"
+public final class com.sstlfsj.fibra.engine.RemoteContributionInvocationException$Code extends java.lang.Enum<com.sstlfsj.fibra.engine.RemoteContributionInvocationException$Code> {
+  public static final com.sstlfsj.fibra.engine.RemoteContributionInvocationException$Code UNKNOWN_KIND;
+  public static final com.sstlfsj.fibra.engine.RemoteContributionInvocationException$Code KIND_NOT_REMOTE;
+  public static final com.sstlfsj.fibra.engine.RemoteContributionInvocationException$Code INPUT_CODEC;
+  public static final com.sstlfsj.fibra.engine.RemoteContributionInvocationException$Code OUTPUT_CODEC;
+  public static com.sstlfsj.fibra.engine.RemoteContributionInvocationException$Code[] values();
+  public static com.sstlfsj.fibra.engine.RemoteContributionInvocationException$Code valueOf(java.lang.String);
+}
+## com.sstlfsj.fibra.engine.RemoteContributionInvoker
+Compiled from "RemoteContributionInvoker.java"
+public final class com.sstlfsj.fibra.engine.RemoteContributionInvoker {
+  public com.sstlfsj.fibra.engine.RemoteContributionInvoker(com.sstlfsj.fibra.bridge.ContributionKindRegistry, com.sstlfsj.fibra.engine.PublishedRuntime);
+  public reactor.core.publisher.Mono<com.sstlfsj.fibra.value.LiteralValue> invoke(java.lang.String, com.sstlfsj.fibra.bridge.ContributionId, java.lang.String, long, com.sstlfsj.fibra.value.LiteralValue);
+}
+## com.sstlfsj.fibra.engine.ResolvedFacetDependency
+Compiled from "ResolvedFacetDependency.java"
+public final class com.sstlfsj.fibra.engine.ResolvedFacetDependency extends java.lang.Record {
+  public com.sstlfsj.fibra.engine.ResolvedFacetDependency(com.sstlfsj.fibra.artifact.PluginId, java.lang.String, com.sstlfsj.fibra.artifact.FacetId, com.sstlfsj.fibra.artifact.ArtifactId);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
-  public java.lang.String expectedRevision();
-  public java.lang.String expectedDesiredRevision();
-  public com.sstlfsj.fibra.config.DesiredInputGraph graph();
+  public com.sstlfsj.fibra.artifact.PluginId pluginId();
+  public java.lang.String packageRevision();
+  public com.sstlfsj.fibra.artifact.FacetId facetId();
+  public com.sstlfsj.fibra.artifact.ArtifactId artifactId();
 }
 ## com.sstlfsj.fibra.engine.RuntimeArtifactInspection
 Compiled from "RuntimeArtifactInspection.java"
 public final class com.sstlfsj.fibra.engine.RuntimeArtifactInspection extends java.lang.Record {
-  public com.sstlfsj.fibra.engine.RuntimeArtifactInspection(com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.artifact.ArtifactId, java.util.Map<java.lang.String, java.lang.Object>);
+  public com.sstlfsj.fibra.engine.RuntimeArtifactInspection(com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.artifact.ArtifactId);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public com.sstlfsj.fibra.artifact.RuntimeId runtimeId();
   public com.sstlfsj.fibra.artifact.ArtifactId artifactId();
-  public java.util.Map<java.lang.String, java.lang.Object> metadata();
 }
-## com.sstlfsj.fibra.engine.RuntimeCatalog
-Compiled from "RuntimeCatalog.java"
-public final class com.sstlfsj.fibra.engine.RuntimeCatalog extends java.lang.Record {
-  public com.sstlfsj.fibra.engine.RuntimeCatalog(com.sstlfsj.fibra.engine.PluginCatalog, java.util.Map<java.lang.String, com.sstlfsj.fibra.artifact.ArtifactId>);
-  public static com.sstlfsj.fibra.engine.RuntimeCatalog empty();
-  public final java.lang.String toString();
-  public final int hashCode();
-  public final boolean equals(java.lang.Object);
-  public com.sstlfsj.fibra.engine.PluginCatalog plugins();
-  public java.util.Map<java.lang.String, com.sstlfsj.fibra.artifact.ArtifactId> artifactByDefinition();
+## com.sstlfsj.fibra.engine.RuntimeCandidate
+Compiled from "RuntimeCandidate.java"
+public interface com.sstlfsj.fibra.engine.RuntimeCandidate {
+  public abstract reactor.core.publisher.Mono<java.lang.Void> prepareAsync();
+  public abstract com.sstlfsj.fibra.engine.RuntimePlan preparedPlan();
+  public abstract com.sstlfsj.fibra.engine.PreparedRuntimeGeneration seal(com.sstlfsj.fibra.engine.CompiledRuntimeSlice);
+  public abstract reactor.core.publisher.Mono<java.lang.Void> closeAsync();
 }
 ## com.sstlfsj.fibra.engine.RuntimeDiagnostics
 Compiled from "RuntimeDiagnostics.java"
@@ -414,66 +674,132 @@ public final class com.sstlfsj.fibra.engine.RuntimeDiagnostics$Builder {
   public com.sstlfsj.fibra.engine.RuntimeDiagnostics$Builder failure(java.lang.String);
   public com.sstlfsj.fibra.engine.RuntimeDiagnostics build();
 }
-## com.sstlfsj.fibra.engine.RuntimeResourceOwner
-Compiled from "RuntimeResourceOwner.java"
-public interface com.sstlfsj.fibra.engine.RuntimeResourceOwner {
-  public abstract com.sstlfsj.fibra.engine.RuntimeResourceUpdate createUpdate(java.util.List<com.sstlfsj.fibra.artifact.ArtifactRecord>);
-  public abstract com.sstlfsj.fibra.engine.RuntimeCatalog catalog();
-  public abstract com.sstlfsj.fibra.engine.RuntimeResourceSnapshot snapshot();
+## com.sstlfsj.fibra.engine.RuntimeDriver
+Compiled from "RuntimeDriver.java"
+public interface com.sstlfsj.fibra.engine.RuntimeDriver {
+  public abstract com.sstlfsj.fibra.artifact.RuntimeId id();
+  public abstract reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.RuntimeArtifactInspection> probe(com.sstlfsj.fibra.engine.PluginFacetSource);
+  public abstract reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.RuntimeArtifactInspection> inspect(com.sstlfsj.fibra.artifact.ManagedFacet);
+  public abstract com.sstlfsj.fibra.engine.RuntimeCandidate createCandidate(com.sstlfsj.fibra.engine.RuntimeTargetSlice);
+  public abstract com.sstlfsj.fibra.engine.RuntimeDriverSnapshot snapshot();
   public abstract reactor.core.publisher.Mono<java.lang.Void> closeAsync();
 }
-## com.sstlfsj.fibra.engine.RuntimeResourceSnapshot
-Compiled from "RuntimeResourceSnapshot.java"
-public final class com.sstlfsj.fibra.engine.RuntimeResourceSnapshot extends java.lang.Record {
-  public com.sstlfsj.fibra.engine.RuntimeResourceSnapshot(com.sstlfsj.fibra.artifact.RuntimeId, java.util.List<com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$Resource>);
+## com.sstlfsj.fibra.engine.RuntimeDriverSnapshot
+Compiled from "RuntimeDriverSnapshot.java"
+public final class com.sstlfsj.fibra.engine.RuntimeDriverSnapshot extends java.lang.Record {
+  public com.sstlfsj.fibra.engine.RuntimeDriverSnapshot(com.sstlfsj.fibra.artifact.RuntimeId, java.util.Map<com.sstlfsj.fibra.engine.ExecutionUnitKey, com.sstlfsj.fibra.engine.ExecutionObservation>);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public com.sstlfsj.fibra.artifact.RuntimeId runtimeId();
-  public java.util.List<com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$Resource> resources();
+  public java.util.Map<com.sstlfsj.fibra.engine.ExecutionUnitKey, com.sstlfsj.fibra.engine.ExecutionObservation> units();
 }
-## com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$Resource
-Compiled from "RuntimeResourceSnapshot.java"
-public final class com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$Resource extends java.lang.Record {
-  public com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$Resource(com.sstlfsj.fibra.artifact.ArtifactRecord, java.lang.String, com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$State, java.lang.String);
-  public static com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$Resource$Builder builder();
+## com.sstlfsj.fibra.engine.RuntimeHostServices
+Compiled from "RuntimeHostServices.java"
+public interface com.sstlfsj.fibra.engine.RuntimeHostServices {
+  public abstract java.lang.String hostInstanceId();
+  public abstract com.sstlfsj.fibra.ScopeView scope();
+  public abstract reactor.core.publisher.Mono<java.lang.Void> releaseScope(com.sstlfsj.fibra.Scope);
+  public abstract com.sstlfsj.fibra.bridge.ContributionKindRegistry contributionKinds();
+  public abstract com.sstlfsj.fibra.bridge.ContributionAdmission openContributionAdmission(com.sstlfsj.fibra.engine.ExecutionUnitKey);
+  public abstract com.sstlfsj.fibra.engine.RemoteContributionInvoker remoteContributions();
+  public abstract java.lang.String nextIdentity(java.lang.String);
+  public abstract void requestReconcile(java.util.Set<com.sstlfsj.fibra.engine.RuntimeUnitFence>, java.lang.String);
+  public abstract void requestObservationRefresh(com.sstlfsj.fibra.engine.RuntimeUnitFence);
+  public abstract void requestDisable(com.sstlfsj.fibra.engine.RuntimeUnitDisableRequest);
+  public abstract void requestRecompile(com.sstlfsj.fibra.engine.RuntimeRecompileReason);
+}
+## com.sstlfsj.fibra.engine.RuntimePlan
+Compiled from "RuntimePlan.java"
+public final class com.sstlfsj.fibra.engine.RuntimePlan {
+  public static com.sstlfsj.fibra.engine.RuntimePlan of(com.sstlfsj.fibra.artifact.RuntimeId, java.util.Collection<com.sstlfsj.fibra.engine.ExecutionUnitPlan>, java.util.Collection<com.sstlfsj.fibra.engine.DefinitionBindingPlan>);
+  public com.sstlfsj.fibra.artifact.RuntimeId runtimeId();
+  public java.util.Map<com.sstlfsj.fibra.engine.ExecutionUnitKey, com.sstlfsj.fibra.engine.ExecutionUnitPlan> units();
+  public java.util.List<com.sstlfsj.fibra.engine.DefinitionBindingPlan> definitions();
+}
+## com.sstlfsj.fibra.engine.RuntimeProvider
+Compiled from "RuntimeProvider.java"
+public interface com.sstlfsj.fibra.engine.RuntimeProvider {
+  public abstract com.sstlfsj.fibra.artifact.RuntimeId id();
+  public abstract java.lang.String contractIdentity();
+  public abstract java.util.List<com.sstlfsj.fibra.engine.BuiltInPluginPackage> builtInPackages();
+  public abstract com.sstlfsj.fibra.engine.RuntimeDriver create(com.sstlfsj.fibra.engine.RuntimeHostServices);
+}
+## com.sstlfsj.fibra.engine.RuntimeRecompileReason
+Compiled from "RuntimeRecompileReason.java"
+public final class com.sstlfsj.fibra.engine.RuntimeRecompileReason extends java.lang.Record {
+  public com.sstlfsj.fibra.engine.RuntimeRecompileReason(com.sstlfsj.fibra.artifact.RuntimeId, java.lang.String, java.lang.String);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
-  public com.sstlfsj.fibra.artifact.ArtifactRecord artifact();
-  public java.lang.String identity();
-  public com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$State state();
-  public java.lang.String failure();
+  public com.sstlfsj.fibra.artifact.RuntimeId sourceRuntimeId();
+  public java.lang.String code();
+  public java.lang.String detail();
 }
-## com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$Resource$Builder
-Compiled from "RuntimeResourceSnapshot.java"
-public final class com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$Resource$Builder {
-  public com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$Resource$Builder artifact(com.sstlfsj.fibra.artifact.ArtifactRecord);
-  public com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$Resource$Builder identity(java.lang.String);
-  public com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$Resource$Builder state(com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$State);
-  public com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$Resource$Builder failure(java.lang.String);
-  public com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$Resource build();
+## com.sstlfsj.fibra.engine.RuntimeTargetSlice
+Compiled from "RuntimeTargetSlice.java"
+public final class com.sstlfsj.fibra.engine.RuntimeTargetSlice {
+  public static com.sstlfsj.fibra.engine.RuntimeTargetSlice$Builder builder(com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.DeploymentTarget);
+  public com.sstlfsj.fibra.artifact.RuntimeId runtimeId();
+  public com.sstlfsj.fibra.engine.DeploymentTarget target();
+  public com.sstlfsj.fibra.config.DesiredEvaluation desired();
+  public com.sstlfsj.fibra.engine.HostCapabilitySnapshot capabilities();
+  public java.util.List<com.sstlfsj.fibra.engine.PluginFacetSource> facets();
+  public java.util.List<com.sstlfsj.fibra.engine.BuiltInPluginPackage> builtInPackages();
+  public java.util.Set<java.lang.String> affectedEntryIds();
+  public java.util.Map<com.sstlfsj.fibra.engine.ExecutionUnitKey, java.util.List<com.sstlfsj.fibra.engine.ExecutionUnitKey>> unitDependencies();
 }
-## com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$State
-Compiled from "RuntimeResourceSnapshot.java"
-public final class com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$State extends java.lang.Enum<com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$State> {
-  public static final com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$State PREPARED;
-  public static final com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$State ACTIVE;
-  public static final com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$State RETIRED;
-  public static final com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$State CLOSED;
-  public static final com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$State CLOSE_FAILED;
-  public static com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$State[] values();
-  public static com.sstlfsj.fibra.engine.RuntimeResourceSnapshot$State valueOf(java.lang.String);
+## com.sstlfsj.fibra.engine.RuntimeTargetSlice$Builder
+Compiled from "RuntimeTargetSlice.java"
+public final class com.sstlfsj.fibra.engine.RuntimeTargetSlice$Builder {
+  public com.sstlfsj.fibra.engine.RuntimeTargetSlice$Builder desired(com.sstlfsj.fibra.config.DesiredEvaluation);
+  public com.sstlfsj.fibra.engine.RuntimeTargetSlice$Builder capabilities(com.sstlfsj.fibra.engine.HostCapabilitySnapshot);
+  public com.sstlfsj.fibra.engine.RuntimeTargetSlice$Builder facets(java.util.List<com.sstlfsj.fibra.engine.PluginFacetSource>);
+  public com.sstlfsj.fibra.engine.RuntimeTargetSlice build();
+  public com.sstlfsj.fibra.engine.RuntimeTargetSlice$Builder builtInPackages(java.util.List<com.sstlfsj.fibra.engine.BuiltInPluginPackage>);
+  public com.sstlfsj.fibra.engine.RuntimeTargetSlice$Builder affectedEntryIds(java.util.Set<java.lang.String>);
+  public com.sstlfsj.fibra.engine.RuntimeTargetSlice$Builder unitDependencies(java.util.Map<com.sstlfsj.fibra.engine.ExecutionUnitKey, java.util.List<com.sstlfsj.fibra.engine.ExecutionUnitKey>>);
 }
-## com.sstlfsj.fibra.engine.RuntimeResourceUpdate
-Compiled from "RuntimeResourceUpdate.java"
-public interface com.sstlfsj.fibra.engine.RuntimeResourceUpdate {
-  public abstract reactor.core.publisher.Mono<java.lang.Void> prepareAsync();
-  public abstract java.util.Set<com.sstlfsj.fibra.artifact.ArtifactId> affectedArtifacts();
-  public abstract com.sstlfsj.fibra.engine.RuntimeCatalog catalog();
-  public abstract com.sstlfsj.fibra.engine.RuntimeResourceSnapshot snapshot();
-  public abstract void adopt();
-  public abstract reactor.core.publisher.Mono<java.lang.Void> closeAsync();
+## com.sstlfsj.fibra.engine.RuntimeUnitDisableRequest
+Compiled from "RuntimeUnitDisableRequest.java"
+public final class com.sstlfsj.fibra.engine.RuntimeUnitDisableRequest extends java.lang.Record {
+  public com.sstlfsj.fibra.engine.RuntimeUnitDisableRequest(com.sstlfsj.fibra.engine.RuntimeUnitFence, java.lang.String);
+  public static com.sstlfsj.fibra.engine.RuntimeUnitDisableRequest of(com.sstlfsj.fibra.engine.RuntimeUnitFence, java.lang.String);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public com.sstlfsj.fibra.engine.RuntimeUnitFence fence();
+  public java.lang.String reason();
+}
+## com.sstlfsj.fibra.engine.RuntimeUnitFence
+Compiled from "RuntimeUnitFence.java"
+public final class com.sstlfsj.fibra.engine.RuntimeUnitFence extends java.lang.Record {
+  public com.sstlfsj.fibra.engine.RuntimeUnitFence(com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.ExecutionUnitKey, long, java.lang.String);
+  public static com.sstlfsj.fibra.engine.RuntimeUnitFence$Builder builder(com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.engine.ExecutionUnitKey);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public com.sstlfsj.fibra.artifact.RuntimeId runtimeId();
+  public com.sstlfsj.fibra.engine.ExecutionUnitKey unitKey();
+  public long unitTargetRevision();
+  public java.lang.String runtimeInstanceId();
+}
+## com.sstlfsj.fibra.engine.RuntimeUnitFence$Builder
+Compiled from "RuntimeUnitFence.java"
+public final class com.sstlfsj.fibra.engine.RuntimeUnitFence$Builder {
+  public com.sstlfsj.fibra.engine.RuntimeUnitFence$Builder unitTargetRevision(long);
+  public com.sstlfsj.fibra.engine.RuntimeUnitFence$Builder runtimeInstanceId(java.lang.String);
+  public com.sstlfsj.fibra.engine.RuntimeUnitFence build();
+}
+## com.sstlfsj.fibra.engine.RuntimeUnitGeneration
+Compiled from "RuntimeUnitGeneration.java"
+public interface com.sstlfsj.fibra.engine.RuntimeUnitGeneration {
+  public abstract com.sstlfsj.fibra.engine.ExecutionUnitPlan plan();
+  public abstract reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.ExecutionObservation> reconcileAsync(java.lang.String);
+  public abstract void closeAdmission();
+  public abstract reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.ExecutionObservation> drainAsync(java.lang.String, java.time.Instant);
+  public abstract reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.ExecutionObservation> stopAsync(java.lang.String, java.time.Instant);
+  public abstract com.sstlfsj.fibra.engine.ExecutionObservation snapshot();
 }
 ## com.sstlfsj.fibra.engine.TargetSaveState
 Compiled from "TargetSaveState.java"
@@ -484,16 +810,6 @@ public final class com.sstlfsj.fibra.engine.TargetSaveState extends java.lang.En
   public static final com.sstlfsj.fibra.engine.TargetSaveState UNCONFIRMED;
   public static com.sstlfsj.fibra.engine.TargetSaveState[] values();
   public static com.sstlfsj.fibra.engine.TargetSaveState valueOf(java.lang.String);
-}
-## com.sstlfsj.fibra.engine.UninstallArtifact
-Compiled from "UninstallArtifact.java"
-public final class com.sstlfsj.fibra.engine.UninstallArtifact extends java.lang.Record implements com.sstlfsj.fibra.engine.EngineCommand {
-  public com.sstlfsj.fibra.engine.UninstallArtifact(java.lang.String, com.sstlfsj.fibra.artifact.ArtifactId);
-  public final java.lang.String toString();
-  public final int hashCode();
-  public final boolean equals(java.lang.Object);
-  public java.lang.String expectedRevision();
-  public com.sstlfsj.fibra.artifact.ArtifactId artifactId();
 }
 ## com.sstlfsj.fibra.engine.UnknownRuntimeException
 Compiled from "UnknownRuntimeException.java"

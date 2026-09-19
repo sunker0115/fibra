@@ -3,8 +3,12 @@ set -euo pipefail
 
 repository_root="$(cd "$(dirname "$0")/.." && pwd)"
 diagnostics_root="${FIBRA_CI_DIAGNOSTICS_DIR:?FIBRA_CI_DIAGNOSTICS_DIR must be set}"
-fixture="$repository_root/verification/ci/HangingJvmFixture.java"
+fixture="$repository_root/fibra-parity-tests/src/test/fixtures/HangingJvmFixture.java"
 wrapper="$repository_root/scripts/run-ci-with-jvm-diagnostics.sh"
+java_executable="${JAVA_HOME:+$JAVA_HOME/bin/java}"
+if [[ -z "$java_executable" || ! -x "$java_executable" ]]; then
+  java_executable="$(command -v java)"
+fi
 temporary_root="$(mktemp -d)"
 pid_file="$temporary_root/pids.txt"
 run_id="$(date -u +%Y%m%dT%H%M%SZ)-$$"
@@ -51,7 +55,7 @@ FIBRA_CI_DIAGNOSTICS_INITIAL_DELAY_SECONDS=1 \
 FIBRA_CI_DIAGNOSTICS_INTERVAL_SECONDS=1 \
 FIBRA_CI_COMMAND_TIMEOUT_SECONDS=2 \
 FIBRA_CI_TERMINATION_GRACE_SECONDS=1 \
-  "$wrapper" java "$fixture" "$pid_file"
+  "$wrapper" "$java_executable" --source 21 "$fixture" "$pid_file"
 timeout_status=$?
 set -e
 

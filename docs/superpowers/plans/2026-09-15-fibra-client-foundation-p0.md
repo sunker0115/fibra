@@ -2,8 +2,10 @@
 
 > 权威架构：[2026-09-15-fibra-client-foundation-architecture.md](../specs/2026-09-15-fibra-client-foundation-architecture.md)
 
-**状态：** 2026-09-17 架构复审后重排。Task 9 旧实现已暂停；当前先完成 Task 7 的新架构契约与真实
-compile-only walking skeleton。不得从旧 Task 9 继续补 `HostPreparedArtifact`、`fibra-runtime-host` 或
+**状态：** Task 7–10 已 Integrated，Task 11 已 Restarted，Task 12–13 已 Integrated。最终根 reactor、Host
+重启、可复现制品、npm 独立消费者、文档一致性与三路独立复核已在同一最终工作树通过；当前唯一未关闭证据是
+提交并推送后由 GitHub Actions 执行的空仓分发门，因此在该 check 变绿前不得提升为 Released。不得恢复
+`HostPreparedArtifact`、`fibra-runtime-host`、`fibra-runtime-client`，也不得恢复独立
 `NodeExecutionRuntime`。
 
 **最终边界：** Fibra 提供统一 runtime SPI、严格 client protocol/API、Java/Node runtime 与 conformance
@@ -14,23 +16,20 @@ fixtures；浏览器 adapter、runner、transport、Web loader、resource cache 
 
 ## 1. 当前事实与状态
 
-| Task | 当前状态 | 结论 |
+| Task | 当前阶段 | 已取得证据与未关闭门 |
 |---|---|---|
-| 1 | 已完成但权威内容已重写 | 旧“架构已冻结”结论撤回；本计划和架构文档成为新真源 |
-| 2 | 部分保留、待重排发布集合 | Maven/npm 隔离门可保留；正式 npm 只留纯 API/protocol |
-| 3 | 部分保留、Task 7 硬切字段 | 严格 codec、数值与错误结构保留；外部 unit 围栏改为 `unitTargetRevision` |
-| 4 | 部分保留 | `client-api` 的纯 SPI 保留；生命周期 actor/runner 不再是 Fibra 正式实现 |
-| 5 | 历史证据 | 浏览器技术可行性结果仅作参考，不再是 Fibra release gate |
-| 6 | 已完成、保留 | `PluginPackage`、facet、精确依赖与 package store 方向有效 |
-| 7 | 进行中 | 双 runtime 契约冻结已撤回；改为单一 `RuntimeDriver` 和 compile-only walking skeleton |
-| 8 | 待开始 | 实现 Java/Node driver、generation 与 lease 所有权 |
-| 9 | 暂停并重写 | Engine、持久目标与全局生命周期硬切 |
-| 10 | 待开始 | 真实 Java + Node + external execution SPI 风险门 |
-| 11 | 待开始 | 管理面/调用方硬切与 Host 重启恢复 |
-| 12 | 待开始 | 发行、API、npm、CI 与独立消费者 |
-| 13 | 待开始 | 全量验收、文档一致性和三类独立审查 |
+| 1–5 | 历史处置见下文 | 早期产物只保留仍符合当前架构的证据；被替代内容不得复活 |
+| 6 | Green | package/facet/store 模型有效；最终集成与发行证据随 Task 13 统一关闭 |
+| 7 | Integrated | 单一 `RuntimeDriver`、entry-key unit、显式 definition 与三 runtime compile-only walking skeleton 已进入最终 reactor |
+| 8 | Integrated | Java/Node driver、跨 attempt 静态 generation、真实生命周期与 lease 已进入最终 reactor |
+| 9 | Integrated | 完整 target、全局 DAG、能力快照、批量 fenced reconcile 与 fail-stop 已由最终 reactor 复证 |
+| 10 | Integrated | external fixture 与 client API/protocol conformance 已由最终 reactor 和 npm 独立消费者复证 |
+| 11 | Restarted | 全部调用方已迁移，最终工作树的 Host 垂直链与重启恢复门通过 |
+| 12 | Integrated | 28 Maven + 2 npm 的清单、独立消费者、CI/release 与内容门通过；待 push 后的空仓门提升 Released |
+| 13 | Integrated | 全量本地门和三路独立复核通过且无 P0/P1/P2；待 GitHub Actions 空仓门提升 Released |
 
-当前安全检查点为 `5e9df97`。其后的未提交内容按以下规则处置：
+本轮迁移起点检查点为 `66cf499`；其后的 Task 7–13 作为一个公开 SPI 原子硬切批次在当前分支统一提交，按以下
+规则处置：
 
 - 保留并完成：`ScopeView` 及 Java root scope ownership 测试；
 - 撤回：根 POM 中 `fibra-runtime-host`、整个 `fibra-runtime-host/` 草稿；
@@ -43,31 +42,116 @@ fixtures；浏览器 adapter、runner、transport、Web loader、resource cache 
 
 1. 每个 Task 都从 RED/compile failure 或明确的结构门开始；契约测试必须包含真实类型组合，不能只用反射和
    fake 验证方法形状。
-2. 一个 checkpoint 只有在该 Task 列出的定向测试、停止条件搜索和 diff 审查通过后才提交。
+2. 一个 checkpoint 只有在对应定向测试、停止条件搜索和 diff 审查通过后才提交；原子批次内部 Task 7/8
+   只有工作树局部门，不形成 checkpoint，首次可提交 checkpoint 是 Task 9 Engine/旧 SPI 同步切换完成后。
 3. 不保留兼容 reader、旧新 adapter、双写状态、双 Registry、runtime 选择开关或弃用重载。
 4. 保存前阶段不得启动插件实例、Node sidecar、远端 session 或网络；保存后失败不得回滚 target 或恢复旧
    handler。
 5. 同一问题连续两次没有通过且没有新根因证据时停止，更新本文和权威架构后再继续。
 6. 最终完成必须以根 reactor、发行、空仓消费者、API baseline、文档一致性和独立审查的实际输出证明。
-7. Task 7–11 是一次公开 SPI 硬切批次：Task 7 删除旧 SPI 后，下游可在当前分支暂时不编译，但不得发布、
-   合并或声称 root 绿色；必须连续推进到 Task 11 全部前沿通过。若实际迁移无法维持清晰前沿，可以合并这些
-   task 的实现提交，但不能引入兼容层换取中间绿色。
+7. Task 7–11 是一次公开 SPI 原子硬切批次。Task 7/8 可在工作树内部短暂同时存在尚未接线的新类型与待删除
+   旧类型，但这只是同一变更的迁移顺序，不得形成 commit、发布物、feature flag 或兼容入口；Task 9 切换
+   `FibraEngine` 的同一原子 checkpoint 删除旧双 SPI，随后必须连续推进到 Task 11 全部下游前沿通过。整个批次
+   完成前不得发布、合并或声称 root 绿色，也不能用兼容层换取中间绿色。
+8. 每项结论必须维护“事实 → owner → 刺激 → seam → oracle → 测试 → 命令 → 本次状态”证据链。状态只允许
+   `Specified → Executable → RED → Green → Integrated → Restarted → Released` 逐级提升；局部单测通过不能写成
+   integrated，Host 重启未跑不能写成 restarted，独立消费者与制品未通过不能写成 released。
+9. 删除旧行为时同步维护替代证据：每个被删测试必须映射到新契约测试、明确由其它门覆盖，或说明该行为已被
+   设计删除。不得仅凭旧类名搜索为零推断行为已迁移。
+
+## 3. 历史完成项：Task 1–6
+
+本节恢复 2026-09-15 初版计划的目标、证据和后续处置，用于解释 Task 7 的输入。它不是当前实现指令；当前
+要求以权威架构和下文 Task 7–13 为准，不得据此恢复已撤回的浏览器 runtime、runner、Web loader、renderer、
+transport 或第二套生命周期控制面。旧完整正文可由
+`git show 5e9df977:docs/superpowers/plans/2026-09-15-fibra-client-foundation-p0.md` 审计；提交 `66cf499`
+在架构重开时错误地删除了详细追踪，只保留状态摘要，本节纠正该追踪缺口而不复活旧设计。
+
+### Task 1：初版架构冻结与文档清理
+
+- 原目标：建立 client foundation 规格，统一仓库、发布物、进程、协议和控制面边界。
+- 保留结果：形成了架构审计、模块边界和“阶段门必须有真实证据”的追溯材料。
+- 替代关系：2026-09-17 复审撤回“浏览器执行下沉 Fibra”和“架构已冻结”的结论。当前只保留统一
+  `RuntimeDriver` SPI、纯 client API/protocol 与 conformance fixture；产品仓拥有浏览器执行。
+- 证据：`86eac429`（`docs: define Fibra client foundation architecture`）；替代提交 `66cf499`
+  （`docs: reopen client foundation runtime architecture`）。
+- 历史处置：已完成，但内容已被现行权威架构替代，不能充当当前冻结门。
+
+### Task 2：初版 Maven/npm 发布边界
+
+- 原目标：建立独立 Java client protocol/runtime 模块和 npm workspace，证明 Java 与前端构建隔离。
+- 保留结果：Java/npm 生命周期独立、workspace 隔离和可执行边界测试仍有效。
+- 替代关系（已删除且禁止恢复）：`fibra-runtime-client`、`client-runtime`、`client-runtime-web`；
+  `client-react` 也已删除且禁止恢复，不再进入正式发布；
+  npm 只保留 `@sstlfsj/fibra-client-api` 与 `@sstlfsj/fibra-client-protocol`，最终证据归 Task 12。
+- 证据：`8a0edeaa`、`9049019d`、`430e8824`；checkpoint `5ad8225`。
+- 历史处置：已完成，发布集合已由 Task 12 重排。
+
+### Task 3：严格且传输中立的 client protocol
+
+- 原目标：实现版本化 Java wire 值对象与严格无状态 codec，覆盖结构错误、阶段身份、精确数值、资源
+  descriptor 和 Java/TypeScript 共享 fixture。
+- 保留结果：严格 codec、tagged literal、规范 decimal、稳定错误结构、transport-neutral descriptor 与共享
+  fixture 均继续有效。
+- 替代关系：当前 Assignment 必须显式携带 `desiredEntryId`、`definitionId`、`unitTargetRevision`、
+  `runtimeInstanceId` 和 resolved config；不得由 carrier 私设字段或全局 target revision 推导 unit 身份。
+- 证据：`5eef9843`、`1f91e1bc`、`773ae45b`、`01b9151c`、`6dfe8153`、`37bc52b6`、`f859b6f5`；
+  checkpoint `b4c332da`。
+- 历史处置：核心编码规则保留，公开字段和 unit fence 由 Task 7、10、12 重新验收。
+
+### Task 4：framework-neutral TypeScript client core
+
+- 历史原目标（已废弃，不得恢复）：实现无 DOM/React/Electron 依赖的 API、Scope/effect 所有权、client
+  lifecycle actor 与资源缓存。
+- 保留结果：纯 TypeScript API、只读 Scope/所有权和 wire interoperability 的结论继续有效。
+- 替代关系：lifecycle actor、instance executor 与 resource cache 属于产品 runtime；Fibra 正式 npm 仅提供
+  factory API 与 protocol，不实现 runner。
+- 证据：`851c241b`、`e4ab90ac`、`f1893dba`、`1293efe2`。
+- 历史处置：探索实现已撤回为产品侧责任；纯 API/protocol 由 Task 12 重新形成发布证据。
+
+### Task 5：P0-A 浏览器技术栈可行性门
+
+- 历史原目标（已废弃，不得恢复）：用 Web ESM loader、DOM/React adapter 和 Chromium fixture 验证资源
+  完整性、Scope 清理、围栏与 CSP。
+- 保留结果：证明产品侧浏览器实现可行；资源复核、清理和 CSP 场景可供产品仓复用。
+- 替代关系：该 fixture 不能证明 Fibra 发布边界，也不再是 Fibra release gate；真实浏览器/Electron/React
+  验收属于产品 P1，Fibra P0 只证明公开 external runtime SPI。
+- 证据：`ef06d7d4`、`c572f279`、`ab2db0d2`。
+- 历史处置：仅作历史探索证据，不计入当前 Fibra P0 release gate。
+
+### Task 6：隔离的逻辑 PluginPackage 模型
+
+- 原目标：以严格 `fibra-package.yaml` 建立逻辑安装单位与多 facet 模型，按受控文件树计算内容身份，并明确
+  拒绝旧 `plugin.properties` 单 artifact 格式。
+- 保留结果：`PluginPackage`、facet、精确逻辑依赖、内容摘要、双快照和 `PluginPackageStore` 原子事务均与
+  当前架构一致。
+- 替代关系（旧 `ArtifactRuntime/ExecutionRuntime` 双模型已废弃且禁止恢复）：当前由单一
+  `RuntimeDriver`、完整 `DeploymentTarget` 与 generation/lease 消费，禁止恢复兼容 reader。
+- 证据：`bd1747ca`（逻辑 package 模型）、`7d6aa3ea`（原子 package store）。
+- 当前阶段：Green；最终集成和发行证据由 Task 9–13 统一关闭。
 
 ## Task 7：冻结单一 RuntimeDriver 契约与 compile-only walking skeleton
 
-**当前状态：进行中。** 权威架构与本计划已重写；代码契约和 walking skeleton 尚未实现。
+**当前阶段：Integrated。** 三 runtime compile-only walking skeleton、Node 显式 `definitionId`、entry-key
+unit/definition 双射、跨 runtime DAG 与保存前零启动均已通过，并已进入最终根 reactor。
 
 ### 目标
 
 - 一个 `RuntimeId` 只注册一个 `RuntimeProvider/RuntimeDriver`；
+- provider 显式提供 `contractIdentity` 与纯 built-in package metadata，实际 built-in definitions 留在 driver；
+- provider 是配置不可变、可顺序复用的 factory；每次 Host 创建独立 driver，provider 不缓存 Host/driver
+  可变状态，Engine 独占 driver 的关闭权；
 - `ExecutionTarget` 只表示 placement/capability，不作为 runtime key；
 - Java 与 Node 私有 prepared 数据始终留在各自 driver；
 - `DeploymentTarget` 纳入完整 `ConfigContextSnapshot`，删除 context-only 持久旁路；
 - Engine 保留一个全局 DAG，并把确定性 runtime slices 交给 drivers；
+- `ExecutionUnitKey` 使用全局 desired entry id；一个 entry 对应一个 unit/definition binding，同 facet 多 entry
+  共享静态资源 lease 但生命周期独立；
 - Fibra 正式模块不依赖浏览器、DOM、React、浏览器 URL/Fetch API、WebSocket 或 Electron；Java runtime
   为 ClassLoader 使用 `java.net.URL` 不属于浏览器边界泄漏；
 - 先完成 browser/runtime 边界清理，正式 npm 只剩纯 API/protocol；
-- 使用不发布的 external RuntimeProvider module 参与 compile-only 组合。
+- 使用 `fibra-parity-tests` 中只依赖公开 SPI 的 external RuntimeProvider fixture 参与 compile-only 组合，
+  不为测试 fixture 创建新的顶层 Maven 模块。
 
 ### Files
 
@@ -99,31 +183,32 @@ fixtures；浏览器 adapter、runner、transport、Web loader、resource cache 
 - Create: `fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaRuntimeDriver.java`
 - Create: `fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeRuntimeProvider.java`
 - Create: `fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeRuntimeDriver.java`
-- Delete after algorithm migration: `ArtifactRuntime.java`、`ExecutionRuntime.java`、`PreparedArtifact.java`、
-  `PreparedArtifactUpdate.java`、`ExecutionTargetPlan.java`、`ExecutionUpdate.java`、`ExecutionHandle.java`、
-  `ArtifactResources.java`、`JavaArtifactRuntime.java`、`NodeArtifactRuntime.java`
-- Modify: `pom.xml`，移除 `fibra-runtime-host`/`fibra-runtime-client`，加入两个非发布 verification modules
-- Delete: `fibra-runtime-host/`
-- Delete after moving pure descriptors/fixtures: `fibra-runtime-client/`
+- Modify: Node strict descriptor，新增必填 `definitionId`，禁止从 artifactId/facetId 隐式推导
+- Rewrite: package 级 `BuiltInPluginPackage` + 多 `BuiltInFacet` 纯 metadata；每 facet 显式声明
+  runtime/target/dependencies/capabilities/definitionIds，Java provider 私有持有实际 definitions
+- Remove in the same Task 9 atomic checkpoint after algorithm migration: `ArtifactRuntime.java`、
+  `ExecutionRuntime.java`、`PreparedArtifact.java`、`PreparedArtifactUpdate.java`、`ExecutionTargetPlan.java`、
+  `ExecutionUpdate.java`、`ExecutionHandle.java`、`ArtifactResources.java`、`JavaArtifactRuntime.java`、
+  `NodeArtifactRuntime.java`
+- Modify: `pom.xml`，移除 `fibra-runtime-host`/`fibra-runtime-client`；测试 fixture 归入既有
+  `fibra-parity-tests`，不增加非正式顶层模块
+- Remove in Task 9: `fibra-runtime-host/`
+- Remove in Task 9 after moving pure descriptors/fixtures: `fibra-runtime-client/`
 - Create: `client/packages/client-protocol/`，从 `client-runtime/src/protocol.ts` 迁移纯 type/codec
 - Modify: Java/TypeScript client protocol，资源与生命周期围栏使用创建 unit 时固定的
   `unitTargetRevision`，不把 current global target revision 当成 retained unit revision
 - Delete: `client/packages/client-runtime/`、`client/packages/client-runtime-web/`、
-  `client/packages/client-react/`、`verification/client/risk-gate/`
+  `client/packages/client-react/` 与旧 client risk gate
 - Modify: `client/package.json`、`client/pnpm-workspace.yaml`、`client/pnpm-lock.yaml`、
   `client/tsconfig*.json`、`client/scripts/check-core-boundaries.mjs`
-- Create: `verification/client/external-runtime-fixture/pom.xml`
-- Create: `verification/client/external-runtime-fixture/src/main/java/.../ExternalFixtureRuntimeProvider.java`
-- Create: `verification/client/runtime-composition/pom.xml`，只依赖 Engine、Java/Node drivers 和 external fixture，
-  设置 `maven.deploy.skip=true`
+- Create: `fibra-parity-tests/src/test/java/.../ExternalFixtureRuntimeProvider.java`，只使用 Engine/bridge 公开 SPI
 - Test: `fibra-engine/src/test/java/com/sstlfsj/fibra/engine/DeploymentTargetContextContractTest.java`
-- Test: `verification/client/runtime-composition/src/test/java/.../RuntimeDriverCompositionTest.java`
-- Test: `verification/client/runtime-composition/src/test/java/.../RuntimeDriverCompileWalkingSkeletonTest.java`
+- Test: Engine、Java、Node 各所有者模块的 compile-only 契约测试，以及 `fibra-parity-tests` 跨 runtime 组合测试
 
 ### 步骤
 
-1. 先写 TypeScript package boundary RED，并建立专用 Maven verification module 的 compile-failure skeleton；
-   不先删除旧包或修改 lockfile。
+1. 先写 TypeScript package boundary RED，并在既有所有者模块和 `fibra-parity-tests` 建立 compile-failure
+   skeleton；不先删除旧包或修改 lockfile。
 2. 将 transport-neutral `ResourceDescriptor(path,digest,byteLength)`、严格 codec，以及字段格式、path 规范化和
    canonical 编码测试迁入 Java/TypeScript `client-protocol`；`fibra-client.yaml` 的 entryModule/parser 属产品
    browser runtime，连同 URL/loader 实现删除，不在 external fixture 复制。实际资源字节的 byteLength/SHA-256
@@ -133,44 +218,54 @@ fixtures；浏览器 adapter、runner、transport、Web loader、resource cache 
 3. 迁移纯 npm API/protocol，再删除 browser/runtime/React 正式模块与旧风险门；重新生成 lockfile，并以
    boundary test 与 pack 内容证明只剩纯契约。
 4. 写 Java RED 测试：
-   configContext 改变 digest/revision；definition/unit 双射完整；Java private prepared type 不出现在 Engine
+   configContext 改变 digest/revision；definition/unit 双射完整；同 facet 两个 entry 产生两个 entry-keyed
+   units 且共享私有静态 generation；Java private prepared type 不出现在 Engine
    公共签名；snapshot canonical codec 区分缺失/null 并稳定处理 key/数字/Unicode；evaluator/binder/driver
-   不能读取未进入 snapshot 的环境变量、系统属性、时间或随机值。
-5. 删除双 runtime SPI 的冻结测试和类型，建立新 SPI、immutable plans、`HostTerminationPort` 与 Java/Node
-   compile-only drivers；
+   不能读取未进入 snapshot 的环境变量、系统属性、时间或随机值；built-in package 含两个 facets 时按
+   facet identity、依赖和 capability 参与同一全局 DAG，singular package artifact、缺失 facet metadata 或
+   跨 provider package fragment 直接拒绝。
+5. 删除双 runtime SPI 的旧冻结测试，建立新 SPI、immutable plans、`HostTerminationPort` 与 Java/Node
+   compile-only drivers；旧生产类型只在 Task 9 切换 `FibraEngine` 的同一原子 checkpoint 删除；
    `createCandidate` 无 I/O，`prepareAsync` 可 materialize 受信 definition，但不启动执行。
 6. 用真实 Java/Node descriptor、ClassLoader/payload 和独立 external provider fixture 跑 compile-only walking
-   skeleton；记录启动计数为 0，全局 dependency-first/reverse order 在分区后不丢失。
+   skeleton；desired graph 必须包含完整 refs，记录启动计数为 0；facet DAG 确定性展开到 entry-keyed units，
+   全局 dependency-first/reverse order 在分区后不丢失。
 7. 全仓检查正式生产模块和 npm tarball 没有 client/Web 产品实现依赖。
 
 ### 门禁
 
 ```text
-mvn -pl verification/client/runtime-composition -am test
+mvn -pl fibra-engine,fibra-runtime-java,fibra-runtime-node,fibra-parity-tests -am test
 pnpm --dir client install --offline --frozen-lockfile
 pnpm --dir client run build
 pnpm --dir client run test
 pnpm --dir client run lint:boundaries
 pnpm --dir client --filter @sstlfsj/fibra-client-api pack
 pnpm --dir client --filter @sstlfsj/fibra-client-protocol pack
-if rg -n "ArtifactRuntime|ExecutionRuntime|HostPreparedArtifact|fibra-runtime-host|fibra-runtime-client" fibra-engine/src/main fibra-runtime-java/src/main fibra-runtime-node/src/main pom.xml; then exit 1; fi
 if rg -n "com\\.microsoft\\.playwright|java\\.net\\.http\\.WebSocket|Electron|org\\.w3c\\.dom" fibra-engine/src/main fibra-client-protocol/src/main; then exit 1; fi
 ```
 
-两个反向断言的生产源码结果必须为空；`lint:boundaries` 另外检查 npm 依赖、DOM lib、React、Playwright、
-Electron、Blob 与浏览器全局。`reactor` 和 Java ClassLoader 所需 `java.net.URL` 不属于违规命中。
+浏览器边界反向断言的生产源码结果必须为空；`lint:boundaries` 另外检查 npm 依赖、DOM lib、React、
+Playwright、Electron、Blob 与浏览器全局。旧双 SPI 的全仓反向断言在 Task 9 原子切换后执行。`reactor` 和 Java
+ClassLoader 所需 `java.net.URL` 不属于违规命中。
 
 ### 停止条件
 
 - 需要 metadata bag、类型 token、runtime cast 或实现模块互相依赖；
 - compile-only 测试必须启动插件、sidecar、session 或网络；
 - context 改变实际 plan 却没有进入 target digest/revision；
+- driver 需要用 artifactId/facetId 猜 definitionId 或把 artifactId 当 unit key；
 - external execution fixture 必须引入浏览器 runner 才能完成编译；
-- 删除 browser/runtime 模块后纯 API/protocol 独立 pack 无法使用。
+- 删除 browser/runtime 模块后纯 API/protocol 独立 pack 无法使用；
+- 新旧 SPI 需要跨越 Task 9 checkpoint、以兼容入口或发布物形式长期共存。
 
 ## Task 8：实现 Java/Node driver、generation 与资源所有权
 
-**依赖：** Task 7 全部门禁通过。
+**依赖：** Task 7 公共 SPI 稳定。由于真实 walking skeleton 必须消费本 Task 的 driver，Task 7/8 在同一工作树
+原子批次内交错实现；验收顺序仍先关闭 Task 7 compile-only 门，再关闭本 Task 生命周期门。
+
+**当前阶段：Integrated。** Java/Node 定向生命周期、真实 contribution admission、Node/Java ACTIVE 后失活替换、
+启动失败不循环替换和资源 lease 门已通过，并已进入最终根 reactor。
 
 ### 目标
 
@@ -199,14 +294,27 @@ Electron、Blob 与浏览器全局。`reactor` 和 Java ClassLoader 所需 `java
 
 - candidate 部分 prepare 失败、取消、关闭失败；
 - `definition()` 可在保存前执行，但 `Plugin.start()` 与 Node process 启动计数仍为 0；
+- Java/Node 同 facet 多 desired entry 形成独立 unit/config/instance；共享 ClassLoader/payload 只有一份物理资源，
+  任一 unit retire 不得提前释放仍被其它 unit 持有的 generation lease；
+- 共享静态 generation 跨 attempt 复用：局部替换 A、保留 B 时，B 与公共依赖 C 的 ClassLoader/wiring 身份
+  保持，A 复用同一 wiring；最后一个跨 attempt lease 释放前不得关闭；
 - definition contract 无 I/O、线程、注册或 Context/Scope 能力；
 - seal 后其它 driver 失败或显式 abort 时，sealed generation 释放全部未启动 unit leases 和私有资源；
 - unit 只有在测试 harness 显式 promote 后调用 `reconcileAsync(operationId)` 才启动真实 Java instance/Node
   sidecar；save/promote 的顺序断言归 Task 9；
 - 旧 invocation 尚未 drain 时旧 ClassLoader/payload close 次数为 0；
+- Engine 并发首次启动订阅者收到同一精确 bootstrap view；长期启动协调不持有第一份 view、descriptor 或原始
+  失败异常图；成功释放的 Java/Node unit 即使仍被 generation/command lane 引用，也不再持有 definition、
+  ClassLoader、payload 或 resolved config；
+- Node 远端 request 由 invocation Scope 作为 `DrainingDisposable` 持有；取消只发请求，远端终态前 route
+  lease 不释放且 unit 不进入 stop；
 - drain/stop 的重复、迟到回复按各自 lifecycleOperationId 拒绝；
 - reverse dependency stop 与 resource retire；
 - cleanup failure 保留 retiring generation 并关闭 mutation gate；
+- 真实 Scope disposer 失败即使被 core 普通关闭语义隔离，Host 的 `releaseScope` 仍必须识别并保留
+  ClassLoader/payload owner；
+- Node sidecar 在 start 成功后、contribution 注册完成前退出时必须封准入并返回 FAILED，不能发布死亡进程为
+  ACTIVE，也不能因从未 ACTIVE 而触发 replacement 风暴；
 - plugin 无法关闭 root scope，child scope 可关闭且 root 级联。
 
 ### 门禁
@@ -217,7 +325,12 @@ mvn -pl fibra-api,fibra-core,fibra-runtime-java,fibra-runtime-node -am test
 
 ## Task 9：硬切 Engine、持久目标与全局生命周期
 
-**依赖：** Task 8 全部门禁通过。
+**依赖：** Task 7 公共 SPI 稳定、Task 8 driver 契约可消费。Engine 编译器与 driver 互相提供真实计划数据，
+因此允许在同一未提交原子批次内交错实现；Task 9 checkpoint 前仍必须依次通过 Task 7、8 全部门禁。
+
+**当前阶段：Integrated。** Engine 旧双 SPI 生产引用已清空；持久目标、全局 unit DAG、传递静态依赖闭包、
+冻结 capability snapshot、批量 fenced reconcile 与 fail-stop 定向门已通过。最终宿主、重启和根 reactor
+已由最终根 reactor 同炉复跑通过。
 
 ### 目标
 
@@ -228,6 +341,10 @@ mvn -pl fibra-api,fibra-core,fibra-runtime-java,fibra-runtime-node -am test
 - save-unconfirmed 同时关闭全部 managed contribution 准入并通过 `HostTerminationPort` 一次性请求受控 Host 退出；
 - `ReconcileCurrent` 在同一 targetRevision 下替换失败 unit closure，不伪造 revision或并存第二 current。
 - capability/runtime contract 改变计划时保守重编译全部 current units；仅可用性变化才 reconcile 旧 plan。
+- capability snapshot 只作为每次编译冻结进 `RuntimeTargetSlice` 的输入：key 存在即可用，value 只作描述；
+  active unit 校验其传递静态 facet 闭包，失败 attempt 不改变 current observation；
+- `requestReconcile` 使用不可拆分的 `Set<RuntimeUnitFence>`；Engine 拒绝 missing/wrong/stale/retired fence，
+  原子替换有效 FAILED 闭包，再唤醒仍匹配的非失败 units。
 
 ### Files
 
@@ -237,12 +354,26 @@ mvn -pl fibra-api,fibra-core,fibra-runtime-java,fibra-runtime-node -am test
 - Rename: `FileEngineStateStore` → `FileDeploymentTargetStore`
 - Delete: `ReplaceConfigContext.java`
 - Delete after migration: `DeploymentManifest.java`、`DeploymentManifestCodec.java`
+- Delete in this same checkpoint: `ArtifactRuntime.java`、`ExecutionRuntime.java`、`PreparedArtifact.java`、
+  `PreparedArtifactUpdate.java`、`ExecutionTargetPlan.java`、`ExecutionUpdate.java`、`ExecutionHandle.java`、
+  `ArtifactResources.java`、`PluginRuntimeAdapter.java`、`RuntimeResources.java`、`RuntimeResourceOwner.java`、
+  `RuntimeResourceSnapshot.java`、`RuntimeResourceUpdate.java`、`JavaArtifactRuntime.java`、
+  `NodeArtifactRuntime.java`、`fibra-runtime-host/`、`fibra-runtime-client/`
+- Modify: root `pom.xml`，在同一 checkpoint 移除 `fibra-runtime-host` 与 `fibra-runtime-client` 的 module 和
+  dependencyManagement
 - Create/Rewrite: `DurableTargetState`、deployment attempt、retirement batch、Engine diagnostics/snapshot/phase
 - Test: full save/failure/retry/restart-state matrix
 
 ### 必测场景
 
 - same digest no-op；A→B→A revision；configContext A→B→A；
+- compiledFingerprint 覆盖每个 provider contractIdentity、built-in metadata 与 capability snapshot；
+- affected closure 比较旧、新完整 unit dependency map；同 facet 新增、删除或 gate 第二个 entry 时，依赖该
+  facet 的 retained unit 也必须被替换；
+- 依赖-only/contract-only facet 的精确传递闭包进入 consumer unit 编译输入身份；闭包中任一 package
+  revision、facet/artifact identity 或依赖边变化先命中直接 consumer，再沿旧/新 unit DAG 扩散；不伪造 unit；
+- package gate disabled 保存成功并撤销该 package 的全部 active units，但 raw desired entries 保留；缺少
+  selection、revision/digest 不匹配或绕过 gate 的 active entry 在保存前拒绝；
 - prepare/definition/binder/validator/plan 失败不保存；
 - save 明确失败不启动；save-unconfirmed 不 promote、不继续服务并进入受控退出；
 - 某 driver seal 后另一 driver seal 失败、全部 seal 后 save 明确失败，均 abort sealed generations 且零 lease 泄漏；
@@ -270,6 +401,13 @@ if rg -n "PluginRuntimeAdapter|ArtifactRuntime|ExecutionRuntime|RuntimeResources
 
 **依赖：** Task 9 全部门禁通过。
 
+**当前阶段：Integrated。** 真实 package/target store、Engine、动态 Java JAR、Node sidecar、external
+provider、Java→Node→external 启动顺序、保存前零启动、offline→online reconcile、同 facet 双 entry 独立
+resolved config、retained identity、route/lease/drain/stop 及资源归零均已通过。Java/Node 自停用现已统一进入
+带 `RuntimeUnitFence` 的 Host→Engine gateway 并保存完整 replacement target；Java unit-local
+registrar/control realm、运行中 observed refresh、stale fence、保存失败与 dependency-only affected 回归均已
+通过，并已由 Task 11/13 的最终工作树复跑确认。
+
 ### 目标
 
 - 真实 Engine、文件 package/state store、动态 Java JAR、Node sidecar 和不发布的 external runtime fixture
@@ -279,29 +417,41 @@ if rg -n "PluginRuntimeAdapter|ArtifactRuntime|ExecutionRuntime|RuntimeResources
 
 ### Files
 
-- Create/Modify: `fibra-bridge` contribution kind registry 与 LiteralValue codecs；不得依赖 Engine
+- Create/Modify: `fibra-bridge` contribution kind registry、unit-owned `ContributionAdmission` 与 LiteralValue
+  codecs；不得依赖 Engine
 - Create: `fibra-engine/.../RemoteContributionInvoker.java`，组合 bridge registry 与 `PublishedRuntime`
-- Extend: `verification/client/external-runtime-fixture/` with lifecycle、offline/online wake-up、resource lease
-- Create: `verification/client/host/pom.xml`，依赖 Engine、Java/Node drivers、external fixture 和测试库，设置
-  `maven.deploy.skip=true`
-- Create: `verification/client/host/src/test/...` Java/Node/external execution vertical tests
-- Modify: root `pom.xml`，加入 `verification/client/host`，并为全部 verification modules 设置
-  `maven.deploy.skip=true`
+- Modify: `RuntimeHostServices`，只读暴露 host identity、共享 kind registry、unit admission factory 与 remote
+  invoker；禁止暴露 directory/root Scope/domain
+- Modify: Engine builder/bootstrap 保留唯一 `HostServiceRegistry` 构造面；启动时冻结到长期 RuntimeDomain，
+  Java unit 只通过 scope 继承读取，Spring 不得保留未接线的空 bridge
+- Modify: Java driver，在每个 unit scope 中发布该 unit admission 为 `ContributionServices.REGISTRAR`，并在
+  drain 前同步封闭全部真实 route
+- Modify: Node provider/driver，删除私有 `NodeContributionKindResolver`，使用共享 registry/admission；ACTIVE
+  sidecar 失活必须发布 FAILED 并请求 replacement，不能原地复用
+- Modify: Java/TypeScript client protocol，`Assignment` 必填自身 `unitTargetRevision`、`desiredEntryId`、
+  `definitionId` 与规范 resolved config
+- Extend: `fibra-parity-tests/src/test/java/.../verification/external/` with lifecycle、offline/online wake-up、
+  resource lease
+- Create: `fibra-parity-tests/src/test/java/.../verification/host/` Java/Node/external execution vertical tests；
+  继续使用既有整仓测试模块，不增加独立 fixture 模块
 - Test: cross-runtime package、call fence、offline PENDING、disable/upgrade、resource lease
 
 ### 步骤
 
-1. 在 bridge 先写 duplicate kind、unknown codec 和 registry route lease RED 测试，再实现唯一 registry/codecs。
+1. 在 bridge 先写 duplicate kind、unknown codec、unit admission 并发 register/同步封准入、双 route drain RED
+   测试，再实现唯一 registry/codecs/admission；公共 codec wire 只允许 `LiteralValue`。
 2. 在 Engine 写 stale view/registration、closed admission、route drain 与 invoker codec RED 测试，再实现
    `RemoteContributionInvoker`。
-3. 扩展 external fixture，但仍只依赖公开 Engine/bridge/protocol；由 `requestReconcile` 把上线事件送回 Engine
+3. Java/Node 先接入同一 unit admission 与 registry；真实 Java 插件必须从 Context service 取得 registrar，
+   Node ACTIVE 后失活必须撤销 route、发布 FAILED 并由 Engine replacement。随后扩展 external fixture，但仍只
+   依赖公开 Engine/bridge SPI；由 `requestReconcile` 把上线事件送回 Engine
    lane，不允许 fixture 自行启动 dependent runtime。
 4. 以真实 package/state store 安装包含 Java、Node、external facets 的 package，验证保存前启动计数为 0。
 5. 保存后启动真实 Java/Node，驱动 external fixture 从 PENDING 到 ACTIVE，再执行调用、升级、停用和退役。
 6. 让 external fixture 发出 plan-affecting `requestRecompile`，证明不保存 target、revision/token 不变，Java、
    Node、external 全部 current units 获得新 runtimeInstanceId，旧 units 按反依赖 drain/stop/retire。
 7. 注入 driver B seal 失败及已 sealed driver A abort 失败，证明零执行启动、资源现场保留、全局准入关闭；
-   verification Host 消费 `HostTerminationPort`，证明独立 notification lane 只触发一次并实际结束受管 Host
+   parity Host fixture 消费 `HostTerminationPort`，证明独立 notification lane 只触发一次并实际结束受管 Host
    lifecycle；不得在 Engine 内调用 `System.exit`。
 8. 检查 fixture 只存在于 test/verification dependency graph，distribution 和生产 composition root 均不引用。
 
@@ -309,10 +459,23 @@ if rg -n "PluginRuntimeAdapter|ArtifactRuntime|ExecutionRuntime|RuntimeResources
 
 - Java、Node、external facets 的精确跨包依赖；
 - Java/Node contribution 真正启动并由同一 `PublishedRuntime` 调用；
-- external fixture 完成 assignment、activate、call、drain、stop、observed；
-- 旧 host/view/registration/runtimeInstance/operation 全部拒绝；
+- Java contribution 的 `providerInstanceId` 与 `PluginInstance.id()` 必须等于稳定 desired entry id；每代变化的
+  `runtimeInstanceId` 只进入 fence/observed，不得暴露为 contribution provider 名称；
+- external fixture 完成公开 RuntimeProvider 的 prepare/seal、activate、call、drain、stop、observed、
+  config 隔离和 fence；它不生产 transport/client Assignment；
+- 旧 host/view 与旧 runtimeInstance/operation 围栏全部拒绝；registration 只与当前 view 和稳定
+  ContributionId 组成完整准入 tuple，数值本身允许在新目录重复；
+- retirement 开始后，旧 unit 的多条 route 必须在同一次同步 admission close 中全部拒绝；已有调用仍能有界
+  drain，插件/Scope/sidecar 不得在调用完成前释放；
+- 动态 Java 插件只能通过 unit scope 中的同一 registrar 注册 contribution；Node 不得保留私有 kind resolver；
+- ACTIVE Node sidecar 异常退出必须进入 FAILED、封准入并换新 runtimeInstance，不能永久保持 ACTIVE；
 - target revision 推进但 external unit 被 retained 时，旧 `unitTargetRevision` + 同 runtimeInstance 的精确 tuple
   仍合法；unit 替换后该 tuple 立即失效；
+- 同一 external facet 的两个 desired entries 使用不同 resolved config 时，必须形成两个独立 units、activation
+  和 runtimeInstance；
+- client API/protocol conformance 必须从正式 `host.snapshot` codec 结果仅取 Assignment 的公开字段，精确选择
+  `ClientModuleDefinition`，为两个 entries 创建独立 modules，并在全新 session 重复绑定，证明不依赖 fixture
+  私有字段或跨 session 实例缓存；
 - external execution 离线时 PENDING，不阻塞 target save/Host ready；
 - disconnect 不冒充 stop；
 - plan-affecting capability/runtime contract 变化重编译全部 current units，不保存新 target；
@@ -329,15 +492,19 @@ if rg -n "PluginRuntimeAdapter|ArtifactRuntime|ExecutionRuntime|RuntimeResources
 ### 门禁
 
 ```text
-mvn -pl fibra-bridge,verification/client/external-runtime-fixture,verification/client/host -am test
-if rg -n "external-runtime-fixture|verification/client" fibra-*/pom.xml fibra-distribution scripts/verify-distribution.sh; then exit 1; fi
+mvn -pl fibra-bridge,fibra-parity-tests -am test
+if rg -n "ExternalFixtureRuntimeProvider" fibra-*/src/main fibra-distribution; then exit 1; fi
 ```
 
-第二条在生产 POM/distribution 中必须无命中。
+第二条在生产源码与 distribution 中必须无命中。
 
 ## Task 11：迁移管理面与调用方，并验证 Host 重启恢复
 
 **依赖：** Task 10 全部门禁通过。
+
+**当前阶段：Restarted。** Registry/config、CLI/Spring/Boot、examples/benchmarks、parity/archetype、plugins 与
+distribution 已迁移；旧 `ArtifactPackage/ArtifactStore` 正式入口和 assembly 已删除。两 Host 重启定向门曾
+通过；最终根 reactor 已同炉复跑 Host 垂直链与重启恢复门。
 
 ### 依赖前沿
 
@@ -356,8 +523,8 @@ if rg -n "external-runtime-fixture|verification/client" fibra-*/pom.xml fibra-di
 - Modify: examples、benchmarks、parity、archetype、plugins、distribution manifests and tests
 - Delete: anonymous catalog、`InstallArtifact/UninstallArtifact`、old manifest readers/version solver and remaining
   `PluginRuntimeAdapter` call sites
-- Create: `verification/client/host/src/test/java/.../HostRestartRecoveryTest.java`，复用 Task 10 的真实 Host fixture，
-  只依赖 reactor production modules 与 verification external provider
+- Create: `fibra-parity-tests/src/test/java/.../verification/host/HostRestartRecoveryTest.java`，复用 Task 10 的真实
+  Host fixture，只依赖 reactor production modules 与 parity test fixture
 
 ### 步骤与前沿门
 
@@ -366,21 +533,30 @@ if rg -n "external-runtime-fixture|verification/client" fibra-*/pom.xml fibra-di
    或 Spring application context 退出，运行第二前沿；
 3. examples/benchmarks 不得保留旧 builder/catalog convenience，运行第三前沿；
 4. parity/archetype/plugins/distribution 切换唯一 package 格式，运行第四前沿；
-5. 最后在 verification Host 运行两 Host 真实进程重启测试并检查残留 PID/process tree。
+5. 最后在 parity Host fixture 运行两 Host 真实进程重启测试并检查残留 PID/process tree。
 
 ```text
 mvn -pl fibra-config,fibra-registry -am test
 mvn -pl fibra-cli,fibra-spring,fibra-spring-boot-starter -am test
 mvn -pl fibra-example,fibra-benchmarks -am test
 mvn -pl fibra-parity-tests,fibra-plugin-archetype,fibra-plugins,fibra-distribution -am test
-mvn -pl verification/client/host -am test -Dtest=HostRestartRecoveryTest -Dsurefire.failIfNoSpecifiedTests=false
+mvn -pl fibra-parity-tests -am test -Dtest=HostRestartRecoveryTest -Dsurefire.failIfNoSpecifiedTests=false
 ```
 
 ### 管理语义
 
 - package install/upgrade/enable/disable/uninstall；
+- install 只收 source 与显式 enabled，身份从严格 package 元数据取得；upgrade 只收 source，要求已有
+  selection 并保留 gate，同 revision 的完整 target 可 no-op；
+- uninstall 只删 selection，不物理删除不可变内容；任何 raw entry 引用（含 disabled）都必须先移除；
+- 完整 deploy 接收已发布 selections、raw desired 与 configContext；增量用例以 durable targetRevision CAS
+  派生完整 target，target 保存失败不删除已发布内容；
+- audit succeeded 表示 Engine 接受命令，不代表 unit ACTIVE；失败/不确定保存按 EngineChangeException
+  记录，成功按前后 target revision/digest 判定，no-op 与 ReconcileCurrent 记 NOT_APPLICABLE；
 - desired entry upsert/enable/disable/move/remove；
-- 插件自停用只作用于当前 entry；
+- 插件自停用只作用于当前 entry；Java `ManagedPluginControl` 与 Node `fibra.disable` 走同一 Host→Engine gateway，
+  以 `RuntimeId + unit key + unitTargetRevision + runtimeInstanceId` 拒绝 retiring 旧代次迟到请求；保存失败保留
+  当前 unit/target 并允许重试，不得降级为 reconcile；
 - package gate 关闭撤销全部 facets/entries；
 - CLI/Spring 只默认装配 Java/Node，产品 runtime 由产品 composition root 显式注册。
 
@@ -388,12 +564,18 @@ mvn -pl verification/client/host -am test -Dtest=HostRestartRecoveryTest -Dsuref
 
 - Host A 保存并运行真实 Java、Node、external fixture；
 - 使用同一 package/state store 启动 Host B；
-- target digest/revision 保持，host/runtime/operation/registration/Node PID 全部更新；
-- 旧 session、ack、call result、resource request 全部拒绝；
+- target digest/revision 与 `ContributionId` 业务身份保持，host/runtime/operation/view/Node PID 更新；
+  registration 属于新目录，数值允许重复，只有与 view 和 contribution identity 组成完整 tuple 才能准入；
+- 核心 Host 门拒绝旧 `viewRevision + ContributionId + registrationIdentity` 完整调用 tuple、错误 registration
+  和旧 `RuntimeUnitFence`；产品 session、ack、call result、resource request 由产品 runtime/gateway 单独验证，
+  不得由 Fibra fixture 冒充；
 - 动态 ClassLoader、Node sidecar 和 contributions 从持久 target 重建；
 - 保存后 execution 失败的 current target 在重启时重新收敛；
 - package 缺失/损坏时失败可观察且 target 不被改写；
-- save-unconfirmed 以磁盘事实恢复。
+- built-in 同 digest 恢复；provider 缺失、旧 digest 不再提供、metadata 与私有 definitions 不一致时失败可观察
+  且 target 不被改写；发布二进制或声明变化必须改变 built-in digest/contract identity；
+- save-unconfirmed 由 Engine/store 定向故障注入证明只以重启后的磁盘事实消歧；Host 进程门只验证确定落盘
+  target 的恢复，不重复伪造 store 内部窗口。
 
 ### 停止条件
 
@@ -406,43 +588,19 @@ mvn -pl verification/client/host -am test -Dtest=HostRestartRecoveryTest -Dsuref
 
 **依赖：** Task 11 全部门禁通过。
 
+**当前阶段：Integrated。** 28 个 Maven 制品、两个纯契约 npm 包、Java external
+`RuntimeProvider` 消费者、npm tarball 消费者、正式制品内容检查与分离 CI/release 流程均已在最终工作树通过；
+冻结、提交和推送后仍须由 GitHub Actions 执行空仓分发，才能提升为 Released。
+
 ### 正式发布集合
 
-Maven 精确发布 28 个 artifacts：
-
-```text
-fibra-api
-fibra-core
-fibra-config
-fibra-artifact
-fibra-engine
-fibra-bridge
-fibra-runtime-java
-fibra-runtime-node
-fibra-registry
-fibra-cli-api
-fibra-cli
-fibra-spring
-fibra-spring-boot-starter
-fibra-plugin-archetype
-fibra-client-protocol
-fibra-tool-api
-fibra-fs
-fibra-fs-local
-fibra-tool-fs
-fibra-tool-fs-search
-fibra-subprocess
-fibra-subprocess-local
-fibra-shell
-fibra-shell-local
-fibra-tool-shell
-fibra-storage
-fibra-storage-json
-fibra-tool-storage
-```
+Maven 精确发布 28 个 artifacts。各模块 POM 中显式的
+`<maven.deploy.skip>false</maven.deploy.skip>` 是发布集合唯一真源，完整集合与维护规则见
+`docs/release.md`；本计划不复制第二份模块名称清单。
 
 - 保留 npm：`@sstlfsj/fibra-client-api`、`@sstlfsj/fibra-client-protocol`；
-- 不发布：`fibra-runtime-host`、`fibra-runtime-client`、client runner/Web/React、verification fixtures。
+- 不发布：`fibra-runtime-host`、`fibra-runtime-client`、client runner/Web/React；所有测试 fixture 留在既有
+  `fibra-parity-tests`、`fibra-distribution/src/test` 或 `client/tests`。
 
 npm 两包版本必须与 Maven release version 完全一致；`-SNAPSHOT` 只允许 build/test/pack，不 publish。稳定版本
 发布 `latest` tag，预发布版本使用其 qualifier tag。release workflow 使用 npm trusted publishing/OIDC 与
@@ -455,11 +613,19 @@ provenance；凭据或 provenance 不可用时阻断发布，不回退为仓库�
 - `.github/workflows/ci.yml`
 - `.github/workflows/release.yml`
 - Java `ApiSignatureBaselineTest`
+- `fibra-parity-tests/.../ArchitectureBaselineTest.java`
+- `fibra-distribution/src/test/consumers/engine-application/EngineConsumerTest.java`
+- `fibra-distribution/src/test/consumers/engine-application/LifecycleConsumerTest.java`
+- `fibra-distribution/src/test/consumers/{core,cli,spring-boot}-application` 与生成的 Java plugin consumer
+- 已在 Task 11 前置完成：删除 `fibra-artifact/ArtifactPackage.java`、仅服务旧 `ArtifactStore` 的公共面、
+  对应正向测试和 `build/plugin-package-assembly.xml`；保留 `PluginPackage` 对旧格式的负向拒绝测试
 - Create: `client/api-baseline/client-api.d.ts`、`client/api-baseline/client-protocol.d.ts`
-- Create: `verification/distribution/runtime-provider-application/pom.xml` Java external RuntimeProvider 空仓消费者
-- Create: `verification/client/package-consumer/`，只安装两个 npm tarball 的 TypeScript API/protocol 消费者
+- Create: `fibra-distribution/src/test/consumers/runtime-provider-application/pom.xml` Java external
+  RuntimeProvider 空仓消费者
+- Create: `client/tests/package-consumer/`，只安装两个 npm tarball 的 TypeScript API/protocol 消费者
 - Create: `scripts/verify-client-packages.sh`，在临时目录 pack、安装、编译 package consumer 并检查 tar 内容
-- Create: `scripts/verify-published-contents.sh`，按精确发布清单解压 JAR/tarball 并执行禁止内容断言
+- Modify: `scripts/verify-distribution.sh`，复用 POM 发布声明并检查 Maven JAR 内容；npm tarball 内容由
+  `verify-client-packages.sh` 检查，不再设置重复门禁
 - distribution ZIP、archetype、独立消费者与 release 文档
 
 ### 门禁
@@ -472,25 +638,27 @@ provenance；凭据或 provenance 不可用时阻断发布，不回退为仓库�
   RuntimeProvider SPI 可消费，不能用 TypeScript tarball 替代；
 - Maven headless 门在没有 Node/pnpm 时通过；npm 门不读 reactor classpath；
 - distribution/reproducible/API baseline 使用上述精确 28 artifacts 与两个 npm 包；
-- 解压每个 Maven JAR/npm tarball，确认不含 verification、runner、Web loader、React、Playwright 或 transport
-  实现；
-- CI 分离 Maven、npm、发行、可复现构建。
+- 分别在 distribution/client package 门中解压 Maven JAR/npm tarball，确认不含 fixture、runner、Web loader、
+  React、Playwright 或 transport 实现；
+- CI 分离 Maven 与 npm；Maven job 复用同一锁定环境执行可复现构建，空仓分发只在 push 与 release workflow
+  中执行，PR 事件不重复执行。
 
 ```text
 mvn -pl fibra-parity-tests,fibra-distribution -am verify
 pnpm --dir client install --offline --frozen-lockfile
-pnpm --dir client run build
-pnpm --dir client run test
-pnpm --dir client run lint:boundaries
 scripts/verify-client-packages.sh
-scripts/verify-distribution.sh
 scripts/verify-reproducible-release.sh
-scripts/verify-published-contents.sh
+scripts/verify-architecture-boundaries.sh
+# 代码与文档冻结、提交并推送后，由 push workflow 自动执行
 ```
 
 ## Task 13：全量验收、文档一致性和独立审查
 
 **依赖：** Task 12 全部门禁通过。
+
+**当前阶段：Integrated。** 2026-09-19 的最终工作树已通过根 reactor、可复现构建、npm 包门、架构边界、
+文档一致性和架构/发行/脚本三路独立复核，复核剩余 P0/P1/P2 均为零。提交并推送后的 GitHub Actions 空仓分发
+check 是唯一未关闭门；它通过后当前提交才能视为 Released。
 
 ### 全量命令与证据
 
@@ -499,30 +667,42 @@ scripts/verify-published-contents.sh
 - Host 重启恢复；
 - npm frozen-lockfile build/test/pack；
 - Maven/npm 独立消费者；
-- `scripts/verify-distribution.sh`；
 - `scripts/verify-reproducible-release.sh`；
+- `scripts/verify-architecture-boundaries.sh`；
+- 代码、测试、文档与审查修订冻结、提交并推送后，由 GitHub Actions 在目标分支执行
+  `scripts/verify-distribution.sh`；
 - Java/TypeScript API baseline；
 - `git diff --check`；
 - 旧模型、兼容分支、产品浏览器代码的全仓搜索；
 - 文档一致性审查；
 - 架构、代码、发行三路独立审查实际 diff、测试输出和制品。
 
+2026-09-19 本地最终证据：
+
+- Java 21 + Maven 3.9.9 的 `mvn clean verify`：43 个 reactor 模块全部成功，耗时 2 分 15 秒；
+- `scripts/verify-reproducible-release.sh`：三轮构建与 Maven 制品、发行 ZIP、目录树逐字节比对通过；
+- `scripts/verify-client-packages.sh`：client API 4 项、protocol 8 项测试通过，两个 tarball 内容与独立消费者通过，
+  下载 0 个包；
+- `scripts/verify-architecture-boundaries.sh`、7 个脚本的 `bash -n`、workflow YAML 解析与 `git diff --check` 通过；
+- 文档一致性、最终架构与脚本/发行三路复核均无剩余 P0/P1/P2；
+- `scripts/verify-distribution.sh` 未在本地执行，按最终约束只由 push workflow 和正式 release workflow 执行。
+
 最终至少执行：
 
 ```text
 mvn clean verify
-mvn -pl verification/client/host -am test
 pnpm --dir client install --offline --frozen-lockfile
-pnpm --dir client run build
-pnpm --dir client run test
-pnpm --dir client run lint:boundaries
 scripts/verify-client-packages.sh
-scripts/verify-distribution.sh
 scripts/verify-reproducible-release.sh
-scripts/verify-published-contents.sh
 git diff --check
-if rg -n "PluginRuntimeAdapter|ArtifactRuntime|ExecutionRuntime|ReplaceConfigContext|fibra-runtime-host|fibra-runtime-client" --glob '**/src/main/**' --glob 'pom.xml' .; then exit 1; fi
+scripts/verify-architecture-boundaries.sh
+# 上述结果和独立审查收口、提交并推送后，空仓最终门由 push workflow 自动执行
 ```
+
+最终架构边界不靠历史文档 allowlist 维持。`verify-architecture-boundaries.sh` 只扫描当前生产源码、POM 和发布
+入口，拒绝旧 runtime/package 类型、旧模块、旧清单和产品浏览器实现重新进入正式路径；模块依赖方向由
+`ArchitectureBaselineTest` 证明，Java/npm 发布内容分别由 distribution/client package 门证明。归档设计和负向
+拒绝测试不属于生产依赖，不纳入字符串白名单式门禁。搜索时排除 `target/`、`dist/` 与 flattened POM。
 
 ### 文档统一边界
 

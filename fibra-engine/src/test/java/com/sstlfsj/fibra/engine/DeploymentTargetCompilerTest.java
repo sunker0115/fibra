@@ -161,7 +161,8 @@ class DeploymentTargetCompilerTest {
     }
 
     private DeploymentTarget target(List<PluginSelection> selections) {
-        return DeploymentTarget.of(1, selections, new DesiredInputGraph(List.of()));
+        return DeploymentTarget.of(1, selections, new DesiredInputGraph(List.of()),
+            com.sstlfsj.fibra.config.ConfigContextSnapshot.empty());
     }
 
     private ManagedFacet facet(String artifactId, String pluginId, String revision,

@@ -47,7 +47,7 @@ class CliReplTest {
         assertEquals(0, exitCode);
         assertEquals(1, opened.get());
         var rendered = output.toString(StandardCharsets.UTF_8);
-        assertEquals(2, occurrences(rendered, "\"artifacts\":[]"));
+        assertEquals(2, occurrences(rendered, "\"selections\":[]"));
         assertFalse(rendered.contains("\u001B"), rendered);
         assertEquals("", error.toString(StandardCharsets.UTF_8));
     }
@@ -68,7 +68,7 @@ class CliReplTest {
         assertEquals(0, exitCode);
         assertEquals(1, opened.get());
         assertTrue(error.toString(StandardCharsets.UTF_8).contains("不能在 REPL 中指定全局选项"));
-        assertTrue(output.toString(StandardCharsets.UTF_8).contains("\"artifacts\":[]"));
+        assertTrue(output.toString(StandardCharsets.UTF_8).contains("\"selections\":[]"));
     }
 
     @Test
@@ -100,7 +100,7 @@ class CliReplTest {
         var exitCode = execute(home, "@" + arguments + "\nexit\n", output, error, CliHost::open);
 
         assertEquals(0, exitCode);
-        assertTrue(!output.toString(StandardCharsets.UTF_8).contains("\"artifacts\":"));
+        assertTrue(!output.toString(StandardCharsets.UTF_8).contains("\"selections\":"));
         var diagnostics = error.toString(StandardCharsets.UTF_8);
         assertTrue(diagnostics.contains("Unmatched argument"), diagnostics);
         assertTrue(diagnostics.contains("@" + arguments), diagnostics);
@@ -271,7 +271,7 @@ class CliReplTest {
     private static void initialize(Path home) throws Exception {
         var profiles = Files.createDirectories(home.resolve("config/profiles"));
         Files.writeString(profiles.resolve("default.yaml"), "[]\n");
-        Files.writeString(profiles.resolve("default.artifacts.yaml"), "[]\n");
+        Files.writeString(profiles.resolve("default.packages.yaml"), "[]\n");
     }
 
     private static PrintWriter writer(ByteArrayOutputStream output) {

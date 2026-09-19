@@ -1,9 +1,10 @@
 package com.sstlfsj.fibra.config;
 
 /** 配置对插件定义的完整逻辑引用，不引入对 artifact 模块的反向依赖。 */
-public record PluginDefinitionRef(String pluginId, String definitionId) {
+public record PluginDefinitionRef(String pluginId, String facetId, String definitionId) {
     public PluginDefinitionRef {
         pluginId = required(pluginId, "plugin id");
+        facetId = required(facetId, "facet id");
         definitionId = required(definitionId, "definition id");
     }
 

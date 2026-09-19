@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/** 在 Engine 启动前收集宿主服务；启动时冻结并复制到每个运行代。 */
+/** 在 Engine 启动前收集宿主服务；启动时冻结并发布到长期 RuntimeDomain。 */
 public final class HostServiceRegistry {
     private final Map<ServiceKey<?>, Binding<?>> bindings = new LinkedHashMap<>();
     private boolean frozen;

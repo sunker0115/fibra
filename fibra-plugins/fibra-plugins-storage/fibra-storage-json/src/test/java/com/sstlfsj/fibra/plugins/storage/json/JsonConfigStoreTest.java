@@ -110,9 +110,8 @@ class JsonConfigStoreTest {
         try (var input = JsonStorageEntrypoint.class.getResourceAsStream(
             "/META-INF/fibra/plugin.yaml")) {
             var manifest = new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
-            assertTrue(manifest.contains("id: fibra-storage-json"));
-            assertTrue(manifest.contains("entrypoint: " + JsonStorageEntrypoint.class.getName()));
-            assertTrue(manifest.contains("id: fibra-storage"));
+            assertEquals("entrypoint: " + JsonStorageEntrypoint.class.getName()
+                + "\n", manifest);
         }
     }
 

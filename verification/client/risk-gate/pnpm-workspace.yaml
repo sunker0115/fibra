@@ -1,7 +1,0 @@
-packages:
-  - .
-allowBuilds:
-  esbuild: true
-overrides:
-  '@sstlfsj/fibra-client-api': file:../../../client/packages/client-api
-  '@sstlfsj/fibra-client-runtime': file:../../../client/packages/client-runtime

@@ -1,0 +1,13 @@
+format: 1
+id: fibra-tool-shell
+version: "${project.version}"
+facets:
+  - id: main
+    role: host
+    runtime: java
+    target: host
+    payload: lib/main.jar
+    dependencies:
+      - pluginId: fibra-shell
+        facetId: main
+    capabilities: []

@@ -36,7 +36,7 @@ public final class InvocationContext {
     /**
      * 使用同一 RuntimeDomain 内的独立资源 Scope 创建调用上下文，同时保留 caller 的能力解析语境。
      */
-    public static InvocationContext of(Context caller, Scope scope, String serviceName) {
+    public static InvocationContext of(Context caller, ScopeView scope, String serviceName) {
         if (serviceName == null || serviceName.isBlank()) {
             throw new IllegalArgumentException("serviceName must not be blank");
         }
@@ -66,7 +66,7 @@ public final class InvocationContext {
     }
 
     /** 返回资源 owner 所在的生命周期 Scope；实际 owner 由 {@link #effects()} 的资源语境保留。 */
-    public Scope scope() {
+    public ScopeView scope() {
         return resourceContext.scope();
     }
 

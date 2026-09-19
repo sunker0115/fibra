@@ -19,7 +19,7 @@ public final class RetentionJavaEntrypoint implements PluginEntrypoint<Void> {
         return PluginDefinition.builder("retention", Void.class, () -> (context, config) -> {
             var kind = ContributionKind.local("retention", Descriptor.class, String.class, String.class);
             return context.services().require(ContributionServices.REGISTRAR)
-                .register(context, kind, "retention", "value", new Descriptor("retention"),
+                .register(context, kind, "value", new Descriptor("retention"),
                     (invocation, input) -> Mono.just(input)).then();
         }).require(ContributionServices.REGISTRAR).build();
     }
@@ -30,6 +30,20 @@ public final class RetentionJavaEntrypoint implements PluginEntrypoint<Void> {
             return PluginDefinition.builder("retention-failure", Void.class,
                 () -> (context, config) -> Mono.error(context.services().require(STARTUP_FAILURE)))
                 .require(STARTUP_FAILURE).build();
+        }
+    }
+
+    public static final class Peer implements PluginEntrypoint<Void> {
+        @Override
+        public PluginDefinition<Void> definition() {
+            return PluginDefinition.builder("retention-peer", Void.class,
+                () -> (context, config) -> {
+                    var kind = ContributionKind.local("retention", Descriptor.class,
+                        String.class, String.class);
+                    return context.services().require(ContributionServices.REGISTRAR)
+                        .register(context, kind, "value", new Descriptor("peer"),
+                            (invocation, input) -> Mono.just(input)).then();
+                }).require(ContributionServices.REGISTRAR).build();
         }
     }
 }

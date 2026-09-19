@@ -17,8 +17,8 @@ class ConfigDocumentStoreTest {
     void commitsOrRollsBackValidatedContentWithExpectedRevision(@TempDir Path work)
         throws Exception {
         var root = work.resolve("fibra.yaml");
-        var original = "- id: first\n  plugin: sample\n";
-        var replacement = "- id: second\n  plugin: sample\n";
+        var original = "- id: first\n  plugin: {id: sample-plugin, facet: main, definition: sample}\n";
+        var replacement = "- id: second\n  plugin: {id: sample-plugin, facet: main, definition: sample}\n";
         Files.writeString(root, original);
         var store = new ConfigDocumentStore(root, ConfigLimits.defaults());
         var initial = store.read();
@@ -47,7 +47,7 @@ class ConfigDocumentStoreTest {
     @Test
     void rejectsInvalidCandidateBeforeTouchingTheSource(@TempDir Path work) throws Exception {
         var root = work.resolve("fibra.yaml");
-        var original = "- id: first\n  plugin: sample\n";
+        var original = "- id: first\n  plugin: {id: sample-plugin, facet: main, definition: sample}\n";
         Files.writeString(root, original);
         var store = new ConfigDocumentStore(root, ConfigLimits.defaults());
         var initial = store.read();

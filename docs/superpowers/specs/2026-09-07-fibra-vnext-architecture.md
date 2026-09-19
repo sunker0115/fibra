@@ -2,9 +2,9 @@
 
 日期：2026-09-07
 
-状态：第 1–10 节与第 11 节 F1–F4 已完成（2026-09-14）。本文记录该完成态；client foundation、跨执行域
-插件模型及其 P0 以 [2026-09-15 Client Foundation 权威架构](./2026-09-15-fibra-client-foundation-architecture.md)
-为准。
+状态：第 1–10 节与第 11 节 F1–F4 的原始交付已完成；2026-09-17 已按 Client Foundation 最终架构重写
+制品、持久目标和 runtime owner 相关段落。跨执行域插件模型及其 P0 的字段级契约仍以
+[2026-09-15 Client Foundation 权威架构](./2026-09-15-fibra-client-foundation-architecture.md)为准。
 
 本文是已完成 vNext 与 CLI F1–F4 的权威记录，定义该交付态的系统边界、运行模型、模块职责和验收标准；
 它不再定义 client foundation 的最终形态或实施顺序。外部实现的源码对拍统一收录在
@@ -31,10 +31,10 @@ Tool、Agent、Session 等业务插件的实现不因此进入通用底座；其
 2. 托管 Engine 在长期运行域内进行实例差量更新；配置树、服务依赖图和资源所有权树分别建模。
 3. core 只有一个 lifecycle lane，托管层只有一个 Engine command loop；不存在其他可变写入口。
 4. Engine 原子发布不可变 `PublishedView`；宿主不分别拼接状态、贡献和诊断。视图一致不等于生命周期变更原子。
-5. 配置和制品只是输入事实，不能直接修改 Runtime；所有托管变更统一编译为 `ChangeSet`。
-6. 已完成交付态中 Java 与 Node 通过 `PluginRuntimeAdapter` 端口参与变更，Engine 不接触 ClassLoader、Process
-   或 JSON-RPC 私有句柄；该历史 SPI 将按 2026-09-15 Client Foundation 规格在 P0-A–P0-D 硬切为单一
-   `RuntimeDriver` owner 模型。
+5. 配置和 package 只是输入事实，不能直接修改 Runtime；所有托管变更统一编译为完整 `DeploymentTarget`
+   和全局 execution-unit DAG。
+6. Java、Node 与产品提供的 external runtime 通过唯一 `RuntimeProvider/RuntimeDriver` SPI 参与变更；Engine
+   不接触 ClassLoader、Process、session 或 JSON-RPC 私有句柄。
 7. 运行域内所有注册都归某个 `Scope`，注册生效与逆操作登记是同一个 lane command；关闭可等待且幂等。
 8. `PENDING` 是合法运行状态；逐 entry 的 `PublicationRequirement` 决定目标是否达成，不允许隐瞒实际运行状态。
 9. vNext 不引入 PF4J，不保留旧公开 API、旧模块名、旧配置入口或兼容转发。
@@ -54,7 +54,7 @@ Fibra 分为控制面、运行域内能力面和发布面：
 
 ```text
 控制面
-外层宿主 -> PluginRegistry / EngineCommand -> FibraEngine -> PluginRuntimeAdapter
+外层宿主 -> PluginRegistry / EngineCommand -> FibraEngine -> RuntimeDriver
 
 运行域内能力面
 built-in / Java plugin -> Context -> Service / Event / Effect -> plugin
@@ -68,15 +68,15 @@ RuntimeDomain + ContributionDirectory -> PublishedView -> PublishedRuntime -> �
 ```text
 FibraEngine
   ├─ command loop                         托管变更的唯一写入口
-  ├─ EngineStateStore                     单一部署目标的保存与读取
-  ├─ ArtifactStore / desired input source  不可变制品内容与候选配置采集
-  ├─ PluginRuntimeAdapter[]               Java、Node 等运行时参与者
+  ├─ DeploymentTargetStore                单一完整目标的保存与读取
+  ├─ PluginPackageStore / desired input    不可变 package 与候选配置采集
+  ├─ RuntimeDriver[]                      Java、Node 与 external runtime owner
   ├─ FibraRuntime
   │    └─ lifecycle lane                  core 状态的唯一写入口
   ├─ RuntimeDomain                        长期运行，局部变更实例和服务
   │    ├─ Scope ownership tree            实例、嵌套插件与调用资源
   │    └─ ContributionDirectory           注册、撤销与条目调用排空
-  ├─ runtime resources                    按制品依赖闭包准备和回收
+  ├─ runtime generations                  按全局 unit DAG 准备、激活与回收
   └─ PublishedRuntime                     宿主唯一能力入口
        └─ AtomicReference<PublishedView>
             ├─ EngineSnapshot
@@ -86,7 +86,7 @@ FibraEngine
 ```
 
 `PluginRegistry` 只管理安装、版本、期望状态和审计；`ContributionDirectory` 只管理域内贡献；runtime
-adapter 只管理自己的制品物化和资源；Engine 只管理目标、变更编排与发布。任何类型同时承担其中两类职责，
+driver 只管理自己的静态资源与 execution generation；Engine 只管理目标、全局 DAG、变更编排与发布。任何类型同时承担其中两类职责，
 都属于边界泄漏。
 
 ### 2.1 配置树、服务图与资源归属
@@ -251,48 +251,36 @@ PENDING -> STARTING -> ACTIVE -> STOPPING -> DISPOSED
 ### 4.1 变更协调与资源所有权
 
 Engine 长期持有一个运行域、一个贡献目录和各 runtime 的资源所有者。配置变化比较稳定实例身份、
-definition、配置和有效继承策略：新增实例挂载，删除或停用实例撤销；仅配置变化使用实例更新协议；
-definition 或有效隔离归属变化重挂受影响实例。没有变化的实例、effects、ClassLoader 和 Node 进程保留。
-服务 provider 变化引起的消费者停止和重新激活由内核依赖协议驱动，Engine 不另建第二套服务调度器。
-同一 `ChangeSet` 中所有仅配置变化的既有实例组成一次域级目标批量登记，再由内核依赖图独立收敛；
-新增和重挂实例仍按所有权先决顺序处理。Engine 只把 `PLUGIN_BATCH_UPDATE_FAILED` 识别为“目标已全部登记、
-实例收敛失败”，继续捕获并发布实际状态；登记前错误直接终止协调，不能通过读取某个实例状态猜测失败阶段。
+definition、配置和有效继承策略。完整 target 先编译为 entry-keyed execution units 与全局依赖 DAG；package
+facet 依赖同时决定静态资源闭包和 unit 依赖。新增、删除、配置、definition、realm/intercept、capability、
+provider contract 或依赖边变化都通过旧新编译输入计算 affected closure，不能把 artifact identity 当 unit key。
 
-制品变更先校验完整目标依赖图，再按变化制品及其反向依赖闭包准备资源。Java 的已链接契约类型要求
-消费者装载器随所依赖契约一起替换；不能只更新 provider 的 ClassLoader。未受影响的装载器继续使用。
-adapter 负责计算其运行时的物化影响范围并返回 catalog 与资源身份，Engine 负责实例协调与唯一视图发布；
-adapter 不持有另一份宿主发布指针。Node 进程归插件实例的受管资源范围，目录撤销及调用排空后才能清理。
+每个 runtime provider 创建一个长期 driver。一次变更先创建 inert candidate，`prepareAsync()` 只解析与绑定
+受影响输入，`seal()` 只把 driver-private 准备结果转成交由 Engine 持有的 generation；保存成功后才
+`reconcileAsync()` 启动 units。Java 的 ClassLoader/definition/binder 只留在 Java driver，Node payload、
+sidecar/session 只留在 Node driver；Engine 只看公共 plan、observation 与生命周期端口。
 
-adapter 创建长期 `RuntimeResourceOwner`，每次制品变更创建并登记一个有界 `RuntimeResourceUpdate`。
-update 的准备结果包含受影响制品集合、目标 catalog 及 definition 到制品的归属；目标 catalog 复用
-未受影响 definition 和装载器的原对象。Java 在旧、新制品 DAG 边的并集上计算反向依赖闭包，
-资源 identity 表示实际装载对象，不能用制品 revision 代替（依赖升级也会导致消费者装载器重建）。
-
-预绑定期间只允许受影响闭包的新旧资源暂时共存，不创建另一整个运行域。`adopt()` 仅转移内存中的
-资源所有权：新资源交给长期 owner，被替换旧资源交给 update；不执行 I/O、插件启动或关闭。
-adopt 前关闭 update 只清理本次准备资源，adopt 后关闭只清理被替换旧资源，借用的未受影响资源
-始终归长期 owner。Engine 先登记句柄再准备，并在旧实例安全清理后才允许旧资源关闭。
-这不是通用事务参与者协议，不提供发布指针或运行态回滚。Java 预绑定可能执行入口类初始化、
-入口构造器和 definition 构建，不能承诺完全没有制品代码副作用；插件 factory/start 不属于预绑定。
+Java 在旧、新静态依赖边并集上计算 replacement，并按精确 wiring identity 跨 attempt 复用未变化 class
+space；Node 同样按 payload identity 租用静态资源。retained unit 保持原 `unitTargetRevision` 与
+`runtimeInstanceId`，replacement unit 分配新 execution identity。driver 不持有另一份 desired、发布指针或
+恢复数据库。
 
 资源句柄在取得后、执行后续可失败动作前登记所有者；准备失败不使资源失去归属。停止与清理按以下
 先决顺序进行，实际服务消费者也必须完成对旧 provider 激活快照的清理：
 
 ```text
 受影响贡献停止接入 -> 排空已接受调用 -> 清理实例及其子资源
-                 -> 关闭不再使用的 runtime 资源 -> 释放制品引用
+                 -> 关闭不再使用的 runtime generation -> 释放 package/facet lease
 ```
 
-同级独立资源逆序尝试关闭并聚合失败；先决层失败不得释放其仍依赖的下一层资源。保留失败资源身份、
-引用与清理结果，不得仅从活动索引删除后宣告成功。准备和关闭缓存完整终态，重复关闭不掩盖首次失败。
-尚在准备的资源关闭必须等待准备结束，已关闭资源不得再次取得资源。失败尚未处理完毕时，不接受会
-叠加替换资源的后续变更；不能靠无限积累候选资源继续运行。
+同级独立资源逆序尝试关闭并聚合失败；先决层失败不得释放其仍依赖的下一层资源。保留失败 generation、
+lease 与清理结果，不得仅从活动索引删除后宣告成功。准备和关闭缓存完整终态，重复关闭不掩盖首次失败。
+cleanup 失败关闭 mutation gate 并请求宿主受控退出，不能靠无限积累候选资源继续运行。
 
 `DrainingDisposable` 是 owned resource 的专用排空契约，不是通用事务 hook。沿现有 Scope、插件和
-effect 所有权闭包先冻结准入，再启动排空；同步回调及迟到异步资源不能绕过该边界。全部相关排空完成
-后才启动普通清理；provider 还须等待实际消费者的旧 activation 清理，不等待其下一次激活。普通
-effect 的逆序与告警隔离语义保留，但其失败句柄及真实依赖仍被持有，不能以消费者已退出活动索引为由
-提前释放 provider。每个 runtime owner 自己保护失败资源的先决依赖，不能因一个 owner 失败跳过独立 owner。
+effect 所有权闭包先同步关闭 unit 独占的 `ContributionAdmission`，再排空已接受调用，随后按反依赖顺序
+drain/stop units 并 retire generations。同步回调及迟到异步资源不能绕过该边界。普通 effect 的逆序与
+告警隔离语义保留，但失败句柄及真实依赖仍被持有，不能以 unit 已退出活动索引为由提前释放 provider。
 
 此屏障只服务于实际受管调用和资源关闭顺序，不引入全域停机、第二份依赖调度图或通用补偿协议。
 DSH 已有 effect 所有权、在途清理复用和服务撤销后的消费者等待；Fibra 直接采用这些原则，额外的
@@ -371,15 +359,16 @@ Engine 关闭先在线性化的命令准入边界停止接收新请求，等待�
 状态；它是事实流而非完整生命周期审计日志。域关闭时发布最终事实并完成流。Engine 将域事实与
 贡献事实变化汇入同一个发布入口，诊断变化也推进 view revision。
 
-### 4.4 ChangeSet 与持久目标
+### 4.4 Generation 编排与持久目标
 
-artifact、config 和联合 deployment 共用同一个 command loop。`ChangeSet` 只是一次受管变更的内部
-执行计划，不是开放给任意资源参与者的两阶段提交或事务日志框架：
+package、config 和联合 deployment 共用同一个 command loop。Engine 先编译不可变 candidate 和全局 unit
+DAG，再把各 runtime slice 交给对应 driver；这不是开放给任意资源参与者的两阶段提交或事务日志框架：
 
 ```text
-observe -> validate / prepare affected artifacts / bind changed inputs
-        -> save deployment target -> reconcile affected instances
-        -> observe convergence / publish views -> retire unused resources
+observe -> validate / prepare affected facets / bind changed entries
+        -> seal complete candidate -> save deployment target -> promote candidate as current
+        -> close old admission -> drain / stop old units -> activate new units
+        -> observe convergence / publish views -> retire released generations
 ```
 
 配置上下文是持久 desired 的组成部分。任何会改变 enabled、config、realm 或 intercept 求值的上下文变更，
@@ -389,23 +378,29 @@ save/reconcile 路径；不存在 `ReplaceConfigContext` 这种只切换内存�
 PublishedView 全部保持不变。
 
 - prepare 读取并冻结输入，完成制品摘要、依赖图和受影响声明的配置绑定；不执行插件启动，不拆旧运行态。
-- reconcile 调用实例生命周期协议，并等待实际依赖图收敛；按声明要求判断目标达成，合法 PENDING
+- save 成功后 Engine 只在 command lane 内原子提升完整 candidate 为 current；随后同步关闭 retirement batch
+  的新准入，按反依赖顺序 drain/stop 旧 units，再按依赖顺序 activate 新 units。retained units 原样保留，旧
+  generation 仅在其全部 unit、invocation 与 resource lease 释放后 retire；不能跳过 promote 或在旧准入仍开放时
+  启动 replacement。
+- reconcile/activate 调用实例生命周期协议，并等待实际依赖图收敛；按声明要求判断目标达成，合法 PENDING
   不能一律当成失败。该阶段不是可回滚的预检，启动或清理失败必须报告实际状态。
 - 所需不可变制品必须先可靠保存，目标清单只引用已完整保存且校验通过的内容；制品保存本身不选择
   活动版本。重复保存同一内容不得覆盖或删除既有对象。
 - 制品先复制到操作独占的暂存位置，完整校验后才发布稳定对象；已有对象须校验后复用。
   准备失败、撤销或恢复只清理该操作自己的暂存资源，不删除可能被其他准备操作引用的共享对象。
   完整但未被目标引用的对象可以保留，不为失败清理引入通用 GC 或共享对象回滚。
-- `EngineStateStore` 原子替换一份完整目标清单并确认落盘，随后 Engine 协调运行态并发布事实视图。
-  成功响应须同时满足目标已保存、要求已达成及结果视图已发布；失败结果也必须区分目标是否保存、
-  哪些实例已经改变与后续恢复条件，保存成功不是运行时已经可用的同义词。
+- `DeploymentTargetStore` 原子替换一份完整目标并返回可核验 token；Engine 只凭该 token promote 已 seal 的
+  candidate，随后按上述旧/新 unit 顺序协调运行态并发布事实视图。成功响应须同时满足目标已保存、要求已达成及
+  结果视图已发布；失败结果也必须区分目标是否保存、哪些实例已经改变与后续恢复条件，保存成功不是运行时已经
+  可用的同义词。
 - 保存目标前失败只清理新准备的资源；保存后不得因启动、发布或清理错误反写旧目标。清理按资源依赖逐层进行，
   前一层失败时保留后续先决资源；独立同级资源仍全部尝试并聚合失败。
 - 排空与回收不决定保存的目标内容。回收失败进入健康诊断并关闭后续变更准入，不伪造旧路由恢复。
 
-已完成 adopt、运行收敛和旧资源 retire 的目标，即使包含可观察的插件 FAILED 或未满足声明要求，仍可
-通过显式新目标纠正。协调异常、部分 runtime adopt、未确认目标保存或清理失败则不能据“资源仍有 owner”
-推断为安全，必须封锁后续变更并保留实际失败事实。不得用统一 finally retire 或一律重开 gate 掩盖这一区别。
+candidate 已 promote、运行已收敛且 retirement batch 已完成的目标，即使包含可观察的插件 FAILED 或未满足
+声明要求，仍可通过显式新目标纠正。candidate seal/promote、目标保存确认或 unit drain/stop/retire 任一失败，
+都不能据“资源仍有 owner”推断为安全，必须封锁后续变更并保留实际失败事实。不得用统一 finally retire 或
+一律重开 gate 掩盖这一区别。
 失败诊断分别表达原始执行阶段、目标保存确认与清理失败，不从拼接后的错误文本反推控制决策；保存事实的
 公共契约不得让 Engine 反向依赖 Registry 实现，也不为此引入通用事务框架。
 
@@ -413,10 +408,10 @@ DSH 的配置 Entry 在应用失败时会尝试恢复旧配置；这里不自动
 重启后读取的目标一致，避免引入第二次可能失败的目标提交。修正配置或恢复旧版本须提交显式新目标；
 这是一项明确取舍，不表示 DSH 的恢复方案不合理，也不把 Fibra 描述为具有更强的运行态回滚能力。
 
-`DeploymentManifest` 选择完整 artifact revision 集合和完整声明图，包括顺序、稳定实例身份、所属
-分组、启停意图、配置、隔离和发布要求。停用声明同样保存，不要求对应 definition 已安装。部署
-revision 为规范编码的内容摘要，与 source 和 view revision 分离。清单携带显式格式版本
-及内容校验，不保存 `Class`、绑定后的配置或运行对象，也不把环境中的来源路径当成部署身份。
+`DeploymentTarget` 选择完整 package revision 集合、raw desired graph 与 `ConfigContextSnapshot`，因此
+条件求值、稳定 desired entry identity、启停意图、配置、隔离和发布要求共享一个 revision/digest。停用
+声明同样保存，不要求对应 definition 已安装。target 不保存 `Class`、绑定后的 typed config、runtime 私有
+对象或环境来源路径。
 
 目标文件写入与替换由一个所有者执行：同目录临时文件写全并 force，原子替换后 force 目录，成功后
 才确认保存。创建所需目录的所有者负责持久化目录链。读取同时验证格式、完整性和制品引用；不支持
@@ -489,8 +484,11 @@ fibra-engine              -> fibra-core + fibra-config + fibra-artifact + fibra-
 fibra-runtime-java        -> fibra-engine + fibra-artifact + fibra-api
 fibra-runtime-node        -> fibra-engine + fibra-artifact + fibra-bridge + fibra-api
 fibra-registry            -> fibra-engine
+fibra-cli-api             -> fibra-api + fibra-bridge
+fibra-cli                 -> fibra-cli-api + fibra-engine + fibra-registry + fibra-runtime-java + fibra-runtime-node + fibra-tool-api
 fibra-spring              -> fibra-api + fibra-engine
-fibra-spring-boot-starter -> fibra-spring + fibra-registry + fibra-runtime-java
+fibra-spring-boot-starter -> fibra-spring + fibra-registry + fibra-runtime-java + fibra-runtime-node
+fibra-client-protocol     -> fibra-api
 ```
 
 `fibra-plugin-archetype` 只生成依赖 `fibra-api` 的独立插件工程。`fibra-parity-tests`、
@@ -503,7 +501,7 @@ fibra-spring-boot-starter -> fibra-spring + fibra-registry + fibra-runtime-java
 | `fibra-config` | desired model、repository 端口与编译 | ClassLoader、Runtime 修改、Engine 事务 |
 | `fibra-artifact` | 运行时中立制品身份、校验、不可变内容保存与引用释放后的回收 | Java/Node 私有物化、活动部署选择、config、Engine |
 | `fibra-bridge` | 通用贡献身份、Scope 归属、撤销、快照与调用适配 | 具体贡献类型、制品安装、Engine 事务 |
-| `fibra-engine` | runtime 端口、command、ChangeSet、单一持久目标、PublishedView | 具体 runtime、Spring、宿主业务、通用事务协调器 |
+| `fibra-engine` | RuntimeDriver SPI、command、全局 unit DAG、单一持久目标、PublishedView | 具体 runtime、Spring、宿主业务、通用事务协调器 |
 | `fibra-runtime-java` | manifest、依赖图、隔离 ClassSpace、Java 插件物化 | Node、config、宿主业务 |
 | `fibra-runtime-node` | Node package、sidecar、JSON-RPC endpoint | Java ClassLoader、config、具体业务类型 |
 | `fibra-registry` | 安装、版本、期望状态与审计控制面 | runtime 私有对象、业务贡献目录 |
@@ -581,18 +579,12 @@ Java core。当前八个操作符足以覆盖已知场景，且让采集、持�
 在此之前不承担 CEL、protobuf 与缓存栈的依赖和版本治理成本。
 
 条目根插件主动停用采用显式意图，不从 `PluginInstance` 的 `DISPOSED` 或 `FAILED` 事实反推管理目标。
-插件通过自身 `Context` 的 `Plugins.requestDisable()` 提交异步请求；core 只接受 `STARTING` 或 `ACTIVE`
-实例，并把精确实例身份交给域内控制面。Engine 在唯一 command lane 上再次校验该对象仍是当前托管
-条目根、raw `enabled` 仍为 true 且当前条件有效，然后以执行时的最新 desired revision 构造
-`withEnabled(entryId, false)`，复用既有 ChangeSet 先保存完整目标、再排空并关闭该条目。请求不返回
-完成句柄，避免插件在 `start()` 内等待自身所属 Engine 命令形成死锁；重复请求和已被替换的旧实例
-按身份 CAS 静默丢弃。动态子插件、直接 `dispose()`、普通失败、配置更新导致的重挂载、祖先停用和
-Engine 关闭都不写回 desired。自停用不是 Registry 用户操作，不伪造审计历史；Registry 从
-PublishedView 观察结果。Node 仅接受 sidecar 的严格 `fibra.disable` JSON-RPC notification，且通知方
-不能提供目标 ID；Java wrapper 代其提交同一意图，sidecar 不做进程终身去重，使目标保存失败后可由
-插件再次请求，重复意图由 Engine 的身份和最新目标校验收敛。sidecar 继续服务到目标保存并收到既有
-`fibra.stop`。这保留 DSH“只有条目根主动行为才持久停用”的契约，同时满足 Fibra target-first、
-失败可见和局部排空边界。
+Java `ManagedPluginControl` 与 Node `fibra.disable` 都只向 `RuntimeHostServices.requestDisable` 提交
+`RuntimeUnitFence + reason`。Engine 在唯一 command lane 校验 runtime、unit、unitTargetRevision 与
+runtimeInstanceId 仍指向 current unit，再从当前 durable target 构造仅关闭该 entry 的完整 replacement。
+先保存新 target，再同步封闭 route admission 并排空该 unit；保存失败保留原 target/unit 并允许重试。
+动态子插件、直接 `dispose()`、普通失败和 Engine 关闭都不写回 desired。迟到的 retiring generation 请求
+被 fence 丢弃，不能错误关闭 replacement unit。
 
 绑定使用准备后的目标 catalog 与程序内建 definition；启动时绑定全部有效启用插件，更新时只绑定
 新增或受影响的插件。有效停用声明不查找 definition、不绑定配置，允许保留尚未安装的插件。
@@ -610,8 +602,8 @@ PublishedView 观察结果。Node 仅接受 sidecar 的严格 `fibra.disable` JS
 `DesiredInputEntry`、输入图相等性或部署内容摘要。宿主实例快照返回输入图中的 `LiteralValue`，
 不能从运行实例的可变 typed config 反推声明。
 
-`fibra-artifact` 只管理通用 identity、版本、摘要、不可变内容及其准备和回收状态。它不知道 JAR、npm、
-ClassLoader 或 Process。配置与 artifact 互不依赖，由 Engine 在 ChangeSet 中对齐。
+`fibra-artifact` 只管理通用 identity、版本、facet、摘要和不可变 package 内容。它不知道 JAR、npm、
+ClassLoader 或 Process。配置与 package 互不依赖，由 Engine 在 `DeploymentTarget` 编译中对齐。
 
 程序内建 definition 与 runtime catalog 合并后供目标输入绑定；语法解析和声明采集不持有 catalog 的
 类型对象。绑定端口不向输入源暴露制品路径、运行时句柄或运行实例。
@@ -624,13 +616,13 @@ DSH 中已安装 package、bundle patch、profile 组合和最终运行配置是
 
 | DSH 职责 | Fibra 落点 |
 |---|---|
-| package 的物理安装 | `ArtifactPackage`、`ArtifactStore` 与 Registry 安装记录 |
+| package 的物理安装 | `PluginPackage`、`PluginPackageStore` 与 Registry selection |
 | bundle 提供的有序配置 patch | `DesiredInputGraph` 的 include 与条目 patch |
 | profile 选择 bundle 及其顺序 | 命名配置入口按声明顺序组合配置 bundle |
-| profile 声明的完整 package 选择 | 相邻的 `<profile>.artifacts.yaml` 输入清单，只列相对候选目录的包路径 |
-| profile 的 package 依赖闭包 | `DeploymentManifest` 的 artifact revision 集合及 runtime 制品依赖图 |
-| profile 合成后的活动配置 | Engine 保存的单一完整部署目标 |
-| 应用运行态 | 长期 `RuntimeDomain` 中按目标差量协调的实例与资源 |
+| profile 声明的完整 package 选择 | 相邻的 `<profile>.packages.yaml`，只列相对候选目录的 package 路径 |
+| profile 的 package/facet 依赖闭包 | `DeploymentTarget` selection 与全局 facet/unit DAG |
+| profile 合成后的活动配置 | Engine 保存的单一完整 `DeploymentTarget` |
+| 应用运行态 | 长期 `RuntimeDomain` 中按目标差量协调的 units 与 generations |
 
 这里的 profile 是一次宿主启动选择的应用组合，不是 Spring Profile，也不是新的运行域。正式 CLI 每次
 启动选择一个 profile；profile 名称只决定配置入口和持久数据命名空间，不进入 artifact identity、实例
@@ -649,14 +641,14 @@ fibra-<version>/
   THIRD_PARTY_NOTICES.md            第三方声明
   bin/fibra                         POSIX 启动脚本
   lib/                              CLI 与宿主库
-  plugins/<plugin-id>/              候选插件包
-    plugin.properties               包布局描述
-    lib/                            Java payload 与私有依赖，或 Node payload 目录
+  plugins/<plugin-id>/              候选逻辑 package
+    fibra-package.yaml              package 身份、版本、facets 与依赖
+    lib/                            Java payload 与私有依赖
   runtime/bin/node                  目标平台 Node 运行件
   runtime/bin/rg                    目标平台 ripgrep 运行件
   runtime/bin/bash                  固定转发到目标系统 /bin/bash
   config/profiles/<profile>.yaml    命名组合入口
-  config/profiles/<profile>.artifacts.yaml  完整候选包选择输入
+  config/profiles/<profile>.packages.yaml   完整候选 package 选择输入
   config/bundles/*.yaml             可复用配置片段
   data/profiles/<profile>/          首次启动时创建的持久目标、制品与运行数据
 ```
@@ -667,28 +659,21 @@ ZIP 不预置 `data/`，首次启动从空数据目录建立所选 profile 的�
 `runtime/bin/bash` 是固定系统边界，不接受构建时绝对路径覆盖。ZIP 内不得出现符号链接、`target/`、
 `.DS_Store`、绝对路径或 `..` 路径。
 
-插件包根必须是普通目录且整棵树不含符号链接；外层 `plugin.properties` 只允许三个字段：
+插件包根必须是普通目录且整棵树不含符号链接；唯一根清单 `fibra-package.yaml` 严格声明 `format`、`id`、
+`version` 与非空 `facets`。每个 facet 显式声明 `id`、`role`、`runtime`、`target`、`payload`、精确 facet
+dependencies 与 required capabilities。所有字段封闭，payload 必须位于包根内，package/facet 摘要只由
+受控内容计算，清单不得自报摘要。`PluginPackageStore` 以完整 package 为事务单位保存和恢复；runtime
+只读取属于自己的 facet payload，不再探测第二种包格式。
 
-```properties
-formatVersion=1
-runtime=java
-payload=lib/plugin.jar
-```
-
-字段缺失、重复、未知或格式版本不支持均拒绝；`payload` 必须是包根内部已存在的独立文件或目录，不能
-为包根本身、绝对路径或越界路径。外层描述只解决运行时选择和 payload 定位，不重复声明插件 ID、版本、
-依赖或入口；这些仍以 Java/Node payload 内部 manifest 为唯一事实。探测返回整个包根作为待安装 source，
-`ArtifactStore` 校验并复制完整目录，runtime 在受管副本中重新读取外层描述和内部 manifest，并核对保存
-记录中的 runtime、ID 与版本，不能保留对候选目录的运行依赖或提供裸 JAR/旧 Node 目录 fallback。
-
-Java payload 是含 `META-INF/fibra/plugin.yaml` 的主 JAR；同包 `lib/*.jar` 按规范文件名顺序加入该插件的
+Java facet payload 是含 `META-INF/fibra/plugin.yaml` 的主 JAR；同 package 的私有依赖按明确 payload 布局加入该插件的
 唯一 ClassLoader，主 JAR 固定最先，私有依赖不进入宿主或其他插件 ClassLoader。主 JAR 和纳入该
 ClassLoader 的私有依赖 JAR 若 `MANIFEST.MF Class-Path` 非空则拒绝，避免 URLClassLoader 隐式引入未受管
-路径。Node payload 必须是目录，
-其中 `fibra-plugin.yaml` 和相对 entrypoint 一同被保存；entrypoint 不能是绝对路径或逃出 payload。
+路径。JAR 内 runtime-local descriptor 只保留 Java `entrypoint`；逻辑 package id/version/dependencies 只在
+根清单出现。Node facet payload 必须是目录，其中 `fibra-plugin.yaml` 只声明 protocol、definitionId、
+相对 entrypoint 与 contributions；entrypoint 不能是绝对路径或逃出 payload。
 
 `<profile>.yaml` 保持现有配置条目数组语法，不增加包管理字段或 profile 顶层对象；相邻的
-`<profile>.artifacts.yaml` 是必需的字符串数组，例如：
+`<profile>.packages.yaml` 是必需的字符串数组，例如：
 
 ```yaml
 - fibra-fs
@@ -696,36 +681,37 @@ ClassLoader 的私有依赖 JAR 若 `MANIFEST.MF Class-Path` 非空则拒绝，�
 - fibra-tool-fs
 ```
 
-每项是相对所选候选插件目录的包根路径，不是 artifact ID。清单不重复声明 ID、runtime、版本、入口或
-依赖；这些事实仍由 `PluginArtifactProbe` 通过标准包及其内部 manifest 读取。清单必须显式列出本次
-目标的全部制品，包括所需依赖包，不根据配置 definition 名猜测闭包，不执行版本范围求解。未列出的
+每项是相对所选候选插件目录的包根路径，不是 plugin ID。清单不重复声明 ID、runtime、版本、入口或
+依赖；这些事实由 `PluginPackage.read` 从根清单和内容树严格读取。清单必须显式列出本次
+目标的全部 packages，包括所需依赖包，不根据配置 definition 名猜测闭包，不执行版本范围求解。未列出的
 候选目录完全忽略；清单顺序仅保留输入与诊断顺序，不取代 runtime 的实际依赖顺序。
 
 缺失、空文件、`null`、非数组、非字符串或空白项均拒绝；`[]` 是唯一明确的空制品选择。路径按候选根
 规范化，拒绝绝对路径、根本身、越界路径、URL、通配模式及重复规范路径；解析真实路径后再次检查
 候选根边界与重复路径，拒绝通过中间符号链接逃出候选根。包本身仍遵守上述无符号链接约束。不同包路径
-探测出相同 artifact ID 也拒绝。清单读取沿用配置文件的大小、嵌套、字符串和条目数量限制。
+解析出相同 plugin ID 也拒绝。清单读取沿用配置文件的大小、嵌套、字符串和条目数量限制。
 
-`fibra-cli` 解析 profile、配置根、候选插件目录和数据目录，并把显式包路径清单交给统一 probe；
+`fibra-cli` 解析 profile、配置根、候选插件目录和数据目录，并把显式 package 路径清单交给
+`PluginPackageStore`；
 `fibra-config` 负责 include、patch、条件及
-配置树编译；Registry 负责安装、版本、期望状态和审计；Engine 只接收完整 desired graph 与 artifact
-选择，不感知 profile/bundle 的文件组织；runtime adapter 只解释目标引用的 payload；distribution 只
-提供默认目录和正式组合内容。不得新增与 `DesiredInputGraph`、`DeploymentManifest` 平行的
+配置树编译；Registry 负责安装、selection、期望状态和审计；Engine 只接收完整 desired graph、selection
+与 config context，不感知 profile/bundle 的文件组织；runtime driver 只解释目标引用的 facet payload；
+distribution 只提供默认目录和正式组合内容。不得新增与 `DesiredInputGraph`、`DeploymentTarget` 平行的
 `BundleManager`、`ProfileRuntime` 或第二套活动状态。
 
-首次所选 profile 的持久存储为空时，配置入口由 `DesiredStateRepository` 采集、组合，包清单由惰性的
-`InitialArtifactSource` 采集；两者经同一个 ChangeSet 建立初始完整目标，不能先逐个安装再提交配置。
+首次所选 profile 的持久存储为空时，CLI 同时读取配置入口与 package 选择，先把 packages 原子发布到
+store，再提交一个包含完整 selection、desired graph 与 config context 的 target。
 空配置数组与空制品数组构成合法空目标。已有完整目标时，重启必须直接恢复该目标，不读取两个 profile
 源文件或候选目录；它们即使缺失也不影响恢复，默认 profile 或分发升级不得静默覆盖保存目标。
 
 显式 `apply` 重新采集配置与完整包清单，验证后通过 Registry 的 deployment 请求一次性替换目标；
 不与当前安装集合取并集。此时列出的候选包必须存在，不能缺失时隐式回退到已安装版本。修改候选包不
-自动升级目标，只有显式 apply 或 Registry upgrade 才选择新内容。`refresh` 与明确启用的自动源刷新
-只刷新配置图、保留当前制品选择，不读取包清单或扫描候选目录；不能把它们描述成完整 apply 的同义词。
+自动升级目标，只有显式 apply 或 Registry upgrade 才选择新内容。不存在后台 profile watcher 或隐式
+refresh；候选文件变化只有下一次显式 `apply` 才进入目标。
 
 Registry install、upgrade、uninstall 只改变当前保存目标，不回写 profile 或包清单；后续完整 apply
 明确以输入清单替换这些命令式制品变更。安装不修改实例启用意图或配置 bundle，但可能补齐已有启用
-声明所缺的制品，从而使该声明达成。输入文件是下一次导入来源，`DeploymentManifest` 仍是唯一保存
+声明所缺的制品，从而使该声明达成。输入文件是下一次导入来源，`DeploymentTarget` 仍是唯一保存
 目标，不增加活动选择指针或第二安装数据库。切换 profile 等价于选择另一套持久数据命名空间并启动
 新的宿主进程，不在同一 Engine 内实现整代切换或回滚。
 
@@ -749,7 +735,7 @@ provider 已成功产生的不可变结果，由有序 `content` 与可选 `stru
 完整闭环，不以无类型 map 预演 image、audio 或 resource。`ToolOutcome` 在 Harness 工具调用边界把
 `ToolResult` 归一为成功，把明确的 `ToolException` 归一为带稳定 `ToolFailureCode`、消息和文本内容的
 失败；未知贡献、revision 冲突、畸形输出、断链及未知异常仍属于宿主或协议失败，不猜测成工具业务错误。
-Engine、通用 contribution 和 runtime adapter 不识别工具终态类型。
+Engine、通用 contribution 和 runtime driver 不识别工具终态类型。
 
 该分层采用 DSH 的实际执行模型：工具 body 返回 canonical JSON 成功值或抛错，`ToolRuntime` 才生成判别式
 成功/失败；DSH 的 MCP bridge 收到远端 `isError=true` 也先进入同一抛错/归一化路径，而不是把 MCP
@@ -790,11 +776,13 @@ CLI 投影使用 `content`、可选 `structuredContent`、`isError`、失败时�
   而被误当成宿主必备类；
 - 禁止扫描全部 class 猜入口，不生成 extension index，不维护第二套插件状态机；
 - 替换变化制品及其反向依赖闭包，闭包外装载器保留；旧类型仍被实例、服务槽或调用持有时不得回收；
-- Owner 持有活动 Loaded 图；Update 在 adopt 前拥有新建节点，adopt 后拥有待退休旧节点，未变化节点
-  只是借用。依赖关系记录实际节点 identity，不按 artifact id 把新旧代连在一起，不另建 ClassSpace 生命周期；
+- Java driver 的 prepared generation 私有持有 Loaded 图与精确静态资源 lease；Engine 只编排 candidate、current
+  与 retiring 的 public unit roles。未受影响 unit 原样保留；被替换 unit stop 后只释放自身 lease，最后一个 lease
+  清零前不得关闭共享 ClassLoader。依赖关系记录实际节点 identity，不按 artifact id 把新旧代连在一起，不另建
+  ClassSpace 生命周期；
 - 排空和旧实例清理完成后按真实依赖逆序关闭。成功关闭的节点立即解除入口、loader 与依赖强引用；失败
-  节点保留自身及必需先决资源，独立成功节点不因同级失败继续被保留。完成的 Update 只保留元数据事实，
-  不经 old/fresh/catalog、已结束的异常或缓存结果长期引用插件对象；
+  节点保留自身及必需先决资源，独立成功节点不因同级失败继续被保留。已结束的 unit/generation 只保留元数据
+  事实，不经被替换 generation、已结束的异常或缓存结果长期引用插件对象；
 - Engine 的长期启动缓存只持有启动完成事实，不持有第一份含插件 descriptor 的 PublishedView。当前
   发布视图仍由正常发布所有权持有；调用方主动保留旧视图、Class 或插件对象不属于框架可回收保证；
 - prepare 按每个 artifact 的实际本地 classpath 校验有效二进制类名：主 JAR 与 lib JAR 一并计入，多 release
@@ -813,7 +801,7 @@ CLI 投影使用 `content`、可选 `structuredContent`、`isError`、失败时�
 
 ### 6.3 Node Runtime
 
-Node 插件作为受管 sidecar，通过版本化 JSON-RPC 协议参与同一 `PluginRuntimeAdapter`：
+Node 插件作为受管 sidecar，通过版本化 JSON-RPC 协议参与 Node `RuntimeDriver`：
 
 - 预检完成包与声明校验；实例激活负责进程启动、握手及能力与 schema 协商，失败属于运行收敛失败；
 - endpoint 先适配为通用 contribution，再进入域内目录；
@@ -865,14 +853,14 @@ desired、observed 三类状态；observed 只来自 `PublishedView.engine()`。
 仅在 Engine 启动前将 binding 收集到 `HostServiceRegistry`；Engine 启动时冻结该收集表，并把 binding
 复制到长期 `RuntimeDomain`。`ServiceRegistration.dispose()` 仅在冻结前移除待收集 binding，启动后不会
 动态撤销已发布服务；运行域关闭与在途排空仍由 Engine 的 Scope 所有权树负责。
-`fibra-spring-boot-starter` 收集所有 `PluginRuntimeAdapter` Bean，装配一个 Engine、Registry 和
-PublishedRuntime；不能把 Engine 写死为 Java-only。
+`fibra-spring-boot-starter` 装配 Java/Node `RuntimeProvider`、一个 Engine、Registry 和 PublishedRuntime；
+产品若需要 external runtime，由产品 composition root 显式注册额外 provider，starter 不包含产品实现。
 starter 只通过标准 `AutoConfiguration.imports` 发现，默认组件均使用 `@ConditionalOnMissingBean`，配置
 通过 `fibra.storage-root` 与 `fibra.source.refresh-interval` 绑定；不引入另一套 JSON、`.env` 或 Spring
 Profile 解释。`SmartLifecycle` 在宿主服务完成预注册后启动 Engine，并在 Spring 关闭阶段调用同一个
 Engine 关闭入口；不得为 Spring 嵌入场景另建 JVM shutdown hook 或绕过 Engine 的排空结果。
 
-默认 ArtifactStore 与 EngineStateStore 在 Engine 工厂内部创建，成功构造后由 Engine 唯一负责关闭，
+默认 `PluginPackageStore` 与 `DeploymentTargetStore` 在 Engine 工厂内部创建，成功构造后由 Engine 唯一负责关闭，
 不另注册为容器自动销毁的 Bean。工厂失败时释放尚未移交的存储，保留原异常及各项关闭失败。
 显式提供自定义存储 Bean 时，同样将关闭所有权交给 Engine，须声明 `@Bean(destroyMethod = "")`；
 容器不能在 Engine 因清理失败保留资源后，再独立释放对应存储锁。普通宿主服务 Bean 的容器所有权不变。
@@ -985,7 +973,7 @@ Java Harness 只是验证 built-in definition、EngineCommand、PublishedView、
   不能用上述内核测试或“接口存在”替代功能等价证明；
 - RuntimeDomain 域间隔离、长期域内差量更新、PublishedView 一致投影和受影响调用排空通过；
   改变一个实例时，无关实例、ClassLoader、Node PID、effects 与在途调用保持；
-- artifact/config/联合 deployment 使用同一 ChangeSet，覆盖准备资源清理失败、目标保存边界、mutation gate
+- package/config 联合 deployment 使用同一 `DeploymentTarget` 与 generation 编排，覆盖准备资源清理失败、目标保存边界、mutation gate
   与按清单重建；验证重复内容、半份写入、替换后同步失败、成功保存后崩溃、损坏及缺失引用；
 - 审计失败不改变成功部署结果，但能被诊断；不以丢失错误实现 best-effort；
 - Java 使用真实 JAR 验证依赖图、资源委派和 ClassLoader 回收；
@@ -1005,22 +993,10 @@ Java Harness 只是验证 built-in definition、EngineCommand、PublishedView、
 开发阶段使用本地依赖缓存执行受影响测试，必要时运行全仓验证；空依赖仓库的外部分发验证留到
 最终交付统一执行一次，发现分发问题时才针对修复重新验证，不因每次逻辑修改重复下载依赖。
 
-2026-09-13 的最终发行阶段已在 macOS 26.6.2 arm64、Zulu JDK 21.0.2、Maven 3.9.9 上完成以下独立证据：
-`mvn --offline -pl fibra-distribution -am clean verify` 对 25 个相关 reactor 模块通过，并在仓库外解压 ZIP
-执行真实命令；`scripts/verify-reproducible-release.sh` 对 26 个正式 Maven 发布物、ZIP 字节和发行目录
-路径/类型/权限/SHA 完成 clean、再次 clean 与非 clean 三轮一致性比较；`scripts/verify-distribution.sh`
-使用仓库内固定 settings 和互相隔离的空 Maven 本地仓，先 clean/deploy 26 个正式发布物，再仅从临时发布
-仓单独构建 `fibra-distribution`，最后完成 ZIP 外部启动、消费者、Spring 与 archetype 验证。根目录原始
-`mvn --offline clean package` 也已对 50 个 reactor 模块通过，并自动产生完整发行目录与 ZIP；最终
-`mvn --offline clean verify` 对同一 50 模块通过，发行模块在 verify 阶段再次完成仓库外真实验收。该空仓门禁
-不读取本机 Maven 用户 settings，也不允许聚合 POM、distribution、acceptance、example、parity 或
-benchmark 混入发布仓。`ApiSignatureBaselineTest` 另以定向命令通过，最终全仓、公开 API 与文档一致性
-结果记录在
-[行为验收账本](../references/2026-09-11-behavior-verification-ledger.md)。
-
-最终独立审核未发现审计级别 P0/P1；审核指出的运行件版本探测非零退出码、REPL 停用/恢复结果断言和
-`SIGTERM` 及时退出证明三个审计级别 P2 已在同一实现/测试提交中关闭。最终 ZIP 门禁因此具备 10 秒退出截止，不再可能把工具
-自然超时误记为排空成功；Node、ripgrep 或 Bash 版本探测失败也会直接阻止装配。
+2026-09-13 的发行与独立审核结果只证明当时的旧发布边界，不能作为 2026-09-17 RuntimeDriver/package
+硬切后的完成证据。当前正式边界为 28 个 Maven 制品和两个纯契约 npm 包，必须重新执行根 reactor、
+可复现发行、独立 Maven/npm 消费者、正式归档内容和文档一致性门；发布清单与命令以
+[发布与构建基线](../../release.md)为准。在这些门和新的独立审查全部关闭前，不沿用旧的“无 P0/P1”结论。
 
 平台边界不随本机绿色结果扩大：本次 ZIP 携带的是 macOS arm64 目标运行件；Windows 文件发布、Job
 Object 与 Linux user-systemd 仍只记录实现、注入测试和既有 Ubuntu 构建证据，不宣称已在对应目标平台
@@ -1251,7 +1227,7 @@ Fibra 的后续范围包括可被另一个产品仓库复用的完整 CLI 框架
 - 不新增 Model、Agent、Session、MCP、Skill、Goal、Todo、Plan、Compaction、Sandbox、Jobs、ACP 或 UI
   业务模块，不把这些类型加入 `fibra-api`、`fibra-cli-api` 或 core。
 
-`fibra-runtime-node` 继续属于 Fibra。它是 Node sidecar 的通用 runtime adapter：校验 Node 插件制品与
+`fibra-runtime-node` 继续属于 Fibra。它是 Node sidecar 的通用 runtime driver：校验 Node 插件 facet 与
 manifest，托管进程和心跳，以 JSON-RPC 执行握手、启动、调用、取消、停用和停止，并把宿主已知的
 `ContributionKind` endpoint 注册到同一个 `ContributionDirectory`。它不是通用 Node SDK，也不是任意
 Java Service/Event 的透明跨进程注入层；上层项目的 Node provider 只有在定义了宿主可见 contribution
@@ -1572,8 +1548,8 @@ vNext 只保留边界：上层产品单独拥有仓库、版本、CLI/Desktop �
 [2026-09-15 Client Foundation 权威架构](./2026-09-15-fibra-client-foundation-architecture.md)
 为唯一真源。
 
-vNext 已交付的 `PublishedRuntime`、贡献租约、调用 Scope、排空和关闭语义继续作为底座；P0-A–P0-D 会按新规格
-重构其制品/执行抽象，不保留 `PluginRuntimeAdapter` 或旧单 facet 包的兼容入口。上层产品仍独占 Agent、
+vNext 已交付的 `PublishedRuntime`、贡献租约、调用 Scope、排空和关闭语义继续作为底座；当前实现已经按新规格
+硬切为单一 `RuntimeDriver`、逻辑多 facet package 与完整 `DeploymentTarget`。上层产品仍独占 Agent、
 Session、Model、审批、窗口壳、具体 renderer 和长会话 journal，不能把这些业务事实下沉进 Fibra client
 协议。
 
@@ -1637,20 +1613,20 @@ JavaFX `Node`、React component、路由、slot、browser loader、transport 或
 
 ### 11.8 提交、验证与文档留痕
 
-Fibra 的 F1 至 F4 只维护本文和既有行为验收账本，没有新建平行 spec/plan。每阶段使用一个包含契约、实现、
-测试、发行适配与证据回填的独立提交，没有拆出会暂时制造不一致基线的平行提交。F4 冻结 27 个正式制品、
-依赖坐标、发行脚本和仓外消费者后，已完成正式制品部署、发行 ZIP、五类仓外消费者、真实 PTY 和 archetype
-完整门禁；最终关闭状态机修正没有改变上述发行输入。最终源码投影另在全新 checkout 重新通过 50 模块
-`clean verify`、ZIP 仓外验收和三轮可复现制品门禁。现行所有 Maven 阶段统一复用已有 `~/.m2`，不创建或
-清空本地仓库；隔离边界由仓外消费者目录、临时构建输出和只含正式制品的临时发布目标证明。
+Fibra 的 F1 至 F4 只维护本文和既有行为验收账本，没有新建平行 spec/plan。各阶段当时采用包含契约、实现、
+测试、发行适配与证据回填的独立提交。2026-09-13 的 F4 证据覆盖当时 27 个正式制品、50 模块 reactor、发行
+ZIP、五类仓外消费者、真实 PTY、archetype 和三轮可复现门禁；这些数字与结论只保留为历史记录，不代表
+2026-09-17 Client Foundation 硬切后的发布集合或完成状态。当前 28 个 Maven 制品、两个 npm tarball、独立
+消费者与全量门禁以第 10 节和[发布与构建基线](../../release.md)为准，必须在最终工作树重新取证。
 
 上层项目建立后拥有自己的权威架构文档和行为验收账本，不把产品实现证据回填成 Fibra 已实现能力。
 每个 P 阶段同样要求实现与测试同提交、真实 provider 验收、仓库外 ZIP 验收和独立审核；发布里程碑复用
 已有 `~/.m2` 解析 Fibra 正式发布物，再在仓外目录单独构建上层项目，并核对解析制品与临时发布目标字节，
 以证明两仓边界真实成立。
 
-Fibra F1–F4 已完成。下一次先执行 Fibra Client Foundation P0；随后产品从 P1 业务阶段开始。Model、Agent、
-Session、MCP 或其它 DSH 产品模块不回填到 Fibra 仓库。
+Fibra F1–F4 的历史阶段已完成；Fibra Client Foundation P0 当前正在执行，进度与完成条件以
+[实施计划](../plans/2026-09-15-fibra-client-foundation-p0.md)为准，未通过其最终门禁与独立复审前不得沿用 F4
+的完成结论。Model、Agent、Session、MCP 或其它 DSH 产品模块不回填到 Fibra 仓库。
 
 ### 11.9 vNext 收口与 `0.5.0-SNAPSHOT` 底座打磨
 
@@ -1672,15 +1648,14 @@ API、协议和模块，不保留兼容层、不以局部补丁替代责任分�
 | 5 | 公共扩展面与契约套件 | 以 canonical manifest、最小 SPI、typed config、Contribution、稳定错误码和仓外 Java/Node 消费者形成第三方插件套件，不测试废弃版本兼容 | 独立插件可执行安装、配置、启停、升级、重装、调用中卸载和泄漏检查，并输出结构化报告；不取得 Engine 内部类型 |
 | 6 | 安全与供应链边界 | 校验 digest、制品目录、依赖图、诊断脱敏和 trusted Java、受管 sidecar、容器/远端三档执行策略 | 篡改和越界制品 fail-closed；secret 不进入日志与诊断；ClassLoader 不被描述为安全沙箱 |
 
-N1/N2/J1/J2/E1 的实现、测试与证据已经提交。V1 的本地全量构建、安全用例、发行 ZIP、27 制品三轮
-可复现比较和仓外消费者已通过；#33/#34/#36 暴露的启动结果投影竞态已由确定性回归覆盖，修复提交
-`98ccd53` 的 [GitHub Actions #37](https://github.com/sunker0115/fibra/actions/runs/34920221889) 已在同一 HEAD
-依次通过短超时诊断、全量构建与兼容性验收、27 制品三轮可复现比较和仓外分发消费者。V1 与六项底座
-打磨据此全部收口。执行进度与红绿证据见
-[Java/Node 与整体底座打磨计划](../plans/2026-09-14-java-node-stability-hardening.md)。所有 Maven 阶段统一
-复用已有 `~/.m2`，不创建或清空本地仓库；Windows 仍保持未实测声明。Java/Node 底座打磨已经收口，但
-client foundation 是已确认、独立设立的 Fibra 后续能力，其 P0-A–P0-D 和停止条件以 2026-09-15 Client
-Foundation 规格为准；产品业务路线仍在独立产品文档中推进。
+N1/N2/J1/J2/E1 与 V1 的实现、测试和历史证据已经提交；#33/#34/#36 暴露的启动结果投影竞态由确定性回归
+覆盖，修复提交 `98ccd53` 的
+[GitHub Actions #37](https://github.com/sunker0115/fibra/actions/runs/34920221889) 曾在同一 HEAD 通过当时的
+短超时、全量构建、27 制品可复现比较和仓外分发消费者。该证据只说明 Client Foundation 硬切前的 Java/Node
+底座里程碑，不证明当前 28+2 发布边界已完成。历史执行进度见
+[Java/Node 与整体底座打磨计划](../plans/2026-09-14-java-node-stability-hardening.md)；当前进度、门禁与停止条件
+以 2026-09-15 Client Foundation 规格和实施计划为准。Windows 仍保持未实测声明，产品业务路线仍在独立
+产品文档中推进。
 
 底座可保留一个仓库外的薄上层夹具，验证真实调用方不绕过 `PublishedRuntime`、不取得内部 `Context`；
 该夹具不是 Agent 产品实现。产品业务 P1–P8 仍在独立项目和独立权威文档中推进。

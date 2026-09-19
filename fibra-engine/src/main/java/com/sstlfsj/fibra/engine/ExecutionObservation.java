@@ -2,7 +2,6 @@ package com.sstlfsj.fibra.engine;
 
 import com.sstlfsj.fibra.artifact.ExecutionTarget;
 import com.sstlfsj.fibra.artifact.FacetId;
-import com.sstlfsj.fibra.artifact.PluginFacet;
 import com.sstlfsj.fibra.artifact.PluginId;
 import com.sstlfsj.fibra.artifact.RuntimeId;
 
@@ -49,21 +48,6 @@ public final class ExecutionObservation {
             executionTarget, Objects.requireNonNull(executions, "executions"));
     }
 
-    /** 按 execution target 与 capability 覆盖关系筛选后聚合。 */
-    public static ExecutionObservation matching(PluginId pluginId, PluginFacet facet,
-                                                List<ExecutionCandidate> candidates) {
-        Objects.requireNonNull(facet, "facet");
-        var matching = Objects.requireNonNull(candidates, "candidates").stream()
-            .map(value -> Objects.requireNonNull(value, "candidate"))
-            .filter(value -> value.executionTarget().equals(facet.executionTarget()))
-            .map(ExecutionCandidate::observation)
-            .filter(value -> value.capabilities().containsAll(
-                facet.requiredCapabilities()))
-            .toList();
-        return of(pluginId, facet.facetId(), facet.runtimeId(),
-            facet.executionTarget(), matching);
-    }
-
     public PluginId pluginId() { return pluginId; }
     public FacetId facetId() { return facetId; }
     public RuntimeId runtimeId() { return runtimeId; }
@@ -102,7 +86,7 @@ public final class ExecutionObservation {
     public enum State { PENDING, ACTIVE, FAILED }
 
     public static final class Detail {
-        private final long targetRevision;
+        private final long unitTargetRevision;
         private final String executionId;
         private final String runtimeInstanceId;
         private final String lifecycleOperationId;
@@ -111,10 +95,11 @@ public final class ExecutionObservation {
         private final Failure failure;
 
         private Detail(Builder builder) {
-            if (builder.targetRevision < 1) {
-                throw new IllegalArgumentException("target revision must be positive");
+            if (builder.unitTargetRevision < 1) {
+                throw new IllegalArgumentException(
+                    "unit target revision must be positive");
             }
-            targetRevision = builder.targetRevision;
+            unitTargetRevision = builder.unitTargetRevision;
             executionId = required(builder.executionId, "execution id");
             runtimeInstanceId = required(builder.runtimeInstanceId,
                 "runtime instance id");
@@ -135,7 +120,7 @@ public final class ExecutionObservation {
         }
 
         public static Builder builder() { return new Builder(); }
-        public long targetRevision() { return targetRevision; }
+        public long unitTargetRevision() { return unitTargetRevision; }
         public String executionId() { return executionId; }
         public String runtimeInstanceId() { return runtimeInstanceId; }
         public String lifecycleOperationId() { return lifecycleOperationId; }
@@ -147,7 +132,7 @@ public final class ExecutionObservation {
         public boolean equals(Object candidate) {
             if (this == candidate) return true;
             if (!(candidate instanceof Detail other)) return false;
-            return targetRevision == other.targetRevision
+            return unitTargetRevision == other.unitTargetRevision
                 && executionId.equals(other.executionId)
                 && runtimeInstanceId.equals(other.runtimeInstanceId)
                 && lifecycleOperationId.equals(other.lifecycleOperationId)
@@ -157,12 +142,12 @@ public final class ExecutionObservation {
 
         @Override
         public int hashCode() {
-            return Objects.hash(targetRevision, executionId, runtimeInstanceId,
+            return Objects.hash(unitTargetRevision, executionId, runtimeInstanceId,
                 lifecycleOperationId, capabilities, state, failure);
         }
 
         public static final class Builder {
-            private long targetRevision;
+            private long unitTargetRevision;
             private String executionId;
             private String runtimeInstanceId;
             private String lifecycleOperationId;
@@ -171,8 +156,8 @@ public final class ExecutionObservation {
             private Failure failure;
 
             private Builder() { }
-            public Builder targetRevision(long value) {
-                targetRevision = value; return this;
+            public Builder unitTargetRevision(long value) {
+                unitTargetRevision = value; return this;
             }
             public Builder executionId(String value) {
                 executionId = value; return this;
@@ -189,14 +174,6 @@ public final class ExecutionObservation {
             public Builder state(State value) { state = value; return this; }
             public Builder failure(Failure value) { failure = value; return this; }
             public Detail build() { return new Detail(this); }
-        }
-    }
-
-    public record ExecutionCandidate(ExecutionTarget executionTarget,
-                                     Detail observation) {
-        public ExecutionCandidate {
-            Objects.requireNonNull(executionTarget, "executionTarget");
-            Objects.requireNonNull(observation, "observation");
         }
     }
 

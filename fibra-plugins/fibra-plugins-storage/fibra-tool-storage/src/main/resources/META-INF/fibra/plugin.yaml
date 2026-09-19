@@ -1,6 +1,1 @@
-id: fibra-tool-storage
-version: ${project.version}
 entrypoint: com.sstlfsj.fibra.plugins.storage.tool.StorageToolEntrypoint
-requires:
-  - id: fibra-storage
-    version: ${project.version}

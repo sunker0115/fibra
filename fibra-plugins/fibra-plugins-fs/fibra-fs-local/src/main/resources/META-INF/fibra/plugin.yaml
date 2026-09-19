@@ -1,6 +1,1 @@
-id: fibra-fs-local
-version: ${project.version}
 entrypoint: com.sstlfsj.fibra.plugins.fs.local.LocalFileSystemEntrypoint
-requires:
-  - id: fibra-fs
-    version: ${project.version}

@@ -5,9 +5,8 @@
     "moduleResolution": "NodeNext",
     "strict": true,
     "declaration": true,
-    "types": ["node"],
-    "jsx": "react-jsx"
+    "types": ["node"]
   },
-  "include": ["packages/*/src/**/*.ts", "packages/*/src/**/*.tsx", "packages/*/tests/**/*.ts", "packages/*/tests/**/*.tsx"],
+  "include": ["packages/client-api/src/**/*.ts", "packages/client-protocol/src/**/*.ts", "packages/client-protocol/tests/**/*.ts"],
   "exclude": ["node_modules", "target"]
 }

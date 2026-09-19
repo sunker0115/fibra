@@ -13,9 +13,9 @@ import com.sstlfsj.fibra.cli.api.CliInputResult;
 import com.sstlfsj.fibra.cli.api.CliTerminalFrame;
 import com.sstlfsj.fibra.cli.api.CliTerminalRenderer;
 import com.sstlfsj.fibra.cli.api.CliProfile;
-import com.sstlfsj.fibra.config.DesiredInputGraph;
-import com.sstlfsj.fibra.config.DesiredSourceSnapshot;
-import com.sstlfsj.fibra.engine.ChangePhase;
+import com.sstlfsj.fibra.engine.AttemptPhase;
+import com.sstlfsj.fibra.engine.DurableTargetState;
+import com.sstlfsj.fibra.engine.TargetSaveState;
 import com.sstlfsj.fibra.engine.EngineDiagnostics;
 import com.sstlfsj.fibra.engine.EngineSnapshot;
 import com.sstlfsj.fibra.engine.EngineState;
@@ -706,14 +706,13 @@ class CliSessionTest {
 
     private static PublishedView view(List<ContributionSnapshotEntry> contributions) {
         return new PublishedView("view-1", new EngineSnapshot(EngineState.RUNNING,
-            new DesiredSourceSnapshot("test", "source-1", Set.of()),
-            new DesiredInputGraph(List.of()), Map.of(), Map.of(), Map.of(), null),
+            "host", DurableTargetState.ABSENT, java.util.Optional.empty(),
+            java.util.Optional.empty(), java.util.Optional.empty(), Map.of(), Map.of(), null),
             new ContributionSnapshot(1L, contributions),
             RuntimeDiagnostics.builder().domainName("test").plugins(List.of()).services(List.of())
                 .events(List.of()).build(),
-            EngineDiagnostics.builder().targetRevision("target-1").contextRevision("context-1")
-                .phase(ChangePhase.IDLE).affectedInstances(Set.of()).resources(Map.of())
-                .targetSatisfied(true).mutationGateOpen(true).build());
+            new EngineDiagnostics(AttemptPhase.SETTLED, TargetSaveState.NOT_APPLICABLE,
+                true, true, true, List.of(), java.util.Optional.empty(), null));
     }
 
     private static final class StubPublishedRuntime implements PublishedRuntime {

@@ -4,7 +4,7 @@ import com.sstlfsj.fibra.plugins.shell.ShellServices;
 import com.sstlfsj.fibra.plugins.subprocess.SubprocessServices;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -14,10 +14,8 @@ class ShellPluginTest {
         assertNotNull(resource);
         try (resource) {
             var text = new String(resource.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
-            assertTrue(text.contains("id: fibra-shell-local"));
-            assertTrue(text.contains("id: fibra-shell\n"));
-            assertTrue(text.contains("id: fibra-subprocess\n"));
-            assertFalse(text.contains("${project.version}"));
+            assertEquals("entrypoint: " + ShellLocalEntrypoint.class.getName()
+                + "\n", text);
         }
         var entrypoint = (PluginEntrypoint<?>) Class.forName(
             "com.sstlfsj.fibra.plugins.shell.local.ShellLocalEntrypoint").getConstructor().newInstance();

@@ -1,10 +1,11 @@
 package com.sstlfsj.fibra.parity;
 
 import com.sstlfsj.fibra.Context;
-import com.sstlfsj.fibra.artifact.ArtifactStore;
+import com.sstlfsj.fibra.artifact.PluginPackageStore;
 import com.sstlfsj.fibra.bridge.ContributionDirectory;
 import com.sstlfsj.fibra.cli.api.CliApplication;
 import com.sstlfsj.fibra.cli.FibraCli;
+import com.sstlfsj.fibra.client.protocol.ClientMessage;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.plugins.fs.FileSystem;
@@ -14,8 +15,8 @@ import com.sstlfsj.fibra.plugins.subprocess.Subprocess;
 import com.sstlfsj.fibra.plugins.tool.ToolDescriptor;
 import com.sstlfsj.fibra.registry.PluginRegistry;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
-import com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter;
-import com.sstlfsj.fibra.runtime.node.NodePluginRuntimeAdapter;
+import com.sstlfsj.fibra.runtime.java.JavaRuntimeProvider;
+import com.sstlfsj.fibra.runtime.node.NodeRuntimeProvider;
 import com.sstlfsj.fibra.spring.FibraServiceBridge;
 import com.sstlfsj.fibra.spring.boot.FibraAutoConfiguration;
 import org.junit.jupiter.api.Test;
@@ -38,15 +39,17 @@ class ApiSignatureBaselineTest {
         new ModuleApi("fibra-api", Context.class, "com.sstlfsj.fibra."),
         new ModuleApi("fibra-core", FibraRuntime.class, "com.sstlfsj.fibra.runtime."),
         new ModuleApi("fibra-config", DesiredInputGraph.class, "com.sstlfsj.fibra.config."),
-        new ModuleApi("fibra-artifact", ArtifactStore.class,
+        new ModuleApi("fibra-artifact", PluginPackageStore.class,
             "com.sstlfsj.fibra.artifact."),
         new ModuleApi("fibra-engine", FibraEngine.class, "com.sstlfsj.fibra.engine."),
         new ModuleApi("fibra-bridge", ContributionDirectory.class,
             "com.sstlfsj.fibra.bridge."),
-        new ModuleApi("fibra-runtime-java", JavaPluginRuntimeAdapter.class,
+        new ModuleApi("fibra-runtime-java", JavaRuntimeProvider.class,
             "com.sstlfsj.fibra.runtime.java."),
-        new ModuleApi("fibra-runtime-node", NodePluginRuntimeAdapter.class,
+        new ModuleApi("fibra-runtime-node", NodeRuntimeProvider.class,
             "com.sstlfsj.fibra.runtime.node."),
+        new ModuleApi("fibra-client-protocol", ClientMessage.class,
+            "com.sstlfsj.fibra.client.protocol."),
         new ModuleApi("fibra-registry", PluginRegistry.class,
             "com.sstlfsj.fibra.registry."),
         new ModuleApi("fibra-cli-api", CliApplication.class,

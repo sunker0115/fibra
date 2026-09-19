@@ -6,6 +6,7 @@ import com.sstlfsj.fibra.ServiceKey;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -23,10 +24,11 @@ class InvocationContextCancellationTest {
             caller.services().provide(key, "value");
 
             assertSame(caller, derived.caller());
-            assertSame(scope, derived.scope());
+            assertNotSame(scope, derived.scope());
+            assertSame(scope.context().scope(), derived.scope());
             assertSame(source.token(), derived.cancellation());
             derived.service(key).invoke((serviceInvocation, ignored) -> {
-                assertSame(scope, serviceInvocation.scope());
+                assertSame(scope.context().scope(), serviceInvocation.scope());
                 assertSame(source.token(), serviceInvocation.cancellation());
                 return null;
             });

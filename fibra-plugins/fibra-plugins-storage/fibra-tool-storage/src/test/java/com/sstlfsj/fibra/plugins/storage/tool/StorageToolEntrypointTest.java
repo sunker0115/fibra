@@ -59,11 +59,8 @@ class StorageToolEntrypointTest {
             ((Map<?, ?>) descriptors.get("changes").outputSchema().toJava()).get("required"));
         try (var input = StorageToolEntrypointTest.class.getResourceAsStream("/META-INF/fibra/plugin.yaml")) {
             var manifest = new String(input.readAllBytes(), StandardCharsets.UTF_8);
-            assertTrue(manifest.contains("id: fibra-tool-storage"));
-            assertTrue(manifest.contains("version: " + System.getProperty("fibra.test.projectVersion")));
-            assertTrue(manifest.contains("entrypoint: " + StorageToolEntrypoint.class.getName()));
-            assertTrue(manifest.contains("id: fibra-storage"));
-            assertFalse(manifest.contains("${project.version}"));
+            assertEquals("entrypoint: " + StorageToolEntrypoint.class.getName()
+                + "\n", manifest);
         }
     }
 
@@ -168,7 +165,8 @@ class StorageToolEntrypointTest {
         private Harness(ConfigStore store) {
             var context = runtime.rootScope().context();
             context.services().provide(StorageServices.CONFIG_STORE, store);
-            context.services().provide(ContributionServices.REGISTRAR, directory);
+            context.services().provide(ContributionServices.REGISTRAR,
+                directory.openAdmission("storage-tools"));
             plugin = context.plugins().mount("storage-tools", new StorageToolEntrypoint().definition().prepare(null));
             plugin.settled().block();
         }

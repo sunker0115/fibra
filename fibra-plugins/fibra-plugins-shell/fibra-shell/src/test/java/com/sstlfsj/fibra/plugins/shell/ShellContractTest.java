@@ -64,15 +64,11 @@ class ShellContractTest {
     }
 
     @Test
-    void packagesAFilteredContractOnlyManifest() throws Exception {
+    void runtimeDescriptorDoesNotDuplicateLogicalPackageMetadata() throws Exception {
         try (var input = ShellContractTest.class.getResourceAsStream("/META-INF/fibra/plugin.yaml")) {
             assertTrue(input != null);
             var manifest = new String(input.readAllBytes(), StandardCharsets.UTF_8);
-            assertTrue(manifest.contains("id: fibra-shell"));
-            assertTrue(manifest.contains("version: " + System.getProperty("fibra.test.projectVersion")));
-            assertTrue(manifest.contains("requires: []"));
-            assertFalse(manifest.contains("entrypoint:"));
-            assertFalse(manifest.contains("${project.version}"));
+            assertEquals("{}\n", manifest);
         }
     }
 }

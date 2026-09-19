@@ -196,9 +196,9 @@ public final class ClientProtocolCodec {
 
     private LifecycleFence lifecycle(JsonNode node) {
         var value = object(node, "lifecycle", ErrorCode.INVALID_IDENTITY);
-        exactFields(value, Set.of("session", "targetRevision", "runtimeInstanceId", "lifecycleOperationId"), ErrorCode.INVALID_IDENTITY);
+        exactFields(value, Set.of("session", "unitTargetRevision", "runtimeInstanceId", "lifecycleOperationId"), ErrorCode.INVALID_IDENTITY);
         try {
-            return new LifecycleFence(session(value.get("session")), canonicalPositiveLong(value, "targetRevision", ErrorCode.INVALID_IDENTITY),
+            return new LifecycleFence(session(value.get("session")), canonicalPositiveLong(value, "unitTargetRevision", ErrorCode.INVALID_IDENTITY),
                 text(value, "runtimeInstanceId", ErrorCode.INVALID_IDENTITY), text(value, "lifecycleOperationId", ErrorCode.INVALID_IDENTITY));
         } catch (IllegalArgumentException exception) {
             throw invalidIdentity("invalid lifecycle fence", exception);
@@ -221,9 +221,10 @@ public final class ClientProtocolCodec {
         var result = new ArrayList<ClientMessage.Assignment>(array.size());
         for (var item : array) {
             var value = object(item, "assignment", ErrorCode.MALFORMED_MESSAGE);
-            exactFields(value, Set.of("pluginId", "facetId", "runtimeInstanceId", "executionTarget", "entryModule", "payloadDigest", "requiredCapabilities", "resources"), ErrorCode.MALFORMED_MESSAGE);
+            exactFields(value, Set.of("pluginId", "facetId", "desiredEntryId", "definitionId", "runtimeInstanceId", "unitTargetRevision", "executionTarget", "config", "entryModule", "payloadDigest", "requiredCapabilities", "resources"), ErrorCode.MALFORMED_MESSAGE);
             result.add(new ClientMessage.Assignment(text(value, "pluginId", ErrorCode.MALFORMED_MESSAGE), text(value, "facetId", ErrorCode.MALFORMED_MESSAGE),
-                text(value, "runtimeInstanceId", ErrorCode.MALFORMED_MESSAGE), text(value, "executionTarget", ErrorCode.MALFORMED_MESSAGE),
+                text(value, "desiredEntryId", ErrorCode.MALFORMED_MESSAGE), text(value, "definitionId", ErrorCode.MALFORMED_MESSAGE),
+                text(value, "runtimeInstanceId", ErrorCode.MALFORMED_MESSAGE), canonicalPositiveLong(value, "unitTargetRevision", ErrorCode.MALFORMED_MESSAGE), text(value, "executionTarget", ErrorCode.MALFORMED_MESSAGE), literal(value.get("config"), 4),
                 text(value, "entryModule", ErrorCode.MALFORMED_MESSAGE), digest(value, "payloadDigest"),
                 strings(value.get("requiredCapabilities"), "requiredCapabilities"), resources(value.get("resources"))));
         }
@@ -297,9 +298,9 @@ public final class ClientProtocolCodec {
             var value = object(item, "execution", ErrorCode.MALFORMED_MESSAGE);
             var state = enumValue(value, "state", ClientMessage.ObservedState.class);
             exactFields(value, state == ClientMessage.ObservedState.FAILED
-                ? Set.of("targetRevision", "runtimeInstanceId", "lifecycleOperationId", "state", "failure")
-                : Set.of("targetRevision", "runtimeInstanceId", "lifecycleOperationId", "state"), ErrorCode.MALFORMED_MESSAGE);
-            result.add(new ClientMessage.ExecutionObservation(canonicalPositiveLong(value, "targetRevision", ErrorCode.MALFORMED_MESSAGE),
+                ? Set.of("unitTargetRevision", "runtimeInstanceId", "lifecycleOperationId", "state", "failure")
+                : Set.of("unitTargetRevision", "runtimeInstanceId", "lifecycleOperationId", "state"), ErrorCode.MALFORMED_MESSAGE);
+            result.add(new ClientMessage.ExecutionObservation(canonicalPositiveLong(value, "unitTargetRevision", ErrorCode.MALFORMED_MESSAGE),
                 text(value, "runtimeInstanceId", ErrorCode.MALFORMED_MESSAGE), text(value, "lifecycleOperationId", ErrorCode.MALFORMED_MESSAGE), state,
                 state == ClientMessage.ObservedState.FAILED ? failure(value.get("failure")) : null));
         }
@@ -421,7 +422,7 @@ public final class ClientProtocolCodec {
     private ObjectNode lifecycle(LifecycleFence fence) {
         var value = json.createObjectNode();
         value.set("session", session(fence.session()));
-        value.put("targetRevision", Long.toString(fence.targetRevision()));
+        value.put("unitTargetRevision", Long.toString(fence.unitTargetRevision()));
         value.put("runtimeInstanceId", fence.runtimeInstanceId());
         value.put("lifecycleOperationId", fence.lifecycleOperationId());
         return value;
@@ -455,8 +456,12 @@ public final class ClientProtocolCodec {
             var item = array.addObject();
             item.put("pluginId", value.pluginId());
             item.put("facetId", value.facetId());
+            item.put("desiredEntryId", value.desiredEntryId());
+            item.put("definitionId", value.definitionId());
             item.put("runtimeInstanceId", value.runtimeInstanceId());
+            item.put("unitTargetRevision", Long.toString(value.unitTargetRevision()));
             item.put("executionTarget", value.executionTarget());
+            item.set("config", literal(value.config(), 4));
             item.put("entryModule", value.entryModule());
             item.put("payloadDigest", value.payloadDigest());
             strings(item, "requiredCapabilities", value.requiredCapabilities());
@@ -486,7 +491,7 @@ public final class ClientProtocolCodec {
         return value;
     }
     private ObjectNode failure(ClientMessage.Failure failure) { var value = json.createObjectNode(); value.put("code", failure.code()); value.put("message", failure.message()); var diagnostics = value.putObject("diagnostics"); failure.diagnostics().forEach(diagnostics::put); return value; }
-    private void executions(ObjectNode payload, List<ClientMessage.ExecutionObservation> values) { var array = payload.putArray("executions"); for (var value : values) { var node = array.addObject(); node.put("targetRevision", Long.toString(value.targetRevision())); node.put("runtimeInstanceId", value.runtimeInstanceId()); node.put("lifecycleOperationId", value.lifecycleOperationId()); node.put("state", value.state().name()); if (value.failure() != null) node.set("failure", failure(value.failure())); } }
+    private void executions(ObjectNode payload, List<ClientMessage.ExecutionObservation> values) { var array = payload.putArray("executions"); for (var value : values) { var node = array.addObject(); node.put("unitTargetRevision", Long.toString(value.unitTargetRevision())); node.put("runtimeInstanceId", value.runtimeInstanceId()); node.put("lifecycleOperationId", value.lifecycleOperationId()); node.put("state", value.state().name()); if (value.failure() != null) node.set("failure", failure(value.failure())); } }
     private JsonNode literal(LiteralValue value, int depth) {
         return switch (value) {
             case LiteralValue.NullValue ignored -> json.getNodeFactory().nullNode();

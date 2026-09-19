@@ -29,7 +29,7 @@ class ContributionCallTest {
     void completedHandlerStillPinsRegistrationUntilTheCallIsClosed() throws Exception {
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var owner = runtime.rootScope().context();
-            var registration = directory.register(owner, COMMAND, "plugin", "command",
+            var registration = directory.openAdmission("plugin").register(owner, COMMAND, "command",
                 new CommandDescriptor("Command"), (invocation, input) -> Mono.just(input)).block();
             var call = directory.current().routes().acquire(COMMAND, registration.id(),
                 registration.registrationIdentity());
@@ -47,7 +47,7 @@ class ContributionCallTest {
     void closeIsIdempotent() throws Exception {
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var owner = runtime.rootScope().context();
-            var registration = directory.register(owner, COMMAND, "plugin", "command",
+            var registration = directory.openAdmission("plugin").register(owner, COMMAND, "command",
                 new CommandDescriptor("Command"), (invocation, input) -> Mono.just(input)).block();
             var call = directory.current().routes().acquire(COMMAND, registration.id(),
                 registration.registrationIdentity());
@@ -63,7 +63,7 @@ class ContributionCallTest {
     void retainedRoutesDoNotResolveANewEntryWithTheSameId() {
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var owner = runtime.rootScope().context();
-            var first = directory.register(owner, COMMAND, "plugin", "command",
+            var first = directory.openAdmission("plugin").register(owner, COMMAND, "command",
                 new CommandDescriptor("First"), (invocation, input) -> Mono.just("first")).block();
             var oldRoutes = directory.current().routes();
             var oldCall = oldRoutes.acquire(COMMAND, first.id(), first.registrationIdentity());
@@ -72,7 +72,7 @@ class ContributionCallTest {
             assertFalse(revoked.isDone());
             oldCall.close();
             revoked.join();
-            var second = directory.register(owner, COMMAND, "plugin", "command",
+            var second = directory.openAdmission("plugin").register(owner, COMMAND, "command",
                 new CommandDescriptor("Second"), (invocation, input) -> Mono.just("second")).block();
 
             assertThrows(ContributionUnavailableException.class,
@@ -88,12 +88,12 @@ class ContributionCallTest {
     void aReusedLogicalIdReceivesANewRegistrationIdentity() {
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var owner = runtime.rootScope().context();
-            var first = directory.register(owner, COMMAND, "plugin", "command",
+            var first = directory.openAdmission("plugin").register(owner, COMMAND, "command",
                 new CommandDescriptor("First"), (invocation, input) -> Mono.just("first")).block();
             var firstEntry = directory.current().snapshot().entries().getFirst();
 
             first.dispose().block();
-            var second = directory.register(owner, COMMAND, "plugin", "command",
+            var second = directory.openAdmission("plugin").register(owner, COMMAND, "command",
                 new CommandDescriptor("Second"), (invocation, input) -> Mono.just("second")).block();
             var secondEntry = directory.current().snapshot().entries().getFirst();
 
@@ -109,7 +109,7 @@ class ContributionCallTest {
     void cancellingAHandlerDoesNotReleaseAnExplicitCall() throws Exception {
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var owner = runtime.rootScope().context();
-            var registration = directory.register(owner, COMMAND, "plugin", "command",
+            var registration = directory.openAdmission("plugin").register(owner, COMMAND, "command",
                 new CommandDescriptor("Command"), (invocation, input) -> Mono.never()).block();
             var call = directory.current().routes().acquire(COMMAND, registration.id(),
                 registration.registrationIdentity());
@@ -135,10 +135,10 @@ class ContributionCallTest {
         var afterDrain = new AtomicInteger();
         var binding = new ContributionBinding<>(COMMAND, "command", new CommandDescriptor("Command"),
             (ContributionHandler<String, String>) (invocation, input) -> Mono.just(input));
-        var registration = directory.registerAll(owner.context(), "plugin", List.of(binding),
+        var registration = directory.openAdmission("plugin").registerAll(owner.context(), List.of(binding),
             () -> Mono.fromRunnable(afterDrain::incrementAndGet)).block(TIMEOUT);
         var selected = registration.getFirst();
-        var other = directory.register(runtime.rootScope().context(), COMMAND, "other", "command",
+        var other = directory.openAdmission("other").register(runtime.rootScope().context(), COMMAND, "command",
             new CommandDescriptor("Other"), (invocation, input) -> Mono.just(input)).block(TIMEOUT);
         var routes = directory.current().routes();
         var failed = routes.acquire(COMMAND, selected.id(), selected.registrationIdentity());
@@ -192,7 +192,7 @@ class ContributionCallTest {
         try {
             var directory = new ContributionDirectory();
             var owner = runtime.rootScope().context();
-            var registration = directory.register(owner, COMMAND, "plugin", "command",
+            var registration = directory.openAdmission("plugin").register(owner, COMMAND, "command",
                 new CommandDescriptor("Command"), (invocation, input) -> Mono.just(input)).block();
             var routes = directory.current().routes();
             var failed = routes.acquire(COMMAND, registration.id(),
@@ -226,7 +226,7 @@ class ContributionCallTest {
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var owner = runtime.rootScope().context();
             var invocations = new AtomicInteger();
-            var registration = directory.register(owner, COMMAND, "plugin", "command",
+            var registration = directory.openAdmission("plugin").register(owner, COMMAND, "command",
                 new CommandDescriptor("Command"), (invocation, input) -> Mono.fromSupplier(() -> {
                     invocations.incrementAndGet();
                     return input;
@@ -261,7 +261,7 @@ class ContributionCallTest {
                     (ContributionHandler<String, String>) (invocation, input) -> Mono.just(input)),
                 new ContributionBinding<>(COMMAND, "second", new CommandDescriptor("Second"),
                     (ContributionHandler<String, String>) (invocation, input) -> Mono.just(input)));
-            var registrations = directory.registerAll(owner.context(), "plugin", bindings,
+            var registrations = directory.openAdmission("plugin").registerAll(owner.context(), bindings,
                 () -> Mono.fromRunnable(afterDrain::incrementAndGet)).block();
             var routes = directory.current().routes();
             var failed = routes.acquire(COMMAND, registrations.getFirst().id(),
@@ -286,14 +286,16 @@ class ContributionCallTest {
     }
 
     @Test
-    void legacyCodecsKeepTheDefaultRemoteFailureAndCancellationBehavior() {
+    void codecsKeepTheDefaultRemoteFailureAndCancellationBehavior() {
         ContributionCodec<String, String, String> codec = new ContributionCodec<>() {
             @Override public int schemaVersion() { return 1; }
-            @Override public String decodeDescriptor(Object descriptor) { return descriptor.toString(); }
-            @Override public Object encodeInput(String input) { return input; }
-            @Override public String decodeInput(Object input) { return input.toString(); }
-            @Override public Object encodeOutput(String output) { return output; }
-            @Override public String decodeOutput(Object output) { return output.toString(); }
+            @Override public String decodeDescriptor(LiteralValue descriptor) {
+                return descriptor.toJava().toString();
+            }
+            @Override public LiteralValue encodeInput(String input) { return LiteralValue.of(input); }
+            @Override public String decodeInput(LiteralValue input) { return input.toJava().toString(); }
+            @Override public LiteralValue encodeOutput(String output) { return LiteralValue.of(output); }
+            @Override public String decodeOutput(LiteralValue output) { return output.toJava().toString(); }
         };
 
         assertFalse(codec.cancellationToken("input").isCancelled());

@@ -23,7 +23,6 @@ public final class ToolFsSearchEntrypoint implements PluginEntrypoint<SearchPlug
                 () -> (context, config) -> Mono.defer(() -> {
                     validatePaths(config);
                     var runner = new SearchRunner(config);
-                    var instanceId = context.plugins().current().orElseThrow().id();
                     var glob = new ContributionBinding<>(ToolContributions.KIND, "glob",
                         globDescriptor(), (invocation, request) -> runner.glob(
                             invocation.withCancellation(request.cancellation()), request));
@@ -31,7 +30,7 @@ public final class ToolFsSearchEntrypoint implements PluginEntrypoint<SearchPlug
                         grepDescriptor(), (invocation, request) -> runner.grep(
                             invocation.withCancellation(request.cancellation()), request));
                     return context.services().require(ContributionServices.REGISTRAR)
-                        .registerAll(context, instanceId, List.of(glob, grep),
+                        .registerAll(context, List.of(glob, grep),
                             Disposables.noop())
                         .then();
                 }))

@@ -24,17 +24,18 @@ class DesiredConfigPatchTest {
         "{id: absent, enabled: false}|PATCH_TARGET_MISSING",
         "{id: absent, enabled: \"false\"}|PATCH_TARGET_MISSING",
         "{id: absent, plugin: 42}|PATCH_TARGET_MISSING",
-        "{id: worker, plugin: other, enabled: false}|PATCH_NAME_MISMATCH",
+        "{id: worker, plugin: {id: other-plugin, facet: main, definition: other}, enabled: false}|PATCH_DEFINITION_REF_MISMATCH",
         "{id: absent, insert: []}|PATCH_TARGET_MISSING",
         "{id: worker, insert: []}|PATCH_TARGET_NOT_GROUP"
     })
     void skippedPatchesWarnAndAllowLaterPatches(String skipped, String code, @TempDir Path work)
         throws Exception {
-        var result = compile(work, "- {id: worker, plugin: sample, config: original}\n",
-            "- " + skipped + "\n- {id: worker, plugin: sample, config: changed}\n");
+        var result = compile(work,
+            "- {id: worker, plugin: {id: sample-plugin, facet: main, definition: sample}, config: original}\n",
+            "- " + skipped + "\n- {id: worker, plugin: {id: sample-plugin, facet: main, definition: sample}, config: changed}\n");
 
         var worker = plugin(result, "bundle:worker");
-        assertEquals("sample", worker.definitionName());
+        assertEquals(new PluginDefinitionRef("sample-plugin", "main", "sample"), worker.definitionRef());
         assertTrue(worker.enabled());
         assertEquals(LiteralValue.of("changed"), worker.config());
         assertEquals(1, result.diagnostics().size());
@@ -52,17 +53,17 @@ class DesiredConfigPatchTest {
             - id: group
               group: true
               realm: {message: tenant}
-              entries: [{id: first, plugin: sample}]
+              entries: [{id: first, plugin: {id: sample-plugin, facet: main, definition: sample}}]
             """, """
             - insert:
-                - {id: tail, plugin: sample}
+                - {id: tail, plugin: {id: sample-plugin, facet: main, definition: sample}}
             - id: group
               insert:
                 - id: nested
                   group: true
                   enabled: false
-                  entries: [{id: added, plugin: sample}]
-            - {id: added, plugin: sample, config: patched}
+                  entries: [{id: added, plugin: {id: sample-plugin, facet: main, definition: sample}}]
+            - {id: added, plugin: {id: sample-plugin, facet: main, definition: sample}, config: patched}
             - {id: tail, enabled: false}
             """);
 
@@ -84,7 +85,7 @@ class DesiredConfigPatchTest {
     void ordinaryGroupReplacementDoesNotReindexItsNewChildren(@TempDir Path work) throws Exception {
         var result = compile(work, "- {id: group, group: true, entries: []}\n", """
             - id: group
-              entries: [{id: child, plugin: sample, config: original}]
+              entries: [{id: child, plugin: {id: sample-plugin, facet: main, definition: sample}, config: original}]
             - {id: child, config: must-be-skipped}
             """);
 
@@ -95,9 +96,9 @@ class DesiredConfigPatchTest {
 
     @Test
     void patchesStayWithinTheCurrentIncludeNamespace(@TempDir Path work) throws Exception {
-        Files.writeString(work.resolve("nested.yaml"), "- {id: worker, plugin: sample, config: nested}\n");
+        Files.writeString(work.resolve("nested.yaml"), "- {id: worker, plugin: {id: sample-plugin, facet: main, definition: sample}, config: nested}\n");
         var result = compile(work, """
-            - {id: worker, plugin: sample, config: outer}
+            - {id: worker, plugin: {id: sample-plugin, facet: main, definition: sample}, config: outer}
             - {id: nested, include: nested.yaml}
             """, """
             - {id: 'nested:worker', config: must-be-skipped}
@@ -114,13 +115,13 @@ class DesiredConfigPatchTest {
     void shallowOverridesReplaceWholeValuesAndKeepLiteralNull(@TempDir Path work) throws Exception {
         var result = compile(work, """
             - id: worker
-              plugin: sample
+              plugin: {id: sample-plugin, facet: main, definition: sample}
               config: {original: true, retained: false}
               realm: {message: tenant}
               intercept: {message: {trace: true}}
             """, """
             - {id: worker, config: {only: replacement}, realm: {message: null}, intercept: {message: null}}
-            - insert: [{id: nullable, plugin: sample, config: previous}]
+            - insert: [{id: nullable, plugin: {id: sample-plugin, facet: main, definition: sample}, config: previous}]
             - {id: nullable, config: null}
             """);
 
@@ -140,8 +141,17 @@ class DesiredConfigPatchTest {
     }
 
     @Test
+    void matchedOverridesRejectAnIncompletePluginReference(@TempDir Path work) {
+        var failure = assertThrows(ConfigException.class, () -> compile(work,
+            "- {id: worker, plugin: {id: sample-plugin, facet: main, definition: sample}}\n",
+            "- {id: worker, plugin: null}\n"));
+
+        assertEquals("PATCH_FIELD_INVALID", failure.diagnostic().code());
+    }
+
+    @Test
     void repeatedCompilationDoesNotBakePatchesIntoSharedInput(@TempDir Path work) throws Exception {
-        var source = "- {id: worker, plugin: sample, config: original}\n";
+        var source = "- {id: worker, plugin: {id: sample-plugin, facet: main, definition: sample}, config: original}\n";
         var first = compile(work, source, "- {id: worker, config: first}\n");
         var second = compile(work, source, "- {id: worker, config: second}\n");
         var removed = compile(work, source, "[]\n");
@@ -155,13 +165,13 @@ class DesiredConfigPatchTest {
     @ParameterizedTest
     @ValueSource(strings = {
         "{target: worker, set: {enabled: false}}",
-        "{after: worker, insert: {id: extra, plugin: sample}}",
+        "{after: worker, insert: {id: extra, plugin: {id: sample-plugin, facet: main, definition: sample}}}",
         "{id: absent, surprise: true}",
         "{insert: [], surprise: true}"
     })
     void rejectsUnknownFieldsIncludingBothOldFormats(String patch, @TempDir Path work) {
         var failure = assertThrows(ConfigException.class, () -> compile(work,
-            "- {id: worker, plugin: sample}\n", "- " + patch + "\n"));
+            "- {id: worker, plugin: {id: sample-plugin, facet: main, definition: sample}}\n", "- " + patch + "\n"));
 
         assertEquals("PATCH_FIELDS_INVALID", failure.diagnostic().code());
     }
@@ -169,7 +179,7 @@ class DesiredConfigPatchTest {
     @Test
     void insertMustBeAnEntryList(@TempDir Path work) {
         var failure = assertThrows(ConfigException.class, () -> compile(work,
-            "- {id: worker, plugin: sample}\n", "- {insert: {id: extra, plugin: sample}}\n"));
+            "- {id: worker, plugin: {id: sample-plugin, facet: main, definition: sample}}\n", "- {insert: {id: extra, plugin: {id: sample-plugin, facet: main, definition: sample}}}\n"));
 
         assertEquals("PATCH_FIELD_INVALID", failure.diagnostic().code());
     }
@@ -177,11 +187,11 @@ class DesiredConfigPatchTest {
     @Test
     void insertedEntriesStillUndergoDuplicateAndNodeValidation(@TempDir Path work) {
         var duplicate = assertThrows(ConfigException.class, () -> compile(work,
-            "- {id: worker, plugin: sample}\n", "- {insert: [{id: worker, plugin: sample}]}\n"));
+            "- {id: worker, plugin: {id: sample-plugin, facet: main, definition: sample}}\n", "- {insert: [{id: worker, plugin: {id: sample-plugin, facet: main, definition: sample}}]}\n"));
         assertEquals("DUPLICATE_ID", duplicate.diagnostic().code());
 
         var invalid = assertThrows(ConfigException.class, () -> compile(work,
-            "- {id: worker, plugin: sample}\n", "- {insert: [{id: broken, plugin: sample, group: true}]}\n"));
+            "- {id: worker, plugin: {id: sample-plugin, facet: main, definition: sample}}\n", "- {insert: [{id: broken, plugin: {id: sample-plugin, facet: main, definition: sample}, group: true}]}\n"));
         assertEquals("ENTRY_KIND_INVALID", invalid.diagnostic().code());
     }
 

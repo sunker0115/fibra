@@ -110,7 +110,7 @@ class FibraCliTest {
         throws Exception {
         var profiles = Files.createDirectories(home.resolve("config/profiles"));
         Files.writeString(profiles.resolve("default.yaml"), "[]\n");
-        Files.writeString(profiles.resolve("default.artifacts.yaml"), "[]\n");
+        Files.writeString(profiles.resolve("default.packages.yaml"), "[]\n");
         var output = new ByteArrayOutputStream();
         var error = new ByteArrayOutputStream();
 
@@ -212,7 +212,7 @@ class FibraCliTest {
     void pluginsListPrintsEmptyHostAsSingleJsonLine(@TempDir Path home) throws Exception {
         var profiles = Files.createDirectories(home.resolve("config/profiles"));
         Files.writeString(profiles.resolve("default.yaml"), "[]\n");
-        Files.writeString(profiles.resolve("default.artifacts.yaml"), "[]\n");
+        Files.writeString(profiles.resolve("default.packages.yaml"), "[]\n");
         var output = new ByteArrayOutputStream();
         var error = new ByteArrayOutputStream();
 
@@ -221,8 +221,8 @@ class FibraCliTest {
 
         assertEquals(0, exitCode);
         assertTrue(output.toString(StandardCharsets.UTF_8)
-            .matches("\\{\\\"artifacts\\\":\\[\\],\\\"auditFailures\\\":\\[\\],"
-                + "\\\"instances\\\":\\[\\],\\\"viewRevision\\\":\\\".+\\\"}\\R"));
+            .matches("\\{\\\"auditFailures\\\":\\[\\],\\\"instances\\\":\\[\\],"
+                + "\\\"selections\\\":\\[\\],\\\"viewRevision\\\":\\\".+\\\"}\\R"));
         assertEquals("", error.toString(StandardCharsets.UTF_8));
     }
 
@@ -230,7 +230,7 @@ class FibraCliTest {
     void globalPathOptionsSelectTheConfiguredProfile(@TempDir Path work) throws Exception {
         var config = Files.createDirectories(work.resolve("custom-config/profiles"));
         Files.writeString(config.resolve("team-a.yaml"), "[]\n");
-        Files.writeString(config.resolve("team-a.artifacts.yaml"), "[]\n");
+        Files.writeString(config.resolve("team-a.packages.yaml"), "[]\n");
         var output = new ByteArrayOutputStream();
         var error = new ByteArrayOutputStream();
 
@@ -243,7 +243,7 @@ class FibraCliTest {
         }, new ByteArrayInputStream(new byte[0]), writer(output), writer(error));
 
         assertEquals(0, exitCode);
-        assertTrue(output.toString(StandardCharsets.UTF_8).contains("\"artifacts\":[]"));
+        assertTrue(output.toString(StandardCharsets.UTF_8).contains("\"selections\":[]"));
         assertEquals("", error.toString(StandardCharsets.UTF_8));
         assertTrue(Files.isDirectory(work.resolve("custom-data/profiles/team-a")));
     }
@@ -252,7 +252,7 @@ class FibraCliTest {
     void mainExecutionPathRemovesShutdownHookAfterClosingHost(@TempDir Path home) throws Exception {
         var profiles = Files.createDirectories(home.resolve("config/profiles"));
         Files.writeString(profiles.resolve("default.yaml"), "[]\n");
-        Files.writeString(profiles.resolve("default.artifacts.yaml"), "[]\n");
+        Files.writeString(profiles.resolve("default.packages.yaml"), "[]\n");
 
         assertEquals(0, executeListWithShutdownHook(home));
         assertEquals(0, executeListWithShutdownHook(home));
@@ -263,7 +263,7 @@ class FibraCliTest {
         throws Exception {
         var profiles = Files.createDirectories(work.resolve("home/config/profiles"));
         Files.writeString(profiles.resolve("default.yaml"), "[]\n");
-        Files.writeString(profiles.resolve("default.artifacts.yaml"), "[]\n");
+        Files.writeString(profiles.resolve("default.packages.yaml"), "[]\n");
         var external = Files.createDirectories(work.resolve("external-package"));
         var output = new ByteArrayOutputStream();
         var error = new ByteArrayOutputStream();
@@ -273,7 +273,8 @@ class FibraCliTest {
         }, new ByteArrayInputStream(new byte[0]), writer(output), writer(error));
 
         assertEquals(4, exitCode);
-        assertTrue(error.toString(StandardCharsets.UTF_8).contains("插件探测失败"));
+        assertTrue(error.toString(StandardCharsets.UTF_8)
+            .contains("invalid plugin package"));
         assertFalse(error.toString(StandardCharsets.UTF_8).contains("候选插件目录"));
     }
 
@@ -282,11 +283,11 @@ class FibraCliTest {
         throws Exception {
         var profiles = Files.createDirectories(home.resolve("config/profiles"));
         Files.writeString(profiles.resolve("default.yaml"), "[]\n");
-        Files.writeString(profiles.resolve("default.artifacts.yaml"), "[]\n");
+        Files.writeString(profiles.resolve("default.packages.yaml"), "[]\n");
         assertEquals(0, FibraCli.run(new String[] {"--home", home.toString(), "plugins", "list"},
             new ByteArrayInputStream(new byte[0]), writer(new ByteArrayOutputStream()),
             writer(new ByteArrayOutputStream())));
-        Files.writeString(profiles.resolve("default.artifacts.yaml"), "not-a-list\n");
+        Files.writeString(profiles.resolve("default.packages.yaml"), "not-a-list\n");
         var output = new ByteArrayOutputStream();
         var error = new ByteArrayOutputStream();
 
@@ -346,7 +347,8 @@ class FibraCliTest {
         throws Exception {
         dynamicCommandProfile(home);
         Files.writeString(home.resolve("config/profiles/default.yaml"),
-            "- {id: command-a, plugin: command}\n- {id: command-b, plugin: command}\n");
+            "- {id: command-a, plugin: {id: command, facet: main, definition: command}}\n"
+                + "- {id: command-b, plugin: {id: command, facet: main, definition: command}}\n");
         var output = new ByteArrayOutputStream();
         var error = new ByteArrayOutputStream();
 
@@ -422,7 +424,7 @@ class FibraCliTest {
         throws Exception {
         var profiles = Files.createDirectories(home.resolve("config/profiles"));
         Files.writeString(profiles.resolve("default.yaml"), "[]\n");
-        Files.writeString(profiles.resolve("default.artifacts.yaml"), "[]\n");
+        Files.writeString(profiles.resolve("default.packages.yaml"), "[]\n");
         var output = new ByteArrayOutputStream();
         var error = new ByteArrayOutputStream();
         var application = CliApplication.builder("agent")
@@ -558,31 +560,6 @@ class FibraCliTest {
         assertFalse(diagnostics.contains(secret), diagnostics);
     }
 
-    @Test
-    void instanceJsonDistinguishesDisabledAndFailedRuntimeState() {
-        var disabled = FibraCli.instance("disabled",
-            DesiredInputEntry.builder("disabled", "sample").enabled(false).build(), null);
-        var failedSnapshot = PluginInstanceSnapshot.builder().identity(42).instanceId("failed")
-            .definitionName("sample").config(LiteralValue.of(null))
-            .state(PluginInstanceState.FAILED)
-            .publicationRequirement(PublicationRequirement.ACTIVE_REQUIRED)
-            .failure("start failed").build();
-        var failed = FibraCli.instance("failed",
-            DesiredInputEntry.builder("failed", "sample").build(), failedSnapshot);
-
-        assertEquals(false, disabled.get("enabled"));
-        assertEquals(false, disabled.get("observed"));
-        assertEquals(null, disabled.get("state"));
-        assertEquals(true, disabled.get("requirementSatisfied"));
-        assertEquals(null, disabled.get("failure"));
-        assertEquals(true, failed.get("enabled"));
-        assertEquals(true, failed.get("observed"));
-        assertEquals("FAILED", failed.get("state"));
-        assertEquals("ACTIVE_REQUIRED", failed.get("publicationRequirement"));
-        assertEquals(false, failed.get("requirementSatisfied"));
-        assertEquals("start failed", failed.get("failure"));
-        assertFalse(failed.containsKey("config"));
-    }
 
     @Test
     void auditDeliveryFailureJsonPreservesSuccessfulMutationDiagnostics() {
@@ -633,7 +610,7 @@ class FibraCliTest {
     private static void emptyProfile(Path home) throws Exception {
         var profiles = Files.createDirectories(home.resolve("config/profiles"));
         Files.writeString(profiles.resolve("default.yaml"), "[]\n");
-        Files.writeString(profiles.resolve("default.artifacts.yaml"), "[]\n");
+        Files.writeString(profiles.resolve("default.packages.yaml"), "[]\n");
     }
 
     private static PrintWriter writer(ByteArrayOutputStream output) {
@@ -642,23 +619,17 @@ class FibraCliTest {
 
     private static void failingToolProfile(Path home) throws Exception {
         var profiles = Files.createDirectories(home.resolve("config/profiles"));
-        Files.writeString(profiles.resolve("default.yaml"), "- {id: failer, plugin: failer}\n");
-        Files.writeString(profiles.resolve("default.artifacts.yaml"), "- failer\n");
+        Files.writeString(profiles.resolve("default.yaml"),
+            "- {id: failer, plugin: {id: failer, facet: main, definition: failer}}\n");
+        Files.writeString(profiles.resolve("default.packages.yaml"), "- failer\n");
         var root = Files.createDirectories(home.resolve("plugins/failer"));
-        var lib = Files.createDirectories(root.resolve("lib"));
-        Files.writeString(root.resolve("plugin.properties"), """
-            formatVersion=1
-            runtime=java
-            payload=lib/main.jar
-            """);
-        try (var jar = new JarOutputStream(Files.newOutputStream(lib.resolve("main.jar")))) {
+        Files.writeString(root.resolve("fibra-package.yaml"),
+            packageManifest("failer"));
+        try (var jar = new JarOutputStream(Files.newOutputStream(
+            root.resolve("plugin.jar")))) {
             jar.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml"));
-            jar.write(("""
-                id: failer
-                version: 1.0.0
-                entrypoint: %s
-                requires: []
-                """).formatted(FailingToolEntrypoint.class.getName()).getBytes(StandardCharsets.UTF_8));
+            jar.write(("entrypoint: " + FailingToolEntrypoint.class.getName()
+                + '\n').getBytes(StandardCharsets.UTF_8));
             jar.closeEntry();
             var className = FailingToolEntrypoint.class.getName().replace('.', '/') + ".class";
             jar.putNextEntry(new JarEntry(className));
@@ -673,24 +644,16 @@ class FibraCliTest {
     private static void dynamicCommandProfile(Path home) throws Exception {
         var profiles = Files.createDirectories(home.resolve("config/profiles"));
         Files.writeString(profiles.resolve("default.yaml"),
-            "- {id: command, plugin: command}\n");
-        Files.writeString(profiles.resolve("default.artifacts.yaml"), "- command\n");
+            "- {id: command, plugin: {id: command, facet: main, definition: command}}\n");
+        Files.writeString(profiles.resolve("default.packages.yaml"), "- command\n");
         var root = Files.createDirectories(home.resolve("plugins/command"));
-        var lib = Files.createDirectories(root.resolve("lib"));
-        Files.writeString(root.resolve("plugin.properties"), """
-            formatVersion=1
-            runtime=java
-            payload=lib/main.jar
-            """);
-        try (var jar = new JarOutputStream(Files.newOutputStream(lib.resolve("main.jar")))) {
+        Files.writeString(root.resolve("fibra-package.yaml"),
+            packageManifest("command"));
+        try (var jar = new JarOutputStream(Files.newOutputStream(
+            root.resolve("plugin.jar")))) {
             jar.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml"));
-            jar.write(("""
-                id: command
-                version: 1.0.0
-                entrypoint: %s
-                requires: []
-                """).formatted(DynamicCommandEntrypoint.class.getName())
-                .getBytes(StandardCharsets.UTF_8));
+            jar.write(("entrypoint: " + DynamicCommandEntrypoint.class.getName()
+                + '\n').getBytes(StandardCharsets.UTF_8));
             jar.closeEntry();
             var className = DynamicCommandEntrypoint.class.getName().replace('.', '/') + ".class";
             jar.putNextEntry(new JarEntry(className));
@@ -702,10 +665,23 @@ class FibraCliTest {
         }
     }
 
+    private static String packageManifest(String pluginId) {
+        return "format: 1\n"
+            + "id: " + pluginId + "\n"
+            + "version: 1.0.0\n"
+            + "facets:\n"
+            + "  - id: main\n"
+            + "    role: host\n"
+            + "    runtime: java\n"
+            + "    target: host\n"
+            + "    payload: plugin.jar\n"
+            + "    dependencies: []\n"
+            + "    capabilities: []\n";
+    }
+
     public static final class DynamicCommandEntrypoint implements PluginEntrypoint<Void> {
         @Override public PluginDefinition<Void> definition() {
             return PluginDefinition.builder("command", Void.class, () -> (context, config) -> {
-                var provider = context.plugins().current().orElseThrow().id();
                 var descriptor = new CliCommandDescriptor(List.of("echo"),
                     "输出带前缀的参数。", List.of(
                     new CliCommandOption(List.of("--prefix"), "输出前缀。", false, false,
@@ -714,7 +690,7 @@ class FibraCliTest {
                         List.of())), "TEXT", List.of());
                 var registrar = context.services().require(ContributionServices.REGISTRAR);
                 var echo = registrar.register(context,
-                    CliCommandContributions.KIND, provider, "echo", descriptor,
+                    CliCommandContributions.KIND, "echo", descriptor,
                     (invocation, request) -> {
                         if (request.options().containsKey("--secret")) {
                             throw new IllegalStateException("敏感参数无效: "
@@ -726,7 +702,7 @@ class FibraCliTest {
                         return Mono.just(CliCommandResult.success());
                     });
                 var terminal = registrar.register(context, CliCommandContributions.KIND,
-                    provider, "terminal", new CliCommandDescriptor(List.of("terminal"),
+                    "terminal", new CliCommandDescriptor(List.of("terminal"),
                         "取得受控终端租约。", List.of(), null, List.of()),
                     (invocation, request) -> {
                         request.invocation().terminal().acquire();
@@ -734,7 +710,7 @@ class FibraCliTest {
                         return Mono.just(CliCommandResult.success());
                     });
                 var interrupt = registrar.register(context, CliCommandContributions.KIND,
-                    provider, "interrupt", new CliCommandDescriptor(List.of("interrupt"),
+                    "interrupt", new CliCommandDescriptor(List.of("interrupt"),
                         "等待受控终端中断。", List.of(), null, List.of()),
                     (invocation, request) -> {
                         try (var lease = request.invocation().terminal().acquire()) {
@@ -769,7 +745,7 @@ class FibraCliTest {
                 (LiteralValue.ObjectValue) LiteralValue.of(Map.of("type", "object")),
                 (LiteralValue.ObjectValue) LiteralValue.of(Map.of("type", "object")));
             return context.services().require(ContributionServices.REGISTRAR).register(context,
-                ToolContributions.KIND, "failer", "fail", descriptor,
+                ToolContributions.KIND, "fail", descriptor,
                 (invocation, request) -> Mono.error(new ToolException(
                     ToolFailureCode.TIMEOUT, "simulated timeout"))).then();
         }

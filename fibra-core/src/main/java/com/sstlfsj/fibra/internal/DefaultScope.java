@@ -3,6 +3,7 @@ package com.sstlfsj.fibra.internal;
 import com.sstlfsj.fibra.Context;
 import com.sstlfsj.fibra.FibraException;
 import com.sstlfsj.fibra.Scope;
+import com.sstlfsj.fibra.ScopeView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
@@ -22,6 +23,7 @@ final class DefaultScope implements Scope, ResourceOwner {
     private final DefaultScope parent;
     private final String name;
     private final long identity;
+    private final ScopeView view;
     private final List<DefaultScope> children = new ArrayList<>();
     private final List<PluginInstanceImpl<?>> plugins = new ArrayList<>();
     private final IdentityList<OwnedEffect> resources = new IdentityList<>();
@@ -39,6 +41,7 @@ final class DefaultScope implements Scope, ResourceOwner {
         }
         this.name = name;
         identity = domain.runtime().nextSequence();
+        view = new View(this);
         context = DefaultContext.root(this);
     }
 
@@ -69,8 +72,12 @@ final class DefaultScope implements Scope, ResourceOwner {
     }
 
     @Override
-    public boolean sharesDomainWith(Scope other) {
-        return other instanceof DefaultScope candidate && domain == candidate.domain;
+    public boolean sharesDomainWith(ScopeView other) {
+        Objects.requireNonNull(other, "other");
+        if (other instanceof DefaultScope candidate) {
+            return domain == candidate.domain;
+        }
+        return other instanceof View candidate && domain == candidate.scope.domain;
     }
 
     @Override
@@ -133,6 +140,10 @@ final class DefaultScope implements Scope, ResourceOwner {
 
     DefaultFibraRuntime runtime() {
         return domain.runtime();
+    }
+
+    ScopeView view() {
+        return view;
     }
 
     @Override
@@ -230,6 +241,39 @@ final class DefaultScope implements Scope, ResourceOwner {
         if (!acceptsResources()) {
             throw new FibraException(FibraException.SCOPE_CLOSED,
                 "scope \"" + name + "\" is closed");
+        }
+    }
+
+    private static final class View implements ScopeView {
+        private final DefaultScope scope;
+
+        private View(DefaultScope scope) {
+            this.scope = scope;
+        }
+
+        @Override
+        public String name() {
+            return scope.name();
+        }
+
+        @Override
+        public Context context() {
+            return scope.context();
+        }
+
+        @Override
+        public Scope openChild(String name) {
+            return scope.openChild(name);
+        }
+
+        @Override
+        public boolean sharesDomainWith(ScopeView other) {
+            return scope.sharesDomainWith(other);
+        }
+
+        @Override
+        public boolean isClosed() {
+            return scope.isClosed();
         }
     }
 }

@@ -9,8 +9,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FileToolPluginTest {
     @Test
@@ -39,12 +37,8 @@ class FileToolPluginTest {
             .get("type"));
         try (var input = FileToolPluginTest.class.getResourceAsStream("/META-INF/fibra/plugin.yaml")) {
             var manifest = new String(input.readAllBytes(), StandardCharsets.UTF_8);
-            assertTrue(manifest.contains("id: fibra-tool-fs"));
-            assertTrue(manifest.contains("version: "
-                + System.getProperty("fibra.test.projectVersion")));
-            assertTrue(manifest.contains("entrypoint: com.sstlfsj.fibra.plugins.fs.tool.FileToolEntrypoint"));
-            assertTrue(manifest.contains("id: fibra-fs"));
-            assertFalse(manifest.contains("${project.version}"));
+            assertEquals("entrypoint: " + FileToolEntrypoint.class.getName()
+                + "\n", manifest);
         }
     }
 }

@@ -1,120 +1,60 @@
 package com.sstlfsj.fibra.engine;
 
-import com.sstlfsj.fibra.PluginDefinition;
-import com.sstlfsj.fibra.artifact.ArtifactId;
-import com.sstlfsj.fibra.artifact.ExecutionTarget;
-import com.sstlfsj.fibra.artifact.FacetDependency;
-import com.sstlfsj.fibra.artifact.FacetId;
-import com.sstlfsj.fibra.artifact.FacetRole;
-import com.sstlfsj.fibra.artifact.ManagedFacet;
-import com.sstlfsj.fibra.artifact.ManagedPluginPackage;
-import com.sstlfsj.fibra.artifact.PluginFacet;
-import com.sstlfsj.fibra.artifact.PluginId;
-import com.sstlfsj.fibra.artifact.RuntimeId;
-import com.sstlfsj.fibra.config.DesiredInputGraph;
-import com.sstlfsj.fibra.config.PluginDefinitionRef;
+import com.sstlfsj.fibra.artifact.*;
+import com.sstlfsj.fibra.config.*;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Mono;
-
-import java.nio.file.Path;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import java.util.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 class BuiltInPluginPackageTest {
-    private static final String DIGEST = "a".repeat(64);
-
     @Test
-    void definitionReferenceAlwaysCarriesPluginOwnership() {
-        var reference = new PluginDefinitionRef("core", "sample");
-        assertEquals("core", reference.pluginId());
-        assertEquals("sample", reference.definitionId());
-        assertThrows(IllegalArgumentException.class,
-            () -> new PluginDefinitionRef("", "sample"));
-        assertThrows(IllegalArgumentException.class,
-            () -> new PluginDefinitionRef("core", " "));
+    void multipleFacetsKeepIdentityCapabilitiesAndDependencyOrder() {
+        var api = BuiltInFacet.builder(new FacetId("api"), new RuntimeId("java"), new ExecutionTarget("host"))
+            .definitionIds(Set.of("service")).requiredCapabilities(Set.of("storage")).build();
+        var impl = BuiltInFacet.builder(new FacetId("impl"), new RuntimeId("java"), new ExecutionTarget("host"))
+            .definitionIds(Set.of("service")).dependencies(List.of(new FacetDependency(
+                new PluginId("core"), new FacetId("api")))).build();
+        var builtIn = metadata(List.of(impl, api));
+        var target = DeploymentTarget.of(1, List.of(builtIn.selection(true)), new DesiredInputGraph(List.of()),
+            ConfigContextSnapshot.empty());
+        var compiled = new DeploymentTargetCompiler().compile(target, List.of(), List.of(builtIn));
+        assertEquals(List.of(builtIn.artifactId(api.facetId()), builtIn.artifactId(impl.facetId())),
+            compiled.dependencyFirst());
+        assertEquals(Set.of("storage"), compiled.builtInFacets().get(builtIn.artifactId(api.facetId()))
+            .facet().requiredCapabilities());
+        assertEquals(builtIn.artifactId(api.facetId()), compiled.builtInFacets()
+            .get(builtIn.artifactId(impl.facetId())).dependencies().getFirst().artifactId());
+        assertNotEquals(builtIn.artifactId(api.facetId()), builtIn.artifactId(impl.facetId()));
+        assertThrows(UnsupportedOperationException.class, () -> builtIn.facets().clear());
     }
 
     @Test
-    void builtInDefinitionsHaveStablePackageIdentity() {
-        var definition = PluginDefinition.builder("sample", Void.class,
-            () -> (context, config) -> Mono.empty()).build();
-        var catalogEntry = new PluginCatalogEntry<>(definition, ignored -> null);
-        var builtIn = BuiltInPluginPackage.builder()
-            .pluginId(new PluginId("core"))
-            .version("1.0.0")
-            .packageDigest(DIGEST)
-            .catalog(PluginCatalog.of(catalogEntry))
-            .build();
-
-        assertEquals(new PluginId("core"), builtIn.pluginId());
-        assertEquals("1.0.0", builtIn.version());
-        assertEquals(DIGEST, builtIn.packageDigest());
-        assertEquals(new FacetId("host"), builtIn.facetId());
-        assertEquals(new ExecutionTarget("host"), builtIn.executionTarget());
-        assertEquals(new PluginSelection(new PluginId("core"), DIGEST, false),
-            builtIn.selection(false));
-        assertSame(catalogEntry,
-            builtIn.definitions().get(new PluginDefinitionRef("core", "sample")));
-        assertThrows(UnsupportedOperationException.class,
-            () -> builtIn.definitions().clear());
-        assertThrows(IllegalArgumentException.class, () -> BuiltInPluginPackage.builder()
-            .pluginId(new PluginId("core")).version("1.0.0")
-            .packageDigest("invalid").catalog(PluginCatalog.of(catalogEntry)).build());
-    }
-
-    @Test
-    void dynamicAndBuiltInPluginIdsCannotConflict() {
-        var definition = PluginDefinition.builder("sample", Void.class,
-            () -> (context, config) -> Mono.empty()).build();
-        var builtIn = BuiltInPluginPackage.builder()
-            .pluginId(new PluginId("core")).version("1.0.0").packageDigest(DIGEST)
-            .catalog(PluginCatalog.of(new PluginCatalogEntry<>(definition, ignored -> null)))
-            .build();
-        var facet = new ManagedFacet(new ArtifactId("dynamic"), new PluginId("core"),
-            DIGEST, new PluginFacet(new FacetId("main"), FacetRole.HOST,
-                new RuntimeId("java"), new ExecutionTarget("host"), Path.of("dynamic"),
-                "b".repeat(64), List.of(), List.of()));
-        var target = DeploymentTarget.of(1,
-            List.of(new PluginSelection(new PluginId("core"), DIGEST, true)),
-            new DesiredInputGraph(List.of()));
-
+    void builtInFacetCyclesAndCrossProviderFragmentsAreRejected() {
+        var one = BuiltInFacet.builder(new FacetId("one"), new RuntimeId("java"), new ExecutionTarget("host"))
+            .dependencies(List.of(new FacetDependency(new PluginId("core"), new FacetId("two")))).build();
+        var two = BuiltInFacet.builder(new FacetId("two"), new RuntimeId("java"), new ExecutionTarget("host"))
+            .dependencies(List.of(new FacetDependency(new PluginId("core"), new FacetId("one")))).build();
+        var value = metadata(List.of(one, two));
+        var target = DeploymentTarget.of(1, List.of(value.selection(true)), new DesiredInputGraph(List.of()),
+            ConfigContextSnapshot.empty());
         assertThrows(IllegalArgumentException.class,
-            () -> new DeploymentTargetCompiler().compile(target,
-                List.of(ManagedPluginPackage.builder().pluginId(new PluginId("core"))
-                    .version("1.0.0").packageRevision(DIGEST)
-                    .facets(List.of(facet)).build()), List.of(builtIn)));
+            () -> new DeploymentTargetCompiler().compile(target, List.of(), List.of(value)));
+        var foreign = BuiltInFacet.builder(new FacetId("foreign"), new RuntimeId("node"), new ExecutionTarget("host")).build();
+        assertThrows(IllegalArgumentException.class, () -> metadata(List.of(one, foreign)));
     }
 
     @Test
-    void builtInHostFacetIsAnExactDependencyTarget() {
-        var definition = PluginDefinition.builder("sample", Void.class,
-            () -> (context, config) -> Mono.empty()).build();
-        var builtIn = BuiltInPluginPackage.builder()
-            .pluginId(new PluginId("core")).version("1.0.0").packageDigest(DIGEST)
-            .catalog(PluginCatalog.of(new PluginCatalogEntry<>(definition, ignored -> null)))
-            .build();
-        var dynamicRevision = "b".repeat(64);
-        var consumer = new ManagedFacet(new ArtifactId("consumer"),
-            new PluginId("consumer"), dynamicRevision,
-            new PluginFacet(new FacetId("main"), FacetRole.HOST,
-                new RuntimeId("java"), new ExecutionTarget("host"),
-                Path.of("consumer"), "c".repeat(64),
-                List.of(new FacetDependency(new PluginId("core"),
-                    new FacetId("host"))), List.of()));
-        var dynamic = ManagedPluginPackage.builder()
-            .pluginId(new PluginId("consumer")).version("1.0.0")
-            .packageRevision(dynamicRevision).facets(List.of(consumer)).build();
-        var target = DeploymentTarget.of(1, List.of(
-            new PluginSelection(new PluginId("consumer"), dynamicRevision, true),
-            builtIn.selection(true)), new DesiredInputGraph(List.of()));
+    void providerRevisionMustMatchEvenWhenItsPackageIsDisabled() {
+        var value = metadata(List.of(BuiltInFacet.builder(new FacetId("host"), new RuntimeId("java"),
+            new ExecutionTarget("host")).definitionIds(Set.of("sample")).build()));
+        var target = DeploymentTarget.of(1, List.of(new PluginSelection(value.pluginId(), "b".repeat(64), false)),
+            new DesiredInputGraph(List.of()), ConfigContextSnapshot.empty());
+        assertThrows(IllegalArgumentException.class,
+            () -> new DeploymentTargetCompiler().compile(target, List.of(), List.of(value)));
+    }
 
-        var compiled = new DeploymentTargetCompiler().compile(target,
-            List.of(dynamic), List.of(builtIn));
-
-        assertEquals(builtIn.artifactId(), compiled.facets().get(consumer.artifactId())
-            .dependencies().getFirst().artifactId());
+    private static BuiltInPluginPackage metadata(List<BuiltInFacet> facets) {
+        return BuiltInPluginPackage.builder().pluginId(new PluginId("core")).version("1")
+            .packageDigest("a".repeat(64)).facets(facets).build();
     }
 }

@@ -31,15 +31,17 @@ public class LifecycleDispatchBenchmark {
         "bench/empty", Ticker.class, EventMode.EMIT);
 
     private Context ctx;
+    private FibraRuntime runtime;
 
     @Setup
     public void setup() {
-        ctx = FibraRuntime.create().rootScope().context();
+        runtime = FibraRuntime.create();
+        ctx = runtime.rootScope().context();
     }
 
     @TearDown
     public void tearDown() {
-        ctx.scope().close();
+        runtime.close();
     }
 
     @Benchmark

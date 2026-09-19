@@ -1,6 +1,1 @@
-id: fibra-subprocess-local
-version: ${project.version}
 entrypoint: com.sstlfsj.fibra.plugins.subprocess.local.SubprocessLocalEntrypoint
-requires:
-  - id: fibra-subprocess
-    version: ${project.version}

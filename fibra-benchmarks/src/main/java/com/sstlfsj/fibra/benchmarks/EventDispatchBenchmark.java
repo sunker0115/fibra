@@ -33,11 +33,13 @@ public class EventDispatchBenchmark {
     private int hooks;
 
     private Context ctx;
+    private FibraRuntime runtime;
     private long counter;
 
     @Setup
     public void setup() {
-        ctx = FibraRuntime.create().rootScope().context();
+        runtime = FibraRuntime.create();
+        ctx = runtime.rootScope().context();
         for (int i = 0; i < hooks; i++) {
             ctx.events().on(TICK, () -> counter++);
             ctx.events().on(WF, (in, next) -> next.call() + 1);
@@ -46,7 +48,7 @@ public class EventDispatchBenchmark {
 
     @TearDown
     public void tearDown() {
-        ctx.scope().close();
+        runtime.close();
     }
 
     @Benchmark

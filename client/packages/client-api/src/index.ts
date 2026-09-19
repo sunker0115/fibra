@@ -31,8 +31,9 @@ export interface SessionFence {
 
 export interface LifecycleFence {
   readonly session: SessionFence;
-  readonly targetRevision: string;
   readonly runtimeInstanceId: string;
+  /** Canonical positive signed-long decimal for the unit's creation revision; retained units keep it unchanged. */
+  readonly unitTargetRevision: string;
   readonly lifecycleOperationId: string;
 }
 
@@ -76,8 +77,13 @@ export interface ResourceDescriptor {
 export interface Assignment {
   readonly pluginId: string;
   readonly facetId: string;
+  readonly desiredEntryId: string;
+  readonly definitionId: string;
   readonly runtimeInstanceId: string;
+  /** Canonical positive signed-long decimal for the unit's creation revision; retained units keep it unchanged. */
+  readonly unitTargetRevision: string;
   readonly executionTarget: string;
+  readonly config: LiteralValue;
   readonly entryModule: string;
   readonly payloadDigest: string;
   readonly requiredCapabilities: readonly string[];
@@ -90,47 +96,38 @@ export interface Contribution {
   readonly registrationIdentity: string;
 }
 
-export interface VerifiedResource {
-  readonly bytes: Uint8Array;
-  readonly byteLength: string;
-}
-
-export interface ClientResourceRequest {
-  readonly session: SessionFence;
-  readonly targetRevision: string;
-  readonly runtimeInstanceId: string;
-  readonly descriptor: ResourceDescriptor;
-}
-
-/** Internal transport boundary; it always receives the exact assignment fence. */
-export interface ClientResourceProvider {
-  load(request: ClientResourceRequest): Promise<Uint8Array>;
-}
-
-/** Adapter-owned verification boundary; core only consumes its completed result. */
-export interface VerifiedResourceLoader {
-  loadVerified(request: ClientResourceRequest): Promise<VerifiedResource>;
-}
-
-/** Plugin-facing view permanently bound to one assignment. */
-export interface ClientResourceView {
-  load(path: string): Promise<VerifiedResource>;
-}
-
 /** Plugin callers cannot provide a session, revision, or registration fence. */
 export interface HostCaller {
   call(contributionKind: string, contributionId: ContributionId, input: LiteralValue): Promise<LiteralValue>;
 }
 
-export interface ClientContext {
+/** Capabilities and resolved assignment facts permanently bound to one client instance. */
+export interface ClientInstanceContext {
+  readonly desiredEntryId: string;
+  readonly definitionId: string;
+  /** Canonical positive signed-long decimal for the unit's creation revision. */
+  readonly unitTargetRevision: string;
+  readonly runtimeInstanceId: string;
+  /** The resolved canonical config carried by the assignment. */
+  readonly config: LiteralValue;
   readonly scope: ClientScope;
   readonly host: HostCaller;
-  readonly resources: ClientResourceView;
 }
 
 export interface ClientModule {
-  prepare?(context: ClientContext): void | Promise<void>;
-  activate?(context: ClientContext): void | Promise<void>;
-  drain?(context: ClientContext): void | Promise<void>;
-  stop?(context: ClientContext): void | Promise<void>;
+  prepare?(): void | Promise<void>;
+  activate?(): void | Promise<void>;
+  drain?(): void | Promise<void>;
+  stop?(): void | Promise<void>;
+}
+
+/** One definition can create independent modules for multiple desired entries. */
+export interface ClientModuleDefinition {
+  readonly definitionId: string;
+  create(context: ClientInstanceContext): ClientModule | Promise<ClientModule>;
+}
+
+/** Shape exported by an assignment's loaded entry module. */
+export interface ClientEntryModule {
+  readonly definitions: readonly ClientModuleDefinition[];
 }

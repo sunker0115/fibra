@@ -1,6 +1,5 @@
-id: content-sanitizer
-version: 1.0.0
 protocol: 1
+definitionId: content-sanitizer
 entrypoint: index.mjs
 contributions:
   - name: sanitize

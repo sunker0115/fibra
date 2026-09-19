@@ -1,0 +1,11 @@
+format: 1
+id: content-sanitizer
+version: 1.0.0
+facets:
+  - id: main
+    role: host
+    runtime: node
+    target: host
+    payload: payload
+    dependencies: []
+    capabilities: []

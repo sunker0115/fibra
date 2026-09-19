@@ -4,15 +4,13 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const corePackages = ["client-api", "client-runtime"];
-const rendererNeutralPackages = [...corePackages, "client-runtime-web"];
+const corePackages = ["client-api", "client-protocol"];
+const rendererNeutralPackages = corePackages;
 const allowedWorkspaceDependencies = {
   "client-api": [],
-  "client-runtime": ["@sstlfsj/fibra-client-api"],
-  "client-runtime-web": ["@sstlfsj/fibra-client-api", "@sstlfsj/fibra-client-runtime"],
-  "client-react": ["@sstlfsj/fibra-client-api", "@sstlfsj/fibra-client-runtime"],
+  "client-protocol": ["@sstlfsj/fibra-client-api"],
 };
-const forbidden = /\b(?:document|window|HTMLElement|fetch|URL)\b|from\s+["'](?:react|react-dom|electron|vue)["']/;
+const forbidden = /\b(?:document|window|HTMLElement|fetch|URL|Blob)\b|from\s+["'](?:react|react-dom|electron|vue)["']/;
 
 for (const [name, allowed] of Object.entries(allowedWorkspaceDependencies)) {
   const directory = join(root, "packages", name);

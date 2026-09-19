@@ -32,7 +32,7 @@ public final class DisableJavaEntrypoint implements PluginEntrypoint<Void> {
             if (!self) return Mono.empty();
             ContributionKind<String, String, String> kind = context.services().require(CONTROL);
             return context.services().require(ContributionServices.REGISTRAR)
-                .register(context, kind, name, "control", "Control", (invocation, input) -> {
+                .register(context, kind, "control", "Control", (invocation, input) -> {
                     context.plugins().requestDisable();
                     return Mono.just("requested");
                 }).then();
