@@ -87,7 +87,8 @@ scripts/verify-architecture-boundaries.sh
 release workflow 也执行一次。每次执行内部只建立一个全新消费者仓库，不再二次清仓重跑。
 
 所有 action 使用完整提交 SHA。Maven、ripgrep、Node 和 pnpm 版本由仓库锁定；门禁不能依赖开发机全局安装
-的偶然版本。
+的偶然版本。GitHub Actions 通过固定提交的 `pnpm/action-setup` 读取 `client/package.json` 的
+`packageManager`，不依赖 Node 发行包内置的 Corepack 版本。
 
 ## 正式发布
 

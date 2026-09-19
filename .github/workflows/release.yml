@@ -87,11 +87,14 @@ jobs:
           node-version: '20.20.0'
           package-manager-cache: false
 
-      - name: 启用锁定的 pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.19.0 --activate
-          pnpm --version
+      - name: 配置项目锁定的 pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          package_json_file: client/package.json
+          run_install: false
+
+      - name: 确认 pnpm 版本
+        run: pnpm --version
 
       - name: 配置项目锁定的 Maven 版本
         shell: bash
