@@ -2,9 +2,10 @@
 
 ## 开发环境
 
-项目固定使用 JDK 21、Maven 3.9.9、Node.js 20.20 或更高版本和 pnpm 11.19.0。真实插件与发行验证还需要
-Python 3、`unzip`、Bash 和 ripgrep 15.0.1。优先使用仓库已锁定的版本和本地依赖缓存，不提交 IDE 元数据、
-构建产物、凭据或私有配置。
+Java/runtime 开发固定使用 JDK 21、Maven 3.9.9 和 Node.js 20.20 或更高版本；client npm 构建使用
+`client/.node-version` 锁定的 Node.js 22.13.0 和 pnpm 11.19.0。真实插件与发行验证还需要 Python 3、
+`unzip`、Bash 和 ripgrep 15.0.1。优先使用仓库已锁定的版本和本地依赖缓存，不提交 IDE 元数据、构建产物、
+凭据或私有配置。
 
 ## 架构约束
 
