@@ -45,9 +45,10 @@ Node payload 必须已包含可执行入口和生产依赖。runtime 不执行 `
 
 ## 权威门禁
 
-Java/runtime 门使用 Java 21、Maven 3.9.9、Node.js 20.20 或更高版本、Python 3、`unzip`、Bash 和
-ripgrep 15.0.1。client 与完整发布门使用 `client/.node-version` 锁定的 Node.js 22.13.0 和 pnpm 11.19.0；
-pnpm 11.19.0 的官方 engine 下限就是 Node.js 22.13，不能用 Node runtime 的 20.20 基线代替构建工具基线。
+所有门使用 Java 21、Maven 3.9.9、`client/.node-version` 锁定的 Node.js 22.14.0、pnpm 11.19.0、Python 3、
+`unzip`、Bash 和 ripgrep 15.0.1。该版本同时满足 pnpm 11.19.0 的 Node.js 22.13 engine 下限和 npm Trusted
+Publishing 的 Node.js 22.14 下限；Maven/runtime、client、完整发布和 npm publish workflow 不得各自维护
+不同 Node 版本。
 
 ```bash
 mvn --batch-mode --no-transfer-progress clean verify

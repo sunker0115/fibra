@@ -81,7 +81,7 @@ jobs:
           java-version: '21'
           cache: maven
 
-      - name: 配置 client Node.js
+      - name: 配置项目锁定的 Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: client/.node-version
@@ -219,10 +219,10 @@ jobs:
           ref: ${{ needs.verify-release.outputs.commit }}
           persist-credentials: false
 
-      - name: 配置支持 npm Trusted Publishing 的 Node.js
+      - name: 配置项目锁定的 Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '24'
+          node-version-file: client/.node-version
           registry-url: 'https://registry.npmjs.org'
           package-manager-cache: false
 

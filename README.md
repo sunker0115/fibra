@@ -12,10 +12,9 @@ transport-neutral 的 client API 和协议契约。
 
 ## 快速开始
 
-构建 Java 发行包需要 JDK 21、Maven 3.9.9、Node.js 20.20 或更高版本、Python 3、`unzip`，以及当前 POSIX
-目标平台的 `/bin/bash` 和 ripgrep 15.0.1；构建 client npm 包与执行完整发布门还需要
-`client/.node-version` 锁定的 Node.js 22.13.0 和 pnpm 11.19.0。发行 Node.js 和 ripgrep 路径可分别通过
-`fibra.distribution.node` 与 `fibra.distribution.rg` Maven 属性覆盖。
+构建与发布需要 JDK 21、Maven 3.9.9、`client/.node-version` 锁定的 Node.js 22.14.0、pnpm 11.19.0、
+Python 3、`unzip`，以及当前 POSIX 目标平台的 `/bin/bash` 和 ripgrep 15.0.1。发行 Node.js 和 ripgrep 路径
+可分别通过 `fibra.distribution.node` 与 `fibra.distribution.rg` Maven 属性覆盖。
 
 ```bash
 mvn -pl fibra-distribution -am package

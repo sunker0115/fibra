@@ -12,7 +12,7 @@ spring-host/  通过 Starter 接入并暴露 HTTP API 的宿主
 
 ## 构建与验证
 
-要求 JDK 21、Maven 3.9.9+ 和 Node.js 20+。在仓库根目录执行：
+要求 JDK 21、Maven 3.9.9+ 和仓库 `client/.node-version` 锁定的 Node.js 22.14.0。在仓库根目录执行：
 
 ```bash
 mvn -pl :spring-host -am clean verify
