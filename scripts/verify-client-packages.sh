@@ -60,8 +60,8 @@ verify_tarball() {
       *) fail "$(basename "$tarball") contains forbidden entry $member" ;;
     esac
   done < "$members"
-  rg -qx 'package/LICENSE' "$members" || fail "$(basename "$tarball") must contain package/LICENSE"
-  rg -qx 'package/NOTICE' "$members" || fail "$(basename "$tarball") must contain package/NOTICE"
+  grep -Fqx 'package/LICENSE' "$members" || fail "$(basename "$tarball") must contain package/LICENSE"
+  grep -Fqx 'package/NOTICE' "$members" || fail "$(basename "$tarball") must contain package/NOTICE"
   cmp -- "$unpack_dir/package/LICENSE" "$package_dir/LICENSE" \
     || fail "$(basename "$tarball") LICENSE differs from the package source"
   cmp -- "$unpack_dir/package/NOTICE" "$package_dir/NOTICE" \
@@ -92,7 +92,7 @@ if (expectedName === "@sstlfsj/fibra-client-protocol"
 }
 NODE
 
-  if rg -n -i '/(users|home|private|tmp|var)/|\b(clientrunner|runtimeweb|clientreact|react|htmlelement|resourceloader|resourcecache|playwright|transport)\b' "$unpack_dir/package/dist"; then
+  if grep -RniE '/(users|home|private|tmp|var)/|(^|[^[:alnum:]_])(clientrunner|runtimeweb|clientreact|react|htmlelement|resourceloader|resourcecache|playwright|transport)([^[:alnum:]_]|$)' "$unpack_dir/package/dist"; then
     fail "$(basename "$tarball") leaks a private, runner, Web, React, or transport implementation"
   fi
 }
