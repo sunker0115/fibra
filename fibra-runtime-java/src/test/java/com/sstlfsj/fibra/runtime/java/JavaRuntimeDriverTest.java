@@ -47,6 +47,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -218,6 +219,59 @@ class JavaRuntimeDriverTest {
         } finally {
             fixture.PreparationObserver.callback = null;
             driver.closeAsync().block();
+        }
+    }
+
+    @Test
+    void stoppedUnitReleasesItsPrivateClassSpaceWhileItsGenerationKeepsARetainedPeer()
+        throws Exception {
+        var replacedFacet = facet("replaced",
+            "entrypoint: fixture.PreparationEntrypoint\n",
+            fixture.PreparationEntrypoint.class);
+        var retainedFacet = facet("retained",
+            "entrypoint: fixture.PreparationEntrypoint\n",
+            fixture.PreparationEntrypoint.class,
+            "c".repeat(64), "d".repeat(64));
+        var closes = new ArrayList<PluginClassLoader>();
+        fixture.PreparationObserver.callback = ignored -> { };
+        try (var services = new LiveHostServices()) {
+            var driver = new JavaRuntimeDriver(services, List.of(),
+                getClass().getClassLoader(), List.of("java.",
+                    "com.sstlfsj.fibra.", "reactor.",
+                    "org.reactivestreams.", "org.slf4j.",
+                    "fixture.PreparationObserver"),
+                loader -> { closes.add(loader); loader.close(); });
+            var candidate = driver.createCandidate(slice(
+                new PluginFacetSource(replacedFacet, List.of()),
+                new PluginFacetSource(retainedFacet, List.of())));
+            candidate.prepareAsync().block();
+            var generation = candidate.seal(CompiledRuntimeSlice.of(
+                candidate.preparedPlan(), List.of(new ExecutionUnitKey("replaced"),
+                    new ExecutionUnitKey("retained"))));
+            var replaced = generation.units().get(
+                new ExecutionUnitKey("replaced"));
+            var retained = generation.units().get(
+                new ExecutionUnitKey("retained"));
+            replaced.reconcileAsync("start-replaced").block();
+            retained.reconcileAsync("start-retained").block();
+
+            stop(replaced, "replaced");
+
+            assertEquals(1, closes.size());
+            assertNull(field(replaced, "prepared"));
+            assertNull(field(replaced, "instance"));
+            assertNull(field(replaced, "scope"));
+            assertNull(field(replaced, "contributions"));
+            assertNull(field(replaced, "failure"));
+            assertEquals(com.sstlfsj.fibra.engine.ExecutionObservation.State.ACTIVE,
+                retained.snapshot().aggregateState());
+
+            stop(retained, "retained");
+            generation.retireAsync().block();
+            assertEquals(2, closes.size());
+            driver.closeAsync().block();
+        } finally {
+            fixture.PreparationObserver.callback = null;
         }
     }
 
@@ -713,6 +767,13 @@ class JavaRuntimeDriverTest {
         var leaseField = unit.getClass().getDeclaredField("lease");
         leaseField.setAccessible(true);
         return (AutoCloseable) leaseField.get(unit);
+    }
+
+    private static Object field(Object target, String name)
+        throws ReflectiveOperationException {
+        var field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(target);
     }
 
     private static JavaBuiltInPackage builtIn(

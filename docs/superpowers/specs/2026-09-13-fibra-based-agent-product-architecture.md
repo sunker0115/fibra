@@ -1,8 +1,10 @@
 # 基于 Fibra 的 CLI + Desktop Agent 产品架构与实施路线
 
-状态：产品业务路线；Fibra CLI F1–F4 已完成，产品业务阶段尚未实施。client foundation、跨执行域插件模型和
-其 P0 验收已由 [2026-09-15 Client Foundation 权威架构](./2026-09-15-fibra-client-foundation-architecture.md)
-替代本文此前的 P0 技术设计。
+状态：产品业务路线；Fibra CLI F1–F4 与 Client Foundation P0 本地冻结已完成，产品业务阶段尚未实施。
+产品 P1 前置装配可从冻结的 Fibra SPI/protocol 开始，但其真实 browser runtime、transport 与发行证据仍由
+产品仓负责。client foundation、跨执行域插件模型和
+其 P0 验收只以 [2026-09-15 Client Foundation 权威架构](./2026-09-15-fibra-client-foundation-architecture.md)
+为准，本文不复制 P0 技术状态机。
 
 本文件承接 Fibra vNext 第 1–10 节的完成点 `a83174d`，定义后续独立 Agent 产品的业务边界、产品装配与
 P1–P8 路线。Fibra 已完成范围与已交付的 CLI F1–F4 仍以
@@ -39,11 +41,11 @@ P1–P8 路线。Fibra 已完成范围与已交付的 CLI F1–F4 仍以
 |---|---|---|
 | Fibra vNext 第 1–10 节 | 已实现并有发行证据 | RuntimeDomain、Engine、Registry、ArtifactStore、Java/Node runtime、PublishedRuntime、差量更新、调用排空、正式基础插件、封闭 CLI 和发行 ZIP |
 | Fibra CLI F1–F4 | 已实现并通过最终交付门禁 | F1 已交付公开 CLI 组合 API、动态 Java command contribution 和最小终端租约；F2 已交付安全历史、补全、高亮与 dumb-terminal 降级；F3 已交付调用级取消、raw lease 和进程信号协调；F4 已冻结 `CliSession`、应用原始输入、resize/redisplay、渐进 renderer、终端恢复及 CLI API |
-| Fibra Client Foundation P0 | 架构复审中；唯一真源为 2026-09-15 规格 | 逻辑插件多 facet、统一 RuntimeDriver SPI、client protocol/API、唯一 target、Java/Node runtime 与 external execution conformance；浏览器实现不属于 Fibra |
+| Fibra Client Foundation P0 | 已本地冻结；保持 0.5.0-SNAPSHOT，未正式发布 | 逻辑插件多 facet、统一 RuntimeDriver SPI、client protocol/API、唯一 target、Java/Node runtime、external execution conformance 及 Engine operation/candidate/current/retirement 独立状态所有权；浏览器实现不属于 Fibra |
 | 上层 Agent 产品 P1–P8 | 尚未实施；阶段顺序只由本文定义 | Model、Agent、Session、MCP、Skill、审批及其它产品业务插件 |
 
-F4 的仓外消费者、公开 API 签名和最终发行门禁已经通过。现在完成本设计或 F4 不等于
-Fibra Client Foundation P0 已经实施。
+F4 的仓外消费者、公开 API 签名和最终发行门禁已经通过，但这些历史证据不能抵扣当前
+Client Foundation P0 状态模型硬切，也不等于产品侧 browser runtime、transport 或 Agent P1 已经实现。
 
 ## 2. 桌面技术路线与开源参照
 
@@ -137,7 +139,7 @@ DSH/Cordis 使用固定源码作为契约参照；VS Code、Grafana 与 Eclipse 
 | 产品 CLI | bootstrap 参数、一次性命令、REPL、终端 renderer、Host 附着 | 独立 Engine 状态、Session 副本、Desktop 状态 |
 | Electron main | Host 发现/启动、窗口、preload、操作系统集成、退出协调 | 插件版本选择、业务权限、Session 数据 |
 | 固定 bootstrap/preload | 窗口、加载/失败画面、受限桥与产品 transport 选择 | 产品页面、插件管理状态、业务命令、第二 desired state |
-| Fibra client foundation | RuntimeDriver SPI、协议/API、统一 generation 编排、observed 和调用围栏 | 产品 session、transport、browser runner、Web loader、renderer |
+| Fibra client foundation | RuntimeDriver SPI、协议/API、统一 generation 编排、observed 和调用围栏；Engine operation/candidate/current/retirement 状态只在 Host 内部 | 产品 session、transport、browser runner、Web loader、renderer |
 | 产品 client RuntimeDriver 与浏览器 execution | session/assignment、transport、资源授权、浏览器 Scope/effect、runner、observed | Registry、PluginPackageStore、版本选择、Session 业务事实 |
 | React UI 插件 | route、slot、component、action、可重建视图状态 | 任意 DOM 修改权、长期凭据、Host 私有对象 |
 
@@ -177,12 +179,15 @@ renderer 崩溃或重载而释放；main process 异常退出才触发回收。h
 
 Desktop 启动后可以立即打开固定 loading 页面，但产品页面只能在两级就绪完成后显示：
 
-- Host ready：Engine 已恢复保存目标或完成空目标初始化，gateway 已监听，当前 PublishedView 可读取；
+- Host ready：Engine 已恢复保存目标、完成空目标初始化，或在可信 target 无法重建时进入
+  `RUNNING + PRESENT + BLOCKED` 管理 ready；gateway 已监听，当前 PublishedView 可读取；
 - UI ready：renderer 执行端已经注册，首屏所需 client plugins 已按当前目标激活并回报成功。
 
 浏览器尚未连接时，client facet observed 明确为 `PENDING`，但不阻塞 Host target 保存或 Host ready。
 Host ready 不能等待一个尚未创建的 renderer，否则形成启动死锁；UI ready 也不能因为 Host 已就绪就忽略
 失败的 renderer/layout 插件。
+`BLOCKED` 管理 ready 不表示 UI ready；此时没有 current assignments，只允许管理面提交删除坏引用的完整
+replacement target。目标/store 事实不可信或 bootstrap 清理失败时 Engine 进入 `FAIL_STOP`，不得对外宣称 Host ready。
 
 ### 5.3 关闭
 
@@ -278,7 +283,10 @@ Desktop action ──────┘
 
 Client snapshot、lifecycle fence 与 message codec 的精确结构以 Fibra 发布的 `client-protocol` schema/API 和
 codec 为产品可消费的唯一真源；Fibra 私有 conformance fixture 只是自身符合性证据，不是发布契约。
-2026-09-15 Client Foundation 权威架构只冻结身份、资源围栏和职责边界。
+2026-09-15 Client Foundation 权威架构在 P0 重新冻结后只对产品暴露身份、资源围栏和职责边界。
+client protocol 不携带 `AttemptRole/AttemptPhase`、Engine operation、candidate/current/retirement phase 或
+mutation gate。产品 client RuntimeDriver 仅把 Engine current units 投影为 assignments；candidate 在 promote 前不下发，
+retirement 只在已建立连接上以精确旧 fence 排空/停止，不复制 Engine 状态机。
 每条 lifecycle 命令必须携带 `hostInstanceId + clientExecutionId + unitTargetRevision + runtimeInstanceId +
 lifecycleOperationId`；重连、实例重建或新操作产生新身份，迟到旧回复直接丢弃并记录
 诊断。这些身份只是跨进程围栏，不是新的 desired revision 或控制面。
@@ -426,8 +434,8 @@ resize/redisplay、渐进 renderer 与发行冻结证据由 vNext
 ### 11.2 产品阶段
 
 Client foundation 的通用 SPI 与生产硬切属于 Fibra P0；真实浏览器 RuntimeDriver、adapter、runner 和
-transport 属于产品 P1 前置装配。以下 P1–P8 只描述在已发行 Fibra foundation 和产品 execution 实现上叠加的
-业务阶段。
+transport 属于产品 P1 前置装配。Fibra P0 已完成状态所有权硬切和本地冻结，产品 P1 前置实现可从冻结的
+公开契约开始。以下 P1–P8 只描述未来在已冻结 Fibra foundation 和产品 execution 实现上叠加的业务阶段。
 
 产品 P1 browser runtime 的前置验收必须在 target 已 save/promote 后，对每次 browser lifecycle prepare/装载
 取得的实际资源字节重算 byteLength 与 SHA-256，拒绝未声明文件、摘要/长度不符和两次装载间被替换的内容；
@@ -447,7 +455,7 @@ transport 属于产品 P1 前置装配。以下 P1–P8 只描述在已发行 Fi
 依赖主线：
 
 ```text
-[F1, F2] -> F3 -> F4 -> P0-A -> P0-B -> P0-C -> P0-D
+[F1, F2] -> F3 -> F4 -> P0 状态模型硬切 -> P0-A -> P0-B -> P0-C -> P0-D
                                       |
                                       v
                     产品 client RuntimeDriver / transport / browser runner
@@ -526,7 +534,8 @@ transport 属于产品 P1 前置装配。以下 P1–P8 只描述在已发行 Fi
 - 把受信 UI 插件的约定式隔离描述为恶意 JavaScript 安全沙箱；
 - 因为使用 Electron 就接受第二控制面、两套配置或不可追踪的前端热更新。
 
-下一次实施先完成 Fibra Client Foundation P0-A–P0-D。产品 P1 前置阶段再以正式 Fibra SPI/protocol 实现
-client RuntimeDriver、Host adapter、transport、browser runner 和 renderer bootstrap；这些实现留在产品仓，
-不得反向下沉 Fibra 或建立第二控制面。任何产品业务阶段都不能用 Fibra F4、client foundation P0 或产品
-transport 的完成证据抵扣。
+Fibra Client Foundation P0-A–P0-D 已在当前工作树重新关闭并本地冻结。下一次实施是产品 P1 前置阶段，
+以冻结的 Fibra SPI/protocol 实现 client RuntimeDriver、Host adapter、transport、browser runner 和
+renderer bootstrap。这些实现留在产品仓，不得反向下沉
+Fibra 或建立第二控制面。任何产品业务阶段都不能用 Fibra F4、client foundation P0 或产品 transport
+的完成证据抵扣。

@@ -42,11 +42,11 @@ class HostRestartRecoveryTest {
         awaitDead(oldSupervisor);
         awaitDead(oldPayload);
 
-        assertRecoveryFailurePreservesTarget("missing-provider",
+        assertRecoveryRefusalPreservesTarget("missing-provider",
             durableBytes, target);
-        assertRecoveryFailurePreservesTarget("old-built-in-digest",
+        assertRecoveryRefusalPreservesTarget("old-built-in-digest",
             durableBytes, target);
-        assertRecoveryFailurePreservesTarget("metadata-definition-mismatch",
+        assertRecoveryRefusalPreservesTarget("metadata-definition-mismatch",
             durableBytes, target);
 
         var packageLocation = Path.of(
@@ -55,7 +55,7 @@ class HostRestartRecoveryTest {
         Files.move(packageLocation, heldPackage,
             StandardCopyOption.ATOMIC_MOVE);
         try {
-            assertRecoveryFailurePreservesTarget("missing-package",
+            assertRecoveryRefusalPreservesTarget("missing-package",
                 durableBytes, target);
         } finally {
             Files.move(heldPackage, packageLocation,
@@ -66,7 +66,7 @@ class HostRestartRecoveryTest {
         var pluginBytes = Files.readAllBytes(pluginJar);
         Files.writeString(pluginJar, "corrupt", StandardCharsets.UTF_8);
         try {
-            assertRecoveryFailurePreservesTarget("corrupt-package",
+            assertRecoveryRefusalPreservesTarget("corrupt-package",
                 durableBytes, target);
         } finally {
             Files.write(pluginJar, pluginBytes);
@@ -117,15 +117,18 @@ class HostRestartRecoveryTest {
         awaitDead(number(hostB, "b.node.payloadPid"));
     }
 
-    private void assertRecoveryFailurePreservesTarget(String scenario,
+    private void assertRecoveryRefusalPreservesTarget(String scenario,
                                                       byte[] targetBytes,
                                                       Path target)
         throws Exception {
-        var report = work.resolve("reports/failure-" + scenario
+        var report = work.resolve("reports/refusal-" + scenario
             + ".properties");
-        run("expect-failure", report, scenario);
+        run("verify-recovery-refusal", report, scenario);
         var values = read(report);
         assertEquals(scenario, values.getProperty("scenario"));
+        assertEquals("metadata-definition-mismatch".equals(scenario)
+                ? "rejected-before-host" : "blocked-recoverable",
+            values.getProperty("outcome"));
         assertEquals("true", values.getProperty("targetUnchanged"));
         assertFalse(values.getProperty("failure").isBlank());
         assertArrayEquals(targetBytes, Files.readAllBytes(target));

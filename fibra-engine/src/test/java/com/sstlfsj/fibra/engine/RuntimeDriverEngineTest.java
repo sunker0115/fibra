@@ -41,6 +41,40 @@ class RuntimeDriverEngineTest {
     }
 
     @Test
+    void replacementCandidatePhaseDoesNotOverwriteSettledCurrent() throws Exception {
+        try (var engine = engine(request -> { })) {
+            apply(engine, 0, graph(1, "a1"));
+            var currentAttempt = engine.snapshot().current().orElseThrow().attemptId();
+            var prepareEntered = Sinks.<Void>one();
+            var prepareRelease = Sinks.<Void>one();
+            alpha.prepareEntered = prepareEntered;
+            alpha.prepareRelease = prepareRelease;
+
+            var replacement = engine.submit(ApplyDeployment.builder(graph(2, "a1"))
+                .expectedRevision(1)
+                .selections(List.of(alpha.metadata().selection(true), beta.metadata().selection(true)))
+                .configContext(ConfigContextSnapshot.empty()).build()).toFuture();
+            PublishedView view;
+            try {
+                prepareEntered.asMono().block(Duration.ofSeconds(2));
+                view = engine.published().current();
+            } finally {
+                alpha.prepareRelease = null;
+                prepareRelease.tryEmitEmpty();
+            }
+            replacement.get(2, TimeUnit.SECONDS);
+            assertEquals(CandidatePhase.PREPARING,
+                view.engine().candidate().orElseThrow().phase());
+            assertEquals(currentAttempt,
+                view.engine().current().orElseThrow().attemptId());
+            assertEquals(CurrentPhase.SETTLED,
+                view.engine().current().orElseThrow().phase());
+            assertEquals(EngineOperationStage.PREPARING,
+                view.engineDiagnostics().operation().orElseThrow().stage());
+        }
+    }
+
+    @Test
     void partialSealAndExplicitSaveFailureAbortWithoutActivatingAnyUnit() {
         beta.sealFailure = true;
         try (var engine = engine(request -> fail("unexpected termination"))) {
@@ -67,7 +101,8 @@ class RuntimeDriverEngineTest {
             var identity = detail(engine, "a1").runtimeInstanceId();
             events.clear();
             var same = apply(engine, 1, graph(1, "a1"));
-            assertEquals(a.viewRevision(), same.viewRevision());
+            assertEquals(EngineOperationOutcome.SUCCEEDED,
+                same.engineDiagnostics().operation().orElseThrow().outcome());
             assertTrue(events.isEmpty());
             assertEquals(identity, detail(engine, "a1").runtimeInstanceId());
             apply(engine, 1, graph(2, "a1"));
@@ -159,7 +194,7 @@ class RuntimeDriverEngineTest {
             assertEquals(context, disabled.configContext());
             assertFalse(disabled.desiredGraph().plugins().get("a1").enabled());
             assertTrue(disabled.desiredGraph().plugins().get("b1").enabled());
-            assertFalse(engine.snapshot().units().containsKey(
+            assertFalse(currentObservations(engine.snapshot()).containsKey(
                 new ExecutionUnitKey("a1")));
             assertEquals(betaIdentity, detail(engine, "b1").runtimeInstanceId());
             var saves = store.saves;
@@ -217,7 +252,8 @@ class RuntimeDriverEngineTest {
             unit.observe("dependency-lost", ExecutionObservation.State.PENDING);
             alpha.services.requestObservationRefresh(fence);
             var pending = pendingView.get(2, TimeUnit.SECONDS);
-            assertFalse(pending.engineDiagnostics().targetSatisfied());
+            assertEquals(TargetConvergence.UNSATISFIED,
+                pending.engine().targetConvergence());
             assertEquals(active.runtimeInstanceId(), detail(pending, "a1")
                 .runtimeInstanceId());
 
@@ -226,7 +262,8 @@ class RuntimeDriverEngineTest {
             unit.observe("dependency-failed", ExecutionObservation.State.FAILED);
             alpha.services.requestObservationRefresh(fence);
             var failed = failedView.get(2, TimeUnit.SECONDS);
-            assertFalse(failed.engineDiagnostics().targetSatisfied());
+            assertEquals(TargetConvergence.UNSATISFIED,
+                failed.engine().targetConvergence());
             assertNotNull(detail(failed, "a1").failure());
 
             var recoveredView = nextState(engine, "a1",
@@ -234,7 +271,8 @@ class RuntimeDriverEngineTest {
             unit.observe("dependency-recovered", ExecutionObservation.State.ACTIVE);
             alpha.services.requestObservationRefresh(fence);
             var recovered = recoveredView.get(2, TimeUnit.SECONDS);
-            assertTrue(recovered.engineDiagnostics().targetSatisfied());
+            assertEquals(TargetConvergence.SATISFIED,
+                recovered.engine().targetConvergence());
             assertEquals(active.runtimeInstanceId(), detail(recovered, "a1")
                 .runtimeInstanceId());
             assertSame(unit, alpha.units.get("a1"));
@@ -273,8 +311,6 @@ class RuntimeDriverEngineTest {
                 .runtimeInstanceId(current.runtimeInstanceId() + ":old").build());
             flush(engine);
 
-            assertEquals(before.viewRevision(), engine.published().current()
-                .viewRevision());
             assertEquals(current.lifecycleOperationId(), detail(engine, "a1")
                 .lifecycleOperationId());
         }
@@ -338,9 +374,10 @@ class RuntimeDriverEngineTest {
 
             var pending = pendingView.get(2, TimeUnit.SECONDS);
             assertEquals(ExecutionObservation.State.PENDING,
-                pending.engine().units().get(new ExecutionUnitKey("a1"))
+                currentObservations(pending.engine()).get(new ExecutionUnitKey("a1"))
                     .aggregateState());
-            assertFalse(pending.engineDiagnostics().targetSatisfied());
+            assertEquals(TargetConvergence.UNSATISFIED,
+                pending.engine().targetConvergence());
             assertEquals(1, unit.scriptedSnapshotCalls.get());
         }
     }
@@ -354,8 +391,11 @@ class RuntimeDriverEngineTest {
             var current = detail(engine, "a1");
             store.fail = true;
 
+            var failedSave = engine.published().views()
+                .filter(view -> view.engineDiagnostics().failure().isPresent())
+                .next().toFuture();
             alpha.services.requestDisable(disable(alpha.id(), "a1", current));
-            flush(engine);
+            var failedView = failedSave.join();
 
             assertEquals(target, engine.snapshot().target().orElseThrow());
             assertEquals(attempt,
@@ -363,9 +403,9 @@ class RuntimeDriverEngineTest {
             assertEquals(current, detail(engine, "a1"));
             assertTrue(engine.snapshot().target().orElseThrow().desiredGraph()
                 .plugins().get("a1").enabled());
-            assertTrue(engine.published().current().engineDiagnostics()
+            assertTrue(failedView.engineDiagnostics()
                 .mutationGateOpen());
-            assertNotNull(engine.published().current().engineDiagnostics().failure());
+            assertTrue(failedView.engineDiagnostics().failure().isPresent());
 
             store.fail = false;
             alpha.services.requestDisable(disable(alpha.id(), "a1", current));
@@ -375,7 +415,7 @@ class RuntimeDriverEngineTest {
                 engine.snapshot().target().orElseThrow().targetRevision());
             assertFalse(engine.snapshot().target().orElseThrow().desiredGraph()
                 .plugins().get("a1").enabled());
-            assertFalse(engine.snapshot().units().containsKey(
+            assertFalse(currentObservations(engine.snapshot()).containsKey(
                 new ExecutionUnitKey("a1")));
         }
     }
@@ -419,7 +459,7 @@ class RuntimeDriverEngineTest {
             apply(engine, 2, graph(1, "a1", "b2"));
             assertNotEquals(second, detail(engine, "a1").runtimeInstanceId());
             assertEquals(List.of(new ExecutionUnitKey("b2")), alpha.units.get("a1").plan.dependencies());
-            assertFalse(engine.snapshot().units().containsKey(new ExecutionUnitKey("b1")));
+            assertFalse(currentObservations(engine.snapshot()).containsKey(new ExecutionUnitKey("b1")));
         }
     }
 
@@ -433,9 +473,9 @@ class RuntimeDriverEngineTest {
                 .configContext(ConfigContextSnapshot.empty()).build();
             engine.submit(disabled).block();
             assertEquals(desired, engine.snapshot().target().orElseThrow().desiredGraph());
-            assertTrue(engine.snapshot().units().isEmpty());
+            assertTrue(currentObservations(engine.snapshot()).isEmpty());
             apply(engine, 2, desired);
-            assertEquals(2, engine.snapshot().units().size());
+            assertEquals(2, currentObservations(engine.snapshot()).size());
         }
     }
 
@@ -487,7 +527,14 @@ class RuntimeDriverEngineTest {
             assertThrows(EngineChangeException.class, () -> apply(engine, 1, graph(2, "a1")));
             assertTrue(entered.await(2, TimeUnit.SECONDS));
             assertEquals(DurableTargetState.UNCERTAIN, engine.snapshot().durableState());
+            assertEquals(CandidatePhase.FAILED,
+                engine.snapshot().candidate().orElseThrow().phase());
             assertEquals(oldAttempt, engine.snapshot().current().orElseThrow().attemptId());
+            assertEquals(CurrentPhase.SETTLED,
+                engine.snapshot().current().orElseThrow().phase());
+            assertEquals(EngineOperationOutcome.FAILED,
+                engine.published().current().engineDiagnostics().operation()
+                    .orElseThrow().outcome());
             assertFalse(engine.published().current().engineDiagnostics().contributionAdmissionOpen());
             assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
                 assertThrows(MutationGateClosedException.class, () -> engine.submit(new ReconcileCurrent()).block()));
@@ -628,11 +675,12 @@ class RuntimeDriverEngineTest {
         try (var engine = engine(request -> fail("healthy reconcile must not terminate Host"))) {
             apply(engine, 0, graph(1, "a1"));
             var before = detail(engine, "a1");
-            var view = engine.published().current().viewRevision();
             events.clear();
             engine.submit(new ReconcileCurrent()).block();
             assertEquals(before, detail(engine, "a1"));
-            assertEquals(view, engine.published().current().viewRevision());
+            assertEquals(EngineOperationOutcome.SUCCEEDED,
+                engine.published().current().engineDiagnostics().operation()
+                    .orElseThrow().outcome());
             assertTrue(events.isEmpty());
             assertTrue(engine.published().current().engineDiagnostics().mutationGateOpen());
         }
@@ -789,6 +837,11 @@ class RuntimeDriverEngineTest {
             assertEquals(previous.runtimeInstanceId(),
                 preserved.runtimeInstanceId());
             assertEquals(Set.of("storage"), preserved.capabilities());
+            assertEquals(CurrentPhase.SETTLED,
+                engine.snapshot().current().orElseThrow().phase());
+            assertEquals(EngineOperationOutcome.FAILED,
+                engine.published().current().engineDiagnostics().operation()
+                    .orElseThrow().outcome());
             assertEquals(1, store.saves);
 
             source.set(HostCapabilitySnapshot.of(Map.of(
@@ -832,7 +885,11 @@ class RuntimeDriverEngineTest {
                 assertThrows(EngineChangeException.class, () -> apply(engine, 1, graph(2, "a1")));
                 assertTrue(notified.await(2, TimeUnit.SECONDS));
                 assertEquals(2, engine.snapshot().target().orElseThrow().targetRevision());
-                assertFalse(engine.snapshot().retiring().isEmpty());
+                assertFalse(engine.snapshot().retirementBatch().isEmpty());
+                assertEquals(RetirementPhase.FAILED,
+                    engine.snapshot().retirementBatch().orElseThrow().phase());
+                assertEquals(CurrentPhase.BLOCKED,
+                    engine.snapshot().current().orElseThrow().phase());
                 assertFalse(engine.published().current().engineDiagnostics().mutationGateOpen());
                 if (!failure.equals("retire")) assertFalse(events.contains("activate:a1"));
                 if (failure.equals("drain")) assertFalse(events.contains("stop:a1"));
@@ -877,11 +934,17 @@ class RuntimeDriverEngineTest {
         var broken = FibraEngine.builder(new PluginPackageStore(root.resolve("missing-provider")), store)
             .runtimeProvider(beta).hostTerminationPort(request -> { }).build();
         try {
-            assertThrows(EngineChangeException.class, () -> broken.startAsync().block());
+            broken.startAsync().block();
+            assertEquals(EngineState.RUNNING, broken.snapshot().state());
+            assertEquals(TargetConvergence.BLOCKED,
+                broken.snapshot().targetConvergence());
             assertEquals(DurableTargetState.PRESENT, broken.snapshot().durableState());
             assertTrue(broken.snapshot().current().isEmpty());
             assertEquals(1, store.saves);
             assertTrue(broken.published().current().engineDiagnostics().mutationGateOpen());
+            assertEquals(EngineOperationOutcome.FAILED,
+                broken.published().current().engineDiagnostics().operation()
+                    .orElseThrow().outcome());
         } finally { broken.close(); }
     }
 
@@ -941,7 +1004,8 @@ class RuntimeDriverEngineTest {
             .config(LiteralValue.of(config)).build();
     }
     private static ExecutionObservation.Detail detail(FibraEngine engine, String key) {
-        return engine.snapshot().units().get(new ExecutionUnitKey(key)).executions().getFirst();
+        return currentObservations(engine.snapshot()).get(new ExecutionUnitKey(key))
+            .executions().getFirst();
     }
     private static RuntimeUnitDisableRequest disable(RuntimeId runtimeId,
                                                      String key,
@@ -958,14 +1022,21 @@ class RuntimeDriverEngineTest {
     private static CompletableFuture<PublishedView> nextState(
         FibraEngine engine, String key, ExecutionObservation.State state) {
         return engine.published().views().filter(view -> {
-            var observation = view.engine().units().get(new ExecutionUnitKey(key));
+            var observation = currentObservations(view.engine()).get(
+                new ExecutionUnitKey(key));
             return observation != null && observation.aggregateState() == state;
         }).next().toFuture();
     }
     private static ExecutionObservation.Detail detail(PublishedView view,
                                                        String key) {
-        return view.engine().units().get(new ExecutionUnitKey(key))
+        return currentObservations(view.engine()).get(new ExecutionUnitKey(key))
             .executions().getFirst();
+    }
+    private static Map<ExecutionUnitKey, ExecutionObservation> currentObservations(
+        EngineSnapshot snapshot
+    ) {
+        return snapshot.current().map(CurrentAttemptSnapshot::observations)
+            .orElseGet(Map::of);
     }
     private static void flush(FibraEngine engine) {
         engine.submit(new ReconcileCurrent()).block();
@@ -1037,6 +1108,8 @@ class RuntimeDriverEngineTest {
         String lifecycleFailure;
         volatile Sinks.One<Void> activationEntered;
         volatile Sinks.One<Void> activationRelease;
+        volatile Sinks.One<Void> prepareEntered;
+        volatile Sinks.One<Void> prepareRelease;
         RuntimeHostServices services;
         ProbeProvider(String runtime, String plugin) { runtimeId = new RuntimeId(runtime); this.plugin = plugin; }
         public RuntimeId id() { return runtimeId; }
@@ -1061,7 +1134,7 @@ class RuntimeDriverEngineTest {
                     return new RuntimeCandidate() {
                         RuntimePlan plan;
                         public Mono<Void> prepareAsync() {
-                            return Mono.fromRunnable(() -> {
+                            Mono<Void> prepare = Mono.fromRunnable(() -> {
                                 events.add("prepare:" + runtimeId.value());
                                 if (prepareFailure) throw new IllegalStateException("prepare failed");
                                 var plans = new ArrayList<ExecutionUnitPlan>();
@@ -1079,6 +1152,10 @@ class RuntimeDriverEngineTest {
                                 });
                                 plan = RuntimePlan.of(runtimeId, plans, bindings);
                             });
+                            var release = prepareRelease;
+                            if (release == null) return prepare;
+                            prepareEntered.tryEmitEmpty();
+                            return release.asMono().then(prepare);
                         }
                         public RuntimePlan preparedPlan() { return plan; }
                         public PreparedRuntimeGeneration seal(CompiledRuntimeSlice compiled) {
@@ -1127,6 +1204,11 @@ class RuntimeDriverEngineTest {
                 observed = observation("prepared", ExecutionObservation.State.PENDING);
             }
             public ExecutionUnitPlan plan() { return plan; }
+            public RuntimeUnitFence fence() {
+                return RuntimeUnitFence.builder(runtimeId, plan.key())
+                    .unitTargetRevision(revision).runtimeInstanceId(instance)
+                    .build();
+            }
             public Mono<ExecutionObservation> reconcileAsync(String operation) {
                 var activation = Mono.fromSupplier(() -> {
                     events.add("activate:" + plan.key().value());

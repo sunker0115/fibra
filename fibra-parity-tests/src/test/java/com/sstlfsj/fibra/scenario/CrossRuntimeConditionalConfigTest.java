@@ -23,6 +23,7 @@ import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.HostServiceRegistry;
 import com.sstlfsj.fibra.engine.PluginSelection;
 import com.sstlfsj.fibra.engine.PublishedView;
+import com.sstlfsj.fibra.engine.TargetConvergence;
 import com.sstlfsj.fibra.runtime.java.JavaRuntimeProvider;
 import com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions;
 import com.sstlfsj.fibra.runtime.node.NodeRuntimeProvider;
@@ -137,8 +138,8 @@ class CrossRuntimeConditionalConfigTest {
             assertNotSame(dynamicLoaders.getFirst(), stableLoaders.getFirst());
             assertEquals(1, initialDynamicNodeStarts.size());
             assertTrue(initialDynamicNodeStarts.getFirst().endsWith(":before"));
-            assertTrue(deployed.engineDiagnostics().targetSatisfied());
-            assertFalse(deployed.engine().units().containsKey(
+            assertEquals(TargetConvergence.SATISFIED, deployed.engine().targetConvergence());
+            assertFalse(currentUnits(deployed).containsKey(
                 new ExecutionUnitKey(CONDITIONAL_NODE)));
 
             var rejected = assertThrows(EngineChangeException.class, () -> engine.submit(
@@ -183,7 +184,7 @@ class CrossRuntimeConditionalConfigTest {
                         detail(changed, DYNAMIC_NODE).runtimeInstanceId());
                     assertSameExecution(stableNode, detail(changed, STABLE_NODE));
                     assertEquals(ExecutionObservation.State.ACTIVE,
-                        changed.engine().units().get(new ExecutionUnitKey(CONDITIONAL_NODE))
+                        currentUnits(changed).get(new ExecutionUnitKey(CONDITIONAL_NODE))
                             .aggregateState());
                     assertEquals(2, dynamicLoaders.size());
                     assertSame(dynamicLoaders.getFirst(), dynamicLoaders.get(1));
@@ -204,7 +205,8 @@ class CrossRuntimeConditionalConfigTest {
                         .map(ProcessHandle::isAlive).orElse(false));
                     assertTrue(ProcessHandle.of(updatedDynamicNodePid)
                         .map(ProcessHandle::isAlive).orElse(false));
-                    assertTrue(changed.engineDiagnostics().targetSatisfied());
+                    assertEquals(TargetConvergence.SATISFIED,
+                        changed.engine().targetConvergence());
                     assertTrue(changed.engineDiagnostics().mutationGateOpen());
                     assertFalse(held.isDone());
 
@@ -413,8 +415,12 @@ class CrossRuntimeConditionalConfigTest {
     }
 
     private static ExecutionObservation.Detail detail(PublishedView view, String id) {
-        return view.engine().units().get(new ExecutionUnitKey(id))
+        return currentUnits(view).get(new ExecutionUnitKey(id))
             .executions().getFirst();
+    }
+
+    private static Map<ExecutionUnitKey, ExecutionObservation> currentUnits(PublishedView view) {
+        return view.engine().current().map(current -> current.observations()).orElse(Map.of());
     }
 
     private static void assertSameExecution(ExecutionObservation.Detail expected,

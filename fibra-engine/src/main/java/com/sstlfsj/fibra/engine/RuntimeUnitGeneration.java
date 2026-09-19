@@ -7,6 +7,8 @@ import java.time.Instant;
 public interface RuntimeUnitGeneration {
     ExecutionUnitPlan plan();
 
+    RuntimeUnitFence fence();
+
     Mono<ExecutionObservation> reconcileAsync(String lifecycleOperationId);
 
     void closeAdmission();

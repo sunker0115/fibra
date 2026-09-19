@@ -12,7 +12,8 @@ import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.PluginDefinitionRef;
 import com.sstlfsj.fibra.engine.ApplyDeployment;
-import com.sstlfsj.fibra.engine.AttemptPhase;
+import com.sstlfsj.fibra.engine.CandidatePhase;
+import com.sstlfsj.fibra.engine.CurrentPhase;
 import com.sstlfsj.fibra.engine.DeploymentTarget;
 import com.sstlfsj.fibra.engine.DeploymentTargetStore;
 import com.sstlfsj.fibra.engine.DurableTargetToken;
@@ -23,6 +24,7 @@ import com.sstlfsj.fibra.engine.FileDeploymentTargetStore;
 import com.sstlfsj.fibra.engine.HostServiceRegistry;
 import com.sstlfsj.fibra.engine.PluginSelection;
 import com.sstlfsj.fibra.engine.PublishedView;
+import com.sstlfsj.fibra.engine.TargetConvergence;
 import com.sstlfsj.fibra.runtime.java.JavaRuntimeProvider;
 import com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions;
 import com.sstlfsj.fibra.runtime.node.NodeRuntimeProvider;
@@ -95,10 +97,10 @@ class CrossRuntimeSelfDisableTest {
                 .expectedRevision(0).selections(selections)
                 .configContext(ConfigContextSnapshot.empty()).build())
                 .block(TIMEOUT).view();
-            assertEquals(raw.plugins().keySet(), deployed.engine().units().keySet()
+            assertEquals(raw.plugins().keySet(), currentUnits(deployed).keySet()
                 .stream().map(ExecutionUnitKey::value)
                 .collect(java.util.stream.Collectors.toSet()));
-            deployed.engine().units().values().forEach(unit ->
+            currentUnits(deployed).values().forEach(unit ->
                 assertEquals(ExecutionObservation.State.ACTIVE,
                     unit.aggregateState()));
             assertHealthy(deployed);
@@ -143,11 +145,12 @@ class CrossRuntimeSelfDisableTest {
 
                     store.failNextSave();
                     var nodeDisableFailure = engine.published().views().filter(view ->
-                        view.engineDiagnostics().phase() == AttemptPhase.FAILED
-                            && view.engineDiagnostics().failure() != null
+                        view.engine().candidate().map(candidate ->
+                            candidate.phase() == CandidatePhase.FAILED).orElse(false)
+                            && view.engineDiagnostics().failure().isPresent()
                             && view.engine().target().orElseThrow().desiredGraph()
                                 .plugins().get("self-node").enabled()
-                            && view.engine().units().containsKey(
+                            && currentUnits(view).containsKey(
                                 new ExecutionUnitKey("self-node")))
                         .next().toFuture();
                     invokeControl(engine, "self-node", "disable");
@@ -174,7 +177,7 @@ class CrossRuntimeSelfDisableTest {
                     assertEquals(target(store), observations.get(1).target());
                     assertFalse(alive(selfPid),
                         "停用完成时 self Node 必须已经退出");
-                    assertFalse(bothDisabled.engine().units().containsKey(
+                    assertFalse(currentUnits(bothDisabled).containsKey(
                         new ExecutionUnitKey("self-java")));
                     assertStable(deployed, bothDisabled, starts, cleanups,
                         stableLoader, stablePidFile, stablePid);
@@ -207,8 +210,8 @@ class CrossRuntimeSelfDisableTest {
                 restored.engine().target().orElseThrow());
             assertEquals(Set.of(new ExecutionUnitKey("stable-java"),
                 new ExecutionUnitKey("stable-node")),
-                restored.engine().units().keySet());
-            restored.engine().units().values().forEach(unit ->
+                currentUnits(restored).keySet());
+            currentUnits(restored).values().forEach(unit ->
                 assertEquals(ExecutionObservation.State.ACTIVE,
                     unit.aggregateState()));
             assertHealthy(restored);
@@ -272,7 +275,7 @@ class CrossRuntimeSelfDisableTest {
         for (var id : List.of("stable-java", "stable-node")) {
             assertSameExecution(detail(before, id), detail(after, id));
             assertEquals(ExecutionObservation.State.ACTIVE,
-                after.engine().units().get(new ExecutionUnitKey(id))
+                currentUnits(after).get(new ExecutionUnitKey(id))
                     .aggregateState());
         }
         assertEquals(2, starts.size());
@@ -305,7 +308,7 @@ class CrossRuntimeSelfDisableTest {
     }
 
     private static void assertHealthy(PublishedView view) {
-        assertTrue(view.engineDiagnostics().targetSatisfied());
+        assertEquals(TargetConvergence.SATISFIED, view.engine().targetConvergence());
         assertTrue(view.engineDiagnostics().mutationGateOpen());
     }
 
@@ -338,18 +341,27 @@ class CrossRuntimeSelfDisableTest {
             Mono.fromSupplier(engine.published()::current)).filter(view ->
                 !view.engine().target().orElseThrow().desiredGraph()
                     .plugins().get(id).enabled()
-                    && !view.engine().units().containsKey(new ExecutionUnitKey(id))
-                    && !view.engine().retiring().containsKey(new ExecutionUnitKey(id))
-                    && view.engineDiagnostics().phase() == AttemptPhase.SETTLED
-                    && view.engineDiagnostics().targetSatisfied()
+                    && !currentUnits(view).containsKey(new ExecutionUnitKey(id))
+                    && !retirementUnits(view).containsKey(new ExecutionUnitKey(id))
+                    && view.engine().current().map(current ->
+                        current.phase() == CurrentPhase.SETTLED).orElse(false)
+                    && view.engine().targetConvergence() == TargetConvergence.SATISFIED
                     && view.engineDiagnostics().mutationGateOpen())
             .next().block(TIMEOUT);
     }
 
     private static ExecutionObservation.Detail detail(PublishedView view,
                                                        String id) {
-        return view.engine().units().get(new ExecutionUnitKey(id))
+        return currentUnits(view).get(new ExecutionUnitKey(id))
             .executions().getFirst();
+    }
+
+    private static Map<ExecutionUnitKey, ExecutionObservation> currentUnits(PublishedView view) {
+        return view.engine().current().map(current -> current.observations()).orElse(Map.of());
+    }
+
+    private static Map<ExecutionUnitKey, ExecutionObservation> retirementUnits(PublishedView view) {
+        return view.engine().retirementBatch().map(batch -> batch.observations()).orElse(Map.of());
     }
 
     private static DesiredInputGraph rawTarget(Path selfPid, Path stablePid,

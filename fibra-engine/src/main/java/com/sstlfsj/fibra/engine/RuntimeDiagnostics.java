@@ -7,8 +7,7 @@ public record RuntimeDiagnostics(String domainName,
     List<RuntimeDomainSnapshot.Plugin> plugins,
     List<RuntimeDomainSnapshot.Service> services,
     List<RuntimeDomainSnapshot.Event> events,
-    List<RuntimeDomainSnapshot.CleanupFailure> cleanupFailures,
-    String failure) {
+    List<RuntimeDomainSnapshot.CleanupFailure> cleanupFailures) {
     public RuntimeDiagnostics {
         plugins = List.copyOf(plugins);
         services = List.copyOf(services);
@@ -24,13 +23,11 @@ public record RuntimeDiagnostics(String domainName,
         private List<RuntimeDomainSnapshot.Service> services;
         private List<RuntimeDomainSnapshot.Event> events;
         private List<RuntimeDomainSnapshot.CleanupFailure> cleanupFailures = List.of();
-        private String failure;
         public Builder domainName(String value) { domainName = value; return this; }
         public Builder plugins(List<RuntimeDomainSnapshot.Plugin> value) { plugins = value; return this; }
         public Builder services(List<RuntimeDomainSnapshot.Service> value) { services = value; return this; }
         public Builder events(List<RuntimeDomainSnapshot.Event> value) { events = value; return this; }
         public Builder cleanupFailures(List<RuntimeDomainSnapshot.CleanupFailure> value) { cleanupFailures = value; return this; }
-        public Builder failure(String value) { failure = value; return this; }
-        public RuntimeDiagnostics build() { return new RuntimeDiagnostics(domainName, plugins, services, events, cleanupFailures, failure); }
+        public RuntimeDiagnostics build() { return new RuntimeDiagnostics(domainName, plugins, services, events, cleanupFailures); }
     }
 }

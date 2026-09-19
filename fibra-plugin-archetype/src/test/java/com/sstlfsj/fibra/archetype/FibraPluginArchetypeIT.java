@@ -69,7 +69,7 @@ class FibraPluginArchetypeIT {
                 .configContext(ConfigContextSnapshot.empty()).build())
                 .block(TIMEOUT).view();
 
-            var observation = deployed.engine().units().get(
+            var observation = deployed.engine().current().orElseThrow().observations().get(
                 new ExecutionUnitKey("generated-plugin"));
             assertEquals(ExecutionObservation.State.ACTIVE,
                 observation.aggregateState());

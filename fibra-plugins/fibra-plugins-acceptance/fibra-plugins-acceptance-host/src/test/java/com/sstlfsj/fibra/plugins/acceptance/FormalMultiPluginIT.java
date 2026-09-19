@@ -209,7 +209,8 @@ class FormalMultiPluginIT {
         try (var reopened = PluginAcceptanceHarness.start(packageStore,
              new FileDeploymentTargetStore(state))) {
             var current = reopened.engine().published().current();
-            assertEquals(graph.plugins().keySet(), current.engine().units().keySet().stream()
+            assertEquals(graph.plugins().keySet(), current.engine().current().orElseThrow()
+                .observations().keySet().stream()
                 .map(ExecutionUnitKey::value).collect(java.util.stream.Collectors.toSet()));
             assertEquals("dark", javaMap(javaMap(reopened.invoke("config-b", "load", Map.of()))
                 .get("values")).get("theme"));
@@ -242,16 +243,20 @@ class FormalMultiPluginIT {
             var audit = harness.registry().history().getLast();
             assertTrue(audit.succeeded());
             assertEquals(TargetSaveState.SAVED, audit.targetSaveState());
-            assertFalse(pending.engineDiagnostics().targetSatisfied());
+            assertEquals(com.sstlfsj.fibra.engine.TargetConvergence.UNSATISFIED,
+                pending.engine().targetConvergence());
             assertFalse(pending.engine().target().orElseThrow().selections()
                 .get(new PluginId("fibra-storage-json")).enabled());
             assertTrue(pending.engine().target().orElseThrow().desiredGraph().plugins()
                 .values().stream().allMatch(DesiredInputEntry::enabled));
-            assertNull(pending.engine().units().get(new ExecutionUnitKey("storage-shared")));
-            assertNull(pending.engine().units().get(new ExecutionUnitKey("storage-isolated")));
+            assertNull(pending.engine().current().orElseThrow().observations()
+                .get(new ExecutionUnitKey("storage-shared")));
+            assertNull(pending.engine().current().orElseThrow().observations()
+                .get(new ExecutionUnitKey("storage-isolated")));
             for (var id : retained.keySet()) {
                 assertEquals(com.sstlfsj.fibra.engine.ExecutionObservation.State.PENDING,
-                    pending.engine().units().get(new ExecutionUnitKey(id)).aggregateState());
+                    pending.engine().current().orElseThrow().observations()
+                        .get(new ExecutionUnitKey(id)).aggregateState());
                 assertEquals(retained.get(id), instanceIdentity(pending, id));
             }
 
@@ -259,10 +264,11 @@ class FormalMultiPluginIT {
                 .block(PluginAcceptanceHarness.TIMEOUT);
 
             var recovered = harness.engine().published().current();
-            assertTrue(recovered.engineDiagnostics().targetSatisfied());
+            assertEquals(com.sstlfsj.fibra.engine.TargetConvergence.SATISFIED,
+                recovered.engine().targetConvergence());
             assertEquals(retained, instanceIdentities(recovered,
                 "config-a", "config-b", "config-c"));
-            assertTrue(recovered.engine().units().values().stream().allMatch(unit ->
+            assertTrue(recovered.engine().current().orElseThrow().observations().values().stream().allMatch(unit ->
                 unit.aggregateState()
                     == com.sstlfsj.fibra.engine.ExecutionObservation.State.ACTIVE));
             harness.invoke("config-a", "put", Map.of("key", "recovered", "value", true));
@@ -294,7 +300,8 @@ class FormalMultiPluginIT {
             for (var entry : beforeIdentities.entrySet()) {
                 assertNotEquals(entry.getValue(), instanceIdentity(upgraded, entry.getKey()));
             }
-            assertTrue(upgraded.engineDiagnostics().targetSatisfied());
+            assertEquals(com.sstlfsj.fibra.engine.TargetConvergence.SATISFIED,
+                upgraded.engine().targetConvergence());
             harness.invoke("config-a", "put", Map.of("key", "contract", "value", "upgraded"));
             assertEquals("upgraded", javaMap(javaMap(harness.invoke("config-b", "load", Map.of()))
                 .get("values")).get("contract"));
@@ -393,7 +400,8 @@ class FormalMultiPluginIT {
             disabled.get(PluginAcceptanceHarness.TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
 
             var after = harness.engine().published().current();
-            assertFalse(after.engine().units().containsKey(new ExecutionUnitKey("shell-tools")));
+            assertFalse(after.engine().current().orElseThrow().observations()
+                .containsKey(new ExecutionUnitKey("shell-tools")));
             assertThrows(ContributionUnavailableException.class, () ->
                 harness.engine().published().invoke(after.viewRevision(), heldIdentity,
                     ToolContributions.KIND,
@@ -492,7 +500,8 @@ class FormalMultiPluginIT {
     }
 
     private static String instanceIdentity(PublishedView view, String id) {
-        return view.engine().units().get(new ExecutionUnitKey(id)).executions().getFirst()
+        return view.engine().current().orElseThrow().observations().get(new ExecutionUnitKey(id))
+            .executions().getFirst()
             .runtimeInstanceId();
     }
 

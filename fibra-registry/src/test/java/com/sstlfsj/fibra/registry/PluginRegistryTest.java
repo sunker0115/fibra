@@ -201,7 +201,8 @@ class PluginRegistryTest {
             fixture.provider.activationFailure = true;
             var failed = fixture.registry.upsert(null, entry("entry", "main")).block();
             assertEquals(ExecutionObservation.State.FAILED, failed.observed().get("entry").aggregateState());
-            assertFalse(failed.engineDiagnostics().targetSatisfied());
+            assertEquals(com.sstlfsj.fibra.engine.TargetConvergence.UNSATISFIED,
+                failed.engine().targetConvergence());
             assertTrue(fixture.registry.history().getLast().succeeded());
             assertEquals(TargetSaveState.SAVED, fixture.registry.history().getLast().targetSaveState());
             var revision = failed.target().orElseThrow().targetRevision();
@@ -409,6 +410,11 @@ class PluginRegistryTest {
                 observation = observe("prepared", ExecutionObservation.State.PENDING);
             }
             public ExecutionUnitPlan plan() { return plan; }
+            public RuntimeUnitFence fence() {
+                return RuntimeUnitFence.builder(RUNTIME, plan.key())
+                    .unitTargetRevision(revision).runtimeInstanceId(instance)
+                    .build();
+            }
             public Mono<ExecutionObservation> reconcileAsync(String operation) {
                 return Mono.fromSupplier(() -> observation = observe(operation,
                     activationFailure ? ExecutionObservation.State.FAILED : ExecutionObservation.State.ACTIVE));

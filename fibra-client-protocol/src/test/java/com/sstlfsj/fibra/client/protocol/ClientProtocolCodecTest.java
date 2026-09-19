@@ -347,6 +347,15 @@ class ClientProtocolCodecTest {
             messages.stream().map(ClientEnvelope::type).collect(java.util.stream.Collectors.toSet()));
         for (var message : messages) assertEquals(message, codec.decode(codec.encode(message)));
 
+        var snapshot = assertInstanceOf(ClientMessage.Snapshot.class, messages.stream()
+            .filter(message -> message.type().equals("host.snapshot")).findFirst()
+            .orElseThrow().message());
+        assertEquals(5, snapshot.targetRevision());
+        assertEquals(List.of("entry-1", "entry-2"), snapshot.assignments().stream()
+            .map(ClientMessage.Assignment::desiredEntryId).toList());
+        assertEquals(List.of(4L, 5L), snapshot.assignments().stream()
+            .map(ClientMessage.Assignment::unitTargetRevision).toList());
+
         var call = assertInstanceOf(ClientMessage.Call.class, messages.stream()
             .filter(message -> message.type().equals("client.call")).findFirst().orElseThrow().message());
         assertEquals("0", call.call().expectedViewRevision());

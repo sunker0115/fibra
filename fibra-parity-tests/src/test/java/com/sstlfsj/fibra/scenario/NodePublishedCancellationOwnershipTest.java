@@ -11,13 +11,13 @@ import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.PluginDefinitionRef;
 import com.sstlfsj.fibra.engine.ApplyDeployment;
-import com.sstlfsj.fibra.engine.AttemptPhase;
 import com.sstlfsj.fibra.engine.DeploymentTargetStore;
 import com.sstlfsj.fibra.engine.ExecutionUnitKey;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.PluginSelection;
 import com.sstlfsj.fibra.engine.PublishedRevisionConflictException;
 import com.sstlfsj.fibra.engine.PublishedView;
+import com.sstlfsj.fibra.engine.RetirementPhase;
 import com.sstlfsj.fibra.plugins.tool.ToolContributions;
 import com.sstlfsj.fibra.plugins.tool.ToolContent;
 import com.sstlfsj.fibra.plugins.tool.ToolRequest;
@@ -86,9 +86,11 @@ class NodePublishedCancellationOwnershipTest {
                 assertTrue(alive(pid));
 
                 var draining = engine.published().views().filter(view ->
-                    view.engineDiagnostics().phase() == AttemptPhase.DRAINING).next().toFuture();
+                    view.engine().retirementBatch().map(batch ->
+                        batch.phase() == RetirementPhase.DRAINING).orElse(false)).next().toFuture();
                 var stopping = engine.published().views().filter(view ->
-                    view.engineDiagnostics().phase() == AttemptPhase.STOPPING).next().toFuture();
+                    view.engine().retirementBatch().map(batch ->
+                        batch.phase() == RetirementPhase.STOPPING).orElse(false)).next().toFuture();
                 var disabling = engine.submit(ApplyDeployment.builder(
                         initial.withEnabled(INSTANCE, false))
                     .expectedRevision(1).selections(List.of(selection))
@@ -107,7 +109,7 @@ class NodePublishedCancellationOwnershipTest {
                 Files.writeString(release, "release");
                 stopping.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
                 var disabled = disabling.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS).view();
-                assertFalse(disabled.engine().units().containsKey(new ExecutionUnitKey(INSTANCE)));
+                assertFalse(currentUnits(disabled).containsKey(new ExecutionUnitKey(INSTANCE)));
                 assertFalse(alive(pid), "远端终态后停用必须完成并关闭 Node sidecar");
                 assertEquals(List.of("request-settled", "stop"),
                     Files.readAllLines(lifecycleEvents),
@@ -252,10 +254,20 @@ class NodePublishedCancellationOwnershipTest {
     private static com.sstlfsj.fibra.engine.ExecutionObservation.Detail detail(
         PublishedView view) {
         var key = new ExecutionUnitKey(INSTANCE);
-        var observation = view.engine().units().get(key);
-        if (observation == null) observation = view.engine().retiring().get(key);
+        var observation = currentUnits(view).get(key);
+        if (observation == null) observation = retirementUnits(view).get(key);
         return observation
             .executions().getFirst();
+    }
+
+    private static Map<ExecutionUnitKey, com.sstlfsj.fibra.engine.ExecutionObservation>
+        currentUnits(PublishedView view) {
+        return view.engine().current().map(current -> current.observations()).orElse(Map.of());
+    }
+
+    private static Map<ExecutionUnitKey, com.sstlfsj.fibra.engine.ExecutionObservation>
+        retirementUnits(PublishedView view) {
+        return view.engine().retirementBatch().map(batch -> batch.observations()).orElse(Map.of());
     }
 
     private static long recordedPid(Path pidFile) throws Exception {

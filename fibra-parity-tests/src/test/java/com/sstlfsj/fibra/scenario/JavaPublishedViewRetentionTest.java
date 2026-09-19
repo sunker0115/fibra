@@ -16,6 +16,7 @@ import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.HostServiceRegistry;
 import com.sstlfsj.fibra.engine.PluginSelection;
 import com.sstlfsj.fibra.engine.PublishedView;
+import com.sstlfsj.fibra.engine.TargetConvergence;
 import com.sstlfsj.fibra.runtime.java.JavaRuntimeProvider;
 import fixture.RetentionJavaEntrypoint;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,8 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 
@@ -45,6 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class JavaPublishedViewRetentionTest {
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
     private static final String PLUGIN = "retention";
+    private static final int REPLACEMENT_ROUNDS = 50;
 
     @Test
     @Timeout(20)
@@ -106,10 +110,13 @@ class JavaPublishedViewRetentionTest {
         FibraEngine engine, PluginPackageStore packages, Path work)
         throws Exception {
         var failed = engine.startAsync().block(TIMEOUT);
+        assertTrue(failed.engine().candidate().isEmpty());
         assertEquals(ExecutionObservation.State.FAILED,
-            failed.engine().units().get(new ExecutionUnitKey("failing")).aggregateState());
+            currentUnits(failed).get(new ExecutionUnitKey("failing"))
+                .aggregateState());
         assertTrue(failed.engineDiagnostics().mutationGateOpen());
-        assertTrue(!failed.engineDiagnostics().targetSatisfied());
+        assertEquals(TargetConvergence.UNSATISFIED,
+            failed.engine().targetConvergence());
         var oldLoader = descriptorLoader(failed);
         var replacement = install(packages, pluginPackage(work, 1, PLUGIN,
             "fixture.RetentionJavaEntrypoint"));
@@ -117,16 +124,16 @@ class JavaPublishedViewRetentionTest {
                 new DesiredInputGraph(List.of(entry(PLUGIN, PLUGIN))))
             .expectedRevision(1).selections(List.of(selection(replacement)))
             .configContext(ConfigContextSnapshot.empty()).build()).block(TIMEOUT).view();
-        assertTrue(corrected.engineDiagnostics().targetSatisfied());
+        assertEquals(TargetConvergence.SATISFIED, corrected.engine().targetConvergence());
         assertEquals(EngineState.RUNNING, corrected.engine().state());
-        assertEquals(1, corrected.engine().units().size());
+        assertEquals(1, currentUnits(corrected).size());
         assertNotSame(oldLoader, descriptorLoader(corrected));
         return List.of(new WeakReference<>(oldLoader));
     }
 
     @Test
-    @Timeout(20)
-    void liveEngineDoesNotRetainTheFirstPublishedDescriptorLoaderAfterRepeatedReplacements(
+    @Timeout(60)
+    void liveEngineDoesNotAccumulateDescriptorLoadersAcrossFiftyReplacements(
         @TempDir Path work) throws Exception {
         try (var fixture = fixture(work)) {
             var engine = fixture.engine();
@@ -158,21 +165,25 @@ class JavaPublishedViewRetentionTest {
         try (var engine = FibraEngine.builder(packages, targets)
             .runtimeProvider(new JavaRuntimeProvider(List.of()))
             .hostTerminationPort(ignored -> { }).build()) {
-            var references = startAndPartiallyReplace(engine, graph,
-                replaceableV2, peer);
-            assertAll(() -> awaitCollected(List.of(references.retired())),
-                () -> assertNotNull(references.retained().get(),
+            var scenario = new FutureTask<>(() -> startAndPartiallyReplace(
+                engine, graph, replaceableV2, peer));
+            Thread.ofPlatform().name("fibra-retention-fixture").start(scenario);
+            var references = scenario.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+            assertAll(() -> awaitCollected(List.of(references.retiredDescriptor())),
+                () -> assertNotNull(references.retainedLoader().get(),
                     "retained unit keeps its own loader while the old generation stays live"));
             Reference.reachabilityFence(engine);
         }
     }
 
-    private static LoaderReferences startAndPartiallyReplace(
+    private static RetentionReferences startAndPartiallyReplace(
         FibraEngine engine, DesiredInputGraph graph,
         PluginPackageRecord replaceableV2, PluginPackageRecord peer) {
         var started = engine.startAsync().block(TIMEOUT);
+        var retiredDescriptor = descriptor(started, "replaceable");
         var retiredLoader = descriptorLoader(started, "replaceable");
         var retainedLoader = descriptorLoader(started, "retained");
+        assertNotSame(retiredLoader, retainedLoader);
         var retainedInstance = detail(started, "retained").runtimeInstanceId();
         var replaced = engine.submit(ApplyDeployment.builder(graph)
             .expectedRevision(1)
@@ -182,7 +193,7 @@ class JavaPublishedViewRetentionTest {
         assertSame(retainedLoader, descriptorLoader(replaced, "retained"));
         assertEquals(retainedInstance,
             detail(replaced, "retained").runtimeInstanceId());
-        return new LoaderReferences(new WeakReference<>(retiredLoader),
+        return new RetentionReferences(new WeakReference<>(retiredDescriptor),
             new WeakReference<>(retainedLoader));
     }
 
@@ -213,12 +224,14 @@ class JavaPublishedViewRetentionTest {
         var started = engine.startAsync().block(TIMEOUT);
         retired.add(new WeakReference<>(descriptorLoader(started)));
         var before = detail(started);
-        for (var round = 1; round <= 3; round++) {
+        for (var round = 1; round <= REPLACEMENT_ROUNDS; round++) {
             replace(engine, fixture.revisions().get(round), round);
             var current = engine.published().current();
             assertNotEquals(before.runtimeInstanceId(), detail(current).runtimeInstanceId());
             before = detail(current);
-            if (round < 3) retired.add(new WeakReference<>(descriptorLoader(current)));
+            if (round < REPLACEMENT_ROUNDS) {
+                retired.add(new WeakReference<>(descriptorLoader(current)));
+            }
         }
         return retired;
     }
@@ -234,31 +247,42 @@ class JavaPublishedViewRetentionTest {
 
     private static ClassLoader descriptorLoader(PublishedView view,
                                                  String provider) {
+        return descriptor(view, provider).getClass().getClassLoader();
+    }
+
+    private static Object descriptor(PublishedView view, String provider) {
         var matches = view.contributions().entries().stream()
             .filter(entry -> entry.id().providerInstanceId().equals(provider))
             .toList();
         assertEquals(1, matches.size());
-        var loader = matches.getFirst().descriptor().getClass().getClassLoader();
+        var descriptor = matches.getFirst().descriptor();
+        var loader = descriptor.getClass().getClassLoader();
         assertNotSame(RetentionJavaEntrypoint.class.getClassLoader(), loader);
-        return loader;
+        return descriptor;
     }
 
     private static ExecutionObservation.Detail detail(PublishedView view) {
-        return view.engine().units().get(new ExecutionUnitKey(PLUGIN))
+        return currentUnits(view).get(new ExecutionUnitKey(PLUGIN))
             .executions().getFirst();
     }
 
 
     private static ExecutionObservation.Detail detail(PublishedView view,
                                                        String entry) {
-        return view.engine().units().get(new ExecutionUnitKey(entry))
+        return currentUnits(view).get(new ExecutionUnitKey(entry))
             .executions().getFirst();
+    }
+
+    private static java.util.Map<ExecutionUnitKey, ExecutionObservation> currentUnits(
+        PublishedView view) {
+        return view.engine().current().map(current -> current.observations())
+            .orElse(java.util.Map.of());
     }
 
     private static TestEngine fixture(Path work) throws Exception {
         var packages = new PluginPackageStore(work.resolve("packages"));
         var revisions = new ArrayList<PluginPackageRecord>();
-        for (var round = 0; round <= 3; round++) {
+        for (var round = 0; round <= REPLACEMENT_ROUNDS; round++) {
             revisions.add(install(packages, pluginPackage(work, round, PLUGIN,
                 "fixture.RetentionJavaEntrypoint")));
         }
@@ -338,13 +362,13 @@ class JavaPublishedViewRetentionTest {
         throws InterruptedException {
         for (var attempt = 0; attempt < 60; attempt++) {
             System.gc();
-            if (references.stream().allMatch(reference -> reference.get() == null)) return;
+            if (references.stream().allMatch(reference -> reference.refersTo(null))) return;
             Thread.sleep(25);
         }
-        assertEquals(0, references.stream().filter(reference -> reference.get() != null).count(),
+        assertEquals(0, references.stream().filter(reference -> !reference.refersTo(null)).count(),
             () -> "live Engine retains retired fixture references at indexes "
                 + java.util.stream.IntStream.range(0, references.size())
-                    .filter(index -> references.get(index).get() != null).boxed().toList());
+                    .filter(index -> !references.get(index).refersTo(null)).boxed().toList());
     }
 
     private record TestEngine(FibraEngine engine,
@@ -353,6 +377,7 @@ class JavaPublishedViewRetentionTest {
         @Override public void close() { engine.close(); }
     }
 
-    private record LoaderReferences(WeakReference<ClassLoader> retired,
-                                    WeakReference<ClassLoader> retained) { }
+    private record RetentionReferences(WeakReference<Object> retiredDescriptor,
+                                       WeakReference<ClassLoader> retainedLoader) { }
+
 }

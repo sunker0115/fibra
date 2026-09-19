@@ -2,7 +2,7 @@ package com.sstlfsj.fibra.registry;
 
 import com.sstlfsj.fibra.artifact.PluginId;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
-import com.sstlfsj.fibra.engine.AttemptSnapshot;
+import com.sstlfsj.fibra.engine.CurrentAttemptSnapshot;
 import com.sstlfsj.fibra.engine.DeploymentTarget;
 import com.sstlfsj.fibra.engine.EngineDiagnostics;
 import com.sstlfsj.fibra.engine.EngineSnapshot;
@@ -27,7 +27,7 @@ public record RegistrySnapshot(String viewRevision, EngineSnapshot engine,
     }
 
     public Optional<DeploymentTarget> target() { return engine.target(); }
-    public Optional<AttemptSnapshot> current() { return engine.current(); }
+    public Optional<CurrentAttemptSnapshot> current() { return engine.current(); }
     public Map<PluginId, PluginSelection> selections() {
         return target().map(DeploymentTarget::selections).orElse(Map.of());
     }
@@ -35,7 +35,8 @@ public record RegistrySnapshot(String viewRevision, EngineSnapshot engine,
         return target().map(DeploymentTarget::desiredGraph).orElseGet(() -> new DesiredInputGraph(List.of()));
     }
     public Map<String, ExecutionObservation> observed() {
-        return engine.units().entrySet().stream().collect(Collectors.toUnmodifiableMap(
+        return engine.current().map(CurrentAttemptSnapshot::observations).orElse(Map.of())
+            .entrySet().stream().collect(Collectors.toUnmodifiableMap(
             entry -> entry.getKey().value(), Map.Entry::getValue));
     }
 

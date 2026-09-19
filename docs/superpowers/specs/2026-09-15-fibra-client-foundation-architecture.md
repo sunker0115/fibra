@@ -1,10 +1,11 @@
 # Fibra Client Foundation 权威架构与 P0 验证设计
 
-状态：2026-09-17 架构复审后重新打开，旧“已冻结、无需修改”结论撤回。本文是 Fibra 逻辑插件、
-跨执行域 SPI 与 Client Foundation P0 的当前权威设计；只有第 12 节的重新冻结门全部通过后，状态才可改为
-“已冻结”。实施期间不保留旧新兼容层、双格式、双状态源或按开关选择的两套 runtime。
+状态：2026-09-20 Client Foundation P0 已按第 12 节在当前工作树关闭并本地冻结。本文是 Fibra 逻辑插件、
+跨执行域 SPI 与 Client Foundation P0 的权威设计。当前版本仍为 `0.5.0-SNAPSHOT`，未执行正式版本号、
+tag、Maven/npm 发布、合并或推送；冻结只确认架构、实现与本地验收完成，不冒充正式发布。实现不得保留
+旧新兼容层、双格式、双状态源或按开关选择的两套 runtime。
 
-本文同时纠正 2026-09-15 版本中的四个方向性错误：
+本文同时纠正 2026-09-15 版本及首次实现中的五个方向性错误：
 
 1. Fibra 不实现或发布浏览器 runner、Web loader、renderer adapter、transport/carrier；它们属于上层产品。
 2. Fibra 不分别注册 `ArtifactRuntime` 与 `ExecutionRuntime`；一个 `RuntimeId` 只有一个完整
@@ -13,6 +14,8 @@
    entry 可以共享同一 facet 的 ClassLoader/payload generation lease。
 4. definition 身份和内建 package 不能靠 artifactId、facetId 或匿名 catalog 隐式推导；runtime 必须显式产出
    definition metadata，内建实际对象仍由对应 driver 私有持有。
+5. Engine 的操作进度、candidate/current 的生命周期与旧 unit 回收进度不能共用一个
+   `AttemptPhase`；它们必须是不同 owner 的独立类型，失败也必须显式指向真实 subject。
 
 ## 1. 最终目标与边界
 
@@ -44,7 +47,7 @@ transport 的证据由产品仓库提供，不能由 Fibra fixture 冒充。
 
 | 参照 | 借鉴 | 不照搬 | Fibra 结论 |
 |---|---|---|---|
-| OSGi Bundle Wiring | content revision、current wiring、仍被引用的旧 wiring 与依赖闭包 refresh 分离 | OSGi resolver、service registry 和完整 bundle 状态机 | 明确 candidate/current/retiring generation；旧 generation 在 execution/invocation lease 清零前不能 retire |
+| OSGi Bundle Wiring | content revision、current wiring、仍被引用的旧 wiring 与依赖闭包 refresh 分离 | OSGi resolver、service registry 和完整 bundle 状态机 | candidate、current 与 `RetirementBatch` 分别持有自己的状态；旧 generation 在 execution/invocation lease 清零前不能 retire |
 | VS Code extension host | extension host 类型、running location 与具体 host manager 分离 | IDE 协议、URI、Web extension packaging | `RuntimeId` 是唯一 owner；`ExecutionTarget` 只是 placement/capability，不能当注册键 |
 | Wasmtime Module/Instance | 编译产物与实例化/执行分阶段 | Wasm runtime、序列化格式 | runtime candidate 可在保存前准备和校验，但任何插件实例/sidecar/external session 只能在保存后启动 |
 | Terraform Provider/Resource | provider 显式声明 resource type/schema，配置中的每个 resource block 是独立实例 | Terraform state、RPC 和 provider 生态 | facet 必须显式声明 definition；每个 desired entry 形成独立 execution unit，不能把 artifact 当实例 |
@@ -226,6 +229,7 @@ PreparedRuntimeGeneration
 
 RuntimeUnitGeneration
   plan() -> ExecutionUnitPlan
+  fence() -> RuntimeUnitFence
   reconcileAsync(lifecycleOperationId) -> Mono<ExecutionObservation>
   closeAdmission() -> void
   drainAsync(lifecycleOperationId, deadline) -> Mono<ExecutionObservation>
@@ -392,115 +396,153 @@ closure，按 `ReconcileCurrent` 的 replacement 流程全量重编译，使用�
 P0 不实现 per-runtime 影响映射，避免聚合 fingerprint 更新后漏掉其它 runtime。相同 targetDigest 的 no-op 只有
 在 fingerprint 也相同且 current 已满足时成立；否则必须重编译。
 
-## 7. 持久目标、运行 attempt 与唯一状态机
+## 7. 持久目标、运行对象与状态所有权
 
-持久 desired 与进程内执行 attempt 是两类事实，不能再用一个 CURRENT 混写：
+持久 desired、Engine 健康、一次操作的编排进度，candidate/current 的生命周期和旧 unit 回收是六类
+独立事实。最终模型固定为：
 
 ```text
-DurableTargetState = ABSENT | PRESENT | UNCERTAIN
-AttemptRole        = CANDIDATE | CURRENT | RETIRING | RETIRED
-AttemptPhase       = REGISTERED | PREPARING | VALIDATING | READY_TO_SAVE |
-                     SAVING | PROMOTING | RECONCILING | DRAINING |
-                     STOPPING | RELEASING | SETTLED | FAILED
+EngineState             = NEW | RUNNING | FAIL_STOP | CLOSING | CLOSED
+DurableTargetState      = ABSENT | PRESENT | UNCERTAIN
+TargetConvergence       = ABSENT | CONVERGING | SATISFIED | UNSATISFIED | BLOCKED
+EngineOperationStage    = PLANNING | PREPARING | VALIDATING | SAVING | PROMOTING |
+                          RETIRING | RECONCILING | COMPLETED | FAILED
+CandidatePhase          = REGISTERED | PREPARING | VALIDATING | READY_TO_SAVE |
+                          SAVING | FAILED
+CurrentPhase            = WAITING_FOR_RETIREMENT | RECONCILING | SETTLED |
+                          BLOCKED | FAILED
+RetirementPhase         = DRAINING | STOPPING | READY_TO_RELEASE | RELEASING |
+                          FAILED
 ```
 
-`PRESENT` 表示 `DeploymentTargetStore` 已证明的完整 target；它可以暂时没有可运行 attempt，例如 Host 启动
-prepare 失败。`CURRENT` 只表示当前进程为该 durable target 选择的 unit generation map，不表示全部 ACTIVE。
-P0 同时最多一个 candidate attempt、一个 current attempt 和一个 retirement batch。retirement 清理失败时
-mutation gate 关闭，不堆叠更多替换。
+`AttemptRole`、通用 `AttemptPhase` 和通用 `AttemptSnapshot` 从公开与内部模型中删除；`EngineDiagnostics.phase`、顶层无身份
+`units/retiring` map、兼容 getter、deprecated 别名和旧新双写也一并删除。类型系统必须使
+`CURRENT:DRAINING`、`CANDIDATE:STOPPING` 这类组合无法表达，而不是靠运行时分支拒绝。
+
+Engine 聚合根的实时所有权为：
+
+```text
+FibraEngine
+├─ EngineState
+├─ DurableTargetFact + TargetConvergence
+├─ EngineOperation?
+├─ CandidateAttempt?
+├─ CurrentAttempt?
+├─ RetirementBatch?
+└─ FailureFact?
+```
+
+- `EngineOperation` 只表示一次 deploy/reconcile/bootstrap/close 命令的编排进度，不拥有 runtime
+  资源，不作为任何 attempt 的生命周期状态。其终态可作为最近一次操作事实投影，下一操作可替换；
+- `CandidateAttempt` 拥有 `attemptId`、candidate target、尚未 promote 的 prepared resources 和
+  `CandidatePhase`；它不得包含 observed execution 或对外准入；
+- `CurrentAttempt` 拥有同一 `attemptId`、`DurableTargetToken`、已选 unit generations、各 unit 冻结
+  observations 与 `CurrentPhase`。`SETTLED` 只表示当前无生命周期命令在运行，是否满足目标由
+  `TargetConvergence` 单独表达；
+- `RetirementBatch` 是老 current 中被替换 unit 的有身份子集，拥有 `batchId`、
+  `sourceAttemptId`、精确 unit generations、冻结 observations 和 `RetirementPhase`。它不是第二个 current；
+- 已完成回收的 batch 不以 `RETIRED` 伪状态留在实时快照。如需历史必须另建审计契约，不能用可变运行投影冒充。
+
+`PRESENT` 表示 `DeploymentTargetStore` 已证明的完整 target，不承诺当前进程已有 current。P0 同时
+最多一个 candidate、一个 current 和一个 retirement batch。retirement 清理失败时不允许堆叠下一次替换。
+
+`TargetConvergence` 只回答持久目标与当前运行事实的关系：无 target 为 `ABSENT`；生命周期命令正在推进为
+`CONVERGING`；全部声明要求满足为 `SATISFIED`；编排已结束但存在合法 PENDING 或未满足要求、且未来
+的可用性事件可继续唤醒收敛为 `UNSATISFIED`；必须修改完整 target 或受控重启才可前进为 `BLOCKED`。
+`CurrentPhase.SETTLED` 可与 `SATISFIED` 或 `UNSATISFIED` 组合，但不与 `BLOCKED/FAILED` 混为同一含义。
 
 新 target 的唯一生产路径为：
 
-1. 先做同 digest + compiledFingerprint no-op 判断；两者相同且 current 已满足时直接返回；
-2. 创建 `CANDIDATE:REGISTERED` 和全部 runtime candidates，再执行 `PREPARING`；
-3. materialize definition、绑定配置、构造并验证 `CompiledDeployment`；
-4. seal 所有 candidates，聚合新 units、retained units 和全部资源 lease，进入 `READY_TO_SAVE`；
-5. `DeploymentTargetStore.save(expectedRevision, candidateTarget)` 原子 CAS，并返回不可伪造的
-   `DurableTargetToken`；
-6. Engine 串行 lane 只移动内存所有权：以 token 将整个 `DeploymentCandidate` 原子提升为 current attempt，
-   未受影响 units 原样保留，被替换旧 units 进入 retirement batch；此步不调用 driver、不执行 I/O；
-7. 同步关闭 retirement batch 中全部旧 contribution 的新准入；
-8. 按反依赖顺序等待旧 route/invocation/resource-read drain，再 stop 旧 units；
-9. 按依赖顺序对新 units 调用 `reconcileAsync`；外部 execution 不在线时快速得到 PENDING，不能阻塞 Host
-   ready，其 dependents 也保持 PENDING；
-10. 旧 unit leases 清零后 retire 对应 prepared generations；retirement batch 清空后 Engine 回到稳定态。
+1. 创建 `EngineOperation(PLANNING)`，以同 digest + compiledFingerprint + convergence 判定 no-op；
+2. 创建 `CandidateAttempt(REGISTERED)`，按 `PREPARING → VALIDATING → READY_TO_SAVE` 准备完整
+   deployment；该过程不改动 current 或 retirement 的任何状态；
+3. candidate 进入 `SAVING`，`DeploymentTargetStore.save(expectedRevision, candidateTarget)` 原子 CAS
+   并返回 `DurableTargetToken`；
+4. operation 进入 `PROMOTING`，Engine 串行 lane 不调用 driver、不执行 I/O，把 candidate 的
+   `attemptId` 和所有权原子转为新 `CurrentAttempt`；retained units 原样转入新 current，老 current 的
+   被替换 units 以老 `attemptId` 为 `sourceAttemptId` 建立 `RetirementBatch`；
+5. 若 batch 非空，新 current 为 `WAITING_FOR_RETIREMENT`，batch 按 `DRAINING → STOPPING →
+   READY_TO_RELEASE → RELEASING` 进行；若为空，新 current 直接进入 `RECONCILING`；
+6. retirement 成功清空后，current 进入 `RECONCILING`，新 units 按依赖顺序启动；外部 execution
+   不在线时快速得到 PENDING，不阻塞 Host ready；
+7. 编排结束后 current 进入 `SETTLED` 或 `BLOCKED`，operation 进入 `COMPLETED` 或 `FAILED`，
+   `TargetConvergence` 独立表达整体是否满足。
 
-保存后的 activate 失败不回滚 target、不恢复旧准入，只在 durable target 下发布 FAILED/PENDING observed。
-当外部 execution 上线时，driver 经 `requestReconcile` 唤醒 Engine；Engine 对同一 unit generation 分配新的
-operationId 并继续 DAG 收敛。执行过插件代码后进入 FAILED 的 unit 不得原地复用；显式
-`ReconcileCurrent` 或 plan-affecting `requestRecompile` 先为失败/受影响 unit 及 dependent closure 准备新的
-candidate units，再使用当前
-`DurableTargetToken` 走同一 promote → close admission → drain → stop → reconcile → retire 流程，但跳过
-target save。新 units 必须获得新的 runtimeInstanceId，旧 attempt 清理失败时不允许并存第二个 current。
+显式 `ReconcileCurrent` 或 plan-affecting `requestRecompile` 为失败/受影响 unit 及 dependent closure
+创建新 candidate，使用当前 `DurableTargetToken` 走同一 promote/retire/reconcile 流程但跳过 target
+save。新 units 必须获得新 runtimeInstanceId；已执行过插件代码的 FAILED unit 不得原地复用。
 
-本地进程或外部 execution 在 ACTIVE 后失活时，driver 必须先把对应 unit 观察改为 FAILED、同步封闭它的
-`ContributionAdmission`，再调用 `requestReconcile`。Engine 看到 FAILED unit 时走上述 replacement 流程，不能
-对已经执行过插件代码的旧 unit 原地再次 `reconcileAsync`。仅 sidecar 私有 failure 或仅发 wake-up 而仍发布
-ACTIVE 都是契约违例。尚未到达 ACTIVE 的确定性启动失败只发布 FAILED 并由当前 deployment attempt 返回，
-不得自动请求 replacement；否则同一 durable target 会形成无限重建风暴。Node sidecar 在 `fibra.start`
-成功后、contribution 注册或 ACTIVE 提交前退出，也属于启动失败：driver 必须保存该终止事实、立即封闭
-admission，并与 ACTIVE 提交在同一同步判定中二选一，不能消费一次性终止信号后再发布死亡进程为 ACTIVE。
+本地进程或外部 execution 在 ACTIVE 后失活时，driver 必须先把对应 unit 观察改为 FAILED、同步封闭
+它的 `ContributionAdmission`，再调用 `requestReconcile`。尚未到达 ACTIVE 的确定性启动失败不得自动
+重建，否则同一 durable target 会形成风暴。Node sidecar 的终止事实必须与 ACTIVE 提交在同一同步判定中二选一。
 
-不改变 plan、也不要求 replacement 的插件内部状态变化走 `requestObservationRefresh`。Java driver 的 unit
-`snapshot()` 必须从当前 `PluginInstance` 实时派生 PENDING/ACTIVE/FAILED 与失败原因，不能缓存启动完成时的
-结果；根实例 state subscription 由 unit scope 持有，unit 关闭时自动取消。Engine 对已被替换、retiring 或
-identity 不匹配的 refresh fence 无副作用。这个通道只刷新运行事实，不能暗中修正 desired target。
+observation 采样与公开投影必须分层：Engine command lane 对 current 和 retirement 的每个 unit 各采样一次，
+将成功结果冻结进对应 owner；采样抛错使用明确 owner 转换为 `FailureFact`。`publish()` 只将已冻结
+Engine model 转换为 `PublishedView`，禁止调用 runtime、采样可变状态、触发 fail-stop 或改变任何生命周期。
+`CurrentAttemptSnapshot` 和 `RetirementBatchSnapshot` 分别内嵌自己的 observations，candidate 不暴露
+execution observations。Registry 的 observed 只从 current snapshot 投影，不从 operation 或 retirement 猜测。
 
-生命周期 lease 链固定为：
+生命周期 lease 链仍固定为 `route invocation/resource read → RuntimeUnitGeneration →
+driver-private artifact/resource generation`。每个 unit 在创建时分配并公开不可变 `RuntimeUnitFence`，
+Engine 以它校验 stale/retired 回调并把 unit 失败绑定到精确运行身份。旧 unit 尚有 execution、调用或资源读取时
+不得 stop/retire。driver 只有在 unit disposer/私有 lease 明确完成后才能释放对应 ClassLoader、进程或远端连接；
+GC 可达性只作为测试中的补充观测，不构成生命周期完成事实。drain deadline 到期、不可强杀的 in-process
+invocation 未结束或资源释放失败，都必须保留真实 owner 和现场。
 
-```text
-route invocation/resource read
-        ↓
-RuntimeUnitGeneration
-        ↓
-driver-private artifact/resource generation
-```
+## 8. 失败 subject、保存边界与重启恢复
 
-Engine 不通过 `Set<ArtifactId>` 或一次 `handles()` 快照猜测所有权。旧 unit 尚有 execution、调用或资源读取
-时，driver 不得关闭其 ClassLoader、payload 或其它物理资源。drain deadline 到期只表示关闭失败：本地可安全
-强制终止的进程可以被 driver 终止，但不可强杀的 in-process invocation 必须继续持有 lease；不得并发 stop
-插件代码或 retire 资源。失败 unit 标为 FAILED/ORPHANED、mutation gate 关闭，并保留现场等待受控 Host 退出。
+`FailureFact` 固定包含 `reason`、`subject`、失败发生的 `stage`、`operationStage?`、`targetRevision?` 和稳定
+message。
+`FailureSubject` 是带身份的 `ENGINE`、`DURABLE_TARGET`、`OPERATION(operationId)`、
+`CANDIDATE(attemptId)`、`CURRENT(attemptId)`、`RETIREMENT(batchId, sourceAttemptId)` 或 `UNIT(fence)`，
+其中 unit subject 还携带其直接 owner id（current attemptId 或 retirement batchId）；不得依据“此刻哪个字段
+非空”猜测失败 owner，也不得用通用 kind + 可空 id 重建身份。
 
-## 8. 失败、保存边界与重启恢复
+| 失败点 | 失败 subject | 持久 target / Engine | 处理 |
+|---|---|---|---|
+| plan 失败且 candidate 尚未建立 | operation | 不变 / `RUNNING` | 结束本次 operation，current 状态和准入不变 |
+| prepare/validate/seal 或 save 明确失败 | candidate | 不变 / `RUNNING` | 逆序 close/abort candidate；清理成功后移除 candidate，保留 current |
+| candidate close/abort 失败 | candidate | 不变 / `FAIL_STOP` | 保留 candidate 资源现场，封闭 mutation 和 managed contribution 准入，请求 Host termination |
+| save-unconfirmed | candidate | `UNCERTAIN` / `FAIL_STOP` | 不 promote、不猜测磁盘事实；保留需要的 current/candidate 资源并受控退出 |
+| save 后确定性 activate 失败 | current 或精确 unit | 新 target / `RUNNING` | 不回滚 target、不恢复旧准入；current=`BLOCKED`，convergence=`BLOCKED`，允许提交修正 target |
+| current runtime 同步抛错、snapshot 或其它契约违例 | current 或精确 unit | 不变 / `FAIL_STOP` | current=`FAILED`，封闭全局准入并请求 Host termination |
+| drain/stop/release 或 retirement 采样失败 | retirement batch 或精确 unit | 新 target / `FAIL_STOP` | retirement=`FAILED`，current=`BLOCKED`，保留 lease 与现场 |
+| contribution directory、Engine 共享基础设施失败 | Engine | 不变 / `FAIL_STOP` | 不伪造 candidate/current/retirement 失败；封闭准入并受控退出 |
+| Host/driver 在 `CLOSING` 中关闭失败 | Engine | 不变 / `CLOSING` | 聚合关闭失败并继续释放独立同级资源；不把已移除的 attempt 伪造为 FAILED |
 
-| 失败点 | 持久 target | 处理 |
-|---|---|---|
-| prepare/validate/plan | 不变 | 逆序关闭 candidate；清理成功后可继续，失败则关闭 mutation gate |
-| seal/save 明确失败 | 不变 | 不 promote、不启动；abort 已 sealed generations，关闭未 sealed candidates；任一 abort/close 失败立即 fail-stop、保留现场并请求 Host termination |
-| save-unconfirmed | `UNCERTAIN` | 立即关闭全部 managed contribution 新准入和 mutation gate，保留 current/candidate 资源到有界关闭，发布 `TARGET_SAVE_UNCERTAIN`，进入受控 Host 退出；本进程不得继续服务或猜测磁盘事实 |
-| save 后 activate 失败 | 新 target | 旧准入不恢复；继续清理 retirement batch 并在 durable target 下发布 FAILED/PENDING |
-| drain/stop/retire 失败 | 新 target | 保留 retirement batch、lease 与失败事实；关闭 mutation gate并进入有界 Host 关闭 |
+所有 runtime SPI 调用通过同一契约边界，统一处理方法同步抛错、返回 null publisher、publisher 异步失败、
+timeout 及失败 subject 映射，不在各调用点零散打补丁。
 
-Engine 不直接调用 `System.exit`。composition root 必须提供 `HostTerminationPort`；Engine 在封闭 mutation gate、
-全部 managed contribution 准入并发布 fatal observed 后，以一次性
-`HostTerminationRequest(hostInstanceId, reason, phase, targetRevision?)` 请求宿主退出。Engine 先在 command lane
-记录一次性逻辑 request，再由独立 notification lane 调用端口，绝不内联执行宿主回调。端口本身也必须快速、
-非阻塞地把请求转交宿主自有 executor/event loop 后返回；禁止同步关闭 Host、调用任何 Engine API 或等待 Engine
-termination。端口抛错、阻塞超时或重复通知都不能阻塞 command lane、重开准入或产生第二逻辑 request；Engine
-保持 fail-stop。verification Host、CLI、Spring 和产品 Host 分别在 lane 外消费该请求并协调自己拥有的 HTTP、
-Session、进程与 application context 关闭。
+Engine 不直接调用 `System.exit`。composition root 必须提供 `HostTerminationPort`；Engine 在 command lane
+记录一次性逻辑请求，再由独立 notification lane 传递
+`HostTerminationRequest(hostInstanceId, reason, subject, operationStage?, targetRevision?)`。端口只能快速转交给
+宿主自有 executor/event loop，禁止同步关闭 Host、重入 Engine 或等待 Engine termination。端口抛错、
+阻塞超时或重复通知都不能阻塞 command lane、重开 gate 或产生第二逻辑请求。
 
-重启只恢复持久 `DeploymentTarget`，不恢复 candidate、retiring、observed、runtimeInstanceId 或 operation
-ledger。启动流程为：
+重启只恢复持久 `DeploymentTarget`，不恢复 operation、candidate、current、retirement、observed、
+runtimeInstanceId 或任何进程内账本。启动流程为：
 
 ```text
 new hostInstanceId
-→ load target
-→ receive DurableTargetToken
-→ verify selected packages/built-ins
-→ create candidates
-→ prepare/validate
-→ seal and promote in memory without re-saving
-→ reconcile with new runtimeInstanceId/operationId
+→ load target and DurableTargetToken
+→ create bootstrap EngineOperation
+→ verify packages/providers/built-ins
+→ create CandidateAttempt and prepare/validate/seal
+→ promote in memory without re-saving
+→ create CurrentAttempt and reconcile with new runtimeInstanceId/operationId
 ```
 
-crash 在 save 前恢复旧 target；原子 save 后任何点 crash 都恢复新 target。核心能够直接证明旧
-`viewRevision + ContributionId + registrationIdentity` 完整调用 tuple，以及旧 `RuntimeUnitFence` 在新 Host
-中失效。产品 runtime 的旧 session、ack、call result 和 resource request 还必须由产品侧 gateway 使用
+crash 在 save 前恢复旧 target；原子 save 后任何点 crash 都恢复新 target。持久 target 合法，但 package/provider 缺失、
+digest/metadata 不匹配或 prepare 失败时，若 candidate 清理成功，Engine 仍为 `RUNNING`，
+`DurableTargetState=PRESENT`、`TargetConvergence=BLOCKED`、current/candidate/retirement 均为空，失败 subject 为
+durable target。Host 必须可进入管理 ready，控制面可以基于同一 target revision 提交完整 replacement
+修正，不能伪造一个 FAILED current。只有 target/store 事实无法可信读取、资源所有权不确定或 bootstrap
+清理失败才进入 `FAIL_STOP`。
+
+核心继续直接拒绝旧 `viewRevision + ContributionId + registrationIdentity` 完整调用 tuple 与旧
+`RuntimeUnitFence`。产品 runtime 的旧 session、ack、call result 和 resource request 由产品侧 gateway 使用
 `hostInstanceId + clientExecutionId + unitTargetRevision + runtimeInstanceId` 单独验证；Fibra Host fixture
-不得冒充这部分证据。持久 target 合法但 package 缺失或
-prepare 失败时仍是 `DurableTargetState.PRESENT`，但没有 current attempt；target observed 为 FAILED，不伪造
-一个不存在的 CURRENT generation，也不篡改 target。控制面仍可提交一个新的完整 replacement target。
+不得冒充这部分证据。
 
 ## 9. Contribution gateway 与外部 execution SPI
 
@@ -534,6 +576,22 @@ Node 等远端 contribution 的每次请求必须把 runtime-private request 作
 `DrainingDisposable` 登记。下游订阅取消只发出远端取消请求，不能立即释放 route invocation lease；只有远端
 成功、失败或取消宽限终态到达后，调用 Scope 才完成排空，unit 才能从 `DRAINING` 进入 `STOPPING`。这条所有权
 链与 sidecar 主动 stop 分离，禁止用 Reactor subscriber 已取消冒充远端工作已结束。
+
+连接层消费的是 current execution assignments，不是 Engine 内部状态机。边界固定为：
+
+```text
+CurrentAttemptSnapshot.current units
+  → product RuntimeDriver host.snapshot projection
+  → fibra-client-protocol Java codec
+  → transport/carrier owned by product
+  → TypeScript client-protocol decode
+  → ClientModuleDefinition selection and instance creation
+```
+
+client protocol 不引入 `AttemptRole`、candidate/current/retirement phase、Engine operation 或 mutation gate。candidate
+在 promote 前永远不生成 assignment；host snapshot 只从 current units 生成新 assignment；retirement batch 只通过已建立
+连接上的精确旧 fence 执行 drain/stop，不重新出现在新 snapshot 中。产品 adapter 不得复制 Engine
+的 candidate/current/retirement 状态机。
 
 Fibra 的 client protocol 只冻结 transport-neutral 值对象、严格 codec 和以下身份：
 
@@ -578,6 +636,12 @@ React adapter 或真实 transport 都不得进入这些包。
 同一 entry module 可以声明多个 definitions，同一 definition 可以为多个 assignments 创建独立实例，但不能
 使用全局 registry 或跨 generation 缓存实例。definition 查找、重复/缺失拒绝、模块装载、调用编排和实例回收
 都属于产品 runner，不在 Fibra 正式包中实现。
+
+P0 的连接纵向门必须从真实 Engine current 构造正式 `host.snapshot`，经 Java codec 生成固定
+fixture，再由 TypeScript 解码并完成 `ClientModuleDefinition` 选择与独立实例化。该门同时必须证明
+candidate 不泄漏、retained unit 保持 `unitTargetRevision/runtimeInstanceId`、retirement 旧 fence 在排空终止后
+被拒绝，且不依赖 fixture 私有字段。这只证明 Fibra 连接契约可消费，不冒充真实浏览器
+transport、gateway、runner 或产品长会话已实现。
 
 ## 10. Composition root 与关闭所有权
 
@@ -646,7 +710,7 @@ package 与 instance 管理必须分开：
   `RuntimeId + ExecutionUnitKey + unitTargetRevision + runtimeInstanceId`，Engine 在唯一 command lane 校验仍是
   当前 unit 代次后，基于当前 durable target 生成“selections/configContext 不变、仅该 entry 本地
   enabled=false、targetRevision+1”的完整 replacement 并正常 save/promote，不得把自停用映射为 reconcile；
-- retiring/已替换 unit 的迟到自停用、重复请求或目标中已停用/已删除的 entry 必须无副作用；save 失败保留
+- `RetirementBatch`/已替换 unit 的迟到自停用、重复请求或目标中已停用/已删除的 entry 必须无副作用；save 失败保留
   当前 unit 与旧 durable target、公开失败诊断并允许同一当前代次重试，不能旁路持久化；
 - package gate 关闭时，其全部 facets 和 entries 一起撤销；
 - 所有操作最终都生成一个完整 `DeploymentTarget`，不存在裸 definition 或 runtime-only 旁路。
@@ -663,10 +727,10 @@ pluginId 已有 selection，并原样保留旧 gate；相同 revision 与完整 
 审计保存事实按本次前后 durable revision/digest 与 `EngineChangeException` 判断，no-op 和 reconcile 记为
 `NOT_APPLICABLE`，不得将前一次发布视图中的 `SAVED` 误记为本次保存。
 
-Registry 只投影 package、durable target、current attempt 和 observed，不建立第二状态机。CLI、Spring、UI 管理
-页面只能调用相同用例。
+Registry 只投影 package、durable target、`CurrentAttemptSnapshot` 中的 observations 与 Engine 公开失败事实，
+不从 operation 阶段或 retirement 反推 current，也不建立第二状态机。CLI、Spring、UI 管理页面只能调用相同用例。
 
-## 12. P0 重新冻结门
+## 12. P0 冻结门
 
 ### P0-A：compile-only 可组合性
 
@@ -689,6 +753,10 @@ Registry 只投影 package、durable target、current attempt 和 observed，不
 - package publish 与 target activation 是两个 commit point；
 - no-op、A→B→A、完整 configContext digest/revision；
 - prepare/validate/save/promote/reconcile/drain/stop/retire 全路径；
+- candidate PREPARING/VALIDATING/SAVING 时旧 current 仍保持自己的精确 phase 与 observations，不被
+  operation 阶段覆盖；promote 后 candidate attemptId 成为 current attemptId，老 current attemptId 只成为
+  retirement sourceAttemptId；
+- current 与 retirement 的 phase/observations 分别投影，retained unit 只属于新 current；
 - driver A seal 后 driver B seal 失败、以及全部 seal 后 save 明确失败时，已 sealed generations 全部 abort；
 - abort/close 失败立即 fail-stop、保留现场并请求 Host termination；
 - 保存前失败零持久变更，保存后失败保留新 target；
@@ -699,8 +767,9 @@ Registry 只投影 package、durable target、current attempt 和 observed，不
   tuple 立即拒绝；
 - external RuntimeProvider fixture 中同一 facet 的两个 desired entries 以不同 resolved config 形成两个独立
   units/activations，二者不得合并或互串配置；
-- 独立 client API/protocol conformance 从正式 `host.snapshot` codec 结果只取公开 Assignment 字段，为两个
-  entries 精确选择 definitions、创建独立 modules，并在全新 session 重复绑定；该门不实现浏览器 loader；
+- 独立 client API/protocol conformance 从真实 Engine current 构造正式 `host.snapshot` codec 结果，
+  只取公开 Assignment 字段，为两个 entries 精确选择 definitions、创建独立 modules，并在全新
+  session 重复绑定；证明 candidate/operation 不泄漏至协议，该门不实现浏览器 loader；
 - remote call 只经同一 `RemoteContributionInvoker`；
 - 离线 external execution 不阻塞 Host ready。
 
@@ -715,10 +784,12 @@ Registry 只投影 package、durable target、current attempt 和 observed，不
   call result、resource request 的拒绝由产品 runtime/gateway 以同一正式身份契约另行证明，不计入 Fibra Host
   fixture 已完成证据；
 - 保存后执行失败的 current target 会重新尝试收敛；
-- package 缺失/损坏时失败可观察且 target 不被篡改；
+- package 缺失/损坏时 target 不被篡改；target 本身可信且 candidate 清理成功时为无 current 的
+  `RUNNING + PRESENT + BLOCKED`，允许完整 replacement；target/store 不可信或清理失败才 `FAIL_STOP`；
 - built-in selection digest 与 provider metadata 完全相同时恢复；provider 缺失、旧 digest 不再提供、metadata
-  与私有 definitions 不匹配时启动失败可观察且 target 不被篡改；发布二进制或声明变化必须改变 built-in
-  digest 与 provider contract identity；
+  与私有 definitions 不匹配时 target 不被篡改、Engine 保持管理 ready，发布 `PRESENT + BLOCKED`且不伪造
+  current；提交一个去除坏引用的完整 replacement target 后可收敛。发布二进制或声明变化必须改变 built-in
+  digest 与 provider contract identity；bootstrap 清理失败则进入 `FAIL_STOP`；
 - save-unconfirmed 只由 restart/load 消歧；该故障注入由 Engine/store 定向测试证明，Host 进程门只消费已经
   落盘的确定事实，不伪造 store 内部不确定窗口；
 - `HostTerminationPort` 在 fatal observed 发布后只通知一次；回调抛错、超时或尝试重入均不重开 gate，真实
@@ -727,6 +798,9 @@ Registry 只投影 package、durable target、current attempt 和 observed，不
 ### P0-D：调用方、发行与独立消费
 
 - Registry、CLI、Spring、examples、parity、archetype、plugins 和 distribution 全部硬切；
+- Java API baseline 与所有仓外消费者只使用 role-specific snapshots、`TargetConvergence` 和
+  `FailureFact`；不存在 `AttemptRole`、`AttemptPhase`、`AttemptSnapshot`、`EngineDiagnostics.phase`、
+  兼容 getter 或旧新双投影；
 - 根 reactor、API baseline、可复现发行、空 Maven 仓 Java RuntimeProvider 消费者和 npm tarball 消费者
   全部通过；
 - npm 正式包只有纯 API/protocol，发行物不含 runner/Web/React/transport；
@@ -741,6 +815,10 @@ Registry 只投影 package、durable target、current attempt 和 observed，不
 
 - 需要 `HostPreparedArtifact`、metadata bag、运行时 cast 或 runtime 实现间依赖才能传递私有对象；
 - Engine 同时保留 ArtifactRuntime/ExecutionRuntime 或旧 PluginRuntimeAdapter；
+- Engine 保留通用 `AttemptRole`/`AttemptPhase`/`AttemptSnapshot`、`EngineDiagnostics.phase`、顶层无身份 retirement map
+  或任何兼容别名；
+- `publish()` 调用 runtime/snapshot、根据字段是否存在猜测 failure subject，或产品/client 协议复制
+  Engine attempt 状态机；
 - `ExecutionTarget` 再次作为 runtime 注册键；
 - artifactId/facetId 再次被当作 ExecutionUnitKey 或隐式 definitionId；
 - 内建 Java definition 由 Engine catalog 持有或绕过 Java driver 生命周期；
@@ -773,6 +851,7 @@ Registry 只投影 package、durable target、current attempt 和 observed，不
 - `fibra-runtime-host`、`HostPreparedArtifact` 和当前 `NodeExecutionRuntime` 草稿；
 - `fibra-runtime-client` 生产实现；
 - Fibra 正式发布 `client-runtime`、Web loader、React adapter 与 transport 的路线；
+- 通用 `AttemptRole`/`AttemptPhase`/`AttemptSnapshot`、全局 `EngineDiagnostics.phase` 和无 owner 的 retiring 投影；
 - Task 9—13 的旧阶段和“无 P0/P1/P2”结论。
 
 Git 历史保留原实现与审查记录，不在当前文档旁保留已废弃设计。实施计划必须按本架构重写，而不是追加一个

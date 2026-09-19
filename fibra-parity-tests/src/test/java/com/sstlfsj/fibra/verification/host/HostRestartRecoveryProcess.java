@@ -21,11 +21,15 @@ import com.sstlfsj.fibra.engine.BuiltInFacet;
 import com.sstlfsj.fibra.engine.BuiltInPluginPackage;
 import com.sstlfsj.fibra.engine.ExecutionObservation;
 import com.sstlfsj.fibra.engine.ExecutionUnitKey;
+import com.sstlfsj.fibra.engine.DurableTargetState;
+import com.sstlfsj.fibra.engine.EngineState;
+import com.sstlfsj.fibra.engine.FailureSubject;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.FileDeploymentTargetStore;
 import com.sstlfsj.fibra.engine.PluginSelection;
 import com.sstlfsj.fibra.engine.PublishedView;
 import com.sstlfsj.fibra.engine.RemoteContributionInvoker;
+import com.sstlfsj.fibra.engine.TargetConvergence;
 import com.sstlfsj.fibra.runtime.java.JavaBuiltInPackage;
 import com.sstlfsj.fibra.runtime.java.JavaDefinitionEntry;
 import com.sstlfsj.fibra.runtime.java.JavaRuntimeProvider;
@@ -76,7 +80,7 @@ public final class HostRestartRecoveryProcess {
     public static void main(String[] args) throws Exception {
         if (args.length < 3) {
             throw new IllegalArgumentException(
-                "usage: <seed|recover|expect-failure> <work> <report> [scenario|seed-report]");
+                "usage: <seed|recover|verify-recovery-refusal> <work> <report> [scenario|seed-report]");
         }
         var mode = args[0];
         var work = Path.of(args[1]).toAbsolutePath();
@@ -85,7 +89,8 @@ public final class HostRestartRecoveryProcess {
         switch (mode) {
             case "seed" -> seed(work, report);
             case "recover" -> recover(work, report, Path.of(args[3]));
-            case "expect-failure" -> expectFailure(work, report, args[3]);
+            case "verify-recovery-refusal" -> verifyRecoveryRefusal(work,
+                report, args[3]);
             default -> throw new IllegalArgumentException("unknown mode " + mode);
         }
     }
@@ -171,7 +176,7 @@ public final class HostRestartRecoveryProcess {
                 "the durable recovery target did not retain its execution failure");
             require(failed.engine().target().orElseThrow().targetRevision() == 2,
                 "the failed execution target was not saved");
-            require(!failed.engineDiagnostics().targetSatisfied(),
+            require(failed.engine().targetConvergence() != TargetConvergence.SATISFIED,
                 "the failed execution target was reported as satisfied");
             recordTarget(values, failed);
             values.setProperty("a.hostProcessPid",
@@ -203,7 +208,7 @@ public final class HostRestartRecoveryProcess {
                 && engine.published().current().contributions().entries().size() == 5,
                 () -> describe(engine.published().current()));
             var current = engine.published().current();
-            require(current.engineDiagnostics().targetSatisfied(),
+            require(current.engine().targetConvergence() == TargetConvergence.SATISFIED,
                 "Host B did not converge the durable target");
             require("java-recovered:request".equals(invoke(engine, current,
                 HostVerificationContract.KIND_NAME, "java-echo", null)),
@@ -260,61 +265,73 @@ public final class HostRestartRecoveryProcess {
         write(report, values);
     }
 
-    private static void expectFailure(Path work, Path report, String scenario)
+    private static void verifyRecoveryRefusal(Path work, Path report,
+                                              String scenario)
         throws Exception {
         var target = work.resolve("target/target.json");
         var before = Files.readAllBytes(target);
-        Throwable failure = null;
-        if ("metadata-definition-mismatch".equals(scenario)) {
-            try {
-                builtIn(BUILT_IN_DIGEST, true);
-                failure = null;
-            } catch (Throwable expected) {
-                failure = expected;
-            }
-        } else {
-            FibraEngine engine = null;
-            try {
-                var external = new ExternalFixtureRuntimeProvider();
-                var builder = FibraEngine.builder(
-                        new PluginPackageStore(work.resolve("packages")),
-                        new FileDeploymentTargetStore(work.resolve("target")))
-                    .runtimeProvider(new JavaRuntimeProvider(List.of(builtIn(
-                        "old-built-in-digest".equals(scenario)
-                            ? "c".repeat(64) : BUILT_IN_DIGEST, false))))
-                    .runtimeProvider(new NodeRuntimeProvider(nodeOptions(work)))
-                    .contributionKinds(kinds())
-                    .hostTerminationPort(ignored -> { })
-                    .lifecycleTimeout(TIMEOUT);
-                if (!"missing-provider".equals(scenario)) {
-                    builder.runtimeProvider(external);
-                }
-                engine = builder.build();
-                engine.startAsync().block(TIMEOUT);
-                failure = null;
-            } catch (Throwable expected) {
-                failure = expected;
-            } finally {
-                if (engine != null) {
-                    try {
-                        engine.close();
-                    } catch (Throwable closeFailure) {
-                        if (failure == null) {
-                            failure = closeFailure;
-                        } else {
-                            failure.addSuppressed(closeFailure);
-                        }
-                    }
-                }
-            }
-        }
-        require(failure != null,
-            "recovery unexpectedly succeeded for " + scenario);
-        require(Arrays.equals(before, Files.readAllBytes(target)),
-            "failed recovery rewrote the durable target for " + scenario);
         var values = new Properties();
         values.setProperty("scenario", scenario);
-        values.setProperty("failure", failure.toString());
+        if ("metadata-definition-mismatch".equals(scenario)) {
+            Throwable failure = null;
+            try {
+                builtIn(BUILT_IN_DIGEST, true);
+            } catch (Throwable expected) {
+                failure = expected;
+            }
+            require(failure != null,
+                "invalid built-in metadata unexpectedly passed validation");
+            values.setProperty("outcome", "rejected-before-host");
+            values.setProperty("failure", failure.toString());
+        } else {
+            var external = new ExternalFixtureRuntimeProvider();
+            var builder = FibraEngine.builder(
+                    new PluginPackageStore(work.resolve("packages")),
+                    new FileDeploymentTargetStore(work.resolve("target")))
+                .runtimeProvider(new JavaRuntimeProvider(List.of(builtIn(
+                    "old-built-in-digest".equals(scenario)
+                        ? "c".repeat(64) : BUILT_IN_DIGEST, false))))
+                .runtimeProvider(new NodeRuntimeProvider(nodeOptions(work)))
+                .contributionKinds(kinds())
+                .hostTerminationPort(ignored -> { })
+                .lifecycleTimeout(TIMEOUT);
+            if (!"missing-provider".equals(scenario)) {
+                builder.runtimeProvider(external);
+            }
+            try (var engine = builder.build()) {
+                var view = engine.startAsync().block(TIMEOUT);
+                require(view.engine().state() == EngineState.RUNNING,
+                    "recoverable bootstrap refusal stopped the engine");
+                require(view.engine().durableState()
+                        == DurableTargetState.PRESENT,
+                    "recoverable bootstrap refusal lost the durable target");
+                require(view.engine().targetConvergence()
+                        == TargetConvergence.BLOCKED,
+                    "recoverable bootstrap refusal was not BLOCKED");
+                require(view.engine().candidate().isEmpty(),
+                    "failed bootstrap retained a candidate");
+                require(view.engine().current().isEmpty(),
+                    "failed bootstrap invented a current attempt");
+                require(view.engineDiagnostics().mutationGateOpen()
+                        && view.engineDiagnostics().contributionAdmissionOpen(),
+                    "recoverable bootstrap refusal closed correction gates");
+                require(view.engineDiagnostics().terminationRequest().isEmpty(),
+                    "recoverable bootstrap refusal requested host termination");
+                var failure = view.engineDiagnostics().failure().orElseThrow();
+                require(failure.subject()
+                        instanceof FailureSubject.DurableTarget,
+                    "bootstrap failure does not belong to the durable target");
+                var subject = (FailureSubject.DurableTarget) failure.subject();
+                var durable = view.engine().target().orElseThrow();
+                require(subject.targetRevision() == durable.targetRevision()
+                        && subject.targetDigest().equals(durable.targetDigest()),
+                    "durable target failure subject has the wrong identity");
+                values.setProperty("outcome", "blocked-recoverable");
+                values.setProperty("failure", failure.message());
+            }
+        }
+        require(Arrays.equals(before, Files.readAllBytes(target)),
+            "refused recovery rewrote the durable target for " + scenario);
         values.setProperty("targetUnchanged", "true");
         write(report, values);
     }
@@ -402,14 +419,14 @@ public final class HostRestartRecoveryProcess {
 
     private static ExecutionObservation.Detail detail(PublishedView view,
                                                        String entry) {
-        return view.engine().units().get(new ExecutionUnitKey(entry))
+        return currentUnits(view).get(new ExecutionUnitKey(entry))
             .executions().getFirst();
     }
 
     private static boolean allActive(PublishedView view) {
         return List.of(JAVA_ENTRY, NODE_ENTRY, EXTERNAL_A, EXTERNAL_B,
                 BUILT_IN_ENTRY).stream().allMatch(entry -> {
-                    var observation = view.engine().units().get(
+                    var observation = currentUnits(view).get(
                         new ExecutionUnitKey(entry));
                     return observation != null && observation.aggregateState()
                         == ExecutionObservation.State.ACTIVE;
@@ -630,9 +647,13 @@ public final class HostRestartRecoveryProcess {
     }
 
     private static String describe(PublishedView view) {
-        return "units=" + view.engine().units() + ", contributions="
+        return "units=" + currentUnits(view) + ", contributions="
             + view.contributions().entries() + ", failure="
-            + view.engine().failure();
+            + view.engineDiagnostics().failure();
+    }
+
+    private static Map<ExecutionUnitKey, ExecutionObservation> currentUnits(PublishedView view) {
+        return view.engine().current().map(current -> current.observations()).orElse(Map.of());
     }
 
     private static void await(BooleanSupplier condition,

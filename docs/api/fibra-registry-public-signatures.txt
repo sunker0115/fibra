@@ -139,7 +139,7 @@ Compiled from "RegistrySnapshot.java"
 public final class com.sstlfsj.fibra.registry.RegistrySnapshot extends java.lang.Record {
   public com.sstlfsj.fibra.registry.RegistrySnapshot(java.lang.String, com.sstlfsj.fibra.engine.EngineSnapshot, com.sstlfsj.fibra.engine.EngineDiagnostics, java.util.List<com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure>);
   public java.util.Optional<com.sstlfsj.fibra.engine.DeploymentTarget> target();
-  public java.util.Optional<com.sstlfsj.fibra.engine.AttemptSnapshot> current();
+  public java.util.Optional<com.sstlfsj.fibra.engine.CurrentAttemptSnapshot> current();
   public java.util.Map<com.sstlfsj.fibra.artifact.PluginId, com.sstlfsj.fibra.engine.PluginSelection> selections();
   public com.sstlfsj.fibra.config.DesiredInputGraph desiredGraph();
   public java.util.Map<java.lang.String, com.sstlfsj.fibra.engine.ExecutionObservation> observed();

@@ -29,6 +29,13 @@ describe("v1 protocol codec", () => {
       "host.call-result", "client.detach",
     ]);
     assert.deepEqual(decoded.map((message) => JSON.parse(encodeEnvelope(message))), fixtures);
+    const snapshot = decoded.find((message) => message.type === "host.snapshot");
+    assert(snapshot?.type === "host.snapshot");
+    assert.equal(snapshot.payload.targetRevision, "5");
+    assert.deepEqual(snapshot.payload.assignments.map((assignment) => [
+      assignment.desiredEntryId,
+      assignment.unitTargetRevision,
+    ]), [["entry-1", "4"], ["entry-2", "5"]]);
   });
 
   it("uses unitTargetRevision for lifecycle and observations while snapshots retain targetRevision", () => {

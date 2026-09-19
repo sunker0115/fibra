@@ -2,11 +2,13 @@
 
 > 权威架构：[2026-09-15-fibra-client-foundation-architecture.md](../specs/2026-09-15-fibra-client-foundation-architecture.md)
 
-**状态：** Task 7–10 已 Integrated，Task 11 已 Restarted，Task 12–13 已 Integrated。最终根 reactor、Host
-重启、可复现制品、npm 独立消费者、文档一致性与三路独立复核已在同一最终工作树通过；当前唯一未关闭证据是
-提交并推送后由 GitHub Actions 执行的空仓分发门，因此在该 check 变绿前不得提升为 Released。不得恢复
-`HostPreparedArtifact`、`fibra-runtime-host`、`fibra-runtime-client`，也不得恢复独立
-`NodeExecutionRuntime`。
+**状态：** 2026-09-20 P0 实现范围已重新关闭并在当前工作树本地冻结。当前仍为
+`0.5.0-SNAPSHOT`，未执行正式版本号、tag、deploy/publish、合并或推送。此前通用
+`AttemptRole/AttemptPhase` 和 `EngineDiagnostics.phase` 将 Engine operation、candidate/current 与
+retirement batch 的状态所有权压扁；本轮已完成角色专用状态、精确 failure subject、可修正 bootstrap、
+连接纵切和全部本地冻结门，不再沿用旧模型或旧证据。
+不得恢复 `HostPreparedArtifact`、`fibra-runtime-host`、`fibra-runtime-client` 或独立
+`NodeExecutionRuntime`，也不得为状态模型硬切保留兼容 API。
 
 **最终边界：** Fibra 提供统一 runtime SPI、严格 client protocol/API、Java/Node runtime 与 conformance
 fixtures；浏览器 adapter、runner、transport、Web loader、resource cache 和 renderer 留在产品仓库。
@@ -20,13 +22,13 @@ fixtures；浏览器 adapter、runner、transport、Web loader、resource cache 
 |---|---|---|
 | 1–5 | 历史处置见下文 | 早期产物只保留仍符合当前架构的证据；被替代内容不得复活 |
 | 6 | Green | package/facet/store 模型有效；最终集成与发行证据随 Task 13 统一关闭 |
-| 7 | Integrated | 单一 `RuntimeDriver`、entry-key unit、显式 definition 与三 runtime compile-only walking skeleton 已进入最终 reactor |
-| 8 | Integrated | Java/Node driver、跨 attempt 静态 generation、真实生命周期与 lease 已进入最终 reactor |
-| 9 | Integrated | 完整 target、全局 DAG、能力快照、批量 fenced reconcile 与 fail-stop 已由最终 reactor 复证 |
-| 10 | Integrated | external fixture 与 client API/protocol conformance 已由最终 reactor 和 npm 独立消费者复证 |
-| 11 | Restarted | 全部调用方已迁移，最终工作树的 Host 垂直链与重启恢复门通过 |
-| 12 | Integrated | 28 Maven + 2 npm 的清单、独立消费者、CI/release 与内容门通过；待 push 后的空仓门提升 Released |
-| 13 | Integrated | 全量本地门和三路独立复核通过且无 P0/P1/P2；待 GitHub Actions 空仓门提升 Released |
+| 7 | Integrated | 单一 `RuntimeDriver`、entry-key unit、显式 definition 与 compile-only 边界已在新状态模型上复验 |
+| 8 | Integrated | Java/Node driver、静态 generation、不可变 fence 与显式 disposer/lease 所有权已复验 |
+| 9 | Integrated | Engine aggregate 已硬切为 operation/candidate/current/retirement 独立 owner；旧通用 attempt API 已删除 |
+| 10 | Integrated | 真实 Java/Node/external 生命周期及 Engine current→Java codec→TypeScript client 连接纵切通过 |
+| 11 | Restarted | 全仓调用方完成硬切；可修正 bootstrap 与两 Host 重启恢复通过 |
+| 12 | Integrated | API baseline、Maven/npm 独立消费者、client tarball 与三轮可复现制品通过；正式发布未执行 |
+| 13 | Integrated | 完整本地门、文档一致性和架构/实现/发行复核通过；P0 已本地关闭冻结 |
 
 本轮迁移起点检查点为 `66cf499`；其后的 Task 7–13 作为一个公开 SPI 原子硬切批次在当前分支统一提交，按以下
 规则处置：
@@ -58,6 +60,27 @@ fixtures；浏览器 adapter、runner、transport、Web loader、resource cache 
    integrated，Host 重启未跑不能写成 restarted，独立消费者与制品未通过不能写成 released。
 9. 删除旧行为时同步维护替代证据：每个被删测试必须映射到新契约测试、明确由其它门覆盖，或说明该行为已被
    设计删除。不得仅凭旧类名搜索为零推断行为已迁移。
+
+### 2.1 本轮状态模型硬切顺序
+
+1. 先重写权威架构的状态所有权、failure subject、bootstrap 可修正性与连接边界，撤回过早的关闭结论；
+2. 建立角色并存红测试：candidate PREPARING 不覆盖 current SETTLED，promote 后 candidate id 成为 current id，
+   老 current id 成为 retirement source，retained unit 只属于新 current；
+3. 硬切公开 API，删除 `AttemptRole`、`AttemptPhase`、`AttemptSnapshot`、`EngineDiagnostics.phase`、无身份顶层
+   units/retiring 投影与全部兼容入口；引入 role-specific snapshots、`EngineOperationSnapshot`、
+   `TargetConvergence` 与 `FailureFact`；
+4. 将 `FibraEngine` 内部重构为实际拥有资源的 `CandidateAttempt`、`CurrentAttempt` 和
+   `RetirementBatch`，删除平行 id/phase/map 字段；
+5. 所有 runtime SPI 经统一契约边界处理同步抛错、null publisher、异步失败和 timeout；采样与
+   `publish()` 分离，每个失败显式指向 Engine/target/operation/candidate/current/retirement/unit；
+6. 重写 bootstrap 恢复：可信 target 因 package/provider/digest/prepare 失败且清理成功时保持
+   `RUNNING + PRESENT + BLOCKED`、无 current，并允许完整 replacement；只有 store/所有权/清理不可信时
+   `FAIL_STOP`；
+7. Registry、Spring、CLI、parity、distribution consumers 与 API baseline 全部硬切，不保留双投影；
+8. 建立真实 Engine current → 正式 `host.snapshot` → Java codec → TypeScript decode →
+   `ClientModuleDefinition` 实例化的纵向门，证明 candidate 不泄漏且 retained/retirement fence 正确；
+9. 重跑定向测试、根 reactor、client package、可复现构建、架构边界、API baseline、diff 检查和独立审查；
+   全部证据归属同一最终工作树后才能重新冻结。
 
 ## 3. 历史完成项：Task 1–6
 
@@ -132,8 +155,9 @@ transport 或第二套生命周期控制面。旧完整正文可由
 
 ## Task 7：冻结单一 RuntimeDriver 契约与 compile-only walking skeleton
 
-**当前阶段：Integrated。** 三 runtime compile-only walking skeleton、Node 显式 `definitionId`、entry-key
-unit/definition 双射、跨 runtime DAG 与保存前零启动均已通过，并已进入最终根 reactor。
+**当前阶段：Integrated。** 三 runtime compile-only walking skeleton、Node 显式 `definitionId`、
+entry-key unit/definition 双射、跨 runtime DAG 与保存前零启动已在 Task 9 删除通用 attempt 类型后的
+最终工作树重跑通过。
 
 ### 目标
 
@@ -177,8 +201,7 @@ unit/definition 双射、跨 runtime DAG 与保存前零启动均已通过，并
 - Create: `fibra-engine/src/main/java/com/sstlfsj/fibra/engine/DeploymentCandidate.java`
 - Create: `fibra-engine/src/main/java/com/sstlfsj/fibra/engine/CompiledDeployment.java`
 - Create: `fibra-engine/src/main/java/com/sstlfsj/fibra/engine/DurableTargetToken.java`
-- Create: `fibra-engine/src/main/java/com/sstlfsj/fibra/engine/AttemptRole.java`
-- Create: `fibra-engine/src/main/java/com/sstlfsj/fibra/engine/AttemptPhase.java`
+- 不归属 Task 7：通用 `AttemptRole/AttemptPhase` 已被后续架构复审否决，由 Task 9 硬切删除；
 - Create: `fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaRuntimeProvider.java`
 - Create: `fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaRuntimeDriver.java`
 - Create: `fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeRuntimeProvider.java`
@@ -264,15 +287,16 @@ ClassLoader 所需 `java.net.URL` 不属于违规命中。
 **依赖：** Task 7 公共 SPI 稳定。由于真实 walking skeleton 必须消费本 Task 的 driver，Task 7/8 在同一工作树
 原子批次内交错实现；验收顺序仍先关闭 Task 7 compile-only 门，再关闭本 Task 生命周期门。
 
-**当前阶段：Integrated。** Java/Node 定向生命周期、真实 contribution admission、Node/Java ACTIVE 后失活替换、
-启动失败不循环替换和资源 lease 门已通过，并已进入最终根 reactor。
+**当前阶段：Integrated。** Java/Node 定向生命周期、真实 contribution admission、
+ACTIVE 后失活替换、不可变 unit fence、显式 disposer 和资源 lease 门已在新的
+candidate/current/retirement owner 模型上重跑通过。
 
 ### 目标
 
 - Java 制品、ClassLoader、definition 物化、配置绑定和 Host execution 统一由
   `fibra-runtime-java` driver 拥有；
 - Node 制品、sidecar 和 contribution 统一由 `fibra-runtime-node` driver 拥有；
-- candidate/current/retiring unit 所有权显式；generation 在副作用前持有全部私有资源 lease；
+- candidate/current/`RetirementBatch` unit 所有权显式；generation 在副作用前持有全部私有资源 lease；
 - Java `Context.scope()` 只暴露 `ScopeView`，instance root 只能由 runtime 关闭。
 
 ### Files
@@ -310,7 +334,7 @@ ClassLoader 所需 `java.net.URL` 不属于违规命中。
   lease 不释放且 unit 不进入 stop；
 - drain/stop 的重复、迟到回复按各自 lifecycleOperationId 拒绝；
 - reverse dependency stop 与 resource retire；
-- cleanup failure 保留 retiring generation 并关闭 mutation gate；
+- cleanup failure 保留 `RetirementBatch` 与对应 generations，并关闭 mutation gate；
 - 真实 Scope disposer 失败即使被 core 普通关闭语义隔离，Host 的 `releaseScope` 仍必须识别并保留
   ClassLoader/payload owner；
 - Node sidecar 在 start 成功后、contribution 注册完成前退出时必须封准入并返回 FAILED，不能发布死亡进程为
@@ -328,15 +352,16 @@ mvn -pl fibra-api,fibra-core,fibra-runtime-java,fibra-runtime-node -am test
 **依赖：** Task 7 公共 SPI 稳定、Task 8 driver 契约可消费。Engine 编译器与 driver 互相提供真实计划数据，
 因此允许在同一未提交原子批次内交错实现；Task 9 checkpoint 前仍必须依次通过 Task 7、8 全部门禁。
 
-**当前阶段：Integrated。** Engine 旧双 SPI 生产引用已清空；持久目标、全局 unit DAG、传递静态依赖闭包、
-冻结 capability snapshot、批量 fenced reconcile 与 fail-stop 定向门已通过。最终宿主、重启和根 reactor
-已由最终根 reactor 同炉复跑通过。
+**当前阶段：Integrated。** 旧双 SPI 与通用 attempt 投影已删除；持久目标、全局 unit DAG、角色专用
+aggregate、结构化 failure subject、纯投影及可修正 bootstrap 已在同一最终工作树通过定向与全量门禁。
 
 ### 目标
 
 - Engine 生产路径只使用 `RuntimeDriver`；
 - `DeploymentTarget` 是 selections + desired + configContext 的唯一持久格式；
-- 唯一顺序为 prepare → validate → seal → save → promote → close admission → drain → stop → activate → retire；
+- Engine operation、candidate、current 与 retirement batch 分别持有自己的类型与 phase，不能交叉投影；
+- 唯一顺序为 prepare → validate → seal → save → promote → close admission → drain → stop → activate → retire，
+  但顺序只由 `EngineOperationStage` 编排，不写入不属于该 owner 的 phase；
 - 保存后失败保留新 target 和真实 observed；save-unconfirmed 关闭 mutation gate；
 - save-unconfirmed 同时关闭全部 managed contribution 准入并通过 `HostTerminationPort` 一次性请求受控 Host 退出；
 - `ReconcileCurrent` 在同一 targetRevision 下替换失败 unit closure，不伪造 revision或并存第二 current。
@@ -345,6 +370,14 @@ mvn -pl fibra-api,fibra-core,fibra-runtime-java,fibra-runtime-node -am test
   active unit 校验其传递静态 facet 闭包，失败 attempt 不改变 current observation；
 - `requestReconcile` 使用不可拆分的 `Set<RuntimeUnitFence>`；Engine 拒绝 missing/wrong/stale/retired fence，
   原子替换有效 FAILED 闭包，再唤醒仍匹配的非失败 units。
+- `RuntimeUnitGeneration.fence()` 暴露创建时分配的不可变完整 fence；运行时不得在首次 reconcile 时才生成身份；
+- retirement batch 具有独立 `batchId`，不能以 source attempt id 冒充 batch 身份；
+- `FailureFact.subject` 使用带身份的封闭类型显式指向 Engine/target/operation/candidate/current/retirement/unit；
+  unit 同时携带直接 owner id 与完整 fence，不从字段存在性推断，也不保留通用 kind + 可空 id 兼容形态；
+- runtime SPI 统一适配同步抛错、null publisher、异步失败与 timeout；
+- observation 采样与投影分离，`publish()` 是不调用 runtime、不改状态的纯函数；
+- `RUNNING + PRESENT + BLOCKED` 表达可信持久目标无法 bootstrap 但可由完整 replacement 修正，
+  不伪造 FAILED current。
 
 ### Files
 
@@ -361,7 +394,12 @@ mvn -pl fibra-api,fibra-core,fibra-runtime-java,fibra-runtime-node -am test
   `NodeArtifactRuntime.java`、`fibra-runtime-host/`、`fibra-runtime-client/`
 - Modify: root `pom.xml`，在同一 checkpoint 移除 `fibra-runtime-host` 与 `fibra-runtime-client` 的 module 和
   dependencyManagement
-- Create/Rewrite: `DurableTargetState`、deployment attempt、retirement batch、Engine diagnostics/snapshot/phase
+- Delete: `AttemptRole.java`、`AttemptPhase.java`、`AttemptSnapshot.java`、`EngineDiagnostics.phase`、无身份顶层
+  units/retiring 投影及兼容 API
+- Create/Rewrite: `EngineState`、`DurableTargetState`、`TargetConvergence`、`EngineOperationStage`、
+  `EngineOperationSnapshot`、`CandidatePhase/Snapshot`、`CurrentPhase/Snapshot`、
+  `RetirementPhase/BatchSnapshot`、`FailureFact/FailureSubject`、Engine diagnostics/snapshot
+- Create/Rewrite internal aggregate: `CandidateAttempt`、`CurrentAttempt`、`RetirementBatch` 及统一 runtime invocation boundary
 - Test: full save/failure/retry/restart-state matrix
 
 ### 必测场景
@@ -375,6 +413,14 @@ mvn -pl fibra-api,fibra-core,fibra-runtime-java,fibra-runtime-node -am test
 - package gate disabled 保存成功并撤销该 package 的全部 active units，但 raw desired entries 保留；缺少
   selection、revision/digest 不匹配或绕过 gate 的 active entry 在保存前拒绝；
 - prepare/definition/binder/validator/plan 失败不保存；
+- candidate PREPARING/VALIDATING/SAVING 时 current 仍是原 phase，current snapshot failure 显式归属 current，
+  candidate 不被误标为失败；
+- promote 后 candidate attemptId 成为 current attemptId，老 current attemptId 成为 retirement sourceAttemptId，
+  retirement 获得独立 batchId，retained unit 只属于新 current；
+- current 与 retirement 同时存在时 phase/observations 互不覆盖；`publish()` 不触发任何 runtime 调用；
+- `reconcileAsync` 同步抛错、异步失败、null publisher 和 timeout 均映射到精确 current/unit；
+- 同 generation 中一个 unit 被替换而另一个保留时，被替换 unit 的显式 disposer/私有 lease 必须完成，保留 unit
+  的运行身份与 ClassLoader 不变；GC 回收只作补充观测，不作为释放门禁；
 - save 明确失败不启动；save-unconfirmed 不 promote、不继续服务并进入受控退出；
 - 某 driver seal 后另一 driver seal 失败、全部 seal 后 save 明确失败，均 abort sealed generations 且零 lease 泄漏；
 - abort/close 失败保留资源现场、关闭 mutation/contribution gate 并请求 Host termination，不接受下一变更；
@@ -386,13 +432,15 @@ mvn -pl fibra-api,fibra-core,fibra-runtime-java,fibra-runtime-node -am test
   notification lane 调用 `HostTerminationPort`。端口抛错、阻塞或尝试重入不得阻塞 command lane、重开 gate
   或产生第二 request；
 - current reconcile retry 先清理旧失败 closure，同 revision、新 runtimeInstanceId；
+- bootstrap 的 package/provider/digest/prepare 失败且清理成功时无 current、target=`PRESENT`、
+  convergence=`BLOCKED`、Engine=`RUNNING`，完整 replacement 可修正；清理失败则 `FAIL_STOP`；
 - 旧格式直接拒绝。
 
 ### 门禁
 
 ```text
 mvn -pl fibra-engine,fibra-runtime-java,fibra-runtime-node -am test
-if rg -n "PluginRuntimeAdapter|ArtifactRuntime|ExecutionRuntime|RuntimeResources|ReplaceConfigContext" fibra-engine/src/main; then exit 1; fi
+if rg -n "PluginRuntimeAdapter|ArtifactRuntime|ExecutionRuntime|RuntimeResources|ReplaceConfigContext|AttemptRole|AttemptPhase|AttemptSnapshot" fibra-engine/src/main; then exit 1; fi
 ```
 
 搜索结果必须为空。
@@ -401,12 +449,8 @@ if rg -n "PluginRuntimeAdapter|ArtifactRuntime|ExecutionRuntime|RuntimeResources
 
 **依赖：** Task 9 全部门禁通过。
 
-**当前阶段：Integrated。** 真实 package/target store、Engine、动态 Java JAR、Node sidecar、external
-provider、Java→Node→external 启动顺序、保存前零启动、offline→online reconcile、同 facet 双 entry 独立
-resolved config、retained identity、route/lease/drain/stop 及资源归零均已通过。Java/Node 自停用现已统一进入
-带 `RuntimeUnitFence` 的 Host→Engine gateway 并保存完整 replacement target；Java unit-local
-registrar/control realm、运行中 observed refresh、stale fence、保存失败与 dependency-only affected 回归均已
-通过，并已由 Task 11/13 的最终工作树复跑确认。
+**当前阶段：Integrated。** 真实 package/target store、Java/Node/external 运行、围栏和
+Engine current → 正式 `host.snapshot` → Java/TypeScript 契约纵切已在新 aggregate/投影 API 上重新取证。
 
 ### 目标
 
@@ -414,6 +458,9 @@ registrar/control realm、运行中 observed refresh、stale fence、保存失�
   跑通一个逻辑 package；
 - contribution kind/codec 只有一个 registry，远端调用只经 `RemoteContributionInvoker`；
 - 外部 runtime fixture 只消费公开 SPI，不进入生产 composition root 或发行物。
+- client 连接层只消费 current assignments，不泄漏 Engine operation/candidate/retirement 状态机；
+- 从真实 Engine current 生成正式 `host.snapshot`，并经 Java codec 与 TypeScript 解码完成
+  `ClientModuleDefinition` 绑定，不用手写 fixture 冒充 Engine 投影。
 
 ### Files
 
@@ -475,7 +522,8 @@ registrar/control realm、运行中 observed refresh、stale fence、保存失�
   和 runtimeInstance；
 - client API/protocol conformance 必须从正式 `host.snapshot` codec 结果仅取 Assignment 的公开字段，精确选择
   `ClientModuleDefinition`，为两个 entries 创建独立 modules，并在全新 session 重复绑定，证明不依赖 fixture
-  私有字段或跨 session 实例缓存；
+  私有字段或跨 session 实例缓存；该 snapshot 必须由真实 current 投影，candidate 不产生
+  assignment，retirement 不作为新 assignment 重新下发；
 - external execution 离线时 PENDING，不阻塞 target save/Host ready；
 - disconnect 不冒充 stop；
 - plan-affecting capability/runtime contract 变化重编译全部 current units，不保存新 target；
@@ -502,9 +550,8 @@ if rg -n "ExternalFixtureRuntimeProvider" fibra-*/src/main fibra-distribution; t
 
 **依赖：** Task 10 全部门禁通过。
 
-**当前阶段：Restarted。** Registry/config、CLI/Spring/Boot、examples/benchmarks、parity/archetype、plugins 与
-distribution 已迁移；旧 `ArtifactPackage/ArtifactStore` 正式入口和 assembly 已删除。两 Host 重启定向门曾
-通过；最终根 reactor 已同炉复跑 Host 垂直链与重启恢复门。
+**当前阶段：Restarted。** Registry/config、CLI/Spring/Boot 及其余下游已全部硬切角色专用公开投影；
+两 Host 重启已覆盖无 current 的 `RUNNING + PRESENT + BLOCKED` bootstrap 修正路径。
 
 ### 依赖前沿
 
@@ -518,6 +565,8 @@ distribution 已迁移；旧 `ArtifactPackage/ArtifactStore` 正式入口和 ass
 ### Files
 
 - Rewrite: `fibra-registry` package/desired use cases and persistence projections
+- Rewrite: Registry/Spring/CLI/parity/distribution 的 Engine snapshot 消费，只使用 role-specific
+  snapshots、`TargetConvergence` 和 `FailureFact`，不复制第二状态机
 - Modify: `fibra-config` definition refs、target construction and codecs
 - Modify: `fibra-cli`、`fibra-spring`、`fibra-spring-boot-starter` composition roots
 - Modify: examples、benchmarks、parity、archetype、plugins、distribution manifests and tests
@@ -558,6 +607,8 @@ mvn -pl fibra-parity-tests -am test -Dtest=HostRestartRecoveryTest -Dsurefire.fa
   以 `RuntimeId + unit key + unitTargetRevision + runtimeInstanceId` 拒绝 retiring 旧代次迟到请求；保存失败保留
   当前 unit/target 并允许重试，不得降级为 reconcile；
 - package gate 关闭撤销全部 facets/entries；
+- Registry observed 只投影 `CurrentAttemptSnapshot` 的 observations；operation/candidate/retirement 只作诊断，
+  不改写 active package/entry 事实；
 - CLI/Spring 只默认装配 Java/Node，产品 runtime 由产品 composition root 显式注册。
 
 ### 重启必测场景
@@ -573,7 +624,9 @@ mvn -pl fibra-parity-tests -am test -Dtest=HostRestartRecoveryTest -Dsurefire.fa
 - 保存后 execution 失败的 current target 在重启时重新收敛；
 - package 缺失/损坏时失败可观察且 target 不被改写；
 - built-in 同 digest 恢复；provider 缺失、旧 digest 不再提供、metadata 与私有 definitions 不一致时失败可观察
-  且 target 不被改写；发布二进制或声明变化必须改变 built-in digest/contract identity；
+  且 target 不被改写；清理成功时 Engine 保持管理 ready、无 current、投影 `PRESENT + BLOCKED`，
+  再通过完整 replacement target 删除坏引用并收敛；发布二进制或声明变化必须改变 built-in
+  digest/contract identity；
 - save-unconfirmed 由 Engine/store 定向故障注入证明只以重启后的磁盘事实消歧；Host 进程门只验证确定落盘
   target 的恢复，不重复伪造 store 内部窗口。
 
@@ -588,9 +641,8 @@ mvn -pl fibra-parity-tests -am test -Dtest=HostRestartRecoveryTest -Dsurefire.fa
 
 **依赖：** Task 11 全部门禁通过。
 
-**当前阶段：Integrated。** 28 个 Maven 制品、两个纯契约 npm 包、Java external
-`RuntimeProvider` 消费者、npm tarball 消费者、正式制品内容检查与分离 CI/release 流程均已在最终工作树通过；
-冻结、提交和推送后仍须由 GitHub Actions 执行空仓分发，才能提升为 Released。
+**当前阶段：Integrated。** 28 个 Maven 制品、两个纯契约 npm 包、Engine 新公开状态 API、Java/npm
+独立消费者、API baseline、制品内容与可复现门均已通过。本轮只完成本地冻结，不执行正式发布。
 
 ### 正式发布集合
 
@@ -656,9 +708,9 @@ scripts/verify-architecture-boundaries.sh
 
 **依赖：** Task 12 全部门禁通过。
 
-**当前阶段：Integrated。** 2026-09-19 的最终工作树已通过根 reactor、可复现构建、npm 包门、架构边界、
-文档一致性和架构/发行/脚本三路独立复核，复核剩余 P0/P1/P2 均为零。提交并推送后的 GitHub Actions 空仓分发
-check 是唯一未关闭门；它通过后当前提交才能视为 Released。
+**当前阶段：Integrated。** P0 已在当前工作树本地关闭冻结。role-specific phase、精确 failure subject、
+纯投影、可修正 bootstrap、显式资源释放和真实连接纵切已在同一工作树重新取证；正式发布、合并与推送
+仍按独立授权执行。
 
 ### 全量命令与证据
 
@@ -672,19 +724,45 @@ check 是唯一未关闭门；它通过后当前提交才能视为 Released。
 - 代码、测试、文档与审查修订冻结、提交并推送后，由 GitHub Actions 在目标分支执行
   `scripts/verify-distribution.sh`；
 - Java/TypeScript API baseline；
+- Java Engine API baseline 中不存在 `AttemptRole`、`AttemptPhase`、`AttemptSnapshot`、
+  `EngineDiagnostics.phase` 或兼容重载；
 - `git diff --check`；
 - 旧模型、兼容分支、产品浏览器代码的全仓搜索；
 - 文档一致性审查；
 - 架构、代码、发行三路独立审查实际 diff、测试输出和制品。
 
-2026-09-19 本地最终证据：
+2026-09-20 本次关闭证据：
+
+- Java 21 + Maven 3.9.9 的 `mvn clean verify`：43 个 reactor 模块全部成功；
+- `fibra-parity-tests` 全量 139 项通过，含真实 Java/Node/external execution、连接纵切与 Host 重启恢复；
+- `EngineAttemptStateModelTest` 覆盖 candidate/current/retirement 并存、精确 owner、bootstrap blocked 与
+  fatal gate；Java/Node runtime 定向门通过；
+- 插件切换资源门完成复验：Java unit 成功 stop 后立即断开 definition、instance、Scope、contribution、failure
+  与 ClassLoader lease 等私有引用，局部替换继续保持无关 unit 的 ClassLoader/运行身份；50 轮真实 Java 替换后
+  退役 descriptor/ClassLoader 不累积。Node 成功 stop 后断开 payload/session/process 与私有
+  `startupTermination` 异常图，50 轮 start/stop/retire 后 payload、session 和存活 PID 均为零；JVM 类卸载只作
+  补充 GC 观测，不替代显式 disposer/lease 完成这一权威释放门；
+- Java API baseline 更新与复验通过，Registry、CLI、distribution、archetype 与 plugins 消费方完成硬切；
+- `scripts/verify-client-packages.sh`：client API 4 项、protocol 8 项测试、两个 tarball 内容与离线独立消费者
+  通过，下载 0 个包；
+- `scripts/verify-reproducible-release.sh` 三轮构建及制品逐字节比较通过；
+- `scripts/verify-architecture-boundaries.sh`、旧模型/旧 SPI 静态搜索和 `git diff --check` 通过；
+- 架构、实现与发行边界复核未留下 P0/P1/P2 阻断项；复核中发现并修正 retirement unit owner 必须使用
+  `batchId` 而非 `sourceAttemptId`，并补充回归测试；
+- 根门禁暴露并修正 Node supervisor 在首次关闭副作用前尚未取得 shutdown ownership 的可重入竞态；
+  `NodeSidecarTest` 全量 76 项与根 reactor 复验通过；
+- `scripts/verify-distribution.sh` 按既定策略不在本地或 pull request 运行，只在后续获授权的 push/release
+  workflow 执行；这不属于本次本地冻结或正式发布已完成的声明。
+
+2026-09-19 状态模型重构前的历史证据（不构成本次关闭证据）：
 
 - Java 21 + Maven 3.9.9 的 `mvn clean verify`：43 个 reactor 模块全部成功，耗时 2 分 15 秒；
 - `scripts/verify-reproducible-release.sh`：三轮构建与 Maven 制品、发行 ZIP、目录树逐字节比对通过；
 - `scripts/verify-client-packages.sh`：client API 4 项、protocol 8 项测试通过，两个 tarball 内容与独立消费者通过，
   下载 0 个包；
 - `scripts/verify-architecture-boundaries.sh`、7 个脚本的 `bash -n`、workflow YAML 解析与 `git diff --check` 通过；
-- 文档一致性、最终架构与脚本/发行三路复核均无剩余 P0/P1/P2；
+- 当时的文档一致性、架构与脚本/发行复核无剩余 P0/P1/P2；后续复审发现状态所有权缺口，
+  该结论已失效；
 - `scripts/verify-distribution.sh` 未在本地执行，按最终约束只由 push workflow 和正式 release workflow 执行。
 
 最终至少执行：
@@ -711,12 +789,18 @@ scripts/verify-architecture-boundaries.sh
 - Fibra：SPI、协议、唯一 Engine/RuntimeDriver、Java/Node、发行契约；
 - 产品：browser adapter、runner、transport、Web loader、renderer、React/Electron。
 
+同时必须一致使用 `EngineOperation`、`CandidateAttempt`、`CurrentAttempt`、
+`RetirementBatch`、`FailureFact`、`TargetConvergence` 的新模型；任一文档出现通用
+`AttemptRole/AttemptPhase/AttemptSnapshot`、`EngineDiagnostics.phase` 仍作为现行实现，或把本地冻结写成
+正式发布，均视为未完成。历史审计与禁止事项中的名称不表示现行能力。
+
 ### 完成条件
 
-- 所有 Task 状态和 commit/checkpoint 回填；
+- 所有 Task 状态和本地验证 checkpoint 回填；commit、push 与正式发布按独立授权执行；
 - 无未归属工作树改动；
 - 全部阶段门有本次运行证据；
+- role-specific 状态、结构化失败、bootstrap replacement 与 Engine→Java→TypeScript 连接纵切门全部通过；
 - 三路独立审查无未关闭 P0/P1/P2；
-- 只有此时才能把权威架构改为“已冻结”、把 P0 标记完成并合并。
+- 只有此时才能把权威架构改为“已冻结”并把 P0 实现范围标记完成；正式发布、合并与推送按独立授权执行。
 
 任一门禁未实际运行、证据范围小于声明范围、fixture 被生产依赖、发行集合与文档不一致，均不得宣告完成。

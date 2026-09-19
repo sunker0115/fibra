@@ -21,6 +21,7 @@ import com.sstlfsj.fibra.engine.HostTerminationRequest;
 import com.sstlfsj.fibra.engine.PluginSelection;
 import com.sstlfsj.fibra.engine.PublishedView;
 import com.sstlfsj.fibra.engine.RemoteContributionInvoker;
+import com.sstlfsj.fibra.engine.TargetConvergence;
 import com.sstlfsj.fibra.runtime.java.JavaRuntimeProvider;
 import com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions;
 import com.sstlfsj.fibra.runtime.node.NodeRuntimeProvider;
@@ -156,7 +157,7 @@ class RuntimeHostVerticalVerificationTest {
             await(() -> pending(engine.published().current(), EXTERNAL_A)
                 && pending(engine.published().current(), EXTERNAL_B)
                 && contributionCount(engine.published().current()) == 2
-                && engine.snapshot().retiring().isEmpty());
+                && engine.snapshot().retirementBatch().isEmpty());
             var offline = engine.published().current();
             assertNotEquals(disconnectedA.runtimeInstanceId(),
                 detail(offline, EXTERNAL_A).runtimeInstanceId());
@@ -221,8 +222,8 @@ class RuntimeHostVerticalVerificationTest {
             removal.get(TIMEOUT.toSeconds(), TimeUnit.SECONDS);
 
             var empty = engine.published().current();
-            assertTrue(empty.engine().units().isEmpty());
-            assertTrue(empty.engineDiagnostics().targetSatisfied());
+            assertTrue(currentUnits(empty).isEmpty());
+            assertEquals(TargetConvergence.SATISFIED, empty.engine().targetConvergence());
             assertEquals(0, contributionCount(empty));
             assertEquals(0, controller.snapshot().counters().resourceGenerations());
             assertEquals(0, controller.snapshot().counters().resourceLeases());
@@ -248,27 +249,31 @@ class RuntimeHostVerticalVerificationTest {
     private static void assertUnit(PublishedView view, String entry,
                                    ExecutionObservation.State state,
                                    long revision) {
-        var observation = view.engine().units().get(new ExecutionUnitKey(entry));
+        var observation = currentUnits(view).get(new ExecutionUnitKey(entry));
         assertEquals(state, observation.aggregateState());
         assertEquals(revision, observation.executions().getFirst().unitTargetRevision());
     }
 
     private static boolean active(PublishedView view, String entry) {
-        var observation = view.engine().units().get(new ExecutionUnitKey(entry));
+        var observation = currentUnits(view).get(new ExecutionUnitKey(entry));
         return observation != null
             && observation.aggregateState() == ExecutionObservation.State.ACTIVE;
     }
 
     private static boolean pending(PublishedView view, String entry) {
-        var observation = view.engine().units().get(new ExecutionUnitKey(entry));
+        var observation = currentUnits(view).get(new ExecutionUnitKey(entry));
         return observation != null
             && observation.aggregateState() == ExecutionObservation.State.PENDING;
     }
 
     private static ExecutionObservation.Detail detail(PublishedView view,
                                                        String entry) {
-        return view.engine().units().get(new ExecutionUnitKey(entry))
+        return currentUnits(view).get(new ExecutionUnitKey(entry))
             .executions().getFirst();
+    }
+
+    private static Map<ExecutionUnitKey, ExecutionObservation> currentUnits(PublishedView view) {
+        return view.engine().current().map(current -> current.observations()).orElse(Map.of());
     }
 
     private static int contributionCount(PublishedView view) {

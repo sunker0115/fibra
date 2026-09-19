@@ -2,8 +2,8 @@
 
 日期：2026-09-07
 
-状态：第 1–10 节与第 11 节 F1–F4 的原始交付已完成；2026-09-17 已按 Client Foundation 最终架构重写
-制品、持久目标和 runtime owner 相关段落。跨执行域插件模型及其 P0 的字段级契约仍以
+状态：第 1–10 节与第 11 节 F1–F4 的原始交付已完成；2026-09-20 Client Foundation P0
+状态所有权重构及本地冻结门已完成。跨执行域插件模型及其 P0 的字段级契约仍以
 [2026-09-15 Client Foundation 权威架构](./2026-09-15-fibra-client-foundation-architecture.md)为准。
 
 本文是已完成 vNext 与 CLI F1–F4 的权威记录，定义该交付态的系统边界、运行模型、模块职责和验收标准；
@@ -80,6 +80,12 @@ FibraEngine
   └─ PublishedRuntime                     宿主唯一能力入口
        └─ AtomicReference<PublishedView>
             ├─ EngineSnapshot
+            │    ├─ EngineState + DurableTargetState + TargetConvergence
+            │    ├─ EngineOperationSnapshot?
+            │    ├─ CandidateAttemptSnapshot?
+            │    ├─ CurrentAttemptSnapshot?
+            │    ├─ RetirementBatchSnapshot?
+            │    └─ FailureFact?
             ├─ ContributionSnapshot
             ├─ RuntimeDiagnostics
             └─ EngineDiagnostics
@@ -341,7 +347,12 @@ Engine 关闭先在线性化的命令准入边界停止接收新请求，等待�
 | `RuntimeDiagnostics.services` | `ServiceKey`、effective provider 与 shadowed providers |
 | `RuntimeDiagnostics.events` | 事件名称、mode、listener type，以及 listener owner/order/once/global |
 | `ContributionSnapshot` | 目录 revision、contribution id/kind/descriptor、provider/owner、注册身份及可调用状态 |
-| `EngineDiagnostics` | 已保存目标 revision、变更阶段、受影响实例/资源、排空与清理失败、目标是否达成、mutation gate 与 Engine failure |
+| `EngineSnapshot` | Engine 健康、持久目标、收敛结果，以及独立的 operation/candidate/current/retirement/failure 快照 |
+| `EngineOperationSnapshot` | 一次命令的编排进度、影响集和 target save 事实；不表示 attempt 生命周期 |
+| `CandidateAttemptSnapshot` | 尚未 promote 的 candidate 身份、target 和 candidate-only phase；无 execution observations |
+| `CurrentAttemptSnapshot` | 当前 attempt 身份、current-only phase、units 与同一采样点的 observations |
+| `RetirementBatchSnapshot` | batch/source attempt 身份、retirement-only phase、被替换 units 与 observations |
+| `EngineDiagnostics` | mutation/admission gate、排空/清理事实与结构化 `FailureFact`；不存在全局 `phase` |
 
 这些 DTO 只描述结果，不暴露 Fiber、Context、ClassLoader、Process、RPC channel 或 registration 句柄。
 声明的达成要求不能按 instanceId 与整个 domain 的实例列表连接：动态子插件可能没有配置声明，
@@ -350,8 +361,9 @@ Engine 关闭先在线性化的命令准入边界停止接收新请求，等待�
 运行实例具有 Runtime 内唯一、创建时分配且不复用的 identity；配置局部 ID 和 Scope 名称不承担
 运行身份。声明实例状态与全域诊断从同一次域采样按 identity 投影，不能分别读取句柄的可变状态。
 目录采样前后的单调 revision 必须相同，才能与该域采样组成 PublishedView；竞争时让出执行权后
-重采，不持有目录锁等待 lifecycle lane，也不以紧循环阻塞命令队列。仅刷新 Engine 变更阶段时，
-复用上一份完整运行事实，不单独替换其中的诊断或实例状态。
+重采，不持有目录锁等待 lifecycle lane，也不以紧循环阻塞命令队列。仅刷新 Engine operation 编排进度时，
+复用上一份完整运行事实，不单独替换其中的诊断或实例状态。`publish()` 只投影 command lane
+已冻结的模型，不在发布时调用 runtime `snapshot()`、处理失败或改变生命周期。
 
 `RuntimeDomain.snapshots()` 提供整个域的最新不可变事实，覆盖动态子插件加入、退出、状态变化，以及
 服务和事件监听器变化；不能只订阅 Engine 声明实例的状态。服务变化即使没有改变实例的 PENDING
@@ -370,6 +382,12 @@ observe -> validate / prepare affected facets / bind changed entries
         -> close old admission -> drain / stop old units -> activate new units
         -> observe convergence / publish views -> retire released generations
 ```
+
+这条顺序是 `EngineOperation` 的编排，不是可被 candidate/current/retirement 共用的生命周期枚举。
+`CandidateAttempt`、`CurrentAttempt` 和 `RetirementBatch` 分别拥有不可混用的 phase 类型；promote
+只做 candidate 到 current 的原子所有权转移，老 current 中被替换 units 形成带 `sourceAttemptId`
+的 retirement batch，retained units 只属于新 current。不存在公开 `AttemptRole/AttemptPhase/AttemptSnapshot`、
+`EngineDiagnostics.phase` 或无身份的顶层 retiring map。
 
 配置上下文是持久 desired 的组成部分。任何会改变 enabled、config、realm 或 intercept 求值的上下文变更，
 都必须提交包含完整 `ConfigContextSnapshot` 的新 `DeploymentTarget`，参与 canonical target digest，并走同一
@@ -398,11 +416,17 @@ PublishedView 全部保持不变。
 - 排空与回收不决定保存的目标内容。回收失败进入健康诊断并关闭后续变更准入，不伪造旧路由恢复。
 
 candidate 已 promote、运行已收敛且 retirement batch 已完成的目标，即使包含可观察的插件 FAILED 或未满足
-声明要求，仍可通过显式新目标纠正。candidate seal/promote、目标保存确认或 unit drain/stop/retire 任一失败，
-都不能据“资源仍有 owner”推断为安全，必须封锁后续变更并保留实际失败事实。不得用统一 finally retire 或
-一律重开 gate 掩盖这一区别。
-失败诊断分别表达原始执行阶段、目标保存确认与清理失败，不从拼接后的错误文本反推控制决策；保存事实的
-公共契约不得让 Engine 反向依赖 Registry 实现，也不为此引入通用事务框架。
+声明要求，仍可通过显式新目标纠正。candidate prepare/validate/seal 或 save 明确失败且清理成功时，旧 current
+与准入不变，可继续提交修正目标；candidate 清理失败、save-unconfirmed、current runtime 契约违例或
+unit drain/stop/retire 失败才关闭后续变更并保留现场。不得用统一 finally retire 或一律重开 gate 掩盖区别。
+
+失败诊断必须是结构化 `FailureFact`，显式指向 Engine、durable target、operation、candidate、current、
+retirement batch 或精确 unit；retirement 以独立 batchId + sourceAttemptId 标识，unit 以直接 owner id +
+创建时分配的完整 `RuntimeUnitFence` 标识，不从此刻存在哪个字段或拼接错误文本反推 owner。保存事实的公共
+契约不得让 Engine 反向依赖 Registry 实现，也不为此引入通用事务框架。
+
+运行资源是否释放以显式 disposer/lease 完成为唯一权威事实。ClassLoader、sidecar 或远端连接的 GC 可达性
+只能作为补充诊断，不能替代 stop/retire 完成，也不能据此宣布 generation 生命周期结束。
 
 DSH 的配置 Entry 在应用失败时会尝试恢复旧配置；这里不自动反写已保存目标，是为了让进程内结果与
 重启后读取的目标一致，避免引入第二次可能失败的目标提交。修正配置或恢复旧版本须提交显式新目标；
@@ -437,9 +461,11 @@ Engine 单独记录最近一次已接受的 source revision，它不随 Registry
 | 目标已保存、协调尚未结束时崩溃 | 重启按保存的目标重建；不承诺崩溃前未完成的调用仍能收到响应 |
 | 目标已保存、启动或清理失败 | 发布实际状态及未达成要求，保留必要资源，明确失败与恢复条件；不声称整批回滚 |
 | 已达成目标后回收失败 | 报告残留资源与故障，不倒退已保存目标 |
-| 目标损坏、引用缺失或重建失败 | 启动或恢复明确失败；不自动回退旧版本、不用当前源文件猜测修复 |
+| 目标文件/存储事实不可信 | 进入 `FAIL_STOP` 或拒绝启动；不自动回退旧版本、不用当前源文件猜测修复 |
+| 目标可信，但 package/provider 缺失或重建失败 | 清理成功时保持 `RUNNING + PRESENT + BLOCKED`、无 current，使 Host 进入管理 ready 并接受完整 replacement；清理失败则 `FAIL_STOP` |
 
-运行诊断中的变更阶段不是重启恢复日志。操作审计独立记录，失败须可观察，但不能把已经成功的
+运行诊断中的 `EngineOperationStage` 不是重启恢复日志，也不得投影为 candidate/current/retirement
+的共享 phase。操作审计独立记录，失败须可观察，但不能把已经成功的
 部署返回成失败，也不能反向改变目标；不保证部署结果与审计记录恰好一次或原子持久化。业务若要求
 强审计，应在宿主层另行定义协议，不能偷偷扩大 Fibra 的提交边界。
 
@@ -583,7 +609,7 @@ Java `ManagedPluginControl` 与 Node `fibra.disable` 都只向 `RuntimeHostServi
 `RuntimeUnitFence + reason`。Engine 在唯一 command lane 校验 runtime、unit、unitTargetRevision 与
 runtimeInstanceId 仍指向 current unit，再从当前 durable target 构造仅关闭该 entry 的完整 replacement。
 先保存新 target，再同步封闭 route admission 并排空该 unit；保存失败保留原 target/unit 并允许重试。
-动态子插件、直接 `dispose()`、普通失败和 Engine 关闭都不写回 desired。迟到的 retiring generation 请求
+动态子插件、直接 `dispose()`、普通失败和 Engine 关闭都不写回 desired。迟到的 `RetirementBatch` unit 请求
 被 fence 丢弃，不能错误关闭 replacement unit。
 
 绑定使用准备后的目标 catalog 与程序内建 definition；启动时绑定全部有效启用插件，更新时只绑定
@@ -1624,9 +1650,11 @@ ZIP、五类仓外消费者、真实 PTY、archetype 和三轮可复现门禁；
 已有 `~/.m2` 解析 Fibra 正式发布物，再在仓外目录单独构建上层项目，并核对解析制品与临时发布目标字节，
 以证明两仓边界真实成立。
 
-Fibra F1–F4 的历史阶段已完成；Fibra Client Foundation P0 当前正在执行，进度与完成条件以
-[实施计划](../plans/2026-09-15-fibra-client-foundation-p0.md)为准，未通过其最终门禁与独立复审前不得沿用 F4
-的完成结论。Model、Agent、Session、MCP 或其它 DSH 产品模块不回填到 Fibra 仓库。
+Fibra F1–F4 的历史阶段已完成；Fibra Client Foundation P0 已按
+[实施计划](../plans/2026-09-15-fibra-client-foundation-p0.md)完成状态模型硬切并在当前工作树本地冻结。
+当前保持 `0.5.0-SNAPSHOT` 且未正式发布；独立产品 P1 前置装配应从该冻结契约开始，仍须由产品仓完成
+自身真实 browser RuntimeDriver、transport 与发行门。
+Model、Agent、Session、MCP 或其它 DSH 产品模块不回填到 Fibra 仓库。
 
 ### 11.9 vNext 收口与 `0.5.0-SNAPSHOT` 底座打磨
 

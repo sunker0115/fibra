@@ -5,7 +5,6 @@ import com.sstlfsj.fibra.artifact.PluginPackageStore;
 import com.sstlfsj.fibra.bridge.ContributionKindRegistry;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.PluginDefinitionRef;
-import com.sstlfsj.fibra.engine.AttemptPhase;
 import com.sstlfsj.fibra.engine.ExecutionObservation;
 import com.sstlfsj.fibra.engine.FileDeploymentTargetStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
@@ -164,7 +163,12 @@ class LifecycleConsumerTest {
     private static WeakReference<ClassLoader> atomicallyRemove(PluginRegistry registry, FibraEngine engine, Fixture fixture) throws Exception {
         var loader = fixture.loader(engine); var pids = fixture.activePids();
         var hold = invokeAsync(engine, ToolRequest.of(Map.of("operation", "hold"))).toFuture(); fixture.awaitHold();
-        var revoking = engine.published().views().filter(view -> view.engineDiagnostics().phase() == AttemptPhase.DRAINING && view.contributions().entries().stream().noneMatch(entry -> entry.kind().equals(ToolContributions.KIND.name()) && entry.id().equals(ToolContributions.id(INSTANCE, "lifecycle")))).next().toFuture();
+        var revoking = engine.published().views().filter(view -> view.engine().retirementBatch()
+            .map(batch -> batch.phase() == com.sstlfsj.fibra.engine.RetirementPhase.DRAINING)
+            .orElse(false) && view.contributions().entries().stream().noneMatch(entry ->
+                entry.kind().equals(ToolContributions.KIND.name())
+                    && entry.id().equals(ToolContributions.id(INSTANCE, "lifecycle"))))
+            .next().toFuture();
         var removal = registry.remove(INSTANCE).toFuture(); revoking.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
         assertThrows(java.util.concurrent.TimeoutException.class, () -> removal.get(300, TimeUnit.MILLISECONDS), "排空中的调用不得被 entry remove 越过");
         fixture.assertActiveLoader(loader); fixture.assertActivePids(pids); fixture.release();

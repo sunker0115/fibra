@@ -29,6 +29,7 @@ import com.sstlfsj.fibra.engine.RuntimeUnitGeneration;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
 import com.sstlfsj.fibra.value.LiteralValue;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.lang.reflect.Field;
@@ -50,11 +51,14 @@ import reactor.core.publisher.Sinks;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NodeRuntimeDriverTest {
     private static final String REVISION = "a".repeat(64);
+    private static final int REPLACEMENT_ROUNDS = 50;
     private static final ContributionCodec<String, String, String> TEST_CODEC =
         new ContributionCodec<>() {
             @Override public int schemaVersion() { return 1; }
@@ -153,6 +157,37 @@ class NodeRuntimeDriverTest {
             assertEquals(0, payloadCount(driver));
             assertTrue(driver.snapshot().units().isEmpty());
             generation.retireAsync().block(Duration.ofSeconds(5));
+            driver.closeAsync().block(Duration.ofSeconds(5));
+        }
+    }
+
+    @Test
+    @Timeout(120)
+    void repeatedUnitReplacementDoesNotAccumulatePayloadsSessionsOrProcesses(
+        @TempDir Path work) throws Exception {
+        var pidDirectory = Files.createDirectory(work.resolve("replacement-pids"));
+        var facet = lifecycleFacet(work, pidDirectory, false);
+        try (var services = new Services()) {
+            var driver = new NodeRuntimeProvider(options(work)).create(services);
+            for (var round = 0; round < REPLACEMENT_ROUNDS; round++) {
+                var sealed = sealedUnit(driver, facet, "replacement-entry");
+                sealed.unit.reconcileAsync("start-" + round)
+                    .block(Duration.ofSeconds(5));
+                stop(sealed.unit, "replacement-" + round);
+                sealed.generation.retireAsync().block(Duration.ofSeconds(5));
+
+                assertEquals(0, payloadCount(driver));
+                assertTrue(driver.snapshot().units().isEmpty());
+                try (var sessions = Files.list(work.resolve("sessions"))) {
+                    assertTrue(sessions.findAny().isEmpty());
+                }
+                try (var pids = Files.list(pidDirectory)) {
+                    assertTrue(pids.map(path -> Long.parseLong(
+                            path.getFileName().toString()))
+                        .noneMatch(pid -> ProcessHandle.of(pid)
+                            .map(ProcessHandle::isAlive).orElse(false)));
+                }
+            }
             driver.closeAsync().block(Duration.ofSeconds(5));
         }
     }
@@ -329,9 +364,15 @@ class NodeRuntimeDriverTest {
                 observation.aggregateState());
             assertEquals(0, services.reconcileRequests.get(),
                 "a sidecar that never became active must not request replacement");
+            var startupTermination = sealed.unit.getClass()
+                .getDeclaredField("startupTermination");
+            startupTermination.setAccessible(true);
+            assertNotNull(startupTermination.get(sealed.unit));
 
             sealed.unit.drainAsync("drain", deadline()).block(Duration.ofSeconds(5));
             sealed.unit.stopAsync("stop", deadline()).block(Duration.ofSeconds(5));
+            assertNull(startupTermination.get(sealed.unit),
+                "successful stop must disconnect the private startup failure graph");
             sealed.generation.retireAsync().block(Duration.ofSeconds(5));
             driver.closeAsync().block(Duration.ofSeconds(5));
         }

@@ -28,6 +28,7 @@ import com.sstlfsj.fibra.engine.RuntimeHostServices;
 import com.sstlfsj.fibra.engine.RuntimePlan;
 import com.sstlfsj.fibra.engine.RuntimeProvider;
 import com.sstlfsj.fibra.engine.RuntimeTargetSlice;
+import com.sstlfsj.fibra.engine.RuntimeUnitFence;
 import com.sstlfsj.fibra.engine.RuntimeUnitGeneration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -166,6 +167,13 @@ class RuntimeProviderConsumerTest {
 
         private ConsumerRuntimeUnit(ExecutionUnitPlan plan) { this.plan = plan; }
         @Override public ExecutionUnitPlan plan() { return plan; }
+        @Override public RuntimeUnitFence fence() {
+            return RuntimeUnitFence.builder(ConsumerRuntimeProvider.RUNTIME_ID,
+                    plan.key())
+                .unitTargetRevision(1)
+                .runtimeInstanceId("consumer-instance")
+                .build();
+        }
         @Override public Mono<ExecutionObservation> reconcileAsync(String operationId) {
             return Mono.just(observation(operationId));
         }

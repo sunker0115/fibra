@@ -219,8 +219,14 @@ public final class NodeRuntimeDriver implements RuntimeDriver {
             plan = prepared.plan;
             this.revision = revision;
             this.capabilities = Set.copyOf(capabilities);
+            instanceId = services.nextIdentity("node:" + plan.key().value());
         }
         @Override public ExecutionUnitPlan plan() { return plan; }
+        @Override public RuntimeUnitFence fence() {
+            return RuntimeUnitFence.builder(id(), plan.key())
+                .unitTargetRevision(revision).runtimeInstanceId(instanceId)
+                .build();
+        }
         @Override public Mono<ExecutionObservation> reconcileAsync(String operation) {
             operation = operation(operation);
             final Scope created;
@@ -230,7 +236,6 @@ public final class NodeRuntimeDriver implements RuntimeDriver {
                     if (sidecar != null && state == ExecutionObservation.State.ACTIVE) return operation.equals(reconcileId) ? Mono.just(snapshot()) : Mono.error(new IllegalStateException("stale Node reconcile operation"));
                     if (reconcileId != null && !operation.equals(reconcileId)) return Mono.error(new IllegalStateException("stale Node reconcile operation"));
                     reconcileId = operation;
-                    instanceId = services.nextIdentity("node:" + plan().key().value());
                     created = services.scope().openChild("node:" + plan().key().value());
                     scope = created;
                     contributions = services.openContributionAdmission(plan.key());
@@ -239,10 +244,8 @@ public final class NodeRuntimeDriver implements RuntimeDriver {
                 return failStart(startFailure);
             }
             var entry = prepared.lease.payload.facet.facet().payload().resolve(prepared.lease.payload.descriptor.entrypoint());
-            var disableRequest = RuntimeUnitDisableRequest.of(
-                RuntimeUnitFence.builder(id(), plan().key())
-                    .unitTargetRevision(revision).runtimeInstanceId(instanceId)
-                    .build(), "node-fibra-disable");
+            var disableRequest = RuntimeUnitDisableRequest.of(fence(),
+                "node-fibra-disable");
             return NodeSidecar.start(entry, options,
                     () -> services.requestDisable(disableRequest))
                 .flatMap(session -> { synchronized (Unit.this) { sidecar = session; }
@@ -309,7 +312,7 @@ public final class NodeRuntimeDriver implements RuntimeDriver {
                 : stopSidecar(stopping, !failedRuntime && stopping.isAlive());
             var closeScope = owner == null ? Mono.<Void>empty() : closeScope(owner);
             return Mono.whenDelayError(shutdown, closeScope)
-                .then(Mono.fromSupplier(() -> { synchronized (Unit.this) { releaseLease(); sidecar = null; scope = null; contributions = null; state = ExecutionObservation.State.PENDING; failure = null; published.remove(plan().key(), Unit.this); return snapshot(); } }));
+                .then(Mono.fromSupplier(() -> { synchronized (Unit.this) { releaseLease(); sidecar = null; scope = null; contributions = null; state = ExecutionObservation.State.PENDING; failure = null; startupTermination = null; published.remove(plan().key(), Unit.this); return snapshot(); } }));
         }
         @Override public synchronized ExecutionObservation snapshot() {
             var details = state == ExecutionObservation.State.PENDING && sidecar == null ? List.<ExecutionObservation.Detail>of() : List.of(ExecutionObservation.Detail.builder()
@@ -372,8 +375,7 @@ public final class NodeRuntimeDriver implements RuntimeDriver {
             }
             closeAdmission();
             if (!active) return;
-            services.requestReconcile(Set.of(RuntimeUnitFence.builder(id(), plan().key())
-                .unitTargetRevision(revision).runtimeInstanceId(instanceId).build()),
+            services.requestReconcile(Set.of(fence()),
                 "node-sidecar-terminated");
         }
         private Mono<Void> stopSidecar(NodeSidecar stopping, boolean graceful) {

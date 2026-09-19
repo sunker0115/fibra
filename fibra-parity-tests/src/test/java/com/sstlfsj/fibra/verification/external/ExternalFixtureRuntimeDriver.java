@@ -560,7 +560,8 @@ public final class ExternalFixtureRuntimeDriver implements RuntimeDriver {
             return !admissionClosed && !stopped && !released;
         }
 
-        private RuntimeUnitFence fence() {
+        @Override
+        public RuntimeUnitFence fence() {
             return RuntimeUnitFence.builder(id(), plan().key())
                 .unitTargetRevision(unitTargetRevision)
                 .runtimeInstanceId(runtimeInstanceId).build();
