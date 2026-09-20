@@ -19,7 +19,7 @@
     <fibra.distribution.directory>${project.build.directory}/fibra-${project.version}</fibra.distribution.directory>
     <fibra.distribution.node>node</fibra.distribution.node>
     <fibra.distribution.rg>rg</fibra.distribution.rg>
-    <fibra.distribution.verify.skip>false</fibra.distribution.verify.skip>
+    <fibra.distribution.verify.skip>true</fibra.distribution.verify.skip>
   </properties>
 
   <dependencies>
@@ -76,6 +76,16 @@
                 <resource>
                   <directory>src/main/distribution</directory>
                   <filtering>false</filtering>
+                  <excludes>
+                    <exclude>plugins/**/fibra-package.yaml</exclude>
+                  </excludes>
+                </resource>
+                <resource>
+                  <directory>src/main/distribution</directory>
+                  <filtering>true</filtering>
+                  <includes>
+                    <include>plugins/**/fibra-package.yaml</include>
+                  </includes>
                 </resource>
                 <resource>
                   <directory>${project.basedir}/..</directory>

@@ -37,7 +37,8 @@ class ToolFsSearchEntrypointTest {
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var domain = runtime.openDomain("search");
             var context = domain.rootScope().context();
-            context.services().provide(ContributionServices.REGISTRAR, directory);
+            context.services().provide(ContributionServices.REGISTRAR,
+                directory.openAdmission("search-instance"));
             context.services().provide(SubprocessServices.SUBPROCESS,
                 (invocation, spec) -> Mono.just(successUnit("one.txt\n")));
             var definition = new ToolFsSearchEntrypoint().definition();
@@ -67,7 +68,8 @@ class ToolFsSearchEntrypointTest {
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var domain = runtime.openDomain("search");
             var context = domain.rootScope().context();
-            context.services().provide(ContributionServices.REGISTRAR, directory);
+            context.services().provide(ContributionServices.REGISTRAR,
+                directory.openAdmission("search-instance"));
             context.services().provide(SubprocessServices.SUBPROCESS,
                 (invocation, spec) -> Mono.just(successUnit("")));
             var definition = new ToolFsSearchEntrypoint().definition();
@@ -82,13 +84,10 @@ class ToolFsSearchEntrypointTest {
     }
 
     @Test
-    void manifestDeclaresOnlyTheSubprocessContractDependency() throws Exception {
+    void runtimeDescriptorDeclaresOnlyTheEntrypoint() throws Exception {
         var manifest = Files.readString(Path.of("target/classes/META-INF/fibra/plugin.yaml"));
-        assertTrue(manifest.contains("id: fibra-tool-fs-search"));
-        assertTrue(manifest.contains("version: " + System.getProperty("fibra.test.projectVersion")));
-        assertTrue(manifest.contains("entrypoint: " + ToolFsSearchEntrypoint.class.getName()));
-        assertTrue(manifest.contains("id: fibra-subprocess"));
-        assertFalse(manifest.contains("id: fibra-fs\n"));
+        assertEquals("entrypoint: " + ToolFsSearchEntrypoint.class.getName()
+            + "\n", manifest);
     }
 
     private static ProcessUnit successUnit(String stdout) {

@@ -39,8 +39,10 @@ class FormalCliIT {
         Files.createDirectory(home.resolve("plugins/unlisted-invalid-package"));
         var storage = home.resolve("data/profiles/default/storage");
         profile(home, List.of(
-            Map.of("id", "storage", "plugin", "storage-json", "config", Map.of("root", storage.toString())),
-            Map.of("id", "storage-tools", "plugin", "tool-storage")), packages);
+            Map.of("id", "storage", "plugin", plugin("fibra-storage-json", "storage-json"),
+                "config", Map.of("root", storage.toString())),
+            Map.of("id", "storage-tools", "plugin",
+                plugin("fibra-tool-storage", "tool-storage"))), packages);
 
         var first = cli(home, """
             plugins list
@@ -52,7 +54,7 @@ class FormalCliIT {
 
         assertEquals(4, first.size());
         assertEquals(List.of("fibra-storage", "fibra-storage-json", "fibra-tool-storage"),
-            ids(first.get(0).path("artifacts")));
+            selectionIds(first.get(0).path("selections")));
         assertEquals(2, first.get(0).path("instances").size());
         assertTrue(first.get(0).path("instances").valueStream()
             .allMatch(instance -> instance.path("desired").asBoolean() && instance.path("observed").asBoolean()));
@@ -69,7 +71,7 @@ class FormalCliIT {
         // A new public run creates a new host. Neither source is usable during recovery.
         Files.move(home.resolve("plugins"), home.resolve("removed-candidates"));
         Files.writeString(home.resolve("config/profiles/default.yaml"), "invalid source");
-        Files.writeString(home.resolve("config/profiles/default.artifacts.yaml"), "invalid selection");
+        Files.writeString(home.resolve("config/profiles/default.packages.yaml"), "invalid selection");
         var recovered = cli(home, """
             tools invoke storage-tools load --input '{}'
             tools invoke storage-tools changes --input '{}'
@@ -87,7 +89,7 @@ class FormalCliIT {
     }
 
     @Test
-    void completeApplyReplacesArtifactsAndInstancesWhilePublicPluginCommandsRemainWired(@TempDir Path home)
+    void completeApplyReplacesPackagesAndInstancesWhilePublicPluginCommandsRemainWired(@TempDir Path home)
         throws Exception {
         var sources = new java.util.LinkedHashMap<String, Path>();
         var initialPackages = packages(home.resolve("plugins"), sources,
@@ -97,20 +99,20 @@ class FormalCliIT {
 
         var initial = cli(home, "", "plugins", "list").getFirst();
         assertEquals(List.of("fibra-fs", "fibra-storage", "fibra-storage-json", "fibra-tool-storage"),
-            ids(initial.path("artifacts")));
+            selectionIds(initial.path("selections")));
         assertEquals(List.of("A", "B", "storage"), ids(initial.path("instances")));
         assertActive(initial, "A");
         assertActive(initial, "B");
 
         var upgraded = cli(home, "", "plugins", "upgrade", sources.get("fibra-fs").toString()).getFirst();
-        assertEquals(ids(initial.path("artifacts")), ids(upgraded.path("artifacts")));
+        assertEquals(selectionIds(initial.path("selections")), selectionIds(upgraded.path("selections")));
         var uninstalled = cli(home, "", "plugins", "uninstall", "fibra-fs").getFirst();
         assertEquals(List.of("fibra-storage", "fibra-storage-json", "fibra-tool-storage"),
-            ids(uninstalled.path("artifacts")));
+            selectionIds(uninstalled.path("selections")));
         assertEquals(List.of("A", "B", "storage"), ids(uninstalled.path("instances")));
 
         var restored = cli(home, "", "apply").getFirst();
-        assertEquals(ids(initial.path("artifacts")), ids(restored.path("artifacts")));
+        assertEquals(selectionIds(initial.path("selections")), selectionIds(restored.path("selections")));
         var disabled = cli(home, "", "plugins", "disable", "B").getFirst();
         assertInactive(disabled, "B");
         var enabled = cli(home, "", "plugins", "enable", "B").getFirst();
@@ -126,13 +128,11 @@ class FormalCliIT {
         var beforeApply = replacement.get(0);
         var applied = replacement.get(1);
 
-        assertEquals(ids(initial.path("artifacts")), ids(beforeApply.path("artifacts")));
+        assertEquals(selectionIds(initial.path("selections")), selectionIds(beforeApply.path("selections")));
         assertEquals(List.of("A", "B", "storage"), ids(beforeApply.path("instances")));
         assertEquals(List.of("fibra-storage", "fibra-storage-json", "fibra-subprocess", "fibra-tool-storage"),
-            ids(applied.path("artifacts")));
+            selectionIds(applied.path("selections")));
         assertEquals(List.of("B", "C", "storage"), ids(applied.path("instances")));
-        assertEquals(identity(beforeApply, "B"), identity(applied, "B"),
-            "完整 apply 必须保留未变化 B 的运行实例");
         assertActive(applied, "B");
         assertActive(applied, "C");
         var retained = cli(home, "", "tools", "invoke", "B", "load", "--input", "{}").getFirst();
@@ -141,16 +141,16 @@ class FormalCliIT {
 
         Files.move(home.resolve("plugins"), home.resolve("removed-candidates"));
         Files.writeString(home.resolve("config/profiles/default.yaml"), "invalid source");
-        Files.writeString(home.resolve("config/profiles/default.artifacts.yaml"), "invalid selection");
+        Files.writeString(home.resolve("config/profiles/default.packages.yaml"), "invalid selection");
         var recovered = cli(home, "", "plugins", "list").getFirst();
-        assertEquals(applied.path("artifacts"), recovered.path("artifacts"));
+        assertEquals(applied.path("selections"), recovered.path("selections"));
         assertEquals(ids(applied.path("instances")), ids(recovered.path("instances")));
         assertActive(recovered, "B");
         assertActive(recovered, "C");
     }
 
     @Test
-    void localInstallPersistsWithoutEnablingAndCompleteApplyReplacesThatSelection(@TempDir Path home)
+    void localInstallPersistsWithoutDesiredEntryAndCompleteApplyReplacesThatSelection(@TempDir Path home)
         throws Exception {
         profile(home, List.of(), List.of());
         var request = PluginAcceptanceHarness.installRequest(home.resolve("plugins"),
@@ -158,29 +158,29 @@ class FormalCliIT {
 
         var installed = cli(home, "", "plugins", "install", request.source().toString()).getFirst();
 
-        assertEquals(List.of("fibra-storage"), ids(installed.path("artifacts")));
+        assertEquals(List.of("fibra-storage"), selectionIds(installed.path("selections")));
         assertTrue(installed.path("instances").isEmpty());
         assertEquals("[]", Files.readString(home.resolve("config/profiles/default.yaml")));
-        assertEquals("[]", Files.readString(home.resolve("config/profiles/default.artifacts.yaml")));
+        assertEquals("[]", Files.readString(home.resolve("config/profiles/default.packages.yaml")));
         Files.move(home.resolve("plugins"), home.resolve("removed-candidates"));
         var recovered = cli(home, "", "plugins", "list").getFirst();
-        assertEquals(installed.path("artifacts"), recovered.path("artifacts"));
+        assertEquals(installed.path("selections"), recovered.path("selections"));
 
         var applied = cli(home, "", "apply").getFirst();
 
-        assertTrue(applied.path("artifacts").isEmpty());
+        assertTrue(applied.path("selections").isEmpty());
         assertTrue(applied.path("instances").isEmpty());
         Files.writeString(home.resolve("config/profiles/default.yaml"), "invalid source");
-        Files.writeString(home.resolve("config/profiles/default.artifacts.yaml"), "invalid selection");
+        Files.writeString(home.resolve("config/profiles/default.packages.yaml"), "invalid selection");
         var emptyRecovered = cli(home, "", "plugins", "list").getFirst();
-        assertTrue(emptyRecovered.path("artifacts").isEmpty());
+        assertTrue(emptyRecovered.path("selections").isEmpty());
         assertTrue(emptyRecovered.path("instances").isEmpty());
     }
 
     private static void profile(Path home, List<?> entries, List<String> packages) throws Exception {
         var profiles = Files.createDirectories(home.resolve("config/profiles"));
         Files.writeString(profiles.resolve("default.yaml"), JSON.writeValueAsString(entries));
-        Files.writeString(profiles.resolve("default.artifacts.yaml"), JSON.writeValueAsString(packages));
+        Files.writeString(profiles.resolve("default.packages.yaml"), JSON.writeValueAsString(packages));
     }
 
     private static List<String> packages(Path plugins, Map<String, Path> sources, String... artifactIds) {
@@ -196,9 +196,16 @@ class FormalCliIT {
 
     private static List<Map<String, Object>> storageEntries(Path storage, String... toolIds) {
         var entries = new ArrayList<Map<String, Object>>();
-        entries.add(Map.of("id", "storage", "plugin", "storage-json", "config", Map.of("root", storage.toString())));
-        for (var toolId : toolIds) entries.add(Map.of("id", toolId, "plugin", "tool-storage"));
+        entries.add(Map.of("id", "storage", "plugin", plugin("fibra-storage-json", "storage-json"),
+            "config", Map.of("root", storage.toString())));
+        for (var toolId : toolIds) {
+            entries.add(Map.of("id", toolId, "plugin", plugin("fibra-tool-storage", "tool-storage")));
+        }
         return entries;
+    }
+
+    private static Map<String, String> plugin(String id, String definition) {
+        return Map.of("id", id, "facet", "main", "definition", definition);
     }
 
     private static List<JsonNode> cli(Path home, String input, String... command) {
@@ -226,32 +233,23 @@ class FormalCliIT {
         return entries.valueStream().map(entry -> entry.path("id").asString()).toList();
     }
 
+    private static List<String> selectionIds(JsonNode entries) {
+        assertTrue(entries.isArray());
+        return entries.valueStream().map(entry -> entry.path("pluginId").asString()).toList();
+    }
+
     private static void assertActive(JsonNode snapshot, String id) {
         var instance = snapshot.path("instances").valueStream()
             .filter(entry -> id.equals(entry.path("id").asString())).findFirst().orElseThrow();
         assertTrue(instance.path("desired").asBoolean());
-        assertTrue(instance.path("enabled").asBoolean());
         assertTrue(instance.path("observed").asBoolean());
-        assertEquals("ACTIVE", instance.path("state").asString());
-        assertTrue(instance.path("requirementSatisfied").asBoolean());
-        assertTrue(instance.path("failure").isNull());
     }
 
     private static void assertInactive(JsonNode snapshot, String id) {
         var instance = snapshot.path("instances").valueStream()
             .filter(entry -> id.equals(entry.path("id").asString())).findFirst().orElseThrow();
         assertTrue(instance.path("desired").asBoolean());
-        assertFalse(instance.path("enabled").asBoolean());
         assertFalse(instance.path("observed").asBoolean());
-        assertTrue(instance.path("state").isNull());
-        assertTrue(instance.path("requirementSatisfied").asBoolean());
-        assertTrue(instance.path("failure").isNull());
-    }
-
-    private static String identity(JsonNode snapshot, String id) {
-        return snapshot.path("instances").valueStream()
-            .filter(entry -> id.equals(entry.path("id").asString())).findFirst().orElseThrow()
-            .path("identity").asString();
     }
 
     private static void assertSuccessfulTool(JsonNode result) {

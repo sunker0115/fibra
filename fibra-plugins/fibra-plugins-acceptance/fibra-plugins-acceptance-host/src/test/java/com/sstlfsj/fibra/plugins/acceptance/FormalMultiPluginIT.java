@@ -1,15 +1,18 @@
 package com.sstlfsj.fibra.plugins.acceptance;
 
 import com.sstlfsj.fibra.CancellationSource;
+import com.sstlfsj.fibra.artifact.PluginId;
 import com.sstlfsj.fibra.bridge.ContributionUnavailableException;
 import com.sstlfsj.fibra.bridge.ContributionId;
 import com.sstlfsj.fibra.bridge.ContributionKind;
+import com.sstlfsj.fibra.config.PluginDefinitionRef;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
-import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
-import com.sstlfsj.fibra.engine.FileEngineStateStore;
+import com.sstlfsj.fibra.engine.DeploymentTargetStore;
+import com.sstlfsj.fibra.engine.ExecutionUnitKey;
+import com.sstlfsj.fibra.engine.FileDeploymentTargetStore;
 import com.sstlfsj.fibra.engine.PublishedView;
-import com.sstlfsj.fibra.engine.RuntimeResourceSnapshot;
+import com.sstlfsj.fibra.engine.TargetSaveState;
 import com.sstlfsj.fibra.plugins.tool.ToolContent;
 import com.sstlfsj.fibra.plugins.tool.ToolContributions;
 import com.sstlfsj.fibra.plugins.tool.ToolException;
@@ -42,6 +45,7 @@ import java.util.jar.JarOutputStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -58,12 +62,11 @@ class FormalMultiPluginIT {
         Files.writeString(content.resolve("nested/existing.txt"), "needle existing\n");
         var graph = applicationGraph(content, work.resolve("storage"));
 
-        try (var harness = PluginAcceptanceHarness.start(work.resolve("artifacts"),
-            com.sstlfsj.fibra.engine.EngineStateStore.inMemory(),
-            InMemoryDesiredStateRepository.empty())) {
-            var deployed = harness.deploy(graph, PluginAcceptanceHarness.ALL_ARTIFACTS);
+        try (var harness = PluginAcceptanceHarness.start(work.resolve("package-store"),
+            DeploymentTargetStore.inMemory())) {
+            var deployed = harness.deploy(graph, PluginAcceptanceHarness.ALL_PACKAGES);
             assertTrue(deployed.observed().values().stream().allMatch(instance ->
-                instance.state() == com.sstlfsj.fibra.PluginInstanceState.ACTIVE));
+                instance.aggregateState() == com.sstlfsj.fibra.engine.ExecutionObservation.State.ACTIVE));
 
             var written = javaMap(harness.invoke("fs-tools", "write", Map.of(
                 "path", "note.txt", "content", "first")));
@@ -110,9 +113,8 @@ class FormalMultiPluginIT {
         var wrapper = hangingExecutable(work.resolve("hanging-rg"), entered, pidFile);
         var graph = searchGraph(content, wrapper, 5_000, 50);
 
-        try (var harness = PluginAcceptanceHarness.start(work.resolve("artifacts"),
-            com.sstlfsj.fibra.engine.EngineStateStore.inMemory(),
-            InMemoryDesiredStateRepository.empty())) {
+        try (var harness = PluginAcceptanceHarness.start(work.resolve("package-store"),
+            DeploymentTargetStore.inMemory())) {
             harness.deploy(graph, "fibra-subprocess", "fibra-subprocess-local",
                 "fibra-tool-fs-search");
 
@@ -149,12 +151,11 @@ class FormalMultiPluginIT {
         @TempDir Path work) throws Exception {
         var storage = work.resolve("storage");
         var state = work.resolve("engine-state");
-        var artifacts = work.resolve("artifacts");
+        var packageStore = work.resolve("package-store");
         var graph = storageGraph(storage);
 
-        try (var harness = PluginAcceptanceHarness.start(artifacts,
-             new FileEngineStateStore(state),
-                 InMemoryDesiredStateRepository.empty())) {
+        try (var harness = PluginAcceptanceHarness.start(packageStore,
+             new FileDeploymentTargetStore(state))) {
             harness.deploy(graph, "fibra-storage", "fibra-storage-json", "fibra-tool-storage");
 
             harness.invoke("config-a", "put", Map.of("key", "theme", "value", "dark"));
@@ -205,11 +206,12 @@ class FormalMultiPluginIT {
                 .get("values")).get("theme"));
         }
 
-        try (var reopened = PluginAcceptanceHarness.start(artifacts,
-             new FileEngineStateStore(state),
-                 InMemoryDesiredStateRepository.empty())) {
+        try (var reopened = PluginAcceptanceHarness.start(packageStore,
+             new FileDeploymentTargetStore(state))) {
             var current = reopened.engine().published().current();
-            assertEquals(graph.plugins().keySet(), current.engine().instances().keySet());
+            assertEquals(graph.plugins().keySet(), current.engine().current().orElseThrow()
+                .observations().keySet().stream()
+                .map(ExecutionUnitKey::value).collect(java.util.stream.Collectors.toSet()));
             assertEquals("dark", javaMap(javaMap(reopened.invoke("config-b", "load", Map.of()))
                 .get("values")).get("theme"));
             assertEquals("light", javaMap(javaMap(reopened.invoke("config-c", "load", Map.of()))
@@ -224,7 +226,90 @@ class FormalMultiPluginIT {
     }
 
     @Test
-    void localArtifactUpdatePreservesUnrelatedProcessStackAndInflightInvocation(@TempDir Path work)
+    void packageGateKeepsDependentExecutionsPendingUntilTheProviderRecovers(
+        @TempDir Path work) {
+        var graph = storageGraph(work.resolve("storage"));
+
+        try (var harness = PluginAcceptanceHarness.start(work.resolve("package-store"),
+            DeploymentTargetStore.inMemory())) {
+            harness.deploy(graph, "fibra-storage", "fibra-storage-json", "fibra-tool-storage");
+            var active = harness.engine().published().current();
+            var retained = instanceIdentities(active, "config-a", "config-b", "config-c");
+
+            harness.registry().disablePackage(new PluginId("fibra-storage-json"))
+                .block(PluginAcceptanceHarness.TIMEOUT);
+
+            var pending = harness.engine().published().current();
+            var audit = harness.registry().history().getLast();
+            assertTrue(audit.succeeded());
+            assertEquals(TargetSaveState.SAVED, audit.targetSaveState());
+            assertEquals(com.sstlfsj.fibra.engine.TargetConvergence.UNSATISFIED,
+                pending.engine().targetConvergence());
+            assertFalse(pending.engine().target().orElseThrow().selections()
+                .get(new PluginId("fibra-storage-json")).enabled());
+            assertTrue(pending.engine().target().orElseThrow().desiredGraph().plugins()
+                .values().stream().allMatch(DesiredInputEntry::enabled));
+            assertNull(pending.engine().current().orElseThrow().observations()
+                .get(new ExecutionUnitKey("storage-shared")));
+            assertNull(pending.engine().current().orElseThrow().observations()
+                .get(new ExecutionUnitKey("storage-isolated")));
+            for (var id : retained.keySet()) {
+                assertEquals(com.sstlfsj.fibra.engine.ExecutionObservation.State.PENDING,
+                    pending.engine().current().orElseThrow().observations()
+                        .get(new ExecutionUnitKey(id)).aggregateState());
+                assertEquals(retained.get(id), instanceIdentity(pending, id));
+            }
+
+            harness.registry().enablePackage(new PluginId("fibra-storage-json"))
+                .block(PluginAcceptanceHarness.TIMEOUT);
+
+            var recovered = harness.engine().published().current();
+            assertEquals(com.sstlfsj.fibra.engine.TargetConvergence.SATISFIED,
+                recovered.engine().targetConvergence());
+            assertEquals(retained, instanceIdentities(recovered,
+                "config-a", "config-b", "config-c"));
+            assertTrue(recovered.engine().current().orElseThrow().observations().values().stream().allMatch(unit ->
+                unit.aggregateState()
+                    == com.sstlfsj.fibra.engine.ExecutionObservation.State.ACTIVE));
+            harness.invoke("config-a", "put", Map.of("key", "recovered", "value", true));
+            assertEquals(true, javaMap(javaMap(harness.invoke("config-b", "load", Map.of()))
+                .get("values")).get("recovered"));
+        }
+    }
+
+    @Test
+    void contractPackageUpgradeReplacesItsRealDependentsWithoutADesiredContractEntry(
+        @TempDir Path work) throws Exception {
+        var graph = storageGraph(work.resolve("storage"));
+
+        try (var harness = PluginAcceptanceHarness.start(work.resolve("package-store"),
+            DeploymentTargetStore.inMemory())) {
+            harness.deploy(graph, "fibra-storage", "fibra-storage-json", "fibra-tool-storage");
+            var before = harness.engine().published().current();
+            var beforeIdentities = instanceIdentities(before, "storage-shared", "storage-isolated",
+                "config-a", "config-b", "config-c");
+            assertFalse(graph.plugins().values().stream().anyMatch(entry ->
+                entry.definitionRef().pluginId().equals("fibra-storage")));
+
+            var variant = variantJar(work, PluginAcceptanceHarness.stagedJar("fibra-storage"),
+                "fibra-storage-variant.jar");
+            var request = PluginAcceptanceHarness.installRequest(work.resolve("variant-packages"), variant);
+            harness.registry().upgrade(request.source()).block(PluginAcceptanceHarness.TIMEOUT);
+
+            var upgraded = harness.engine().published().current();
+            for (var entry : beforeIdentities.entrySet()) {
+                assertNotEquals(entry.getValue(), instanceIdentity(upgraded, entry.getKey()));
+            }
+            assertEquals(com.sstlfsj.fibra.engine.TargetConvergence.SATISFIED,
+                upgraded.engine().targetConvergence());
+            harness.invoke("config-a", "put", Map.of("key", "contract", "value", "upgraded"));
+            assertEquals("upgraded", javaMap(javaMap(harness.invoke("config-b", "load", Map.of()))
+                .get("values")).get("contract"));
+        }
+    }
+
+    @Test
+    void localPackageUpgradePreservesUnrelatedProcessStackAndInflightInvocation(@TempDir Path work)
         throws Exception {
         var content = createDirectory(work.resolve("content"));
         var entered = work.resolve("entered");
@@ -232,15 +317,14 @@ class FormalMultiPluginIT {
         var pidFile = work.resolve("payload.pid");
         var graph = applicationGraph(content, work.resolve("storage"));
 
-        try (var harness = PluginAcceptanceHarness.start(work.resolve("artifacts"),
-            com.sstlfsj.fibra.engine.EngineStateStore.inMemory(),
-            InMemoryDesiredStateRepository.empty())) {
-            harness.deploy(graph, PluginAcceptanceHarness.ALL_ARTIFACTS);
+        try (var harness = PluginAcceptanceHarness.start(work.resolve("package-store"),
+            DeploymentTargetStore.inMemory())) {
+            harness.deploy(graph, PluginAcceptanceHarness.ALL_PACKAGES);
             var before = harness.engine().published().current();
             var stableInstances = instanceIdentities(before, "subprocess-provider", "shell-provider",
                 "shell-tools", "search-tools", "storage-shared", "storage-isolated", "config-a",
                 "config-b", "config-c");
-            var stableResources = resourceIdentities(before, "fibra-subprocess",
+            var stablePackages = packageRevisions(before, "fibra-subprocess",
                 "fibra-subprocess-local", "fibra-shell", "fibra-shell-local",
                 "fibra-tool-shell", "fibra-storage", "fibra-storage-json", "fibra-tool-storage");
 
@@ -260,16 +344,17 @@ class FormalMultiPluginIT {
             assertTrue(ProcessHandle.of(payloadPid).map(ProcessHandle::isAlive).orElse(false));
             assertTrue(ProcessHandle.of(supervisorPid).map(ProcessHandle::isAlive).orElse(false));
 
-            var variant = variantJar(work, PluginAcceptanceHarness.stagedJar("fibra-fs-local"));
+            var variant = variantJar(work, PluginAcceptanceHarness.stagedJar("fibra-fs-local"),
+                "fibra-fs-local-variant.jar");
             var request = PluginAcceptanceHarness.installRequest(work.resolve("variant-packages"), variant);
-            var changed = harness.registry().upgrade(request).block(PluginAcceptanceHarness.TIMEOUT);
+            var changed = harness.registry().upgrade(request.source()).block(PluginAcceptanceHarness.TIMEOUT);
 
-            assertNotEquals(before.engine().instances().get("fs-provider").identity(),
-                changed.observed().get("fs-provider").identity());
+            assertNotEquals(instanceIdentity(before, "fs-provider"),
+                changed.observed().get("fs-provider").executions().getFirst().runtimeInstanceId());
             assertEquals(stableInstances, instanceIdentities(harness.engine().published().current(),
                 "subprocess-provider", "shell-provider", "shell-tools", "search-tools",
                 "storage-shared", "storage-isolated", "config-a", "config-b", "config-c"));
-            assertEquals(stableResources, resourceIdentities(harness.engine().published().current(),
+            assertEquals(stablePackages, packageRevisions(harness.engine().published().current(),
                 "fibra-subprocess", "fibra-subprocess-local", "fibra-shell", "fibra-shell-local",
                 "fibra-tool-shell", "fibra-storage", "fibra-storage-json", "fibra-tool-storage"));
             assertFalse(held.isDone());
@@ -291,10 +376,9 @@ class FormalMultiPluginIT {
         var release = work.resolve("release");
         var graph = applicationGraph(content, work.resolve("storage"));
 
-        try (var harness = PluginAcceptanceHarness.start(work.resolve("artifacts"),
-            com.sstlfsj.fibra.engine.EngineStateStore.inMemory(),
-            InMemoryDesiredStateRepository.empty())) {
-            harness.deploy(graph, PluginAcceptanceHarness.ALL_ARTIFACTS);
+        try (var harness = PluginAcceptanceHarness.start(work.resolve("package-store"),
+            DeploymentTargetStore.inMemory())) {
+            harness.deploy(graph, PluginAcceptanceHarness.ALL_PACKAGES);
             var current = harness.engine().published().current();
             var heldIdentity = identity(current, ToolContributions.KIND,
                 ToolContributions.id("shell-tools", "bash"));
@@ -316,7 +400,8 @@ class FormalMultiPluginIT {
             disabled.get(PluginAcceptanceHarness.TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
 
             var after = harness.engine().published().current();
-            assertFalse(after.engine().instances().containsKey("shell-tools"));
+            assertFalse(after.engine().current().orElseThrow().observations()
+                .containsKey(new ExecutionUnitKey("shell-tools")));
             assertThrows(ContributionUnavailableException.class, () ->
                 harness.engine().published().invoke(after.viewRevision(), heldIdentity,
                     ToolContributions.KIND,
@@ -378,7 +463,9 @@ class FormalMultiPluginIT {
 
     private static DesiredInputEntry entry(String id, String definition, Object config,
                                            Map<String, LiteralValue> realms) {
-        var builder = DesiredInputEntry.builder(id, definition).realms(realms);
+        var pluginId = definition.startsWith("fibra-") ? definition : "fibra-" + definition;
+        var builder = DesiredInputEntry.builder(id,
+            new PluginDefinitionRef(pluginId, "main", definition)).realms(realms);
         if (config != null) builder.config(LiteralValue.of(config));
         return builder.build();
     }
@@ -406,10 +493,16 @@ class FormalMultiPluginIT {
     private record ExpectedChange(long revision, String key, String operation, Object value) {
     }
 
-    private static Map<String, Long> instanceIdentities(PublishedView view, String... ids) {
-        var result = new LinkedHashMap<String, Long>();
-        for (var id : ids) result.put(id, view.engine().instances().get(id).identity());
+    private static Map<String, String> instanceIdentities(PublishedView view, String... ids) {
+        var result = new LinkedHashMap<String, String>();
+        for (var id : ids) result.put(id, instanceIdentity(view, id));
         return result;
+    }
+
+    private static String instanceIdentity(PublishedView view, String id) {
+        return view.engine().current().orElseThrow().observations().get(new ExecutionUnitKey(id))
+            .executions().getFirst()
+            .runtimeInstanceId();
     }
 
     private static long identity(PublishedView view, ContributionKind<?, ?, ?> kind, ContributionId id) {
@@ -418,21 +511,19 @@ class FormalMultiPluginIT {
             .map(entry -> entry.registrationIdentity()).findFirst().orElseThrow();
     }
 
-    private static Map<String, String> resourceIdentities(PublishedView view, String... artifactIds) {
-        var resources = view.engine().runtimes().get(
-            com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter.RUNTIME_ID).resources();
+    private static Map<String, String> packageRevisions(PublishedView view, String... pluginIds) {
+        var selections = view.engine().target().orElseThrow().selections();
         var result = new LinkedHashMap<String, String>();
-        for (var id : artifactIds) {
-            var resource = resources.stream().filter(value -> value.artifact().id().value().equals(id))
-                .filter(value -> value.state() == RuntimeResourceSnapshot.State.ACTIVE)
-                .findFirst().orElseThrow();
-            result.put(id, resource.identity());
+        for (var id : pluginIds) {
+            result.put(id, selections.entrySet().stream()
+                .filter(entry -> entry.getKey().value().equals(id))
+                .findFirst().orElseThrow().getValue().packageRevision());
         }
         return result;
     }
 
-    private static Path variantJar(Path work, Path source) throws IOException {
-        var target = work.resolve("fibra-fs-local-variant.jar");
+    private static Path variantJar(Path work, Path source, String targetName) throws IOException {
+        var target = work.resolve(targetName);
         try (var input = new JarInputStream(Files.newInputStream(source));
              var output = new JarOutputStream(Files.newOutputStream(target))) {
             JarEntry entry;

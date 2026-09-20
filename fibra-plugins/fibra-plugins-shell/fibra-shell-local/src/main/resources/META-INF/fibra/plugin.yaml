@@ -1,8 +1,1 @@
-id: fibra-shell-local
-version: ${project.version}
 entrypoint: com.sstlfsj.fibra.plugins.shell.local.ShellLocalEntrypoint
-requires:
-  - id: fibra-shell
-    version: ${project.version}
-  - id: fibra-subprocess
-    version: ${project.version}

@@ -1,6 +1,7 @@
 package com.sstlfsj.fibra.benchmarks;
 
 import com.sstlfsj.fibra.Context;
+import com.sstlfsj.fibra.bridge.ContributionAdmission;
 import com.sstlfsj.fibra.bridge.ContributionDirectory;
 import com.sstlfsj.fibra.bridge.ContributionId;
 import com.sstlfsj.fibra.bridge.ContributionKind;
@@ -35,18 +36,22 @@ public class ContributionInvocationBenchmark {
     private FibraRuntime runtime;
     private Context context;
     private ContributionDirectory directory;
+    private ContributionAdmission admission;
 
     @Setup
     public void setup() {
         runtime = FibraRuntime.create();
         context = runtime.rootScope().context();
         directory = new ContributionDirectory();
-        directory.register(context, KIND, ID.providerInstanceId(), ID.localName(),
+        admission = directory.openAdmission(ID.providerInstanceId());
+        admission.register(context, KIND, ID.localName(),
             "Add one", (invocation, input) -> Mono.just(input + 1)).block();
     }
 
     @TearDown
     public void tearDown() {
+        admission.closeAdmission();
+        admission.drainAsync().block();
         runtime.close();
         directory.close();
     }

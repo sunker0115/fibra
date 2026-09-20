@@ -1,4 +1,4 @@
-name: 发布到 Maven Central
+name: 发布到 Maven Central 与 npm
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: fibra-central-${{ inputs.release_tag }}
+  group: fibra-release-${{ inputs.release_tag }}
   cancel-in-progress: false
 
 jobs:
@@ -37,10 +37,12 @@ jobs:
         shell: bash
         env:
           RELEASE_TAG: ${{ inputs.release_tag }}
+          WORKFLOW_REF: ${{ github.ref }}
+          WORKFLOW_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "正式版本标签必须符合 v<major>.<minor>.<patch>" >&2
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
+            echo "版本标签必须符合 v<major>.<minor>.<patch> 或带字母开头的预发布 qualifier" >&2
             exit 1
           fi
           revision="$(sed -n 's/.*<revision>\([^<]*\)<\/revision>.*/\1/p' pom.xml)"
@@ -53,6 +55,15 @@ jobs:
             exit 1
           fi
           tag_commit="$(git rev-parse --verify "refs/tags/$RELEASE_TAG^{commit}")"
+          if [[ "$WORKFLOW_REF" != "refs/tags/$RELEASE_TAG" ]]; then
+            echo "workflow_dispatch 必须从发布标签 refs/tags/$RELEASE_TAG 运行，实际为 $WORKFLOW_REF" >&2
+            exit 1
+          fi
+          workflow_commit="$(git rev-parse --verify "$WORKFLOW_SHA^{commit}")"
+          if [[ "$workflow_commit" != "$tag_commit" ]]; then
+            echo "workflow_dispatch 提交 $workflow_commit 与标签提交 $tag_commit 不一致" >&2
+            exit 1
+          fi
           if [[ "$(git rev-parse HEAD)" != "$tag_commit" ]]; then
             echo "检出提交与标签提交不一致" >&2
             exit 1
@@ -69,6 +80,21 @@ jobs:
           distribution: zulu
           java-version: '21'
           cache: maven
+
+      - name: 配置项目锁定的 Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: client/.node-version
+          package-manager-cache: false
+
+      - name: 配置项目锁定的 pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          package_json_file: client/package.json
+          run_install: false
+
+      - name: 确认 pnpm 版本
+        run: pnpm --version
 
       - name: 配置项目锁定的 Maven 版本
         shell: bash
@@ -107,11 +133,29 @@ jobs:
       - name: 全量构建与兼容性验收
         run: mvn --batch-mode --no-transfer-progress clean verify
 
-      - name: 验证二十七个发布制品可复现
+      - name: 验证纯 API 与协议 npm 包
+        run: |
+          pnpm --dir client install --frozen-lockfile
+          pack_dir="$RUNNER_TEMP/fibra-npm-pack"
+          mkdir -p "$pack_dir"
+          FIBRA_NPM_PACK_DIR="$pack_dir" scripts/verify-client-packages.sh
+
+      - name: 保存已验证的 npm 制品
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fibra-npm-packages-${{ steps.release-ref.outputs.commit }}
+          path: ${{ runner.temp }}/fibra-npm-pack/*.tgz
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: 验证 Maven 制品与发行 ZIP/目录树可复现
         run: scripts/verify-reproducible-release.sh
 
       - name: 验证仓库外项目可直接消费发布制品
         run: scripts/verify-distribution.sh
+
+      - name: 验证架构边界
+        run: scripts/verify-architecture-boundaries.sh
 
   publish-central:
     needs: verify-release
@@ -158,5 +202,65 @@ jobs:
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
         run: >-
           mvn --batch-mode --no-transfer-progress clean deploy -Pcentral-release
-          -pl fibra-api,fibra-core,fibra-config,fibra-artifact,fibra-engine,fibra-bridge,fibra-runtime-java,fibra-runtime-node,fibra-registry,fibra-cli,fibra-spring,fibra-spring-boot-starter,fibra-plugin-archetype,fibra-plugins/fibra-tool-api,fibra-plugins/fibra-plugins-fs/fibra-fs,fibra-plugins/fibra-plugins-fs/fibra-fs-local,fibra-plugins/fibra-plugins-fs/fibra-tool-fs,fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search,fibra-plugins/fibra-plugins-subprocess/fibra-subprocess,fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local,fibra-plugins/fibra-plugins-shell/fibra-shell,fibra-plugins/fibra-plugins-shell/fibra-shell-local,fibra-plugins/fibra-plugins-shell/fibra-tool-shell,fibra-plugins/fibra-plugins-storage/fibra-storage,fibra-plugins/fibra-plugins-storage/fibra-storage-json,fibra-plugins/fibra-plugins-storage/fibra-tool-storage
+          -pl "$(scripts/release-maven-modules.sh csv)"
           -am -DskipTests -Darchetype.test.skip=true
+
+  publish-npm:
+    needs: verify-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: 检出已验证提交
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.verify-release.outputs.commit }}
+          persist-credentials: false
+
+      - name: 配置项目锁定的 Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: client/.node-version
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+
+      - name: 安装锁定的 npm
+        run: |
+          npm install --global npm@11.15.0
+          npm --version
+
+      - name: 下载已验证的 npm 制品
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: fibra-npm-packages-${{ needs.verify-release.outputs.commit }}
+          path: ${{ runner.temp }}/fibra-npm-pack
+
+      - name: 核对待发布 npm 制品
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$(git rev-parse HEAD)" != "$GITHUB_SHA" ]]; then
+            echo "npm 发布提交与 provenance 的 GITHUB_SHA 不一致" >&2
+            exit 1
+          fi
+          pack_dir="$RUNNER_TEMP/fibra-npm-pack"
+          find "$pack_dir" -maxdepth 1 -type f -name '*.tgz' -print | LC_ALL=C sort > "$RUNNER_TEMP/fibra-npm-tarballs"
+          [[ "$(wc -l < "$RUNNER_TEMP/fibra-npm-tarballs" | tr -d ' ')" == 2 ]]
+
+      - name: 通过 OIDC 发布 npm 制品并生成 provenance
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          revision="${RELEASE_TAG#v}"
+          npm_tag=latest
+          if [[ "$revision" == *-* ]]; then
+            qualifier="${revision#*-}"
+            npm_tag="${qualifier%%.*}"
+          fi
+          while IFS= read -r tarball; do
+            npm publish "$tarball" --access public --tag "$npm_tag" --provenance
+          done < "$RUNNER_TEMP/fibra-npm-tarballs"

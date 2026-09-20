@@ -19,7 +19,7 @@ class DesiredConfigCompilerTest {
     void collectsLiteralInputWithoutResolvingOrBindingPluginTypes(@TempDir Path work)
         throws Exception {
         var source = work.resolve("input.yaml");
-        Files.writeString(source, "- id: x\n  plugin: not-loaded\n  config: {value: text}\n");
+        Files.writeString(source, "- id: x\n  plugin: {id: plugin, facet: main, definition: not-loaded}\n  config: {value: text}\n");
         var result = new DesiredConfigCompiler(ConfigLimits.defaults()).compile(source);
 
         assertEquals(com.sstlfsj.fibra.value.LiteralValue.of(Map.of("value", "text")),
@@ -30,7 +30,7 @@ class DesiredConfigCompilerTest {
     void graphIdentityDoesNotDependOnSourcePaths(@TempDir Path work) throws Exception {
         var first = work.resolve("first.yaml");
         var second = work.resolve("second.yaml");
-        var content = "- id: p\n  plugin: p\n  config: {number: 2.50}\n";
+        var content = "- id: p\n  plugin: {id: plugin, facet: main, definition: p}\n  config: {number: 2.50}\n";
         Files.writeString(first, content);
         Files.writeString(second, content);
         var compiler = new DesiredConfigCompiler(ConfigLimits.defaults());
@@ -48,7 +48,7 @@ class DesiredConfigCompilerTest {
         var included = work.resolve("included.yaml");
         Files.writeString(included, """
             - id: provider
-              plugin: provider
+              plugin: {id: provider-plugin, facet: main, definition: provider}
               publication: pending-allowed
               config:
                 value: original
@@ -65,17 +65,17 @@ class DesiredConfigCompilerTest {
                   trace: true
               entries:
                 - id: consumer
-                  plugin: consumer
+                  plugin: {id: consumer-plugin, facet: main, definition: consumer}
             - id: bundle
               include: included.yaml
               patches:
                 - id: provider
-                  plugin: provider
+                  plugin: {id: provider-plugin, facet: main, definition: provider}
                   config:
                     value: patched
                 - insert:
                     - id: second
-                      plugin: provider
+                      plugin: {id: provider-plugin, facet: main, definition: provider}
                       enabled: false
                       config:
                         value: second
@@ -151,17 +151,17 @@ class DesiredConfigCompilerTest {
         Files.writeString(duplicate, """
             - id: one
               group: true
-              entries: [{id: worker, plugin: sample}]
+              entries: [{id: worker, plugin: {id: sample-plugin, facet: main, definition: sample}}]
             - id: two
               group: true
-              entries: [{id: worker, plugin: sample}]
+              entries: [{id: worker, plugin: {id: sample-plugin, facet: main, definition: sample}}]
             """);
         var duplicateFailure = assertThrows(ConfigException.class,
             () -> new DesiredConfigCompiler(ConfigLimits.defaults()).compile(duplicate));
         assertEquals("DUPLICATE_ID", duplicateFailure.diagnostic().code());
 
         var invalidRealm = work.resolve("realm.yaml");
-        Files.writeString(invalidRealm, "- id: worker\n  plugin: sample\n  realm: {scope: 42}\n");
+        Files.writeString(invalidRealm, "- id: worker\n  plugin: {id: sample-plugin, facet: main, definition: sample}\n  realm: {scope: 42}\n");
         var realmFailure = assertThrows(ConfigException.class,
             () -> new DesiredConfigCompiler(ConfigLimits.defaults()).compile(invalidRealm));
         assertEquals("REALM_POLICY_INVALID", realmFailure.diagnostic().code());
@@ -173,7 +173,7 @@ class DesiredConfigCompilerTest {
         var included = work.resolve("included.yaml");
         Files.writeString(included, """
             - id: worker
-              plugin: sample
+              plugin: {id: sample-plugin, facet: main, definition: sample}
               when: {$eq: [1]}
               config: {value: {$ref: /value}}
             """);
@@ -185,7 +185,7 @@ class DesiredConfigCompilerTest {
               context: {value: include}
               patches:
                 - id: worker
-                  plugin: sample
+                  plugin: {id: sample-plugin, facet: main, definition: sample}
                   when: {$ref: /active}
                   context: {active: true, value: patched}
             - id: dormant
@@ -193,7 +193,7 @@ class DesiredConfigCompilerTest {
               when: false
               patches:
                 - id: worker
-                  plugin: sample
+                  plugin: {id: sample-plugin, facet: main, definition: sample}
                   when: true
             """);
 
@@ -217,22 +217,39 @@ class DesiredConfigCompilerTest {
     void rejectsReservedLocalMetadataAndMalformedRawExpressionAfterPatch(@TempDir Path work)
         throws Exception {
         var reserved = work.resolve("reserved.yaml");
-        Files.writeString(reserved, "- id: x\n  plugin: sample\n  context: {entry: forged}\n");
+        Files.writeString(reserved, "- id: x\n  plugin: {id: sample-plugin, facet: main, definition: sample}\n  context: {entry: forged}\n");
         var reservedFailure = assertThrows(ConfigException.class,
             () -> new DesiredConfigCompiler(ConfigLimits.defaults()).compile(reserved));
         assertEquals("CONTEXT_ENTRY_RESERVED", reservedFailure.diagnostic().code());
 
         var invalid = work.resolve("invalid.yaml");
-        Files.writeString(invalid, "- id: x\n  plugin: sample\n  when: {$if: [true, false]}\n");
+        Files.writeString(invalid, "- id: x\n  plugin: {id: sample-plugin, facet: main, definition: sample}\n  when: {$if: [true, false]}\n");
         var invalidFailure = assertThrows(ConfigException.class,
             () -> new DesiredConfigCompiler(ConfigLimits.defaults()).compile(invalid));
         assertEquals("EXPRESSION_SHAPE_INVALID", invalidFailure.diagnostic().code());
 
         var nonBoolean = work.resolve("non-boolean.yaml");
-        Files.writeString(nonBoolean, "- id: x\n  plugin: sample\n  when: 1\n");
+        Files.writeString(nonBoolean, "- id: x\n  plugin: {id: sample-plugin, facet: main, definition: sample}\n  when: 1\n");
         var typeFailure = assertThrows(ConfigException.class,
             () -> new DesiredConfigCompiler(ConfigLimits.defaults()).compile(nonBoolean));
         assertEquals("CONDITION_NOT_BOOLEAN", typeFailure.diagnostic().code());
+    }
+
+    @Test
+    void requiresACompletePluginFacetAndDefinitionReference(@TempDir Path work) throws Exception {
+        var legacy = work.resolve("legacy.yaml");
+        Files.writeString(legacy, "- {id: x, plugin: sample}\n");
+        var legacyFailure = assertThrows(ConfigException.class,
+            () -> new DesiredConfigCompiler(ConfigLimits.defaults()).compile(legacy));
+
+        assertEquals("FIELD_NOT_OBJECT", legacyFailure.diagnostic().code());
+
+        var incomplete = work.resolve("incomplete.yaml");
+        Files.writeString(incomplete, "- {id: x, plugin: {id: sample, facet: main}}\n");
+        var incompleteFailure = assertThrows(ConfigException.class,
+            () -> new DesiredConfigCompiler(ConfigLimits.defaults()).compile(incomplete));
+
+        assertEquals("FIELD_NOT_TEXT", incompleteFailure.diagnostic().code());
     }
 
 }

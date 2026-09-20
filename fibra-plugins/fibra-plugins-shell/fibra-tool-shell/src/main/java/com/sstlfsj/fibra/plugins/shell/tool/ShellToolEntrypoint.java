@@ -15,8 +15,8 @@ public final class ShellToolEntrypoint implements PluginEntrypoint<Void> {
     @Override public PluginDefinition<Void> definition() {
         return PluginDefinition.builder("fibra-tool-shell", Void.class,
             () -> (context, config) -> context.services().require(ContributionServices.REGISTRAR)
-                .register(context, ToolContributions.KIND, context.plugins().current().orElseThrow().id(),
-                    "bash", descriptor(), ShellToolEntrypoint::invoke).then())
+                .register(context, ToolContributions.KIND, "bash", descriptor(),
+                    ShellToolEntrypoint::invoke).then())
             .require(ContributionServices.REGISTRAR).require(ShellServices.SHELL).build();
     }
 

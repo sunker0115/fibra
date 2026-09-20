@@ -1,158 +1,173 @@
 package com.sstlfsj.fibra.cli;
 
-import com.sstlfsj.fibra.artifact.ArtifactStore;
-import com.sstlfsj.fibra.config.ConfigContextSnapshot;
+import com.sstlfsj.fibra.artifact.PluginId;
+import com.sstlfsj.fibra.artifact.PluginPackageInstallTransaction;
+import com.sstlfsj.fibra.artifact.PluginPackageStore;
+import com.sstlfsj.fibra.bridge.ContributionKindRegistry;
 import com.sstlfsj.fibra.config.ConfigLimits;
 import com.sstlfsj.fibra.config.FileDesiredStateRepository;
-import com.sstlfsj.fibra.engine.DeploymentArtifact;
-import com.sstlfsj.fibra.engine.FileEngineStateStore;
+import com.sstlfsj.fibra.engine.FileDeploymentTargetStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
-import com.sstlfsj.fibra.engine.PluginArtifactProbe;
+import com.sstlfsj.fibra.engine.HostTerminationPort;
+import com.sstlfsj.fibra.engine.PluginSelection;
 import com.sstlfsj.fibra.engine.PublishedRuntime;
 import com.sstlfsj.fibra.plugins.tool.ToolContributions;
 import com.sstlfsj.fibra.registry.FilePluginAuditRepository;
 import com.sstlfsj.fibra.registry.PluginDeploymentRequest;
-import com.sstlfsj.fibra.registry.PluginInstallRequest;
 import com.sstlfsj.fibra.registry.PluginRegistry;
 import com.sstlfsj.fibra.registry.RegistrySnapshot;
-import com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter;
-import com.sstlfsj.fibra.runtime.node.NodePluginRuntimeAdapter;
+import com.sstlfsj.fibra.runtime.java.JavaRuntimeProvider;
 import com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions;
+import com.sstlfsj.fibra.runtime.node.NodeRuntimeProvider;
 
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 
-/** CLI profile namespace内唯一的 Engine、Registry 与持久资源所有者。 */
+/** CLI profile namespace 内唯一的 Engine、Registry 与持久资源所有者。 */
 final class CliHost implements AutoCloseable {
     private final CliPaths paths;
-    private final PluginArtifactProbe probe;
+    private final PluginPackageStore packages;
+    private final FileDeploymentTargetStore targets;
     private final FibraEngine engine;
     private final PluginRegistry registry;
     private final FilePluginAuditRepository audit;
+    private final ExecutorService terminationExecutor;
     private boolean closed;
     private Throwable closeFailure;
 
-    private CliHost(CliPaths paths, PluginArtifactProbe probe, FibraEngine engine,
-                    PluginRegistry registry, FilePluginAuditRepository audit) {
+    private CliHost(CliPaths paths, PluginPackageStore packages, FileDeploymentTargetStore targets,
+                    FibraEngine engine, PluginRegistry registry,
+                    FilePluginAuditRepository audit, ExecutorService terminationExecutor) {
         this.paths = paths;
-        this.probe = probe;
+        this.packages = packages;
+        this.targets = targets;
         this.engine = engine;
         this.registry = registry;
         this.audit = audit;
+        this.terminationExecutor = terminationExecutor;
     }
 
     static CliHost open(CliPaths paths) {
-        var config = new FileDesiredStateRepository(paths.profileFile(), ConfigLimits.defaults());
-        FileEngineStateStore state = null;
-        ArtifactStore artifacts = null;
+        PluginPackageStore packages = null;
+        FileDeploymentTargetStore targets = null;
         FilePluginAuditRepository audit = null;
+        ExecutorService termination = null;
         FibraEngine engine = null;
         try {
             Files.createDirectories(paths.workspaceRoot());
             Files.createDirectories(paths.storageRoot());
-            state = new FileEngineStateStore(paths.stateRoot());
-            artifacts = new ArtifactStore(paths.artifactRoot());
+            packages = new PluginPackageStore(paths.packageStoreRoot());
+            targets = new FileDeploymentTargetStore(paths.stateRoot());
             audit = new FilePluginAuditRepository(paths.auditFile());
-            var java = new JavaPluginRuntimeAdapter();
-            var node = new NodePluginRuntimeAdapter(name -> "fibra.tool".equals(name)
-                ? Optional.of(ToolContributions.KIND) : Optional.empty(), NodeRuntimeOptions.defaults(
-                    paths.nodeExecutable(), paths.nodeSessionRoot()));
-            var probe = new PluginArtifactProbe(List.of(java, node));
-            var source = new ProfileArtifactSource(paths.profileArtifactsFile(), paths.pluginsRoot(), probe);
-            engine = FibraEngine.builder(config).stateStore(state).artifactStore(artifacts)
-                .initialArtifacts(source).configContext(ConfigContextSnapshot.of(paths.configContext()))
-                .runtimeAdapter(java).runtimeAdapter(node).build();
-            var registry = new PluginRegistry(engine, audit);
-            engine.start().block();
-            return new CliHost(paths, probe, engine, registry, audit);
+            var terminationExecutor = Executors.newSingleThreadExecutor(Thread.ofPlatform().daemon()
+                .name("fibra-cli-termination-", 0).factory());
+            termination = terminationExecutor;
+            var owner = new AtomicReference<CliHost>();
+            HostTerminationPort terminationPort = request -> terminationExecutor.execute(() -> {
+                var host = owner.get();
+                if (host != null) host.close();
+            });
+            engine = FibraEngine.builder(packages, targets)
+                .contributionKinds(ContributionKindRegistry.of(ToolContributions.KIND))
+                .hostTerminationPort(terminationPort)
+                .runtimeProvider(new JavaRuntimeProvider(List.of()))
+                .runtimeProvider(new NodeRuntimeProvider(NodeRuntimeOptions.defaults(
+                    paths.nodeExecutable(), paths.nodeSessionRoot())))
+                .build();
+            var registry = new PluginRegistry(engine, packages, audit);
+            engine.startAsync().block();
+            var host = new CliHost(paths, packages, targets, engine, registry, audit, termination);
+            owner.set(host);
+            if (registry.snapshot().target().isEmpty()) host.apply();
+            return host;
         } catch (Throwable failure) {
-            closeAfterFailedStart(failure, engine, artifacts, state, audit);
+            close(failure, engine);
+            close(failure, audit);
+            close(failure, targets);
+            close(failure, packages);
+            if (termination != null) termination.shutdownNow();
             throwUnchecked(failure);
             throw new AssertionError("unreachable");
         }
     }
 
-    PluginRegistry registry() {
-        return registry;
-    }
-
-    PublishedRuntime published() {
-        return engine.published();
-    }
-
-    PluginArtifactProbe probe() {
-        return probe;
-    }
+    PluginRegistry registry() { return registry; }
+    PublishedRuntime published() { return engine.published(); }
 
     RegistrySnapshot apply() {
-        var graph = new FileDesiredStateRepository(paths.profileFile(), ConfigLimits.defaults())
-            .load().graph();
-        var source = new ProfileArtifactSource(paths.profileArtifactsFile(), paths.pluginsRoot(), probe);
-        var artifacts = source.load().stream().map(CliHost::installRequest).toList();
-        return registry.deploy(new PluginDeploymentRequest(artifacts, graph)).block();
+        var graph = new FileDesiredStateRepository(paths.profileFile(),
+            ConfigLimits.defaults()).load().graph();
+        var selected = new ProfilePackageSource(paths.profilePackagesFile(), paths.pluginsRoot()).load();
+        var transactions = new ArrayList<PluginPackageInstallTransaction>();
+        final RegistrySnapshot result;
+        try {
+            var prepared = new LinkedHashMap<PluginId,
+                PluginPackageInstallTransaction>();
+            for (var source : selected) {
+                var transaction = packages.prepareInstall(source);
+                transactions.add(transaction);
+                var pluginId = transaction.candidate().pluginId();
+                if (prepared.putIfAbsent(pluginId, transaction) != null) {
+                    throw new IllegalArgumentException(
+                        "duplicate plugin id in profile package selection: "
+                            + pluginId.value());
+                }
+            }
+            var selections = prepared.values().stream().map(transaction -> {
+                var published = transaction.save();
+                return new PluginSelection(published.pluginId(),
+                    published.packageRevision(), true);
+            }).toList();
+            result = registry.deploy(new PluginDeploymentRequest(selections,
+                graph, paths.configContext())).block();
+        } catch (RuntimeException | Error failure) {
+            closeTransactions(transactions, failure);
+            throw failure;
+        }
+        closeTransactions(transactions, null);
+        return result;
     }
 
-    @Override
-    public synchronized void close() {
+    private static void closeTransactions(
+        List<PluginPackageInstallTransaction> transactions, Throwable primary) {
+        Throwable failure = primary;
+        for (var transaction : transactions.reversed()) {
+            try { transaction.close(); }
+            catch (Throwable cleanup) {
+                if (failure == null) failure = cleanup;
+                else if (failure != cleanup) failure.addSuppressed(cleanup);
+            }
+        }
+        if (primary == null && failure != null) throwUnchecked(failure);
+    }
+
+    @Override public synchronized void close() {
         if (closed) {
             if (closeFailure != null) throwUnchecked(closeFailure);
             return;
         }
         closed = true;
         Throwable failure = null;
-        try {
-            engine.close();
-        } catch (Throwable error) {
-            failure = error;
-        }
-        try {
-            audit.close();
-        } catch (Throwable error) {
-            failure = append(failure, error);
-        }
-        if (failure != null) {
-            closeFailure = failure;
-            throwUnchecked(failure);
-        }
-    }
-
-    private static PluginInstallRequest installRequest(DeploymentArtifact artifact) {
-        return PluginInstallRequest.builder().artifactId(artifact.artifactId())
-            .runtimeId(artifact.runtimeId()).version(artifact.version()).source(artifact.source()).build();
-    }
-
-    private static void closeAfterFailedStart(Throwable failure, FibraEngine engine,
-                                                ArtifactStore artifacts, FileEngineStateStore state,
-                                                FilePluginAuditRepository audit) {
-        if (engine != null) {
-            try {
-                engine.close();
-            } catch (Throwable closeFailure) {
-                failure.addSuppressed(closeFailure);
-            }
-        } else {
-            close(failure, artifacts);
-            close(failure, state);
-        }
-        close(failure, audit);
+        try { engine.close(); } catch (Throwable error) { failure = error; }
+        try { audit.close(); } catch (Throwable error) { failure = append(failure, error); }
+        terminationExecutor.shutdownNow();
+        if (failure != null) { closeFailure = failure; throwUnchecked(failure); }
     }
 
     private static void close(Throwable failure, AutoCloseable resource) {
         if (resource == null) return;
-        try {
-            resource.close();
-        } catch (Throwable closeFailure) {
-            failure.addSuppressed(closeFailure);
-        }
+        try { resource.close(); } catch (Throwable cleanup) { failure.addSuppressed(cleanup); }
     }
-
-    private static Throwable append(Throwable failure, Throwable next) {
-        if (failure == null) return next;
-        if (failure != next) failure.addSuppressed(next);
-        return failure;
+    private static Throwable append(Throwable first, Throwable next) {
+        if (first == null) return next;
+        if (first != next) first.addSuppressed(next);
+        return first;
     }
-
     private static void throwUnchecked(Throwable failure) {
         if (failure instanceof RuntimeException runtime) throw runtime;
         if (failure instanceof Error error) throw error;

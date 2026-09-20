@@ -8,5 +8,6 @@ else
   java_executable=java
 fi
 
-exec "$java_executable" -Dfibra.home="$install_root" \
+exec "$java_executable" --enable-native-access=ALL-UNNAMED \
+  -Dfibra.home="$install_root" \
   -cp "$install_root/lib/*" com.sstlfsj.fibra.cli.FibraCli "$@"

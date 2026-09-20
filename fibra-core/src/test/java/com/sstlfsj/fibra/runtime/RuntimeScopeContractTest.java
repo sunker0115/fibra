@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -28,7 +29,8 @@ class RuntimeScopeContractTest {
                 .withRealm(MESSAGE, "tenant-a")
                 .withIntercept(MESSAGE, "trace");
 
-            assertSame(scope, derived.scope());
+            assertNotSame(scope, derived.scope());
+            assertSame(scope.context().scope(), derived.scope());
             assertFalse(derived instanceof AutoCloseable);
         }
     }

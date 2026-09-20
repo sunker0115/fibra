@@ -14,22 +14,6 @@ public final class com.sstlfsj.fibra.artifact.ArtifactId extends java.lang.Recor
   public final boolean equals(java.lang.Object);
   public java.lang.String value();
 }
-## com.sstlfsj.fibra.artifact.ArtifactInstallTransaction
-Compiled from "ArtifactInstallTransaction.java"
-public interface com.sstlfsj.fibra.artifact.ArtifactInstallTransaction extends java.lang.AutoCloseable {
-  public abstract com.sstlfsj.fibra.artifact.ArtifactRecord candidate();
-  public abstract com.sstlfsj.fibra.artifact.ArtifactRecord save();
-  public abstract void rollback();
-  public default void close();
-}
-## com.sstlfsj.fibra.artifact.ArtifactPackage
-Compiled from "ArtifactPackage.java"
-public final class com.sstlfsj.fibra.artifact.ArtifactPackage {
-  public java.nio.file.Path root();
-  public com.sstlfsj.fibra.artifact.RuntimeId runtimeId();
-  public java.nio.file.Path payload();
-  public static com.sstlfsj.fibra.artifact.ArtifactPackage read(java.nio.file.Path);
-}
 ## com.sstlfsj.fibra.artifact.ArtifactPhase
 Compiled from "ArtifactPhase.java"
 public final class com.sstlfsj.fibra.artifact.ArtifactPhase extends java.lang.Enum<com.sstlfsj.fibra.artifact.ArtifactPhase> {
@@ -41,36 +25,6 @@ public final class com.sstlfsj.fibra.artifact.ArtifactPhase extends java.lang.En
   public static com.sstlfsj.fibra.artifact.ArtifactPhase[] values();
   public static com.sstlfsj.fibra.artifact.ArtifactPhase valueOf(java.lang.String);
 }
-## com.sstlfsj.fibra.artifact.ArtifactRecord
-Compiled from "ArtifactRecord.java"
-public final class com.sstlfsj.fibra.artifact.ArtifactRecord {
-  public static com.sstlfsj.fibra.artifact.ArtifactRecord$Builder builder();
-  public com.sstlfsj.fibra.artifact.ArtifactRecord$Builder toBuilder();
-  public com.sstlfsj.fibra.artifact.ArtifactId id();
-  public com.sstlfsj.fibra.artifact.RuntimeId runtimeId();
-  public java.lang.String version();
-  public java.lang.String checksum();
-  public java.lang.String revision();
-  public java.nio.file.Path location();
-  public com.sstlfsj.fibra.artifact.ArtifactState state();
-  public java.time.Instant updatedAt();
-  public boolean equals(java.lang.Object);
-  public int hashCode();
-}
-## com.sstlfsj.fibra.artifact.ArtifactRecord$Builder
-Compiled from "ArtifactRecord.java"
-public final class com.sstlfsj.fibra.artifact.ArtifactRecord$Builder {
-  public com.sstlfsj.fibra.artifact.ArtifactRecord$Builder();
-  public com.sstlfsj.fibra.artifact.ArtifactRecord$Builder id(com.sstlfsj.fibra.artifact.ArtifactId);
-  public com.sstlfsj.fibra.artifact.ArtifactRecord$Builder runtimeId(com.sstlfsj.fibra.artifact.RuntimeId);
-  public com.sstlfsj.fibra.artifact.ArtifactRecord$Builder version(java.lang.String);
-  public com.sstlfsj.fibra.artifact.ArtifactRecord$Builder checksum(java.lang.String);
-  public com.sstlfsj.fibra.artifact.ArtifactRecord$Builder revision(java.lang.String);
-  public com.sstlfsj.fibra.artifact.ArtifactRecord$Builder location(java.nio.file.Path);
-  public com.sstlfsj.fibra.artifact.ArtifactRecord$Builder state(com.sstlfsj.fibra.artifact.ArtifactState);
-  public com.sstlfsj.fibra.artifact.ArtifactRecord$Builder updatedAt(java.time.Instant);
-  public com.sstlfsj.fibra.artifact.ArtifactRecord build();
-}
 ## com.sstlfsj.fibra.artifact.ArtifactState
 Compiled from "ArtifactState.java"
 public final class com.sstlfsj.fibra.artifact.ArtifactState extends java.lang.Enum<com.sstlfsj.fibra.artifact.ArtifactState> {
@@ -79,13 +33,157 @@ public final class com.sstlfsj.fibra.artifact.ArtifactState extends java.lang.En
   public static com.sstlfsj.fibra.artifact.ArtifactState[] values();
   public static com.sstlfsj.fibra.artifact.ArtifactState valueOf(java.lang.String);
 }
-## com.sstlfsj.fibra.artifact.ArtifactStore
-Compiled from "ArtifactStore.java"
-public final class com.sstlfsj.fibra.artifact.ArtifactStore implements java.lang.AutoCloseable {
-  public com.sstlfsj.fibra.artifact.ArtifactStore(java.nio.file.Path);
-  public com.sstlfsj.fibra.artifact.ArtifactInstallTransaction prepareInstall(com.sstlfsj.fibra.artifact.ArtifactId, com.sstlfsj.fibra.artifact.RuntimeId, java.lang.String, java.nio.file.Path);
-  public java.util.Optional<com.sstlfsj.fibra.artifact.ArtifactRecord> find(com.sstlfsj.fibra.artifact.ArtifactId, java.lang.String);
-  public java.util.List<com.sstlfsj.fibra.artifact.ArtifactRecord> history(com.sstlfsj.fibra.artifact.ArtifactId);
+## com.sstlfsj.fibra.artifact.ExecutionTarget
+Compiled from "ExecutionTarget.java"
+public final class com.sstlfsj.fibra.artifact.ExecutionTarget extends java.lang.Record {
+  public com.sstlfsj.fibra.artifact.ExecutionTarget(java.lang.String);
+  public java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String value();
+}
+## com.sstlfsj.fibra.artifact.FacetDependency
+Compiled from "FacetDependency.java"
+public final class com.sstlfsj.fibra.artifact.FacetDependency extends java.lang.Record {
+  public com.sstlfsj.fibra.artifact.FacetDependency(com.sstlfsj.fibra.artifact.PluginId, com.sstlfsj.fibra.artifact.FacetId);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public com.sstlfsj.fibra.artifact.PluginId pluginId();
+  public com.sstlfsj.fibra.artifact.FacetId facetId();
+}
+## com.sstlfsj.fibra.artifact.FacetId
+Compiled from "FacetId.java"
+public final class com.sstlfsj.fibra.artifact.FacetId extends java.lang.Record {
+  public com.sstlfsj.fibra.artifact.FacetId(java.lang.String);
+  public java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String value();
+}
+## com.sstlfsj.fibra.artifact.FacetRole
+Compiled from "FacetRole.java"
+public final class com.sstlfsj.fibra.artifact.FacetRole extends java.lang.Record {
+  public static final com.sstlfsj.fibra.artifact.FacetRole HOST;
+  public static final com.sstlfsj.fibra.artifact.FacetRole COMMAND;
+  public static final com.sstlfsj.fibra.artifact.FacetRole CLIENT;
+  public com.sstlfsj.fibra.artifact.FacetRole(java.lang.String);
+  public java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String value();
+}
+## com.sstlfsj.fibra.artifact.ManagedFacet
+Compiled from "ManagedFacet.java"
+public final class com.sstlfsj.fibra.artifact.ManagedFacet extends java.lang.Record {
+  public com.sstlfsj.fibra.artifact.ManagedFacet(com.sstlfsj.fibra.artifact.ArtifactId, com.sstlfsj.fibra.artifact.PluginId, java.lang.String, com.sstlfsj.fibra.artifact.PluginFacet);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public com.sstlfsj.fibra.artifact.ArtifactId artifactId();
+  public com.sstlfsj.fibra.artifact.PluginId pluginId();
+  public java.lang.String packageRevision();
+  public com.sstlfsj.fibra.artifact.PluginFacet facet();
+}
+## com.sstlfsj.fibra.artifact.ManagedPluginPackage
+Compiled from "ManagedPluginPackage.java"
+public final class com.sstlfsj.fibra.artifact.ManagedPluginPackage {
+  public static com.sstlfsj.fibra.artifact.ManagedPluginPackage$Builder builder();
+  public static com.sstlfsj.fibra.artifact.ManagedPluginPackage from(com.sstlfsj.fibra.artifact.PluginPackage, java.util.Map<com.sstlfsj.fibra.artifact.FacetId, com.sstlfsj.fibra.artifact.ArtifactId>);
+  public com.sstlfsj.fibra.artifact.PluginId pluginId();
+  public java.lang.String version();
+  public java.lang.String packageRevision();
+  public java.util.List<com.sstlfsj.fibra.artifact.ManagedFacet> facets();
+  public boolean equals(java.lang.Object);
+  public int hashCode();
+}
+## com.sstlfsj.fibra.artifact.ManagedPluginPackage$Builder
+Compiled from "ManagedPluginPackage.java"
+public final class com.sstlfsj.fibra.artifact.ManagedPluginPackage$Builder {
+  public com.sstlfsj.fibra.artifact.ManagedPluginPackage$Builder pluginId(com.sstlfsj.fibra.artifact.PluginId);
+  public com.sstlfsj.fibra.artifact.ManagedPluginPackage$Builder version(java.lang.String);
+  public com.sstlfsj.fibra.artifact.ManagedPluginPackage$Builder packageRevision(java.lang.String);
+  public com.sstlfsj.fibra.artifact.ManagedPluginPackage$Builder facets(java.util.Collection<com.sstlfsj.fibra.artifact.ManagedFacet>);
+  public com.sstlfsj.fibra.artifact.ManagedPluginPackage build();
+}
+## com.sstlfsj.fibra.artifact.PluginFacet
+Compiled from "PluginFacet.java"
+public final class com.sstlfsj.fibra.artifact.PluginFacet extends java.lang.Record {
+  public com.sstlfsj.fibra.artifact.PluginFacet(com.sstlfsj.fibra.artifact.FacetId, com.sstlfsj.fibra.artifact.FacetRole, com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.artifact.ExecutionTarget, java.nio.file.Path, java.lang.String, java.util.List<com.sstlfsj.fibra.artifact.FacetDependency>, java.util.List<java.lang.String>);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public com.sstlfsj.fibra.artifact.FacetId facetId();
+  public com.sstlfsj.fibra.artifact.FacetRole role();
+  public com.sstlfsj.fibra.artifact.RuntimeId runtimeId();
+  public com.sstlfsj.fibra.artifact.ExecutionTarget executionTarget();
+  public java.nio.file.Path payload();
+  public java.lang.String payloadDigest();
+  public java.util.List<com.sstlfsj.fibra.artifact.FacetDependency> dependencies();
+  public java.util.List<java.lang.String> requiredCapabilities();
+}
+## com.sstlfsj.fibra.artifact.PluginId
+Compiled from "PluginId.java"
+public final class com.sstlfsj.fibra.artifact.PluginId extends java.lang.Record {
+  public com.sstlfsj.fibra.artifact.PluginId(java.lang.String);
+  public java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String value();
+}
+## com.sstlfsj.fibra.artifact.PluginPackage
+Compiled from "PluginPackage.java"
+public final class com.sstlfsj.fibra.artifact.PluginPackage {
+  public static final java.lang.String MANIFEST;
+  public java.nio.file.Path root();
+  public com.sstlfsj.fibra.artifact.PluginId pluginId();
+  public java.lang.String version();
+  public java.lang.String packageDigest();
+  public java.util.List<com.sstlfsj.fibra.artifact.PluginFacet> facets();
+  public static com.sstlfsj.fibra.artifact.PluginPackage read(java.nio.file.Path);
+}
+## com.sstlfsj.fibra.artifact.PluginPackageInstallTransaction
+Compiled from "PluginPackageInstallTransaction.java"
+public interface com.sstlfsj.fibra.artifact.PluginPackageInstallTransaction extends java.lang.AutoCloseable {
+  public abstract com.sstlfsj.fibra.artifact.PluginPackageRecord candidate();
+  public abstract com.sstlfsj.fibra.artifact.PluginPackageRecord save();
+  public abstract void rollback();
+  public default void close();
+}
+## com.sstlfsj.fibra.artifact.PluginPackageRecord
+Compiled from "PluginPackageRecord.java"
+public final class com.sstlfsj.fibra.artifact.PluginPackageRecord {
+  public static com.sstlfsj.fibra.artifact.PluginPackageRecord$Builder builder();
+  public com.sstlfsj.fibra.artifact.PluginPackageRecord$Builder toBuilder();
+  public com.sstlfsj.fibra.artifact.PluginId pluginId();
+  public java.lang.String version();
+  public java.lang.String packageRevision();
+  public java.nio.file.Path location();
+  public com.sstlfsj.fibra.artifact.ManagedPluginPackage managedPackage();
+  public com.sstlfsj.fibra.artifact.ArtifactState state();
+  public java.time.Instant updatedAt();
+  public boolean equals(java.lang.Object);
+  public int hashCode();
+}
+## com.sstlfsj.fibra.artifact.PluginPackageRecord$Builder
+Compiled from "PluginPackageRecord.java"
+public final class com.sstlfsj.fibra.artifact.PluginPackageRecord$Builder {
+  public com.sstlfsj.fibra.artifact.PluginPackageRecord$Builder pluginId(com.sstlfsj.fibra.artifact.PluginId);
+  public com.sstlfsj.fibra.artifact.PluginPackageRecord$Builder version(java.lang.String);
+  public com.sstlfsj.fibra.artifact.PluginPackageRecord$Builder packageRevision(java.lang.String);
+  public com.sstlfsj.fibra.artifact.PluginPackageRecord$Builder location(java.nio.file.Path);
+  public com.sstlfsj.fibra.artifact.PluginPackageRecord$Builder managedPackage(com.sstlfsj.fibra.artifact.ManagedPluginPackage);
+  public com.sstlfsj.fibra.artifact.PluginPackageRecord$Builder state(com.sstlfsj.fibra.artifact.ArtifactState);
+  public com.sstlfsj.fibra.artifact.PluginPackageRecord$Builder updatedAt(java.time.Instant);
+  public com.sstlfsj.fibra.artifact.PluginPackageRecord build();
+}
+## com.sstlfsj.fibra.artifact.PluginPackageStore
+Compiled from "PluginPackageStore.java"
+public final class com.sstlfsj.fibra.artifact.PluginPackageStore implements java.lang.AutoCloseable {
+  public com.sstlfsj.fibra.artifact.PluginPackageStore(java.nio.file.Path);
+  public com.sstlfsj.fibra.artifact.PluginPackageInstallTransaction prepareInstall(java.nio.file.Path);
+  public java.util.Optional<com.sstlfsj.fibra.artifact.PluginPackageRecord> find(com.sstlfsj.fibra.artifact.PluginId, java.lang.String);
+  public java.util.List<com.sstlfsj.fibra.artifact.PluginPackageRecord> history(com.sstlfsj.fibra.artifact.PluginId);
   public void close();
 }
 ## com.sstlfsj.fibra.artifact.RuntimeId

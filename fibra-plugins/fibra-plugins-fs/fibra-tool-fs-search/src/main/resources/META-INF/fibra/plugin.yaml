@@ -1,6 +1,1 @@
-id: fibra-tool-fs-search
-version: ${project.version}
 entrypoint: com.sstlfsj.fibra.plugins.fs.search.ToolFsSearchEntrypoint
-requires:
-  - id: fibra-subprocess
-    version: ${project.version}

@@ -18,6 +18,5 @@
 
   <modules>
     <module>content-sanitizer</module>
-    <module>plugin-dependency</module>
   </modules>
 </project>

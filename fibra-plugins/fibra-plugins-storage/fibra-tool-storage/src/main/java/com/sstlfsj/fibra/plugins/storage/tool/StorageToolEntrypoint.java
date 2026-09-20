@@ -83,12 +83,10 @@ public final class StorageToolEntrypoint implements PluginEntrypoint<Void> {
 
         @Override
         public Mono<Void> start(Context context, Void ignored) {
-            var provider = context.plugins().current().orElseThrow(
-                () -> new IllegalStateException("storage tools require plugin ownership")).id();
             context.services().reference(StorageServices.CONFIG_STORE).invoke(
                 (invocation, store) -> store.subscribe(invocation, changes::add));
             var descriptors = descriptors();
-            return context.services().require(ContributionServices.REGISTRAR).registerAll(context, provider, List.of(
+            return context.services().require(ContributionServices.REGISTRAR).registerAll(context, List.of(
                 new ContributionBinding<>(ToolContributions.KIND, "load", descriptors.get("load"), this::load),
                 new ContributionBinding<>(ToolContributions.KIND, "put", descriptors.get("put"), this::put),
                 new ContributionBinding<>(ToolContributions.KIND, "remove", descriptors.get("remove"), this::remove),

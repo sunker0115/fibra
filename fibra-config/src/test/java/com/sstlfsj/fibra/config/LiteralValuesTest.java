@@ -20,7 +20,7 @@ class LiteralValuesTest {
         data.put("escaped", "\"\\\u0000\n中文\ud83d\ude00\ud800");
         data.put("nested", List.of(Map.of("value", true), Map.of("value", false)));
         var original = LiteralValue.of(data);
-        var encoded = "[{\"id\":\"p\",\"plugin\":\"p\",\"config\":"
+        var encoded = "[{\"id\":\"p\",\"plugin\":{\"id\":\"sample-plugin\",\"facet\":\"main\",\"definition\":\"sample\"},\"config\":"
             + original.canonicalJson() + "}]";
         var parsed = new ConfigDocumentReader(ConfigLimits.defaults()).read(
             java.nio.file.Path.of("input.json"),
@@ -33,8 +33,8 @@ class LiteralValuesTest {
     void sourceReadersPreserveExactDecimalDigits() {
         var reader = new ConfigDocumentReader(ConfigLimits.defaults());
         var sources = Map.of(
-            "literal.json", "[{\"id\":\"p\",\"plugin\":\"p\",\"config\":0.10000000000000000001}]",
-            "literal.yaml", "- id: p\n  plugin: p\n  config: 0.10000000000000000001\n");
+            "literal.json", "[{\"id\":\"p\",\"plugin\":{\"id\":\"sample-plugin\",\"facet\":\"main\",\"definition\":\"sample\"},\"config\":0.10000000000000000001}]",
+            "literal.yaml", "- id: p\n  plugin: {id: sample-plugin, facet: main, definition: sample}\n  config: 0.10000000000000000001\n");
         sources.forEach((name, text) -> {
             var document = reader.read(java.nio.file.Path.of(name),
                 text.getBytes(java.nio.charset.StandardCharsets.UTF_8), null);

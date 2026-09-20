@@ -1,20 +1,21 @@
 package com.sstlfsj.fibra.plugins.acceptance;
 
-import com.sstlfsj.fibra.artifact.ArtifactPackage;
-import com.sstlfsj.fibra.artifact.ArtifactStore;
+import com.sstlfsj.fibra.artifact.PluginPackageStore;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
-import com.sstlfsj.fibra.config.DesiredStateRepository;
-import com.sstlfsj.fibra.engine.EngineStateStore;
+import com.sstlfsj.fibra.config.ConfigContextSnapshot;
+import com.sstlfsj.fibra.engine.DeploymentTargetStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
+import com.sstlfsj.fibra.engine.PluginSelection;
 import com.sstlfsj.fibra.engine.PublishedView;
 import com.sstlfsj.fibra.bridge.ContributionId;
 import com.sstlfsj.fibra.bridge.ContributionKind;
+import com.sstlfsj.fibra.bridge.ContributionKindRegistry;
 import com.sstlfsj.fibra.registry.InMemoryPluginAuditRepository;
 import com.sstlfsj.fibra.registry.PluginDeploymentRequest;
 import com.sstlfsj.fibra.registry.PluginInstallRequest;
 import com.sstlfsj.fibra.registry.PluginRegistry;
 import com.sstlfsj.fibra.registry.RegistrySnapshot;
-import com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter;
+import com.sstlfsj.fibra.runtime.java.JavaRuntimeProvider;
 import com.sstlfsj.fibra.plugins.tool.ToolContributions;
 import com.sstlfsj.fibra.plugins.tool.ToolRequest;
 import com.sstlfsj.fibra.plugins.tool.ToolResult;
@@ -25,46 +26,58 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.jar.JarFile;
-import java.util.regex.Pattern;
 
 final class PluginAcceptanceHarness implements AutoCloseable {
     static final Duration TIMEOUT = Duration.ofSeconds(20);
-    static final String[] ALL_ARTIFACTS = {
+    static final String[] ALL_PACKAGES = {
         "fibra-fs", "fibra-fs-local", "fibra-tool-fs",
         "fibra-subprocess", "fibra-subprocess-local", "fibra-tool-fs-search",
         "fibra-shell", "fibra-shell-local", "fibra-tool-shell",
         "fibra-storage", "fibra-storage-json", "fibra-tool-storage"
     };
 
-    private static final Pattern ID = Pattern.compile("(?m)^id: ([^\\s]+)$");
+    private static final Map<String, List<String>> DEPENDENCIES = dependencies();
 
     private final FibraEngine engine;
     private final PluginRegistry registry;
+    private final PluginPackageStore packageStore;
+    private final DeploymentTargetStore targetStore;
     private final Path packages;
 
-    private PluginAcceptanceHarness(FibraEngine engine, Path packages) {
+    private PluginAcceptanceHarness(FibraEngine engine, PluginPackageStore packageStore,
+                                    DeploymentTargetStore targetStore, Path packages) {
         this.engine = engine;
+        this.packageStore = packageStore;
+        this.targetStore = targetStore;
         this.packages = packages;
-        registry = new PluginRegistry(engine, new InMemoryPluginAuditRepository());
+        registry = new PluginRegistry(engine, packageStore, new InMemoryPluginAuditRepository());
     }
 
-    static PluginAcceptanceHarness start(Path artifactStore, EngineStateStore stateStore,
-                                         DesiredStateRepository desired) {
-        var engine = FibraEngine.builder(desired)
-            .artifactStore(new ArtifactStore(artifactStore))
-            .stateStore(stateStore)
-            .runtimeAdapter(new JavaPluginRuntimeAdapter())
+    static PluginAcceptanceHarness start(Path storeRoot, DeploymentTargetStore targetStore) {
+        var packageStore = new PluginPackageStore(storeRoot);
+        var engine = FibraEngine.builder(packageStore, targetStore)
+            .runtimeProvider(new JavaRuntimeProvider(List.of()))
+            .contributionKinds(ContributionKindRegistry.of(ToolContributions.KIND))
+            .hostTerminationPort(request -> { })
             .build();
-        engine.start().block(TIMEOUT);
-        return new PluginAcceptanceHarness(engine, artifactStore.resolveSibling("packages"));
+        engine.startAsync().block(TIMEOUT);
+        return new PluginAcceptanceHarness(engine, packageStore, targetStore,
+            storeRoot.resolveSibling("package-sources"));
     }
 
-    RegistrySnapshot deploy(DesiredInputGraph graph, String... artifactIds) {
-        var artifacts = new ArrayList<PluginInstallRequest>();
-        for (var artifactId : artifactIds) artifacts.add(installRequest(packages, stagedJar(artifactId)));
-        return registry.deploy(new PluginDeploymentRequest(artifacts, graph)).block(TIMEOUT);
+    RegistrySnapshot deploy(DesiredInputGraph graph, String... pluginIds) {
+        RegistrySnapshot installed = registry.snapshot();
+        for (var pluginId : pluginIds) {
+            installed = registry.install(installRequest(packages, stagedJar(pluginId))).block(TIMEOUT);
+        }
+        return registry.deploy(new PluginDeploymentRequest(
+            new ArrayList<PluginSelection>(installed.selections().values()), graph,
+            ConfigContextSnapshot.empty())).block(TIMEOUT);
     }
 
     ToolResult invoke(String provider, String localName, Map<String, ?> arguments) {
@@ -90,14 +103,15 @@ final class PluginAcceptanceHarness implements AutoCloseable {
 
     static PluginInstallRequest installRequest(Path packages, Path source) {
         try {
+            var pluginId = pluginId(source);
+            var version = source.getFileName().toString()
+                .substring(pluginId.length() + 1, source.getFileName().toString().length() - 4);
             var root = Files.createTempDirectory(Files.createDirectories(packages), "plugin-");
             var lib = Files.createDirectory(root.resolve("lib"));
             Files.copy(source, lib.resolve(source.getFileName()));
-            Files.writeString(root.resolve("plugin.properties"),
-                "formatVersion=1\nruntime=java\npayload=lib/" + source.getFileName() + "\n");
-            var candidate = new JavaPluginRuntimeAdapter().probe(ArtifactPackage.read(root)).block(TIMEOUT);
-            return PluginInstallRequest.builder().artifactId(candidate.artifactId())
-                .runtimeId(candidate.runtimeId()).version(candidate.version()).source(candidate.source()).build();
+            Files.writeString(root.resolve("fibra-package.yaml"), packageManifest(pluginId,
+                version, "lib/" + source.getFileName(), DEPENDENCIES.get(pluginId)));
+            return new PluginInstallRequest(root, true);
         } catch (IOException failure) {
             throw new IllegalStateException("cannot package staged plugin " + source, failure);
         }
@@ -107,7 +121,8 @@ final class PluginAcceptanceHarness implements AutoCloseable {
         var root = Path.of(System.getProperty("fibra.pluginArtifacts"));
         try (var paths = Files.list(root)) {
             var matches = paths.filter(path -> path.getFileName().toString().endsWith(".jar"))
-                .filter(path -> artifactId.equals(manifestId(path))).toList();
+                .filter(path -> pluginId(path).equals(artifactId))
+                .toList();
             if (matches.size() != 1) {
                 throw new IllegalStateException("expected one staged plugin artifact "
                     + artifactId + " but found " + matches);
@@ -130,13 +145,54 @@ final class PluginAcceptanceHarness implements AutoCloseable {
         }
     }
 
-    private static String manifestId(Path jar) {
-        try {
-            var match = ID.matcher(manifest(jar));
-            return match.find() ? match.group(1) : null;
-        } catch (IllegalStateException ignored) {
-            return null;
+    private static String pluginId(Path jar) {
+        var name = jar.getFileName().toString();
+        return DEPENDENCIES.keySet().stream()
+            .sorted(Comparator.comparingInt(String::length).reversed())
+            .filter(id -> name.startsWith(id + '-') && name.endsWith(".jar"))
+            .findFirst().orElseThrow(() -> new IllegalArgumentException(
+                "unknown staged plugin JAR " + jar));
+    }
+
+    private static String packageManifest(String pluginId, String version, String payload,
+                                          List<String> dependencies) {
+        var manifest = new StringBuilder()
+            .append("format: 1\n")
+            .append("id: ").append(pluginId).append('\n')
+            .append("version: \"").append(version).append("\"\n")
+            .append("facets:\n")
+            .append("  - id: main\n")
+            .append("    role: host\n")
+            .append("    runtime: java\n")
+            .append("    target: host\n")
+            .append("    payload: ").append(payload).append('\n');
+        if (dependencies.isEmpty()) {
+            manifest.append("    dependencies: []\n");
+        } else {
+            manifest.append("    dependencies:\n");
+            for (var dependency : dependencies) {
+                manifest.append("      - pluginId: ").append(dependency).append('\n')
+                    .append("        facetId: main\n");
+            }
         }
+        return manifest.append("    capabilities: []\n").toString();
+    }
+
+    private static Map<String, List<String>> dependencies() {
+        var result = new LinkedHashMap<String, List<String>>();
+        result.put("fibra-fs", List.of());
+        result.put("fibra-fs-local", List.of("fibra-fs"));
+        result.put("fibra-tool-fs", List.of("fibra-fs"));
+        result.put("fibra-subprocess", List.of());
+        result.put("fibra-subprocess-local", List.of("fibra-subprocess"));
+        result.put("fibra-tool-fs-search", List.of("fibra-subprocess"));
+        result.put("fibra-shell", List.of());
+        result.put("fibra-shell-local", List.of("fibra-shell", "fibra-subprocess"));
+        result.put("fibra-tool-shell", List.of("fibra-shell"));
+        result.put("fibra-storage", List.of());
+        result.put("fibra-storage-json", List.of("fibra-storage"));
+        result.put("fibra-tool-storage", List.of("fibra-storage"));
+        return Map.copyOf(result);
     }
 
     static Path executable(String name) {
@@ -151,6 +207,18 @@ final class PluginAcceptanceHarness implements AutoCloseable {
 
     @Override
     public void close() {
-        engine.close();
+        Throwable failure = null;
+        try { engine.close(); } catch (Throwable error) { failure = error; }
+        try { targetStore.close(); } catch (Throwable error) { failure = append(failure, error); }
+        try { packageStore.close(); } catch (Throwable error) { failure = append(failure, error); }
+        if (failure instanceof RuntimeException runtime) throw runtime;
+        if (failure instanceof Error error) throw error;
+        if (failure != null) throw new IllegalStateException("cannot close plugin acceptance harness", failure);
+    }
+
+    private static Throwable append(Throwable first, Throwable next) {
+        if (first == null) return next;
+        first.addSuppressed(next);
+        return first;
     }
 }

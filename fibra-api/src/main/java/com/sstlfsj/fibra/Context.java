@@ -4,9 +4,9 @@ import com.sstlfsj.fibra.logging.FibraLogger;
 import com.sstlfsj.fibra.logging.LoggerIntercept;
 import com.sstlfsj.fibra.logging.LoggerService;
 
-/** 绑定一个 {@link Scope} 的不可变能力视图，不拥有生命周期。 */
+/** 绑定一个 {@link ScopeView} 的不可变能力视图，不拥有生命周期。 */
 public interface Context {
-    Scope scope();
+    ScopeView scope();
 
     Services services();
 

@@ -5,12 +5,6 @@
       "type": "java.nio.file.Path",
       "defaultValue": ".fibra",
       "description": "Fibra 制品、完整部署目标与审计数据根目录。"
-    },
-    {
-      "name": "fibra.source.refresh-interval",
-      "type": "java.time.Duration",
-      "defaultValue": "0s",
-      "description": "配置源周期 resync 间隔；大于零时同时启用文件事件监听，默认关闭。"
     }
   ]
 }

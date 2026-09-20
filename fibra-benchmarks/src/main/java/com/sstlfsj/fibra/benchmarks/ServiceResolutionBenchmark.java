@@ -34,11 +34,13 @@ public class ServiceResolutionBenchmark {
     private static final int BATCH = 1000;
 
     private Context ctx;
+    private FibraRuntime runtime;
     private ServiceRef<Echo> bound;
 
     @Setup
     public void setup() {
-        ctx = FibraRuntime.create().rootScope().context();
+        runtime = FibraRuntime.create();
+        ctx = runtime.rootScope().context();
         ctx.services().provide(ECHO, () -> 42);
         bound = ctx.services().reference(ECHO);
         ctx.events().on(RESOLVE, times -> {
@@ -52,7 +54,7 @@ public class ServiceResolutionBenchmark {
 
     @TearDown
     public void tearDown() {
-        ctx.scope().close();
+        runtime.close();
     }
 
     @Benchmark

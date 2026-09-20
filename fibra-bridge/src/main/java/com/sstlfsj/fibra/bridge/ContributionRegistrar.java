@@ -10,10 +10,10 @@ import java.util.List;
 public interface ContributionRegistrar {
     <D, I, O> Mono<ContributionRegistration> register(
         Context owner, ContributionKind<D, I, O> kind,
-        String providerInstanceId, String localName, D descriptor,
+        String localName, D descriptor,
         ContributionHandler<I, O> handler);
 
     Mono<List<ContributionRegistration>> registerAll(
-        Context owner, String providerInstanceId,
-        List<ContributionBinding<?, ?, ?>> bindings, Disposable afterDrain);
+        Context owner, List<ContributionBinding<?, ?, ?>> bindings,
+        Disposable afterDrain);
 }

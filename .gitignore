@@ -2,6 +2,15 @@
 target/
 *.class
 .flattened-pom.xml
+__pycache__/
+*.pyc
+
+# Node / browser 构建缓存
+node_modules/
+dist/
+.pnpm-store/
+test-results/
+playwright-report/
 
 # IntelliJ IDEA
 .idea/
@@ -9,3 +18,7 @@ target/
 
 # macOS
 .DS_Store
+
+# 本地架构图导出
+fibra-runtime-architecture.html
+fibra-runtime-architecture.json

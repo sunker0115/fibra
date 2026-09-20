@@ -1,1079 +1,1434 @@
 package com.sstlfsj.fibra.engine;
 
-import com.sstlfsj.fibra.Context;
-import com.sstlfsj.fibra.FibraException;
-import com.sstlfsj.fibra.ManagedPluginControl;
-import com.sstlfsj.fibra.PluginDefinition;
-import com.sstlfsj.fibra.PluginInstance;
-import com.sstlfsj.fibra.PluginInstanceState;
 import com.sstlfsj.fibra.Scope;
-import com.sstlfsj.fibra.artifact.ArtifactId;
-import com.sstlfsj.fibra.artifact.ArtifactInstallTransaction;
-import com.sstlfsj.fibra.artifact.ArtifactRecord;
-import com.sstlfsj.fibra.artifact.ArtifactStore;
-import com.sstlfsj.fibra.artifact.RuntimeId;
-import com.sstlfsj.fibra.bridge.ContributionCall;
-import com.sstlfsj.fibra.bridge.ContributionDirectory;
-import com.sstlfsj.fibra.bridge.ContributionDirectoryView;
-import com.sstlfsj.fibra.bridge.ContributionId;
-import com.sstlfsj.fibra.bridge.ContributionKind;
-import com.sstlfsj.fibra.bridge.ContributionRoutes;
-import com.sstlfsj.fibra.bridge.ContributionServices;
-import com.sstlfsj.fibra.bridge.ContributionSnapshot;
-import com.sstlfsj.fibra.config.ConfigDiagnostic;
-import com.sstlfsj.fibra.config.ConfigContextSnapshot;
-import com.sstlfsj.fibra.config.ConfigStage;
-import com.sstlfsj.fibra.config.DesiredCompilation;
-import com.sstlfsj.fibra.config.DesiredEvaluation;
-import com.sstlfsj.fibra.config.DesiredInputEntry;
-import com.sstlfsj.fibra.config.DesiredInputGraph;
-import com.sstlfsj.fibra.config.DesiredInputGraph.EffectiveDesiredEntry;
-import com.sstlfsj.fibra.config.DesiredSourceSnapshot;
-import com.sstlfsj.fibra.config.DesiredStateRepository;
+import com.sstlfsj.fibra.ScopeView;
+import com.sstlfsj.fibra.artifact.*;
+import com.sstlfsj.fibra.bridge.*;
+import com.sstlfsj.fibra.config.*;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
-import com.sstlfsj.fibra.runtime.PluginUpdate;
 import com.sstlfsj.fibra.runtime.RuntimeDomain;
-import com.sstlfsj.fibra.runtime.RuntimeDomainSnapshot;
 import com.sstlfsj.fibra.value.LiteralValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.time.Instant;
+import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
+/** 唯一 RuntimeDriver owner、持久目标和全局 unit 生命周期协调器。 */
 public final class FibraEngine implements AutoCloseable {
-    private static final Logger LOGGER = LoggerFactory.getLogger(FibraEngine.class);
-    private final DesiredStateRepository desiredRepository;
-    private final InitialArtifactSource initialArtifacts;
-    private final ArtifactStore artifactStore;
-    private final EngineStateStore stateStore;
+    private static final Logger LOG = LoggerFactory.getLogger(FibraEngine.class);
+    private final PluginPackageStore packageStore;
+    private final DeploymentTargetStore targetStore;
+    private final RuntimeProviderRegistry providers;
     private final HostServiceRegistry hostServices;
-    private final FibraRuntime runtime = FibraRuntime.create();
-    private final EngineCommandLoop loop = new EngineCommandLoop();
-    private final RuntimeResources resources;
-    private final DesiredSourceMonitor sourceMonitor;
-    private final ContributionDirectory directory = new ContributionDirectory();
-    private final Map<String, Managed<?>> instances = new LinkedHashMap<>();
+    private final ContributionKindRegistry contributionKinds;
+    private final RemoteContributionInvoker remoteContributions;
+    private final HostTerminationPort terminationPort;
+    private final Supplier<HostCapabilitySnapshot> capabilitySource;
+    private final Duration lifecycleTimeout;
+    private final FibraRuntime runtime;
+    private final RuntimeDomain domain;
+    private final ContributionDirectory directory;
+    private final EngineCommandLoop loop;
+    private final ExecutorService notifications;
+    private final Map<RuntimeId, RuntimeDriver> drivers;
+    private final DeploymentPlanner planner = new DeploymentPlanner();
+    private final String hostInstanceId = UUID.randomUUID().toString();
+    private final AtomicLong identities = new AtomicLong();
+    private final AtomicBoolean closing = new AtomicBoolean();
+    private final AtomicReference<PublishedState> publication = new AtomicReference<>();
     private final Sinks.Many<PublishedView> views = Sinks.many().multicast().directBestEffort();
-    private final AtomicReference<PublishedState> publishedState = new AtomicReference<>();
-    private final AtomicBoolean closeRequested = new AtomicBoolean();
-    private final AtomicBoolean sourceRefreshQueued = new AtomicBoolean();
-    private final AtomicBoolean sourceDirty = new AtomicBoolean();
-    private final AtomicReference<Throwable> sourceMonitorFailure = new AtomicReference<>();
-    private volatile Mono<PublishedView> startSignal;
-    private final Mono<Void> closeSignal;
-
-    private RuntimeDomain domain;
-    private reactor.core.Disposable observation;
-    private DesiredCompilation compilation = DesiredCompilation.builder()
-        .snapshot(new DesiredSourceSnapshot("unstarted", "0", Set.of()))
-        .graph(new DesiredInputGraph(List.of())).build();
-    private ConfigContextSnapshot configContext;
-    private DesiredEvaluation evaluation;
-    private Map<ArtifactId, ArtifactRecord> artifacts = Map.of();
-    private String targetRevision;
-    private ChangePhase phase = ChangePhase.IDLE;
-    private EngineState state = EngineState.NEW;
-    private Set<String> affected = Set.of();
+    private volatile Mono<PublishedView> start;
+    private final Mono<Void> close;
+    private final Disposable directoryObservation;
+    private volatile boolean admissionOpen = true;
     private boolean mutationGate = true;
-    private boolean sourceBaselinePending;
-    private boolean sourceFailure;
-    private ChangePhase failedPhase;
-    private TargetSaveState targetSaveState = TargetSaveState.NOT_APPLICABLE;
-    private List<String> cleanupFailures = List.of();
-    private String failure;
-    private String lastSourceRevision;
+    private EngineState state = EngineState.NEW;
+    private DurableTargetState durableState = DurableTargetState.ABSENT;
+    private DeploymentTarget durableTarget;
+    private DurableTargetToken durableToken;
+    private CandidateAttempt candidate;
+    private CurrentAttempt current;
+    private RetirementBatch retirement;
+    private TargetConvergence targetConvergence = TargetConvergence.ABSENT;
+    private EngineOperation operation;
+    private HostTerminationRequest terminationRequest;
+    private final List<String> cleanupFailures = new ArrayList<>();
+    private final Map<RuntimeUnitGeneration, ExecutionObservation> lastObservations = new IdentityHashMap<>();
+    private FailureFact failure;
 
     private final PublishedRuntime published = new PublishedRuntime() {
-        @Override public PublishedView current() { return publishedState.get().view(); }
-        @Override public Flux<PublishedView> views() {
-            return views.asFlux().onBackpressureLatest()
-                .publishOn(Schedulers.boundedElastic(), 1).onBackpressureLatest();
+        public PublishedView current() { return publication.get().view(); }
+        public Flux<PublishedView> views() {
+            return views.asFlux().onBackpressureLatest().publishOn(Schedulers.boundedElastic(), 1)
+                .onBackpressureLatest();
         }
-        @Override public <D, I, O> Mono<O> invoke(String revision,
-                long registrationIdentity,
-                ContributionKind<D, I, O> kind, ContributionId id, I input) {
-            return invokePublished(revision, registrationIdentity, kind, id, input)
+        public <D, I, O> Mono<O> invoke(String revision, long registration,
+                                       ContributionKind<D, I, O> kind, ContributionId id, I input) {
+            return invokePublished(revision, registration, kind, id, input)
                 .publishOn(Schedulers.boundedElastic());
         }
     };
 
     private FibraEngine(Builder builder) {
-        desiredRepository = builder.desiredRepository;
-        initialArtifacts = builder.initialArtifacts;
-        artifactStore = builder.artifactStore;
-        stateStore = builder.stateStore;
-        hostServices = builder.hostServices;
-        configContext = builder.configContext;
-        evaluation = DesiredEvaluation.evaluate(compilation.graph(), configContext);
-        resources = new RuntimeResources(builder.runtimeAdapters, builder.catalog);
-        sourceMonitor = builder.autoRefreshInterval == null ? null
-            : new DesiredSourceMonitor(builder.autoRefreshInterval);
-        closeSignal = Mono.defer(() -> {
-            closeRequested.set(true);
-            var stopMonitor = sourceMonitor == null ? Mono.<Void>empty()
-                : sourceMonitor.closeAsync().onErrorResume(error -> {
-                    sourceMonitorFailure.compareAndSet(null, error);
-                    return Mono.empty();
-                });
-            return loop.quiesce().then(stopMonitor).then(loop.call(this::closeInternal));
-        }).then(Mono.defer(loop::closeAsync))
-            .onErrorResume(error -> loop.closeAsync().then(Mono.error(error))).cache();
-        publishEmpty();
-        startSignal = Mono.defer(() -> loop.submit(() -> Mono.defer(this::bootstrap)
-            .onErrorResume(error -> {
-                if (error instanceof EngineChangeException) return Mono.error(error);
-                state = EngineState.FAILED;
-                failedPhase = ChangePhase.PREPARING;
-                cleanupFailures = List.of();
-                phase = ChangePhase.FAILED;
-                mutationGate = false;
-                failure = error.toString();
-                return capture().flatMap(captured -> {
-                    publish(captured);
-                    return Mono.error(error);
-                });
-            }))).doOnSuccess(view -> {
-                // 启动等待者接收本次精确结果；后续订阅读当前视图且不长期保留启动视图。
-                startSignal = Mono.fromSupplier(published::current);
-            })
-            .doOnError(error -> {
-                // 正在等待首次启动的订阅者仍收到原异常；后续订阅只保留失败事实。
-                var detail = error.toString();
-                if (error instanceof EngineChangeException change) {
-                    var targetSaveState = change.targetSaveState();
-                    startSignal = Mono.defer(() -> Mono.error(new EngineChangeException(
-                        published.current(), targetSaveState, new IllegalStateException(detail))));
-                } else {
-                    startSignal = Mono.defer(() -> Mono.error(new IllegalStateException(detail)));
-                }
-            }).cache();
+        packageStore = builder.packageStore;
+        targetStore = builder.targetStore;
+        FibraRuntime acquiredRuntime = null;
+        RuntimeDomain acquiredDomain = null;
+        ContributionDirectory acquiredDirectory = null;
+        EngineCommandLoop acquiredLoop = null;
+        ExecutorService acquiredNotifications = null;
+        Map<RuntimeId, RuntimeDriver> acquiredDrivers = null;
+        Disposable acquiredDirectoryObservation = null;
+        try {
+            providers = RuntimeProviderRegistry.of(builder.providers);
+            hostServices = builder.hostServices;
+            contributionKinds = builder.contributionKinds;
+            remoteContributions = new RemoteContributionInvoker(contributionKinds,
+                published);
+            terminationPort = Objects.requireNonNull(builder.terminationPort,
+                "hostTerminationPort");
+            capabilitySource = builder.capabilities;
+            lifecycleTimeout = builder.lifecycleTimeout;
+            var initialCapabilities = Objects.requireNonNull(capabilitySource.get(),
+                "capability snapshot");
+            inputFingerprint(initialCapabilities, captureBuiltIns());
+            runtime = acquiredRuntime = FibraRuntime.create();
+            domain = acquiredDomain = runtime.openDomain("fibra-engine");
+            directory = acquiredDirectory = new ContributionDirectory();
+            loop = acquiredLoop = new EngineCommandLoop();
+            notifications = acquiredNotifications = Executors.newSingleThreadExecutor(
+                Thread.ofPlatform().daemon().name("fibra-termination-", 0).factory());
+            drivers = acquiredDrivers = providers.createDrivers(new HostServices());
+            publish();
+            directoryObservation = acquiredDirectoryObservation = directory.views().subscribe(
+                ignored -> loop.observe(this::publish),
+                error -> loop.submit(() -> Mono.fromRunnable(() ->
+                    failStop(engineFailure("CONTRIBUTION_DIRECTORY_FAILED",
+                        error, FailureStage.OBSERVING)))).subscribe());
+            start = Mono.defer(() -> loop.submit(this::bootstrap))
+                .doOnSuccess(view -> {
+                    // 首次等待者接收本次精确结果；后续订阅读当前视图且不长期保留启动视图。
+                    start = Mono.fromSupplier(published::current);
+                })
+                .doOnError(error -> {
+                    // 后续订阅只保留失败事实，避免缓存携带 PublishedView 或插件异常图。
+                    var detail = error.toString();
+                    if (error instanceof EngineChangeException change) {
+                        start = Mono.defer(() -> Mono.error(new EngineChangeException(
+                            published.current(), change.targetSaveState(),
+                            new IllegalStateException(detail))));
+                    } else {
+                        start = Mono.defer(() -> Mono.error(new IllegalStateException(detail)));
+                    }
+                }).cache();
+            close = Mono.defer(() -> {
+                closing.set(true);
+                admissionOpen = false;
+                return loop.quiesce().then(loop.call(this::shutdown));
+            }).doFinally(ignored -> {
+                directoryObservation.dispose();
+                notifications.shutdownNow();
+            }).then(Mono.defer(loop::closeAsync))
+                .onErrorResume(error -> loop.closeAsync().then(Mono.error(error))).cache();
+        } catch (RuntimeException | Error constructionFailure) {
+            cleanupConstructionFailure(constructionFailure, acquiredDirectoryObservation,
+                acquiredDrivers, acquiredDirectory, acquiredDomain, acquiredRuntime,
+                acquiredLoop, acquiredNotifications, targetStore, packageStore);
+            throw constructionFailure;
+        }
     }
 
-    public static Builder builder(DesiredStateRepository repository) { return new Builder(repository); }
+    private static void cleanupConstructionFailure(
+        Throwable constructionFailure,
+        Disposable directoryObservation,
+        Map<RuntimeId, RuntimeDriver> drivers,
+        ContributionDirectory directory,
+        RuntimeDomain domain,
+        FibraRuntime runtime,
+        EngineCommandLoop loop,
+        ExecutorService notifications,
+        DeploymentTargetStore targetStore,
+        PluginPackageStore packageStore
+    ) {
+        if (directoryObservation != null) {
+            suppressConstructionCleanupFailure(constructionFailure,
+                directoryObservation::dispose);
+        }
+        if (drivers != null) {
+            var reversedDrivers = new ArrayList<>(drivers.values());
+            Collections.reverse(reversedDrivers);
+            reversedDrivers.forEach(driver -> suppressConstructionCleanupFailure(
+                constructionFailure, () -> driver.closeAsync().block()));
+        }
+        if (directory != null) {
+            suppressConstructionCleanupFailure(constructionFailure,
+                () -> directory.closeAsync().block());
+        }
+        if (domain != null) {
+            suppressConstructionCleanupFailure(constructionFailure,
+                () -> domain.closeAsync().block());
+        }
+        if (runtime != null) {
+            suppressConstructionCleanupFailure(constructionFailure,
+                () -> runtime.closeAsync().block());
+        }
+        if (loop != null) {
+            suppressConstructionCleanupFailure(constructionFailure,
+                () -> loop.closeAsync().block());
+        }
+        if (notifications != null) {
+            suppressConstructionCleanupFailure(constructionFailure,
+                notifications::shutdownNow);
+        }
+        suppressConstructionCleanupFailure(constructionFailure, targetStore::close);
+        suppressConstructionCleanupFailure(constructionFailure, packageStore::close);
+    }
+
+    private static void suppressConstructionCleanupFailure(
+        Throwable constructionFailure,
+        Runnable cleanup
+    ) {
+        try {
+            cleanup.run();
+        } catch (RuntimeException | Error cleanupFailure) {
+            if (cleanupFailure != constructionFailure) {
+                constructionFailure.addSuppressed(cleanupFailure);
+            }
+        }
+    }
+
+    public static Builder builder(PluginPackageStore packages, DeploymentTargetStore targets) {
+        return new Builder(packages, targets);
+    }
     public PublishedRuntime published() { return published; }
-    public Mono<PublishedView> start() {
-        return Mono.defer(() -> startSignal);
-    }
-
+    public EngineSnapshot snapshot() { return published.current().engine(); }
+    public Mono<PublishedView> startAsync() { return Mono.defer(() -> start); }
     public Mono<EngineCommandResult> submit(EngineCommand command) {
         Objects.requireNonNull(command, "command");
         return Mono.defer(() -> loop.submit(() -> {
-            if (state == EngineState.NEW) return Mono.error(new IllegalStateException("engine is not started"));
-            if (!mutationGate) return Mono.error(new MutationGateClosedException());
-            checkRevision(command.expectedRevision());
-            return change(command);
-        }));
+            ensureMutable();
+            return switch (command) {
+                case ApplyDeployment apply -> apply(apply);
+                case ReconcileCurrent ignored -> retryCurrent();
+            };
+        })).map(view -> new EngineCommandResult(view, List.of()));
     }
+    public Mono<Void> closeAsync() { return close; }
+    @Override public void close() { closeAsync().block(); }
 
     private Mono<PublishedView> bootstrap() {
-        if (closeRequested.get()) return Mono.error(new IllegalStateException("engine is closing"));
-        var saved = stateStore.load();
-        targetSaveState = saved.isPresent()
-            ? TargetSaveState.SAVED : TargetSaveState.NOT_SAVED;
-        var target = new LinkedHashMap<ArtifactId, ArtifactRecord>();
-        DesiredCompilation desired;
-        List<DeploymentArtifact> bootstrapArtifacts = List.of();
-        if (saved.isPresent()) {
-            var manifest = saved.get();
-            desired = compilation(manifest.desiredGraph(), manifest.revision());
-            targetRevision = manifest.revision();
-            compilation = desired;
-            manifest.artifacts().forEach((id, revision) -> {
-                if (artifactStore == null) throw new IllegalStateException("saved target requires an artifact store");
-                target.put(id, artifactStore.find(id, revision).orElseThrow(() ->
-                    new IllegalStateException("saved artifact is missing: " + id.value() + "@" + revision)));
-            });
-            artifacts = Map.copyOf(target);
-        } else {
-            desired = loadDesired();
-            bootstrapArtifacts = validatedArtifacts(initialArtifacts.load());
-        }
-        domain = runtime.openDomain("engine");
+        return Mono.defer(() -> {
+            if (state != EngineState.NEW) return Mono.just(published.current());
+            installHostServices();
+            var stored = targetStore.load();
+            state = EngineState.RUNNING;
+            if (stored.isEmpty()) {
+                beginOperation(EngineOperationKind.BOOTSTRAP, 0,
+                    TargetSaveState.NOT_APPLICABLE);
+                targetConvergence = TargetConvergence.ABSENT;
+                completeOperation();
+                publish();
+                return Mono.just(published.current());
+            }
+            durableTarget = stored.get().target();
+            durableToken = stored.get().token();
+            verifyToken(durableTarget, durableToken);
+            durableState = DurableTargetState.PRESENT;
+            targetConvergence = TargetConvergence.CONVERGING;
+            return deploy(durableTarget, false, true, Set.of(),
+                EngineOperationKind.BOOTSTRAP);
+        }).onErrorResume(error -> {
+            if (state == EngineState.FAIL_STOP) return Mono.error(error);
+            targetConvergence = durableTarget == null
+                ? TargetConvergence.ABSENT : TargetConvergence.BLOCKED;
+            publish();
+            return Mono.just(published.current());
+        });
+    }
+
+    private void installHostServices() {
         var context = domain.rootScope().context();
-        hostServices.freeze().forEach(binding -> provideHostBinding(context, binding));
-        context.services().provide(ManagedPluginControl.KEY, this::requestDisable);
-        context.services().provide(ContributionServices.REGISTRAR, directory);
-        observation = Flux.merge(domain.snapshots(), directory.views())
-            .subscribe(ignored -> loop.observe(this::refresh));
-        var plan = new ChangeSet(desired, target, configContext);
-        plan.bootstrapping = true;
-        plan.targetSaveState = saved.isPresent()
-            ? TargetSaveState.SAVED : TargetSaveState.NOT_SAVED;
-        plan.committed = saved.isPresent();
-        var initialSelection = bootstrapArtifacts;
-        return Mono.defer(() -> {
-            if (saved.isEmpty()) stage(plan, initialSelection);
-            return execute(plan);
-        }).onErrorResume(error -> plan.executing ? Mono.error(error) : fail(plan, error))
-            .map(EngineCommandResult::view).doOnSuccess(view -> {
-            if (sourceMonitor == null) return;
-            if (saved.isEmpty()) acceptSource(desired);
-            else {
-                sourceBaselinePending = true;
-                seedSourceObservation();
-            }
-            sourceMonitor.start(this::desiredSourceDirty);
-        });
-    }
-
-    private Mono<EngineCommandResult> change(EngineCommand command) {
-        if (command instanceof RefreshDesired) return refreshDesired(true);
-        if (command instanceof ReplaceConfigContext replace) return replaceConfigContext(replace);
-        var desired = compilation;
-        if (command instanceof ReplaceDesiredGraph replace) {
-            checkDesiredRevision(replace.expectedDesiredRevision());
-            desired = replacementCompilation(replace.graph());
-        }
-        if (command instanceof ApplyDeployment deployment) {
-            checkDesiredRevision(deployment.expectedDesiredRevision());
-            desired = replacementCompilation(deployment.graph());
-        }
-        Map<ArtifactId, ArtifactRecord> selection = command instanceof ApplyDeployment
-            ? Map.of() : artifacts;
-        var plan = new ChangeSet(desired, selection, configContext);
-        return Mono.defer(() -> {
-            if (command instanceof UninstallArtifact uninstall) {
-                if (plan.artifacts.remove(uninstall.artifactId()) == null) {
-                    throw new IllegalArgumentException("artifact is not selected: " + uninstall.artifactId().value());
-                }
-            } else if (command instanceof InstallArtifact install) {
-                stage(plan, install.artifactId(), install.runtimeId(), install.version(), install.source());
-            } else if (command instanceof ApplyDeployment deployment) {
-                stage(plan, validatedArtifacts(deployment.artifacts()));
-            }
-            return execute(plan);
-        }).onErrorResume(error -> plan.executing ? Mono.error(error) : fail(plan, error));
-    }
-
-    private void requestDisable(PluginInstance<?> instance) {
-        Objects.requireNonNull(instance, "instance");
-        if (closeRequested.get()) return;
-        loop.submit(() -> disable(instance)).subscribe(ignored -> { }, error -> {
-            if (!closeRequested.get()) {
-                LOGGER.warn("Plugin disable request failed for {}", instance.id(), error);
-            }
-        });
-    }
-
-    private Mono<EngineCommandResult> disable(PluginInstance<?> instance) {
-        if (closeRequested.get() || !mutationGate || !evaluationCurrent()) return Mono.empty();
-        var managed = instances.get(instance.id());
-        if (managed == null || managed.instance() != instance) {
-            return Mono.empty();
-        }
-        var state = instance.state();
-        if (state == PluginInstanceState.STARTING) return retryDisableAfterSettled(instance);
-        if (state != PluginInstanceState.ACTIVE) return Mono.empty();
-        var entry = compilation.graph().plugins().get(instance.id());
-        if (entry == null || !entry.enabled() || !evaluation.require(instance.id()).effective().enabled()) {
-            return Mono.empty();
-        }
-        state = instance.state();
-        if (state == PluginInstanceState.STARTING) return retryDisableAfterSettled(instance);
-        if (state != PluginInstanceState.ACTIVE) return Mono.empty();
-        var plan = new ChangeSet(replacementCompilation(
-            compilation.graph().withEnabled(instance.id(), false)), artifacts, configContext);
-        return execute(plan);
-    }
-
-    private Mono<EngineCommandResult> retryDisableAfterSettled(PluginInstance<?> instance) {
-        instance.settled().subscribe(ignored -> requestDisable(instance), ignored -> { });
-        return Mono.empty();
-    }
-
-    private boolean evaluationCurrent() {
-        return evaluation != null && evaluation.graph().equals(compilation.graph())
-            && evaluation.context().equals(configContext);
-    }
-
-    private Mono<EngineCommandResult> replaceConfigContext(ReplaceConfigContext replace) {
-        checkContextRevision(replace.expectedContextRevision());
-        final DesiredEvaluation nextEvaluation;
-        final Map<String, Bound<?>> nextBound;
-        try {
-            nextEvaluation = DesiredEvaluation.evaluate(compilation.graph(), replace.context());
-            nextBound = bind(compilation, nextEvaluation, resources.catalog());
-        } catch (RuntimeException | Error error) {
-            return Mono.error(error);
-        }
-        var plan = new ChangeSet(compilation, artifacts, replace.context());
-        plan.evaluation = nextEvaluation;
-        plan.bound = nextBound;
-        plan.saveTarget = false;
-        plan.targetSaveState = TargetSaveState.NOT_APPLICABLE;
-        plan.updateResources = false;
-        return execute(plan);
-    }
-
-    private Mono<EngineCommandResult> refreshDesired(boolean force) {
-        return Mono.defer(() -> {
-            final DesiredCompilation desired;
-            try {
-                desired = loadDesired();
-            } catch (RuntimeException | Error error) {
-                return failSourceRefresh(error);
-            }
-            sourceMonitorUpdate(desired);
-            final DesiredEvaluation nextEvaluation;
-            try {
-                nextEvaluation = DesiredEvaluation.evaluate(desired.graph(), configContext);
-            } catch (RuntimeException | Error error) {
-                return failSourceRefresh(error);
-            }
-            if (sourceBaselinePending && !force) {
-                acceptSource(desired);
-                return unchangedSource(desired);
-            }
-            if (!force && desired.snapshot().revision().equals(lastSourceRevision)) {
-                return unchangedSource(desired);
-            }
-            var plan = new ChangeSet(desired, artifacts, configContext);
-            plan.evaluation = nextEvaluation;
-            return execute(plan).doOnSuccess(ignored -> acceptSource(desired))
-                .doOnError(error -> {
-                    if (error instanceof EngineChangeException change
-                        && change.targetSaveState() == TargetSaveState.SAVED) {
-                        acceptSource(desired);
-                    }
-                });
-        });
-    }
-
-    private Mono<EngineCommandResult> failSourceRefresh(Throwable error) {
-        return loop.call(() -> {
-            sourceFailure = true;
-            failedPhase = ChangePhase.PREPARING;
-            targetSaveState = TargetSaveState.NOT_APPLICABLE;
-            cleanupFailures = List.of();
-            failure = error.toString();
-            phase = ChangePhase.FAILED;
-            return capture().flatMap(captured -> {
-                publish(captured);
-                return Mono.error(error);
-            });
-        });
-    }
-
-    private Mono<EngineCommandResult> unchangedSource(DesiredCompilation desired) {
-        var warnings = desired.diagnostics().stream().map(ConfigDiagnostic::message).toList();
-        if (!sourceFailure) {
-            return Mono.just(new EngineCommandResult(publishedState.get().view(), warnings));
-        }
-        sourceFailure = false;
-        failedPhase = null;
-        targetSaveState = TargetSaveState.NOT_APPLICABLE;
-        cleanupFailures = List.of();
-        failure = null;
-        phase = ChangePhase.IDLE;
-        affected = Set.of();
-        return capture().map(captured -> {
-            publish(captured);
-            return new EngineCommandResult(publishedState.get().view(), warnings);
-        });
-    }
-
-    private void desiredSourceDirty() {
-        if (closeRequested.get()) return;
-        sourceDirty.set(true);
-        scheduleSourceRefresh();
-    }
-
-    private void scheduleSourceRefresh() {
-        if (!sourceRefreshQueued.compareAndSet(false, true)) return;
-        loop.submit(() -> {
-            if (!sourceDirty.getAndSet(false) || state != EngineState.RUNNING
-                || !mutationGate) {
-                return Mono.<Void>empty();
-            }
-            return refreshDesired(false).then();
-        }).doFinally(ignored -> {
-            sourceRefreshQueued.set(false);
-            if (sourceDirty.get() && !closeRequested.get()) scheduleSourceRefresh();
-        }).subscribe(ignored -> { }, error -> LOGGER.warn(
-            "Automatic desired source refresh failed: {}", error.toString()));
-    }
-
-    private void seedSourceObservation() {
-        try {
-            var desired = loadDesired();
-            DesiredEvaluation.evaluate(desired.graph(), configContext);
-            acceptSource(desired);
-        } catch (RuntimeException | Error error) {
-            LOGGER.warn("Cannot establish desired source refresh baseline: {}",
-                error.toString());
-            desiredSourceDirty();
-        }
-    }
-
-    private void acceptSource(DesiredCompilation desired) {
-        sourceBaselinePending = false;
-        lastSourceRevision = desired.snapshot().revision();
-        sourceMonitorUpdate(desired);
-    }
-
-    private void sourceMonitorUpdate(DesiredCompilation desired) {
-        if (sourceMonitor != null) {
-            sourceMonitor.update(desired.snapshot().sources());
-        }
-    }
-
-    private DesiredCompilation loadDesired() {
-        var desired = desiredRepository.load();
-        desired.diagnostics().forEach(diagnostic -> LOGGER.warn("{} source={} entry={}: {}",
-            diagnostic.code(), diagnostic.source(), diagnostic.entryId(), diagnostic.message()));
-        return desired;
-    }
-
-    private void stage(ChangeSet plan, ArtifactId id, RuntimeId runtimeId,
-                       String version, java.nio.file.Path source) {
-        if (artifactStore == null) throw new IllegalStateException("engine has no artifact store");
-        var transaction = artifactStore.prepareInstall(id, runtimeId, version, source);
-        plan.installs.add(transaction);
-        plan.artifacts.put(id, transaction.candidate());
-    }
-
-    private void stage(ChangeSet plan, List<DeploymentArtifact> artifacts) {
-        artifacts.forEach(artifact -> stage(plan, artifact.artifactId(),
-            artifact.runtimeId(), artifact.version(), artifact.source()));
-    }
-
-    private static List<DeploymentArtifact> validatedArtifacts(
-        List<DeploymentArtifact> artifacts) {
-        var selection = List.copyOf(Objects.requireNonNull(artifacts, "artifacts"));
-        var ids = new LinkedHashSet<ArtifactId>();
-        for (var artifact : selection) {
-            if (!ids.add(artifact.artifactId())) {
-                throw new IllegalArgumentException("duplicate deployment artifact");
-            }
-        }
-        return selection;
-    }
-
-    private Mono<EngineCommandResult> execute(ChangeSet plan) {
-        plan.executing = true;
-        return loop.call(() -> {
-            sourceFailure = false;
-            failedPhase = null;
-            targetSaveState = plan.targetSaveState;
-            cleanupFailures = List.of();
-            if (plan.evaluation == null) {
-                plan.evaluation = DesiredEvaluation.evaluate(plan.desired.graph(), plan.context);
-            }
-            phase = ChangePhase.PREPARING;
-            plan.sourcePhase = phase;
-            failure = null;
-            publishControl();
-            if (!plan.updateResources) return Mono.<Void>empty();
-            plan.update = resources.createUpdate(plan.artifacts);
-            return plan.update.prepareAsync();
-        }).then(loop.call(() -> {
-            if (plan.bound == null) {
-                var catalog = plan.update == null ? resources.catalog() : plan.update.catalog();
-                plan.bound = bind(plan.desired, plan.evaluation, catalog);
-            }
-            var changed = new LinkedHashSet<String>();
-            instances.forEach((id, managed) -> {
-                var next = plan.bound.get(id);
-                if (next == null || !sameInput(managed.bound(), next)) changed.add(id);
-            });
-            plan.bound.keySet().stream().filter(id -> !instances.containsKey(id)).forEach(changed::add);
-            affected = Set.copyOf(changed);
-            if (plan.saveTarget) {
-                phase = ChangePhase.SAVING;
-                plan.sourcePhase = phase;
-                publishControl();
-                plan.installs.forEach(transaction -> {
-                    var saved = transaction.save();
-                    plan.artifacts.put(saved.id(), saved);
-                });
-                var selections = new LinkedHashMap<ArtifactId, String>();
-                plan.artifacts.forEach((id, record) -> selections.put(id, record.revision()));
-                var manifest = new DeploymentManifest(selections, plan.desired.graph());
-                if (plan.targetSaveState != TargetSaveState.SAVED) stateStore.save(manifest);
-                plan.targetSaveState = TargetSaveState.SAVED;
-                targetSaveState = plan.targetSaveState;
-                targetRevision = manifest.revision();
-            } else if (!plan.installs.isEmpty()) {
-                throw new IllegalStateException("context-only change cannot install artifacts");
-            }
-            compilation = plan.desired;
-            configContext = plan.context;
-            evaluation = plan.evaluation;
-            artifacts = Map.copyOf(plan.artifacts);
-            plan.committed = true;
-            phase = ChangePhase.RECONCILING;
-            plan.sourcePhase = phase;
-            publishControl();
-            return reconcile(plan);
-        })).then(loop.call(() -> domain.settled()))
-            .then(loop.call(() -> {
-                assertClean();
-                phase = ChangePhase.RETIRING;
-                plan.sourcePhase = phase;
-                refresh();
-                if (plan.update == null) {
-                    plan.retired = true;
-                    return Mono.<Void>empty();
-                }
-                return plan.update.closeAsync().doOnSuccess(ignored -> plan.retired = true);
-            })).then(loop.call(() -> capture().map(captured -> {
-                plan.sourcePhase = ChangePhase.RECONCILING;
-                phase = ChangePhase.IDLE;
-                affected = Set.of();
-                state = EngineState.RUNNING;
-                publish(captured);
-                var view = publishedState.get().view();
-                if (!view.engineDiagnostics().targetSatisfied()) {
-                    var error = new IllegalStateException("deployment target requirements are not satisfied");
-                    view.engine().instances().forEach((id, fact) -> {
-                        if (fact.state() == PluginInstanceState.FAILED) {
-                            instances.get(id).instance().failure().ifPresent(error::addSuppressed);
-                        }
-                    });
-                    throw error;
-                }
-                return new EngineCommandResult(view, plan.desired.diagnostics().stream()
-                    .map(ConfigDiagnostic::message).toList());
-            }))).onErrorResume(error -> fail(plan, error));
-    }
-
-    private Mono<Void> reconcile(ChangeSet plan) {
-        var retiring = instances.entrySet().stream().filter(entry -> {
-            var next = plan.bound.get(entry.getKey());
-            return next == null || mustRemount(entry.getValue().bound(), next);
-        }).map(Map.Entry::getKey).toList();
-        // Scope owns the instance and nested resources; disposing it waits on contribution effects.
-        return Flux.fromIterable(retiring).concatMap(id -> loop.call(() -> {
-            var managed = instances.get(id);
-            return managed.scope().closeAsync().then(loop.call(() -> {
-                assertClean();
-                instances.remove(id);
-                refresh();
-                return Mono.empty();
-            }));
-        })).then(loop.call(() -> {
-            assertClean();
-            if (plan.update != null) plan.update.adopt();
-            var existing = plan.bound.entrySet().stream()
-                .map(entry -> new ExistingTarget(entry.getKey(),
-                    instances.get(entry.getKey()), entry.getValue()))
-                .filter(target -> target.previous() != null)
-                .toList();
-            var updating = existing.stream()
-                .filter(target -> !sameInput(target.previous().bound(), target.next()))
-                .toList();
-            var updates = updating.stream().map(target -> preparedUpdate(
-                target.previous(), target.next())).toArray(PluginUpdate<?>[]::new);
-            return domain.updateBatch(updates).onErrorResume(error ->
-                    error instanceof FibraException failure
-                        && FibraException.PLUGIN_BATCH_UPDATE_FAILED.equals(failure.code())
-                        ? Mono.empty() : Mono.error(error))
-                .then(loop.call(() -> {
-                    existing.forEach(target -> instances.put(target.id(),
-                        target.previous().withBound(target.next())));
-                    refresh();
-                    return Flux.fromIterable(plan.bound.entrySet())
-                        .filter(entry -> !instances.containsKey(entry.getKey()))
-                        .concatMap(entry -> loop.call(() -> {
-                            var scope = domain.rootScope().openChild("plugin:" + entry.getKey());
-                            try {
-                                var managed = mount(scope, entry.getValue());
-                                instances.put(entry.getKey(), managed);
-                            } catch (RuntimeException | Error error) {
-                                return scope.closeAsync().then(Mono.error(error));
-                            }
-                            refresh();
-                            return Mono.empty();
-                        })).then();
-                }));
-        }));
+        hostServices.freeze().forEach(binding -> provideHostBinding(context,
+            binding));
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private static PluginUpdate<?> preparedUpdate(Managed<?> previous, Bound<?> next) {
-        return PluginUpdate.prepared((PluginInstance) previous.instance(), next.prepared());
+    private static void provideHostBinding(com.sstlfsj.fibra.Context context,
+                                           HostServiceRegistry.Binding binding) {
+        context.services().provide(binding.key(), binding.value());
     }
 
-    private Map<String, Bound<?>> bind(DesiredCompilation desired, DesiredEvaluation evaluation,
-                                       PluginCatalog catalog) {
-        var result = new LinkedHashMap<String, Bound<?>>();
-        desired.graph().plugins().forEach((id, input) -> {
-            var resolved = evaluation.require(id);
-            var effective = resolved.effective();
-            if (!effective.enabled()) return;
-            var config = resolved.resolvedConfig().orElseThrow();
-            var contract = catalog.find(input.definitionName()).orElseThrow(() ->
-                bindingFailure(desired, id, "DEFINITION_NOT_FOUND", "unknown definition " + input.definitionName(), null));
-            var previous = instances.get(id);
-            if (previous != null && previous.bound().prepared().definition() == contract.definition()
-                && previous.bound().config().equals(config)) {
-                result.put(id, previous.bound().withDeclaration(input, config, effective));
-                return;
-            }
-            try { result.put(id, bound(input, config, effective, contract)); }
-            catch (RuntimeException error) {
-                throw bindingFailure(desired, id, "CONFIG_BIND_FAILED", "cannot bind " + input.definitionName(), error);
-            }
+    private Mono<PublishedView> apply(ApplyDeployment command) {
+        long revision = durableTarget == null ? 0 : durableTarget.targetRevision();
+        if (command.expectedRevision() != revision) return Mono.error(new IllegalStateException(
+            "deployment target revision conflict: expected " + command.expectedRevision() + ", actual " + revision));
+        var target = DeploymentTarget.of(Math.incrementExact(revision), command.selections(),
+            command.graph(), command.configContext());
+        boolean same = durableTarget != null && target.targetDigest().equals(durableTarget.targetDigest());
+        return deploy(same ? durableTarget : target, !same, false, Set.of(),
+            EngineOperationKind.APPLY);
+    }
+
+    private Mono<PublishedView> retryCurrent() {
+        if (durableTarget == null) return Mono.just(published.current());
+        var failed = new LinkedHashSet<ExecutionUnitKey>();
+        if (current != null) current.units.forEach((key, unit) -> {
+            if (observeCurrent(key, unit).aggregateState()
+                == ExecutionObservation.State.FAILED) failed.add(key);
         });
-        return java.util.Collections.unmodifiableMap(result);
-    }
-
-    private static DesiredBindingException bindingFailure(DesiredCompilation desired, String id,
-            String code, String message, Throwable error) {
-        return new DesiredBindingException(new ConfigDiagnostic(ConfigStage.COMPILE, code, message,
-            desired.entrySources().get(id), id), error);
-    }
-
-    private static <C> Bound<C> bound(DesiredInputEntry input, LiteralValue config,
-                                     EffectiveDesiredEntry effective,
-                                     PluginCatalogEntry<C> contract) {
-        return new Bound<>(input, config, effective, contract.bind(config));
-    }
-
-    private static boolean mustRemount(Bound<?> old, Bound<?> next) {
-        return old.prepared().definition() != next.prepared().definition()
-            || !old.effective().realms().equals(next.effective().realms())
-            || !old.effective().intercepts().equals(next.effective().intercepts())
-            || !Objects.equals(old.effective().parentId(), next.effective().parentId());
-    }
-
-    private static boolean sameInput(Bound<?> old, Bound<?> next) {
-        return !mustRemount(old, next) && old.config().equals(next.config());
-    }
-
-    private static <C> Managed<C> mount(Scope scope, Bound<C> bound) {
-        var instance = context(scope.context(), bound.effective()).plugins()
-            .mount(bound.effective().entryId(), bound.prepared());
-        return new Managed<>(scope, instance, bound);
-    }
-
-    private Mono<EngineCommandResult> fail(ChangeSet plan, Throwable error) {
-        sourceFailure = false;
-        boolean unconfirmed = error instanceof EngineStateStore.SaveUnconfirmedException;
-        if (plan.sourcePhase == ChangePhase.RETIRING) {
-            plan.cleanupFailures.addAll(cleanupFailureFacts(error));
+        if (current != null && failed.isEmpty()) {
+            if (currentObservations().values().stream().noneMatch(observation ->
+                observation.aggregateState()
+                    == ExecutionObservation.State.PENDING)) {
+                return Mono.just(published.current());
+            }
+            beginOperation(EngineOperationKind.RECONCILE,
+                durableTarget.targetRevision(), TargetSaveState.NOT_APPLICABLE);
+            return reconcile(current.units.keySet())
+                .then(loop.call(this::finishCurrentOperation));
         }
-        if (unconfirmed || (plan.committed && !plan.retired)) mutationGate = false;
-        var cleanup = (plan.committed || unconfirmed) ? Mono.<Void>empty()
-            : (plan.update == null ? Mono.<Void>empty() : plan.update.closeAsync())
-                .then(Mono.fromRunnable(() -> plan.installs.forEach(ArtifactInstallTransaction::rollback)));
-        return cleanup.onErrorResume(closeFailure -> {
-            mutationGate = false;
-            plan.cleanupFailures.addAll(cleanupFailureFacts(closeFailure));
-            if (closeFailure != error) error.addSuppressed(closeFailure);
-            return Mono.empty();
-        }).then(loop.call(() -> {
-            failedPhase = plan.sourcePhase;
-            targetSaveState = targetSaveState(plan, error);
-            cleanupFailures = List.copyOf(new LinkedHashSet<>(plan.cleanupFailures));
-            failure = "[" + plan.sourcePhase + "] " + error;
-            phase = ChangePhase.FAILED;
-            if (plan.bootstrapping || domain == null || state == EngineState.NEW) state = EngineState.FAILED;
-            return capture().flatMap(captured -> {
-                publish(captured);
-                return Mono.error(new EngineChangeException(
-                    publishedState.get().view(), targetSaveState(plan, error), error));
+        return deploy(durableTarget, false, current == null, failed,
+            EngineOperationKind.RECONCILE);
+    }
+
+    private Mono<PublishedView> deploy(DeploymentTarget target, boolean save,
+                                       boolean forceAll, Set<ExecutionUnitKey> forced,
+                                       EngineOperationKind operationKind) {
+        return Mono.defer(() -> {
+            ensureMutable();
+            beginOperation(operationKind, target.targetRevision(), save
+                ? TargetSaveState.NOT_SAVED : TargetSaveState.NOT_APPLICABLE);
+            var nextCapabilities = Objects.requireNonNull(capabilitySource.get(), "capability snapshot");
+            var builtIns = captureBuiltIns();
+            var inputsIdentity = inputFingerprint(nextCapabilities, builtIns);
+            var fingerprint = digest(target.targetDigest() + ":" + inputsIdentity);
+            if (current != null) refreshCurrentObservations();
+            if (!save && current != null && current.compiled.compiledFingerprint().equals(fingerprint)
+                && forced.isEmpty() && targetSatisfied(currentObservations())) {
+                completeOperation();
+                targetConvergence = TargetConvergence.SATISFIED;
+                publish();
+                return Mono.just(published.current());
+            }
+            failure = null;
+            var packages = target.selections().values().stream()
+                .filter(selection -> builtIns.stream().noneMatch(value -> value.pluginId().equals(selection.pluginId())))
+                .map(selection -> packageStore.find(selection.pluginId(), selection.packageRevision())
+                    .orElseThrow(() -> new IllegalArgumentException("selected package revision is missing: " + selection)))
+                .map(PluginPackageRecord::managedPackage).toList();
+            var input = planner.inputs(target, packages, builtIns,
+                nextCapabilities);
+            input.facets().facets().values().forEach(facet -> requireDriver(facet.facet().facet().runtimeId()));
+            input.facets().builtInFacets().values().forEach(value -> requireDriver(value.facet().runtimeId()));
+            boolean all = forceAll || current == null || !current.inputsIdentity.equals(inputsIdentity)
+                || (!save && forced.isEmpty());
+            var affected = planner.affected(input, current == null ? null : current.compiled, forced, all);
+            var retained = new LinkedHashMap<ExecutionUnitKey, RuntimeUnitGeneration>();
+            if (current != null) current.units.forEach((key, unit) -> {
+                if (!affected.contains(key) && input.units().containsKey(key)) retained.put(key, unit);
             });
+            candidate = new CandidateAttempt(identity("attempt"),
+                new DeploymentCandidate(target));
+            operation.attemptId = candidate.id;
+            var staged = candidate.deployment;
+            // inert create 与登记发生在同一 command-lane 调用栈；其后才允许订阅 prepare。
+            for (var entry : drivers.entrySet()) {
+                var id = entry.getKey();
+                var keys = input.units().values().stream()
+                    .filter(unit -> unit.runtimeId().equals(id) && !retained.containsKey(unit.key()))
+                    .map(ExecutionUnitPlan::key).collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+                if (keys.isEmpty()) continue;
+                var dependencies = new LinkedHashMap<ExecutionUnitKey, List<ExecutionUnitKey>>();
+                keys.forEach(key -> dependencies.put(key, input.units().get(key).dependencies()));
+                var slice = RuntimeTargetSlice.builder(id, target).desired(input.desired())
+                    .capabilities(nextCapabilities)
+                    .affectedEntryIds(keys.stream().map(ExecutionUnitKey::value).collect(java.util.stream.Collectors.toSet()))
+                    .unitDependencies(dependencies)
+                    .facets(input.facets().facets().values().stream()
+                        .filter(facet -> facet.facet().facet().runtimeId().equals(id))
+                        .map(facet -> new PluginFacetSource(facet.facet(), facet.dependencies())).toList())
+                    .builtInPackages(input.facets().builtInFacets().values().stream()
+                        .filter(value -> value.facet().runtimeId().equals(id))
+                        .map(DeploymentTargetCompiler.CompiledBuiltInFacet::pluginPackage).distinct().toList()).build();
+                staged.register(id, entry.getValue().createCandidate(slice));
+            }
+            transitionCandidate(CandidatePhase.PREPARING,
+                EngineOperationStage.PREPARING);
+            publish();
+            return Flux.fromIterable(staged.candidates().values())
+                .concatMap(value -> loop.call(() -> runtimeVoid(
+                    value::prepareAsync)))
+                .then(loop.call(() -> {
+                    ensureMutable();
+                    transitionCandidate(CandidatePhase.VALIDATING,
+                        EngineOperationStage.VALIDATING);
+                    var plans = mergePlans(staged, retained.keySet());
+                    var compiled = planner.validate(input, fingerprint, plans, retained.keySet());
+                    for (var entry : staged.candidates().entrySet()) {
+                        var runtimePlan = entry.getValue().preparedPlan();
+                        var order = compiled.dependencyFirst().stream().filter(runtimePlan.units()::containsKey).toList();
+                        staged.registerSealed(entry.getKey(), entry.getValue().seal(CompiledRuntimeSlice.of(runtimePlan, order)));
+                    }
+                    staged.seal(compiled, retained);
+                    transitionCandidate(CandidatePhase.READY_TO_SAVE,
+                        EngineOperationStage.VALIDATING);
+                    publish();
+                    DurableTargetToken token = durableToken;
+                    if (save) {
+                        transitionCandidate(CandidatePhase.SAVING,
+                            EngineOperationStage.SAVING);
+                        publish();
+                        token = targetStore.save(durableTarget == null ? 0 : durableTarget.targetRevision(), target);
+                        try { verifyToken(target, token); }
+                        catch (RuntimeException invalidConfirmation) {
+                            operation.targetSaveState = TargetSaveState.UNCONFIRMED;
+                            throw invalidConfirmation;
+                        }
+                        durableTarget = target;
+                        durableToken = token;
+                        durableState = DurableTargetState.PRESENT;
+                        targetConvergence = TargetConvergence.CONVERGING;
+                        operation.targetSaveState = TargetSaveState.SAVED;
+                    } else {
+                        targetConvergence = TargetConvergence.CONVERGING;
+                    }
+                    promote(staged, Objects.requireNonNull(token, "durable token"), inputsIdentity);
+                    return settleReplacement();
+                }));
+        }).onErrorResume(this::deploymentFailed);
+    }
+
+    private Map<RuntimeId, RuntimePlan> mergePlans(DeploymentCandidate staged, Set<ExecutionUnitKey> retained) {
+        var result = new LinkedHashMap<RuntimeId, RuntimePlan>();
+        for (var id : drivers.keySet()) {
+            var units = new ArrayList<ExecutionUnitPlan>();
+            var bindings = new ArrayList<DefinitionBindingPlan>();
+            if (current != null) {
+                var previous = current.compiled.runtimePlans().get(id);
+                if (previous != null) {
+                    previous.units().values().stream().filter(unit -> retained.contains(unit.key())).forEach(units::add);
+                    previous.definitions().stream().filter(binding -> retained.contains(binding.unitKey())).forEach(bindings::add);
+                }
+            }
+            var value = staged.candidates().get(id);
+            if (value != null) {
+                var plan = value.preparedPlan();
+                if (!id.equals(plan.runtimeId())) throw new IllegalArgumentException("candidate plan has another runtime identity");
+                units.addAll(plan.units().values());
+                bindings.addAll(plan.definitions());
+            }
+            if (!units.isEmpty() || !bindings.isEmpty()) result.put(id, RuntimePlan.of(id, units, bindings));
+        }
+        return result;
+    }
+
+    /** 只移动 Engine 内存所有权，不调用 driver，也不执行 I/O。 */
+    private void promote(DeploymentCandidate staged, DurableTargetToken token, String inputsIdentity) {
+        transitionOperation(EngineOperationStage.PROMOTING);
+        var owners = new LinkedHashMap<ExecutionUnitKey, PreparedRuntimeGeneration>();
+        if (current != null) staged.compiled().retainedUnits().forEach(key -> owners.put(key, current.owners.get(key)));
+        staged.generations().values().forEach(generation -> generation.units().keySet().forEach(key -> owners.put(key, generation)));
+        var previous = current;
+        var next = new CurrentAttempt(candidate.id, token, staged.compiled(),
+            staged.units(), owners, inputsIdentity, CurrentPhase.RECONCILING);
+        if (current != null) {
+            var replaced = new LinkedHashMap<ExecutionUnitKey, RuntimeUnitGeneration>();
+            current.units.forEach((key, unit) -> { if (next.units.get(key) != unit) replaced.put(key, unit); });
+            if (!replaced.isEmpty()) {
+                retirement = new RetirementBatch(identity("retirement"),
+                    previous, replaced);
+                next.phase = CurrentPhase.WAITING_FOR_RETIREMENT;
+            }
+        }
+        current = next;
+        candidate = null;
+        state = EngineState.RUNNING;
+        refreshCurrentObservations();
+        if (retirement != null) refreshRetirementObservations();
+        publish();
+    }
+
+    private Mono<PublishedView> settleReplacement() {
+        if (retirement != null) {
+            retirement.source.compiled.reverseDependency().stream().filter(retirement.units::containsKey)
+                .forEach(key -> retirement.units.get(key).closeAdmission());
+            transitionRetirement(RetirementPhase.DRAINING);
+            transitionOperation(EngineOperationStage.RETIRING);
+            publish();
+        }
+        return drainAndStopRetirement()
+            .then(loop.call(() -> reconcile(current.compiled.affectedUnits())))
+            .then(loop.call(this::retire))
+            .then(loop.call(this::finishCurrentOperation));
+    }
+
+    private Mono<Void> drainAndStopRetirement() {
+        if (retirement == null) return Mono.empty();
+        var batch = retirement;
+        var reverse = batch.source.compiled.reverseDependency().stream()
+            .filter(batch.units::containsKey).toList();
+        return Flux.fromIterable(reverse)
+            .concatMap(key -> lifecycle(key, batch.units.get(key), true))
+            .then(loop.call(() -> {
+                refreshRetirementObservations();
+                transitionRetirement(RetirementPhase.STOPPING);
+                publish();
+                return Mono.empty();
+            }))
+            .thenMany(Flux.fromIterable(reverse)
+                .concatMap(key -> lifecycle(key, batch.units.get(key), false)))
+            .then(loop.call(() -> {
+                refreshRetirementObservations();
+                transitionRetirement(RetirementPhase.READY_TO_RELEASE);
+                publish();
+                return Mono.empty();
+            }));
+    }
+
+    private Mono<Void> lifecycle(ExecutionUnitKey key, RuntimeUnitGeneration unit,
+                                 boolean drain) {
+        return loop.call(() -> {
+            var lifecycleOperation = identity(drain ? "drain" : "stop");
+            var deadline = Instant.now().plus(lifecycleTimeout);
+            return runtimeObservation(() -> drain
+                    ? unit.drainAsync(lifecycleOperation, deadline)
+                    : unit.stopAsync(lifecycleOperation, deadline),
+                "runtime lifecycle returned no observation").then();
+        });
+    }
+
+    private Mono<PublishedView> reconcile(Set<ExecutionUnitKey> requested) {
+        if (current == null) return Mono.just(published.current());
+        var closure = DeploymentPlanner.closure(requested, current.compiled);
+        if (closure.stream().noneMatch(key -> observeCurrent(key,
+            current.units.get(key)).aggregateState()
+            == ExecutionObservation.State.PENDING)) {
+            return Mono.just(published.current());
+        }
+        transitionCurrent(CurrentPhase.RECONCILING);
+        transitionOperation(EngineOperationStage.RECONCILING);
+        publish();
+        return Flux.fromIterable(current.compiled.dependencyFirst())
+            .filter(closure::contains)
+            .concatMap(key -> loop.call(() -> {
+                var unit = current.units.get(key);
+                if (observeCurrent(key, unit).aggregateState()
+                    != ExecutionObservation.State.PENDING) return Mono.empty();
+                if (unit.plan().dependencies().stream().anyMatch(dependency ->
+                    observeCurrent(dependency, current.units.get(dependency))
+                        .aggregateState() != ExecutionObservation.State.ACTIVE)) {
+                    return Mono.empty();
+                }
+                return runtimeObservation(() -> unit.reconcileAsync(
+                        identity("activate")),
+                    "runtime activation returned no observation")
+                    .doOnNext(observed -> {
+                        lastObservations.put(unit, observed);
+                        if (observed.aggregateState()
+                            == ExecutionObservation.State.FAILED) {
+                            targetConvergence = TargetConvergence.UNSATISFIED;
+                        }
+                    }).then().onErrorResume(error -> {
+                        // driver 应把普通启动失败转为 FAILED；异常信号是 SPI 契约破坏。
+                        failStop(unitFailure(
+                            "RUNTIME_ACTIVATION_CONTRACT_VIOLATION",
+                            current.id, unit, error,
+                            FailureStage.RECONCILING));
+                        return Mono.error(error);
+                    }).doOnSuccess(ignored -> publish());
+            }))
+            .then(loop.call(() -> Mono.just(published.current())));
+    }
+
+    private Mono<Void> retire() {
+        if (retirement == null) return Mono.empty();
+        transitionRetirement(RetirementPhase.RELEASING);
+        publish();
+        var retiringOwners = new LinkedHashSet<PreparedRuntimeGeneration>();
+        retirement.source.compiled.reverseDependency().stream()
+            .filter(retirement.units::containsKey)
+            .forEach(key -> retiringOwners.add(retirement.source.owners.get(key)));
+        retiringOwners.removeAll(current.owners.values());
+        return Flux.fromIterable(retiringOwners).concatMap(owner ->
+                loop.call(() -> runtimeVoid(owner::retireAsync)))
+            .then(loop.call(() -> {
+                retirement.units.values().forEach(lastObservations::remove);
+                retirement = null;
+                return Mono.empty();
+            }));
+    }
+
+    private Mono<PublishedView> deploymentFailed(Throwable error) {
+        if (error instanceof MutationGateClosedException) return Mono.error(error);
+        var saveState = operation == null ? TargetSaveState.NOT_APPLICABLE
+            : operation.targetSaveState;
+        if (state == EngineState.FAIL_STOP) {
+            return Mono.error(new EngineChangeException(published.current(),
+                saveState, error));
+        }
+        if (error instanceof DeploymentTargetStore.SaveUnconfirmedException
+            || saveState == TargetSaveState.UNCONFIRMED) {
+            durableState = DurableTargetState.UNCERTAIN;
+            targetConvergence = TargetConvergence.BLOCKED;
+            operation.targetSaveState = TargetSaveState.UNCONFIRMED;
+            var fact = candidateFailure("TARGET_SAVE_UNCERTAIN", error,
+                FailureStage.SAVING);
+            failStop(fact);
+            return Mono.error(new EngineChangeException(published.current(),
+                TargetSaveState.UNCONFIRMED, error));
+        }
+        if (candidate != null) {
+            var fact = candidateFailure("CANDIDATE_FAILED", error,
+                failureStage());
+            candidate.phase = CandidatePhase.FAILED;
+            failOperation(fact);
+            var staged = candidate;
+            publish();
+            return cleanupCandidate(staged).then(loop.call(() -> {
+                candidate = null;
+                if (current == null && durableTarget != null) {
+                    targetConvergence = TargetConvergence.BLOCKED;
+                    if (operation != null
+                        && operation.kind == EngineOperationKind.BOOTSTRAP) {
+                        failOperation(durableTargetFailure(
+                            "BOOTSTRAP_TARGET_BLOCKED", error,
+                            failureStage()));
+                    }
+                }
+                publish();
+                return Mono.<PublishedView>error(new EngineChangeException(
+                    published.current(), saveState, error));
+            })).onErrorResume(cleanup -> {
+                if (cleanup instanceof EngineChangeException) {
+                    return Mono.error(cleanup);
+                }
+                error.addSuppressed(cleanup);
+                cleanupFailures.add(cleanup.toString());
+                var cleanupFact = candidateFailure(
+                    "CANDIDATE_CLEANUP_FAILED", error,
+                    failureStage());
+                failStop(cleanupFact);
+                return Mono.error(new EngineChangeException(
+                    published.current(), saveState, error));
+            });
+        }
+        if (retirement != null) {
+            retirement.phase = RetirementPhase.FAILED;
+            if (current != null) current.phase = CurrentPhase.BLOCKED;
+            targetConvergence = TargetConvergence.BLOCKED;
+            failStop(retirementFailure("LIFECYCLE_CLEANUP_FAILED", error,
+                failureStage()));
+            return Mono.error(new EngineChangeException(published.current(), saveState, error));
+        }
+        if (current != null && operation != null
+            && operation.stage.ordinal()
+            >= EngineOperationStage.PROMOTING.ordinal()) {
+            current.phase = CurrentPhase.FAILED;
+            targetConvergence = TargetConvergence.BLOCKED;
+            failStop(currentFailure("CURRENT_CONVERGENCE_FAILED", error,
+                failureStage()));
+            return Mono.error(new EngineChangeException(published.current(),
+                saveState, error));
+        }
+        targetConvergence = durableTarget == null ? TargetConvergence.ABSENT
+            : TargetConvergence.BLOCKED;
+        failOperation(operation != null
+            && operation.kind == EngineOperationKind.BOOTSTRAP
+            && durableTarget != null
+            ? durableTargetFailure("BOOTSTRAP_TARGET_BLOCKED", error,
+                failureStage())
+            : operationFailure("DEPLOYMENT_PLANNING_FAILED", error,
+                failureStage()));
+        publish();
+        return Mono.error(new EngineChangeException(published.current(),
+            saveState, error));
+    }
+
+    private Mono<Void> cleanupCandidate(CandidateAttempt staged) {
+        var deployment = staged.deployment;
+        var actions = new ArrayList<Supplier<Mono<Void>>>();
+        for (var entry : new ArrayList<>(deployment.candidates().entrySet()).reversed()) {
+            var sealed = deployment.generations().get(entry.getKey());
+            actions.add(sealed == null ? entry.getValue()::closeAsync : sealed::abortAsync);
+        }
+        return cleanupAll(actions);
+    }
+
+    private Mono<Void> cleanupAll(List<Supplier<Mono<Void>>> actions) {
+        var failures = new ArrayList<Throwable>();
+        return Flux.fromIterable(actions).concatMap(action -> loop.call(() ->
+                runtimeVoid(action)).onErrorResume(error -> {
+                    failures.add(error);
+                    return Mono.empty();
+                }))
+            .then(loop.call(() -> {
+                if (failures.isEmpty()) return Mono.empty();
+                var result = new IllegalStateException("runtime cleanup failed",
+                    failures.getFirst());
+                failures.stream().skip(1).forEach(result::addSuppressed);
+                return Mono.error(result);
+            }));
+    }
+
+    private void failStop(FailureFact fact) {
+        mutationGate = false;
+        admissionOpen = false;
+        state = EngineState.FAIL_STOP;
+        failure = Objects.requireNonNull(fact, "fact");
+        if (operation != null) operation.outcome = EngineOperationOutcome.FAILED;
+        switch (fact.subject()) {
+            case FailureSubject.Candidate subject -> {
+                if (candidate != null
+                    && candidate.id.equals(subject.attemptId())) {
+                    candidate.phase = CandidatePhase.FAILED;
+                }
+            }
+            case FailureSubject.Current subject -> {
+                if (current != null
+                    && current.id.equals(subject.attemptId())) {
+                    current.phase = CurrentPhase.FAILED;
+                }
+            }
+            case FailureSubject.Retirement subject -> {
+                if (retirement != null && retirement.id.equals(subject.batchId())
+                    && retirement.source.id.equals(subject.sourceAttemptId())) {
+                    retirement.phase = RetirementPhase.FAILED;
+                    if (current != null) current.phase = CurrentPhase.BLOCKED;
+                }
+            }
+            case FailureSubject.Unit subject -> {
+                if (current != null
+                    && current.id.equals(subject.ownerId())) {
+                    current.phase = CurrentPhase.FAILED;
+                } else if (retirement != null
+                    && retirement.id.equals(subject.ownerId())) {
+                    retirement.phase = RetirementPhase.FAILED;
+                    if (current != null) current.phase = CurrentPhase.BLOCKED;
+                }
+            }
+            case FailureSubject.Engine ignored -> { }
+            case FailureSubject.DurableTarget ignored -> { }
+            case FailureSubject.Operation ignored -> { }
+        }
+        var owned = Collections.newSetFromMap(
+            new IdentityHashMap<RuntimeUnitGeneration, Boolean>());
+        if (current != null) owned.addAll(current.units.values());
+        if (retirement != null) owned.addAll(retirement.units.values());
+        if (candidate != null) candidate.deployment.generations().values()
+            .forEach(value -> owned.addAll(value.units().values()));
+        for (var unit : owned) {
+            try {
+                unit.closeAdmission();
+            } catch (RuntimeException | Error violation) {
+                cleanupFailures.add(violation.toString());
+            }
+        }
+        publish();
+        if (terminationRequest == null) {
+            terminationRequest = new HostTerminationRequest(hostInstanceId,
+                fact.reason(), fact.subject(), fact.operationStage(),
+                fact.targetRevision());
+            publish();
+            var request = terminationRequest;
+            notifications.execute(() -> {
+                try { terminationPort.requestTermination(request); }
+                catch (Throwable portFailure) { LOG.error("Host termination notification failed", portFailure); }
+            });
+        }
+    }
+
+    private Mono<Void> shutdown() {
+        mutationGate = false;
+        admissionOpen = false;
+        if (operation == null || operation.kind != EngineOperationKind.SHUTDOWN) {
+            beginOperation(EngineOperationKind.SHUTDOWN,
+                durableTarget == null ? 0 : durableTarget.targetRevision(),
+                TargetSaveState.NOT_APPLICABLE);
+            state = EngineState.CLOSING;
+        }
+        if (candidate != null) {
+            return cleanupCandidate(candidate).then(loop.call(() -> {
+                candidate = null;
+                return shutdown();
+            })).onErrorResume(error -> {
+                failStop(candidateFailure("HOST_CLOSE_FAILED", error,
+                    FailureStage.CLOSING));
+                return Mono.error(error);
+            });
+        }
+        if (retirement != null) return Mono.error(new IllegalStateException(
+            "retirement cleanup failed; resource ownership retained for Host termination"));
+        if (current != null) {
+            retirement = new RetirementBatch(identity("retirement"),
+                current, current.units);
+            current.compiled.reverseDependency().forEach(key -> current.units.get(key).closeAdmission());
+            var old = current;
+            current = null;
+            transitionRetirement(RetirementPhase.DRAINING);
+            transitionOperation(EngineOperationStage.RETIRING);
+            publish();
+            var owners = Collections.newSetFromMap(new IdentityHashMap<PreparedRuntimeGeneration, Boolean>());
+            owners.addAll(old.owners.values());
+            return drainAndStopRetirement().thenMany(Flux.fromIterable(owners)
+                .concatMap(owner -> loop.call(() -> runtimeVoid(
+                    owner::retireAsync))))
+                .then(loop.call(() -> {
+                    old.units.values().forEach(lastObservations::remove);
+                    retirement = null;
+                    return shutdown();
+                })).onErrorResume(error -> {
+                    if (retirement != null) {
+                        failStop(retirementFailure("HOST_CLOSE_FAILED", error,
+                            FailureStage.CLOSING));
+                    } else {
+                        failStop(engineFailure("HOST_CLOSE_FAILED", error,
+                            FailureStage.CLOSING));
+                    }
+                    return Mono.error(error);
+                });
+        }
+        var actions = new ArrayList<Supplier<Mono<Void>>>();
+        new ArrayList<>(drivers.values()).reversed().forEach(driver -> actions.add(driver::closeAsync));
+        actions.add(directory::closeAsync);
+        actions.add(domain::closeAsync);
+        actions.add(runtime::closeAsync);
+        actions.add(() -> Mono.fromRunnable(targetStore::close));
+        actions.add(() -> Mono.fromRunnable(packageStore::close));
+        return cleanupAll(actions).then(loop.call(() -> {
+            lastObservations.clear();
+            state = EngineState.CLOSED;
+            completeOperation();
+            publish();
+            views.tryEmitComplete();
+            return Mono.empty();
         }));
     }
 
-    private void checkRevision(String expected) {
-        var actual = publishedState.get().view().viewRevision();
-        if (expected != null && !expected.equals(actual)) throw new PublishedRevisionConflictException(expected, actual);
-    }
-
-    private void checkDesiredRevision(String expected) {
-        if (!Objects.equals(expected, compilation.snapshot().revision())) {
-            throw new IllegalArgumentException("desired revision conflict: expected " + expected
-                + ", actual " + compilation.snapshot().revision());
-        }
-    }
-
-    private void checkContextRevision(String expected) {
-        if (!expected.equals(configContext.revision())) {
-            throw new IllegalArgumentException("context revision conflict: expected " + expected
-                + ", actual " + configContext.revision());
-        }
-    }
-
-    private static DesiredCompilation compilation(DesiredInputGraph graph, String revision) {
-        return DesiredCompilation.builder().graph(graph)
-            .snapshot(new DesiredSourceSnapshot("deployment-target", revision == null ? "0" : revision, Set.of()))
-            .build();
-    }
-
-    private static DesiredCompilation replacementCompilation(DesiredInputGraph graph) {
-        return DesiredCompilation.builder().graph(graph).snapshot(new DesiredSourceSnapshot(
-            "managed-desired", java.util.UUID.randomUUID().toString(), Set.of())).build();
-    }
-
-    private Mono<ObservedRuntime> capture() {
+    private <D, I, O> Mono<O> invokePublished(String revision, long registration,
+                                               ContributionKind<D, I, O> kind,
+                                               ContributionId id, I input) {
         return Mono.defer(() -> {
-            var captured = tryCapture();
-            return captured == null ? loop.nextTurn().then(Mono.defer(this::capture)) : Mono.just(captured);
-        });
-    }
-
-    private ObservedRuntime tryCapture() {
-        var before = directory.current();
-        var snapshot = domain == null ? null : domain.snapshot();
-        var after = directory.current();
-        return before.snapshot().revision() == after.snapshot().revision()
-            ? new ObservedRuntime(snapshot, after) : null;
-    }
-
-    private void refresh() {
-        if (closeRequested.get() || domain == null) return;
-        var captured = tryCapture();
-        if (captured == null) loop.observe(this::refresh);
-        else publish(captured);
-    }
-
-    private void publish(ObservedRuntime captured) {
-        if (captured.domain() != null && !captured.domain().cleanupFailures().isEmpty()) {
-            mutationGate = false;
-            var observed = new LinkedHashSet<>(cleanupFailures);
-            captured.domain().cleanupFailures().stream()
-                .map(RuntimeDomainSnapshot.CleanupFailure::failure).forEach(observed::add);
-            cleanupFailures = List.copyOf(observed);
-            var cleanupFailure = "runtime cleanup failed: " + captured.domain().cleanupFailures();
-            if (failure == null) failure = cleanupFailure;
-            phase = ChangePhase.FAILED;
-        }
-        var pluginFacts = new LinkedHashMap<Long, RuntimeDomainSnapshot.Plugin>();
-        if (captured.domain() != null) captured.domain().plugins().forEach(plugin -> pluginFacts.put(plugin.identity(), plugin));
-        var observed = new LinkedHashMap<String, PluginInstanceSnapshot>();
-        instances.forEach((id, managed) -> {
-            var fact = pluginFacts.get(managed.instance().identity());
-            var declared = compilation.graph().plugins().get(id);
-            var input = declared == null ? managed.bound().input() : declared;
-            observed.put(id, PluginInstanceSnapshot.builder().identity(managed.instance().identity())
-                .instanceId(id).definitionName(managed.instance().definition().name())
-                .config(managed.bound().config())
-                .state(fact == null ? PluginInstanceState.DISPOSED : fact.state())
-                .publicationRequirement(input.publicationRequirement())
-                .failure(fact == null ? null : fact.failure()).build());
-        });
-        var engine = new EngineSnapshot(state, compilation.snapshot(), compilation.graph(), observed,
-            artifacts, resources.snapshots(), failure);
-        var diagnostic = runtimeDiagnostics(captured.domain());
-        var controls = diagnostics(engine);
-        var current = publishedState.get();
-        if (current != null && engine.equals(current.view().engine())
-            && captured.contributions().snapshot().equals(current.view().contributions())
-            && diagnostic.equals(current.view().diagnostics()) && controls.equals(current.view().engineDiagnostics())) return;
-        var view = PublishedView.builder().viewRevision(nextRevision()).engine(engine)
-            .contributions(captured.contributions().snapshot()).diagnostics(diagnostic)
-            .engineDiagnostics(controls).build();
-        publishedState.set(new PublishedState(view, captured.contributions().routes()));
-        views.tryEmitNext(view);
-    }
-
-    private RuntimeDiagnostics runtimeDiagnostics(RuntimeDomainSnapshot snapshot) {
-        return RuntimeDiagnostics.builder().domainName(snapshot == null ? null : snapshot.name())
-            .plugins(snapshot == null ? List.of() : snapshot.plugins())
-            .services(snapshot == null ? List.of() : snapshot.services())
-            .events(snapshot == null ? List.of() : snapshot.events())
-            .cleanupFailures(snapshot == null ? List.of() : snapshot.cleanupFailures())
-            .failure(failure).build();
-    }
-
-    private void assertClean() {
-        var failures = domain == null ? List.of() : domain.snapshot().cleanupFailures();
-        if (!failures.isEmpty()) {
-            throw new IllegalStateException("runtime has unreleased resources: " + failures);
-        }
-    }
-
-    private EngineDiagnostics diagnostics(EngineSnapshot snapshot) {
-        var enabled = evaluation.entries().entrySet().stream()
-            .filter(entry -> entry.getValue().input() instanceof DesiredInputEntry)
-            .filter(entry -> entry.getValue().effective().enabled())
-            .map(Map.Entry::getKey)
-            .collect(java.util.stream.Collectors.toSet());
-        boolean satisfied = state == EngineState.RUNNING
-            && (phase != ChangePhase.FAILED || sourceFailure)
-            && targetRevision != null && snapshot.desiredGraph().equals(compilation.graph())
-            && evaluation.graph().equals(compilation.graph())
-            && evaluation.context().equals(configContext)
-            && snapshot.artifacts().equals(artifacts) && resources.matchesTarget(artifacts)
-            && snapshot.instances().keySet().equals(enabled) && enabled.stream().allMatch(id -> {
-                var expected = compilation.graph().plugins().get(id);
-                var resolved = evaluation.require(id);
-                var actual = snapshot.instances().get(id);
-                var managed = instances.get(id);
-                return actual != null && actual.requirementSatisfied()
-                    && actual.definitionName().equals(expected.definitionName())
-                    && actual.config().equals(resolved.resolvedConfig().orElseThrow())
-                    && managed != null && managed.bound().effective().equals(resolved.effective());
-            });
-        return EngineDiagnostics.builder().targetRevision(targetRevision)
-            .contextRevision(configContext.revision()).phase(phase)
-            .failedPhase(failedPhase).targetSaveState(targetSaveState)
-            .affectedInstances(affected).resources(snapshot.runtimes()).targetSatisfied(satisfied)
-            .cleanupFailures(cleanupFailures)
-            .mutationGateOpen(mutationGate && !closeRequested.get()).failure(failure).build();
-    }
-
-    private void publishControl() {
-        var current = publishedState.get();
-        if (current == null) { publishEmpty(); return; }
-        var view = PublishedView.builder().viewRevision(nextRevision()).engine(current.view().engine())
-            .contributions(current.view().contributions()).diagnostics(current.view().diagnostics())
-            .engineDiagnostics(diagnostics(current.view().engine())).build();
-        publishedState.set(new PublishedState(view, current.routes()));
-        views.tryEmitNext(view);
-    }
-
-    private void publishEmpty() {
-        publish(new ObservedRuntime(null, directory.current()));
-    }
-
-    private String nextRevision() {
-        var current = publishedState.get();
-        return current == null ? "0" : Long.toString(Long.parseLong(current.view().viewRevision()) + 1);
-    }
-
-    private <D, I, O> Mono<O> invokePublished(String revision, long registrationIdentity,
-                                             ContributionKind<D, I, O> kind,
-                                             ContributionId id, I input) {
-        Objects.requireNonNull(revision, "revision");
-        Objects.requireNonNull(kind, "kind");
-        Objects.requireNonNull(id, "id");
-        return Mono.defer(() -> {
-            if (closeRequested.get()) return Mono.error(new IllegalStateException("engine is closing"));
-            var current = publishedState.get();
-            if (!revision.equals(current.view().viewRevision())) return Mono.error(
+            if (!admissionOpen || closing.get()) return Mono.error(new MutationGateClosedException());
+            var current = publication.get();
+            if (!Objects.equals(revision, current.view().viewRevision())) return Mono.error(
                 new PublishedRevisionConflictException(revision, current.view().viewRevision()));
-            if (domain == null) return Mono.error(new IllegalStateException("engine is not running"));
             final ContributionCall<I, O> call;
-            try { call = current.routes().acquire(kind, id, registrationIdentity); }
+            try { call = current.routes().acquire(kind, id, registration); }
             catch (RuntimeException error) { return Mono.error(error); }
-            if (publishedState.get() != current || closeRequested.get()) {
+            if (!admissionOpen || publication.get() != current || closing.get()) {
                 call.close();
-                return Mono.error(new PublishedRevisionConflictException(revision, publishedState.get().view().viewRevision()));
+                return Mono.error(new PublishedRevisionConflictException(revision, publication.get().view().viewRevision()));
             }
             final Scope scope;
             try { scope = domain.rootScope().openChild("invocation:" + kind.name()); }
             catch (RuntimeException | Error error) { call.close(); return Mono.error(error); }
-            var cleanup = Mono.defer(scope::closeAsync)
-                .then(Mono.<Void>fromRunnable(() -> {
-                    var failures = domain.cleanupFailures(scope);
-                    if (!failures.isEmpty()) throw new IllegalStateException("invocation cleanup failed: " + failures);
-                }))
-                .doOnSuccess(ignored -> call.close()).doOnError(error -> call.failCleanup(error.toString())).cache();
+            var cleanup = Mono.defer(scope::closeAsync).then(Mono.fromRunnable(() -> {
+                var failures = domain.cleanupFailures(scope);
+                if (!failures.isEmpty()) throw new IllegalStateException("invocation cleanup failed: " + failures);
+            })).doOnSuccess(ignored -> call.close()).doOnError(error -> call.failCleanup(error.toString())).cache();
             return Mono.usingWhen(Mono.just(scope), value -> call.invoke(value.context(), input),
                 ignored -> cleanup, (ignored, error) -> cleanup, ignored -> cleanup);
         });
     }
 
-    private Mono<Void> closeInternal() {
-        var previousFailedPhase = failedPhase;
-        var previousTargetSaveState = targetSaveState;
-        var previousCleanupFailures = cleanupFailures;
-        var previousFailure = failure;
-        phase = ChangePhase.CLOSING;
-        if (previousFailure == null) {
-            failedPhase = null;
-            targetSaveState = TargetSaveState.NOT_APPLICABLE;
-            cleanupFailures = List.of();
-        }
-        publishControl();
-        if (observation != null) observation.dispose();
-        return directory.closeAsync()
-            .then(domain == null ? Mono.empty() : Mono.defer(domain::closeAsync))
-            .then(Mono.defer(runtime::closeAsync))
-            .then(Mono.fromRunnable(this::assertClean))
-            .then(Mono.defer(resources::closeAsync))
-            .then(loop.call(() -> {
-                closeStores();
-                var monitorFailure = sourceMonitorFailure.get();
-                if (monitorFailure != null) {
-                    throw new IllegalStateException(
-                        "cannot close desired source monitor", monitorFailure);
-                }
-                instances.clear();
-                state = EngineState.CLOSED;
-                phase = ChangePhase.CLOSED;
-                publishEmpty();
-                views.tryEmitComplete();
-                return Mono.<Void>empty();
-            })).onErrorResume(error -> loop.call(() -> {
-                state = EngineState.FAILED;
-                if (previousFailure == null) {
-                    failedPhase = ChangePhase.CLOSING;
-                    targetSaveState = TargetSaveState.NOT_APPLICABLE;
-                    cleanupFailures = cleanupFailureFacts(error);
-                    failure = "engine cleanup failed: " + error;
-                } else {
-                    failedPhase = previousFailedPhase;
-                    targetSaveState = previousTargetSaveState;
-                    var combined = new LinkedHashSet<>(previousCleanupFailures);
-                    combined.addAll(cleanupFailureFacts(error));
-                    cleanupFailures = List.copyOf(combined);
-                    failure = previousFailure;
-                }
-                phase = ChangePhase.FAILED;
-                mutationGate = false;
-                return capture().flatMap(captured -> {
-                    publish(captured);
-                    views.tryEmitComplete();
-                    return Mono.error(error);
-                });
-            }));
+    private void publish() {
+        var contributions = directory.current();
+        var unitFacts = currentObservations();
+        var retiredFacts = retirementObservations();
+        var snapshot = new EngineSnapshot(state, hostInstanceId, durableState,
+            targetConvergence, Optional.ofNullable(durableTarget),
+            candidate == null ? Optional.empty() : Optional.of(
+                new CandidateAttemptSnapshot(candidate.id, candidate.phase,
+                    candidate.deployment.target().targetRevision(),
+                    Optional.ofNullable(candidate.deployment.compiled())
+                        .map(CompiledDeployment::compiledFingerprint),
+                    candidate.deployment.ownedUnitKeys())),
+            current == null ? Optional.empty() : Optional.of(
+                new CurrentAttemptSnapshot(current.id, current.phase,
+                    current.token.targetRevision(),
+                    current.compiled.compiledFingerprint(), unitFacts)),
+            retirement == null ? Optional.empty() : Optional.of(
+                new RetirementBatchSnapshot(retirement.id,
+                    retirement.source.id,
+                    retirement.phase, retirement.source.token.targetRevision(),
+                    retirement.source.compiled.compiledFingerprint(),
+                    retiredFacts)));
+        var diagnostics = new EngineDiagnostics(
+            Optional.ofNullable(operation).map(EngineOperation::snapshot),
+            mutationGate, admissionOpen, cleanupFailures,
+            Optional.ofNullable(terminationRequest), Optional.ofNullable(failure));
+        var domainSnapshot = domain.snapshot();
+        var runtimeDiagnostics = RuntimeDiagnostics.builder().domainName(domainSnapshot.name())
+            .plugins(domainSnapshot.plugins()).services(domainSnapshot.services()).events(domainSnapshot.events())
+            .cleanupFailures(domainSnapshot.cleanupFailures()).build();
+        var previous = publication.get();
+        if (previous != null && previous.view.engine().equals(snapshot)
+            && previous.view.contributions().equals(contributions.snapshot())
+            && previous.view.engineDiagnostics().equals(diagnostics)
+            && previous.view.diagnostics().equals(runtimeDiagnostics)) return;
+        var view = PublishedView.builder().viewRevision(identity("view")).engine(snapshot)
+            .contributions(contributions.snapshot()).diagnostics(runtimeDiagnostics).engineDiagnostics(diagnostics).build();
+        publication.set(new PublishedState(view, contributions.routes()));
+        views.tryEmitNext(view);
     }
 
-    public Mono<Void> closeAsync() { return closeSignal; }
-    @Override public void close() { closeSignal.block(); }
-
-    private void closeStores() {
-        RuntimeException failure = null;
-        try { stateStore.close(); }
-        catch (RuntimeException error) { failure = error; }
-        try { if (artifactStore != null) artifactStore.close(); }
-        catch (RuntimeException error) {
-            if (failure == null) failure = error;
-            else if (failure != error) failure.addSuppressed(error);
-        }
-        if (failure != null) throw failure;
+    private void beginOperation(EngineOperationKind kind, long targetRevision,
+                                TargetSaveState targetSaveState) {
+        operation = new EngineOperation(identity("operation"), kind,
+            targetRevision, targetSaveState);
+        failure = null;
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private static void provideHostBinding(Context context, HostServiceRegistry.Binding binding) {
-        context.services().provide(binding.key(), binding.value());
+    private void transitionOperation(EngineOperationStage next) {
+        if (operation != null) operation.stage = Objects.requireNonNull(next,
+            "next");
     }
 
-    private static Context context(Context initial, EffectiveDesiredEntry entry) {
-        var result = initial;
-        for (var policy : entry.realms().entrySet()) {
-            var value = policy.getValue().value();
-            if (value instanceof LiteralValue.BooleanValue flag && flag.value()) {
-                result = result.withRealm(policy.getKey(), new LocalRealm(policy.getValue().ownerEntryId()));
-            } else if (value instanceof LiteralValue.StringValue name) result = result.withRealm(policy.getKey(), name.value());
+    private void completeOperation() {
+        if (operation == null) return;
+        operation.stage = EngineOperationStage.COMPLETED;
+        operation.outcome = EngineOperationOutcome.SUCCEEDED;
+    }
+
+    private void failOperation(FailureFact fact) {
+        failure = Objects.requireNonNull(fact, "fact");
+        if (operation != null) operation.outcome = EngineOperationOutcome.FAILED;
+    }
+
+    private void transitionCandidate(CandidatePhase next,
+                                     EngineOperationStage operationStage) {
+        if (candidate == null) throw new IllegalStateException(
+            "candidate attempt is missing");
+        candidate.phase = Objects.requireNonNull(next, "next");
+        transitionOperation(operationStage);
+    }
+
+    private void transitionCurrent(CurrentPhase next) {
+        if (current == null) throw new IllegalStateException(
+            "current attempt is missing");
+        current.phase = Objects.requireNonNull(next, "next");
+    }
+
+    private void transitionRetirement(RetirementPhase next) {
+        if (retirement == null) throw new IllegalStateException(
+            "retirement batch is missing");
+        retirement.phase = Objects.requireNonNull(next, "next");
+    }
+
+    private Mono<PublishedView> finishCurrentOperation() {
+        refreshCurrentObservations();
+        transitionCurrent(CurrentPhase.SETTLED);
+        targetConvergence = targetSatisfied(currentObservations())
+            ? TargetConvergence.SATISFIED : TargetConvergence.UNSATISFIED;
+        completeOperation();
+        publish();
+        return Mono.just(published.current());
+    }
+
+    private Map<ExecutionUnitKey, ExecutionObservation> currentObservations() {
+        return cachedObservations(current == null ? Map.of() : current.units);
+    }
+
+    private Map<ExecutionUnitKey, ExecutionObservation> retirementObservations() {
+        return cachedObservations(retirement == null ? Map.of()
+            : retirement.units);
+    }
+
+    private Map<ExecutionUnitKey, ExecutionObservation> cachedObservations(
+        Map<ExecutionUnitKey, RuntimeUnitGeneration> units) {
+        var result = new LinkedHashMap<ExecutionUnitKey, ExecutionObservation>();
+        units.forEach((key, unit) -> {
+            var observation = lastObservations.get(unit);
+            if (observation != null) result.put(key, observation);
+        });
+        return Map.copyOf(result);
+    }
+
+    private void refreshCurrentObservations() {
+        if (current != null) current.units.forEach(this::observeCurrent);
+    }
+
+    private void refreshRetirementObservations() {
+        if (retirement != null) retirement.units.forEach(this::observeRetirement);
+    }
+
+    private ExecutionObservation observeCurrent(ExecutionUnitKey key,
+                                                RuntimeUnitGeneration unit) {
+        return observe(key, unit, current.id);
+    }
+
+    private ExecutionObservation observeRetirement(ExecutionUnitKey key,
+                                                   RuntimeUnitGeneration unit) {
+        return observe(key, unit, retirement.id);
+    }
+
+    private ExecutionObservation observe(ExecutionUnitKey key,
+                                         RuntimeUnitGeneration unit,
+                                         String ownerId) {
+        try {
+            var observation = Objects.requireNonNull(unit.snapshot(), "runtime unit snapshot");
+            lastObservations.put(unit, observation);
+            return observation;
+        } catch (RuntimeException | Error violation) {
+            failStop(unitFailure("RUNTIME_SNAPSHOT_CONTRACT_VIOLATION",
+                ownerId, unit, violation, FailureStage.OBSERVING));
+            throw violation;
         }
-        for (var policy : entry.intercepts().entrySet()) {
-            var value = policy.getValue().value();
-            if (!(value instanceof LiteralValue.NullValue)) result = result.withIntercept(policy.getKey(), value.toJava());
+    }
+
+    private boolean targetSatisfied(
+        Map<ExecutionUnitKey, ExecutionObservation> observations) {
+        return current != null && current.compiled.runtimePlans().values().stream()
+            .flatMap(plan -> plan.definitions().stream()).allMatch(binding -> {
+                var observation = observations.get(binding.unitKey());
+                if (observation == null) return false;
+                var state = observation.aggregateState();
+                return state == ExecutionObservation.State.ACTIVE
+                    || state == ExecutionObservation.State.PENDING
+                    && binding.publicationRequirement() == PublicationRequirement.PENDING_ALLOWED;
+            });
+    }
+
+    private <T> Mono<T> runtimeObservation(Supplier<Mono<T>> action,
+                                           String emptyMessage) {
+        return Mono.defer(() -> Objects.requireNonNull(action.get(),
+                "runtime lifecycle publisher"))
+            .timeout(lifecycleTimeout)
+            .switchIfEmpty(Mono.error(new IllegalStateException(emptyMessage)));
+    }
+
+    private Mono<Void> runtimeVoid(Supplier<Mono<Void>> action) {
+        return Mono.defer(() -> Objects.requireNonNull(action.get(),
+                "runtime lifecycle publisher"))
+            .timeout(lifecycleTimeout);
+    }
+
+    private FailureFact engineFailure(String reason, Throwable error,
+                                      FailureStage stage) {
+        return failureFact(reason, new FailureSubject.Engine(hostInstanceId),
+            error, stage);
+    }
+
+    private FailureFact durableTargetFailure(String reason, Throwable error,
+                                             FailureStage stage) {
+        if (durableTarget == null) {
+            throw new IllegalStateException("durable target is missing");
+        }
+        return failureFact(reason, new FailureSubject.DurableTarget(
+            durableTarget.targetRevision(), durableTarget.targetDigest()),
+            error, stage);
+    }
+
+    private FailureFact operationFailure(String reason, Throwable error,
+                                         FailureStage stage) {
+        if (operation == null) {
+            throw new IllegalStateException("operation is missing");
+        }
+        return failureFact(reason, new FailureSubject.Operation(operation.id),
+            error, stage);
+    }
+
+    private FailureFact candidateFailure(String reason, Throwable error,
+                                         FailureStage stage) {
+        if (candidate == null) {
+            throw new IllegalStateException("candidate is missing");
+        }
+        return failureFact(reason, new FailureSubject.Candidate(candidate.id),
+            error, stage);
+    }
+
+    private FailureFact currentFailure(String reason, Throwable error,
+                                       FailureStage stage) {
+        if (current == null) {
+            throw new IllegalStateException("current attempt is missing");
+        }
+        return failureFact(reason, new FailureSubject.Current(current.id),
+            error, stage);
+    }
+
+    private FailureFact retirementFailure(String reason, Throwable error,
+                                          FailureStage stage) {
+        if (retirement == null) {
+            throw new IllegalStateException("retirement batch is missing");
+        }
+        return failureFact(reason, new FailureSubject.Retirement(retirement.id,
+            retirement.source.id), error, stage);
+    }
+
+    private FailureFact unitFailure(String reason, String ownerId,
+                                    RuntimeUnitGeneration unit, Throwable error,
+                                    FailureStage stage) {
+        return failureFact(reason, new FailureSubject.Unit(ownerId,
+            unit.fence()), error, stage);
+    }
+
+    private FailureFact failureFact(String reason, FailureSubject subject,
+                                    Throwable error, FailureStage stage) {
+        var operationStage = operation == null ? Optional.<EngineOperationStage>empty()
+            : Optional.of(operation.stage);
+        long revision = operation == null ? 0 : operation.targetRevision;
+        if (revision < 1 && durableTarget != null) {
+            revision = durableTarget.targetRevision();
+        }
+        return new FailureFact(reason, subject, stage, operationStage,
+            revision < 1 ? OptionalLong.empty() : OptionalLong.of(revision),
+            error.toString());
+    }
+
+    private FailureStage failureStage() {
+        if (retirement != null) {
+            return switch (retirement.phase) {
+                case DRAINING -> FailureStage.DRAINING;
+                case STOPPING, READY_TO_RELEASE -> FailureStage.STOPPING;
+                case RELEASING -> FailureStage.RELEASING;
+                case FAILED -> FailureStage.CLOSING;
+            };
+        }
+        if (candidate != null) {
+            return switch (candidate.phase) {
+                case REGISTERED -> FailureStage.PLANNING;
+                case PREPARING -> FailureStage.PREPARING;
+                case VALIDATING, READY_TO_SAVE -> FailureStage.VALIDATING;
+                case SAVING -> FailureStage.SAVING;
+                case FAILED -> FailureStage.CLOSING;
+            };
+        }
+        if (current != null && current.phase == CurrentPhase.RECONCILING) {
+            return FailureStage.RECONCILING;
+        }
+        if (operation == null) return FailureStage.BOOTSTRAPPING;
+        return switch (operation.stage) {
+            case PLANNING -> FailureStage.PLANNING;
+            case PREPARING -> FailureStage.PREPARING;
+            case VALIDATING -> FailureStage.VALIDATING;
+            case SAVING -> FailureStage.SAVING;
+            case PROMOTING -> FailureStage.PROMOTING;
+            case RETIRING -> FailureStage.DRAINING;
+            case RECONCILING -> FailureStage.RECONCILING;
+            case COMPLETED -> FailureStage.OBSERVING;
+        };
+    }
+    private void ensureMutable() {
+        if (!mutationGate || closing.get()) throw new MutationGateClosedException();
+        if (state == EngineState.NEW) throw new IllegalStateException("engine is not started");
+    }
+    private RuntimeDriver requireDriver(RuntimeId id) {
+        var driver = drivers.get(id);
+        if (driver == null) throw new IllegalArgumentException("runtime provider is missing: " + id);
+        return driver;
+    }
+    private String identity(String namespace) { return hostInstanceId + ':' + namespace + ':' + identities.incrementAndGet(); }
+    private List<BuiltInPluginPackage> captureBuiltIns() {
+        var result = providers.providers().values().stream().flatMap(provider -> {
+            var metadata = List.copyOf(provider.builtInPackages());
+            if (metadata.stream().flatMap(value -> value.facets().stream())
+                .anyMatch(value -> !value.runtimeId().equals(provider.id()))) {
+                throw new IllegalArgumentException("provider declares another runtime's built-in package");
+            }
+            return metadata.stream();
+        }).sorted(Comparator.comparing(value -> value.pluginId().value())).toList();
+        if (result.stream().map(BuiltInPluginPackage::pluginId).distinct().count() != result.size()) {
+            throw new IllegalArgumentException("duplicate built-in plugin package");
         }
         return result;
     }
-
-    private static TargetSaveState targetSaveState(ChangeSet plan, Throwable error) {
-        if (!plan.saveTarget) return TargetSaveState.NOT_APPLICABLE;
-        if (error instanceof EngineStateStore.SaveUnconfirmedException) {
-            return TargetSaveState.UNCONFIRMED;
+    private String inputFingerprint(HostCapabilitySnapshot snapshot, List<BuiltInPluginPackage> builtIns) {
+        var contracts = new TreeMap<String, Object>();
+        providers.providers().forEach((id, provider) -> {
+            var identity = provider.contractIdentity();
+            if (identity == null || identity.isBlank()) throw new IllegalArgumentException("runtime contract identity is blank");
+            contracts.put(id.value(), identity);
+        });
+        var metadata = builtIns.stream().map(value -> Map.of(
+            "pluginId", value.pluginId().value(), "version", value.version(),
+            "packageDigest", value.packageDigest(), "facets", value.facets().stream().map(facet -> Map.of(
+                "facetId", facet.facetId().value(), "runtimeId", facet.runtimeId().value(),
+                "executionTarget", facet.executionTarget().value(),
+                "dependencies", facet.dependencies().stream()
+                    .sorted(Comparator.comparing((FacetDependency dependency) -> dependency.pluginId().value())
+                        .thenComparing(dependency -> dependency.facetId().value()))
+                    .map(dependency -> Map.of("pluginId", dependency.pluginId().value(),
+                        "facetId", dependency.facetId().value())).toList(),
+                "requiredCapabilities", facet.requiredCapabilities().stream().sorted().toList(),
+                "definitionIds", facet.definitionIds().stream().sorted().toList())).toList())).toList();
+        return digest(LiteralValue.of(Map.of("capabilities", snapshot.values(), "contracts", contracts,
+            "builtInPackages", metadata)).canonicalJson());
+    }
+    private static String digest(String value) {
+        try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))); }
+        catch (java.security.NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
+    }
+    private static void verifyToken(DeploymentTarget target, DurableTargetToken token) {
+        if (token.targetRevision() != target.targetRevision() || !token.targetDigest().equals(target.targetDigest())) {
+            throw new IllegalStateException("store confirmed a different target");
         }
-        return plan.targetSaveState;
     }
 
-    private static List<String> cleanupFailureFacts(Throwable failure) {
-        var facts = new ArrayList<String>();
-        collectCleanupFailureFacts(failure, facts,
-            java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>()));
-        return List.copyOf(facts);
+    private final class HostServices implements RuntimeHostServices {
+        public String hostInstanceId() { return hostInstanceId; }
+        public ScopeView scope() { return domain.rootScope().context().scope(); }
+        public Mono<Void> releaseScope(Scope scope) {
+            Objects.requireNonNull(scope, "scope");
+            return Mono.defer(scope::closeAsync).then(Mono.fromRunnable(() -> {
+                var failures = domain.cleanupFailures(scope);
+                if (!failures.isEmpty()) {
+                    throw new IllegalStateException(
+                        "runtime scope cleanup failed: " + failures);
+                }
+            }));
+        }
+        public ContributionKindRegistry contributionKinds() { return contributionKinds; }
+        public ContributionAdmission openContributionAdmission(ExecutionUnitKey key) {
+            Objects.requireNonNull(key, "key");
+            if (!admissionOpen || closing.get()) throw new MutationGateClosedException();
+            return directory.openAdmission(key.value());
+        }
+        public RemoteContributionInvoker remoteContributions() {
+            return remoteContributions;
+        }
+        public String nextIdentity(String namespace) { return identity(namespace); }
+        public void requestReconcile(Set<RuntimeUnitFence> fences,
+                                     String reason) {
+            var requested = Set.copyOf(Objects.requireNonNull(fences,
+                "fences"));
+            if (requested.isEmpty()) return;
+            if (closing.get()) return;
+            loop.submit(() -> {
+                ensureMutable();
+                if (current == null) return Mono.<Void>empty();
+                var valid = new LinkedHashMap<ExecutionUnitKey,
+                    RuntimeUnitFence>();
+                var failed = new LinkedHashSet<ExecutionUnitKey>();
+                requested.forEach(fence -> {
+                    var unit = current.units.get(fence.unitKey());
+                    if (unit == null) return;
+                    var observation = observeCurrent(fence.unitKey(), unit);
+                    if (!matchesFence(unit, fence)) return;
+                    valid.put(fence.unitKey(), fence);
+                    if (observation.aggregateState()
+                        == ExecutionObservation.State.FAILED) {
+                        failed.add(fence.unitKey());
+                    }
+                });
+                if (valid.isEmpty()) return Mono.<Void>empty();
+                var notFailed = new LinkedHashSet<>(valid.keySet());
+                notFailed.removeAll(failed);
+                if (failed.isEmpty()) {
+                    beginOperation(EngineOperationKind.RECONCILE,
+                        durableTarget.targetRevision(),
+                        TargetSaveState.NOT_APPLICABLE);
+                    return reconcile(notFailed)
+                        .then(loop.call(
+                            FibraEngine.this::finishCurrentOperation)).then();
+                }
+                return deploy(durableTarget, false, false, failed,
+                    EngineOperationKind.RECONCILE)
+                    .then(loop.call(() -> {
+                        if (current == null) return Mono.empty();
+                        var stillCurrent = new LinkedHashSet<ExecutionUnitKey>();
+                        notFailed.forEach(key -> {
+                            var unit = current.units.get(key);
+                            if (unit != null && matchesFence(unit,
+                                valid.get(key))) {
+                                stillCurrent.add(key);
+                            }
+                        });
+                        if (stillCurrent.isEmpty()) return Mono.empty();
+                        beginOperation(EngineOperationKind.RECONCILE,
+                            durableTarget.targetRevision(),
+                            TargetSaveState.NOT_APPLICABLE);
+                        return reconcile(stillCurrent)
+                            .then(loop.call(
+                                FibraEngine.this::finishCurrentOperation))
+                            .then();
+                    }));
+            }).subscribe(ignored -> { }, error -> LOG.debug("Runtime reconcile was not accepted: {}", reason, error));
+        }
+        public void requestObservationRefresh(RuntimeUnitFence fence) {
+            Objects.requireNonNull(fence, "fence");
+            if (closing.get()) return;
+            loop.observe(() -> {
+                if (current == null) return;
+                var unit = current.units.get(fence.unitKey());
+                if (unit == null || !matchesFence(unit, fence)) return;
+                observeCurrent(fence.unitKey(), unit);
+                targetConvergence = targetSatisfied(currentObservations())
+                    ? TargetConvergence.SATISFIED
+                    : TargetConvergence.UNSATISFIED;
+                publish();
+            });
+        }
+        public void requestDisable(RuntimeUnitDisableRequest request) {
+            Objects.requireNonNull(request, "request");
+            if (closing.get()) return;
+            loop.submit(() -> {
+                ensureMutable();
+                if (current == null || durableTarget == null) {
+                    return Mono.just(published.current());
+                }
+                var unit = current.units.get(request.fence().unitKey());
+                if (unit == null || !matchesFence(unit, request.fence())) {
+                    return Mono.just(published.current());
+                }
+                var entry = durableTarget.desiredGraph().plugins().get(
+                    request.fence().unitKey().value());
+                if (entry == null || !entry.enabled()) {
+                    return Mono.just(published.current());
+                }
+                var replacement = DeploymentTarget.of(Math.incrementExact(
+                        durableTarget.targetRevision()),
+                    durableTarget.selections().values(),
+                    durableTarget.desiredGraph().withEnabled(
+                        request.fence().unitKey().value(), false),
+                    durableTarget.configContext());
+                return deploy(replacement, true, false, Set.of(),
+                    EngineOperationKind.APPLY);
+            }).subscribe(ignored -> { }, error -> LOG.debug(
+                "Runtime unit disable failed: {}", request.reason(), error));
+        }
+        public void requestRecompile(RuntimeRecompileReason reason) {
+            loop.submit(() -> {
+                ensureMutable();
+                return durableTarget == null ? Mono.empty()
+                    : deploy(durableTarget, false, true, Set.of(),
+                        EngineOperationKind.RECONCILE);
+            }).subscribe(ignored -> { }, error -> LOG.debug("Runtime recompile failed: {}", reason, error));
+        }
+
+        private boolean matchesFence(RuntimeUnitGeneration unit,
+                                     RuntimeUnitFence fence) {
+            if (!fence.runtimeId().equals(unit.plan().runtimeId())
+                || !fence.unitKey().equals(unit.plan().key())) {
+                return false;
+            }
+            var observation = lastObservations.get(unit);
+            return observation != null && observation.executions().stream()
+                .anyMatch(execution -> execution.unitTargetRevision()
+                    == fence.unitTargetRevision()
+                    && execution.runtimeInstanceId().equals(
+                        fence.runtimeInstanceId()));
+        }
     }
 
-    private static void collectCleanupFailureFacts(Throwable failure, List<String> facts,
-                                                   Set<Throwable> visited) {
-        if (!visited.add(failure)) return;
-        facts.add(failure.toString());
-        var suppressed = failure.getSuppressed();
-        for (var nested : suppressed) {
-            collectCleanupFailureFacts(nested, facts, visited);
+    private record PublishedState(PublishedView view, ContributionRoutes routes) { }
+    private static final class CandidateAttempt {
+        private final String id;
+        private final DeploymentCandidate deployment;
+        private CandidatePhase phase = CandidatePhase.REGISTERED;
+
+        private CandidateAttempt(String id, DeploymentCandidate deployment) {
+            this.id = Objects.requireNonNull(id, "id");
+            this.deployment = Objects.requireNonNull(deployment, "deployment");
+        }
+    }
+
+    private static final class CurrentAttempt {
+        private final String id;
+        private final DurableTargetToken token;
+        private final CompiledDeployment compiled;
+        private final Map<ExecutionUnitKey, RuntimeUnitGeneration> units;
+        private final Map<ExecutionUnitKey, PreparedRuntimeGeneration> owners;
+        private final String inputsIdentity;
+        private CurrentPhase phase;
+
+        private CurrentAttempt(String id, DurableTargetToken token,
+                               CompiledDeployment compiled,
+                               Map<ExecutionUnitKey, RuntimeUnitGeneration> units,
+                               Map<ExecutionUnitKey, PreparedRuntimeGeneration> owners,
+                               String inputsIdentity, CurrentPhase phase) {
+            this.id = Objects.requireNonNull(id, "id");
+            this.token = Objects.requireNonNull(token, "token");
+            this.compiled = Objects.requireNonNull(compiled, "compiled");
+            this.units = Map.copyOf(units);
+            this.owners = Map.copyOf(owners);
+            this.inputsIdentity = Objects.requireNonNull(inputsIdentity,
+                "inputsIdentity");
+            this.phase = Objects.requireNonNull(phase, "phase");
+        }
+    }
+
+    private static final class RetirementBatch {
+        private final String id;
+        private final CurrentAttempt source;
+        private final Map<ExecutionUnitKey, RuntimeUnitGeneration> units;
+        private RetirementPhase phase = RetirementPhase.DRAINING;
+
+        private RetirementBatch(String id, CurrentAttempt source,
+                                Map<ExecutionUnitKey, RuntimeUnitGeneration> units) {
+            this.id = Objects.requireNonNull(id, "id");
+            this.source = Objects.requireNonNull(source, "source");
+            this.units = Map.copyOf(units);
+        }
+    }
+
+    private static final class EngineOperation {
+        private final String id;
+        private final EngineOperationKind kind;
+        private final long targetRevision;
+        private EngineOperationStage stage = EngineOperationStage.PLANNING;
+        private EngineOperationOutcome outcome = EngineOperationOutcome.RUNNING;
+        private TargetSaveState targetSaveState;
+        private String attemptId;
+
+        private EngineOperation(String id, EngineOperationKind kind,
+                                long targetRevision, TargetSaveState targetSaveState) {
+            this.id = Objects.requireNonNull(id, "id");
+            this.kind = Objects.requireNonNull(kind, "kind");
+            this.targetRevision = targetRevision;
+            this.targetSaveState = Objects.requireNonNull(targetSaveState,
+                "targetSaveState");
+        }
+
+        private EngineOperationSnapshot snapshot() {
+            return new EngineOperationSnapshot(id, kind, stage, outcome,
+                targetRevision, targetSaveState,
+                Optional.ofNullable(attemptId));
         }
     }
 
     public static final class Builder {
-        private final DesiredStateRepository desiredRepository;
-        private InitialArtifactSource initialArtifacts = List::of;
-        private PluginCatalog catalog = PluginCatalog.empty();
-        private EngineStateStore stateStore = EngineStateStore.inMemory();
-        private ArtifactStore artifactStore;
+        private final PluginPackageStore packageStore;
+        private final DeploymentTargetStore targetStore;
+        private final List<RuntimeProvider> providers = new ArrayList<>();
         private HostServiceRegistry hostServices = new HostServiceRegistry();
-        private ConfigContextSnapshot configContext = ConfigContextSnapshot.empty();
-        private Duration autoRefreshInterval;
-        private final Map<RuntimeId, PluginRuntimeAdapter> runtimeAdapters = new LinkedHashMap<>();
-        private Builder(DesiredStateRepository repository) { desiredRepository = Objects.requireNonNull(repository, "repository"); }
-        public Builder initialArtifacts(InitialArtifactSource value) {
-            initialArtifacts = Objects.requireNonNull(value); return this;
+        private ContributionKindRegistry contributionKinds = ContributionKindRegistry.empty();
+        private HostTerminationPort terminationPort;
+        private Supplier<HostCapabilitySnapshot> capabilities = HostCapabilitySnapshot::empty;
+        private Duration lifecycleTimeout = Duration.ofSeconds(30);
+        private Builder(PluginPackageStore packages, DeploymentTargetStore targets) {
+            packageStore = Objects.requireNonNull(packages, "packageStore");
+            targetStore = Objects.requireNonNull(targets, "targetStore");
         }
-        public Builder catalog(PluginCatalog value) { catalog = Objects.requireNonNull(value); return this; }
-        public Builder stateStore(EngineStateStore value) { stateStore = Objects.requireNonNull(value); return this; }
-        public Builder artifactStore(ArtifactStore value) { artifactStore = Objects.requireNonNull(value); return this; }
-        public Builder hostServices(HostServiceRegistry value) { hostServices = Objects.requireNonNull(value); return this; }
-        public Builder configContext(ConfigContextSnapshot value) {
-            configContext = Objects.requireNonNull(value); return this;
-        }
-        public Builder autoRefresh(Duration interval) {
-            if (interval == null || interval.isZero() || interval.isNegative()) {
-                throw new IllegalArgumentException("auto refresh interval must be positive");
-            }
-            autoRefreshInterval = interval;
+        public Builder runtimeProvider(RuntimeProvider value) { providers.add(Objects.requireNonNull(value)); return this; }
+        public Builder hostServices(HostServiceRegistry value) {
+            hostServices = Objects.requireNonNull(value, "hostServices");
             return this;
         }
-        public Builder runtimeAdapter(PluginRuntimeAdapter value) {
-            Objects.requireNonNull(value);
-            if (runtimeAdapters.putIfAbsent(value.id(), value) != null) throw new IllegalArgumentException("duplicate runtime adapter " + value.id());
+        public Builder contributionKinds(ContributionKindRegistry value) {
+            contributionKinds = Objects.requireNonNull(value, "contributionKinds");
             return this;
+        }
+        public Builder hostTerminationPort(HostTerminationPort value) { terminationPort = Objects.requireNonNull(value); return this; }
+        public Builder capabilities(Supplier<HostCapabilitySnapshot> value) { capabilities = Objects.requireNonNull(value); return this; }
+        public Builder lifecycleTimeout(Duration value) {
+            if (value.isNegative() || value.isZero()) throw new IllegalArgumentException("lifecycle timeout must be positive");
+            lifecycleTimeout = value; return this;
         }
         public FibraEngine build() { return new FibraEngine(this); }
-    }
-
-    private static final class ChangeSet {
-        final DesiredCompilation desired;
-        final LinkedHashMap<ArtifactId, ArtifactRecord> artifacts;
-        final ConfigContextSnapshot context;
-        final List<ArtifactInstallTransaction> installs = new ArrayList<>();
-        final List<String> cleanupFailures = new ArrayList<>();
-        DesiredEvaluation evaluation;
-        RuntimeResources.Update update;
-        Map<String, Bound<?>> bound;
-        boolean saveTarget = true;
-        boolean updateResources = true;
-        TargetSaveState targetSaveState = TargetSaveState.NOT_SAVED;
-        boolean committed;
-        boolean retired;
-        boolean bootstrapping;
-        boolean executing;
-        ChangePhase sourcePhase = ChangePhase.PREPARING;
-        ChangeSet(DesiredCompilation desired, Map<ArtifactId, ArtifactRecord> artifacts,
-                  ConfigContextSnapshot context) {
-            this.desired = desired;
-            this.artifacts = new LinkedHashMap<>(artifacts);
-            this.context = context;
-        }
-    }
-
-    private record Bound<C>(DesiredInputEntry input, LiteralValue config,
-                            EffectiveDesiredEntry effective,
-                            PluginDefinition.Prepared<C> prepared) {
-        Bound<C> withDeclaration(DesiredInputEntry input, LiteralValue config,
-                                 EffectiveDesiredEntry effective) {
-            return new Bound<>(input, config, effective, prepared);
-        }
-    }
-    private record Managed<C>(Scope scope, PluginInstance<C> instance, Bound<C> bound) {
-        @SuppressWarnings("unchecked")
-        Managed<C> withBound(Bound<?> next) { return new Managed<>(scope, instance, (Bound<C>) next); }
-    }
-    private record PublishedState(PublishedView view, ContributionRoutes routes) { }
-    private record ObservedRuntime(RuntimeDomainSnapshot domain, ContributionDirectoryView contributions) { }
-
-    private record ExistingTarget(String id, Managed<?> previous, Bound<?> next) { }
-    private record LocalRealm(String ownerEntryId) {
-        @Override public String toString() { return "local:" + ownerEntryId; }
     }
 }

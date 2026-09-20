@@ -1,71 +1,81 @@
 package com.sstlfsj.fibra.archetype;
 
-import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.PluginInstanceState;
-import com.sstlfsj.fibra.artifact.ArtifactPackage;
-import com.sstlfsj.fibra.artifact.ArtifactRecord;
-import com.sstlfsj.fibra.artifact.ArtifactState;
-import com.sstlfsj.fibra.runtime.FibraRuntime;
-import com.sstlfsj.fibra.runtime.java.JavaPluginRuntimeAdapter;
+import com.sstlfsj.fibra.artifact.PluginPackage;
+import com.sstlfsj.fibra.artifact.PluginPackageRecord;
+import com.sstlfsj.fibra.artifact.PluginPackageStore;
+import com.sstlfsj.fibra.config.ConfigContextSnapshot;
+import com.sstlfsj.fibra.config.DesiredInputEntry;
+import com.sstlfsj.fibra.config.DesiredInputGraph;
+import com.sstlfsj.fibra.config.PluginDefinitionRef;
+import com.sstlfsj.fibra.engine.ApplyDeployment;
+import com.sstlfsj.fibra.engine.DeploymentTargetStore;
+import com.sstlfsj.fibra.engine.ExecutionObservation;
+import com.sstlfsj.fibra.engine.ExecutionUnitKey;
+import com.sstlfsj.fibra.engine.FibraEngine;
+import com.sstlfsj.fibra.engine.PluginSelection;
+import com.sstlfsj.fibra.runtime.java.JavaRuntimeProvider;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Instant;
+import java.time.Duration;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FibraPluginArchetypeIT {
+    private static final Duration TIMEOUT = Duration.ofSeconds(5);
+
     @Test
-    void generatedInstallationLoadsThroughTheJavaRuntime() throws Exception {
+    void generatedPackageLoadsThroughTheJavaRuntime(@TempDir Path work)
+        throws Exception {
         var generated = Path.of("target/test-classes/projects/basic/project",
             "sample-fibra-plugin");
         var jar = generated.resolve("target/sample-fibra-plugin-1.0.0.jar");
         assertTrue(Files.isRegularFile(jar),
             () -> "generated plugin JAR is missing: " + jar);
         var root = generated.resolve("target/sample-fibra-plugin-1.0.0-plugin");
-        assertTrue(Files.isDirectory(root), () -> "generated installation is missing: " + root);
-        var installation = ArtifactPackage.read(root);
-        assertEquals(root.resolve("lib/plugin.jar").toRealPath(), installation.payload());
-        assertEquals(-1, Files.mismatch(jar, installation.payload()));
-        var adapter = new JavaPluginRuntimeAdapter();
-        var candidate = adapter.probe(installation).block();
-        assertEquals("sample-fibra-plugin", candidate.artifactId().value());
-        assertEquals("1.0.0", candidate.version());
-        assertEquals(root.toRealPath(), candidate.source());
-        var artifact = ArtifactRecord.builder()
-            .id(candidate.artifactId())
-            .runtimeId(candidate.runtimeId())
-            .version(candidate.version())
-            .checksum("verified-by-archetype-it")
-            .revision("1")
-            .location(candidate.source())
-            .state(ArtifactState.INSTALLED)
-            .updatedAt(Instant.now())
-            .build();
-        var owner = adapter.create();
-        var update = owner.createUpdate(List.of(artifact));
-        try {
-            update.prepareAsync().block();
-            update.adopt();
-            try (var runtime = FibraRuntime.create()) {
-                @SuppressWarnings("unchecked")
-                var definition = (PluginDefinition<Object>) update.catalog().plugins()
-                    .find("sample-fibra-plugin").orElseThrow().definition();
-                var instance = runtime.rootScope().context().plugins()
-                    .mount("generated-plugin", definition.prepare(null));
-                instance.settled().block();
+        assertTrue(Files.isDirectory(root),
+            () -> "generated package is missing: " + root);
+        var pluginPackage = PluginPackage.read(root);
+        assertEquals("sample-fibra-plugin", pluginPackage.pluginId().value());
+        assertEquals("1.0.0", pluginPackage.version());
+        assertEquals(root.resolve("lib/plugin.jar").toRealPath(),
+            pluginPackage.facets().getFirst().payload());
+        assertEquals(-1, Files.mismatch(jar,
+            pluginPackage.facets().getFirst().payload()));
 
-                assertEquals(PluginInstanceState.ACTIVE, instance.state());
-            }
-        } finally {
-            try {
-                update.closeAsync().block();
-            } finally {
-                owner.closeAsync().block();
-            }
+        var packages = new PluginPackageStore(work.resolve("packages"));
+        final PluginPackageRecord installed;
+        try (var transaction = packages.prepareInstall(root)) {
+            installed = transaction.save();
+        }
+        var graph = new DesiredInputGraph(List.of(DesiredInputEntry.builder(
+                "generated-plugin", new PluginDefinitionRef(
+                    "sample-fibra-plugin", "main", "sample-fibra-plugin"))
+            .build()));
+        try (var engine = FibraEngine.builder(packages,
+                DeploymentTargetStore.inMemory())
+            .runtimeProvider(new JavaRuntimeProvider(List.of()))
+            .hostTerminationPort(ignored -> { }).build()) {
+            engine.startAsync().block(TIMEOUT);
+            var deployed = engine.submit(ApplyDeployment.builder(graph)
+                .expectedRevision(0)
+                .selections(List.of(new PluginSelection(installed.pluginId(),
+                    installed.packageRevision(), true)))
+                .configContext(ConfigContextSnapshot.empty()).build())
+                .block(TIMEOUT).view();
+
+            var observation = deployed.engine().current().orElseThrow().observations().get(
+                new ExecutionUnitKey("generated-plugin"));
+            assertEquals(ExecutionObservation.State.ACTIVE,
+                observation.aggregateState());
+            assertTrue(deployed.diagnostics().plugins().stream().anyMatch(plugin ->
+                plugin.pluginId().equals("sample-fibra-plugin")
+                    && plugin.state() == PluginInstanceState.ACTIVE));
         }
     }
 }

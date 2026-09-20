@@ -1,0 +1,11 @@
+format: 1
+id: ${pluginId}
+version: ${version}
+facets:
+  - id: main
+    role: host
+    runtime: java
+    target: host
+    payload: lib/plugin.jar
+    dependencies: []
+    capabilities: []

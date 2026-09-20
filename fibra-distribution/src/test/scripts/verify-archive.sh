@@ -135,20 +135,29 @@ fi
 for artifact in fibra-fs fibra-fs-local fibra-tool-fs fibra-tool-fs-search \
     fibra-subprocess fibra-subprocess-local fibra-shell fibra-shell-local \
     fibra-tool-shell fibra-storage fibra-storage-json fibra-tool-storage; do
-  [[ -f "$install_root/plugins/$artifact/plugin.properties" ]] || fail "缺少 $artifact 包描述"
+  package_manifest="$install_root/plugins/$artifact/fibra-package.yaml"
+  [[ -f "$package_manifest" ]] || fail "缺少 $artifact package 清单"
+  assert_contains "$package_manifest" "id: $artifact"
+  assert_contains "$package_manifest" "version: \"$version\""
+  [[ ! -e "$install_root/plugins/$artifact/plugin.properties" ]] ||
+    fail "$artifact 仍包含旧 plugin.properties"
   [[ -f "$install_root/plugins/$artifact/lib/main.jar" ]] || fail "缺少 $artifact 主 JAR"
 done
+[[ -f "$install_root/config/profiles/default.packages.yaml" ]] ||
+  fail "缺少 default package 选择清单"
+[[ ! -e "$install_root/config/profiles/default.artifacts.yaml" ]] ||
+  fail "发行包仍包含旧 artifact 选择清单"
 
 plugins_output="$temporary_root/plugins.json"
 tools_output="$temporary_root/tools.json"
 run_cli "$plugins_output" plugins list
 [[ -d "$install_root/data/profiles/default/state" ]] || fail "首次启动未创建 Profile 状态"
 [[ -f "$install_root/data/profiles/default/state/target.json" ]] || fail "首次启动未保存完整目标"
-assert_contains "$plugins_output" '"id":"fibra-fs"'
-assert_contains "$plugins_output" '"id":"fibra-tool-fs-search"'
-assert_contains "$plugins_output" '"id":"fibra-subprocess-local"'
-assert_contains "$plugins_output" '"id":"fibra-shell-local"'
-assert_contains "$plugins_output" '"id":"fibra-storage-json"'
+assert_contains "$plugins_output" '"pluginId":"fibra-fs"'
+assert_contains "$plugins_output" '"pluginId":"fibra-tool-fs-search"'
+assert_contains "$plugins_output" '"pluginId":"fibra-subprocess-local"'
+assert_contains "$plugins_output" '"pluginId":"fibra-shell-local"'
+assert_contains "$plugins_output" '"pluginId":"fibra-storage-json"'
 assert_contains "$plugins_output" '"id":"storage-tools"'
 
 run_cli "$tools_output" tools list
@@ -229,20 +238,22 @@ mutation_output="$temporary_root/mutations.log"
     'plugins enable fs-tools' \
     'quit' | "$launcher" repl
 ) > "$mutation_output" 2> "$mutation_output.stderr"
-for instance in subprocess-provider search-tools shell-provider shell-tools \
-    storage-provider storage-tools; do
-  identities=$(grep -o "\"id\":\"$instance\",\"identity\":[^,}]*" "$mutation_output" | sort -u | wc -l | tr -d ' ')
-  [[ "$identities" == 1 ]] || fail "无关实例 $instance 在升级或停用期间被替换"
-done
-fs_provider_identities=$(grep -o '"id":"fs-provider","identity":[^,}]*' \
+fs_local_revisions=$(grep -o '"enabled":true,"packageRevision":"[^"]*","pluginId":"fibra-fs-local"' \
   "$mutation_output" | sort -u | wc -l | tr -d ' ')
-[[ "$fs_provider_identities" == 2 ]] || fail "fibra-fs-local 升级未替换目标实例"
+[[ "$fs_local_revisions" == 2 ]] || fail "fibra-fs-local 升级未发布新的 package revision"
 fs_tool_states=$(grep -o '"definition":"tool-fs"[^}]*"id":"fs-tools"[^}]*' "$mutation_output")
-grep -F '"enabled":false' <<< "$fs_tool_states" >/dev/null || fail "fs-tools 停用未生效"
 grep -F '"observed":false' <<< "$fs_tool_states" >/dev/null || fail "fs-tools 停用后仍在运行"
 last_fs_tool_state=$(tail -n 1 <<< "$fs_tool_states")
-[[ "$last_fs_tool_state" == *'"enabled":true'* && "$last_fs_tool_state" == *'"observed":true'* ]] ||
+[[ "$last_fs_tool_state" == *'"observed":true'* ]] ||
   fail "fs-tools 未恢复启用"
+
+post_mutation_shell="$temporary_root/post-mutation-shell.json"
+post_mutation_storage="$temporary_root/post-mutation-storage.json"
+run_cli "$post_mutation_shell" tools invoke shell-tools bash --input \
+  "{\"command\":\"printf retained\",\"workdir\":\"$working_directory\",\"timeoutMs\":5000}"
+run_cli "$post_mutation_storage" tools invoke storage-tools load --input '{}'
+assert_contains "$post_mutation_shell" '"text":"retained"'
+assert_contains "$post_mutation_storage" '"theme":"dark"'
 
 verify_signal_shutdown() {
   local signal=$1

@@ -21,10 +21,8 @@ public final class FileToolEntrypoint implements PluginEntrypoint<FileToolConfig
         return PluginDefinition.builder("tool-fs", FileToolConfig.class,
                 () -> (context, config) -> {
                     var registrar = context.services().require(ContributionServices.REGISTRAR);
-                    var provider = context.plugins().current().orElseThrow(
-                        () -> new IllegalStateException("tool contribution requires plugin ownership")).id();
                     var descriptors = descriptors(config);
-                    return registrar.registerAll(context, provider, List.of(
+                    return registrar.registerAll(context, List.of(
                         new ContributionBinding<>(ToolContributions.KIND, "read", descriptors.get("read"),
                             (invocation, request) -> invocation.withCancellation(request.cancellation())
                                 .service(FileSystemServices.FILE_SYSTEM).invoke((fileContext, fileSystem) ->

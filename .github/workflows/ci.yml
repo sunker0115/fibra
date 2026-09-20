@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
+  maven-verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -28,6 +28,12 @@ jobs:
           distribution: zulu
           java-version: '21'
           cache: maven
+
+      - name: 配置项目锁定的 Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: client/.node-version
+          package-manager-cache: false
 
       - name: 配置项目锁定的 Maven 版本
         shell: bash
@@ -67,7 +73,7 @@ jobs:
         env:
           FIBRA_CI_DIAGNOSTICS_DIR: ${{ runner.temp }}/fibra-ci-hang-diagnostics
         run: |
-          PYTHONDONTWRITEBYTECODE=1 python3 verification/ci/test_verify_cli_tty.py
+          PYTHONDONTWRITEBYTECODE=1 python3 fibra-distribution/src/test/python/test_verify_cli_tty.py
           scripts/verify-short-timeout-diagnostics.sh
 
       - name: 全量构建与兼容性验收
@@ -79,15 +85,15 @@ jobs:
           -Dsurefire.timeout=300 -Dfailsafe.timeout=300
           clean verify
 
-      - name: 验证二十七个发布制品可复现
+      - name: 验证架构边界
+        run: scripts/verify-architecture-boundaries.sh
+
+      - name: 验证 Maven 制品与发行 ZIP/目录树可复现
         run: scripts/verify-reproducible-release.sh
 
-      - name: 验证仓库外项目可直接消费发布制品
-        env:
-          FIBRA_CI_DIAGNOSTICS_DIR: ${{ runner.temp }}/fibra-ci-hang-diagnostics
-        run: >-
-          scripts/run-ci-with-jvm-diagnostics.sh
-          scripts/verify-distribution.sh
+      - name: 验证空仓分发
+        if: ${{ github.event_name == 'push' }}
+        run: scripts/verify-distribution.sh
 
       - name: 上传失败现场
         if: failure()
@@ -100,3 +106,30 @@ jobs:
             **/target/failsafe-reports
           if-no-files-found: warn
           retention-days: 7
+
+  npm-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: 配置项目锁定的 Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: client/.node-version
+          package-manager-cache: false
+
+      - name: 配置项目锁定的 pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          package_json_file: client/package.json
+          run_install: false
+
+      - name: 确认 pnpm 版本
+        run: pnpm --version
+
+      - name: 验证纯 API 与协议 npm 包
+        run: |
+          pnpm --dir client install --frozen-lockfile
+          scripts/verify-client-packages.sh

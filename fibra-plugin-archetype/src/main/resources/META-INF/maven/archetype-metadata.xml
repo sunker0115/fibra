@@ -14,6 +14,7 @@
         <include>pom.xml</include>
         <include>README.md</include>
         <include>src/main/resources/**</include>
+        <include>src/plugin/fibra-package.yaml</include>
       </includes>
     </fileSet>
     <fileSet filtered="true" packaged="true">
@@ -24,7 +25,6 @@
       <directory>src</directory>
       <includes>
         <include>assembly/plugin.xml</include>
-        <include>plugin/plugin.properties</include>
       </includes>
     </fileSet>
   </fileSets>

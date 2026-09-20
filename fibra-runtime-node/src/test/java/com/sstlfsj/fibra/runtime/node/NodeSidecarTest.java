@@ -770,14 +770,19 @@ class NodeSidecarTest {
         var script = work.resolve("sidecar.mjs");
         Files.writeString(script, disableThenRespondScript());
         var disableRequests = new AtomicInteger();
+        var disableForwarded = new java.util.concurrent.CountDownLatch(2);
         var options = NodeRuntimeOptions.defaults(node(), work.resolve("sessions"));
 
         try (var session = NodeSidecar.start(script, options,
-            disableRequests::incrementAndGet).block()) {
+            () -> {
+                disableRequests.incrementAndGet();
+                disableForwarded.countDown();
+            }).block()) {
             assertEquals("ok", session.request("trigger-disable", Map.of(),
                 Duration.ofSeconds(2)).block());
             assertEquals("still-running", session.request("echo", Map.of(),
                 Duration.ofSeconds(2)).block());
+            assertTrue(disableForwarded.await(2, TimeUnit.SECONDS));
             assertEquals(2, disableRequests.get());
         }
     }

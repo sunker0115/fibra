@@ -1,17 +1,26 @@
 package com.sstlfsj.fibra.benchmarks;
 
 import com.sstlfsj.fibra.PluginDefinition;
+import com.sstlfsj.fibra.artifact.ExecutionTarget;
+import com.sstlfsj.fibra.artifact.FacetId;
+import com.sstlfsj.fibra.artifact.PluginId;
+import com.sstlfsj.fibra.artifact.PluginPackageStore;
+import com.sstlfsj.fibra.config.ConfigContextSnapshot;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
-import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
+import com.sstlfsj.fibra.config.PluginDefinitionRef;
+import com.sstlfsj.fibra.engine.BuiltInFacet;
+import com.sstlfsj.fibra.engine.BuiltInPluginPackage;
+import com.sstlfsj.fibra.engine.DeploymentTargetStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
-import com.sstlfsj.fibra.engine.PluginCatalog;
-import com.sstlfsj.fibra.engine.PluginCatalogEntry;
 import com.sstlfsj.fibra.engine.TargetSaveState;
 import com.sstlfsj.fibra.registry.PluginAuditEntry;
 import com.sstlfsj.fibra.registry.PluginAuditRepository;
-import com.sstlfsj.fibra.registry.PluginEnableRequest;
+import com.sstlfsj.fibra.registry.PluginDeploymentRequest;
 import com.sstlfsj.fibra.registry.PluginRegistry;
+import com.sstlfsj.fibra.runtime.java.JavaBuiltInPackage;
+import com.sstlfsj.fibra.runtime.java.JavaDefinitionEntry;
+import com.sstlfsj.fibra.runtime.java.JavaRuntimeProvider;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -27,7 +36,12 @@ import org.openjdk.jmh.annotations.Warmup;
 import reactor.core.publisher.Mono;
 
 import java.time.Instant;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Thread)
@@ -39,36 +53,56 @@ import java.util.concurrent.TimeUnit;
 public class EngineTransactionBenchmark {
     private static final String DEFINITION_NAME = "bench-noop";
     private static final String INSTANCE_ID = "bench-instance";
-    private static final PluginEnableRequest ENABLE = PluginEnableRequest.of(
-        INSTANCE_ID, DEFINITION_NAME, com.sstlfsj.fibra.value.LiteralValue.of(null));
+    private static final PluginId PLUGIN_ID = new PluginId("benchmark-host");
+    private static final FacetId FACET_ID = new FacetId("main");
 
     private FibraEngine engine;
     private PluginRegistry registry;
+    private Path work;
 
     @Setup
-    public void setup() {
+    public void setup() throws Exception {
         var definition = PluginDefinition.builder(DEFINITION_NAME, Void.class,
             () -> (context, config) -> Mono.empty()).build();
-        var catalog = PluginCatalog.of(new PluginCatalogEntry<>(definition,
-            ignored -> null));
+        var metadata = BuiltInPluginPackage.builder().pluginId(PLUGIN_ID)
+            .version("1.0.0").packageDigest("a".repeat(64))
+            .facets(List.of(BuiltInFacet.builder(FACET_ID,
+                    JavaRuntimeProvider.RUNTIME_ID, new ExecutionTarget("host"))
+                .definitionIds(Set.of(DEFINITION_NAME)).build()))
+            .build();
+        var builtIn = new JavaBuiltInPackage(metadata,
+            Map.of(FACET_ID, List.of(new JavaDefinitionEntry<>(definition,
+                ignored -> null))));
         var desired = new DesiredInputGraph(List.of(
-            DesiredInputEntry.builder(INSTANCE_ID, DEFINITION_NAME).build()));
-        engine = FibraEngine.builder(new InMemoryDesiredStateRepository(desired))
-            .catalog(catalog).build();
-        registry = new PluginRegistry(engine, new DiscardingAudit());
-        engine.start().block();
+            DesiredInputEntry.builder(INSTANCE_ID,
+                new PluginDefinitionRef(PLUGIN_ID.value(), FACET_ID.value(),
+                    DEFINITION_NAME)).build()));
+        work = Files.createTempDirectory("fibra-engine-benchmark-");
+        var packages = new PluginPackageStore(work.resolve("packages"));
+        engine = FibraEngine.builder(packages, DeploymentTargetStore.inMemory())
+            .runtimeProvider(new JavaRuntimeProvider(List.of(builtIn)))
+            .hostTerminationPort(request -> { }).build();
+        registry = new PluginRegistry(engine, packages, new DiscardingAudit());
+        engine.startAsync().block();
+        registry.deploy(new PluginDeploymentRequest(List.of(metadata.selection(true)),
+            desired, ConfigContextSnapshot.empty())).block();
     }
 
     @TearDown
-    public void tearDown() {
+    public void tearDown() throws Exception {
         engine.close();
+        try (var paths = Files.walk(work)) {
+            for (var path : paths.sorted(Comparator.reverseOrder()).toList()) {
+                Files.delete(path);
+            }
+        }
     }
 
     @Benchmark
     @OperationsPerInvocation(2)
     public String disableAndEnable() {
         registry.disable(INSTANCE_ID).block();
-        registry.enable(ENABLE).block();
+        registry.enable(INSTANCE_ID).block();
         return registry.snapshot().viewRevision();
     }
 

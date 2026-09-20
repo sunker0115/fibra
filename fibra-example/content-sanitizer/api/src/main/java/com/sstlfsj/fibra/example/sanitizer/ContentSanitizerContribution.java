@@ -3,6 +3,7 @@ package com.sstlfsj.fibra.example.sanitizer;
 import com.sstlfsj.fibra.bridge.ContributionCodec;
 import com.sstlfsj.fibra.bridge.ContributionId;
 import com.sstlfsj.fibra.bridge.ContributionKind;
+import com.sstlfsj.fibra.value.LiteralValue;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -32,31 +33,31 @@ public final class ContentSanitizerContribution {
         }
 
         @Override
-        public SanitizerDescriptor decodeDescriptor(Object descriptor) {
-            var values = object(descriptor, "descriptor");
+        public SanitizerDescriptor decodeDescriptor(LiteralValue descriptor) {
+            var values = object(descriptor.toJava(), "descriptor");
             return new SanitizerDescriptor(text(values, "title"),
                 stringList(values, "supportedRules"));
         }
 
         @Override
-        public Object encodeInput(SanitizeRequest input) {
-            return Map.of("text", input.text());
+        public LiteralValue encodeInput(SanitizeRequest input) {
+            return LiteralValue.of(Map.of("text", input.text()));
         }
 
         @Override
-        public SanitizeRequest decodeInput(Object input) {
-            return new SanitizeRequest(text(object(input, "input"), "text"));
+        public SanitizeRequest decodeInput(LiteralValue input) {
+            return new SanitizeRequest(text(object(input.toJava(), "input"), "text"));
         }
 
         @Override
-        public Object encodeOutput(SanitizeResult output) {
-            return Map.of("text", output.text(), "redactions", output.redactions(),
-                "total", output.total());
+        public LiteralValue encodeOutput(SanitizeResult output) {
+            return LiteralValue.of(Map.of("text", output.text(), "redactions", output.redactions(),
+                "total", output.total()));
         }
 
         @Override
-        public SanitizeResult decodeOutput(Object output) {
-            var values = object(output, "output");
+        public SanitizeResult decodeOutput(LiteralValue output) {
+            var values = object(output.toJava(), "output");
             return new SanitizeResult(text(values, "text"),
                 counts(values.get("redactions")), integer(values, "total"));
         }

@@ -1,0 +1,11 @@
+format: 1
+id: fibra-subprocess
+version: "${project.version}"
+facets:
+  - id: main
+    role: host
+    runtime: java
+    target: host
+    payload: lib/main.jar
+    dependencies: []
+    capabilities: []

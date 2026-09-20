@@ -1,75 +1,11 @@
 package com.sstlfsj.fibra.registry;
 
-import com.sstlfsj.fibra.artifact.ArtifactId;
-import com.sstlfsj.fibra.artifact.RuntimeId;
-
 import java.nio.file.Path;
 import java.util.Objects;
 
-public final class PluginInstallRequest {
-    private final ArtifactId artifactId;
-    private final RuntimeId runtimeId;
-    private final String version;
-    private final Path source;
-
-    private PluginInstallRequest(Builder builder) {
-        artifactId = Objects.requireNonNull(builder.artifactId, "artifactId");
-        runtimeId = Objects.requireNonNull(builder.runtimeId, "runtimeId");
-        if (builder.version == null || builder.version.isBlank()) {
-            throw new IllegalArgumentException("version must not be blank");
-        }
-        version = builder.version;
-        source = Objects.requireNonNull(builder.source, "source");
-    }
-
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    public ArtifactId artifactId() {
-        return artifactId;
-    }
-
-    public RuntimeId runtimeId() {
-        return runtimeId;
-    }
-
-    public String version() {
-        return version;
-    }
-
-    public Path source() {
-        return source;
-    }
-
-    public static final class Builder {
-        private ArtifactId artifactId;
-        private RuntimeId runtimeId;
-        private String version;
-        private Path source;
-
-        public Builder artifactId(ArtifactId value) {
-            artifactId = value;
-            return this;
-        }
-
-        public Builder runtimeId(RuntimeId value) {
-            runtimeId = value;
-            return this;
-        }
-
-        public Builder version(String value) {
-            version = value;
-            return this;
-        }
-
-        public Builder source(Path value) {
-            source = value;
-            return this;
-        }
-
-        public PluginInstallRequest build() {
-            return new PluginInstallRequest(this);
-        }
+/** package 身份只从严格读取的包内元数据取得；启用门必须由调用者显式指定。 */
+public record PluginInstallRequest(Path source, boolean enabled) {
+    public PluginInstallRequest {
+        source = Objects.requireNonNull(source, "source").toAbsolutePath().normalize();
     }
 }

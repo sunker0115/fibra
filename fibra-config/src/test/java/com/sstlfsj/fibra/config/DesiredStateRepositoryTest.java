@@ -74,7 +74,7 @@ class DesiredStateRepositoryTest {
     @Test
     void fileRepositoryIsAnExplicitReadOnlySource(@TempDir Path work) throws Exception {
         var root = work.resolve("fibra.yaml");
-        Files.writeString(root, "- id: sample\n  plugin: sample\n");
+        Files.writeString(root, "- id: sample\n  plugin: {id: sample-plugin, facet: main, definition: sample}\n");
         var repository = new FileDesiredStateRepository(root, ConfigLimits.defaults());
         assertFalse(repository.writable());
         assertEquals(1, repository.load().graph().plugins().size());
@@ -83,6 +83,7 @@ class DesiredStateRepositoryTest {
     }
 
     private static DesiredInputEntry entry(String id) {
-        return DesiredInputEntry.builder(id, "sample").build();
+        return DesiredInputEntry.builder(id,
+            new PluginDefinitionRef("sample-plugin", "main", "sample")).build();
     }
 }

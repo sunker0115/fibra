@@ -7,9 +7,9 @@
   <includeBaseDirectory>false</includeBaseDirectory>
   <files>
     <file>
-      <source>${project.basedir}/src/plugin/plugin.properties</source>
+      <source>${project.basedir}/src/plugin/fibra-package.yaml</source>
       <outputDirectory>/</outputDirectory>
-      <destName>plugin.properties</destName>
+      <destName>fibra-package.yaml</destName>
     </file>
     <file>
       <source>${project.build.directory}/${project.build.finalName}.jar</source>

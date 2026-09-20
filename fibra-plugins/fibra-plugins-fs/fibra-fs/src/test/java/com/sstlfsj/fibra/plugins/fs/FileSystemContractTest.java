@@ -108,11 +108,10 @@ class FileSystemContractTest {
     }
 
     @Test
-    void manifestIsTheContractOnlyPluginWithTheProjectVersion() throws IOException {
+    void runtimeDescriptorDoesNotDuplicateLogicalPackageMetadata() throws IOException {
         try (var input = FileSystemContractTest.class.getResourceAsStream("/META-INF/fibra/plugin.yaml")) {
             var manifest = new String(input.readAllBytes(), StandardCharsets.UTF_8);
-            assertEquals("id: fibra-fs\nversion: "
-                + System.getProperty("fibra.test.projectVersion") + "\nrequires: []\n", manifest);
+            assertEquals("{}\n", manifest);
         }
     }
 }

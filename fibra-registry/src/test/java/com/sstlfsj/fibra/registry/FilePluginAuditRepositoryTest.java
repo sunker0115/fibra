@@ -123,7 +123,7 @@ class FilePluginAuditRepositoryTest {
     }
 
     @Test
-    void successfulAuditEntryRequiresASavedTargetInEveryConstructionPath(@TempDir Path work)
+    void successfulAuditEntryRejectsFailedOrUnconfirmedTargetSaveInEveryConstructionPath(@TempDir Path work)
         throws Exception {
         for (var state : List.of(TargetSaveState.NOT_SAVED, TargetSaveState.UNCONFIRMED)) {
             assertThrows(IllegalArgumentException.class, () -> PluginAuditEntry.builder().sequence(1)
@@ -139,6 +139,18 @@ class FilePluginAuditRepositoryTest {
             Files.writeString(file, "1\t2026-09-11T00:00:00Z\taW5zdGFsbA\tc2FtcGxl\ttrue\t"
                 + state + "\tMQ\tYWNjZXB0ZWQ\n");
             assertThrows(IllegalStateException.class, () -> new FilePluginAuditRepository(file));
+        }
+    }
+
+    @Test
+    void acceptedNoopAndReconcileCanBePersistedWithoutATargetSave(@TempDir Path work) {
+        var file = work.resolve("audit.log");
+        try (var audit = new FilePluginAuditRepository(file)) {
+            audit.append("reconcile", "deployment", true, TargetSaveState.NOT_APPLICABLE, "1", "accepted");
+        }
+        try (var reopened = new FilePluginAuditRepository(file)) {
+            assertTrue(reopened.history().getFirst().succeeded());
+            assertEquals(TargetSaveState.NOT_APPLICABLE, reopened.history().getFirst().targetSaveState());
         }
     }
 

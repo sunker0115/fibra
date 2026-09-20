@@ -1,0 +1,13 @@
+format: 1
+id: fibra-tool-storage
+version: "${project.version}"
+facets:
+  - id: main
+    role: host
+    runtime: java
+    target: host
+    payload: lib/main.jar
+    dependencies:
+      - pluginId: fibra-storage
+        facetId: main
+    capabilities: []

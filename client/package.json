@@ -1,0 +1,22 @@
+{
+  "name": "fibra-client-workspace",
+  "version": "0.5.0-SNAPSHOT",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "scripts": {
+    "build": "pnpm run build:core",
+    "build:core": "pnpm --filter @sstlfsj/fibra-client-api build && pnpm --filter @sstlfsj/fibra-client-protocol build",
+    "typecheck:core": "pnpm run build:core",
+    "test": "pnpm -r test",
+    "typecheck": "tsc --noEmit",
+    "lint:boundaries": "node scripts/check-core-boundaries.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.2",
+    "typescript": "5.9.3"
+  }
+}

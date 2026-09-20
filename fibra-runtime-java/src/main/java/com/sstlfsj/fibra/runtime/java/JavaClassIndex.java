@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.jar.JarFile;
 import java.util.zip.ZipFile;
 
@@ -14,12 +13,7 @@ import java.util.zip.ZipFile;
 final class JavaClassIndex {
     private static final String VERSIONS = "META-INF/versions/";
 
-    static void validate(Map<ArtifactId, JavaManifestReader.JavaPackage> packages,
-                         ClassLoader parent, List<String> parentPackages) {
-        packages.forEach((id, artifact) -> validate(id, artifact.jars(), parent, parentPackages));
-    }
-
-    private static void validate(ArtifactId owner, List<Path> jars,
+    static void validate(ArtifactId owner, List<Path> jars,
                                  ClassLoader parent, List<String> parentPackages) {
         var classes = new LinkedHashMap<String, Path>();
         try {

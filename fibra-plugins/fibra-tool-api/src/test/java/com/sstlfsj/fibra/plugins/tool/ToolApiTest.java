@@ -114,10 +114,10 @@ class ToolApiTest {
         var request = ToolRequest.of(Map.of("path", "note.txt"));
         var result = ToolResult.text("done");
 
-        assertEquals(descriptor, codec.decodeDescriptor(Map.of(
+        assertEquals(descriptor, codec.decodeDescriptor(LiteralValue.of(Map.of(
             "displayName", "Remote", "description", "Remote tool",
             "inputSchema", descriptor.inputSchema().toJava(),
-            "outputSchema", descriptor.outputSchema().toJava())));
+            "outputSchema", descriptor.outputSchema().toJava()))));
         assertEquals(request.arguments(), codec.decodeInput(codec.encodeInput(request)).arguments());
         assertEquals(result, codec.decodeOutput(codec.encodeOutput(result)));
     }
@@ -129,7 +129,7 @@ class ToolApiTest {
 
         assertEquals(2, codec.schemaVersion());
         assertEquals(Map.of("content", List.of(Map.of("type", "text", "text", "{\"count\":1}")),
-            "structuredContent", Map.of("count", java.math.BigDecimal.ONE)), codec.encodeOutput(result));
+            "structuredContent", Map.of("count", java.math.BigDecimal.ONE)), codec.encodeOutput(result).toJava());
         assertEquals(result, codec.decodeOutput(codec.encodeOutput(result)));
     }
 
@@ -139,10 +139,11 @@ class ToolApiTest {
         for (var value : java.util.Arrays.asList(null, "text", 42, true, List.of(1, 2), Map.of("key", "value"))) {
             var result = ToolResult.structured(LiteralValue.of(value));
             assertEquals(result, codec.decodeOutput(codec.encodeOutput(result)));
-            assertTrue(((Map<?, ?>) codec.encodeOutput(result)).containsKey("structuredContent"));
+            assertTrue(((Map<?, ?>) codec.encodeOutput(result).toJava()).containsKey("structuredContent"));
         }
-        assertFalse(((Map<?, ?>) codec.encodeOutput(ToolResult.text("done"))).containsKey("structuredContent"));
-        assertEquals(new ToolResult(List.of(), Optional.empty()), codec.decodeOutput(Map.of("content", List.of())));
+        assertFalse(((Map<?, ?>) codec.encodeOutput(ToolResult.text("done")).toJava()).containsKey("structuredContent"));
+        assertEquals(new ToolResult(List.of(), Optional.empty()), codec.decodeOutput(
+            LiteralValue.of(Map.of("content", List.of()))));
     }
 
     @Test
@@ -151,10 +152,11 @@ class ToolApiTest {
         for (var content : List.of("not-array", List.of("text"), List.of(Map.of("type", "image", "data", "AA==")),
             List.of(Map.of("type", "text")), List.of(Map.of("type", "text", "text", 42)),
             List.of(Map.of("type", "text", "text", "ok", "extra", true)))) {
-            assertThrows(IllegalArgumentException.class, () -> codec.decodeOutput(Map.of("content", content)));
+            assertThrows(IllegalArgumentException.class, () -> codec.decodeOutput(
+                LiteralValue.of(Map.of("content", content))));
         }
-        assertThrows(IllegalArgumentException.class, () -> codec.decodeOutput(Map.of(
-            "content", List.of(), "isError", false)));
+        assertThrows(IllegalArgumentException.class, () -> codec.decodeOutput(LiteralValue.of(Map.of(
+            "content", List.of(), "isError", false))));
     }
 
     @Test
@@ -162,14 +164,14 @@ class ToolApiTest {
         var codec = ToolContributions.KIND.codec().orElseThrow();
 
         assertThrows(IllegalArgumentException.class,
-            () -> codec.decodeInput(Map.of("arguments", Map.of(), "extra", true)));
+            () -> codec.decodeInput(LiteralValue.of(Map.of("arguments", Map.of(), "extra", true))));
         assertThrows(IllegalArgumentException.class,
-            () -> codec.decodeOutput(Map.of("text", "done")));
+            () -> codec.decodeOutput(LiteralValue.of(Map.of("text", "done"))));
         assertThrows(IllegalArgumentException.class,
-            () -> codec.decodeOutput(Map.of("text", "done", "data", Map.of())));
+            () -> codec.decodeOutput(LiteralValue.of(Map.of("text", "done", "data", Map.of()))));
         assertThrows(IllegalArgumentException.class,
-            () -> codec.decodeDescriptor(Map.of("displayName", "name", "description", "desc",
-                "inputSchema", Map.of(), "outputSchema", Map.of(), "extra", true)));
+            () -> codec.decodeDescriptor(LiteralValue.of(Map.of("displayName", "name", "description", "desc",
+                "inputSchema", Map.of(), "outputSchema", Map.of(), "extra", true))));
     }
 
     @Test

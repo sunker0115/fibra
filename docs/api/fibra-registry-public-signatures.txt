@@ -82,65 +82,40 @@ public interface com.sstlfsj.fibra.registry.PluginAuditRepository extends java.l
 ## com.sstlfsj.fibra.registry.PluginDeploymentRequest
 Compiled from "PluginDeploymentRequest.java"
 public final class com.sstlfsj.fibra.registry.PluginDeploymentRequest extends java.lang.Record {
-  public com.sstlfsj.fibra.registry.PluginDeploymentRequest(java.util.List<com.sstlfsj.fibra.registry.PluginInstallRequest>, com.sstlfsj.fibra.config.DesiredInputGraph);
+  public com.sstlfsj.fibra.registry.PluginDeploymentRequest(java.util.List<com.sstlfsj.fibra.engine.PluginSelection>, com.sstlfsj.fibra.config.DesiredInputGraph, com.sstlfsj.fibra.config.ConfigContextSnapshot);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
-  public java.util.List<com.sstlfsj.fibra.registry.PluginInstallRequest> artifacts();
+  public java.util.List<com.sstlfsj.fibra.engine.PluginSelection> selections();
   public com.sstlfsj.fibra.config.DesiredInputGraph graph();
-}
-## com.sstlfsj.fibra.registry.PluginEnableRequest
-Compiled from "PluginEnableRequest.java"
-public final class com.sstlfsj.fibra.registry.PluginEnableRequest {
-  public static com.sstlfsj.fibra.registry.PluginEnableRequest$Builder builder(java.lang.String, java.lang.String);
-  public static com.sstlfsj.fibra.registry.PluginEnableRequest of(java.lang.String, java.lang.String, com.sstlfsj.fibra.value.LiteralValue);
-  public java.lang.String instanceId();
-  public java.lang.String definitionName();
-  public java.lang.String parentId();
-  public com.sstlfsj.fibra.value.LiteralValue config();
-  public java.util.Map<java.lang.String, com.sstlfsj.fibra.value.LiteralValue> realms();
-  public java.util.Map<java.lang.String, com.sstlfsj.fibra.value.LiteralValue> intercepts();
-}
-## com.sstlfsj.fibra.registry.PluginEnableRequest$Builder
-Compiled from "PluginEnableRequest.java"
-public final class com.sstlfsj.fibra.registry.PluginEnableRequest$Builder {
-  public com.sstlfsj.fibra.registry.PluginEnableRequest$Builder config(com.sstlfsj.fibra.value.LiteralValue);
-  public com.sstlfsj.fibra.registry.PluginEnableRequest$Builder parentId(java.lang.String);
-  public com.sstlfsj.fibra.registry.PluginEnableRequest$Builder realms(java.util.Map<java.lang.String, com.sstlfsj.fibra.value.LiteralValue>);
-  public com.sstlfsj.fibra.registry.PluginEnableRequest$Builder intercepts(java.util.Map<java.lang.String, com.sstlfsj.fibra.value.LiteralValue>);
-  public com.sstlfsj.fibra.registry.PluginEnableRequest build();
+  public com.sstlfsj.fibra.config.ConfigContextSnapshot configContext();
 }
 ## com.sstlfsj.fibra.registry.PluginInstallRequest
 Compiled from "PluginInstallRequest.java"
-public final class com.sstlfsj.fibra.registry.PluginInstallRequest {
-  public static com.sstlfsj.fibra.registry.PluginInstallRequest$Builder builder();
-  public com.sstlfsj.fibra.artifact.ArtifactId artifactId();
-  public com.sstlfsj.fibra.artifact.RuntimeId runtimeId();
-  public java.lang.String version();
+public final class com.sstlfsj.fibra.registry.PluginInstallRequest extends java.lang.Record {
+  public com.sstlfsj.fibra.registry.PluginInstallRequest(java.nio.file.Path, boolean);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
   public java.nio.file.Path source();
-}
-## com.sstlfsj.fibra.registry.PluginInstallRequest$Builder
-Compiled from "PluginInstallRequest.java"
-public final class com.sstlfsj.fibra.registry.PluginInstallRequest$Builder {
-  public com.sstlfsj.fibra.registry.PluginInstallRequest$Builder();
-  public com.sstlfsj.fibra.registry.PluginInstallRequest$Builder artifactId(com.sstlfsj.fibra.artifact.ArtifactId);
-  public com.sstlfsj.fibra.registry.PluginInstallRequest$Builder runtimeId(com.sstlfsj.fibra.artifact.RuntimeId);
-  public com.sstlfsj.fibra.registry.PluginInstallRequest$Builder version(java.lang.String);
-  public com.sstlfsj.fibra.registry.PluginInstallRequest$Builder source(java.nio.file.Path);
-  public com.sstlfsj.fibra.registry.PluginInstallRequest build();
+  public boolean enabled();
 }
 ## com.sstlfsj.fibra.registry.PluginRegistry
 Compiled from "PluginRegistry.java"
 public final class com.sstlfsj.fibra.registry.PluginRegistry {
-  public com.sstlfsj.fibra.registry.PluginRegistry(com.sstlfsj.fibra.engine.FibraEngine, com.sstlfsj.fibra.registry.PluginAuditRepository);
+  public com.sstlfsj.fibra.registry.PluginRegistry(com.sstlfsj.fibra.engine.FibraEngine, com.sstlfsj.fibra.artifact.PluginPackageStore, com.sstlfsj.fibra.registry.PluginAuditRepository);
   public reactor.core.publisher.Mono<com.sstlfsj.fibra.registry.RegistrySnapshot> install(com.sstlfsj.fibra.registry.PluginInstallRequest);
-  public reactor.core.publisher.Mono<com.sstlfsj.fibra.registry.RegistrySnapshot> upgrade(com.sstlfsj.fibra.registry.PluginInstallRequest);
+  public reactor.core.publisher.Mono<com.sstlfsj.fibra.registry.RegistrySnapshot> upgrade(java.nio.file.Path);
+  public reactor.core.publisher.Mono<com.sstlfsj.fibra.registry.RegistrySnapshot> enablePackage(com.sstlfsj.fibra.artifact.PluginId);
+  public reactor.core.publisher.Mono<com.sstlfsj.fibra.registry.RegistrySnapshot> disablePackage(com.sstlfsj.fibra.artifact.PluginId);
+  public reactor.core.publisher.Mono<com.sstlfsj.fibra.registry.RegistrySnapshot> uninstall(com.sstlfsj.fibra.artifact.PluginId);
   public reactor.core.publisher.Mono<com.sstlfsj.fibra.registry.RegistrySnapshot> deploy(com.sstlfsj.fibra.registry.PluginDeploymentRequest);
-  public reactor.core.publisher.Mono<com.sstlfsj.fibra.registry.RegistrySnapshot> enable(com.sstlfsj.fibra.registry.PluginEnableRequest);
+  public reactor.core.publisher.Mono<com.sstlfsj.fibra.registry.RegistrySnapshot> upsert(java.lang.String, com.sstlfsj.fibra.config.DesiredInputEntry);
   public reactor.core.publisher.Mono<com.sstlfsj.fibra.registry.RegistrySnapshot> enable(java.lang.String);
   public reactor.core.publisher.Mono<com.sstlfsj.fibra.registry.RegistrySnapshot> disable(java.lang.String);
   public reactor.core.publisher.Mono<com.sstlfsj.fibra.registry.RegistrySnapshot> move(java.lang.String, java.lang.String, int);
-  public reactor.core.publisher.Mono<com.sstlfsj.fibra.registry.RegistrySnapshot> uninstall(com.sstlfsj.fibra.artifact.ArtifactId);
+  public reactor.core.publisher.Mono<com.sstlfsj.fibra.registry.RegistrySnapshot> remove(java.lang.String);
+  public reactor.core.publisher.Mono<com.sstlfsj.fibra.registry.RegistrySnapshot> reconcileCurrent();
   public com.sstlfsj.fibra.registry.RegistrySnapshot snapshot();
   public java.util.Optional<com.sstlfsj.fibra.registry.RegistryPluginState> get(java.lang.String);
   public java.util.List<com.sstlfsj.fibra.registry.RegistryPluginState> list();
@@ -151,35 +126,38 @@ public final class com.sstlfsj.fibra.registry.PluginRegistry {
 ## com.sstlfsj.fibra.registry.RegistryPluginState
 Compiled from "RegistryPluginState.java"
 public final class com.sstlfsj.fibra.registry.RegistryPluginState extends java.lang.Record {
-  public com.sstlfsj.fibra.registry.RegistryPluginState(java.lang.String, com.sstlfsj.fibra.config.DesiredInputEntry, com.sstlfsj.fibra.engine.PluginInstanceSnapshot);
+  public com.sstlfsj.fibra.registry.RegistryPluginState(java.lang.String, com.sstlfsj.fibra.config.DesiredInputEntry, com.sstlfsj.fibra.engine.ExecutionObservation);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
-  public java.lang.String instanceId();
+  public java.lang.String entryId();
   public com.sstlfsj.fibra.config.DesiredInputEntry desired();
-  public com.sstlfsj.fibra.engine.PluginInstanceSnapshot observed();
+  public com.sstlfsj.fibra.engine.ExecutionObservation observed();
 }
 ## com.sstlfsj.fibra.registry.RegistrySnapshot
 Compiled from "RegistrySnapshot.java"
 public final class com.sstlfsj.fibra.registry.RegistrySnapshot extends java.lang.Record {
-  public com.sstlfsj.fibra.registry.RegistrySnapshot(java.lang.String, java.util.Map<com.sstlfsj.fibra.artifact.ArtifactId, com.sstlfsj.fibra.artifact.ArtifactRecord>, com.sstlfsj.fibra.config.DesiredInputGraph, java.util.Map<java.lang.String, com.sstlfsj.fibra.engine.PluginInstanceSnapshot>, java.util.List<com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure>);
+  public com.sstlfsj.fibra.registry.RegistrySnapshot(java.lang.String, com.sstlfsj.fibra.engine.EngineSnapshot, com.sstlfsj.fibra.engine.EngineDiagnostics, java.util.List<com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure>);
+  public java.util.Optional<com.sstlfsj.fibra.engine.DeploymentTarget> target();
+  public java.util.Optional<com.sstlfsj.fibra.engine.CurrentAttemptSnapshot> current();
+  public java.util.Map<com.sstlfsj.fibra.artifact.PluginId, com.sstlfsj.fibra.engine.PluginSelection> selections();
+  public com.sstlfsj.fibra.config.DesiredInputGraph desiredGraph();
+  public java.util.Map<java.lang.String, com.sstlfsj.fibra.engine.ExecutionObservation> observed();
   public static com.sstlfsj.fibra.registry.RegistrySnapshot$Builder builder();
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public java.lang.String viewRevision();
-  public java.util.Map<com.sstlfsj.fibra.artifact.ArtifactId, com.sstlfsj.fibra.artifact.ArtifactRecord> artifacts();
-  public com.sstlfsj.fibra.config.DesiredInputGraph desiredGraph();
-  public java.util.Map<java.lang.String, com.sstlfsj.fibra.engine.PluginInstanceSnapshot> observed();
+  public com.sstlfsj.fibra.engine.EngineSnapshot engine();
+  public com.sstlfsj.fibra.engine.EngineDiagnostics engineDiagnostics();
   public java.util.List<com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure> auditFailures();
 }
 ## com.sstlfsj.fibra.registry.RegistrySnapshot$Builder
 Compiled from "RegistrySnapshot.java"
 public final class com.sstlfsj.fibra.registry.RegistrySnapshot$Builder {
   public com.sstlfsj.fibra.registry.RegistrySnapshot$Builder viewRevision(java.lang.String);
-  public com.sstlfsj.fibra.registry.RegistrySnapshot$Builder artifacts(java.util.Map<com.sstlfsj.fibra.artifact.ArtifactId, com.sstlfsj.fibra.artifact.ArtifactRecord>);
-  public com.sstlfsj.fibra.registry.RegistrySnapshot$Builder desiredGraph(com.sstlfsj.fibra.config.DesiredInputGraph);
-  public com.sstlfsj.fibra.registry.RegistrySnapshot$Builder observed(java.util.Map<java.lang.String, com.sstlfsj.fibra.engine.PluginInstanceSnapshot>);
+  public com.sstlfsj.fibra.registry.RegistrySnapshot$Builder engine(com.sstlfsj.fibra.engine.EngineSnapshot);
+  public com.sstlfsj.fibra.registry.RegistrySnapshot$Builder engineDiagnostics(com.sstlfsj.fibra.engine.EngineDiagnostics);
   public com.sstlfsj.fibra.registry.RegistrySnapshot$Builder auditFailures(java.util.List<com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure>);
   public com.sstlfsj.fibra.registry.RegistrySnapshot build();
 }

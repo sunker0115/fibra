@@ -1,6 +1,1 @@
-id: fibra-tool-fs
-version: ${project.version}
 entrypoint: com.sstlfsj.fibra.plugins.fs.tool.FileToolEntrypoint
-requires:
-  - id: fibra-fs
-    version: ${project.version}

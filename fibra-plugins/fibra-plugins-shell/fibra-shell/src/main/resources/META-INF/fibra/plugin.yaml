@@ -1,3 +1,1 @@
-id: fibra-shell
-version: ${project.version}
-requires: []
+{}

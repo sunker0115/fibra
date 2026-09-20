@@ -1,5 +1,8 @@
 package com.sstlfsj.fibra.cli;
 
+import com.sstlfsj.fibra.config.ConfigContextSnapshot;
+import com.sstlfsj.fibra.value.LiteralValue;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -40,8 +43,8 @@ record CliPaths(Path home, String profile, Path configRoot, Path pluginsRoot,
         return configRoot.resolve("profiles").resolve(profile + ".yaml");
     }
 
-    Path profileArtifactsFile() {
-        return configRoot.resolve("profiles").resolve(profile + ".artifacts.yaml");
+    Path profilePackagesFile() {
+        return configRoot.resolve("profiles").resolve(profile + ".packages.yaml");
     }
 
     Path profileData() {
@@ -52,8 +55,8 @@ record CliPaths(Path home, String profile, Path configRoot, Path pluginsRoot,
         return profileData().resolve("state");
     }
 
-    Path artifactRoot() {
-        return profileData().resolve("artifacts");
+    Path packageStoreRoot() {
+        return profileData().resolve("packages");
     }
 
     Path auditFile() {
@@ -76,15 +79,16 @@ record CliPaths(Path home, String profile, Path configRoot, Path pluginsRoot,
         return profileData().resolve("repl.history");
     }
 
-    Map<String, Object> configContext() {
-        return Map.of("fibra", Map.of(
-            "home", home.toString(),
-            "dataRoot", dataRoot.toString(),
-            "workspaceRoot", workspaceRoot().toString(),
-            "storageRoot", storageRoot().toString(),
-            "nodeExecutable", nodeExecutable.toString(),
-            "rgExecutable", rgExecutable.toString(),
-            "bashExecutable", bashExecutable.toString()));
+    ConfigContextSnapshot configContext() {
+        return ConfigContextSnapshot.of((LiteralValue.ObjectValue) LiteralValue.of(
+            Map.of("fibra", Map.of(
+                "home", home.toString(),
+                "dataRoot", dataRoot.toString(),
+                "workspaceRoot", workspaceRoot().toString(),
+                "storageRoot", storageRoot().toString(),
+                "nodeExecutable", nodeExecutable.toString(),
+                "rgExecutable", rgExecutable.toString(),
+                "bashExecutable", bashExecutable.toString()))));
     }
 
     private static Path bundledOr(Path home, String name) {

@@ -3,7 +3,6 @@
 Compiled from "ConfigContextSnapshot.java"
 public final class com.sstlfsj.fibra.config.ConfigContextSnapshot {
   public static com.sstlfsj.fibra.config.ConfigContextSnapshot empty();
-  public static com.sstlfsj.fibra.config.ConfigContextSnapshot of(java.util.Map<java.lang.String, ?>);
   public static com.sstlfsj.fibra.config.ConfigContextSnapshot of(com.sstlfsj.fibra.value.LiteralValue$ObjectValue);
   public com.sstlfsj.fibra.value.LiteralValue$ObjectValue values();
   public java.lang.String revision();
@@ -142,10 +141,10 @@ public final class com.sstlfsj.fibra.config.DesiredIncludeContent$Uncollected ex
 ## com.sstlfsj.fibra.config.DesiredInputEntry
 Compiled from "DesiredInputEntry.java"
 public final class com.sstlfsj.fibra.config.DesiredInputEntry implements com.sstlfsj.fibra.config.DesiredInputNode {
-  public static com.sstlfsj.fibra.config.DesiredInputEntry$Builder builder(java.lang.String, java.lang.String);
+  public static com.sstlfsj.fibra.config.DesiredInputEntry$Builder builder(java.lang.String, com.sstlfsj.fibra.config.PluginDefinitionRef);
   public com.sstlfsj.fibra.config.DesiredInputEntry$Builder toBuilder();
   public java.lang.String id();
-  public java.lang.String definitionName();
+  public com.sstlfsj.fibra.config.PluginDefinitionRef definitionRef();
   public boolean enabled();
   public com.sstlfsj.fibra.value.LiteralValue when();
   public java.util.Map<java.lang.String, com.sstlfsj.fibra.value.LiteralValue> context();
@@ -308,6 +307,17 @@ public final class com.sstlfsj.fibra.config.InMemoryDesiredStateRepository imple
   public com.sstlfsj.fibra.config.DesiredCompilation load();
   public boolean writable();
   public com.sstlfsj.fibra.config.DesiredStateWriteTransaction prepareReplace(java.lang.String, com.sstlfsj.fibra.config.DesiredInputGraph);
+}
+## com.sstlfsj.fibra.config.PluginDefinitionRef
+Compiled from "PluginDefinitionRef.java"
+public final class com.sstlfsj.fibra.config.PluginDefinitionRef extends java.lang.Record {
+  public com.sstlfsj.fibra.config.PluginDefinitionRef(java.lang.String, java.lang.String, java.lang.String);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String pluginId();
+  public java.lang.String facetId();
+  public java.lang.String definitionId();
 }
 ## com.sstlfsj.fibra.config.PublicationRequirement
 Compiled from "PublicationRequirement.java"

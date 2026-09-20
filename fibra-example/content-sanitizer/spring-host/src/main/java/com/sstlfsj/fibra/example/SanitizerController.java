@@ -27,8 +27,8 @@ final class SanitizerController {
     @GetMapping("/plugins")
     List<PluginView> plugins() {
         return plugins.registry().list().stream().map(state -> new PluginView(
-            state.instanceId(), state.desired() != null && state.desired().enabled(),
-            state.observed() == null ? "ABSENT" : state.observed().state().name()
+            state.entryId(), state.desired() != null && state.desired().enabled(),
+            state.observed() == null ? "ABSENT" : state.observed().aggregateState().name()
         )).toList();
     }
 

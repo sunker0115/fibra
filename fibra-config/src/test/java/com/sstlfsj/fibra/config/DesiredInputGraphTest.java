@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class DesiredInputGraphTest {
     @Test
     void preservesTreeAndCalculatesInheritedPolicyWithoutChangingLocalEntry() {
-        var entry = DesiredInputEntry.builder("worker", "sample").enabled(true)
+        var entry = DesiredInputEntry.builder("worker", ref("sample")).enabled(true)
             .realms(Map.of("shared", LiteralValue.of("entry"))).build();
         var group = DesiredInputGroup.builder("agents").enabled(false)
             .realms(Map.of("shared", LiteralValue.of("group"), "region", LiteralValue.of("cn")))
@@ -36,7 +36,7 @@ class DesiredInputGraphTest {
     void movesAcrossIncludeNamespaceAndRejectsAnEnabledUncollectedInclude() {
         var source = DesiredInputInclude.builder("source").enabled(false)
             .content(new DesiredIncludeContent.Collected(List.of(
-                DesiredInputEntry.builder("worker", "sample").build()))).build();
+                DesiredInputEntry.builder("worker", ref("sample")).build()))).build();
         var target = DesiredInputInclude.builder("target").enabled(false)
             .content(new DesiredIncludeContent.Collected(List.of())).build();
         var uncollected = DesiredInputInclude.builder("uncollected").enabled(false)
@@ -45,7 +45,7 @@ class DesiredInputGraphTest {
 
         assertThrows(ConfigException.class, () -> graph.withEnabled("uncollected", true));
         assertThrows(ConfigException.class, () -> graph.upsert("uncollected",
-            DesiredInputEntry.builder("new", "sample").build()));
+            DesiredInputEntry.builder("new", ref("sample")).build()));
         assertThrows(ConfigException.class, () -> graph.move("source:worker", "uncollected", 0));
         var moved = graph.move("source:worker", "target", 0);
 
@@ -56,22 +56,22 @@ class DesiredInputGraphTest {
     @Test
     void upsertAndRemoveKeepTheCompleteTree() {
         var group = DesiredInputGroup.builder("group").children(List.of(
-            DesiredInputEntry.builder("first", "sample").build())).build();
+            DesiredInputEntry.builder("first", ref("sample")).build())).build();
         var graph = new DesiredInputGraph(List.of(group));
 
-        var updated = graph.upsert("group", DesiredInputEntry.builder("second", "sample").build())
-            .upsert("group", DesiredInputEntry.builder("first", "changed").build());
+        var updated = graph.upsert("group", DesiredInputEntry.builder("second", ref("sample")).build())
+            .upsert("group", DesiredInputEntry.builder("first", ref("changed")).build());
 
         assertEquals(List.of("first", "second"), updated.plugins().keySet().stream().toList());
-        assertEquals("changed", updated.plugins().get("first").definitionName());
+        assertEquals(ref("changed"), updated.plugins().get("first").definitionRef());
         assertEquals(List.of("second"), updated.remove("first").plugins().keySet().stream().toList());
         assertThrows(IllegalArgumentException.class,
-            () -> updated.upsert(null, DesiredInputEntry.builder("second", "sample").build()));
+            () -> updated.upsert(null, DesiredInputEntry.builder("second", ref("sample")).build()));
     }
 
     @Test
     void rejectsBlankInterceptKeysForProgrammaticNodes() {
-        assertThrows(IllegalArgumentException.class, () -> DesiredInputEntry.builder("worker", "sample")
+        assertThrows(IllegalArgumentException.class, () -> DesiredInputEntry.builder("worker", ref("sample"))
             .intercepts(Map.of(" ", LiteralValue.of(true))).build());
     }
 
@@ -79,10 +79,10 @@ class DesiredInputGraphTest {
     void movesWithPostRemovalPositionsAndRejectsInvalidDestinations() {
         var outer = DesiredInputGroup.builder("outer").children(List.of(
             DesiredInputGroup.builder("inner").children(List.of(
-                DesiredInputEntry.builder("nested", "sample").build())).build())).build();
+                DesiredInputEntry.builder("nested", ref("sample")).build())).build())).build();
         var graph = new DesiredInputGraph(List.of(outer,
-            DesiredInputEntry.builder("a", "sample").build(),
-            DesiredInputEntry.builder("b", "sample").build()));
+            DesiredInputEntry.builder("a", ref("sample")).build(),
+            DesiredInputEntry.builder("b", ref("sample")).build()));
 
         assertEquals(List.of("outer", "b", "a"), graph.move("a", null, 2).roots().stream()
             .map(DesiredInputNode::id).toList());
@@ -95,10 +95,10 @@ class DesiredInputGraphTest {
     void rejectsNamespaceConflictsAndRetainsCollectedChildrenWhenAncestorStops() {
         var source = DesiredInputInclude.builder("source").enabled(false)
             .content(new DesiredIncludeContent.Collected(List.of(
-                DesiredInputEntry.builder("worker", "sample").build()))).build();
+                DesiredInputEntry.builder("worker", ref("sample")).build()))).build();
         var target = DesiredInputInclude.builder("target").enabled(false)
             .content(new DesiredIncludeContent.Collected(List.of(
-                DesiredInputEntry.builder("worker", "sample").build()))).build();
+                DesiredInputEntry.builder("worker", ref("sample")).build()))).build();
         var group = DesiredInputGroup.builder("group").children(List.of(source)).build();
         var graph = new DesiredInputGraph(List.of(group, target));
 
@@ -108,5 +108,9 @@ class DesiredInputGraphTest {
         org.junit.jupiter.api.Assertions.assertTrue(stopped.require("source:worker").enabled());
         assertFalse(stopped.effective("source:worker").enabled());
         assertThrows(IllegalArgumentException.class, () -> stopped.remove("group").require("source"));
+    }
+
+    private static PluginDefinitionRef ref(String definitionId) {
+        return new PluginDefinitionRef("sample-plugin", "main", definitionId);
     }
 }

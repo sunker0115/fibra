@@ -15,7 +15,7 @@ Fibra 的是分别包含这些 Java payload 的完整目录包。
 
 provider 与 consumer 是运行时角色，不是两套插件格式。二者都是普通 Fibra 插件：provider 通过
 `PluginDefinition.provide(...)` 声明服务，consumer 通过 `PluginDefinition.require(...)` 声明服务依赖。
-manifest 的 `requires` 先建立制品级类型可见性，desired graph 中相同的 service realm 再决定具体实例
+外层 package facet 的 `dependencies` 先建立类型可见性，desired graph 中相同的 service realm 再决定具体实例
 能否相互注入。只安装 consumer、缺少 contract/provider，或 realm 不一致时，consumer 都不会伪装成可用。
 
 ```text
@@ -33,28 +33,19 @@ fibra-storage-json ──提供 ConfigStore/event──> fibra-tool-storage ─�
 
 ## 安装目录包
 
-每个安装包根必须有 `plugin.properties`，且只允许下列三个字段：
+每个安装包根必须有唯一 `fibra-package.yaml`。它声明 package 的 `id`、`version` 以及每个 facet 的
+`id`、`role`、`runtime`、`target`、`payload`、精确 facet 依赖和 capability 要求。当前正式插件均为
+单个 `main` Java facet，payload 是 `lib/main.jar`。四个动态 contract 仍分别作为独立 package，不能
+复制到 consumer/provider 的私有依赖中。
 
-```properties
-formatVersion=1
-runtime=java
-payload=lib/main.jar
-```
+Java payload 内的 `META-INF/fibra/plugin.yaml` 只描述 Java runtime 私有的 `entrypoint`；纯 contract
+payload 使用空对象。package 身份、版本、依赖和执行位置不得在 payload descriptor 中重复。每个 facet
+使用独立 ClassLoader，类型只沿外层 facet dependency 委派；跨插件共享类型必须只由一个 contract 或
+宿主定义，JAR 也禁止通过非空 `Class-Path` 扩展路径。
 
-Java 主 JAR 和 `lib/` 中的私有依赖构成同一安装单元；四个动态 contract 仍分别作为独立安装包，
-不能复制到 consumer/provider 的私有依赖中。主 JAR 的 `META-INF/fibra/plugin.yaml` 是
-`id`、`version`、`requires` 和 `entrypoint` 的唯一真源。主 JAR 先于按路径排序的私有 JAR 装载，
-共用同一 ClassLoader，插件间类型沿 `requires` 声明顺序委派。不同插件可以分别携带同一库的不同版本；
-同一插件包内不允许重复有效类，跨插件共享类型必须只由一个 contract 或宿主定义。这些 JAR 禁止通过
-非空 `Class-Path` 扩展路径。
-
-Node 安装包使用 `runtime=node`，payload 指向包内独立目录；该目录的 `fibra-plugin.yaml` 是插件
-标识、版本、入口、协议和贡献声明的唯一真源。布局描述不重复这些运行时字段。payload 必须存在且
-位于包根内部，不能是绝对路径、越界路径或包根本身，整个包禁止符号链接。
-
-`PluginArtifactProbe` 读取包布局并委托对应 runtime 探测，安装请求的 source 始终是整个包根。
-`ArtifactStore` 复制完整包，后续 Java 装载和 Node sidecar 启动从受管 payload 进行；不接受裸 JAR
-或直接在根目录放置内部 manifest 的旧 Node 目录。正式 CLI、ZIP 装配和 profile 选择仍属于后续交付。
+`PluginPackageStore` 严格读取并原子保存完整 package，`DeploymentTarget` 锁定选中的 package revision，
+`JavaRuntimeProvider` 为 Java facet 创建唯一 driver，`PluginRegistry` 只提交 package gate 与 desired
+target。安装只接受这一种根清单与受控内容树，不探测其它包格式或 payload 内的逻辑身份字段。
 
 `fibra-storage-json` 在 POSIX 上对临时文件和原子 rename 后的父目录分别同步。rename 已成功、但父目录
 同步失败时，写入按已提交处理并记录 durability warning，内存 revision、事件与磁盘当前内容保持一致；
@@ -80,7 +71,7 @@ Windows 目录同步是 best-effort，不能据此承诺断电后的目录项持
 `fibra-plugin-archetype` 生成独立 Java 插件工程，其主 JAR 是安装包的 payload；默认只有一个 Maven
 工程并只依赖 `fibra-api`。这与本目录的多模块产品不矛盾：当一个产品需要稳定 contract、多个 provider 或 consumer
 时，用不发布的聚合 POM 组织多个由模板规则约束的独立插件工程即可。动态 contract 需手工以 `provided`
-依赖加入生成项目，并同步写入 `plugin.yaml` 的精确 `requires`。
+依赖加入生成项目，并同步写入外层 `fibra-package.yaml` 的精确 facet `dependencies`。
 
 ## 验证
 
@@ -90,5 +81,6 @@ Windows 目录同步是 best-effort，不能据此承诺断电后的目录项持
 mvn -o -pl fibra-plugins -am verify
 ```
 
-`fibra-plugins-acceptance-host` 会把正式 JAR 放到测试宿主 classpath 之外并组装为安装目录包，再经 `PluginRegistry`、
-`JavaPluginRuntimeAdapter` 和 `PublishedRuntime` 完成制品级装载、协作、局部更新、撤销、排空与重启验证。
+`fibra-plugins-acceptance-host` 会把正式 JAR 放到测试宿主 classpath 之外并组装为完整 package，再经
+`PluginPackageStore`、`JavaRuntimeProvider`、`PluginRegistry` 和 `PublishedRuntime` 完成 package
+装载、依赖协作、局部更新、撤销、排空与重启验证。

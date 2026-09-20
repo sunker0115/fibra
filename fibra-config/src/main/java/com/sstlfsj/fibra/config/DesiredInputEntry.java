@@ -7,7 +7,7 @@ import java.util.Objects;
 
 public final class DesiredInputEntry implements DesiredInputNode {
     private final String id;
-    private final String definitionName;
+    private final PluginDefinitionRef definitionRef;
     private final boolean enabled;
     private final LiteralValue when;
     private final Map<String, LiteralValue> context;
@@ -18,7 +18,7 @@ public final class DesiredInputEntry implements DesiredInputNode {
 
     private DesiredInputEntry(Builder builder) {
         id = DesiredInputNode.requireId(builder.id);
-        definitionName = requireName(builder.definitionName, "definition name");
+        definitionRef = Objects.requireNonNull(builder.definitionRef, "definitionRef");
         enabled = builder.enabled;
         when = Objects.requireNonNull(builder.when, "when");
         ConfigExpressionEvaluator.validateCondition(when);
@@ -31,19 +31,19 @@ public final class DesiredInputEntry implements DesiredInputNode {
         intercepts = PolicyValues.intercepts(builder.intercepts);
     }
 
-    public static Builder builder(String id, String definitionName) {
-        return new Builder(id, definitionName);
+    public static Builder builder(String id, PluginDefinitionRef definitionRef) {
+        return new Builder(id, definitionRef);
     }
 
     public Builder toBuilder() {
-        return new Builder(id, definitionName).enabled(enabled)
+        return new Builder(id, definitionRef).enabled(enabled)
             .when(when).context(context)
             .publicationRequirement(publicationRequirement).config(config)
             .realms(realms).intercepts(intercepts);
     }
 
     @Override public String id() { return id; }
-    public String definitionName() { return definitionName; }
+    public PluginDefinitionRef definitionRef() { return definitionRef; }
     @Override public boolean enabled() { return enabled; }
     @Override public LiteralValue when() { return when; }
     @Override public Map<String, LiteralValue> context() { return context; }
@@ -61,7 +61,7 @@ public final class DesiredInputEntry implements DesiredInputNode {
         return enabled == other.enabled
             && publicationRequirement == other.publicationRequirement
             && id.equals(other.id)
-            && definitionName.equals(other.definitionName)
+            && definitionRef.equals(other.definitionRef)
             && when.equals(other.when) && context.equals(other.context)
             && Objects.equals(config, other.config) && realms.equals(other.realms)
             && intercepts.equals(other.intercepts);
@@ -69,29 +69,22 @@ public final class DesiredInputEntry implements DesiredInputNode {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, definitionName, enabled, when, context, publicationRequirement,
+        return Objects.hash(id, definitionRef, enabled, when, context, publicationRequirement,
             config, realms, intercepts);
     }
 
     @Override
     public String toString() {
-        return "DesiredInputEntry[id=" + id + ", definitionName="
-            + definitionName + ", enabled=" + enabled + ", publicationRequirement="
+        return "DesiredInputEntry[id=" + id + ", definitionRef="
+            + definitionRef + ", enabled=" + enabled + ", publicationRequirement="
             + publicationRequirement + ", when=" + when + ", context=" + context
             + ", config=" + config
             + ", realms=" + realms + ", intercepts=" + intercepts + ']';
     }
 
-    private static String requireName(String value, String name) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(name + " must not be blank");
-        }
-        return value;
-    }
-
     public static final class Builder {
         private final String id;
-        private final String definitionName;
+        private final PluginDefinitionRef definitionRef;
         private boolean enabled = true;
         private LiteralValue when = LiteralValue.of(true);
         private Map<String, LiteralValue> context = Map.of();
@@ -101,9 +94,9 @@ public final class DesiredInputEntry implements DesiredInputNode {
         private Map<String, LiteralValue> realms = Map.of();
         private Map<String, LiteralValue> intercepts = Map.of();
 
-        private Builder(String id, String definitionName) {
+        private Builder(String id, PluginDefinitionRef definitionRef) {
             this.id = id;
-            this.definitionName = definitionName;
+            this.definitionRef = definitionRef;
         }
 
         public Builder enabled(boolean value) { enabled = value; return this; }

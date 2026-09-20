@@ -7,7 +7,6 @@ import java.time.Duration;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -80,16 +79,12 @@ class SubprocessContractTest {
     }
 
     @Test
-    void packagesAFilteredContractOnlyManifest() throws Exception {
+    void runtimeDescriptorDoesNotDuplicateLogicalPackageMetadata() throws Exception {
         try (var input = SubprocessContractTest.class.getResourceAsStream(
             "/META-INF/fibra/plugin.yaml")) {
             assertTrue(input != null);
             var manifest = new String(input.readAllBytes(), StandardCharsets.UTF_8);
-            assertTrue(manifest.contains("id: fibra-subprocess"));
-            assertTrue(manifest.contains("version: " + System.getProperty("fibra.test.projectVersion")));
-            assertTrue(manifest.contains("requires: []"));
-            assertFalse(manifest.contains("entrypoint:"));
-            assertFalse(manifest.contains("${project.version}"));
+            assertEquals("{}\n", manifest);
         }
     }
 }

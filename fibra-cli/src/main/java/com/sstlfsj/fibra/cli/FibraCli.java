@@ -1,6 +1,6 @@
 package com.sstlfsj.fibra.cli;
 
-import com.sstlfsj.fibra.artifact.ArtifactId;
+import com.sstlfsj.fibra.artifact.PluginId;
 import com.sstlfsj.fibra.bridge.ContributionId;
 import com.sstlfsj.fibra.bridge.ContributionKind;
 import com.sstlfsj.fibra.bridge.ContributionSnapshotEntry;
@@ -335,34 +335,21 @@ public final class FibraCli {
     }
 
     private void printSnapshot(RegistrySnapshot snapshot) {
-        var artifacts = snapshot.artifacts().values().stream()
-            .sorted(Comparator.comparing(record -> record.id().value()))
-            .map(record -> map("id", record.id().value(), "runtime", record.runtimeId().value(),
-                "version", record.version(), "revision", record.revision())).toList();
+        var selections = snapshot.selections().values().stream()
+            .sorted(Comparator.comparing(value -> value.pluginId().value()))
+            .map(value -> map("pluginId", value.pluginId().value(),
+                "packageRevision", value.packageRevision(), "enabled", value.enabled())).toList();
         var instanceIds = new java.util.TreeSet<String>();
         instanceIds.addAll(snapshot.desiredGraph().plugins().keySet());
         instanceIds.addAll(snapshot.observed().keySet());
-        var instances = instanceIds.stream().map(id -> instance(id,
-            snapshot.desiredGraph().plugins().get(id), snapshot.observed().get(id))).toList();
+        var instances = instanceIds.stream().map(id -> map("id", id,
+            "definition", snapshot.desiredGraph().plugins().containsKey(id)
+                ? snapshot.desiredGraph().plugins().get(id).definitionRef().definitionId() : null,
+            "desired", snapshot.desiredGraph().plugins().containsKey(id),
+            "observed", snapshot.observed().containsKey(id))).toList();
         var auditFailures = snapshot.auditFailures().stream().map(FibraCli::auditFailure).toList();
-        print(map("viewRevision", snapshot.viewRevision(), "artifacts", artifacts,
+        print(map("viewRevision", snapshot.viewRevision(), "selections", selections,
             "instances", instances, "auditFailures", auditFailures));
-    }
-
-    static Map<String, Object> instance(String id, DesiredInputEntry desired,
-                                        PluginInstanceSnapshot observed) {
-        var publicationRequirement = desired != null ? desired.publicationRequirement()
-            : observed.publicationRequirement();
-        var requirementSatisfied = desired != null && (desired.enabled()
-            ? observed != null && observed.requirementSatisfied() : observed == null);
-        return map("id", id, "definition", desired != null ? desired.definitionName()
-                : observed.definitionName(),
-            "desired", desired != null, "enabled", desired == null ? null : desired.enabled(),
-            "observed", observed != null, "identity", observed == null ? null : observed.identity(),
-            "state", observed == null ? null : observed.state().name(),
-            "publicationRequirement", publicationRequirement.name(),
-            "requirementSatisfied", requirementSatisfied,
-            "failure", observed == null ? null : observed.failure());
     }
 
     static Map<String, Object> auditFailure(PluginAuditDeliveryFailure failure) {
@@ -445,17 +432,8 @@ public final class FibraCli {
         throw new CommandLine.ParameterException(spec.commandLine(), "--input 必须是 JSON object");
     }
 
-    private PluginInstallRequest probe(Path value) {
-        try {
-            var artifact = host().probe().probe(source(value)).block();
-            if (artifact == null) throw new IllegalStateException("插件探测没有返回结果");
-            return PluginInstallRequest.builder().artifactId(artifact.artifactId()).runtimeId(artifact.runtimeId())
-                .version(artifact.version()).source(artifact.source()).build();
-        } catch (CliCommandFailure failure) {
-            throw failure;
-        } catch (RuntimeException failure) {
-            throw new CliCommandFailure(4, "插件探测失败: " + message(failure), failure);
-        }
+    private PluginInstallRequest installRequest(Path value) {
+        return new PluginInstallRequest(source(value), true);
     }
 
     private Path source(Path value) {
@@ -498,17 +476,18 @@ public final class FibraCli {
         }
         abstract static class SourceCommand extends Command {
             @CommandLine.Parameters(index = "0", paramLabel = "PACKAGE") private Path source;
-            final PluginInstallRequest request() { return root().probe(source); }
+            final PluginInstallRequest request() { return root().installRequest(source); }
+            final Path source() { return root().source(source); }
         }
         @CommandLine.Command(name = "install", description = "从本地标准插件包安装制品。") static final class Install extends SourceCommand {
             @Override public Integer call() { var root = root(); root.printSnapshot(root.host().registry().install(request()).block()); return 0; }
         }
         @CommandLine.Command(name = "upgrade", description = "从本地标准插件包升级制品。") static final class Upgrade extends SourceCommand {
-            @Override public Integer call() { var root = root(); root.printSnapshot(root.host().registry().upgrade(request()).block()); return 0; }
+            @Override public Integer call() { var root = root(); root.printSnapshot(root.host().registry().upgrade(source()).block()); return 0; }
         }
         @CommandLine.Command(name = "uninstall", description = "卸载指定制品。") static final class Uninstall extends Command {
-            @CommandLine.Parameters(index = "0", paramLabel = "ARTIFACT_ID") private String artifact;
-            @Override public Integer call() { var root = root(); root.printSnapshot(root.host().registry().uninstall(new ArtifactId(artifact)).block()); return 0; }
+            @CommandLine.Parameters(index = "0", paramLabel = "PLUGIN_ID") private String plugin;
+            @Override public Integer call() { var root = root(); root.printSnapshot(root.host().registry().uninstall(new PluginId(plugin)).block()); return 0; }
         }
         @CommandLine.Command(name = "enable", description = "启用指定配置实例。") static final class Enable extends Command {
             @CommandLine.Parameters(index = "0", paramLabel = "INSTANCE_ID") private String instance;

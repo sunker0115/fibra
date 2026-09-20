@@ -6,6 +6,7 @@ import com.sstlfsj.fibra.Events;
 import com.sstlfsj.fibra.Plugins;
 import com.sstlfsj.fibra.Properties;
 import com.sstlfsj.fibra.Scope;
+import com.sstlfsj.fibra.ScopeView;
 import com.sstlfsj.fibra.ServiceKey;
 import com.sstlfsj.fibra.Services;
 import com.sstlfsj.fibra.logging.FibraLogger;
@@ -60,8 +61,8 @@ final class DefaultContext implements Context {
     }
 
     @Override
-    public Scope scope() {
-        return scope;
+    public ScopeView scope() {
+        return scope.view();
     }
 
     @Override

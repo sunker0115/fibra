@@ -17,7 +17,8 @@ class ShellToolTest {
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var caller = runtime.rootScope().context();
             var cancellation = new CancellationSource();
-            caller.services().provide(ContributionServices.REGISTRAR, directory);
+            caller.services().provide(ContributionServices.REGISTRAR,
+                directory.openAdmission("shell-tools-actual"));
             caller.services().provide(ShellServices.SHELL, (invocation, request) -> {
                 assertSame(cancellation.token(), invocation.cancellation());
                 assertEquals("exit 3", request.command());
@@ -68,7 +69,8 @@ class ShellToolTest {
     @Test void invalidArgumentsFailBeforeCallingShell() {
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var caller = runtime.rootScope().context();
-            caller.services().provide(ContributionServices.REGISTRAR, directory);
+            caller.services().provide(ContributionServices.REGISTRAR,
+                directory.openAdmission("tools"));
             caller.services().provide(ShellServices.SHELL, (invocation, request) -> {
                 fail("invalid tool request must not invoke Shell"); return Mono.empty();
             });
@@ -82,7 +84,8 @@ class ShellToolTest {
     @Test void rejectsTimeoutBeyondTheSupportedTimerRangeBeforeCallingShell() {
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var caller = runtime.rootScope().context();
-            caller.services().provide(ContributionServices.REGISTRAR, directory);
+            caller.services().provide(ContributionServices.REGISTRAR,
+                directory.openAdmission("tools"));
             caller.services().provide(ShellServices.SHELL, (invocation, request) -> {
                 fail("oversized timeout must not invoke Shell"); return Mono.empty();
             });
@@ -97,7 +100,8 @@ class ShellToolTest {
     private void assertFailure(Shell shell, ToolFailureCode code) {
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var caller = runtime.rootScope().context();
-            caller.services().provide(ContributionServices.REGISTRAR, directory);
+            caller.services().provide(ContributionServices.REGISTRAR,
+                directory.openAdmission("tools"));
             caller.services().provide(ShellServices.SHELL, shell);
             caller.plugins().mount("tools", new ShellToolEntrypoint().definition().prepare(null)).settled().block();
             var failure = assertThrows(ToolException.class, () -> directory.current().routes().invoke(caller,
@@ -109,7 +113,8 @@ class ShellToolTest {
     private void assertRendered(ShellResult shellResult, String expected) {
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var caller = runtime.rootScope().context();
-            caller.services().provide(ContributionServices.REGISTRAR, directory);
+            caller.services().provide(ContributionServices.REGISTRAR,
+                directory.openAdmission("tools"));
             caller.services().provide(ShellServices.SHELL,
                 (invocation, request) -> Mono.just(shellResult));
             caller.plugins().mount("tools", new ShellToolEntrypoint().definition().prepare(null))

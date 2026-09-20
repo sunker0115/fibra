@@ -1,37 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-readonly production_modules=(
-  fibra-api
-  fibra-core
-  fibra-config
-  fibra-artifact
-  fibra-engine
-  fibra-bridge
-  fibra-runtime-java
-  fibra-runtime-node
-  fibra-registry
-  fibra-cli-api
-  fibra-cli
-  fibra-spring
-  fibra-spring-boot-starter
-  fibra-plugin-archetype
-  fibra-plugins/fibra-tool-api
-  fibra-plugins/fibra-plugins-fs/fibra-fs
-  fibra-plugins/fibra-plugins-fs/fibra-fs-local
-  fibra-plugins/fibra-plugins-fs/fibra-tool-fs
-  fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search
-  fibra-plugins/fibra-plugins-subprocess/fibra-subprocess
-  fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local
-  fibra-plugins/fibra-plugins-shell/fibra-shell
-  fibra-plugins/fibra-plugins-shell/fibra-shell-local
-  fibra-plugins/fibra-plugins-shell/fibra-tool-shell
-  fibra-plugins/fibra-plugins-storage/fibra-storage
-  fibra-plugins/fibra-plugins-storage/fibra-storage-json
-  fibra-plugins/fibra-plugins-storage/fibra-tool-storage
-)
-readonly module_list="fibra-api,fibra-core,fibra-config,fibra-artifact,fibra-engine,fibra-bridge,fibra-runtime-java,fibra-runtime-node,fibra-registry,fibra-cli-api,fibra-cli,fibra-spring,fibra-spring-boot-starter,fibra-plugin-archetype,fibra-plugins/fibra-tool-api,fibra-plugins/fibra-plugins-fs/fibra-fs,fibra-plugins/fibra-plugins-fs/fibra-fs-local,fibra-plugins/fibra-plugins-fs/fibra-tool-fs,fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search,fibra-plugins/fibra-plugins-subprocess/fibra-subprocess,fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local,fibra-plugins/fibra-plugins-shell/fibra-shell,fibra-plugins/fibra-plugins-shell/fibra-shell-local,fibra-plugins/fibra-plugins-shell/fibra-tool-shell,fibra-plugins/fibra-plugins-storage/fibra-storage,fibra-plugins/fibra-plugins-storage/fibra-storage-json,fibra-plugins/fibra-plugins-storage/fibra-tool-storage,fibra-distribution"
 readonly maven_executable="${MVN:-mvn}"
+readonly repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+production_modules=()
+while IFS= read -r module; do
+  production_modules+=("$module")
+done < <("$repository_root/scripts/release-maven-modules.sh")
+readonly -a production_modules
+readonly module_list="$("$repository_root/scripts/release-maven-modules.sh" csv),fibra-distribution"
+cd "$repository_root"
 readonly revision="$(sed -n 's:.*<revision>\([^<]*\)</revision>.*:\1:p' pom.xml)"
 readonly distribution_archive="fibra-distribution/target/fibra-$revision-bin.zip"
 snapshot_directory="$(mktemp -d)"

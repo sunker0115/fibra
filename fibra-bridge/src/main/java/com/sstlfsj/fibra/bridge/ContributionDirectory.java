@@ -20,10 +20,11 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** 单个 RuntimeDomain 拥有的 contribution 注册表与调用排空边界。 */
-public final class ContributionDirectory implements ContributionRegistrar, AutoCloseable {
+public final class ContributionDirectory implements AutoCloseable {
     private final Object monitor = new Object();
     private final Map<ContributionId, Entry<?, ?, ?>> entries = new LinkedHashMap<>();
     private final Set<Entry<?, ?, ?>> liveEntries = new LinkedHashSet<>();
+    private final Set<Admission> admissions = new LinkedHashSet<>();
     private final Sinks.Many<ContributionDirectoryView> views =
         Sinks.many().multicast().directBestEffort();
     private long revision;
@@ -31,19 +32,23 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
     private boolean closed;
     private Mono<Void> closing;
 
-    @Override
-    public <D, I, O> Mono<ContributionRegistration> register(
-        Context owner, ContributionKind<D, I, O> kind,
-        String providerInstanceId, String localName, D descriptor,
-        ContributionHandler<I, O> handler) {
-        var binding = new ContributionBinding<>(kind, localName, descriptor, handler);
-        return registerAll(owner, providerInstanceId, List.of(binding),
-            Disposables.noop()).map(List::getFirst);
+    public ContributionAdmission openAdmission(String providerInstanceId) {
+        Objects.requireNonNull(providerInstanceId, "providerInstanceId");
+        if (providerInstanceId.isBlank()) {
+            throw new IllegalArgumentException("providerInstanceId must not be blank");
+        }
+        synchronized (monitor) {
+            if (closed) {
+                throw new IllegalStateException("contribution directory is closed");
+            }
+            var admission = new Admission(providerInstanceId);
+            admissions.add(admission);
+            return admission;
+        }
     }
 
-    @Override
-    public Mono<List<ContributionRegistration>> registerAll(
-        Context owner, String providerInstanceId,
+    private Mono<List<ContributionRegistration>> registerAll(
+        Admission admission, Context owner,
         List<ContributionBinding<?, ?, ?>> bindings, Disposable afterDrain) {
         Objects.requireNonNull(owner, "owner");
         Objects.requireNonNull(bindings, "bindings");
@@ -55,7 +60,7 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
         return Mono.defer(() -> {
             var registrations = new AtomicReference<List<Registration>>();
             var effect = owner.effects().effect(() -> {
-                var values = registerAllNow(owner, providerInstanceId, copy);
+                var values = registerAllNow(admission, owner, copy);
                 registrations.set(values);
                 return new DrainingDisposable() {
                     private final Mono<Void> drained = Mono.defer(() -> revokeAll(values)).cache();
@@ -71,7 +76,7 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
                         return disposed;
                     }
                 };
-            }, "contributions:" + providerInstanceId);
+            }, "contributions:" + admission.providerInstanceId);
             return effect.ready().then(Mono.fromSupplier(() ->
                 List.copyOf(registrations.get())));
         });
@@ -95,7 +100,14 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
             }
             closed = true;
             var current = List.copyOf(liveEntries);
-            closing = revokeEntries(current)
+            var changed = false;
+            for (var admission : List.copyOf(admissions)) {
+                changed |= closeAdmissionUnsafe(admission);
+            }
+            if (changed) {
+                publishUnsafe();
+            }
+            closing = awaitDrained(current)
                 .doOnSuccess(ignored -> views.tryEmitComplete()).cache();
             return closing;
         }
@@ -140,34 +152,39 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
     }
 
     private List<Registration> registerAllNow(
-        Context owner, String providerInstanceId,
+        Admission admission, Context owner,
         List<ContributionBinding<?, ?, ?>> bindings) {
         synchronized (monitor) {
             if (closed) {
                 throw new IllegalStateException("contribution directory is closed");
             }
+            if (!admission.accepting) {
+                throw new IllegalStateException("contribution admission is closed");
+            }
             var additions = new ArrayList<Entry<?, ?, ?>>();
             for (var binding : bindings) {
-                var id = new ContributionId(providerInstanceId, binding.localName());
+                var id = new ContributionId(admission.providerInstanceId,
+                    binding.localName());
                 if (entries.containsKey(id)
                     || additions.stream().anyMatch(entry -> entry.id.equals(id))) {
                     throw new IllegalArgumentException("duplicate contribution "
                         + id.providerInstanceId() + '/' + id.localName());
                 }
-                additions.add(entry(owner, id, ++nextRegistrationIdentity, binding));
+                additions.add(entry(admission, owner, id, ++nextRegistrationIdentity, binding));
             }
             additions.forEach(entry -> entries.put(entry.id, entry));
             liveEntries.addAll(additions);
+            admission.entries.addAll(additions);
             publishUnsafe();
             return additions.stream().map(Registration::new).toList();
         }
     }
 
-    private static <D, I, O> Entry<D, I, O> entry(
-        Context owner, ContributionId id, long registrationIdentity,
+    private <D, I, O> Entry<D, I, O> entry(
+        Admission admission, Context owner, ContributionId id, long registrationIdentity,
         ContributionBinding<D, I, O> binding) {
-        return new Entry<>(owner, id, registrationIdentity, binding.kind(), binding.descriptor(),
-            binding.handler());
+        return new Entry<>(admission, owner, id, registrationIdentity, binding.kind(),
+            binding.descriptor(), binding.handler());
     }
 
     private Mono<Void> revokeAll(List<Registration> registrations) {
@@ -182,20 +199,37 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
 
     private Mono<Void> revokeEntries(List<Entry<?, ?, ?>> values) {
         synchronized (monitor) {
-            var changed = false;
-            for (var entry : values) {
-                if (entry.accepting) {
-                    entry.accepting = false;
-                    entries.remove(entry.id, entry);
-                    changed = true;
-                    completeIfDrained(entry);
-                }
-            }
+            var changed = revokeEntriesUnsafe(values);
             if (changed) {
                 publishUnsafe();
             }
         }
         return awaitDrained(values);
+    }
+
+    private boolean closeAdmissionUnsafe(Admission admission) {
+        if (!admission.accepting) {
+            return false;
+        }
+        admission.accepting = false;
+        var changed = revokeEntriesUnsafe(List.copyOf(admission.entries));
+        if (admission.entries.isEmpty()) {
+            admissions.remove(admission);
+        }
+        return changed;
+    }
+
+    private boolean revokeEntriesUnsafe(List<Entry<?, ?, ?>> values) {
+        var changed = false;
+        for (var entry : values) {
+            if (entry.accepting) {
+                entry.accepting = false;
+                entries.remove(entry.id, entry);
+                changed = true;
+                completeIfDrained(entry);
+            }
+        }
+        return changed;
     }
 
     private Mono<Void> awaitDrained(List<Entry<?, ?, ?>> values) {
@@ -237,6 +271,10 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
         if (!entry.accepting && entry.inflight == 0) {
             if (entry.cleanupFailure == null) {
                 liveEntries.remove(entry);
+                entry.admission.entries.remove(entry);
+                if (!entry.admission.accepting && entry.admission.entries.isEmpty()) {
+                    admissions.remove(entry.admission);
+                }
                 entry.drained.tryEmitEmpty();
             } else {
                 entry.drained.tryEmitError(new ContributionDrainException(
@@ -262,7 +300,57 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
             new ContributionRoutes(this, entries));
     }
 
-    static final class Entry<D, I, O> {
+    private final class Admission implements ContributionAdmission {
+        private final String providerInstanceId;
+        private final Set<Entry<?, ?, ?>> entries = new LinkedHashSet<>();
+        private boolean accepting = true;
+
+        private Admission(String providerInstanceId) {
+            this.providerInstanceId = providerInstanceId;
+        }
+
+        @Override
+        public <D, I, O> Mono<ContributionRegistration> register(
+            Context owner, ContributionKind<D, I, O> kind,
+            String localName, D descriptor,
+            ContributionHandler<I, O> handler) {
+            var binding = new ContributionBinding<>(kind, localName, descriptor, handler);
+            return registerAll(owner, List.of(binding),
+                Disposables.noop()).map(List::getFirst);
+        }
+
+        @Override
+        public Mono<List<ContributionRegistration>> registerAll(
+            Context owner, List<ContributionBinding<?, ?, ?>> bindings,
+            Disposable afterDrain) {
+            return ContributionDirectory.this.registerAll(this, owner, bindings,
+                afterDrain);
+        }
+
+        @Override
+        public void closeAdmission() {
+            synchronized (monitor) {
+                if (closeAdmissionUnsafe(this)) {
+                    publishUnsafe();
+                }
+            }
+        }
+
+        @Override
+        public Mono<Void> drainAsync() {
+            List<Entry<?, ?, ?>> accepted;
+            synchronized (monitor) {
+                if (closeAdmissionUnsafe(this)) {
+                    publishUnsafe();
+                }
+                accepted = List.copyOf(entries);
+            }
+            return awaitDrained(accepted);
+        }
+    }
+
+    final class Entry<D, I, O> {
+        private final Admission admission;
         private final Context owner;
         private final ContributionId id;
         private final long registrationIdentity;
@@ -274,9 +362,11 @@ public final class ContributionDirectory implements ContributionRegistrar, AutoC
         private int inflight;
         private String cleanupFailure;
 
-        private Entry(Context owner, ContributionId id, long registrationIdentity,
+        private Entry(Admission admission, Context owner, ContributionId id,
+                      long registrationIdentity,
                       ContributionKind<D, I, O> kind, D descriptor,
                       ContributionHandler<I, O> handler) {
+            this.admission = admission;
             this.owner = owner;
             this.id = id;
             this.registrationIdentity = registrationIdentity;

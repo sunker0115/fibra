@@ -2,14 +2,18 @@ package com.sstlfsj.fibra.parity;
 
 import com.sstlfsj.fibra.Context;
 import com.sstlfsj.fibra.PluginDefinition;
+import com.sstlfsj.fibra.Scope;
 import com.sstlfsj.fibra.ServiceKey;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ReflectSpecParityTest extends CordisSpecSupport {
     private static final ServiceKey<Box> FOO = ServiceKey.of("foo", Box.class);
@@ -17,7 +21,10 @@ class ReflectSpecParityTest extends CordisSpecSupport {
     @Test
     void contextIs() {
         assertInstanceOf(Context.class, root);
-        assertSame(runtime.rootScope(), root.scope());
+        assertNotSame(runtime.rootScope(), root.scope());
+        assertFalse(root.scope() instanceof Scope);
+        assertSame(root, root.scope().context());
+        assertTrue(runtime.rootScope().sharesDomainWith(root.scope()));
     }
 
     @Test

@@ -9,7 +9,6 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class StorageContractTest {
     @Test
@@ -62,14 +61,10 @@ class StorageContractTest {
     }
 
     @Test
-    void contractJarCarriesAFilteredEntrypointFreeManifest() throws Exception {
+    void runtimeDescriptorDoesNotDuplicateLogicalPackageMetadata() throws Exception {
         try (var input = getClass().getResourceAsStream("/META-INF/fibra/plugin.yaml")) {
             var manifest = new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
-            assertTrue(manifest.contains("id: fibra-storage"));
-            assertTrue(manifest.contains("version: " + System.getProperty("fibra.test.projectVersion")));
-            assertTrue(manifest.contains("requires: []"));
-            assertFalse(manifest.contains("entrypoint:"));
-            assertFalse(manifest.contains("${project.version}"));
+            assertEquals("{}\n", manifest);
         }
     }
 }

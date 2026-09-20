@@ -11,7 +11,7 @@ import java.util.Objects;
 
 /** 一次配置求值使用的不可变宿主上下文。 */
 public final class ConfigContextSnapshot {
-    private static final ConfigContextSnapshot EMPTY = of(Map.of());
+    private static final ConfigContextSnapshot EMPTY = of(new LiteralValue.ObjectValue(Map.of()));
 
     private final LiteralValue.ObjectValue values;
     private final String revision;
@@ -26,11 +26,6 @@ public final class ConfigContextSnapshot {
 
     public static ConfigContextSnapshot empty() {
         return EMPTY;
-    }
-
-    public static ConfigContextSnapshot of(Map<String, ?> values) {
-        Objects.requireNonNull(values, "values");
-        return of((LiteralValue.ObjectValue) LiteralValue.of(values));
     }
 
     public static ConfigContextSnapshot of(LiteralValue.ObjectValue values) {

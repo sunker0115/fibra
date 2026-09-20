@@ -1,529 +1,438 @@
 package com.sstlfsj.fibra.registry;
 
-import com.sstlfsj.fibra.PluginDefinition;
-import com.sstlfsj.fibra.artifact.ArtifactId;
-import com.sstlfsj.fibra.artifact.ArtifactPackage;
-import com.sstlfsj.fibra.artifact.ArtifactRecord;
-import com.sstlfsj.fibra.artifact.ArtifactStore;
-import com.sstlfsj.fibra.artifact.RuntimeId;
-import com.sstlfsj.fibra.config.InMemoryDesiredStateRepository;
-import com.sstlfsj.fibra.config.DesiredInputEntry;
-import com.sstlfsj.fibra.config.DesiredInputGraph;
-import com.sstlfsj.fibra.config.DesiredInputGroup;
-import com.sstlfsj.fibra.config.DesiredInputInclude;
-import com.sstlfsj.fibra.config.DesiredIncludeContent;
-import com.sstlfsj.fibra.config.PublicationRequirement;
-import com.sstlfsj.fibra.engine.EngineChangeException;
-import com.sstlfsj.fibra.engine.DeploymentArtifact;
-import com.sstlfsj.fibra.engine.EngineStateStore;
-import com.sstlfsj.fibra.engine.FibraEngine;
-import com.sstlfsj.fibra.engine.PluginCatalog;
-import com.sstlfsj.fibra.engine.PluginCatalogEntry;
-import com.sstlfsj.fibra.engine.PluginRuntimeAdapter;
-import com.sstlfsj.fibra.engine.RuntimeArtifactInspection;
-import com.sstlfsj.fibra.engine.RuntimeCatalog;
-import com.sstlfsj.fibra.engine.RuntimeResourceOwner;
-import com.sstlfsj.fibra.engine.RuntimeResourceSnapshot;
-import com.sstlfsj.fibra.engine.RuntimeResourceUpdate;
-import com.sstlfsj.fibra.engine.TargetSaveState;
+import com.sstlfsj.fibra.artifact.*;
+import com.sstlfsj.fibra.config.*;
+import com.sstlfsj.fibra.engine.*;
+import com.sstlfsj.fibra.value.LiteralValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import reactor.core.publisher.Mono;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 class PluginRegistryTest {
+    @TempDir Path root;
+    private static final PluginId PLUGIN = new PluginId("sample");
+    private static final RuntimeId RUNTIME = new RuntimeId("probe");
+
     @Test
-    void exposesArtifactDesiredAndObservedFactsWithoutOwningAnotherStateMachine(
-        @TempDir Path work) throws Exception {
-        var source = work.resolve("sample.bin");
-        Files.writeString(source, "plugin");
-        var runtimeId = new RuntimeId("fake");
-        var artifactId = new ArtifactId("sample");
-        var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty())
-            .artifactStore(new ArtifactStore(work.resolve("artifacts")))
-            .runtimeAdapter(new FakeRuntime(runtimeId)).build();
-        engine.start().block();
-        var audit = new InMemoryPluginAuditRepository();
-        try {
-            var registry = new PluginRegistry(engine, audit);
-            registry.install(PluginInstallRequest.builder().artifactId(artifactId)
-                .runtimeId(runtimeId).version("1.0.0").source(source).build()).block();
-            var enabled = registry.enable(PluginEnableRequest.of(
-                "sample-one", "sample", com.sstlfsj.fibra.value.LiteralValue.of(
-                    Map.of("message", "hello")))).block();
+    void installUsesPackageMetadataAndExplicitGateWhileEntryDisableStaysLocal() throws Exception {
+        try (var fixture = fixture()) {
+            var source = source("one", "1");
+            var installed = fixture.registry.install(new PluginInstallRequest(source, false)).block();
+            var selection = installed.selections().get(PLUGIN);
+            assertFalse(selection.enabled());
+            assertEquals(PluginPackage.read(source).packageDigest(), selection.packageRevision());
+            assertEquals(1, installed.target().orElseThrow().targetRevision());
 
-            assertTrue(enabled.artifacts().containsKey(artifactId));
-            assertTrue(enabled.desiredGraph().plugins().get("sample-one").enabled());
-            assertEquals(com.sstlfsj.fibra.PluginInstanceState.ACTIVE,
-                enabled.observed().get("sample-one").state());
+            fixture.registry.upsert(null, entry("first", "main")).block();
+            fixture.registry.upsert(null, entry("second", "aux")).block();
+            assertTrue(fixture.registry.snapshot().observed().isEmpty());
+            var enabled = fixture.registry.enablePackage(PLUGIN).block();
+            assertEquals(Set.of("first", "second"), enabled.observed().keySet());
+            assertTrue(enabled.observed().values().stream().allMatch(value ->
+                value.aggregateState() == ExecutionObservation.State.ACTIVE));
 
-            var disabled = registry.disable("sample-one").block();
-            assertFalse(disabled.desiredGraph().plugins().get("sample-one").enabled());
-            assertFalse(disabled.observed().containsKey("sample-one"));
-            var removed = registry.uninstall(artifactId).block();
-            assertFalse(removed.artifacts().containsKey(artifactId));
-            assertEquals(4, registry.history().size());
-            assertTrue(registry.history().stream().allMatch(PluginAuditEntry::succeeded));
-            assertTrue(registry.history().stream().allMatch(entry ->
-                entry.targetSaveState() == TargetSaveState.SAVED));
-        } finally {
-            engine.close();
+            var disabled = fixture.registry.disable("first").block();
+            assertTrue(disabled.selections().get(PLUGIN).enabled());
+            assertFalse(disabled.desiredGraph().plugins().get("first").enabled());
+            assertTrue(disabled.desiredGraph().plugins().get("second").enabled());
+            assertEquals(Set.of("second"), disabled.observed().keySet());
+
+            var gated = fixture.registry.disablePackage(PLUGIN).block();
+            assertTrue(gated.observed().isEmpty());
+            assertEquals(disabled.desiredGraph(), gated.desiredGraph());
+            assertEquals(Set.of("second"), fixture.registry.enablePackage(PLUGIN).block().observed().keySet());
+            assertTrue(fixture.registry.history().stream().allMatch(PluginAuditEntry::succeeded));
         }
     }
 
     @Test
-    void fileAuditIsAppendOnlyAcrossReopen(@TempDir Path work) {
-        var file = work.resolve("audit.log");
-        try (var audit = new FilePluginAuditRepository(file)) {
-            audit.append("install", "sample", true, TargetSaveState.SAVED,
-                "1", "accepted");
-        }
-        try (var audit = new FilePluginAuditRepository(file)) {
-            audit.append("disable", "sample-one", false,
-                TargetSaveState.UNCONFIRMED, "1", "conflict");
-            assertEquals(2, audit.history().size());
-            assertEquals(2, audit.history().get(1).sequence());
-            assertEquals(TargetSaveState.UNCONFIRMED,
-                audit.history().get(1).targetSaveState());
-        }
-    }
+    void upgradePreservesGateRawDesiredAndContextAndSameRevisionIsNoop() throws Exception {
+        try (var fixture = fixture()) {
+            var first = source("one", "1");
+            fixture.registry.install(new PluginInstallRequest(first, false)).block();
+            var raw = new DesiredInputGraph(List.of(entry("entry", "main")));
+            var context = ConfigContextSnapshot.of(new LiteralValue.ObjectValue(Map.of("host", LiteralValue.of("one"))));
+            fixture.registry.deploy(new PluginDeploymentRequest(
+                List.copyOf(fixture.registry.snapshot().selections().values()), raw, context)).block();
+            var before = fixture.registry.snapshot().target().orElseThrow();
 
-    @Test
-    void fileAuditHasOneProcessOwner(@TempDir Path work) {
-        var file = work.resolve("audit.log");
-        try (var audit = new FilePluginAuditRepository(file)) {
-            assertThrows(IllegalStateException.class,
-                () -> new FilePluginAuditRepository(file));
-        }
-    }
+            var same = fixture.registry.upgrade(first).block();
+            assertEquals(before.targetRevision(), same.target().orElseThrow().targetRevision());
+            assertEquals(TargetSaveState.NOT_APPLICABLE, fixture.registry.history().getLast().targetSaveState());
 
-    @Test
-    void fileAuditRejectsThePreviousSevenColumnFormatAndReleasesItsLock(
-        @TempDir Path work) throws Exception {
-        var file = work.resolve("audit.log");
-        Files.writeString(file, "1\t2026-09-11T00:00:00Z\taW5zdGFsbA\tc2FtcGxl\ttrue\tMQ\tYWNjZXB0ZWQ\n");
-
-        assertThrows(IllegalStateException.class, () -> new FilePluginAuditRepository(file));
-
-        Files.writeString(file, "");
-        try (var audit = new FilePluginAuditRepository(file)) {
-            assertTrue(audit.history().isEmpty());
+            var upgraded = fixture.registry.upgrade(source("two", "2")).block();
+            assertFalse(upgraded.selections().get(PLUGIN).enabled());
+            assertNotEquals(before.selections().get(PLUGIN).packageRevision(),
+                upgraded.selections().get(PLUGIN).packageRevision());
+            assertEquals(raw, upgraded.desiredGraph());
+            assertEquals(context, upgraded.target().orElseThrow().configContext());
+            assertEquals(2, fixture.packages.history(PLUGIN).size());
         }
     }
 
     @Test
-    void auditDeliveryFailureDoesNotChangeASuccessfulDeploymentResult() {
-        var graph = new DesiredInputGraph(List.of(
-            DesiredInputEntry.builder("disabled", "absent").enabled(false).build()));
-        var auditFailure = new IllegalStateException("audit unavailable");
-        try (var engine = FibraEngine.builder(new InMemoryDesiredStateRepository(graph)).build()) {
-            engine.start().block();
-            var registry = new PluginRegistry(engine, failingAudit(auditFailure));
+    void uninstallRejectsEvenDisabledRawReferencesAndNeverDeletesPublishedContent() throws Exception {
+        try (var fixture = fixture()) {
+            fixture.registry.install(new PluginInstallRequest(source("one", "1"), false)).block();
+            fixture.registry.upsert(null, DesiredInputEntry.builder("entry",
+                new PluginDefinitionRef("sample", "gone", "gone")).enabled(false).build()).block();
+            var before = fixture.registry.snapshot().target().orElseThrow();
+            assertThrows(IllegalArgumentException.class, () -> fixture.registry.uninstall(PLUGIN).block());
+            assertEquals(before, fixture.registry.snapshot().target().orElseThrow());
+            assertFalse(fixture.registry.history().getLast().succeeded());
+            assertEquals(TargetSaveState.NOT_SAVED, fixture.registry.history().getLast().targetSaveState());
 
-            var result = registry.disable("disabled").block();
-
-            assertTrue(result.desiredGraph().plugins().containsKey("disabled"));
-            var diagnostic = registry.auditFailures().getFirst();
-            assertEquals("disable", diagnostic.operation());
-            assertEquals("disabled", diagnostic.target());
-            assertTrue(diagnostic.succeeded());
-            assertEquals(TargetSaveState.SAVED, diagnostic.targetSaveState());
-            assertEquals(result.viewRevision(), diagnostic.viewRevision());
-            assertEquals(auditFailure.toString(), diagnostic.detail());
-            assertEquals(List.of(diagnostic), result.auditFailures());
+            fixture.registry.remove("entry").block();
+            assertTrue(fixture.registry.uninstall(PLUGIN).block().selections().isEmpty());
+            assertEquals(1, fixture.packages.history(PLUGIN).size());
+            assertTrue(fixture.packages.find(PLUGIN, before.selections().get(PLUGIN).packageRevision()).isPresent());
         }
     }
 
     @Test
-    void auditDeliveryFailureKeepsTheOriginalSavedTargetFailure() {
-        var startupFailure = new IllegalStateException("plugin start failed");
-        var definition = PluginDefinition.builder("failing", Void.class,
-            () -> (context, config) -> Mono.error(startupFailure)).build();
-        var auditFailure = new IllegalStateException("audit unavailable");
-        try (var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty())
-            .catalog(PluginCatalog.of(new PluginCatalogEntry<>(definition, ignored -> null)))
-            .build()) {
-            engine.start().block();
-            var registry = new PluginRegistry(engine, failingAudit(auditFailure));
-            var observed = new AtomicReference<Throwable>();
-
-            registry.enable(PluginEnableRequest.of("failing", "failing",
-                    com.sstlfsj.fibra.value.LiteralValue.of(null)))
-                .doOnError(observed::set).onErrorComplete().block();
-
-            var failure = assertInstanceOf(EngineChangeException.class, observed.get());
-            assertEquals(TargetSaveState.SAVED, failure.targetSaveState());
-            assertTrue(containsThrowable(failure, startupFailure));
-            assertFalse(containsThrowable(failure, auditFailure));
-            var diagnostic = registry.auditFailures().getFirst();
-            assertFalse(diagnostic.succeeded());
-            assertEquals(TargetSaveState.SAVED, diagnostic.targetSaveState());
-            assertEquals(failure.view().viewRevision(), diagnostic.viewRevision());
-            assertEquals(auditFailure.toString(), diagnostic.detail());
+    void disabledPackageKeepsDormantDefinitionsButEnableRejectsThemBeforeSave() throws Exception {
+        try (var fixture = fixture()) {
+            fixture.registry.install(new PluginInstallRequest(source("one", "1"), false)).block();
+            fixture.registry.upsert(null, DesiredInputEntry.builder("entry",
+                new PluginDefinitionRef("sample", "main", "missing")).build()).block();
+            var before = fixture.registry.snapshot().target().orElseThrow();
+            var failure = assertThrows(EngineChangeException.class,
+                () -> fixture.registry.enablePackage(PLUGIN).block());
+            assertEquals(TargetSaveState.NOT_SAVED, failure.targetSaveState());
+            assertEquals(before, fixture.registry.snapshot().target().orElseThrow());
+            assertTrue(fixture.registry.snapshot().observed().isEmpty());
         }
     }
 
     @Test
-    void auditKeepsSavedTargetSeparateFromAConvergedRequest() {
-        var startupFailure = new IllegalStateException("plugin start failed");
-        var definition = PluginDefinition.builder("failing", Void.class,
-            () -> (context, config) -> Mono.error(startupFailure)).build();
-        try (var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty())
-            .catalog(PluginCatalog.of(new PluginCatalogEntry<>(definition, ignored -> null)))
-            .build()) {
-            engine.start().block();
-            var audit = new InMemoryPluginAuditRepository();
-            var registry = new PluginRegistry(engine, audit);
-            var observed = new AtomicReference<Throwable>();
-
-            registry.enable(PluginEnableRequest.of("failing", "failing",
-                    com.sstlfsj.fibra.value.LiteralValue.of(null)))
-                .doOnError(observed::set).onErrorComplete().block();
-
-            var failure = assertInstanceOf(EngineChangeException.class, observed.get());
-            var entry = audit.history().getFirst();
-            assertFalse(entry.succeeded());
-            assertEquals(TargetSaveState.SAVED, entry.targetSaveState());
-            assertEquals(failure.view().viewRevision(), entry.viewRevision());
+    void installAndUpgradeRequireCorrectSelectionPresence() throws Exception {
+        try (var fixture = fixture()) {
+            var source = source("one", "1");
+            assertThrows(IllegalArgumentException.class, () -> fixture.registry.upgrade(source).block());
+            fixture.registry.install(new PluginInstallRequest(source, true)).block();
+            assertThrows(IllegalArgumentException.class,
+                () -> fixture.registry.install(new PluginInstallRequest(source, false)).block());
+            assertTrue(fixture.registry.snapshot().selections().get(PLUGIN).enabled());
+            assertEquals(1, fixture.packages.history(PLUGIN).size());
         }
     }
 
     @Test
-    void auditMarksBindingRejectionAsNotSaved() {
-        try (var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty()).build()) {
-            engine.start().block();
-            var audit = new InMemoryPluginAuditRepository();
-            var registry = new PluginRegistry(engine, audit);
-            var observed = new AtomicReference<Throwable>();
+    void fullDeploymentCarriesSelectionsGraphAndContextInOneTargetTransaction() throws Exception {
+        try (var fixture = fixture()) {
+            var published = fixture.publish(source("one", "1"));
+            assertTrue(fixture.registry.snapshot().target().isEmpty(), "publishing alone never selects a package");
+            var graph = new DesiredInputGraph(List.of(entry("entry", "main")));
+            var context = ConfigContextSnapshot.of(new LiteralValue.ObjectValue(Map.of("region", LiteralValue.of("test"))));
+            var deployed = fixture.registry.deploy(new PluginDeploymentRequest(
+                List.of(new PluginSelection(PLUGIN, published.packageRevision(), true)), graph, context)).block();
+            assertEquals(1, deployed.target().orElseThrow().targetRevision());
+            assertEquals(context, deployed.target().orElseThrow().configContext());
+            assertEquals(graph, deployed.desiredGraph());
+            assertEquals(1, fixture.registry.history().size());
+            assertEquals("deploy", fixture.registry.history().getFirst().operation());
 
-            registry.enable(PluginEnableRequest.of("missing", "missing",
-                    com.sstlfsj.fibra.value.LiteralValue.of(null)))
-                .doOnError(observed::set).onErrorComplete().block();
-
-            assertInstanceOf(EngineChangeException.class, observed.get());
-            assertFalse(audit.history().getFirst().succeeded());
-            assertEquals(TargetSaveState.NOT_SAVED,
-                audit.history().getFirst().targetSaveState());
+            var empty = fixture.registry.deploy(new PluginDeploymentRequest(
+                List.of(), new DesiredInputGraph(List.of()), ConfigContextSnapshot.empty())).block();
+            assertTrue(empty.selections().isEmpty());
+            assertTrue(empty.desiredGraph().plugins().isEmpty());
+            assertTrue(empty.observed().isEmpty());
+            assertEquals(1, fixture.packages.history(PLUGIN).size());
         }
     }
 
     @Test
-    void auditRecordsAnUnconfirmedTargetSaveSeparatelyFromNotSaved() {
-        var store = new UnconfirmedSaveStore();
-        var definition = PluginDefinition.builder("sample", Void.class,
-            () -> (context, config) -> Mono.empty()).build();
-        try (var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty())
-            .catalog(PluginCatalog.of(new PluginCatalogEntry<>(definition, ignored -> null)))
-            .stateStore(store).build()) {
-            engine.start().block();
-            store.unconfirmed = true;
-            var audit = new InMemoryPluginAuditRepository();
-            var registry = new PluginRegistry(engine, audit);
-            var observed = new AtomicReference<Throwable>();
+    void groupOperationsPreserveLocalFlagsAndCompleteEntryData() throws Exception {
+        try (var fixture = fixture()) {
+            var published = fixture.publish(source("one", "1"));
+            var entry = DesiredInputEntry.builder("entry", new PluginDefinitionRef("sample", "main", "run"))
+                .config(new LiteralValue.ObjectValue(Map.of("value", LiteralValue.of(1))))
+                .publicationRequirement(PublicationRequirement.PENDING_ALLOWED).build();
+            var group = DesiredInputGroup.builder("group").children(List.of(entry)).build();
+            fixture.registry.deploy(new PluginDeploymentRequest(
+                List.of(new PluginSelection(PLUGIN, published.packageRevision(), true)),
+                new DesiredInputGraph(List.of(group, DesiredInputGroup.builder("other").build())),
+                ConfigContextSnapshot.empty())).block();
+            fixture.registry.disable("group").block();
+            assertTrue(fixture.registry.snapshot().desiredGraph().plugins().get("entry").enabled());
+            fixture.registry.enable("group").block();
+            fixture.registry.move("entry", "other", 0).block();
+            assertEquals(entry, fixture.registry.get("entry").orElseThrow().desired());
+            fixture.registry.disable("entry").block();
+            fixture.registry.enable("entry").block();
+            assertEquals(entry, fixture.registry.get("entry").orElseThrow().desired());
+            fixture.registry.upsert("other", entry("second", "aux")).block();
+            assertEquals(List.of("entry", "second"), fixture.registry.list().stream().map(RegistryPluginState::entryId).toList());
+            fixture.registry.remove("other").block();
+            assertTrue(fixture.registry.list().isEmpty());
+        }
+    }
 
-            registry.enable(PluginEnableRequest.of("sample", "sample",
-                    com.sstlfsj.fibra.value.LiteralValue.of(null)))
-                .doOnError(observed::set).onErrorComplete().block();
+    @Test
+    void includesUseCompleteDesiredEntryIdsForLookupAndMutation() throws Exception {
+        try (var fixture = fixture()) {
+            var published = fixture.publish(source("one", "1"));
+            var include = DesiredInputInclude.builder("included").content(new DesiredIncludeContent.Collected(
+                List.of(entry("entry", "main")))).build();
+            fixture.registry.deploy(new PluginDeploymentRequest(
+                List.of(new PluginSelection(PLUGIN, published.packageRevision(), true)),
+                new DesiredInputGraph(List.of(include)), ConfigContextSnapshot.empty())).block();
+            assertTrue(fixture.registry.get("entry").isEmpty());
+            assertNotNull(fixture.registry.get("included:entry").orElseThrow().observed());
+            fixture.registry.disable("included:entry").block();
+            assertFalse(fixture.registry.get("included:entry").orElseThrow().desired().enabled());
+            fixture.registry.remove("included:entry").block();
+            assertTrue(fixture.registry.list().isEmpty());
+        }
+    }
 
-            var failure = assertInstanceOf(EngineChangeException.class, observed.get());
+    @Test
+    void acceptedStartFailureIsAuditedSeparatelyFromObservedAndReconcileNeverSavesTarget() throws Exception {
+        try (var fixture = fixture()) {
+            fixture.registry.install(new PluginInstallRequest(source("one", "1"), true)).block();
+            fixture.provider.activationFailure = true;
+            var failed = fixture.registry.upsert(null, entry("entry", "main")).block();
+            assertEquals(ExecutionObservation.State.FAILED, failed.observed().get("entry").aggregateState());
+            assertEquals(com.sstlfsj.fibra.engine.TargetConvergence.UNSATISFIED,
+                failed.engine().targetConvergence());
+            assertTrue(fixture.registry.history().getLast().succeeded());
+            assertEquals(TargetSaveState.SAVED, fixture.registry.history().getLast().targetSaveState());
+            var revision = failed.target().orElseThrow().targetRevision();
+            fixture.provider.activationFailure = false;
+            var reconciled = fixture.registry.reconcileCurrent().block();
+            assertEquals(revision, reconciled.target().orElseThrow().targetRevision());
+            assertEquals(ExecutionObservation.State.ACTIVE, reconciled.observed().get("entry").aggregateState());
+            assertEquals(TargetSaveState.NOT_APPLICABLE, fixture.registry.history().getLast().targetSaveState());
+            var identity = reconciled.observed().get("entry").executions().getFirst().runtimeInstanceId();
+            var noop = fixture.registry.reconcileCurrent().block();
+            assertEquals(identity, noop.observed().get("entry").executions().getFirst().runtimeInstanceId());
+        }
+    }
+
+    @Test
+    void explicitSaveFailureKeepsThePublishedPackageButNotTheSelection() throws Exception {
+        var targets = new FailingStore();
+        try (var fixture = new Fixture(targets, new InMemoryPluginAuditRepository())) {
+            targets.failure = TargetSaveState.NOT_SAVED;
+            assertThrows(EngineChangeException.class,
+                () -> fixture.registry.install(new PluginInstallRequest(source("one", "1"), false)).block());
+            assertTrue(fixture.registry.snapshot().target().isEmpty());
+            assertEquals(1, fixture.packages.history(PLUGIN).size());
+            assertEquals(TargetSaveState.NOT_SAVED, fixture.registry.history().getLast().targetSaveState());
+            targets.failure = null;
+            fixture.registry.install(new PluginInstallRequest(source("retry", "1"), false)).block();
+            assertEquals(1, fixture.packages.history(PLUGIN).size());
+        }
+    }
+
+    @Test
+    void uncertainSaveIsAuditedWithoutGuessingOrRetrying() throws Exception {
+        var targets = new FailingStore();
+        try (var fixture = new Fixture(targets, new InMemoryPluginAuditRepository())) {
+            targets.failure = TargetSaveState.UNCONFIRMED;
+            var failure = assertThrows(EngineChangeException.class,
+                () -> fixture.registry.install(new PluginInstallRequest(source("one", "1"), false)).block());
             assertEquals(TargetSaveState.UNCONFIRMED, failure.targetSaveState());
-            assertInstanceOf(EngineStateStore.SaveUnconfirmedException.class,
-                failure.getCause());
-            assertEquals(TargetSaveState.UNCONFIRMED,
-                audit.history().getFirst().targetSaveState());
-            assertFalse(audit.history().getFirst().succeeded());
+            assertEquals(DurableTargetState.UNCERTAIN, fixture.registry.snapshot().engine().durableState());
+            assertEquals(TargetSaveState.UNCONFIRMED, fixture.registry.history().getLast().targetSaveState());
+            assertFalse(fixture.registry.history().getLast().succeeded());
+            assertEquals(1, targets.saves);
         }
     }
 
     @Test
-    void deploysArtifactsAndDesiredGraphThroughOneRegistryOperation(
-        @TempDir Path work) throws Exception {
-        var source = work.resolve("sample.bin");
-        Files.writeString(source, "plugin");
-        var runtimeId = new RuntimeId("fake");
-        var artifactId = new ArtifactId("sample");
-        var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty())
-            .artifactStore(new ArtifactStore(work.resolve("artifacts")))
-            .runtimeAdapter(new FakeRuntime(runtimeId)).build();
-        engine.start().block();
-        var audit = new InMemoryPluginAuditRepository();
-        try {
-            var registry = new PluginRegistry(engine, audit);
-            var installed = PluginInstallRequest.builder().artifactId(artifactId)
-                .runtimeId(runtimeId).version("1.0.0").source(source).build();
-            var graph = new DesiredInputGraph(List.of(
-                DesiredInputGroup.builder("plugins").children(List.of(
-                    DesiredInputEntry.builder("sample-one", "sample").build())).build()));
-
-            var deployed = registry.deploy(
-                new PluginDeploymentRequest(List.of(installed), graph)).block();
-
-            assertTrue(deployed.artifacts().containsKey(artifactId));
-            assertTrue(deployed.observed().containsKey("sample-one"));
-            assertInstanceOf(DesiredInputGroup.class,
-                deployed.desiredGraph().roots().getFirst());
-            assertTrue(deployed.desiredGraph().plugins().containsKey("sample-one"));
-            assertEquals(1, registry.history().size());
-            assertEquals("deploy", registry.history().getFirst().operation());
-
-            var cleared = registry.deploy(new PluginDeploymentRequest(List.of(),
-                new DesiredInputGraph(List.of()))).block();
-
-            assertTrue(cleared.artifacts().isEmpty());
-            assertTrue(cleared.desiredGraph().roots().isEmpty());
-            assertTrue(cleared.observed().isEmpty());
-        } finally {
-            engine.close();
+    void auditDeliveryFailureIsObservableAndDoesNotReplaceSuccessOrEngineFailure() throws Exception {
+        var targets = new FailingStore();
+        var audit = new PluginAuditRepository() {
+            public PluginAuditEntry append(String operation, String target, boolean succeeded,
+                TargetSaveState state, String revision, String detail) { throw new IllegalStateException("audit offline"); }
+            public List<PluginAuditEntry> history() { return List.of(); }
+        };
+        try (var fixture = new Fixture(targets, audit)) {
+            var installed = fixture.registry.install(new PluginInstallRequest(source("one", "1"), false)).block();
+            assertEquals(1, installed.auditFailures().size());
+            assertTrue(installed.auditFailures().getFirst().succeeded());
+            targets.failure = TargetSaveState.NOT_SAVED;
+            var failure = assertThrows(EngineChangeException.class,
+                () -> fixture.registry.enablePackage(PLUGIN).block());
+            assertEquals(TargetSaveState.NOT_SAVED, failure.targetSaveState());
+            assertEquals(2, fixture.registry.auditFailures().size());
+            assertFalse(fixture.registry.auditFailures().getLast().succeeded());
+            assertTrue(fixture.registry.auditFailures().getLast().detail().contains("audit offline"));
         }
     }
 
     @Test
-    void disablingAndEnablingAGroupPreservesEachChildsLocalEnabledState(
-        @TempDir Path work) throws Exception {
-        try (var harness = registry(work)) {
-            harness.deploy(new DesiredInputGraph(List.of(
-                DesiredInputGroup.builder("plugins").children(List.of(
-                    DesiredInputEntry.builder("disabled-child", "sample")
-                        .enabled(false).build())).build())));
-
-            var disabled = harness.registry().disable("plugins").block();
-            assertFalse(assertInstanceOf(DesiredInputGroup.class,
-                disabled.desiredGraph().require("plugins")).enabled());
-            assertFalse(disabled.desiredGraph().plugins().get("disabled-child").enabled());
-
-            var enabled = harness.registry().enable("plugins").block();
-            assertTrue(assertInstanceOf(DesiredInputGroup.class,
-                enabled.desiredGraph().require("plugins")).enabled());
-            assertFalse(enabled.desiredGraph().plugins().get("disabled-child").enabled());
+    void watchProjectsEngineFactsWithoutOwningASecondStateMachine() throws Exception {
+        try (var fixture = fixture()) {
+            var seen = new java.util.concurrent.CopyOnWriteArrayList<RegistrySnapshot>();
+            var subscription = fixture.registry.watch().subscribe(seen::add);
+            try {
+                var installed = fixture.registry.install(new PluginInstallRequest(source("one", "1"), false)).block();
+                assertFalse(seen.isEmpty());
+                assertEquals(installed.viewRevision(), seen.getLast().viewRevision());
+                assertEquals(fixture.engine.snapshot(), fixture.registry.snapshot().engine());
+            } finally { subscription.dispose(); }
         }
     }
 
-    @Test
-    void enablingAnExistingEntryKeepsItsConfigurationAndPublicationRequirement(
-        @TempDir Path work) throws Exception {
-        var config = com.sstlfsj.fibra.value.LiteralValue.of(Map.of("message", "kept"));
-        try (var harness = registry(work)) {
-            harness.deploy(new DesiredInputGraph(List.of(
-                DesiredInputEntry.builder("sample-one", "sample").enabled(false)
-                    .publicationRequirement(PublicationRequirement.PENDING_ALLOWED)
-                    .config(config).build())));
+    private Fixture fixture() { return new Fixture(DeploymentTargetStore.inMemory(), new InMemoryPluginAuditRepository()); }
 
-            var enabled = harness.registry().enable("sample-one").block();
-            var entry = enabled.desiredGraph().plugins().get("sample-one");
-            assertTrue(entry.enabled());
-            assertEquals(config, entry.config());
-            assertEquals(PublicationRequirement.PENDING_ALLOWED,
-                entry.publicationRequirement());
+    private Path source(String directory, String version) throws Exception {
+        var source = Files.createDirectory(root.resolve(directory));
+        Files.writeString(source.resolve("main.bin"), "main-" + version);
+        Files.writeString(source.resolve("aux.bin"), "aux-" + version);
+        Files.writeString(source.resolve(PluginPackage.MANIFEST), """
+            format: 1
+            id: sample
+            version: "%s"
+            facets:
+              - id: main
+                role: host
+                runtime: probe
+                target: host
+                payload: main.bin
+                dependencies: []
+                capabilities: []
+              - id: aux
+                role: host
+                runtime: probe
+                target: host
+                payload: aux.bin
+                dependencies: []
+                capabilities: []
+            """.formatted(version));
+        return source;
+    }
+
+    private static DesiredInputEntry entry(String id, String facet) {
+        return DesiredInputEntry.builder(id, new PluginDefinitionRef("sample", facet, "run")).build();
+    }
+
+    private final class Fixture implements AutoCloseable {
+        final PluginPackageStore packages = new PluginPackageStore(root.resolve("packages"));
+        final ProbeProvider provider = new ProbeProvider();
+        final FibraEngine engine;
+        final PluginRegistry registry;
+        Fixture(DeploymentTargetStore targets, PluginAuditRepository audit) {
+            engine = FibraEngine.builder(packages, targets).runtimeProvider(provider)
+                .hostTerminationPort(request -> { }).lifecycleTimeout(Duration.ofSeconds(2)).build();
+            engine.startAsync().block();
+            registry = new PluginRegistry(engine, packages, audit);
+        }
+        PluginPackageRecord publish(Path source) {
+            try (var transaction = packages.prepareInstall(source)) { return transaction.save(); }
+        }
+        public void close() { engine.close(); }
+    }
+
+    private static final class FailingStore implements DeploymentTargetStore {
+        final DeploymentTargetStore delegate = DeploymentTargetStore.inMemory();
+        TargetSaveState failure;
+        int saves;
+        public Optional<StoredTarget> load() { return delegate.load(); }
+        public DurableTargetToken save(long expected, DeploymentTarget target) {
+            saves++;
+            if (failure == TargetSaveState.NOT_SAVED) throw new IllegalStateException("save failed");
+            var token = delegate.save(expected, target);
+            if (failure == TargetSaveState.UNCONFIRMED) throw new SaveUnconfirmedException(Path.of("target.json"),
+                new java.io.IOException("directory fsync failed"));
+            return token;
         }
     }
 
-    @Test
-    void enablingARequestUnderAParentAddsTheEntryToThatParentsChildren(
-        @TempDir Path work) throws Exception {
-        try (var harness = registry(work)) {
-            harness.deploy(new DesiredInputGraph(List.of(
-                DesiredInputGroup.builder("plugins").children(List.of()).build())));
-
-            var snapshot = harness.registry().enable(PluginEnableRequest
-                .builder("sample-child", "sample").parentId("plugins").build()).block();
-
-            var parent = assertInstanceOf(DesiredInputGroup.class,
-                snapshot.desiredGraph().require("plugins"));
-            assertEquals(List.of("sample-child"), parent.children().stream()
-                .map(node -> node.id()).toList());
-            assertTrue(snapshot.desiredGraph().plugins().containsKey("sample-child"));
-        }
-    }
-
-    @Test
-    void movingAGroupChildKeepsItsFullIdentityAndLocalEntry(
-        @TempDir Path work) throws Exception {
-        var child = DesiredInputEntry.builder("sample-child", "sample")
-            .enabled(false).build();
-        try (var harness = registry(work)) {
-            harness.deploy(new DesiredInputGraph(List.of(
-                DesiredInputGroup.builder("left").children(List.of(child)).build(),
-                DesiredInputGroup.builder("right").children(List.of()).build())));
-
-            var moved = harness.registry().move("sample-child", "right", 0).block();
-            var right = assertInstanceOf(DesiredInputGroup.class,
-                moved.desiredGraph().require("right"));
-            assertEquals(List.of("sample-child"), right.children().stream()
-                .map(node -> node.id()).toList());
-            assertEquals(child, moved.desiredGraph().plugins().get("sample-child"));
-        }
-    }
-
-    @Test
-    void getAndListUseTheGraphsFullPluginIdsForIncludedEntries(@TempDir Path work)
-        throws Exception {
-        try (var harness = registry(work)) {
-            harness.deploy(new DesiredInputGraph(List.of(
-                DesiredInputInclude.builder("included")
-                    .content(new DesiredIncludeContent.Collected(List.of(
-                        DesiredInputEntry.builder("sample-child", "sample")
-                            .enabled(false).build())))
-                    .build())));
-
-            assertTrue(harness.registry().get("included:sample-child").isPresent());
-            assertEquals(List.of("included:sample-child"), harness.registry().list()
-                .stream().map(RegistryPluginState::instanceId).toList());
-        }
-    }
-
-    private static RegistryHarness registry(Path work) throws Exception {
-        var source = work.resolve("sample.bin");
-        Files.writeString(source, "plugin");
-        var runtimeId = new RuntimeId("fake");
-        var engine = FibraEngine.builder(InMemoryDesiredStateRepository.empty())
-            .artifactStore(new ArtifactStore(work.resolve("artifacts")))
-            .runtimeAdapter(new FakeRuntime(runtimeId)).build();
-        engine.start().block();
-        var installation = PluginInstallRequest.builder().artifactId(new ArtifactId("sample"))
-            .runtimeId(runtimeId).version("1.0.0").source(source).build();
-        return new RegistryHarness(engine, new PluginRegistry(engine,
-            new InMemoryPluginAuditRepository()), installation);
-    }
-
-    private record RegistryHarness(FibraEngine engine, PluginRegistry registry,
-                                   PluginInstallRequest installation) implements AutoCloseable {
-        void deploy(DesiredInputGraph graph) {
-            registry.deploy(new PluginDeploymentRequest(List.of(installation), graph)).block();
-        }
-
-        @Override
-        public void close() {
-            engine.close();
-        }
-    }
-
-    private static final class FakeRuntime implements PluginRuntimeAdapter {
-        private final RuntimeId id;
-
-        private FakeRuntime(RuntimeId id) {
-            this.id = id;
-        }
-
-        @Override
-        public RuntimeId id() {
-            return id;
-        }
-
-        @Override
-        public Mono<DeploymentArtifact> probe(ArtifactPackage artifact) {
-            throw new AssertionError("registry test runtime must not probe source packages");
-        }
-
-        @Override
-        public Mono<RuntimeArtifactInspection> inspect(ArtifactRecord artifact) {
-            return Mono.just(new RuntimeArtifactInspection(id, artifact.id(), Map.of()));
-        }
-
-        @Override
-        public RuntimeResourceOwner create() {
-            var definition = PluginDefinition.builder("sample", Void.class,
-                () -> (context, config) -> Mono.empty()).build();
-            return new RuntimeResourceOwner() {
-                private List<ArtifactRecord> active = List.of();
-                private RuntimeCatalog catalog = RuntimeCatalog.empty();
-
-                @Override
-                public RuntimeResourceUpdate createUpdate(List<ArtifactRecord> target) {
-                    var next = List.copyOf(target);
-                    var nextCatalog = next.isEmpty() ? RuntimeCatalog.empty()
-                        : new RuntimeCatalog(PluginCatalog.of(new PluginCatalogEntry<>(
-                            definition, ignored -> null)),
-                            Map.of(definition.name(), next.getFirst().id()));
-                    return new RuntimeResourceUpdate() {
-                        @Override public Mono<Void> prepareAsync() { return Mono.empty(); }
-                        @Override public Set<ArtifactId> affectedArtifacts() {
-                            return next.stream().map(ArtifactRecord::id)
-                                .collect(java.util.stream.Collectors.toSet());
+    private static final class ProbeProvider implements RuntimeProvider {
+        boolean activationFailure;
+        public RuntimeId id() { return RUNTIME; }
+        public String contractIdentity() { return "registry-probe-v1"; }
+        public List<BuiltInPluginPackage> builtInPackages() { return List.of(); }
+        public RuntimeDriver create(RuntimeHostServices services) {
+            return new RuntimeDriver() {
+                public RuntimeId id() { return RUNTIME; }
+                public Mono<RuntimeArtifactInspection> probe(PluginFacetSource source) { return Mono.error(new UnsupportedOperationException()); }
+                public Mono<RuntimeArtifactInspection> inspect(ManagedFacet facet) { return Mono.error(new UnsupportedOperationException()); }
+                public RuntimeDriverSnapshot snapshot() { return new RuntimeDriverSnapshot(RUNTIME, Map.of()); }
+                public Mono<Void> closeAsync() { return Mono.empty(); }
+                public RuntimeCandidate createCandidate(RuntimeTargetSlice slice) {
+                    return new RuntimeCandidate() {
+                        RuntimePlan plan;
+                        public Mono<Void> prepareAsync() {
+                            return Mono.fromRunnable(() -> {
+                                var units = new ArrayList<ExecutionUnitPlan>();
+                                var bindings = new ArrayList<DefinitionBindingPlan>();
+                                for (var id : new TreeSet<>(slice.affectedEntryIds())) {
+                                    var entry = (DesiredInputEntry) slice.desired().require(id).input();
+                                    if (!entry.definitionRef().definitionId().equals("run")) throw new IllegalArgumentException("definition does not exist");
+                                    var facet = slice.facets().stream().filter(value ->
+                                        value.facet().facet().facetId().value().equals(entry.definitionRef().facetId())).findFirst().orElseThrow();
+                                    var key = new ExecutionUnitKey(id);
+                                    units.add(ExecutionUnitPlan.builder(key, RUNTIME, new ExecutionTarget("host"))
+                                        .artifactId(facet.facet().artifactId()).provenance("sample",
+                                            entry.definitionRef().facetId(), slice.target().selections().get(PLUGIN).packageRevision())
+                                        .dependencies(slice.unitDependencies().get(key)).build());
+                                    bindings.add(DefinitionBindingPlan.builder(entry.definitionRef(), id).unitKey(key)
+                                        .publicationRequirement(entry.publicationRequirement()).build());
+                                }
+                                plan = RuntimePlan.of(RUNTIME, units, bindings);
+                            });
                         }
-                        @Override public RuntimeCatalog catalog() { return nextCatalog; }
-                        @Override public RuntimeResourceSnapshot snapshot() {
-                            return FakeRuntime.this.snapshot(next,
-                                RuntimeResourceSnapshot.State.PREPARED);
+                        public RuntimePlan preparedPlan() { return plan; }
+                        public PreparedRuntimeGeneration seal(CompiledRuntimeSlice compiled) {
+                            var units = new LinkedHashMap<ExecutionUnitKey, RuntimeUnitGeneration>();
+                            plan.units().forEach((key, value) -> units.put(key, new ProbeUnit(value,
+                                slice.target().targetRevision(), services.nextIdentity("unit"))));
+                            return new PreparedRuntimeGeneration() {
+                                public Map<ExecutionUnitKey, RuntimeUnitGeneration> units() { return units; }
+                                public Mono<Void> abortAsync() { return Mono.empty(); }
+                                public Mono<Void> retireAsync() { return Mono.empty(); }
+                            };
                         }
-                        @Override public void adopt() { active = next; catalog = nextCatalog; }
-                        @Override public Mono<Void> closeAsync() { return Mono.empty(); }
+                        public Mono<Void> closeAsync() { return Mono.empty(); }
                     };
                 }
-
-                @Override public RuntimeCatalog catalog() { return catalog; }
-                @Override public RuntimeResourceSnapshot snapshot() {
-                    return FakeRuntime.this.snapshot(active,
-                        RuntimeResourceSnapshot.State.ACTIVE);
-                }
-                @Override public Mono<Void> closeAsync() { return Mono.empty(); }
             };
         }
-
-        private RuntimeResourceSnapshot snapshot(List<ArtifactRecord> artifacts,
-                                                 RuntimeResourceSnapshot.State state) {
-            return new RuntimeResourceSnapshot(id, artifacts.stream().map(artifact ->
-                RuntimeResourceSnapshot.Resource.builder().artifact(artifact)
-                    .identity(artifact.revision()).state(state).build()).toList());
-        }
-    }
-
-    private static PluginAuditRepository failingAudit(RuntimeException failure) {
-        return new PluginAuditRepository() {
-            @Override
-            public PluginAuditEntry append(String operation, String target,
-                                           boolean succeeded, TargetSaveState targetSaveState,
-                                           String viewRevision,
-                                           String detail) {
-                throw failure;
+        private final class ProbeUnit implements RuntimeUnitGeneration {
+            final ExecutionUnitPlan plan;
+            final long revision;
+            final String instance;
+            ExecutionObservation observation;
+            ProbeUnit(ExecutionUnitPlan plan, long revision, String instance) {
+                this.plan = plan; this.revision = revision; this.instance = instance;
+                observation = observe("prepared", ExecutionObservation.State.PENDING);
             }
-
-            @Override
-            public List<PluginAuditEntry> history() {
-                return List.of();
+            public ExecutionUnitPlan plan() { return plan; }
+            public RuntimeUnitFence fence() {
+                return RuntimeUnitFence.builder(RUNTIME, plan.key())
+                    .unitTargetRevision(revision).runtimeInstanceId(instance)
+                    .build();
             }
-        };
-    }
-
-    private static boolean containsThrowable(Throwable failure, Throwable expected) {
-        if (failure == expected) {
-            return true;
-        }
-        if (failure.getCause() != null && containsThrowable(failure.getCause(), expected)) {
-            return true;
-        }
-        return java.util.Arrays.stream(failure.getSuppressed())
-            .anyMatch(candidate -> containsThrowable(candidate, expected));
-    }
-
-    private static final class UnconfirmedSaveStore implements EngineStateStore {
-        private com.sstlfsj.fibra.engine.DeploymentManifest manifest;
-        private boolean unconfirmed;
-
-        @Override
-        public Optional<com.sstlfsj.fibra.engine.DeploymentManifest> load() {
-            return Optional.ofNullable(manifest);
-        }
-
-        @Override
-        public void save(com.sstlfsj.fibra.engine.DeploymentManifest value) {
-            if (unconfirmed) {
-                throw new EngineStateStore.SaveUnconfirmedException(Path.of("unconfirmed"),
-                    new IllegalStateException("state-store confirmation failed"));
+            public Mono<ExecutionObservation> reconcileAsync(String operation) {
+                return Mono.fromSupplier(() -> observation = observe(operation,
+                    activationFailure ? ExecutionObservation.State.FAILED : ExecutionObservation.State.ACTIVE));
             }
-            manifest = value;
+            public void closeAdmission() { }
+            public Mono<ExecutionObservation> drainAsync(String operation, Instant deadline) {
+                return Mono.just(observation);
+            }
+            public Mono<ExecutionObservation> stopAsync(String operation, Instant deadline) {
+                return Mono.fromSupplier(() -> observation = observe(operation, ExecutionObservation.State.PENDING));
+            }
+            public ExecutionObservation snapshot() { return observation; }
+            private ExecutionObservation observe(String operation, ExecutionObservation.State state) {
+                var detail = ExecutionObservation.Detail.builder().unitTargetRevision(revision)
+                    .executionId(plan.key().value()).runtimeInstanceId(instance).lifecycleOperationId(operation).state(state);
+                if (state == ExecutionObservation.State.FAILED) detail.failure(new ExecutionObservation.Failure("START_FAILED", "start failed", Map.of()));
+                return ExecutionObservation.of(plan.pluginId(), plan.facetId(), RUNTIME, plan.executionTarget(), List.of(detail.build()));
+            }
         }
     }
 }

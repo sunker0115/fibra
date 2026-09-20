@@ -93,7 +93,8 @@ for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) {
 
 function beginShutdown() {
   if (shutdown) return shutdown;
-  shutdown = terminateManagedRange()
+  shutdown = Promise.resolve()
+    .then(terminateManagedRange)
     .then(async quiescent => {
       if (!quiescent) {
         writeTerminationStatus('FAILED');

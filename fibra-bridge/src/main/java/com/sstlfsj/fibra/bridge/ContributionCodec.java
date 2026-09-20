@@ -1,6 +1,7 @@
 package com.sstlfsj.fibra.bridge;
 
 import com.sstlfsj.fibra.CancellationToken;
+import com.sstlfsj.fibra.value.LiteralValue;
 
 import java.util.Optional;
 import java.util.concurrent.CancellationException;
@@ -8,15 +9,15 @@ import java.util.concurrent.CancellationException;
 public interface ContributionCodec<D, I, O> {
     int schemaVersion();
 
-    D decodeDescriptor(Object descriptor);
+    D decodeDescriptor(LiteralValue descriptor);
 
-    Object encodeInput(I input);
+    LiteralValue encodeInput(I input);
 
-    I decodeInput(Object input);
+    I decodeInput(LiteralValue input);
 
-    Object encodeOutput(O output);
+    LiteralValue encodeOutput(O output);
 
-    O decodeOutput(Object output);
+    O decodeOutput(LiteralValue output);
 
     /** Returns the cooperative cancellation token carried by this invocation input. */
     default CancellationToken cancellationToken(I input) { return CancellationToken.never(); }
