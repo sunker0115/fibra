@@ -10,7 +10,7 @@ consumer_byte_compared_modules=()
 while IFS= read -r module; do
   production_modules+=("$module")
   case "$module" in
-    fibra-runtime-java|fibra-runtime-node|fibra-client-protocol|fibra-plugins/*)
+    fibra-bom|fibra-runtime-java|fibra-runtime-node|fibra-client-protocol|fibra-plugins/*)
       consumer_byte_compared_modules+=("$module")
       ;;
   esac
@@ -23,6 +23,13 @@ readonly forbidden_text_pattern='(PluginRuntimeAdapter|ArtifactRuntime|Execution
 read_property() {
   local name="$1"
   sed -n "s:.*<$name>\([^<]*\)</$name>.*:\1:p" "$repository_root/pom.xml"
+}
+
+module_packaging() {
+  local packaging
+  packaging="$(sed -n 's:.*<packaging>\([^<]*\)</packaging>.*:\1:p' \
+    "$repository_root/$1/pom.xml")"
+  printf '%s\n' "${packaging:-jar}"
 }
 
 readonly revision="$(read_property revision)"
@@ -149,12 +156,19 @@ for module in "${production_modules[@]}"; do
     echo "$module 应恰好发布一个 POM" >&2
     exit 1
   }
-  [[ "${#jars[@]}" -eq 3 && "${#sources[@]}" -eq 1
-      && "${#javadocs[@]}" -eq 1 ]] || {
-    echo "$module 应恰好发布主 JAR、sources JAR 和 Javadoc JAR" >&2
-    exit 1
-  }
-  verify_main_jar_contents "$artifact_id"
+  if [[ "$(module_packaging "$module")" == pom ]]; then
+    [[ "${#jars[@]}" -eq 0 ]] || {
+      echo "$module 是纯 POM，不应发布 JAR" >&2
+      exit 1
+    }
+  else
+    [[ "${#jars[@]}" -eq 3 && "${#sources[@]}" -eq 1
+        && "${#javadocs[@]}" -eq 1 ]] || {
+      echo "$module 应恰好发布主 JAR、sources JAR 和 Javadoc JAR" >&2
+      exit 1
+    }
+    verify_main_jar_contents "$artifact_id"
+  fi
 done
 
 verify_generated_plugin() {
@@ -250,12 +264,8 @@ for module in "${consumer_byte_compared_modules[@]}"; do
   consumer_jar="$consumer_directory/$artifact_id-$revision.jar"
   consumer_pom="$consumer_directory/$artifact_id-$revision.pom"
   consumer_tracking="$consumer_directory/_remote.repositories"
-  [[ -f "$consumer_jar" && -f "$consumer_pom" ]] || {
-    echo "仓外 Maven 临时仓库缺少 $artifact_id 的主 JAR 或 POM" >&2
-    exit 1
-  }
-  cmp -s "$(main_jar "$artifact_id")" "$consumer_jar" || {
-    echo "$artifact_id 主 JAR 与临时发布制品字节不一致" >&2
+  [[ -f "$consumer_pom" ]] || {
+    echo "仓外 Maven 临时仓库缺少 $artifact_id 的 POM" >&2
     exit 1
   }
   cmp -s "$(main_pom "$artifact_id")" "$consumer_pom" || {
@@ -271,11 +281,21 @@ for module in "${consumer_byte_compared_modules[@]}"; do
   else
     tracked_version_pattern="$revision"
   fi
-  grep -Eq "^$artifact_id-$tracked_version_pattern\\.jar>fibra-verification=$" \
-    "$consumer_tracking" || {
-    echo "$artifact_id 主 JAR 未从隔离的临时 file repository 解析" >&2
-    exit 1
-  }
+  if [[ "$(module_packaging "$module")" != pom ]]; then
+    [[ -f "$consumer_jar" ]] || {
+      echo "仓外 Maven 临时仓库缺少 $artifact_id 的主 JAR" >&2
+      exit 1
+    }
+    cmp -s "$(main_jar "$artifact_id")" "$consumer_jar" || {
+      echo "$artifact_id 主 JAR 与临时发布制品字节不一致" >&2
+      exit 1
+    }
+    grep -Eq "^$artifact_id-$tracked_version_pattern\\.jar>fibra-verification=$" \
+      "$consumer_tracking" || {
+      echo "$artifact_id 主 JAR 未从隔离的临时 file repository 解析" >&2
+      exit 1
+    }
+  fi
   grep -Eq "^$artifact_id-$tracked_version_pattern\\.pom>fibra-verification=$" \
     "$consumer_tracking" || {
     echo "$artifact_id POM 未从隔离的临时 file repository 解析" >&2

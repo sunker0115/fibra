@@ -1,6 +1,6 @@
 # 后续架构真源与外部参考审计
 
-首次建立：2026-09-13。最近复核：2026-09-19。
+首次建立：2026-09-13。最近复核：2026-09-23。
 
 本文件只记录架构真源映射、固定外部证据、证据等级和本次文档审计结果，不定义新的产品架构、阶段顺序
 或实施计划。
@@ -11,12 +11,14 @@
 |---|---|---|---|
 | Fibra vNext 已交付底座 | [vNext 架构第 1–10 节](../specs/2026-09-07-fibra-vnext-architecture.md) | 已完成；其中 client foundation 后续演进不再由该文定义 | 不能由历史部分绿色构建替代最终账本 |
 | Fibra CLI 演进 | [vNext 架构第 11 节 F1–F4](../specs/2026-09-07-fibra-vnext-architecture.md) | F1–F4 已完成 | F1 之前的固定 CLI、REPL 与 ZIP 只属于第 1–10 节，不能抵扣 F1；每个阶段只由该阶段新增契约和直接验收事实证明 |
-| Fibra client foundation 与跨执行域插件模型 | [Client Foundation 权威架构](../specs/2026-09-15-fibra-client-foundation-architecture.md) | 实时阶段只见 [P0 实施计划](../plans/2026-09-15-fibra-client-foundation-p0.md)，本审计不复制易漂移状态 | 不能以接口 shape、禁止依赖或 Fibra 内浏览器 fixture 替代真实 Java/Node/external runtime 组合、client conformance、重启和发行证据 |
-| 上层 Agent 产品业务路线 | [CLI + Desktop Agent 产品架构](../specs/2026-09-13-fibra-based-agent-product-architecture.md) | 产品业务阶段尚未实施；其 client foundation 前置以 2026-09-15 规格为准 | vNext 不再保存第二套产品阶段表；其它文档不能重排或重定义产品业务路线 |
+| Fibra client foundation 与跨执行域插件模型 | [Client Foundation 权威架构](../specs/2026-09-15-fibra-client-foundation-architecture.md) | P0 已本地冻结，保持 `0.5.0-SNAPSHOT`，未正式发布；实施证据见 [P0 实施计划](../plans/2026-09-15-fibra-client-foundation-p0.md) | 不能以接口 shape、禁止依赖或 Fibra 内浏览器 fixture 替代真实 Java/Node/external runtime 组合、client conformance、重启和发行证据 |
 
-后续架构的 DSH 契约统一固定为 `@deepseek-ai/dsh 0.1.5-rc.2`、提交
+上层 Agent 产品架构、事件存储、持久工作及其外部研究资料由独立产品仓维护，不再把产品 P1–P8 或产品
+实现取舍列为 Fibra 架构真源。Fibra 文档只保留其公共契约、职责边界和可复核的底座证据。
+
+Fibra CLI 与 Client Foundation 对拍使用的 DSH 契约统一固定为 `@deepseek-ai/dsh 0.1.5-rc.2`、提交
 `c291e7961a515f6d7af9304e7fd1d257929aef26`。旧提交 `b0a7d2c` 与 `a66e470` 只保留其历史对拍价值，
-不得继续作为 F1 或产品阶段的架构契约真源。
+不得继续作为 F1 或 Client Foundation 的架构契约真源。
 
 ## 2. CLI 固定源码证据
 
@@ -106,7 +108,7 @@ Fibra 的单一规范 wire 形式、范围与错误码仍由 Client Foundation �
 | 级别 | 问题 | 处理 |
 |---|---|---|
 | 审计 P0 | vNext 总状态把第 1–10 节完成与第 11 节路线混成整体完成 | 已拆分状态，并明确现有 CLI/ZIP 不证明 F1–F4 |
-| 审计 P0 | 当时 vNext 与产品架构各有一套 P0–P8 阶段表且顺序冲突 | 已删除 vNext 阶段表；该历史结论已由 2026-09-15 Client Foundation 规格更新：Fibra P0 定义 foundation，产品文档只定义其后的业务路线 |
+| 审计 P0 | 当时 vNext 与产品架构各有一套 P0–P8 阶段表且顺序冲突 | 已删除 vNext 阶段表；该历史结论已由 2026-09-15 Client Foundation 规格更新：Fibra P0 定义 foundation，产品业务路线由独立产品仓维护 |
 | 审计 P1 | 解析期被描述为持有旧 route 并参与排空 | 已改为仅 PublishedRuntime 准入后的 invocation 持有租约；准入前代变化返回 stale/revoked |
 | 审计 P1 | Picocli `CommandSpec` 被暗示为不可变命令代 | 已把不可变身份限定为 Fibra descriptor、贡献身份和 revision，并记录 Picocli mutator 证据 |
 | 审计 P1 | 普通 Ctrl+C、raw `0x03` 与外部信号没有分开 | 已定义三类入口和共同的幂等取消/排空协调边界 |
@@ -121,7 +123,6 @@ Fibra 的单一规范 wire 形式、范围与错误码仍由 Client Foundation �
 | 审计 P1 | framework-neutral 门禁只搜索 `react/document/window` 文本，无法证明 package 依赖图与 TypeScript lib 没泄漏 | 增加不含 DOM lib 的 core 编译门禁和 package/workspace 依赖图检查；文本搜索仅作为补充信号 |
 | 历史审计 P1 | P0-A 只验证隔离 harness，却被命名为整体风险门，真实 Engine 状态机直到外围迁移后才碰撞 | 2026-09-16 曾拆为旧 P0-B 三段式；2026-09-17 已由 compile-only、真实 Engine、重启恢复、发行/独立消费四门 P0-A–P0-D 与新 Task 7–13 替代 |
 | 历史审计 P1 | client foundation 下沉只由架构自证，未说明为何不等待第二个外部产品消费者 | 当时只补了文字理由，没有提供真实跨仓消费者或 walking skeleton；2026-09-17 复审据此撤回 browser runtime 下沉，保留通用 SPI/protocol |
-| 审计 P2 | 产品表把 `host-java`/`host-node` 写在 `facet role` 列，混淆 role 与 runtime | 已将列名改为 `facet 形态`，保留 `role=host/command/client` 与 `runtime=java/node/client` 两根正交轴 |
 | 审计 P2 | 对象模型字段与 `fibra-package.yaml` 短 key 没有显式映射 | 已补 `id/runtime/target/capabilities` 到完整对象字段的映射，并明确 `format` 与计算所得 digest 的边界 |
 | 历史审计 P1 | P0 非目标被统一写成“后续由产品阶段进入”，混淆 Fibra 平台欠账与上层产品职责 | 旧第 14 节成熟度账本已删除；当前职责边界、重新冻结门和既有成果处置分别以 Client Foundation 第 1、12、14 节为准 |
 | F2 P2 | F2 当时的自动化宿主没有可受控的真实终端模拟器；`script`/`expect` PTY 缺少 JLine 终端能力协商响应 | 已由 F4 仓外原生 xterm PTY 门禁关闭：直接验证 history 重启、补全、高亮、32x10 窄终端、resize/redisplay、renderer、失败/取消恢复和应用原始输入；不反向改写 F2 当时的阶段证据 |

@@ -45,6 +45,7 @@
   </issueManagement>
 
   <modules>
+    <module>fibra-bom</module>
     <module>fibra-api</module>
     <module>fibra-core</module>
     <module>fibra-config</module>

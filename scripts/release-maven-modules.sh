@@ -2,7 +2,7 @@
 set -euo pipefail
 
 readonly repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-readonly expected_release_module_count=28
+readonly expected_release_module_count=29
 
 release_modules() {
   find "$repository_root" -name pom.xml -not -path '*/target/*' -print \

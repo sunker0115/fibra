@@ -65,6 +65,7 @@ Engine 先编译并按 runtime slice prepare/validate/seal 完整 candidate，�
 
 模块职责：
 
+- `fibra-bom`：全部正式 Fibra Maven 制品的兼容版本目录，不引入运行时依赖；
 - `fibra-api`、`fibra-core`：Scope、插件、服务、事件、effect 和唯一生命周期所有权实现；
 - `fibra-config`：期望状态采集、校验、条件求值和配置绑定；
 - `fibra-artifact`：`PluginPackage`、`PluginPackageStore`、内容摘要和 package revision；
@@ -178,6 +179,29 @@ fibra [全局选项] repl
 动态命令和工具调用都从当前 `PublishedView` 捕获 descriptor、view revision 和 registration identity，再经过
 同一准入路径执行。长期 REPL 只持有一个 Engine/Registry 宿主，不按输入行重建 runtime。
 
+应用可通过 `fibra-bom` 统一 Fibra 制品版本；BOM 只管理版本，不会把任何模块加入运行时：
+
+```xml
+<dependencyManagement>
+  <dependencies>
+    <dependency>
+      <groupId>com.sstlfsj</groupId>
+      <artifactId>fibra-bom</artifactId>
+      <version>0.5.0-SNAPSHOT</version>
+      <type>pom</type>
+      <scope>import</scope>
+    </dependency>
+  </dependencies>
+</dependencyManagement>
+
+<dependencies>
+  <dependency>
+    <groupId>com.sstlfsj</groupId>
+    <artifactId>fibra-spring-boot-starter</artifactId>
+  </dependency>
+</dependencies>
+```
+
 Spring Boot 引入 `fibra-spring-boot-starter` 后，默认建立 `PluginPackageStore`、
 `FileDeploymentTargetStore`、Java/Node provider、Engine、Registry、审计仓库和 `PublishedRuntime`。
 `fibra.storage-root` 默认为 `.fibra`。使用 `@FibraService` 显式导出宿主 Bean；动态插件对象不会被 Spring
@@ -196,7 +220,8 @@ scripts/verify-reproducible-release.sh
 scripts/verify-architecture-boundaries.sh
 ```
 
-正式发布边界为 28 个 Maven 制品和 2 个 npm 制品。门禁覆盖公共签名、Java/Node 真实执行、package 与 durable
+正式发布边界为 29 个 Maven 制品（28 个 JAR 与 1 个 BOM POM）和 2 个 npm 制品。门禁覆盖公共签名、
+Java/Node 真实执行、package 与 durable
 target 恢复、Spring、archetype、独立 Maven/npm 消费者、发行 ZIP、可复现性和正式归档内容。详细发布清单与
 流程见 [发布与构建基线](docs/release.md)。`verify-distribution.sh` 会创建唯一一次全新 Maven 消费仓库，本地开发
 与 PR 事件不执行该空仓门禁，每次 push 由 GitHub Actions 自动执行。

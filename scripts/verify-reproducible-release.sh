@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+shopt -s nullglob
 
 readonly maven_executable="${MVN:-mvn}"
 readonly repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -29,6 +30,12 @@ file_mode() {
   else
     stat -c '%a' "$1"
   fi
+}
+
+module_packaging() {
+  local packaging
+  packaging="$(sed -n 's:.*<packaging>\([^<]*\)</packaging>.*:\1:p' "$1/pom.xml")"
+  printf '%s\n' "${packaging:-jar}"
 }
 
 distribution_manifest() {
@@ -64,8 +71,14 @@ for module in "${production_modules[@]}"; do
       artifact_count=$((artifact_count + 1))
     fi
   done
-  if [[ "$artifact_count" -ne 3 ]]; then
-    echo "$module 应恰好生成主 JAR、sources JAR 和 Javadoc JAR" >&2
+  expected_artifact_count=3
+  expected_artifact_description="主 JAR、sources JAR 和 Javadoc JAR"
+  if [[ "$(module_packaging "$module")" == pom ]]; then
+    expected_artifact_count=0
+    expected_artifact_description="纯 POM，不生成 JAR"
+  fi
+  if [[ "$artifact_count" -ne "$expected_artifact_count" ]]; then
+    echo "$module 应生成$expected_artifact_description" >&2
     exit 1
   fi
 done

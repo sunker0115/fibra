@@ -1,9 +1,9 @@
 # 源码参考与行为证据
 
-本目录只保存架构取舍的来源、固定版本、源码定位和验证映射。Fibra 已完成范围与 F1–F4 由
-[vNext 架构](../specs/2026-09-07-fibra-vnext-architecture.md)定义；产品 P0–P8 只由
-[CLI + Desktop Agent 产品架构](../specs/2026-09-13-fibra-based-agent-product-architecture.md)定义。
-参考项目的实现不自动成为 Fibra 的实现承诺，文章解读也不能替代固定提交的源码与测试。
+本目录只保存 Fibra 架构取舍的来源、固定版本、源码定位和验证映射。Fibra 已完成范围与 F1–F4 由
+[vNext 架构](../specs/2026-09-07-fibra-vnext-architecture.md)定义，Client Foundation P0 由对应权威规格定义。
+参考项目的实现不自动成为 Fibra 的实现承诺，文章解读也不能替代固定提交的源码与测试。上层 Agent 产品
+架构、事件存储、持久工作、DSH Java、OpenCode V2 与 Spring AI 研究资料由独立产品仓维护。
 
 ## 当前证据链
 
@@ -20,9 +20,6 @@
 - [后续架构真源与外部参考审计](2026-09-13-architecture-source-audit.md)：唯一真源矩阵，DSH/Cordis、
   OpenAI Codex CLI 0.154.0、AgentCLI、PaiCLI、Picocli 4.7.7、JLine 4.4.3 的固定源码证据，外部事实与
   Fibra 推导分级，以及本次审计级别 P0/P1/P2 闭环。
-- [DeepSeek Harness Java 公开架构分析与 Fibra 最优演进建议](2026-09-14-deepseek-harness-java-analysis.md)：
-  官网 18 章、MySQL/Mall/部署公开源码与成熟插件架构的交叉分析，插件/工具/会话/治理证据，以及按 Fibra
-  通用底座与上层 Agent 产品分流的采用、优化和拒绝清单。
 
 ## 用户提供的解读材料
 
@@ -34,7 +31,7 @@
 
 ## 文档职责
 
-- vNext spec 记录 Fibra 第 1–10 节已完成范围和第 11 节 F1–F4；产品 spec 独占 P0–P8 编号与顺序。
+- vNext spec 记录 Fibra 第 1–10 节已完成范围和第 11 节 F1–F4；Client Foundation spec 独占 Fibra P0。
 - `specs` 记录已确认的架构决定、边界和验收条件，不在 `references` 建立平行架构或实施计划。
 - `references` 记录支持决定的外部事实、版本、源码定位与测试映射。
 - 行为验收账本只证明逐项覆盖和执行结果，不替代架构理由。

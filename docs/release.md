@@ -2,8 +2,9 @@
 
 ## 发布边界
 
-当前 release workflow 的正式发布集合是 28 个 Maven 制品：
+当前 release workflow 的正式发布集合是 29 个 Maven 制品：
 
+- 版本目录：`fibra-bom`，仅发布展开后的 BOM POM；
 - 基础层：`fibra-api`、`fibra-core`、`fibra-config`、`fibra-artifact`；
 - 托管与扩展层：`fibra-engine`、`fibra-bridge`、`fibra-runtime-java`、`fibra-runtime-node`、
   `fibra-registry`；
@@ -14,8 +15,8 @@
   `fibra-shell-local`、`fibra-tool-shell`、`fibra-storage`、`fibra-storage-json`、
   `fibra-tool-storage`。
 
-每个 Maven 制品发布主 JAR、sources JAR、Javadoc JAR 和展开后的 POM。根工程、聚合模块、acceptance、
-distribution、example、parity 和 benchmarks 不发布。
+其余 28 个 Maven 制品发布主 JAR、sources JAR、Javadoc JAR 和展开后的 POM；`fibra-bom` 是纯 POM
+制品，不生成空 JAR。根工程、聚合模块、acceptance、distribution、example、parity 和 benchmarks 不发布。
 
 同时发布 2 个 npm 制品：
 
@@ -27,8 +28,8 @@ npm tarball 只包含 `package.json`、`LICENSE`、`NOTICE` 和 `dist/`。两者
 
 各模块 POM 中显式的 `<maven.deploy.skip>false</maven.deploy.skip>` 是 Maven 发布集合的唯一真源，
 `scripts/release-maven-modules.sh` 只负责读取该声明。分发、可复现构建与 release workflow 都消费同一结果；
-脚本同时断言当前发布边界仍为 28 个模块。修改发布边界时必须同步模块 POM、该数量断言与本文，不得复制
-第二份模块名称清单。
+脚本同时断言当前发布边界仍为 29 个模块。`ArchitectureBaselineTest` 保证 `fibra-bom` 管理的 28 个坐标恰好
+等于其余正式发布制品，且不导入第三方 BOM。修改发布边界时必须同步模块 POM、BOM、数量断言与本文。
 
 ## Package 与插件发布物
 
@@ -68,10 +69,11 @@ scripts/verify-architecture-boundaries.sh
 - `clean verify`：全 reactor 单元、契约、真实 Java/Node runtime、重启、插件组合、Spring、archetype、API
   签名和 JMH 编译；
 - `verify-client-packages.sh`：TypeScript declaration 基线、严格归档成员、版本关系和离线 tarball 消费者；
-- `verify-reproducible-release.sh`：28 个 Maven 制品的主 JAR、sources、Javadoc、POM，以及发行 ZIP 与完整目录
+- `verify-reproducible-release.sh`：28 组主 JAR、sources、Javadoc，29 个 Maven POM，以及发行 ZIP 与完整目录
   树的字节复现；
 - `verify-distribution.sh`：部署到临时文件仓库，并在复制出的独立目录验证 core、Engine、外部
-  `RuntimeProvider`、Spring Boot、archetype、CLI ZIP 和真实插件，同时检查 28 个 Maven 主 JAR 的内容边界；
+  `RuntimeProvider`、Spring Boot、archetype、CLI ZIP 和真实插件，同时检查 28 个 Maven 主 JAR 的内容边界与
+  BOM POM 的仓外解析来源；
 - `verify-architecture-boundaries.sh`：拒绝旧 runtime/package 模型重新进入当前生产源码、POM 与发布入口。
 
 独立消费者必须只从临时发布仓库或 npm tarball 解析制品，不得借用 reactor classpath、workspace 链接或源码
@@ -102,7 +104,7 @@ release workflow 也执行一次。每次执行内部只建立一个全新消费
 `verify-release` 在标签提交上重跑 Maven、npm、可复现、架构边界和一次空仓分发门，并保存本次已验证的 npm
 tarball。通过后：
 
-- `publish-central` 使用 `central-release` profile 对严格 28 个 Maven 模块签名并上传 Central Portal；
+- `publish-central` 使用 `central-release` profile 对严格 29 个 Maven 模块签名并上传 Central Portal；
 - `publish-npm` 在支持 Trusted Publishing 的 Node/npm 环境中下载并发布上述不可变 tarball，通过 OIDC 生成
   provenance；不重复 build/test/pack。稳定版使用 `latest`，预发布版使用 qualifier 首段作为 npm tag。
 
@@ -113,7 +115,7 @@ Central 与 npm 发布只消费同一个已验证提交。Central profile 保持
 
 发布负责人应确认：
 
-- 根 revision、Git 标签、两个 npm version 和 28 个 Maven POM 一致；
+- 根 revision、Git 标签、两个 npm version 和 29 个 Maven POM 一致；
 - package manifest、API/declaration 基线、共享协议 fixture 和独立消费者已随契约变化更新；
 - 发行 ZIP 中每个标准插件都有 `fibra-package.yaml`，并从受管 package 恢复；
 - 正式归档不含 verification、fixture、产品 client 实现或旧模型名称；

@@ -15,6 +15,7 @@ import java.util.regex.Pattern;
 
 import org.xml.sax.InputSource;
 import org.junit.jupiter.api.io.TempDir;
+import org.w3c.dom.Element;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -31,7 +32,7 @@ class ArchitectureBaselineTest {
     private static final List<String> EXECUTION_CONFIGURATION_ELEMENTS = List.of(
         "executable", "command", "argument", "arguments", "commandlineArgs");
     private static final List<String> MODULES = List.of(
-        "fibra-api", "fibra-core", "fibra-config", "fibra-artifact",
+        "fibra-bom", "fibra-api", "fibra-core", "fibra-config", "fibra-artifact",
         "fibra-engine", "fibra-bridge", "fibra-runtime-java",
         "fibra-runtime-node", "fibra-registry", "fibra-cli-api", "fibra-cli", "fibra-spring",
         "fibra-spring-boot-starter", "fibra-plugin-archetype",
@@ -60,6 +61,52 @@ class ArchitectureBaselineTest {
         assertFalse(pom.contains("pf4j"));
         assertFalse(pom.contains("fibra-loader-"));
         assertFalse(pom.contains("fibra-spring-boot-autoconfigure"));
+    }
+
+    @Test
+    void bomManagesExactlyThePublishedFibraArtifacts() throws Exception {
+        var root = reactorRoot();
+        var bomPom = root.resolve("fibra-bom/pom.xml");
+        var expected = new LinkedHashSet<String>();
+        for (var pom : reactorPomFiles(root.resolve("pom.xml"))) {
+            if (!pom.equals(bomPom)
+                && Files.readString(pom).contains("<maven.deploy.skip>false</maven.deploy.skip>")) {
+                var document = DocumentBuilderFactory.newInstance().newDocumentBuilder()
+                    .parse(pom.toFile());
+                expected.add(directChildText(document.getDocumentElement(), "artifactId"));
+            }
+        }
+
+        var document = DocumentBuilderFactory.newInstance().newDocumentBuilder()
+            .parse(bomPom.toFile());
+        var project = document.getDocumentElement();
+        assertEquals("pom", directChildText(project, "packaging"));
+        assertTrue(directChildElements(project, "dependencies").isEmpty(),
+            "BOM must manage versions without adding runtime dependencies");
+        assertEquals("false", directChildText(
+            directChildElements(project, "properties").getFirst(), "maven.deploy.skip"));
+        assertEquals("bom", document.getElementsByTagName("flattenMode")
+            .item(0).getTextContent().trim());
+
+        var dependencyManagement = directChildElements(project, "dependencyManagement");
+        assertEquals(1, dependencyManagement.size());
+        var managedDependencyContainers = directChildElements(
+            dependencyManagement.getFirst(), "dependencies");
+        assertEquals(1, managedDependencyContainers.size());
+        var dependencies = directChildElements(managedDependencyContainers.getFirst(), "dependency");
+
+        var actual = new LinkedHashSet<String>();
+        for (var dependency : dependencies) {
+            assertEquals("com.sstlfsj", directChildText(dependency, "groupId"));
+            assertEquals("${project.version}", directChildText(dependency, "version"));
+            assertTrue(directChildElements(dependency, "type").isEmpty());
+            assertTrue(directChildElements(dependency, "scope").isEmpty());
+            actual.add(directChildText(dependency, "artifactId"));
+        }
+
+        assertEquals(dependencies.size(), actual.size(),
+            "BOM must not contain duplicate managed artifacts");
+        assertEquals(expected, actual);
     }
 
     @Test
@@ -239,6 +286,24 @@ class ArchitectureBaselineTest {
     private static boolean containsExactToken(String value, String token) {
         return Pattern.compile("(?<![A-Za-z0-9_.-])" + Pattern.quote(token)
             + "(?![A-Za-z0-9_.-])").matcher(value).find();
+    }
+
+    private static String directChildText(Element parent, String name) {
+        var children = directChildElements(parent, name);
+        if (children.size() != 1) {
+            throw new IllegalStateException("expected one direct " + name + " child");
+        }
+        return children.getFirst().getTextContent().trim();
+    }
+
+    private static List<Element> directChildElements(Element parent, String name) {
+        var matches = new ArrayList<Element>();
+        for (var child = parent.getFirstChild(); child != null; child = child.getNextSibling()) {
+            if (child instanceof Element element && name.equals(element.getTagName())) {
+                matches.add(element);
+            }
+        }
+        return List.copyOf(matches);
     }
 
     private static Path reactorRoot() {

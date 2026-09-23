@@ -1020,7 +1020,7 @@ Java Harness 只是验证 built-in definition、EngineCommand、PublishedView、
 最终交付统一执行一次，发现分发问题时才针对修复重新验证，不因每次逻辑修改重复下载依赖。
 
 2026-09-13 的发行与独立审核结果只证明当时的旧发布边界，不能作为 2026-09-17 RuntimeDriver/package
-硬切后的完成证据。当前正式边界为 28 个 Maven 制品和两个纯契约 npm 包，必须重新执行根 reactor、
+硬切后的完成证据。当前正式边界为 29 个 Maven 制品（28 个 JAR 与 1 个 BOM POM）和两个纯契约 npm 包，必须重新执行根 reactor、
 可复现发行、独立 Maven/npm 消费者、正式归档内容和文档一致性门；发布清单与命令以
 [发布与构建基线](../../release.md)为准。在这些门和新的独立审查全部关闭前，不沿用旧的“无 P0/P1”结论。
 
@@ -1479,7 +1479,7 @@ Agent/Session 插件；input handler 只做稳定适配，不缓存插件实现�
 对话事实、turn、模型上下文、流式游标或断线续接状态。一次流式命令在当前 invocation 存活期间由上层
 生产者更新 renderer 自有状态，再通过线程安全控制柄请求重绘；`execute()` 保持阻塞不妨碍 terminal lane
 继续消费输入、resize、取消和合并后的刷新事件。后台生产者不得直接触碰 JLine、`Display` 或物理终端，
-也不得在 handler 返回后继续使用旧输出柄。跨 turn 持久化与重连使用上层产品架构第 9.2 节的 Session journal；
+也不得在 handler 返回后继续使用旧输出柄。跨 turn 持久化、实时传输与重连由上层产品拥有；
 不能用一个永不结束的 CLI invocation 冒充长会话，否则插件撤销和 route/Scope 排空将永久受阻。
 
 一个会话只有一条终端状态机：
@@ -1557,9 +1557,8 @@ protocol/API 与围栏，不能从同进程
 
 F4 完成后先进入 Fibra Client Foundation P0，再进入上层 Agent 产品实施。本节不再定义 client foundation
 或产品业务阶段编号、顺序、模块清单或退出条件；前者唯一真源是
-[2026-09-15 Client Foundation 权威架构](./2026-09-15-fibra-client-foundation-architecture.md)，后者以
-[基于 Fibra 的 CLI + Desktop Agent 产品架构与实施路线](./2026-09-13-fibra-based-agent-product-architecture.md)
-为准。任何阶段调整不回填第二套阶段表到 vNext。
+[2026-09-15 Client Foundation 权威架构](./2026-09-15-fibra-client-foundation-architecture.md)，后者只由
+独立产品仓的权威架构维护。任何阶段调整不回填第二套阶段表到 vNext。
 
 vNext 只保留边界：上层产品单独拥有仓库、版本、CLI/Desktop 入口、产品插件、Session 事实源和发行物；
 它只消费 F4 后发布的 Fibra 制品，不能取得 Engine 内部 `Context`、建立第二插件控制面，或把产品实现证据
@@ -1576,7 +1575,7 @@ vNext 只保留边界：上层产品单独拥有仓库、版本、CLI/Desktop �
 
 vNext 已交付的 `PublishedRuntime`、贡献租约、调用 Scope、排空和关闭语义继续作为底座；当前实现已经按新规格
 硬切为单一 `RuntimeDriver`、逻辑多 facet package 与完整 `DeploymentTarget`。上层产品仍独占 Agent、
-Session、Model、审批、窗口壳、具体 renderer 和长会话 journal，不能把这些业务事实下沉进 Fibra client
+Session、Model、审批、窗口壳、具体 renderer 和长会话事实，不能把这些业务事实下沉进 Fibra client
 协议。
 
 #### 桌面启动与页面打开
@@ -1585,8 +1584,7 @@ Fibra 通用 CLI 仍不隐式打开页面。Electron、Tauri、浏览器标签�
 认证、窗口及 Host 退出策略由上层产品决定；产品消费 Fibra RuntimeDriver SPI 与 client protocol，自行实现
 transport、browser runner 和 renderer，同时不得复制目标选择、generation、围栏或 Registry。Host ready
 不等待 client 在线，UI ready 由 client execution observed 单独表达。
-完整产品启动与 Session 关闭策略只在
-[上层产品架构](./2026-09-13-fibra-based-agent-product-architecture.md)维护。
+完整产品启动与 Session 关闭策略只在独立产品仓维护。
 
 #### 产品 client runtime 的边界
 
@@ -1608,9 +1606,9 @@ DSH/Cordis、VS Code、Grafana、Theia 与 Codex app-server 的证据、版本�
 JavaFX `Node`、React component、路由、slot、browser loader、transport 或产品长会话数据面；这些类型和
 实现只能存在于产品 runtime/renderer adapter 内。
 
-长会话继续由上层产品拥有持久 Session journal、turn 生命周期和有界事件读取。除非出现独立真实消费者并
-证明现有 unary contribution 无法满足，否则 Fibra 不预建通用 streaming contribution。该业务路线以
-[上层产品架构](./2026-09-13-fibra-based-agent-product-architecture.md)为准。
+长会话继续由上层产品拥有业务事实、持久工作、turn 生命周期和有界事件读取。除非出现独立真实消费者并
+证明现有 unary contribution 无法满足，否则 Fibra 不预建通用 streaming contribution。具体业务路线只在
+独立产品仓维护。
 
 ### 11.7 上层产品不可破坏的 Fibra 契约
 
@@ -1624,14 +1622,14 @@ JavaFX `Node`、React component、路由、slot、browser loader、transport 或
 - 产品 bootstrap 命令在构建时静态存在，业务 CLI 命令由运行时 command contribution 插件发布；CLI
   从捕获的 descriptor、贡献身份和 revision 构造 Fibra 不可变命令代。Picocli `CommandSpec` 只是受限的
   可变解析对象，插件不能直接取得或修改它，也不能修改 Spring ApplicationContext。
-- `SessionStore`、模型记忆、CLI history、`ConfigStore` 和 `DeploymentTargetStore` 各自只有一个事实来源；
+- 产品业务事实、模型上下文投影、CLI history、`ConfigStore` 和 `DeploymentTargetStore` 各自只有一个事实来源；
   不能共享格式、revision、恢复入口或把一个存储包装成另一个。
 - 直接工具、Agent 工具和 MCP 工具调用传递同一类 cancellation、deadline、调用 Scope 和稳定失败码；
   本地取消不能被描述为远端已经停止，审批不能被描述为 OS 沙箱。
 - 插件显式升级、停用或候选目录变化继续遵守 Fibra 差量更新不变量：无关实例、ClassLoader、Node PID、
   effects 和在途调用保持；保存目标不因目录变化静默改变。
 - CLI 与 Desktop 只是一套产品底层上的两个入口：它们必须共享同一个 Fibra Engine、Registry、持久目标、
-  `PublishedRuntime`、SessionStore 和诊断投影，不能按“前端/后端”建立两套插件管理或配置保存。
+  `PublishedRuntime`、产品业务事实源和诊断投影，不能按“前端/后端”建立两套插件管理或配置保存。
 - 桌面 bootstrap 只拥有进程、窗口、ready 等待和关闭协调；client runtime 只执行同一 Engine 下发的不可变
   目标和生命周期指令，二者都不能建立插件版本选择、desired state 或 Session 事实的第二来源。
 - DSH 的 `jobs-local` 是内存实现，OTel 基线只核实日志导出，UI slot 属客户端组合；上层项目文档不得把
@@ -1642,7 +1640,7 @@ JavaFX `Node`、React component、路由、slot、browser loader、transport 或
 Fibra 的 F1 至 F4 只维护本文和既有行为验收账本，没有新建平行 spec/plan。各阶段当时采用包含契约、实现、
 测试、发行适配与证据回填的独立提交。2026-09-13 的 F4 证据覆盖当时 27 个正式制品、50 模块 reactor、发行
 ZIP、五类仓外消费者、真实 PTY、archetype 和三轮可复现门禁；这些数字与结论只保留为历史记录，不代表
-2026-09-17 Client Foundation 硬切后的发布集合或完成状态。当前 28 个 Maven 制品、两个 npm tarball、独立
+2026-09-17 Client Foundation 硬切后的发布集合或完成状态。当前 29 个 Maven 制品、两个 npm tarball、独立
 消费者与全量门禁以第 10 节和[发布与构建基线](../../release.md)为准，必须在最终工作树重新取证。
 
 上层项目建立后拥有自己的权威架构文档和行为验收账本，不把产品实现证据回填成 Fibra 已实现能力。
@@ -1680,7 +1678,7 @@ N1/N2/J1/J2/E1 与 V1 的实现、测试和历史证据已经提交；#33/#34/#3
 覆盖，修复提交 `98ccd53` 的
 [GitHub Actions #37](https://github.com/sunker0115/fibra/actions/runs/34920221889) 曾在同一 HEAD 通过当时的
 短超时、全量构建、27 制品可复现比较和仓外分发消费者。该证据只说明 Client Foundation 硬切前的 Java/Node
-底座里程碑，不证明当前 28+2 发布边界已完成。历史执行进度见
+底座里程碑，不证明当前 29 个 Maven 制品加 2 个 npm 制品的发布边界已完成。历史执行进度见
 [Java/Node 与整体底座打磨计划](../plans/2026-09-14-java-node-stability-hardening.md)；当前进度、门禁与停止条件
 以 2026-09-15 Client Foundation 规格和实施计划为准。Windows 仍保持未实测声明，产品业务路线仍在独立
 产品文档中推进。
