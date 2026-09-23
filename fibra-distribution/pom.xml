@@ -16,6 +16,7 @@
   <packaging>pom</packaging>
 
   <properties>
+    <maven.deploy.skip>false</maven.deploy.skip>
     <fibra.distribution.directory>${project.build.directory}/fibra-${project.version}</fibra.distribution.directory>
     <fibra.distribution.node>node</fibra.distribution.node>
     <fibra.distribution.rg>rg</fibra.distribution.rg>
@@ -191,8 +192,8 @@
             <goals><goal>single</goal></goals>
             <configuration>
               <descriptors><descriptor>src/assembly/bin.xml</descriptor></descriptors>
-              <finalName>fibra-${project.version}-bin</finalName>
-              <appendAssemblyId>false</appendAssemblyId>
+              <finalName>fibra-${project.version}</finalName>
+              <appendAssemblyId>true</appendAssemblyId>
             </configuration>
           </execution>
         </executions>

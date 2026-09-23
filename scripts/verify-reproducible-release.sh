@@ -9,7 +9,7 @@ while IFS= read -r module; do
   production_modules+=("$module")
 done < <("$repository_root/scripts/release-maven-modules.sh")
 readonly -a production_modules
-readonly module_list="$("$repository_root/scripts/release-maven-modules.sh" csv),fibra-distribution"
+readonly module_list="$("$repository_root/scripts/release-maven-modules.sh" csv)"
 cd "$repository_root"
 readonly revision="$(sed -n 's:.*<revision>\([^<]*\)</revision>.*:\1:p' pom.xml)"
 readonly distribution_archive="fibra-distribution/target/fibra-$revision-bin.zip"

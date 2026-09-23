@@ -659,7 +659,9 @@ identity 或 service realm。配置 bundle 是普通、可复用的配置源片�
 正式分发由根 reactor 中的顶层 `fibra-distribution` 聚合模块装配，不放入 example 或 acceptance。
 根目录 `mvn clean package` 与 `mvn -pl fibra-distribution -am package` 均直接生成
 `fibra-distribution/target/fibra-<version>/` 和同级 `fibra-<version>-bin.zip`，不需要人工复制、改名或补充
-依赖。发行目录采用下列职责布局：
+依赖。该 ZIP 以 `com.sstlfsj:fibra-distribution:<version>:zip:bin` 附着并发布；仓外分发门从隔离文件仓解析后
+与本轮最终 ZIP 逐字节比较。上层产品必须从制品仓解析，不能从 Fibra reactor 或源码目录复制。发行目录采用
+下列职责布局：
 
 ```text
 fibra-<version>/
@@ -1020,7 +1022,7 @@ Java Harness 只是验证 built-in definition、EngineCommand、PublishedView、
 最终交付统一执行一次，发现分发问题时才针对修复重新验证，不因每次逻辑修改重复下载依赖。
 
 2026-09-13 的发行与独立审核结果只证明当时的旧发布边界，不能作为 2026-09-17 RuntimeDriver/package
-硬切后的完成证据。当前正式边界为 29 个 Maven 制品（28 个 JAR 与 1 个 BOM POM）和两个纯契约 npm 包，必须重新执行根 reactor、
+硬切后的完成证据。当前正式边界为 30 个 Maven 模块（28 个 JAR 模块、1 个 BOM POM 与 1 个发行 ZIP 模块）和两个纯契约 npm 包，必须重新执行根 reactor、
 可复现发行、独立 Maven/npm 消费者、正式归档内容和文档一致性门；发布清单与命令以
 [发布与构建基线](../../release.md)为准。在这些门和新的独立审查全部关闭前，不沿用旧的“无 P0/P1”结论。
 
@@ -1640,7 +1642,7 @@ JavaFX `Node`、React component、路由、slot、browser loader、transport 或
 Fibra 的 F1 至 F4 只维护本文和既有行为验收账本，没有新建平行 spec/plan。各阶段当时采用包含契约、实现、
 测试、发行适配与证据回填的独立提交。2026-09-13 的 F4 证据覆盖当时 27 个正式制品、50 模块 reactor、发行
 ZIP、五类仓外消费者、真实 PTY、archetype 和三轮可复现门禁；这些数字与结论只保留为历史记录，不代表
-2026-09-17 Client Foundation 硬切后的发布集合或完成状态。当前 29 个 Maven 制品、两个 npm tarball、独立
+2026-09-17 Client Foundation 硬切后的发布集合或完成状态。当前 30 个 Maven 模块、两个 npm tarball、独立
 消费者与全量门禁以第 10 节和[发布与构建基线](../../release.md)为准，必须在最终工作树重新取证。
 
 上层项目建立后拥有自己的权威架构文档和行为验收账本，不把产品实现证据回填成 Fibra 已实现能力。
@@ -1678,7 +1680,7 @@ N1/N2/J1/J2/E1 与 V1 的实现、测试和历史证据已经提交；#33/#34/#3
 覆盖，修复提交 `98ccd53` 的
 [GitHub Actions #37](https://github.com/sunker0115/fibra/actions/runs/34920221889) 曾在同一 HEAD 通过当时的
 短超时、全量构建、27 制品可复现比较和仓外分发消费者。该证据只说明 Client Foundation 硬切前的 Java/Node
-底座里程碑，不证明当前 29 个 Maven 制品加 2 个 npm 制品的发布边界已完成。历史执行进度见
+底座里程碑，不证明当前 30 个 Maven 模块加 2 个 npm 制品的发布边界已完成。历史执行进度见
 [Java/Node 与整体底座打磨计划](../plans/2026-09-14-java-node-stability-hardening.md)；当前进度、门禁与停止条件
 以 2026-09-15 Client Foundation 规格和实施计划为准。Windows 仍保持未实测声明，产品业务路线仍在独立
 产品文档中推进。

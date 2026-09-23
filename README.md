@@ -78,7 +78,8 @@ Engine 先编译并按 runtime slice prepare/validate/seal 完整 candidate，�
 - `fibra-client-protocol`：Java 侧、传输中立的 client wire value 与 codec；
 - `client/packages/client-api`、`client/packages/client-protocol`：正式 npm client 契约；
 - `fibra-plugin-archetype`：独立 Java 插件工程骨架；
-- `fibra-plugins`：fs、subprocess、shell、storage 及 tool consumer 的正式插件产品。
+- `fibra-plugins`：fs、subprocess、shell、storage 及 tool consumer 的正式插件产品；
+- `fibra-distribution`：以 `bin` 分类 ZIP 发布的 Fibra 参考发行。
 
 ## 插件 package
 
@@ -220,7 +221,7 @@ scripts/verify-reproducible-release.sh
 scripts/verify-architecture-boundaries.sh
 ```
 
-正式发布边界为 29 个 Maven 制品（28 个 JAR 与 1 个 BOM POM）和 2 个 npm 制品。门禁覆盖公共签名、
+正式发布边界为 30 个 Maven 模块（28 个 JAR 模块、1 个 BOM POM 与 1 个发行 ZIP 模块）和 2 个 npm 制品。门禁覆盖公共签名、
 Java/Node 真实执行、package 与 durable
 target 恢复、Spring、archetype、独立 Maven/npm 消费者、发行 ZIP、可复现性和正式归档内容。详细发布清单与
 流程见 [发布与构建基线](docs/release.md)。`verify-distribution.sh` 会创建唯一一次全新 Maven 消费仓库，本地开发

@@ -171,6 +171,25 @@ for module in "${production_modules[@]}"; do
   fi
 done
 
+readonly deployed_distribution_directory="$remote_repository/com/sstlfsj/fibra-distribution/$revision"
+deployed_distribution_archives=("$deployed_distribution_directory"/fibra-distribution-*-bin.zip)
+[[ "${#deployed_distribution_archives[@]}" -eq 1 ]] || {
+  echo "fibra-distribution 应恰好发布一个 bin 分类的 ZIP" >&2
+  exit 1
+}
+readonly deployed_distribution_archive="${deployed_distribution_archives[0]}"
+cmp "$distribution_archive" "$deployed_distribution_archive"
+
+"$maven_executable" --settings "$fixture/settings.xml" \
+  --batch-mode --no-transfer-progress \
+  -Dmaven.repo.local="$consumer_local_repository" \
+  -Dfibra.repository.url="file://$remote_repository" \
+  "org.apache.maven.plugins:maven-dependency-plugin:$dependency_plugin_version:get" \
+  -Dartifact="com.sstlfsj:fibra-distribution:$revision:zip:bin" \
+  -Dtransitive=false
+readonly consumed_distribution_archive="$consumer_local_repository/com/sstlfsj/fibra-distribution/$revision/fibra-distribution-$revision-bin.zip"
+cmp "$distribution_archive" "$consumed_distribution_archive"
+
 verify_generated_plugin() {
   local settings="$1"
   local generated="$2"

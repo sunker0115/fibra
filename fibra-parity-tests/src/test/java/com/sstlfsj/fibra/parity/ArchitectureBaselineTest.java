@@ -73,7 +73,10 @@ class ArchitectureBaselineTest {
                 && Files.readString(pom).contains("<maven.deploy.skip>false</maven.deploy.skip>")) {
                 var document = DocumentBuilderFactory.newInstance().newDocumentBuilder()
                     .parse(pom.toFile());
-                expected.add(directChildText(document.getDocumentElement(), "artifactId"));
+                var artifactId = directChildText(document.getDocumentElement(), "artifactId");
+                expected.add(publishedCoordinate(artifactId,
+                    artifactId.equals("fibra-distribution") ? "zip" : null,
+                    artifactId.equals("fibra-distribution") ? "bin" : null));
             }
         }
 
@@ -99,14 +102,35 @@ class ArchitectureBaselineTest {
         for (var dependency : dependencies) {
             assertEquals("com.sstlfsj", directChildText(dependency, "groupId"));
             assertEquals("${project.version}", directChildText(dependency, "version"));
-            assertTrue(directChildElements(dependency, "type").isEmpty());
+            var artifactId = directChildText(dependency, "artifactId");
+            var type = optionalDirectChildText(dependency, "type");
+            var classifier = optionalDirectChildText(dependency, "classifier");
             assertTrue(directChildElements(dependency, "scope").isEmpty());
-            actual.add(directChildText(dependency, "artifactId"));
+            if (artifactId.equals("fibra-distribution")) {
+                assertEquals("zip", type);
+                assertEquals("bin", classifier);
+            } else {
+                assertEquals(null, type);
+                assertEquals(null, classifier);
+            }
+            actual.add(publishedCoordinate(artifactId, type, classifier));
         }
 
         assertEquals(dependencies.size(), actual.size(),
             "BOM must not contain duplicate managed artifacts");
         assertEquals(expected, actual);
+    }
+
+    @Test
+    void distributionPublishesTheVerifiedArchiveAsTheBinClassifier() throws Exception {
+        var root = reactorRoot();
+        var pom = Files.readString(root.resolve("fibra-distribution/pom.xml"));
+
+        assertTrue(pom.contains("<maven.deploy.skip>false</maven.deploy.skip>"));
+        assertTrue(pom.contains("<finalName>fibra-${project.version}</finalName>"));
+        assertTrue(pom.contains("<appendAssemblyId>true</appendAssemblyId>"));
+        assertTrue(Files.readString(root.resolve("fibra-distribution/src/assembly/bin.xml"))
+            .contains("<id>bin</id>"));
     }
 
     @Test
@@ -294,6 +318,22 @@ class ArchitectureBaselineTest {
             throw new IllegalStateException("expected one direct " + name + " child");
         }
         return children.getFirst().getTextContent().trim();
+    }
+
+    private static String optionalDirectChildText(Element parent, String name) {
+        var children = directChildElements(parent, name);
+        if (children.size() > 1) {
+            throw new IllegalStateException("expected at most one direct " + name + " child");
+        }
+        return children.isEmpty() ? null : children.getFirst().getTextContent().trim();
+    }
+
+    private static String publishedCoordinate(String artifactId, String type,
+                                              String classifier) {
+        if (type == null && classifier == null) {
+            return artifactId;
+        }
+        return artifactId + ':' + type + ':' + classifier;
     }
 
     private static List<Element> directChildElements(Element parent, String name) {

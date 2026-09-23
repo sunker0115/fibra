@@ -161,6 +161,13 @@
         <artifactId>fibra-tool-storage</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-distribution</artifactId>
+        <version>${project.version}</version>
+        <type>zip</type>
+        <classifier>bin</classifier>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
