@@ -3,7 +3,7 @@
 日期：2026-09-07
 
 状态：第 1–10 节与第 11 节 F1–F4 的原始交付已完成；2026-09-20 Client Foundation P0
-本地冻结为历史事实，2026-10-07 复审缺口与本轮验收见
+本地冻结为历史事实，2026-10-07 复审缺口已修复，实现验收与合并约束见
 [关闭计划](../plans/2026-10-07-final-architecture-closeout.md)。跨执行域插件模型及其 P0 的字段级契约仍以
 [2026-09-15 Client Foundation 权威架构](./2026-09-15-fibra-client-foundation-architecture.md)为准。
 
@@ -1656,8 +1656,9 @@ ZIP、五类仓外消费者、真实 PTY、archetype 和三轮可复现门禁；
 
 Fibra F1–F4 的历史阶段已完成；Fibra Client Foundation P0 在 2026-09-20 按
 [实施计划](../plans/2026-09-15-fibra-client-foundation-p0.md)完成状态模型硬切与当时的本地冻结。
-2026-10-07 已重开最终架构缺口，本轮状态以[关闭计划](../plans/2026-10-07-final-architecture-closeout.md)为准。
-当前保持 `0.5.0-SNAPSHOT` 且未正式发布；独立产品 P1 前置装配仍须等待本轮验收，并由产品仓完成
+2026-10-07 最终架构缺口已修复，实现提交的本地与 Linux CI 验收通过，证据与合并约束以
+[关闭计划](../plans/2026-10-07-final-architecture-closeout.md)为准。
+当前保持 `0.5.0-SNAPSHOT` 且未正式发布；独立产品 P1 前置装配须消费验收通过的 Fibra 制品，并由产品仓完成
 自身真实 browser RuntimeDriver、transport 与发行门。
 Model、Agent、Session、MCP 或其它 DSH 产品模块不回填到 Fibra 仓库。
 

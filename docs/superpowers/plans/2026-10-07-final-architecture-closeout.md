@@ -6,7 +6,8 @@
 
 **技术栈：** Java 21、Maven 3.9.9、Reactor、现有 Java/Node driver、TypeScript API/protocol、项目锁定的 Node/pnpm；执行环境偏差单独记录。
 
-**授权：** 用户已要求开始修复并在通过验收后合并 main，随后明确“按最终架构来设计”，允许参考源项目。合并不等于发布或推送。
+**授权：** 用户已要求开始修复并在通过验收后合并 main，随后明确“按最终架构来设计”，允许参考源项目；
+2026-10-07 又明确授权推送工作分支。只推送 `codex/fibra-ui-foundation`，main 合并在本地完成，不推送 main、不发布制品。
 
 ## 基线与模式分析
 
@@ -68,16 +69,17 @@
 
 - [x] 更新现有权威文档与发行文档，旧顺序直接更正；保留历史计划事实并指向本计划，撤回无证据的当前完成表述。
 - [x] 按项目规则运行根 clean verify、client package/连通门、架构/API、三轮可复现；每轮 Maven 串行，避免 target 互相覆盖。
-- [ ] 核对该最终提交 CI/空仓消费者证据。项目默认空仓门不在本地执行，若无法取得必须明确阻断，不假装通过。
+- [x] 实现提交 `fda128c` 的 Linux CI 与空仓消费者通过；本轮文档回填提交仍须在合并前核对其 HEAD 的同一 CI 门。
 - [x] 最强可用模型完成生命周期、持久状态、发行/连接和文档的交叉独立审查；已报告的 4 处文档矛盾全部修正并经复核关闭。测试运行证据仍由主线程最终集成确认。
-- [ ] 保护用户变化；不自动 push、不触发发布；成功后记录 main 提交与实际验证范围。
+- [x] 工作树保护、推送授权及合并方式已核对：保留阶段提交历史，仅合并本地 main；合并后的提交与树以 Git 历史为准。
 
 ## 停止条件与当前进度
 
 - 同一问题两次失败而没有新证据，停止硬试并记录现场。
 - 新公共契约、依赖、超出本任务的状态源或无法解释的资源 owner 分歧先停止该部分，继续独立工作。
 - 目标只在全部验收及合并完成后关闭；局部测试通过不关闭总目标。
-- 当前：A–D 与文档修正、交叉独审已完成；第二轮根 clean verify、npm 与真实连接消费门通过。三轮可复现构建与逐字节比较通过，可进入最终提交的 Linux CI/空仓门验收；尚未推送、合并或发布。
+- 当前：A–D、文档修正与交叉独审完成；本地验收和实现提交 `fda128c` 的远端 Linux CI/空仓门全部通过。
+  本次回填只修改文档，工作分支 HEAD 仍按相同 CI 门验收后合并 main；不预写尚未产生的合并 SHA，不以本计划替代 Git 合并事实。
 
 ## 本轮验证证据
 
@@ -88,9 +90,21 @@
 - 连接：`connection-red.log` → `connection-java-green.log` / `connection-client-green.log`；最后正向远端调用与精确拒绝断言已由 `builtin-release-green-2.log` 覆盖。
 - 集成：`final-clean-verify.log` 首轮在 Registry 旧测试期待“启动失败但 upsert 成功”处失败；`retention-contract-red.log` 单独复现启动失败应为 BLOCKED 的旧断言。不能把此轮写为成功。
 - npm：`final-client-packages.log` 通过 12 项测试、声明基线、严格 tarball 内容及离线独立消费者；架构边界脚本已通过。
-- 本机 Java 21/Maven 3.9.9/pnpm 11.19.0；Node 22.22.2、ripgrep 15.2.0 与 CI 锁定 22.14.0/15.0.1 有偏差，最终 CI 环境仍须验证。
+- 本机 Java 21/Maven 3.9.9/pnpm 11.19.0；Node 22.22.2、ripgrep 15.2.0 与 CI 锁定 22.14.0/15.0.1 有偏差；
+  下述 Linux CI 已补齐锁定版本环境的验证。
 - 独立复核：三个 `gpt-6-astra / ultra` agent 交叉审查不属于各自实现范围的改动；Engine/builtin 与发行/连接未发现新 blocker，文档 4 项问题已关闭。未将审查结论冒充测试结果。
 - 全仓最终 GREEN：`final-clean-verify-2.log`，44 模块 reactor 全部成功，包含真实 Java/Node runtime、Registry 失败审计、loader 释放、独立 Host 重启、API/架构基线和 archetype 独立构建。
 - 最终连接消费：`final-connection-green.log` 通过，输入来自上述根 clean verify 本轮生成的六份正式 envelope。
 - 可复现 GREEN：`final-reproducible-release.log` 三次构建全部成功，28 组主 JAR/sources/Javadoc、30 个 Maven POM、发行 ZIP 和目录树逐字节一致。
-- 当前唯一未关闭合并门：最终提交的 GitHub Actions Linux CI 与空仓消费者。`docs/release.md` 将空仓门限定于 push/release workflow；用户级规范禁止自动 push，因此推送工作分支需要单独授权，不能在本地绕过该门。
+- 远端实现验收：[`37574181337`](https://github.com/sunker0115/fibra/actions/runs/37574181337)，
+  `head_sha=fda128cd665d3adbc4f9674c4ffa36727435889a`，push workflow 最终 `completed/success`；
+  `npm-verify` 与 `maven-verify` 均成功，完整构建、真实连接、三轮可复现和空仓分发步骤均为 `success`，未跳过空仓门。
+- 最后文档澄清：Registry 审计 `succeeded` 与命令成功回执一致；确定性启动失败即使目标已保存仍记失败。
+  已由独立审查者核对生产 `doOnSuccess/doOnError` 与 Registry 回归测试，只消除旧表述歧义。
+
+## main 合并与完成核验
+
+实现验收证据与合并事实分开保存：上述 CI 证明实现提交；文档回填后的工作分支 HEAD 仍需完成相同 CI，
+随后以保留历史的 merge 合入本地 main。合并后必须确认工作树干净、`fda128c` 是 main 的祖先、
+main 与验收通过的工作分支 HEAD 的 tree 完全一致；合并提交消息记录最终 CI URL 与受验提交。
+远端 main 和正式版本发布均不在本次推送授权内。

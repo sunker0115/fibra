@@ -2,7 +2,7 @@
 
 > 权威架构：[2026-09-15-fibra-client-foundation-architecture.md](../specs/2026-09-15-fibra-client-foundation-architecture.md)
 
-**当前状态：** 2026-10-07 最终架构审查发现实现与验收缺口，已重新打开收口；当前执行与证据见
+**当前状态：** 2026-10-07 最终架构审查发现的实现与验收缺口已修复，实现提交的本地与 Linux CI 验收通过；证据与合并约束见
 [最终架构关闭计划](2026-10-07-final-architecture-closeout.md)。下文 2026-09-20 的冻结记录为历史阶段事实，
 不代表本轮最终工作树已经验收。
 

@@ -1,10 +1,10 @@
 # Fibra Client Foundation 权威架构与 P0 验证设计
 
-状态：2026-10-07 按最终架构复审重开 P0 缺口关闭；本轮验收与合并状态见
+状态：2026-10-07 最终架构复审缺口已修复，实现提交的本地与 Linux CI 验收通过；本轮证据与合并约束见
 [关闭计划](../plans/2026-10-07-final-architecture-closeout.md)。2026-09-20 的本地冻结是历史验收，
 不能代替本轮最终工作树证据。本文是 Fibra 逻辑插件、
-跨执行域 SPI 与 Client Foundation P0 的权威设计。当前版本仍为 `0.5.0-SNAPSHOT`，未执行正式版本号、
-tag、Maven/npm 发布、合并或推送；冻结只确认架构、实现与本地验收完成，不冒充正式发布。实现不得保留
+跨执行域 SPI 与 Client Foundation P0 的权威设计。当前版本仍为 `0.5.0-SNAPSHOT`，本次不执行正式版本号、
+tag 或 Maven/npm 发布；工作分支推送与本地 main 合并按关闭计划核验，完成验收不冒充正式发布。实现不得保留
 旧新兼容层、双格式、双状态源或按开关选择的两套 runtime。
 
 本文同时纠正 2026-09-15 版本及首次实现中的五个方向性错误：
@@ -771,7 +771,9 @@ pluginId 已有 selection，并原样保留旧 gate；相同 revision 与完整 
 
 完整 deploy 接收已发布的 selections、raw desired graph 和 configContext；增量管理用例从当前 durable target
 派生完整 replacement，并以 targetRevision 做 CAS。`ReconcileCurrent` 只重试当前 target，不另存 target。
-审计 `succeeded` 表示命令被 Engine 接受、目标事务完成，不表示全部 unit ACTIVE；执行结果单独投影 observed。
+审计 `succeeded` 与本次 Engine 命令的成功回执一致；提交前校验失败或 Engine 返回错误时记为 `false`。
+确定性启动失败即使 target 已 `SAVED`，也必须记为 `false`；合法 PENDING 可获得成功回执，但不表示全部
+unit ACTIVE。保存事实与执行观察分别记录。
 审计保存事实按本次前后 durable revision/digest 与 `EngineChangeException` 判断，no-op 和 reconcile 记为
 `NOT_APPLICABLE`，不得将前一次发布视图中的 `SAVED` 误记为本次保存。
 
