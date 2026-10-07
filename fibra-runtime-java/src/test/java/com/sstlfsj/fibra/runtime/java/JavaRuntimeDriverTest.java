@@ -288,8 +288,10 @@ class JavaRuntimeDriverTest {
 
         new JavaBuiltInPackage(metadata, Map.of(new FacetId("host"),
             List.of(new JavaDefinitionEntry<>(definition, ignored -> null))));
-        assertThrows(IllegalArgumentException.class, () -> new JavaBuiltInPackage(metadata,
-            Map.of(new FacetId("host"), List.of())));
+        var mismatched = new JavaBuiltInPackage(metadata,
+            Map.of(new FacetId("host"), List.of()));
+        assertThrows(IllegalArgumentException.class,
+            () -> mismatched.definition(new FacetId("host"), "sample"));
     }
 
     @Test

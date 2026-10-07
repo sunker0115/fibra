@@ -2,7 +2,11 @@
 
 > 权威架构：[2026-09-15-fibra-client-foundation-architecture.md](../specs/2026-09-15-fibra-client-foundation-architecture.md)
 
-**状态：** 2026-09-20 P0 实现范围已重新关闭并在当前工作树本地冻结。当前仍为
+**当前状态：** 2026-10-07 最终架构审查发现的实现与验收缺口已修复，实现提交的本地与 Linux CI 验收通过；证据与合并约束见
+[最终架构关闭计划](2026-10-07-final-architecture-closeout.md)。下文 2026-09-20 的冻结记录为历史阶段事实，
+不代表本轮最终工作树已经验收。
+
+**历史状态（2026-09-20）：** 当时 P0 实现范围关闭并本地冻结，版本为
 `0.5.0-SNAPSHOT`，未执行正式版本号、tag、deploy/publish、合并或推送。此前通用
 `AttemptRole/AttemptPhase` 和 `EngineDiagnostics.phase` 将 Engine operation、candidate/current 与
 retirement batch 的状态所有权压扁；本轮已完成角色专用状态、精确 failure subject、可修正 bootstrap、

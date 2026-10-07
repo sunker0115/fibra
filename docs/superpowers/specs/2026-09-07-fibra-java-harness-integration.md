@@ -2,9 +2,7 @@
 
 日期：2026-09-07
 
-状态：非权威参考场景。现已有 DeepSeek Harness Java 官网教程和公开业务插件源码可供核对；公开证据、
-最优实现对比与采用边界见
-[DeepSeek Harness Java 公开架构分析](../references/2026-09-14-deepseek-harness-java-analysis.md)。本文用于
+状态：非权威参考场景。DeepSeek Harness Java 的产品采用分析与反编译证据由独立产品仓维护；本文只用于
 验证通用 Fibra 接入面能否自然承载一种 Agent Harness，不决定 Fibra 的产品方向、模块边界或发布优先级，
 也不把外部实现中的类名、状态名或包名直接视为 Fibra 契约。
 

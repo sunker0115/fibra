@@ -80,9 +80,7 @@ public final class DefaultFibraRuntime {
     }
 
     private void finishClose() {
-        closed.set(true);
-        closedSignal.tryEmitEmpty();
-        lifecycle.shutdown();
+        finishClose(null);
     }
 
     private void finishCloseWithError(Throwable error) {
@@ -90,8 +88,18 @@ public final class DefaultFibraRuntime {
             closedSignal.tryEmitError(error);
             return;
         }
+        finishClose(error);
+    }
+
+    private void finishClose(Throwable error) {
         closed.set(true);
-        closedSignal.tryEmitError(error);
-        lifecycle.shutdown();
+        try {
+            lifecycle.shutdown();
+        } catch (RuntimeException | Error shutdownFailure) {
+            if (error == null) error = shutdownFailure;
+            else if (error != shutdownFailure) error.addSuppressed(shutdownFailure);
+        }
+        if (error == null) closedSignal.tryEmitEmpty();
+        else closedSignal.tryEmitError(error);
     }
 }

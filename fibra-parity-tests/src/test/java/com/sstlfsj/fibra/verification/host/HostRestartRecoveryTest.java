@@ -126,12 +126,22 @@ class HostRestartRecoveryTest {
         run("verify-recovery-refusal", report, scenario);
         var values = read(report);
         assertEquals(scenario, values.getProperty("scenario"));
-        assertEquals("metadata-definition-mismatch".equals(scenario)
-                ? "rejected-before-host" : "blocked-recoverable",
+        assertEquals("blocked-recoverable",
             values.getProperty("outcome"));
         assertEquals("true", values.getProperty("targetUnchanged"));
         assertFalse(values.getProperty("failure").isBlank());
         assertArrayEquals(targetBytes, Files.readAllBytes(target));
+    }
+
+    @Test
+    void independentHostCanReplaceTargetWithMismatchedBuiltInDefinitions() throws Exception {
+        run("seed", work.resolve("reports/seed-replacement.properties"));
+        var report = work.resolve("reports/corrected-definitions.properties");
+        run("verify-recovery-refusal", report, "metadata-definition-replacement");
+        var values = read(report);
+        assertEquals("blocked-recoverable", values.getProperty("outcome"));
+        assertEquals("true", values.getProperty("targetUnchanged"));
+        assertEquals("satisfied", values.getProperty("replacement"));
     }
 
     private void run(String mode, Path report, Path seedReport)

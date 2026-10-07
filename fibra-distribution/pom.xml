@@ -16,6 +16,7 @@
   <packaging>pom</packaging>
 
   <properties>
+    <maven.deploy.skip>false</maven.deploy.skip>
     <fibra.distribution.directory>${project.build.directory}/fibra-${project.version}</fibra.distribution.directory>
     <fibra.distribution.node>node</fibra.distribution.node>
     <fibra.distribution.rg>rg</fibra.distribution.rg>
@@ -191,12 +192,55 @@
             <goals><goal>single</goal></goals>
             <configuration>
               <descriptors><descriptor>src/assembly/bin.xml</descriptor></descriptors>
-              <finalName>fibra-${project.version}-bin</finalName>
-              <appendAssemblyId>false</appendAssemblyId>
+              <finalName>fibra-${project.version}</finalName>
+              <appendAssemblyId>true</appendAssemblyId>
             </configuration>
           </execution>
         </executions>
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>central-release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>verify-central-distribution</id>
+                <phase>verify</phase>
+                <goals><goal>exec</goal></goals>
+                <configuration>
+                  <executable>bash</executable>
+                  <arguments>
+                    <argument>-euc</argument>
+                    <argument><![CDATA[
+verified_archive=$1
+built_archive=$2
+if [[ -z "$verified_archive" || ! -f "$verified_archive" ]]; then
+  echo "Central 发布必须提供已验证的发行 ZIP：$verified_archive" >&2
+  exit 1
+fi
+if [[ "$verified_archive" -ef "$built_archive" ]]; then
+  echo "Central 发布不能以本轮发行 ZIP 自身作为验证基准" >&2
+  exit 1
+fi
+cmp -- "$verified_archive" "$built_archive"
+                    ]]></argument>
+                    <argument>fibra-central-distribution</argument>
+                    <argument>${fibra.distribution.verifiedArchive}</argument>
+                    <argument>${project.build.directory}/fibra-${project.version}-bin.zip</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

@@ -7,14 +7,31 @@
     <version>1.0.0</version>
   </parent>
   <artifactId>spring-boot-application</artifactId>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring-boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.sstlfsj</groupId>
+        <artifactId>fibra-bom</artifactId>
+        <version>${fibra.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
   <dependencies>
     <dependency>
       <groupId>com.sstlfsj</groupId><artifactId>fibra-spring-boot-starter</artifactId>
-      <version>${fibra.version}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId>
-      <version>${spring-boot.version}</version><scope>test</scope>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>

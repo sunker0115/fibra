@@ -2,7 +2,7 @@
 set -euo pipefail
 
 readonly repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-readonly expected_release_module_count=28
+readonly expected_release_module_count=30
 
 release_modules() {
   find "$repository_root" -name pom.xml -not -path '*/target/*' -print \
@@ -21,7 +21,7 @@ while IFS= read -r module; do
 done < <(release_modules)
 
 if (( ${#modules[@]} != expected_release_module_count )); then
-  echo "正式 Maven 发布模块数量应为 $expected_release_module_count，实际为 ${#modules[@]}" >&2
+  echo "正式 Maven 发布模块数量应为 ${expected_release_module_count}，实际为 ${#modules[@]}" >&2
   exit 1
 fi
 

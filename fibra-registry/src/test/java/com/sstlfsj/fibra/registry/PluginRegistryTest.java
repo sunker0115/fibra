@@ -195,24 +195,43 @@ class PluginRegistryTest {
     }
 
     @Test
-    void acceptedStartFailureIsAuditedSeparatelyFromObservedAndReconcileNeverSavesTarget() throws Exception {
-        try (var fixture = fixture()) {
+    void savedStartFailureIsAuditedAsFailedAndReconcileNeverSavesTarget() throws Exception {
+        var targets = new FailingStore();
+        try (var fixture = new Fixture(targets, new InMemoryPluginAuditRepository())) {
             fixture.registry.install(new PluginInstallRequest(source("one", "1"), true)).block();
             fixture.provider.activationFailure = true;
-            var failed = fixture.registry.upsert(null, entry("entry", "main")).block();
+            var failure = assertThrows(EngineChangeException.class,
+                () -> fixture.registry.upsert(null, entry("entry", "main")).block());
+            var failed = fixture.registry.snapshot();
+            assertEquals(TargetSaveState.SAVED, failure.targetSaveState());
+            assertEquals(failure.view().viewRevision(), failed.viewRevision());
+            assertEquals(failure.view().engine(), failed.engine());
             assertEquals(ExecutionObservation.State.FAILED, failed.observed().get("entry").aggregateState());
-            assertEquals(com.sstlfsj.fibra.engine.TargetConvergence.UNSATISFIED,
-                failed.engine().targetConvergence());
-            assertTrue(fixture.registry.history().getLast().succeeded());
-            assertEquals(TargetSaveState.SAVED, fixture.registry.history().getLast().targetSaveState());
+            assertEquals(EngineState.RUNNING, failed.engine().state());
+            assertEquals(CurrentPhase.BLOCKED, failed.engine().current().orElseThrow().phase());
+            assertEquals(TargetConvergence.BLOCKED, failed.engine().targetConvergence());
+            assertEquals(EngineOperationOutcome.FAILED,
+                failed.engineDiagnostics().operation().orElseThrow().outcome());
+            var audit = fixture.registry.history().getLast();
+            assertFalse(audit.succeeded());
+            assertEquals(TargetSaveState.SAVED, audit.targetSaveState());
+            assertEquals(failure.view().viewRevision(), audit.viewRevision());
+            assertEquals(failure.toString(), audit.detail());
+            var saves = targets.saves;
             var revision = failed.target().orElseThrow().targetRevision();
+            var failedIdentity = failed.observed().get("entry").executions().getFirst().runtimeInstanceId();
             fixture.provider.activationFailure = false;
             var reconciled = fixture.registry.reconcileCurrent().block();
+            assertEquals(saves, targets.saves);
             assertEquals(revision, reconciled.target().orElseThrow().targetRevision());
             assertEquals(ExecutionObservation.State.ACTIVE, reconciled.observed().get("entry").aggregateState());
+            assertEquals(TargetConvergence.SATISFIED, reconciled.engine().targetConvergence());
+            assertTrue(fixture.registry.history().getLast().succeeded());
             assertEquals(TargetSaveState.NOT_APPLICABLE, fixture.registry.history().getLast().targetSaveState());
             var identity = reconciled.observed().get("entry").executions().getFirst().runtimeInstanceId();
+            assertNotEquals(failedIdentity, identity);
             var noop = fixture.registry.reconcileCurrent().block();
+            assertEquals(saves, targets.saves);
             assertEquals(identity, noop.observed().get("entry").executions().getFirst().runtimeInstanceId());
         }
     }

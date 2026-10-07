@@ -139,12 +139,23 @@ public final class FibraEngine implements AutoCloseable {
             close = Mono.defer(() -> {
                 closing.set(true);
                 admissionOpen = false;
-                return loop.quiesce().then(loop.call(this::shutdown));
-            }).doFinally(ignored -> {
-                directoryObservation.dispose();
-                notifications.shutdownNow();
-            }).then(Mono.defer(loop::closeAsync))
-                .onErrorResume(error -> loop.closeAsync().then(Mono.error(error))).cache();
+                var result = new CloseResult();
+                return result.attempt(() -> loop.quiesce()
+                        .then(result.attempt(() -> loop.call(this::shutdown)))
+                        .then(loop.call(() -> {
+                            publish();
+                            result.frozen = publication.get();
+                            return Mono.empty();
+                        })))
+                    .then(result.attempt(() -> Mono.fromRunnable(directoryObservation::dispose)))
+                    .then(result.attempt(() -> Mono.fromRunnable(notifications::shutdownNow)))
+                    .then(result.attempt(loop::closeAsync))
+                    .then(Mono.<Void>defer(() -> {
+                        // 最后一次 lane call 已冻结输入；释放 lane 后只在当前栈完成投影。
+                        if (result.frozen != null) finishShutdown(result.frozen, result.failure);
+                        return result.failure == null ? Mono.empty() : Mono.error(result.failure);
+                    }));
+            }).cache();
         } catch (RuntimeException | Error constructionFailure) {
             cleanupConstructionFailure(constructionFailure, acquiredDirectoryObservation,
                 acquiredDrivers, acquiredDirectory, acquiredDomain, acquiredRuntime,
@@ -235,7 +246,17 @@ public final class FibraEngine implements AutoCloseable {
         return Mono.defer(() -> {
             if (state != EngineState.NEW) return Mono.just(published.current());
             installHostServices();
-            var stored = targetStore.load();
+            final Optional<DeploymentTargetStore.StoredTarget> stored;
+            try {
+                stored = Objects.requireNonNull(targetStore.load(), "stored target");
+                stored.ifPresent(value -> verifyToken(value.target(), value.token()));
+            } catch (RuntimeException | Error error) {
+                durableState = DurableTargetState.UNCERTAIN;
+                targetConvergence = TargetConvergence.BLOCKED;
+                failStop(engineFailure("TARGET_LOAD_FAILED", error,
+                    FailureStage.BOOTSTRAPPING));
+                return Mono.error(error);
+            }
             state = EngineState.RUNNING;
             if (stored.isEmpty()) {
                 beginOperation(EngineOperationKind.BOOTSTRAP, 0,
@@ -247,13 +268,13 @@ public final class FibraEngine implements AutoCloseable {
             }
             durableTarget = stored.get().target();
             durableToken = stored.get().token();
-            verifyToken(durableTarget, durableToken);
             durableState = DurableTargetState.PRESENT;
             targetConvergence = TargetConvergence.CONVERGING;
             return deploy(durableTarget, false, true, Set.of(),
                 EngineOperationKind.BOOTSTRAP);
         }).onErrorResume(error -> {
-            if (state == EngineState.FAIL_STOP) return Mono.error(error);
+            if (state == EngineState.FAIL_STOP
+                || error instanceof MutationGateClosedException) return Mono.error(error);
             targetConvergence = durableTarget == null
                 ? TargetConvergence.ABSENT : TargetConvergence.BLOCKED;
             publish();
@@ -311,106 +332,114 @@ public final class FibraEngine implements AutoCloseable {
                                        EngineOperationKind operationKind) {
         return Mono.defer(() -> {
             ensureMutable();
-            beginOperation(operationKind, target.targetRevision(), save
-                ? TargetSaveState.NOT_SAVED : TargetSaveState.NOT_APPLICABLE);
-            var nextCapabilities = Objects.requireNonNull(capabilitySource.get(), "capability snapshot");
-            var builtIns = captureBuiltIns();
-            var inputsIdentity = inputFingerprint(nextCapabilities, builtIns);
-            var fingerprint = digest(target.targetDigest() + ":" + inputsIdentity);
-            if (current != null) refreshCurrentObservations();
-            if (!save && current != null && current.compiled.compiledFingerprint().equals(fingerprint)
-                && forced.isEmpty() && targetSatisfied(currentObservations())) {
-                completeOperation();
-                targetConvergence = TargetConvergence.SATISFIED;
-                publish();
-                return Mono.just(published.current());
-            }
-            failure = null;
-            var packages = target.selections().values().stream()
-                .filter(selection -> builtIns.stream().noneMatch(value -> value.pluginId().equals(selection.pluginId())))
-                .map(selection -> packageStore.find(selection.pluginId(), selection.packageRevision())
-                    .orElseThrow(() -> new IllegalArgumentException("selected package revision is missing: " + selection)))
-                .map(PluginPackageRecord::managedPackage).toList();
-            var input = planner.inputs(target, packages, builtIns,
-                nextCapabilities);
-            input.facets().facets().values().forEach(facet -> requireDriver(facet.facet().facet().runtimeId()));
-            input.facets().builtInFacets().values().forEach(value -> requireDriver(value.facet().runtimeId()));
-            boolean all = forceAll || current == null || !current.inputsIdentity.equals(inputsIdentity)
-                || (!save && forced.isEmpty());
-            var affected = planner.affected(input, current == null ? null : current.compiled, forced, all);
-            var retained = new LinkedHashMap<ExecutionUnitKey, RuntimeUnitGeneration>();
-            if (current != null) current.units.forEach((key, unit) -> {
-                if (!affected.contains(key) && input.units().containsKey(key)) retained.put(key, unit);
-            });
-            candidate = new CandidateAttempt(identity("attempt"),
-                new DeploymentCandidate(target));
-            operation.attemptId = candidate.id;
-            var staged = candidate.deployment;
-            // inert create 与登记发生在同一 command-lane 调用栈；其后才允许订阅 prepare。
-            for (var entry : drivers.entrySet()) {
-                var id = entry.getKey();
-                var keys = input.units().values().stream()
-                    .filter(unit -> unit.runtimeId().equals(id) && !retained.containsKey(unit.key()))
-                    .map(ExecutionUnitPlan::key).collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
-                if (keys.isEmpty()) continue;
-                var dependencies = new LinkedHashMap<ExecutionUnitKey, List<ExecutionUnitKey>>();
-                keys.forEach(key -> dependencies.put(key, input.units().get(key).dependencies()));
-                var slice = RuntimeTargetSlice.builder(id, target).desired(input.desired())
-                    .capabilities(nextCapabilities)
-                    .affectedEntryIds(keys.stream().map(ExecutionUnitKey::value).collect(java.util.stream.Collectors.toSet()))
-                    .unitDependencies(dependencies)
-                    .facets(input.facets().facets().values().stream()
-                        .filter(facet -> facet.facet().facet().runtimeId().equals(id))
-                        .map(facet -> new PluginFacetSource(facet.facet(), facet.dependencies())).toList())
-                    .builtInPackages(input.facets().builtInFacets().values().stream()
-                        .filter(value -> value.facet().runtimeId().equals(id))
-                        .map(DeploymentTargetCompiler.CompiledBuiltInFacet::pluginPackage).distinct().toList()).build();
-                staged.register(id, entry.getValue().createCandidate(slice));
-            }
-            transitionCandidate(CandidatePhase.PREPARING,
-                EngineOperationStage.PREPARING);
-            publish();
-            return Flux.fromIterable(staged.candidates().values())
-                .concatMap(value -> loop.call(() -> runtimeVoid(
-                    value::prepareAsync)))
-                .then(loop.call(() -> {
-                    ensureMutable();
-                    transitionCandidate(CandidatePhase.VALIDATING,
-                        EngineOperationStage.VALIDATING);
-                    var plans = mergePlans(staged, retained.keySet());
-                    var compiled = planner.validate(input, fingerprint, plans, retained.keySet());
-                    for (var entry : staged.candidates().entrySet()) {
-                        var runtimePlan = entry.getValue().preparedPlan();
-                        var order = compiled.dependencyFirst().stream().filter(runtimePlan.units()::containsKey).toList();
-                        staged.registerSealed(entry.getKey(), entry.getValue().seal(CompiledRuntimeSlice.of(runtimePlan, order)));
-                    }
-                    staged.seal(compiled, retained);
-                    transitionCandidate(CandidatePhase.READY_TO_SAVE,
-                        EngineOperationStage.VALIDATING);
+            return Mono.defer(() -> {
+                beginOperation(operationKind, target.targetRevision(), save
+                    ? TargetSaveState.NOT_SAVED : TargetSaveState.NOT_APPLICABLE);
+                var nextCapabilities = Objects.requireNonNull(capabilitySource.get(), "capability snapshot");
+                var builtIns = captureBuiltIns();
+                var inputsIdentity = inputFingerprint(nextCapabilities, builtIns);
+                var fingerprint = digest(target.targetDigest() + ":" + inputsIdentity);
+                if (current != null) refreshCurrentObservations();
+                if (!save && current != null && current.compiled.compiledFingerprint().equals(fingerprint)
+                    && forced.isEmpty() && targetSatisfied(currentObservations())) {
+                    completeOperation();
+                    targetConvergence = TargetConvergence.SATISFIED;
                     publish();
-                    DurableTargetToken token = durableToken;
-                    if (save) {
-                        transitionCandidate(CandidatePhase.SAVING,
-                            EngineOperationStage.SAVING);
-                        publish();
-                        token = targetStore.save(durableTarget == null ? 0 : durableTarget.targetRevision(), target);
-                        try { verifyToken(target, token); }
-                        catch (RuntimeException invalidConfirmation) {
-                            operation.targetSaveState = TargetSaveState.UNCONFIRMED;
-                            throw invalidConfirmation;
+                    return Mono.just(published.current());
+                }
+                failure = null;
+                var packages = target.selections().values().stream()
+                    .filter(selection -> builtIns.stream().noneMatch(value -> value.pluginId().equals(selection.pluginId())))
+                    .map(selection -> packageStore.find(selection.pluginId(), selection.packageRevision())
+                        .orElseThrow(() -> new IllegalArgumentException("selected package revision is missing: " + selection)))
+                    .map(PluginPackageRecord::managedPackage).toList();
+                var input = planner.inputs(target, packages, builtIns,
+                    nextCapabilities);
+                input.facets().facets().values().forEach(facet -> requireDriver(facet.facet().facet().runtimeId()));
+                input.facets().builtInFacets().values().forEach(value -> requireDriver(value.facet().runtimeId()));
+                boolean all = forceAll || current == null || !current.inputsIdentity.equals(inputsIdentity)
+                    || (!save && forced.isEmpty());
+                var affected = planner.affected(input, current == null ? null : current.compiled, forced, all);
+                var retained = new LinkedHashMap<ExecutionUnitKey, RuntimeUnitGeneration>();
+                if (current != null) current.units.forEach((key, unit) -> {
+                    if (!affected.contains(key) && input.units().containsKey(key)) retained.put(key, unit);
+                });
+                candidate = new CandidateAttempt(identity("attempt"),
+                    new DeploymentCandidate(target));
+                operation.attemptId = candidate.id;
+                var staged = candidate.deployment;
+                // inert create 与登记发生在同一 command-lane 调用栈；其后才允许订阅 prepare。
+                for (var entry : drivers.entrySet()) {
+                    var id = entry.getKey();
+                    var keys = input.units().values().stream()
+                        .filter(unit -> unit.runtimeId().equals(id) && !retained.containsKey(unit.key()))
+                        .map(ExecutionUnitPlan::key).collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+                    if (keys.isEmpty()) continue;
+                    var dependencies = new LinkedHashMap<ExecutionUnitKey, List<ExecutionUnitKey>>();
+                    keys.forEach(key -> dependencies.put(key, input.units().get(key).dependencies()));
+                    var slice = RuntimeTargetSlice.builder(id, target).desired(input.desired())
+                        .capabilities(nextCapabilities)
+                        .affectedEntryIds(keys.stream().map(ExecutionUnitKey::value).collect(java.util.stream.Collectors.toSet()))
+                        .unitDependencies(dependencies)
+                        .facets(input.facets().facets().values().stream()
+                            .filter(facet -> facet.facet().facet().runtimeId().equals(id))
+                            .map(facet -> new PluginFacetSource(facet.facet(), facet.dependencies())).toList())
+                        .builtInPackages(input.facets().builtInFacets().values().stream()
+                            .filter(value -> value.facet().runtimeId().equals(id))
+                            .map(DeploymentTargetCompiler.CompiledBuiltInFacet::pluginPackage).distinct().toList()).build();
+                    staged.register(id, entry.getValue().createCandidate(slice));
+                }
+                transitionCandidate(CandidatePhase.PREPARING,
+                    EngineOperationStage.PREPARING);
+                publish();
+                return Flux.fromIterable(staged.candidates().values())
+                    .concatMap(value -> loop.call(() -> runtimeVoid(
+                        value::prepareAsync)))
+                    .then(loop.call(() -> {
+                        ensureMutable();
+                        transitionCandidate(CandidatePhase.VALIDATING,
+                            EngineOperationStage.VALIDATING);
+                        var plans = mergePlans(staged, retained.keySet());
+                        var compiled = planner.validate(input, fingerprint, plans, retained.keySet());
+                        for (var entry : staged.candidates().entrySet()) {
+                            var runtimePlan = entry.getValue().preparedPlan();
+                            var order = compiled.dependencyFirst().stream().filter(runtimePlan.units()::containsKey).toList();
+                            staged.registerSealed(entry.getKey(), entry.getValue().seal(CompiledRuntimeSlice.of(runtimePlan, order)));
                         }
-                        durableTarget = target;
-                        durableToken = token;
-                        durableState = DurableTargetState.PRESENT;
-                        targetConvergence = TargetConvergence.CONVERGING;
-                        operation.targetSaveState = TargetSaveState.SAVED;
-                    } else {
-                        targetConvergence = TargetConvergence.CONVERGING;
-                    }
-                    promote(staged, Objects.requireNonNull(token, "durable token"), inputsIdentity);
-                    return settleReplacement();
-                }));
-        }).onErrorResume(this::deploymentFailed);
+                        staged.seal(compiled, retained);
+                        transitionCandidate(CandidatePhase.READY_TO_SAVE,
+                            EngineOperationStage.VALIDATING);
+                        publish();
+                        DurableTargetToken token = durableToken;
+                        if (save) {
+                            transitionCandidate(CandidatePhase.SAVING,
+                                EngineOperationStage.SAVING);
+                            publish();
+                            token = targetStore.save(durableTarget == null ? 0 : durableTarget.targetRevision(), target);
+                            try { verifyToken(target, token); }
+                            catch (RuntimeException invalidConfirmation) {
+                                operation.targetSaveState = TargetSaveState.UNCONFIRMED;
+                                throw invalidConfirmation;
+                            }
+                            durableTarget = target;
+                            durableToken = token;
+                            durableState = DurableTargetState.PRESENT;
+                            targetConvergence = TargetConvergence.CONVERGING;
+                            operation.targetSaveState = TargetSaveState.SAVED;
+                        } else {
+                            targetConvergence = TargetConvergence.CONVERGING;
+                        }
+                        promote(staged, Objects.requireNonNull(token, "durable token"), inputsIdentity);
+                        return settleReplacement().then(Mono.fromSupplier(published::current));
+                    }));
+            }).onErrorResume(this::deploymentFailed).flatMap(view -> {
+                if (operation.outcome != EngineOperationOutcome.RUNNING) return Mono.just(view);
+                return loop.call(this::finishCurrentOperation).onErrorMap(error ->
+                    error instanceof EngineChangeException ? error
+                        : new EngineChangeException(published.current(),
+                            operation.targetSaveState, error));
+            });
+        });
     }
 
     private Map<RuntimeId, RuntimePlan> mergePlans(DeploymentCandidate staged, Set<ExecutionUnitKey> retained) {
@@ -463,7 +492,7 @@ public final class FibraEngine implements AutoCloseable {
         publish();
     }
 
-    private Mono<PublishedView> settleReplacement() {
+    private Mono<Void> settleReplacement() {
         if (retirement != null) {
             retirement.source.compiled.reverseDependency().stream().filter(retirement.units::containsKey)
                 .forEach(key -> retirement.units.get(key).closeAdmission());
@@ -472,9 +501,9 @@ public final class FibraEngine implements AutoCloseable {
             publish();
         }
         return drainAndStopRetirement()
-            .then(loop.call(() -> reconcile(current.compiled.affectedUnits())))
             .then(loop.call(this::retire))
-            .then(loop.call(this::finishCurrentOperation));
+            .then(loop.call(() -> reconcile(current.compiled.affectedUnits())))
+            .then();
     }
 
     private Mono<Void> drainAndStopRetirement() {
@@ -574,7 +603,6 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private Mono<PublishedView> deploymentFailed(Throwable error) {
-        if (error instanceof MutationGateClosedException) return Mono.error(error);
         var saveState = operation == null ? TargetSaveState.NOT_APPLICABLE
             : operation.targetSaveState;
         if (state == EngineState.FAIL_STOP) {
@@ -628,11 +656,12 @@ public final class FibraEngine implements AutoCloseable {
             });
         }
         if (retirement != null) {
+            var stage = failureStage();
             retirement.phase = RetirementPhase.FAILED;
             if (current != null) current.phase = CurrentPhase.BLOCKED;
             targetConvergence = TargetConvergence.BLOCKED;
             failStop(retirementFailure("LIFECYCLE_CLEANUP_FAILED", error,
-                failureStage()));
+                stage));
             return Mono.error(new EngineChangeException(published.current(), saveState, error));
         }
         if (current != null && operation != null
@@ -645,8 +674,10 @@ public final class FibraEngine implements AutoCloseable {
             return Mono.error(new EngineChangeException(published.current(),
                 saveState, error));
         }
-        targetConvergence = durableTarget == null ? TargetConvergence.ABSENT
-            : TargetConvergence.BLOCKED;
+        if (current == null) {
+            targetConvergence = durableTarget == null ? TargetConvergence.ABSENT
+                : TargetConvergence.BLOCKED;
+        }
         failOperation(operation != null
             && operation.kind == EngineOperationKind.BOOTSTRAP
             && durableTarget != null
@@ -753,6 +784,7 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private Mono<Void> shutdown() {
+        var retainedFailure = failure;
         mutationGate = false;
         admissionOpen = false;
         if (operation == null || operation.kind != EngineOperationKind.SHUTDOWN) {
@@ -760,47 +792,51 @@ public final class FibraEngine implements AutoCloseable {
                 durableTarget == null ? 0 : durableTarget.targetRevision(),
                 TargetSaveState.NOT_APPLICABLE);
             state = EngineState.CLOSING;
+            publish();
         }
         if (candidate != null) {
-            return cleanupCandidate(candidate).then(loop.call(() -> {
-                candidate = null;
-                return shutdown();
-            })).onErrorResume(error -> {
+            return Mono.defer(() -> cleanupCandidate(candidate)).onErrorResume(error -> {
                 failStop(candidateFailure("HOST_CLOSE_FAILED", error,
                     FailureStage.CLOSING));
-                return Mono.error(error);
-            });
+                return Mono.<Void>error(error);
+            }).then(loop.call(() -> {
+                candidate = null;
+                return shutdown();
+            }));
         }
-        if (retirement != null) return Mono.error(new IllegalStateException(
-            "retirement cleanup failed; resource ownership retained for Host termination"));
-        if (current != null) {
-            retirement = new RetirementBatch(identity("retirement"),
-                current, current.units);
-            current.compiled.reverseDependency().forEach(key -> current.units.get(key).closeAdmission());
-            var old = current;
-            current = null;
-            transitionRetirement(RetirementPhase.DRAINING);
-            transitionOperation(EngineOperationStage.RETIRING);
+        if (retirement != null) {
+            // 旧队列已经终结；残留 retirement 只保留此前精确失败，不重试未知 release。
+            state = EngineState.FAIL_STOP;
+            failOperation(retainedFailure);
             publish();
-            var owners = Collections.newSetFromMap(new IdentityHashMap<PreparedRuntimeGeneration, Boolean>());
-            owners.addAll(old.owners.values());
-            return drainAndStopRetirement().thenMany(Flux.fromIterable(owners)
-                .concatMap(owner -> loop.call(() -> runtimeVoid(
-                    owner::retireAsync))))
-                .then(loop.call(() -> {
+            return Mono.error(new IllegalStateException(
+                "retirement cleanup failed; resource ownership retained for Host termination"));
+        }
+        if (current != null) {
+            var old = current;
+            retirement = new RetirementBatch(identity("retirement"),
+                old, old.units);
+            current = null;
+            return Mono.defer(() -> {
+                old.compiled.reverseDependency().forEach(key -> old.units.get(key).closeAdmission());
+                transitionRetirement(RetirementPhase.DRAINING);
+                transitionOperation(EngineOperationStage.RETIRING);
+                publish();
+                var owners = Collections.newSetFromMap(new IdentityHashMap<PreparedRuntimeGeneration, Boolean>());
+                owners.addAll(old.owners.values());
+                return drainAndStopRetirement().thenMany(Flux.fromIterable(owners)
+                    .concatMap(owner -> loop.call(() -> runtimeVoid(owner::retireAsync)))).then();
+            }).onErrorResume(error -> {
+                if (state != EngineState.FAIL_STOP) {
+                    failStop(retirementFailure("HOST_CLOSE_FAILED", error,
+                        FailureStage.CLOSING));
+                }
+                return Mono.<Void>error(error);
+            }).then(loop.call(() -> {
                     old.units.values().forEach(lastObservations::remove);
                     retirement = null;
                     return shutdown();
-                })).onErrorResume(error -> {
-                    if (retirement != null) {
-                        failStop(retirementFailure("HOST_CLOSE_FAILED", error,
-                            FailureStage.CLOSING));
-                    } else {
-                        failStop(engineFailure("HOST_CLOSE_FAILED", error,
-                            FailureStage.CLOSING));
-                    }
-                    return Mono.error(error);
-                });
+                }));
         }
         var actions = new ArrayList<Supplier<Mono<Void>>>();
         new ArrayList<>(drivers.values()).reversed().forEach(driver -> actions.add(driver::closeAsync));
@@ -811,12 +847,29 @@ public final class FibraEngine implements AutoCloseable {
         actions.add(() -> Mono.fromRunnable(packageStore::close));
         return cleanupAll(actions).then(loop.call(() -> {
             lastObservations.clear();
-            state = EngineState.CLOSED;
-            completeOperation();
-            publish();
-            views.tryEmitComplete();
             return Mono.empty();
         }));
+    }
+
+    private void finishShutdown(PublishedState frozen, Throwable error) {
+        if (error == null) {
+            state = EngineState.CLOSED;
+            completeOperation();
+        } else if (state != EngineState.FAIL_STOP) {
+            state = EngineState.CLOSING;
+            failOperation(engineFailure("HOST_CLOSE_FAILED", error, FailureStage.CLOSING));
+        }
+        var view = frozen.view();
+        var observed = view.engine();
+        var snapshot = new EngineSnapshot(state, observed.hostInstanceId(),
+            observed.durableState(), observed.targetConvergence(), observed.target(),
+            observed.candidate(), observed.current(), observed.retirementBatch());
+        var diagnostics = new EngineDiagnostics(
+            Optional.ofNullable(operation).map(EngineOperation::snapshot),
+            false, false, view.engineDiagnostics().cleanupFailures(),
+            view.engineDiagnostics().terminationRequest(), Optional.ofNullable(failure));
+        publish(snapshot, view.contributions(), view.diagnostics(), diagnostics, frozen.routes());
+        if (error == null) views.tryEmitComplete();
     }
 
     private <D, I, O> Mono<O> invokePublished(String revision, long registration,
@@ -876,14 +929,20 @@ public final class FibraEngine implements AutoCloseable {
         var runtimeDiagnostics = RuntimeDiagnostics.builder().domainName(domainSnapshot.name())
             .plugins(domainSnapshot.plugins()).services(domainSnapshot.services()).events(domainSnapshot.events())
             .cleanupFailures(domainSnapshot.cleanupFailures()).build();
+        publish(snapshot, contributions.snapshot(), runtimeDiagnostics, diagnostics, contributions.routes());
+    }
+
+    private void publish(EngineSnapshot snapshot, ContributionSnapshot contributions,
+                         RuntimeDiagnostics runtimeDiagnostics, EngineDiagnostics diagnostics,
+                         ContributionRoutes routes) {
         var previous = publication.get();
         if (previous != null && previous.view.engine().equals(snapshot)
-            && previous.view.contributions().equals(contributions.snapshot())
+            && previous.view.contributions().equals(contributions)
             && previous.view.engineDiagnostics().equals(diagnostics)
             && previous.view.diagnostics().equals(runtimeDiagnostics)) return;
         var view = PublishedView.builder().viewRevision(identity("view")).engine(snapshot)
-            .contributions(contributions.snapshot()).diagnostics(runtimeDiagnostics).engineDiagnostics(diagnostics).build();
-        publication.set(new PublishedState(view, contributions.routes()));
+            .contributions(contributions).diagnostics(runtimeDiagnostics).engineDiagnostics(diagnostics).build();
+        publication.set(new PublishedState(view, routes));
         views.tryEmitNext(view);
     }
 
@@ -932,6 +991,22 @@ public final class FibraEngine implements AutoCloseable {
 
     private Mono<PublishedView> finishCurrentOperation() {
         refreshCurrentObservations();
+        for (var key : current.compiled.dependencyFirst()) {
+            var unit = current.units.get(key);
+            var observed = lastObservations.get(unit);
+            if (observed.aggregateState() != ExecutionObservation.State.FAILED) continue;
+            var detail = observed.executions().stream()
+                .filter(value -> value.state() == ExecutionObservation.State.FAILED)
+                .findFirst().orElseThrow().failure();
+            var error = new IllegalStateException(detail.code() + ": " + detail.message());
+            transitionCurrent(CurrentPhase.BLOCKED);
+            targetConvergence = TargetConvergence.BLOCKED;
+            failOperation(unitFailure("RUNTIME_ACTIVATION_FAILED", current.id,
+                unit, error, FailureStage.RECONCILING));
+            publish();
+            return Mono.error(new EngineChangeException(published.current(),
+                operation.targetSaveState, error));
+        }
         transitionCurrent(CurrentPhase.SETTLED);
         targetConvergence = targetSatisfied(currentObservations())
             ? TargetConvergence.SATISFIED : TargetConvergence.UNSATISFIED;
@@ -1267,9 +1342,11 @@ public final class FibraEngine implements AutoCloseable {
                 var unit = current.units.get(fence.unitKey());
                 if (unit == null || !matchesFence(unit, fence)) return;
                 observeCurrent(fence.unitKey(), unit);
-                targetConvergence = targetSatisfied(currentObservations())
-                    ? TargetConvergence.SATISFIED
-                    : TargetConvergence.UNSATISFIED;
+                if (current.phase != CurrentPhase.BLOCKED) {
+                    targetConvergence = targetSatisfied(currentObservations())
+                        ? TargetConvergence.SATISFIED
+                        : TargetConvergence.UNSATISFIED;
+                }
                 publish();
             });
         }
@@ -1326,6 +1403,20 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private record PublishedState(PublishedView view, ContributionRoutes routes) { }
+
+    private static final class CloseResult {
+        private Throwable failure;
+        private PublishedState frozen;
+
+        private Mono<Void> attempt(Supplier<Mono<Void>> action) {
+            return Mono.defer(action).onErrorResume(error -> {
+                if (failure == null) failure = error;
+                else if (failure != error && Arrays.stream(failure.getSuppressed())
+                    .noneMatch(previous -> previous == error)) failure.addSuppressed(error);
+                return Mono.empty();
+            });
+        }
+    }
     private static final class CandidateAttempt {
         private final String id;
         private final DeploymentCandidate deployment;

@@ -88,6 +88,18 @@ jobs:
       - name: 验证架构边界
         run: scripts/verify-architecture-boundaries.sh
 
+      - name: 配置连接验收使用的 pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          package_json_file: client/package.json
+          run_install: false
+
+      - name: 验证真实 Engine 与客户端契约连接
+        run: |
+          pnpm --dir client install --frozen-lockfile
+          pnpm --dir client run build:core
+          node client/tests/engine-connection/consume-snapshots.mjs fibra-parity-tests/target/client-protocol-conformance
+
       - name: 验证 Maven 制品与发行 ZIP/目录树可复现
         run: scripts/verify-reproducible-release.sh
 
