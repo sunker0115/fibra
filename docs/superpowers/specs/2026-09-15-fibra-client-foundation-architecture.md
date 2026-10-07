@@ -406,7 +406,8 @@ EngineState             = NEW | RUNNING | FAIL_STOP | CLOSING | CLOSED
 DurableTargetState      = ABSENT | PRESENT | UNCERTAIN
 TargetConvergence       = ABSENT | CONVERGING | SATISFIED | UNSATISFIED | BLOCKED
 EngineOperationStage    = PLANNING | PREPARING | VALIDATING | SAVING | PROMOTING |
-                          RETIRING | RECONCILING | COMPLETED | FAILED
+                          RETIRING | RECONCILING | COMPLETED
+EngineOperationOutcome  = RUNNING | SUCCEEDED | FAILED
 CandidatePhase          = REGISTERED | PREPARING | VALIDATING | READY_TO_SAVE |
                           SAVING | FAILED
 CurrentPhase            = WAITING_FOR_RETIREMENT | RECONCILING | SETTLED |
@@ -465,7 +466,8 @@ FibraEngine
    READY_TO_RELEASE → RELEASING` 进行；若为空，新 current 直接进入 `RECONCILING`；
 6. retirement 成功清空后，current 进入 `RECONCILING`，新 units 按依赖顺序启动；外部 execution
    不在线时快速得到 PENDING，不阻塞 Host ready；
-7. 编排结束后 current 进入 `SETTLED` 或 `BLOCKED`，operation 进入 `COMPLETED` 或 `FAILED`，
+7. 编排结束后 current 进入 `SETTLED` 或 `BLOCKED`；成功时 operation stage 为 `COMPLETED`、outcome 为
+   `SUCCEEDED`，失败时保留实际 stage、outcome 为 `FAILED`，
    `TargetConvergence` 独立表达整体是否满足。
 
 显式 `ReconcileCurrent` 或 plan-affecting `requestRecompile` 为失败/受影响 unit 及 dependent closure
@@ -538,6 +540,12 @@ digest/metadata 不匹配或 prepare 失败时，若 candidate 清理成功，En
 durable target。Host 必须可进入管理 ready，控制面可以基于同一 target revision 提交完整 replacement
 修正，不能伪造一个 FAILED current。只有 target/store 事实无法可信读取、资源所有权不确定或 bootstrap
 清理失败才进入 `FAIL_STOP`。
+
+bootstrap 与首次 close 相交时，本次 operation 尚未建立的准入拒绝直接返回原错误，沿既有 start
+错误缓存终结，不创建虚构 operation 或改写上一项 operation/current。已进入 prepare 的操作遭关闭门拒绝时，
+仍由本次 candidate owner 完成失败分类与清理；清理成功后交付同一 BOOTSTRAP operation 的 `FAILED`、
+实际失败 stage 和上述 durable target / BLOCKED 视图，清理失败则保留 candidate 与精确 `FAIL_STOP`。
+关闭等待该已接纳请求终结，再接管共享资源；后续 start 不重执行 bootstrap。
 
 核心继续直接拒绝旧 `viewRevision + ContributionId + registrationIdentity` 完整调用 tuple 与旧
 `RuntimeUnitFence`。产品 runtime 的旧 session、ack、call result 和 resource request 由产品侧 gateway 使用
@@ -688,14 +696,36 @@ Java 插件 `Context.scope()` 返回实际不实现 `Scope/AutoCloseable` 的 `S
 关闭顺序固定为：
 
 ```text
-关闭 mutation gate
+关闭新准入，排空已接纳的 command，并发布 SHUTDOWN / CLOSING
 → generations 封准入、drain、stop、retire
 → runtime drivers 逆序关闭
 → contribution directory
 → runtime domain
 → FibraRuntime
 → stores
+→ 在原 command lane 冻结最后的贡献、路由、runtime 诊断和 Engine observation
+→ 取消目录观察、请求 notification executor 和 command lane 关闭
+→ 发布最终结果，再完成同一 cached close 回执
 ```
+
+关闭订阅先封准入；quiesce 前已接纳的 bootstrap 按原队列完成或失败，尚未执行的普通管理命令仍受
+closing gate 约束。相同 close 的并发订阅、取消等待者及后续重订阅不重复执行清理。
+只有必要资源清理与内部关闭请求全部成功后，才发布 `CLOSED` / `SHUTDOWN SUCCEEDED`、完成 views，
+随后发成功回执。该结果不承诺所有线程已终止、任意外部 callback 已返回或 Host 进程已退出。
+
+共享 driver、store 或内部收尾失败统一发布 `CLOSING` / `SHUTDOWN FAILED` 和 Engine `FailureFact`，
+与关闭前是 NEW、有无 current 无关；保留首个关闭错误，后续不同错误按身份附属，并继续可独立执行的后项。
+candidate、retirement 或 unit 的生命周期失败仍按第 8 节保留精确 owner、`FAIL_STOP` 和资源现场，
+不得因递归关闭捕获了后续共享错误而伪造已移除 attempt 的失败。current 先完整转交 retirement owner，
+再调用外部 closeAdmission；未证明 generation 已 drain/release 时不继续破坏其现场的共享卸载。
+
+最终发布沿用原关闭 owner 在 command lane 释放后的同步调用栈，只消费此前冻结的不可变输入，
+不得再调度到已释放的 lane 或采样 driver/domain。quiesce、lane 或冻结输入不可用时关闭保持非成功，
+保留最后实际发布事实，不增加 off-lane writer、补采样或 fallback view。失败仅发布失败视图并返回错误，
+不发成功 views 终止或新增 views.onError 协议；当前事实仍以 `PublishedRuntime.current()` 为准。
+
+core 的关闭回执同样在其 dispatcher shutdown 请求返回后交付；shutdown 自身抛错必须进入同一结果，
+不能由终态 callback 丢弃。既有 `ResourceDrain.Failure` 继续保留现场及 dispatcher；关闭不新增线程 TERM 门。
 
 构造中途失败也必须按已经取得所有权的逆序关闭，不能泄漏共享 domain 或 driver。
 

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Schedulers;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -893,6 +894,35 @@ class RuntimeDriverEngineTest {
                 assertFalse(engine.published().current().engineDiagnostics().mutationGateOpen());
                 if (!failure.equals("retire")) assertFalse(events.contains("activate:a1"));
                 if (failure.equals("drain")) assertFalse(events.contains("stop:a1"));
+                var beforeClose = engine.published().current();
+                var retained = beforeClose.engine().retirementBatch().orElseThrow();
+                var retainedFailure = beforeClose.engineDiagnostics().failure().orElseThrow();
+                events.clear();
+
+                var first = assertThrows(IllegalStateException.class,
+                    () -> engine.closeAsync().block(Duration.ofSeconds(5)));
+                var firstEvents = List.copyOf(events);
+                var second = assertThrows(IllegalStateException.class,
+                    () -> engine.closeAsync().block(Duration.ofSeconds(5)));
+                var afterClose = engine.published().current();
+
+                assertAll("Host close after " + failure + " failure",
+                    () -> assertSame(first, second),
+                    () -> assertEquals(firstEvents, events, "cached close must not retry retained cleanup"),
+                    () -> assertEquals(EngineState.FAIL_STOP, afterClose.engine().state()),
+                    () -> assertEquals(retained, afterClose.engine().retirementBatch().orElseThrow()),
+                    () -> assertEquals(beforeClose.engine().current(), afterClose.engine().current()),
+                    () -> assertEquals(retainedFailure, afterClose.engineDiagnostics().failure().orElseThrow()),
+                    () -> assertEquals(EngineOperationKind.SHUTDOWN,
+                        afterClose.engineDiagnostics().operation().orElseThrow().kind()),
+                    () -> assertEquals(EngineOperationOutcome.FAILED,
+                        afterClose.engineDiagnostics().operation().orElseThrow().outcome()),
+                    () -> assertFalse(afterClose.engineDiagnostics().mutationGateOpen()),
+                    () -> assertFalse(afterClose.engineDiagnostics().contributionAdmissionOpen()),
+                    () -> assertTrue(events.isEmpty(), "retained ownership must not be cleaned up again"),
+                    () -> assertEquals(0, store.closes),
+                    () -> assertFalse(alpha.services.scope().isClosed())
+                );
             } finally {
                 assertThrows(IllegalStateException.class, engine::close);
                 alpha.lifecycleFailure = null;
@@ -978,6 +1008,921 @@ class RuntimeDriverEngineTest {
         }
     }
 
+    @Test
+    void hostCloseFailurePublishesClosingFactFromNew() {
+        verifyHostCloseFailure(0);
+    }
+
+    @Test
+    void hostCloseFailurePublishesClosingFactFromRunningWithoutCurrent() {
+        verifyHostCloseFailure(1);
+    }
+
+    @Test
+    void hostCloseFailurePublishesClosingFactFromRunningWithCurrent() {
+        verifyHostCloseFailure(2);
+    }
+
+    @Test
+    void closeAdmissionFailureRetainsOnlyRetirementAndStillReleasesCommandLoop() {
+        var admissionFailure = new IllegalStateException("closeAdmission contract failed");
+        var constructorThread = Thread.currentThread();
+        var decorated = new AtomicInteger();
+        var loopShutdowns = new AtomicInteger();
+        var decoratorKey = "engine-close-admission-" + UUID.randomUUID();
+        Schedulers.addExecutorServiceDecorator(decoratorKey, (scheduler, executor) -> {
+            var commandLoopConstruction = Thread.currentThread() == constructorThread
+                && StackWalker.getInstance().walk(frames -> frames.anyMatch(frame ->
+                    frame.getClassName().equals(EngineCommandLoop.class.getName())
+                        && frame.getMethodName().equals("<init>")));
+            if (!commandLoopConstruction) return executor;
+            decorated.incrementAndGet();
+            return new CloseFailureExecutor(executor, loopShutdowns::incrementAndGet);
+        });
+        try {
+            var engine = engine(request -> { });
+            apply(engine, 0, graph(1, "a1"));
+            var previous = engine.snapshot().current().orElseThrow();
+            var unitFence = alpha.units.get("a1").fence();
+            alpha.closeAdmissionFailure = admissionFailure;
+            events.clear();
+
+            var first = assertThrows(RuntimeException.class,
+                () -> engine.closeAsync().block(Duration.ofSeconds(5)));
+            var firstEvents = List.copyOf(events);
+            var second = assertThrows(RuntimeException.class,
+                () -> engine.closeAsync().block(Duration.ofSeconds(5)));
+            var view = engine.published().current();
+            var retained = view.engine().retirementBatch().orElseThrow();
+
+            assertAll(
+                () -> assertSame(first, second),
+                () -> assertTrue(containsFailure(first, admissionFailure)),
+                () -> assertEquals(firstEvents, events, "cached close must not re-enter cleanup"),
+                () -> assertEquals(1, decorated.get()),
+                () -> assertEquals(1, loopShutdowns.get(), "independent loop shutdown must still run once"),
+                () -> assertEquals(EngineState.FAIL_STOP, view.engine().state()),
+                () -> assertTrue(view.engine().current().isEmpty(), "current ownership must already be transferred"),
+                () -> assertEquals(previous.attemptId(), retained.sourceAttemptId()),
+                () -> assertEquals(RetirementPhase.FAILED, retained.phase()),
+                () -> assertEquals(previous.observations(), retained.observations()),
+                () -> assertFalse(view.engineDiagnostics().mutationGateOpen()),
+                () -> assertFalse(view.engineDiagnostics().contributionAdmissionOpen()),
+                () -> assertEquals(EngineOperationKind.SHUTDOWN,
+                    view.engineDiagnostics().operation().orElseThrow().kind()),
+                () -> assertEquals(EngineOperationOutcome.FAILED,
+                    view.engineDiagnostics().operation().orElseThrow().outcome()),
+                () -> {
+                    var failure = view.engineDiagnostics().failure().orElseThrow();
+                    assertEquals(FailureStage.CLOSING, failure.stage());
+                    switch (failure.subject()) {
+                        case FailureSubject.Retirement subject -> {
+                            assertEquals(retained.batchId(), subject.batchId());
+                            assertEquals(previous.attemptId(), subject.sourceAttemptId());
+                        }
+                        case FailureSubject.Unit subject -> {
+                            assertEquals(retained.batchId(), subject.ownerId());
+                            assertEquals(unitFence, subject.fence());
+                        }
+                        default -> fail("closeAdmission must retain its exact retirement or unit owner");
+                    }
+                },
+                () -> assertFalse(events.stream().anyMatch(value -> value.startsWith("drain:")
+                    || value.startsWith("stop:") || value.startsWith("retire:")
+                    || value.startsWith("driver-close:")), "unproven generation must keep its resources"),
+                () -> assertEquals(0, store.closes),
+                () -> assertFalse(alpha.services.scope().isClosed())
+            );
+        } finally {
+            Schedulers.removeExecutorServiceDecorator(decoratorKey);
+        }
+    }
+
+    @Test
+    void candidateAbortFailureDuringHostCloseRetainsItsOwnerAndSkipsSharedRelease() {
+        alpha.abortFailure = true;
+        beta.sealFailure = true;
+        var engine = engine(request -> { });
+        assertThrows(EngineChangeException.class,
+            () -> apply(engine, 0, graph(1, "a1", "b1")));
+        var candidate = engine.snapshot().candidate().orElseThrow();
+        events.clear();
+
+        var first = assertThrows(RuntimeException.class,
+            () -> engine.closeAsync().block(Duration.ofSeconds(5)));
+        var firstEvents = List.copyOf(events);
+        var second = assertThrows(RuntimeException.class,
+            () -> engine.closeAsync().block(Duration.ofSeconds(5)));
+        var view = engine.published().current();
+        var retained = view.engine().candidate().orElseThrow();
+        var failure = view.engineDiagnostics().failure().orElseThrow();
+
+        assertSame(first, second);
+        assertEquals("abort failed", first.getCause().getMessage());
+        assertEquals(firstEvents, events, "cached close must not retry candidate cleanup");
+        assertTrue(events.contains("abort:alpha"));
+        assertTrue(events.contains("close:beta"));
+        assertEquals(EngineState.FAIL_STOP, view.engine().state());
+        assertEquals(candidate.attemptId(), retained.attemptId());
+        assertEquals(CandidatePhase.FAILED, retained.phase());
+        assertEquals(candidate.unitKeys(), retained.unitKeys());
+        assertEquals(candidate.attemptId(),
+            assertInstanceOf(FailureSubject.Candidate.class, failure.subject()).attemptId());
+        assertEquals(FailureStage.CLOSING, failure.stage());
+        assertFalse(view.engineDiagnostics().mutationGateOpen());
+        assertFalse(view.engineDiagnostics().contributionAdmissionOpen());
+        assertEquals(EngineOperationKind.SHUTDOWN,
+            view.engineDiagnostics().operation().orElseThrow().kind());
+        assertEquals(EngineOperationOutcome.FAILED,
+            view.engineDiagnostics().operation().orElseThrow().outcome());
+        assertFalse(events.stream().anyMatch(value -> value.startsWith("driver-close:")));
+        assertEquals(0, store.closes);
+        assertFalse(alpha.services.scope().isClosed());
+    }
+
+    @Test
+    void recoveredCandidateCleanupDoesNotReclassifyLaterStoreCloseFailure() {
+        var packageRoot = root.resolve("candidate-cleanup-then-store-failure");
+        var storeFailure = new IllegalStateException("store close failed after candidate cleanup");
+        alpha.abortFailure = true;
+        beta.sealFailure = true;
+        var engine = FibraEngine.builder(new PluginPackageStore(packageRoot), store)
+            .runtimeProvider(alpha).runtimeProvider(beta)
+            .hostTerminationPort(request -> { }).build();
+        engine.startAsync().block(Duration.ofSeconds(5));
+        assertThrows(EngineChangeException.class,
+            () -> apply(engine, 0, graph(1, "a1", "b1")));
+        var failedCandidate = engine.snapshot().candidate().orElseThrow();
+        alpha.abortFailure = false;
+        store.closeFailure = storeFailure;
+        events.clear();
+
+        var first = assertThrows(RuntimeException.class,
+            () -> engine.closeAsync().block(Duration.ofSeconds(5)));
+        var firstEvents = List.copyOf(events);
+        var second = assertThrows(RuntimeException.class,
+            () -> engine.closeAsync().block(Duration.ofSeconds(5)));
+
+        assertAll(
+            () -> assertSame(first, second),
+            () -> assertTrue(containsFailure(first, storeFailure),
+                "later shared failure must not be replaced by a missing-candidate error"),
+            () -> assertTrue(first == storeFailure || first.getCause() == storeFailure,
+                "candidate cleanup catch must preserve the original shared failure as primary"),
+            () -> assertTrue(engine.snapshot().candidate().isEmpty(),
+                "cleaned candidate " + failedCandidate.attemptId() + " must be removed"),
+            () -> assertClosingFailure(engine, "shared store failure after recovered candidate cleanup"),
+            () -> assertEquals(firstEvents, events, "cached close must not re-enter cleanup"),
+            () -> assertTrue(events.containsAll(List.of("abort:alpha", "close:beta",
+                "driver-close:beta", "driver-close:alpha"))),
+            () -> assertTrue(alpha.services.scope().isClosed()),
+            () -> assertConstructionStoresReleased(packageRoot, store)
+        );
+    }
+
+    @Test
+    void retirementSnapshotFailureDuringHostCloseKeepsExactUnitFence() {
+        var engine = engine(request -> { });
+        apply(engine, 0, graph(1, "a1"));
+        var previous = engine.snapshot().current().orElseThrow();
+        var originalFence = alpha.units.get("a1").fence();
+        alpha.snapshotFailure = true;
+        events.clear();
+
+        var first = assertThrows(IllegalStateException.class,
+            () -> engine.closeAsync().block(Duration.ofSeconds(5)));
+        var firstEvents = List.copyOf(events);
+        var second = assertThrows(IllegalStateException.class,
+            () -> engine.closeAsync().block(Duration.ofSeconds(5)));
+        var view = engine.published().current();
+        var retirement = view.engine().retirementBatch().orElseThrow();
+        var failure = view.engineDiagnostics().failure().orElseThrow();
+
+        assertAll(
+            () -> assertSame(first, second),
+            () -> assertEquals("snapshot contract violated", first.getMessage()),
+            () -> assertEquals(firstEvents, events, "cached close must not resample or clean retained resources"),
+            () -> assertEquals(EngineState.FAIL_STOP, view.engine().state()),
+            () -> assertTrue(view.engine().current().isEmpty()),
+            () -> assertEquals(previous.attemptId(), retirement.sourceAttemptId()),
+            () -> assertEquals(RetirementPhase.FAILED, retirement.phase()),
+            () -> assertEquals(previous.observations(), retirement.observations()),
+            () -> {
+                var unit = assertInstanceOf(FailureSubject.Unit.class, failure.subject());
+                assertEquals(retirement.batchId(), unit.ownerId());
+                assertEquals(originalFence, unit.fence());
+            },
+            () -> assertEquals("RUNTIME_SNAPSHOT_CONTRACT_VIOLATION", failure.reason()),
+            () -> assertEquals(FailureStage.OBSERVING, failure.stage()),
+            () -> assertFalse(view.engineDiagnostics().mutationGateOpen()),
+            () -> assertFalse(view.engineDiagnostics().contributionAdmissionOpen()),
+            () -> assertEquals(EngineOperationKind.SHUTDOWN,
+                view.engineDiagnostics().operation().orElseThrow().kind()),
+            () -> assertEquals(EngineOperationOutcome.FAILED,
+                view.engineDiagnostics().operation().orElseThrow().outcome()),
+            () -> assertTrue(events.contains("drain:a1")),
+            () -> assertFalse(events.stream().anyMatch(value -> value.startsWith("stop:")
+                || value.startsWith("retire:") || value.startsWith("driver-close:"))),
+            () -> assertEquals(0, store.closes),
+            () -> assertFalse(alpha.services.scope().isClosed())
+        );
+    }
+
+    @Test
+    void closeWaitsForAcceptedBootstrapAndDoesNotReopenAfterFirstClose() throws Exception {
+        try (var seed = engine(request -> { })) {
+            apply(seed, 0, graph(1, "a1"));
+        }
+        store.reopen();
+        var closesBeforeRestart = store.closes;
+        var targetBeforeRestart = store.current;
+        events.clear();
+        var entered = Sinks.<Void>one();
+        var release = Sinks.<Void>one();
+        alpha.prepareEntered = entered;
+        alpha.prepareRelease = release;
+        var engine = FibraEngine.builder(new PluginPackageStore(root.resolve("bootstrap-close")), store)
+            .runtimeProvider(alpha).runtimeProvider(beta)
+            .hostTerminationPort(request -> { }).build();
+        try {
+            var receiptEvents = new AtomicReference<List<String>>();
+            var bootstrap = engine.startAsync().doOnNext(view -> {
+                events.add("bootstrap-receipt");
+                receiptEvents.set(List.copyOf(events));
+            }).toFuture();
+            entered.asMono().block(Duration.ofSeconds(5));
+            var acceptedOperation = engine.published().current().engineDiagnostics()
+                .operation().orElseThrow();
+            var sameBootstrap = engine.startAsync().toFuture();
+            var close = engine.closeAsync().toFuture();
+
+            assertFalse(bootstrap.isDone());
+            assertFalse(close.isDone(), "close must wait for the accepted bootstrap owner");
+            assertEquals(closesBeforeRestart, store.closes);
+            assertFalse(events.stream().anyMatch(value -> value.startsWith("driver-close:")));
+            assertThrows(IllegalStateException.class,
+                () -> engine.submit(new ReconcileCurrent()).block(Duration.ofSeconds(5)));
+            release.tryEmitEmpty();
+
+            var bootstrapView = bootstrap.get(5, TimeUnit.SECONDS);
+            assertSame(bootstrapView, sameBootstrap.get(5, TimeUnit.SECONDS));
+            var completedBootstrap = bootstrapView.engineDiagnostics().operation().orElseThrow();
+            close.get(5, TimeUnit.SECONDS);
+            var finalView = engine.published().current();
+            var completedEvents = List.copyOf(events);
+            assertEquals(EngineState.CLOSED, finalView.engine().state());
+            assertEquals(EngineOperationKind.SHUTDOWN,
+                finalView.engineDiagnostics().operation().orElseThrow().kind());
+            assertEquals(EngineOperationOutcome.SUCCEEDED,
+                finalView.engineDiagnostics().operation().orElseThrow().outcome());
+            assertSame(finalView, engine.startAsync().block(Duration.ofSeconds(5)));
+            engine.closeAsync().block(Duration.ofSeconds(5));
+            assertEquals(completedEvents, events);
+            assertEquals(1, Collections.frequency(events, "prepare:alpha"));
+            assertEquals(1, Collections.frequency(events, "driver-close:alpha"));
+            assertEquals(1, Collections.frequency(events, "driver-close:beta"));
+            assertEquals(closesBeforeRestart + 1, store.closes);
+            assertEquals(1, store.saves);
+            assertAll("accepted prepared bootstrap must finish its own candidate before its receipt",
+                () -> assertEquals(acceptedOperation.operationId(), completedBootstrap.operationId()),
+                () -> assertEquals(EngineOperationKind.BOOTSTRAP, completedBootstrap.kind()),
+                () -> assertEquals(EngineOperationOutcome.FAILED, completedBootstrap.outcome()),
+                () -> assertEquals(EngineOperationStage.PREPARING, completedBootstrap.stage()),
+                () -> assertEquals(TargetSaveState.NOT_APPLICABLE, completedBootstrap.targetSaveState()),
+                () -> assertEquals(DurableTargetState.PRESENT, bootstrapView.engine().durableState()),
+                () -> assertEquals(TargetConvergence.BLOCKED, bootstrapView.engine().targetConvergence()),
+                () -> assertTrue(bootstrapView.engine().candidate().isEmpty()),
+                () -> assertTrue(bootstrapView.engine().current().isEmpty()),
+                () -> assertTrue(bootstrapView.engine().retirementBatch().isEmpty()),
+                () -> {
+                    assertTrue(bootstrapView.engineDiagnostics().failure().isPresent(),
+                        "failed bootstrap receipt must retain its DurableTarget failure");
+                    var failure = bootstrapView.engineDiagnostics().failure().orElseThrow();
+                    assertEquals("BOOTSTRAP_TARGET_BLOCKED", failure.reason());
+                    assertEquals(FailureStage.PREPARING, failure.stage());
+                    var subject = assertInstanceOf(FailureSubject.DurableTarget.class, failure.subject());
+                    assertEquals(targetBeforeRestart.targetRevision(), subject.targetRevision());
+                    assertEquals(targetBeforeRestart.targetDigest(), subject.targetDigest());
+                },
+                () -> assertFalse(events.stream().anyMatch(value -> value.startsWith("seal:")
+                    || value.startsWith("activate:") || value.startsWith("save:"))),
+                () -> assertEquals(1, Collections.frequency(events, "close:alpha")),
+                () -> assertTrue(receiptEvents.get().indexOf("close:alpha") >= 0
+                    && receiptEvents.get().indexOf("close:alpha")
+                        < receiptEvents.get().indexOf("bootstrap-receipt"),
+                    "candidate cleanup must precede the bootstrap receipt")
+            );
+        } finally {
+            release.tryEmitEmpty();
+            alpha.prepareEntered = null;
+            alpha.prepareRelease = null;
+            engine.closeAsync().block(Duration.ofSeconds(5));
+        }
+
+        var unopenedStore = new Store();
+        var neverStarted = FibraEngine.builder(new PluginPackageStore(root.resolve("close-before-start")), unopenedStore)
+            .runtimeProvider(alpha).runtimeProvider(beta)
+            .hostTerminationPort(request -> { }).build();
+        neverStarted.closeAsync().block(Duration.ofSeconds(5));
+        var closedEvents = List.copyOf(events);
+        assertThrows(IllegalStateException.class,
+            () -> neverStarted.startAsync().block(Duration.ofSeconds(5)));
+        assertEquals(EngineState.CLOSED, neverStarted.snapshot().state());
+        assertEquals(closedEvents, events, "first start after close cannot reopen resources");
+        assertEquals(1, unopenedStore.closes);
+    }
+
+    @Test
+    void closeWaitsForAcceptedObservationBeforeFreezingItsFinalView() throws Exception {
+        var engine = engine(request -> { });
+        apply(engine, 0, graph(1, "a1"));
+        var unit = alpha.units.get("a1");
+        var fence = unit.fence();
+        var entered = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        unit.snapshotEntered = entered;
+        unit.snapshotRelease = release;
+        var samplesBefore = unit.snapshotCalls.get();
+        events.clear();
+        try {
+            alpha.services.requestObservationRefresh(fence);
+            assertTrue(entered.await(5, TimeUnit.SECONDS), "real observer must enter snapshot before close");
+            var close = engine.closeAsync().toFuture();
+            assertFalse(close.isDone(), "close must not pass the accepted observer writer");
+            assertEquals(0, store.closes);
+            assertFalse(events.stream().anyMatch(value -> value.startsWith("driver-close:")));
+            alpha.services.requestObservationRefresh(fence);
+            assertEquals(samplesBefore + 1, unit.snapshotCalls.get());
+            release.countDown();
+            close.get(5, TimeUnit.SECONDS);
+
+            var finalView = engine.published().current();
+            var completedEvents = List.copyOf(events);
+            assertEquals(EngineState.CLOSED, finalView.engine().state());
+            assertEquals(EngineOperationOutcome.SUCCEEDED,
+                finalView.engineDiagnostics().operation().orElseThrow().outcome());
+            assertFalse(finalView.engineDiagnostics().mutationGateOpen());
+            assertFalse(finalView.engineDiagnostics().contributionAdmissionOpen());
+            // One accepted observer plus the existing post-drain and post-stop retirement samples.
+            assertEquals(samplesBefore + 3, unit.snapshotCalls.get());
+            alpha.services.requestObservationRefresh(fence);
+            alpha.services.requestReconcile(Set.of(fence), "late-after-close");
+            engine.closeAsync().block(Duration.ofSeconds(5));
+            assertSame(finalView, engine.published().current());
+            assertEquals(samplesBefore + 3, unit.snapshotCalls.get());
+            assertEquals(completedEvents, events);
+            assertEquals(1, Collections.frequency(events, "driver-close:alpha"));
+            assertEquals(1, Collections.frequency(events, "driver-close:beta"));
+            assertEquals(1, store.closes);
+        } finally {
+            release.countDown();
+            engine.closeAsync().block(Duration.ofSeconds(5));
+            unit.snapshotEntered = null;
+            unit.snapshotRelease = null;
+        }
+    }
+
+    @Test
+    void closeDuringTargetLoadRejectsBootstrapBeforeCreatingItsOperation() throws Exception {
+        try (var seed = engine(request -> { })) {
+            apply(seed, 0, graph(1, "a1"));
+        }
+        store.reopen();
+        var loadsBeforeRestart = store.loads;
+        var entered = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        store.loadEntered = entered;
+        store.loadRelease = release;
+        var engine = FibraEngine.builder(new PluginPackageStore(root.resolve("load-before-bootstrap-close")), store)
+            .runtimeProvider(alpha).runtimeProvider(beta)
+            .hostTerminationPort(request -> { }).build();
+        events.clear();
+        try {
+            var bootstrap = engine.startAsync().toFuture();
+            assertTrue(entered.await(5, TimeUnit.SECONDS));
+            var sameBootstrap = engine.startAsync().toFuture();
+            var beforeClose = engine.published().current();
+            assertEquals(EngineState.NEW, beforeClose.engine().state());
+            assertTrue(beforeClose.engineDiagnostics().operation().isEmpty());
+            var close = engine.closeAsync().toFuture();
+            assertFalse(close.isDone());
+            release.countDown();
+
+            PublishedView returned = null;
+            Throwable rejected = null;
+            try { returned = bootstrap.get(5, TimeUnit.SECONDS); }
+            catch (ExecutionException error) { rejected = error.getCause(); }
+            PublishedView sameReturned = null;
+            Throwable sameRejected = null;
+            try { sameReturned = sameBootstrap.get(5, TimeUnit.SECONDS); }
+            catch (ExecutionException error) { sameRejected = error.getCause(); }
+            close.get(5, TimeUnit.SECONDS);
+            var completedEvents = List.copyOf(events);
+            PublishedView cachedReturned = null;
+            Throwable cachedRejected = null;
+            try { cachedReturned = engine.startAsync().block(Duration.ofSeconds(5)); }
+            catch (RuntimeException error) { cachedRejected = error; }
+            org.slf4j.LoggerFactory.getLogger(RuntimeDriverEngineTest.class).info(
+                "load-close qualification: startError={}, returnedOperation={}, returnedState={}, finalState={}, concurrentError={}, cachedError={}, loads={}",
+                rejected, returned == null ? "no view" : returned.engineDiagnostics().operation(),
+                returned == null ? "no view" : returned.engine().state(), engine.snapshot().state(),
+                sameRejected, cachedRejected, store.loads);
+
+            assertEquals(EngineState.CLOSED, engine.snapshot().state());
+            assertFalse(events.stream().anyMatch(value -> value.startsWith("prepare:")
+                || value.startsWith("seal:") || value.startsWith("activate:")));
+            assertTrue(engine.published().current().engineDiagnostics().terminationRequest().isEmpty());
+            assertEquals(2, store.closes);
+            assertEquals(1, store.saves);
+            assertEquals(loadsBeforeRestart + 1, store.loads);
+            engine.closeAsync().block(Duration.ofSeconds(5));
+            assertEquals(completedEvents, events);
+            var firstError = rejected;
+            var concurrentError = sameRejected;
+            var cachedError = cachedRejected;
+            var firstView = returned;
+            var concurrentView = sameReturned;
+            var cachedView = cachedReturned;
+            assertAll("pre-operation refusal must keep the existing start error cache",
+                () -> assertInstanceOf(MutationGateClosedException.class, firstError,
+                    "pre-operation bootstrap refusal must be returned as the original control error"),
+                () -> assertInstanceOf(MutationGateClosedException.class, concurrentError),
+                () -> assertSame(firstError, concurrentError),
+                () -> assertInstanceOf(IllegalStateException.class, cachedError),
+                () -> assertNull(firstView),
+                () -> assertNull(concurrentView),
+                () -> assertNull(cachedView)
+            );
+        } finally {
+            release.countDown();
+            engine.closeAsync().block(Duration.ofSeconds(5));
+            store.loadRelease = null;
+            store.loadEntered = null;
+        }
+    }
+
+    @Test
+    void closeBeforeReconcileDeploymentDoesNotReusePreviousOperationOrFailCurrent() throws Exception {
+        var engine = engine(request -> { });
+        apply(engine, 0, graph(1, "a1"));
+        var previous = engine.published().current();
+        var unit = alpha.units.get("a1");
+        var entered = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        unit.scriptSnapshots(ExecutionObservation.State.FAILED);
+        unit.snapshotEntered = entered;
+        unit.snapshotRelease = release;
+        events.clear();
+        try {
+            var reconcile = engine.submit(new ReconcileCurrent()).toFuture();
+            assertTrue(entered.await(5, TimeUnit.SECONDS));
+            assertEquals(previous.engineDiagnostics().operation(),
+                engine.published().current().engineDiagnostics().operation());
+            var close = engine.closeAsync().toFuture();
+            assertFalse(close.isDone());
+            release.countDown();
+
+            var rejected = assertThrows(ExecutionException.class,
+                () -> reconcile.get(5, TimeUnit.SECONDS)).getCause();
+            close.get(5, TimeUnit.SECONDS);
+            var finalView = engine.published().current();
+            org.slf4j.LoggerFactory.getLogger(RuntimeDriverEngineTest.class).info(
+                "reconcile-close qualification: priorOperation={}, commandError={}, finalState={}, terminationRequest={}",
+                previous.engineDiagnostics().operation(), rejected, finalView.engine().state(),
+                finalView.engineDiagnostics().terminationRequest());
+
+            assertInstanceOf(MutationGateClosedException.class, rejected);
+            assertEquals(1, unit.scriptedSnapshotCalls.get());
+            assertFalse(events.stream().anyMatch(value -> value.startsWith("prepare:")
+                || value.startsWith("seal:") || value.startsWith("activate:")));
+            assertEquals(EngineState.CLOSED, finalView.engine().state());
+            assertEquals(EngineOperationKind.SHUTDOWN,
+                finalView.engineDiagnostics().operation().orElseThrow().kind());
+            assertEquals(EngineOperationOutcome.SUCCEEDED,
+                finalView.engineDiagnostics().operation().orElseThrow().outcome());
+            assertTrue(finalView.engineDiagnostics().terminationRequest().isEmpty());
+            assertTrue(finalView.engineDiagnostics().failure().isEmpty());
+            assertEquals(1, store.saves);
+            assertEquals(1, store.closes);
+        } finally {
+            release.countDown();
+            engine.closeAsync().block(Duration.ofSeconds(5));
+            unit.snapshotRelease = null;
+            unit.snapshotEntered = null;
+        }
+    }
+
+    @Test
+    void closeDuringApplyPrepareKeepsPriorCurrentUntilShutdown() throws Exception {
+        verifyCloseDuringCommandPrepare(false);
+    }
+
+    @Test
+    void closeDuringReconcilePrepareKeepsPriorCurrentUntilShutdown() throws Exception {
+        verifyCloseDuringCommandPrepare(true);
+    }
+
+    private void verifyCloseDuringCommandPrepare(boolean reconcile) throws Exception {
+        var engine = engine(request -> { });
+        apply(engine, 0, graph(1, "a1"));
+        var prior = engine.snapshot();
+        var priorCurrent = prior.current().orElseThrow();
+        var priorTarget = store.current;
+        var unit = alpha.units.get("a1");
+        var priorFence = unit.fence();
+        var loadsBefore = store.loads;
+        var entered = Sinks.<Void>one();
+        var release = Sinks.<Void>one();
+        alpha.prepareEntered = entered;
+        alpha.prepareRelease = release;
+        if (reconcile) unit.scriptSnapshots(ExecutionObservation.State.FAILED);
+        events.clear();
+        try {
+            EngineCommand command = reconcile ? new ReconcileCurrent()
+                : ApplyDeployment.builder(graph(2, "a1")).expectedRevision(1)
+                    .selections(List.of(alpha.metadata().selection(true), beta.metadata().selection(true)))
+                    .configContext(ConfigContextSnapshot.empty()).build();
+            var receiptEvents = new AtomicReference<List<String>>();
+            var submitted = engine.submit(command).doOnError(error -> {
+                events.add("command-receipt");
+                receiptEvents.set(List.copyOf(events));
+            }).toFuture();
+            entered.asMono().block(Duration.ofSeconds(5));
+            var preparing = engine.published().current();
+            var acceptedOperation = preparing.engineDiagnostics().operation().orElseThrow();
+            var acceptedCandidate = preparing.engine().candidate().orElseThrow();
+            assertEquals(priorCurrent.attemptId(), preparing.engine().current().orElseThrow().attemptId());
+            var close = engine.closeAsync().toFuture();
+            assertFalse(submitted.isDone());
+            assertFalse(close.isDone());
+            assertEquals(0, store.closes);
+            release.tryEmitEmpty();
+
+            var rejected = assertThrows(ExecutionException.class,
+                () -> submitted.get(5, TimeUnit.SECONDS)).getCause();
+            close.get(5, TimeUnit.SECONDS);
+            var finalView = engine.published().current();
+            var completedEvents = List.copyOf(events);
+            var change = assertInstanceOf(EngineChangeException.class, rejected);
+            assertInstanceOf(MutationGateClosedException.class, change.getCause());
+            var failed = change.view();
+            var failedOperation = failed.engineDiagnostics().operation().orElseThrow();
+            var failure = failed.engineDiagnostics().failure().orElseThrow();
+
+            assertEquals(reconcile ? EngineOperationKind.RECONCILE : EngineOperationKind.APPLY,
+                failedOperation.kind());
+            assertEquals(acceptedOperation.operationId(), failedOperation.operationId());
+            assertEquals(EngineOperationOutcome.FAILED, failedOperation.outcome());
+            assertEquals(EngineOperationStage.PREPARING, failedOperation.stage());
+            assertEquals(reconcile ? TargetSaveState.NOT_APPLICABLE : TargetSaveState.NOT_SAVED,
+                change.targetSaveState());
+            assertEquals(change.targetSaveState(), failedOperation.targetSaveState());
+            assertEquals("CANDIDATE_FAILED", failure.reason());
+            assertEquals(FailureStage.PREPARING, failure.stage());
+            assertEquals(acceptedCandidate.attemptId(),
+                assertInstanceOf(FailureSubject.Candidate.class, failure.subject()).attemptId());
+            assertTrue(failed.engine().candidate().isEmpty());
+            assertTrue(failed.engine().retirementBatch().isEmpty());
+            assertEquals(priorCurrent, failed.engine().current().orElseThrow());
+            assertEquals(priorFence, alpha.units.get("a1").fence());
+            assertSame(priorTarget, failed.engine().target().orElseThrow());
+            assertSame(priorTarget, store.current);
+            assertEquals(DurableTargetState.PRESENT, failed.engine().durableState());
+            assertEquals(loadsBefore, store.loads);
+            assertEquals(1, store.saves);
+            assertFalse(events.stream().anyMatch(value -> value.startsWith("seal:")
+                || value.startsWith("activate:") || value.startsWith("save:")));
+            assertEquals(1, Collections.frequency(events, "prepare:alpha"));
+            assertEquals(1, Collections.frequency(events, "close:alpha"));
+            assertTrue(receiptEvents.get().indexOf("close:alpha") >= 0
+                && receiptEvents.get().indexOf("close:alpha") < receiptEvents.get().indexOf("command-receipt"));
+            assertEquals(EngineState.CLOSED, finalView.engine().state());
+            assertTrue(finalView.engine().current().isEmpty());
+            assertTrue(finalView.engine().retirementBatch().isEmpty());
+            assertEquals(EngineOperationKind.SHUTDOWN,
+                finalView.engineDiagnostics().operation().orElseThrow().kind());
+            assertEquals(EngineOperationOutcome.SUCCEEDED,
+                finalView.engineDiagnostics().operation().orElseThrow().outcome());
+            assertTrue(finalView.engineDiagnostics().terminationRequest().isEmpty());
+            assertEquals(1, Collections.frequency(events, "drain:a1"));
+            assertEquals(1, Collections.frequency(events, "stop:a1"));
+            assertEquals(1, Collections.frequency(events, "retire:alpha"));
+            assertEquals(1, Collections.frequency(events, "driver-close:alpha"));
+            assertEquals(1, Collections.frequency(events, "driver-close:beta"));
+            assertEquals(1, store.closes);
+            engine.closeAsync().block(Duration.ofSeconds(5));
+            assertSame(finalView, engine.published().current());
+            assertEquals(completedEvents, events);
+        } finally {
+            release.tryEmitEmpty();
+            alpha.prepareEntered = null;
+            alpha.prepareRelease = null;
+            engine.closeAsync().block(Duration.ofSeconds(5));
+        }
+    }
+
+    @Test
+    void closeDuringBootstrapPrepareKeepsFailedCandidateCleanupAndOriginalRefusal() throws Exception {
+        try (var seed = engine(request -> { })) {
+            apply(seed, 0, graph(1, "a1"));
+        }
+        store.reopen();
+        var closesBefore = store.closes;
+        var loadsBefore = store.loads;
+        var cleanupFailure = new IllegalStateException("prepared candidate close failed");
+        alpha.candidateCloseFailure = cleanupFailure;
+        var entered = Sinks.<Void>one();
+        var release = Sinks.<Void>one();
+        alpha.prepareEntered = entered;
+        alpha.prepareRelease = release;
+        var engine = FibraEngine.builder(new PluginPackageStore(root.resolve("bootstrap-cleanup-failure")), store)
+            .runtimeProvider(alpha).runtimeProvider(beta)
+            .hostTerminationPort(request -> { }).build();
+        events.clear();
+        try {
+            var bootstrap = engine.startAsync().toFuture();
+            entered.asMono().block(Duration.ofSeconds(5));
+            var preparing = engine.published().current();
+            var candidate = preparing.engine().candidate().orElseThrow();
+            var operation = preparing.engineDiagnostics().operation().orElseThrow();
+            var sameBootstrap = engine.startAsync().toFuture();
+            var close = engine.closeAsync().toFuture();
+            assertFalse(bootstrap.isDone());
+            assertFalse(close.isDone());
+            release.tryEmitEmpty();
+
+            var first = assertThrows(ExecutionException.class,
+                () -> bootstrap.get(5, TimeUnit.SECONDS)).getCause();
+            assertSame(first, assertThrows(ExecutionException.class,
+                () -> sameBootstrap.get(5, TimeUnit.SECONDS)).getCause());
+            var change = assertInstanceOf(EngineChangeException.class, first);
+            var refusal = assertInstanceOf(MutationGateClosedException.class, change.getCause());
+            assertEquals(1, refusal.getSuppressed().length);
+            assertSame(cleanupFailure, refusal.getSuppressed()[0].getCause());
+            var failed = change.view();
+            var retained = failed.engine().candidate().orElseThrow();
+            var failure = failed.engineDiagnostics().failure().orElseThrow();
+            assertEquals(EngineState.FAIL_STOP, failed.engine().state());
+            assertEquals(candidate.attemptId(), retained.attemptId());
+            assertEquals(CandidatePhase.FAILED, retained.phase());
+            assertTrue(failed.engine().current().isEmpty());
+            assertTrue(failed.engine().retirementBatch().isEmpty());
+            assertEquals("CANDIDATE_CLEANUP_FAILED", failure.reason());
+            assertEquals(FailureStage.CLOSING, failure.stage());
+            assertEquals(candidate.attemptId(),
+                assertInstanceOf(FailureSubject.Candidate.class, failure.subject()).attemptId());
+            assertEquals(operation.operationId(), failed.engineDiagnostics().operation().orElseThrow().operationId());
+            assertEquals(EngineOperationKind.BOOTSTRAP, failed.engineDiagnostics().operation().orElseThrow().kind());
+            assertEquals(EngineOperationOutcome.FAILED, failed.engineDiagnostics().operation().orElseThrow().outcome());
+            assertEquals(EngineOperationStage.PREPARING, failed.engineDiagnostics().operation().orElseThrow().stage());
+            assertEquals(TargetSaveState.NOT_APPLICABLE, change.targetSaveState());
+            assertFalse(failed.engineDiagnostics().mutationGateOpen());
+            assertFalse(failed.engineDiagnostics().contributionAdmissionOpen());
+            assertEquals(failure.subject(), failed.engineDiagnostics().terminationRequest().orElseThrow().subject());
+
+            var closeError = assertThrows(ExecutionException.class,
+                () -> close.get(5, TimeUnit.SECONDS)).getCause();
+            assertSame(cleanupFailure, closeError.getCause());
+            var finalView = engine.published().current();
+            var completedEvents = List.copyOf(events);
+            var cachedStart = assertThrows(EngineChangeException.class,
+                () -> engine.startAsync().block(Duration.ofSeconds(5)));
+            assertSame(finalView, cachedStart.view());
+            assertEquals(TargetSaveState.NOT_APPLICABLE, cachedStart.targetSaveState());
+            assertSame(closeError, assertThrows(RuntimeException.class,
+                () -> engine.closeAsync().block(Duration.ofSeconds(5))));
+            assertEquals(completedEvents, events);
+            assertEquals(EngineState.FAIL_STOP, finalView.engine().state());
+            assertEquals(candidate.attemptId(), finalView.engine().candidate().orElseThrow().attemptId());
+            assertEquals(CandidatePhase.FAILED, finalView.engine().candidate().orElseThrow().phase());
+            var closeFailure = finalView.engineDiagnostics().failure().orElseThrow();
+            assertEquals(candidate.attemptId(),
+                assertInstanceOf(FailureSubject.Candidate.class, closeFailure.subject()).attemptId());
+            assertEquals("HOST_CLOSE_FAILED", closeFailure.reason());
+            assertEquals(FailureStage.CLOSING, closeFailure.stage());
+            assertEquals(EngineOperationKind.SHUTDOWN, finalView.engineDiagnostics().operation().orElseThrow().kind());
+            assertEquals(EngineOperationOutcome.FAILED, finalView.engineDiagnostics().operation().orElseThrow().outcome());
+            assertFalse(finalView.engineDiagnostics().mutationGateOpen());
+            assertFalse(finalView.engineDiagnostics().contributionAdmissionOpen());
+            assertEquals(1, Collections.frequency(events, "prepare:alpha"));
+            assertEquals(1, Collections.frequency(events, "close:alpha"), "candidate failure is an idempotent terminal result");
+            assertFalse(events.stream().anyMatch(value -> value.startsWith("seal:")
+                || value.startsWith("activate:") || value.startsWith("save:")
+                || value.startsWith("driver-close:") || value.startsWith("drain:")
+                || value.startsWith("stop:") || value.startsWith("retire:")));
+            assertEquals(loadsBefore + 1, store.loads);
+            assertEquals(closesBefore, store.closes);
+            assertEquals(1, store.saves);
+            assertFalse(alpha.services.scope().isClosed());
+        } finally {
+            release.tryEmitEmpty();
+            alpha.prepareEntered = null;
+            alpha.prepareRelease = null;
+            try { engine.closeAsync().block(Duration.ofSeconds(5)); }
+            catch (RuntimeException expectedCleanupFailure) { /* The candidate retains its failed close result. */ }
+        }
+    }
+
+    private void verifyHostCloseFailure(int mode) {
+        var packageRoot = root.resolve("host-close-failure-" + mode);
+        var targetStore = new Store();
+        var storeFailure = new IllegalStateException("target close failed " + mode);
+        targetStore.closeFailure = storeFailure;
+        var engine = FibraEngine.builder(new PluginPackageStore(packageRoot), targetStore)
+            .runtimeProvider(alpha).runtimeProvider(beta)
+            .hostTerminationPort(request -> { }).build();
+        if (mode > 0) engine.startAsync().block(Duration.ofSeconds(5));
+        if (mode > 1) apply(engine, 0, graph(1, "a1"));
+
+        var first = assertThrows(RuntimeException.class,
+            () -> engine.closeAsync().block(Duration.ofSeconds(5)));
+        var second = assertThrows(RuntimeException.class,
+            () -> engine.closeAsync().block(Duration.ofSeconds(5)));
+
+        assertSame(first, second, "close result must be cached for mode " + mode);
+        assertTrue(containsFailure(first, storeFailure));
+        assertConstructionStoresReleased(packageRoot, targetStore);
+        assertClosingFailure(engine, "mode " + mode);
+    }
+
+    @Test
+    void hostCloseKeepsFirstDriverFailureAndReleasesIndependentLaterResources() {
+        var packageRoot = root.resolve("driver-close-failures");
+        var firstFailure = new IllegalStateException("beta close failed first");
+        var secondFailure = new IllegalStateException("alpha close failed second");
+        var storeFailure = new IllegalStateException("target close failed third");
+        beta.driverCloseFailure = firstFailure;
+        alpha.driverCloseFailure = secondFailure;
+        store.closeFailure = storeFailure;
+        var engine = FibraEngine.builder(new PluginPackageStore(packageRoot), store)
+            .runtimeProvider(alpha).runtimeProvider(beta)
+            .hostTerminationPort(request -> { }).build();
+        engine.startAsync().block(Duration.ofSeconds(5));
+
+        var thrown = assertThrows(RuntimeException.class,
+            () -> engine.closeAsync().block(Duration.ofSeconds(5)));
+
+        assertEquals(List.of("driver-close:beta", "driver-close:alpha"), events);
+        assertTrue(thrown == firstFailure || thrown.getCause() == firstFailure,
+            "later cleanup must not replace the first resource failure");
+        assertTrue(containsFailure(thrown, secondFailure));
+        assertTrue(containsFailure(thrown, storeFailure));
+        assertTrue(alpha.services.scope().isClosed());
+        assertTrue(beta.services.scope().isClosed());
+        assertConstructionStoresReleased(packageRoot, store);
+        assertClosingFailure(engine, "independent host resources");
+    }
+
+    @Test
+    void hostClosePublishesClosingBeforeWaitingAndSurvivesWaiterCancellation() {
+        for (boolean started : List.of(false, true)) {
+            events.clear();
+            var targetStore = new Store();
+            var entered = Sinks.<Void>one();
+            var release = Sinks.<Void>one();
+            beta.driverCloseEntered = entered;
+            beta.driverCloseRelease = release;
+            var engine = FibraEngine.builder(new PluginPackageStore(
+                    root.resolve("close-wait-" + started)), targetStore)
+                .runtimeProvider(alpha).runtimeProvider(beta)
+                .hostTerminationPort(request -> { }).build();
+            if (started) engine.startAsync().block(Duration.ofSeconds(5));
+            var waiter = engine.closeAsync().subscribe();
+            PublishedView duringClose;
+            try {
+                entered.asMono().block(Duration.ofSeconds(5));
+                duringClose = engine.published().current();
+                waiter.dispose();
+            } finally {
+                release.tryEmitEmpty();
+                engine.closeAsync().block(Duration.ofSeconds(5));
+                beta.driverCloseEntered = null;
+                beta.driverCloseRelease = null;
+            }
+
+            assertEquals(EngineState.CLOSING, duringClose.engine().state());
+            assertFalse(duringClose.engineDiagnostics().mutationGateOpen());
+            assertFalse(duringClose.engineDiagnostics().contributionAdmissionOpen());
+            assertEquals(EngineOperationKind.SHUTDOWN,
+                duringClose.engineDiagnostics().operation().orElseThrow().kind());
+            assertEquals(EngineState.CLOSED, engine.snapshot().state());
+            assertEquals(EngineOperationOutcome.SUCCEEDED,
+                engine.published().current().engineDiagnostics().operation().orElseThrow().outcome());
+            assertEquals(List.of("driver-close:beta", "driver-close:alpha"), events);
+            assertEquals(1, targetStore.closes);
+        }
+    }
+
+    private static void assertClosingFailure(FibraEngine engine, String context) {
+        var view = engine.published().current();
+        assertEquals(EngineState.CLOSING, view.engine().state(), context);
+        assertFalse(view.engineDiagnostics().mutationGateOpen(), context);
+        assertFalse(view.engineDiagnostics().contributionAdmissionOpen(), context);
+        var operation = view.engineDiagnostics().operation().orElseThrow();
+        assertEquals(EngineOperationKind.SHUTDOWN, operation.kind(), context);
+        assertEquals(EngineOperationOutcome.FAILED, operation.outcome(), context);
+        var failure = view.engineDiagnostics().failure().orElseThrow();
+        assertInstanceOf(FailureSubject.Engine.class, failure.subject(), context);
+        assertEquals(FailureStage.CLOSING, failure.stage(), context);
+    }
+
+    @Test
+    void hostCloseReleaseFailureNeverPublishesClosed() {
+        verifyCommandLoopReleaseFailure(false);
+    }
+
+    @Test
+    void hostClosePreservesResourceFailureWhenCommandLoopReleaseAlsoFails() {
+        verifyCommandLoopReleaseFailure(true);
+    }
+
+    private void verifyCommandLoopReleaseFailure(boolean failStore) {
+        var loopFailure = new IllegalStateException("command loop release failed");
+        var storeFailure = new IllegalStateException("target store close failed first");
+        if (failStore) store.closeFailure = storeFailure;
+        var constructorThread = Thread.currentThread();
+        var shutdowns = new AtomicInteger();
+        var decorated = new AtomicInteger();
+        var engineReference = new AtomicReference<FibraEngine>();
+        var viewAtRelease = new AtomicReference<PublishedView>();
+        var decoratorKey = "engine-close-release-" + UUID.randomUUID();
+        Schedulers.addExecutorServiceDecorator(decoratorKey, (scheduler, executor) -> {
+            var commandLoopConstruction = Thread.currentThread() == constructorThread
+                && StackWalker.getInstance().walk(frames -> frames.anyMatch(frame ->
+                    frame.getClassName().equals(EngineCommandLoop.class.getName())
+                        && frame.getMethodName().equals("<init>")));
+            if (!commandLoopConstruction) return executor;
+            decorated.incrementAndGet();
+            return new CloseFailureExecutor(executor, () -> {
+                shutdowns.incrementAndGet();
+                viewAtRelease.set(engineReference.get().published().current());
+                throw loopFailure;
+            });
+        });
+        try {
+            var engine = engine(request -> { });
+            engineReference.set(engine);
+            var first = assertThrows(RuntimeException.class,
+                () -> engine.closeAsync().block(Duration.ofSeconds(5)));
+            var second = assertThrows(RuntimeException.class,
+                () -> engine.closeAsync().block(Duration.ofSeconds(5)));
+
+            assertEquals(1, decorated.get());
+            assertEquals(1, shutdowns.get());
+            assertSame(first, second);
+            assertTrue(containsFailure(first, loopFailure));
+            if (failStore) {
+                assertTrue(first == storeFailure || first.getCause() == storeFailure,
+                    "loop release failure must not replace the earlier resource failure");
+            }
+            assertEquals(EngineState.CLOSING, viewAtRelease.get().engine().state(),
+                "CLOSED cannot be published before the final release request succeeds");
+            assertClosingFailure(engine, "command loop release failure");
+        } finally {
+            Schedulers.removeExecutorServiceDecorator(decoratorKey);
+        }
+    }
+
+    private static final class CloseFailureExecutor extends AbstractExecutorService
+        implements ScheduledExecutorService {
+        private final ScheduledExecutorService delegate;
+        private final Runnable afterShutdown;
+        CloseFailureExecutor(ScheduledExecutorService delegate, Runnable afterShutdown) {
+            this.delegate = delegate;
+            this.afterShutdown = afterShutdown;
+        }
+        public void shutdown() { delegate.shutdown(); }
+        public List<Runnable> shutdownNow() {
+            var pending = delegate.shutdownNow();
+            afterShutdown.run();
+            return pending;
+        }
+        public boolean isShutdown() { return delegate.isShutdown(); }
+        public boolean isTerminated() { return delegate.isTerminated(); }
+        public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+            return delegate.awaitTermination(timeout, unit);
+        }
+        public void execute(Runnable command) { delegate.execute(command); }
+        public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+            return delegate.schedule(command, delay, unit);
+        }
+        public <V> ScheduledFuture<V> schedule(Callable<V> command, long delay, TimeUnit unit) {
+            return delegate.schedule(command, delay, unit);
+        }
+        public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initial, long period, TimeUnit unit) {
+            return delegate.scheduleAtFixedRate(command, initial, period, unit);
+        }
+        public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initial, long delay, TimeUnit unit) {
+            return delegate.scheduleWithFixedDelay(command, initial, delay, unit);
+        }
+    }
+
+    private static boolean containsFailure(Throwable thrown, Throwable expected) {
+        if (thrown == expected) return true;
+        if (thrown.getCause() != null && containsFailure(thrown.getCause(), expected)) return true;
+        return Arrays.stream(thrown.getSuppressed()).anyMatch(value -> containsFailure(value, expected));
+    }
+
     private FibraEngine engine(HostTerminationPort port) {
         return engine(port, HostCapabilitySnapshot::empty);
     }
@@ -1058,9 +2003,25 @@ class RuntimeDriverEngineTest {
         boolean uncertain;
         boolean wrongToken;
         RuntimeException closeFailure;
+        volatile CountDownLatch loadEntered;
+        volatile CountDownLatch loadRelease;
+        int loads;
         int saves;
         int closes;
         public Optional<StoredTarget> load() {
+            loads++;
+            var release = loadRelease;
+            if (release != null) {
+                loadEntered.countDown();
+                try {
+                    if (!release.await(5, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException("test load gate was not released");
+                    }
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException("test load gate was interrupted", interrupted);
+                }
+            }
             ensureOpen();
             return Optional.ofNullable(current).map(StoredTarget::confirmed);
         }
@@ -1106,6 +2067,11 @@ class RuntimeDriverEngineTest {
         boolean omitUnit;
         boolean snapshotFailure;
         String lifecycleFailure;
+        RuntimeException driverCloseFailure;
+        RuntimeException candidateCloseFailure;
+        RuntimeException closeAdmissionFailure;
+        volatile Sinks.One<Void> driverCloseEntered;
+        volatile Sinks.One<Void> driverCloseRelease;
         volatile Sinks.One<Void> activationEntered;
         volatile Sinks.One<Void> activationRelease;
         volatile Sinks.One<Void> prepareEntered;
@@ -1129,10 +2095,20 @@ class RuntimeDriverEngineTest {
                 public Mono<RuntimeArtifactInspection> probe(PluginFacetSource source) { return Mono.error(new UnsupportedOperationException()); }
                 public Mono<RuntimeArtifactInspection> inspect(ManagedFacet facet) { return Mono.error(new UnsupportedOperationException()); }
                 public RuntimeDriverSnapshot snapshot() { return new RuntimeDriverSnapshot(runtimeId, Map.of()); }
-                public Mono<Void> closeAsync() { return Mono.fromRunnable(() -> events.add("driver-close:" + runtimeId.value())); }
+                public Mono<Void> closeAsync() {
+                    Mono<Void> close = Mono.fromRunnable(() -> {
+                        events.add("driver-close:" + runtimeId.value());
+                        if (driverCloseFailure != null) throw driverCloseFailure;
+                    });
+                    var release = driverCloseRelease;
+                    if (release == null) return close;
+                    driverCloseEntered.tryEmitEmpty();
+                    return release.asMono().then(close);
+                }
                 public RuntimeCandidate createCandidate(RuntimeTargetSlice slice) {
                     return new RuntimeCandidate() {
                         RuntimePlan plan;
+                        Mono<Void> failedClose;
                         public Mono<Void> prepareAsync() {
                             Mono<Void> prepare = Mono.fromRunnable(() -> {
                                 events.add("prepare:" + runtimeId.value());
@@ -1182,7 +2158,15 @@ class RuntimeDriverEngineTest {
                                 }
                             };
                         }
-                        public Mono<Void> closeAsync() { return Mono.fromRunnable(() -> events.add("close:" + runtimeId.value())); }
+                        public synchronized Mono<Void> closeAsync() {
+                            if (failedClose != null) return failedClose;
+                            var failure = candidateCloseFailure;
+                            if (failure == null) return Mono.fromRunnable(() -> events.add("close:" + runtimeId.value()));
+                            return failedClose = Mono.<Void>fromRunnable(() -> {
+                                events.add("close:" + runtimeId.value());
+                                throw failure;
+                            }).cache();
+                        }
                     };
                 }
             };
@@ -1195,6 +2179,9 @@ class RuntimeDriverEngineTest {
             final Set<String> capabilities;
             volatile ExecutionObservation observed;
             final AtomicInteger scriptedSnapshotCalls = new AtomicInteger();
+            final AtomicInteger snapshotCalls = new AtomicInteger();
+            volatile CountDownLatch snapshotEntered;
+            volatile CountDownLatch snapshotRelease;
             private final Deque<ExecutionObservation.State> scriptedSnapshots =
                 new ArrayDeque<>();
             ProbeUnit(ExecutionUnitPlan plan, long revision, String instance,
@@ -1222,7 +2209,10 @@ class RuntimeDriverEngineTest {
                 activationEntered.tryEmitEmpty();
                 return release.asMono().then(activation);
             }
-            public void closeAdmission() { events.add("admission:" + plan.key().value()); }
+            public void closeAdmission() {
+                events.add("admission:" + plan.key().value());
+                if (closeAdmissionFailure != null) throw closeAdmissionFailure;
+            }
             public Mono<ExecutionObservation> drainAsync(String operation, Instant deadline) {
                 if ("timeout".equals(lifecycleFailure)) return Mono.never();
                 return Mono.fromSupplier(() -> {
@@ -1239,6 +2229,19 @@ class RuntimeDriverEngineTest {
                 });
             }
             public ExecutionObservation snapshot() {
+                snapshotCalls.incrementAndGet();
+                var release = snapshotRelease;
+                if (release != null) {
+                    snapshotEntered.countDown();
+                    try {
+                        if (!release.await(5, TimeUnit.SECONDS)) {
+                            throw new IllegalStateException("test snapshot gate was not released");
+                        }
+                    } catch (InterruptedException interrupted) {
+                        Thread.currentThread().interrupt();
+                        throw new IllegalStateException("test snapshot gate was interrupted", interrupted);
+                    }
+                }
                 if (snapshotFailure) throw new IllegalStateException("snapshot contract violated");
                 synchronized (scriptedSnapshots) {
                     if (!scriptedSnapshots.isEmpty()) {
