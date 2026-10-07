@@ -3,7 +3,8 @@
 日期：2026-09-07
 
 状态：第 1–10 节与第 11 节 F1–F4 的原始交付已完成；2026-09-20 Client Foundation P0
-状态所有权重构及本地冻结门已完成。跨执行域插件模型及其 P0 的字段级契约仍以
+本地冻结为历史事实，2026-10-07 复审缺口与本轮验收见
+[关闭计划](../plans/2026-10-07-final-architecture-closeout.md)。跨执行域插件模型及其 P0 的字段级契约仍以
 [2026-09-15 Client Foundation 权威架构](./2026-09-15-fibra-client-foundation-architecture.md)为准。
 
 本文是已完成 vNext 与 CLI F1–F4 的权威记录，定义该交付态的系统边界、运行模型、模块职责和验收标准；
@@ -379,8 +380,8 @@ DAG，再把各 runtime slice 交给对应 driver；这不是开放给任意资�
 ```text
 observe -> validate / prepare affected facets / bind changed entries
         -> seal complete candidate -> save deployment target -> promote candidate as current
-        -> close old admission -> drain / stop old units -> activate new units
-        -> observe convergence / publish views -> retire released generations
+        -> close old admission -> drain / stop old units -> retire released generations
+        -> activate new units -> observe convergence / publish views
 ```
 
 这条顺序是 `EngineOperation` 的编排，不是可被 candidate/current/retirement 共用的生命周期枚举。
@@ -397,8 +398,9 @@ PublishedView 全部保持不变。
 
 - prepare 读取并冻结输入，完成制品摘要、依赖图和受影响声明的配置绑定；不执行插件启动，不拆旧运行态。
 - save 成功后 Engine 只在 command lane 内原子提升完整 candidate 为 current；随后同步关闭 retirement batch
-  的新准入，按反依赖顺序 drain/stop 旧 units，再按依赖顺序 activate 新 units。retained units 原样保留，旧
-  generation 仅在其全部 unit、invocation 与 resource lease 释放后 retire；不能跳过 promote 或在旧准入仍开放时
+  的新准入，按反依赖顺序 drain/stop 旧 units，完成 retirement 后再按依赖顺序 activate 新 units。
+  retained units 原样保留，共享 generation 仍由 retained units 持有；其它旧 generation 仅在其全部 unit、
+  invocation 与 resource lease 释放后 retire。retirement 失败不得启动新 units；不能跳过 promote 或在旧准入仍开放时
   启动 replacement。
 - reconcile/activate 调用实例生命周期协议，并等待实际依赖图收敛；按声明要求判断目标达成，合法 PENDING
   不能一律当成失败。该阶段不是可回滚的预检，启动或清理失败必须报告实际状态。
@@ -408,15 +410,17 @@ PublishedView 全部保持不变。
   准备失败、撤销或恢复只清理该操作自己的暂存资源，不删除可能被其他准备操作引用的共享对象。
   完整但未被目标引用的对象可以保留，不为失败清理引入通用 GC 或共享对象回滚。
 - `DeploymentTargetStore` 原子替换一份完整目标并返回可核验 token；Engine 只凭该 token promote 已 seal 的
-  candidate，随后按上述旧/新 unit 顺序协调运行态并发布事实视图。成功响应须同时满足目标已保存、要求已达成及
-  结果视图已发布；失败结果也必须区分目标是否保存、哪些实例已经改变与后续恢复条件，保存成功不是运行时已经
-  可用的同义词。
+  candidate，随后按上述旧/新 unit 顺序协调运行态并发布事实视图。成功响应须本次目标保存边界已确定、生命周期
+  编排未失败且结果视图已发布；是否全部声明要求满足由 `TargetConvergence` 单独表达。失败结果仍须区分保存
+  事实、已改变实例与恢复条件，保存成功不是运行时已经可用的同义词。
 - 保存目标前失败只清理新准备的资源；保存后不得因启动、发布或清理错误反写旧目标。清理按资源依赖逐层进行，
   前一层失败时保留后续先决资源；独立同级资源仍全部尝试并聚合失败。
 - 排空与回收不决定保存的目标内容。回收失败进入健康诊断并关闭后续变更准入，不伪造旧路由恢复。
 
-candidate 已 promote、运行已收敛且 retirement batch 已完成的目标，即使包含可观察的插件 FAILED 或未满足
-声明要求，仍可通过显式新目标纠正。candidate prepare/validate/seal 或 save 明确失败且清理成功时，旧 current
+candidate 已 promote 且 retirement batch 已完成后，确定性 activate 失败须发布 current/convergence=`BLOCKED`、
+operation=`FAILED`，并在错误回执中保留本次 target 保存结果；Engine 仍为 `RUNNING`，可显式重试当前 target
+或提交完整修正 target。合法 PENDING 可结束本次编排并发布 `SETTLED + UNSATISFIED`，不能把它与确定性启动
+失败合并。candidate prepare/validate/seal 或 save 明确失败且清理成功时，旧 current
 与准入不变，可继续提交修正目标；candidate 清理失败、save-unconfirmed、current runtime 契约违例或
 unit drain/stop/retire 失败才关闭后续变更并保留现场。不得用统一 finally retire 或一律重开 gate 掩盖区别。
 
@@ -460,7 +464,7 @@ Engine 单独记录最近一次已接受的 source revision，它不随 Registry
 | 替换可能发生、但同步或确认失败 | 不报告成功、不猜测未保存；关闭变更准入，保留新旧目标所需内容，存储重新可靠读取前不继续写入 |
 | 目标已保存、协调尚未结束时崩溃 | 重启按保存的目标重建；不承诺崩溃前未完成的调用仍能收到响应 |
 | 目标已保存、启动或清理失败 | 发布实际状态及未达成要求，保留必要资源，明确失败与恢复条件；不声称整批回滚 |
-| 已达成目标后回收失败 | 报告残留资源与故障，不倒退已保存目标 |
+| retirement 回收失败 | 保留资源现场，current=`BLOCKED`、Engine=`FAIL_STOP`，不启动 replacement units、不倒退已保存目标 |
 | 目标文件/存储事实不可信 | 进入 `FAIL_STOP` 或拒绝启动；不自动回退旧版本、不用当前源文件猜测修复 |
 | 目标可信，但 package/provider 缺失或重建失败 | 清理成功时保持 `RUNNING + PRESENT + BLOCKED`、无 current，使 Host 进入管理 ready 并接受完整 replacement；清理失败则 `FAIL_STOP` |
 
@@ -469,8 +473,8 @@ Engine 单独记录最近一次已接受的 source revision，它不随 Registry
 部署返回成失败，也不能反向改变目标；不保证部署结果与审计记录恰好一次或原子持久化。业务若要求
 强审计，应在宿主层另行定义协议，不能偷偷扩大 Fibra 的提交边界。
 
-审计结果以 `TargetSaveState` 区分 `NOT_SAVED`、`SAVED`、`UNCONFIRMED`，与操作是否达成分别记录。
-成功操作只允许 `SAVED`；`SAVED` 仍可对应未达成操作。文件审计写完整条记录并同步后才确认，
+审计结果以 `TargetSaveState` 区分 `NOT_APPLICABLE`、`NOT_SAVED`、`SAVED`、`UNCONFIRMED`，与操作是否达成分别记录。
+成功保存目标使用 `SAVED`，成功 no-op/reconcile 使用 `NOT_APPLICABLE`；`SAVED` 仍可对应未达成操作。文件审计写完整条记录并同步后才确认，
 写入或同步失败后当前仓库停止追加，保留证据至关闭；重开拒绝残缺记录，不自动截断或改写。
 投递失败通过 `PluginRegistry.auditFailures()`、查询快照及操作返回快照诊断；`watch()` 仅跟随 Engine
 事实变化，不承诺为审计失败另发通知，也不把审计诊断与运行事实伪装成一次原子采样。
@@ -1650,9 +1654,10 @@ ZIP、五类仓外消费者、真实 PTY、archetype 和三轮可复现门禁；
 已有 `~/.m2` 解析 Fibra 正式发布物，再在仓外目录单独构建上层项目，并核对解析制品与临时发布目标字节，
 以证明两仓边界真实成立。
 
-Fibra F1–F4 的历史阶段已完成；Fibra Client Foundation P0 已按
-[实施计划](../plans/2026-09-15-fibra-client-foundation-p0.md)完成状态模型硬切并在当前工作树本地冻结。
-当前保持 `0.5.0-SNAPSHOT` 且未正式发布；独立产品 P1 前置装配应从该冻结契约开始，仍须由产品仓完成
+Fibra F1–F4 的历史阶段已完成；Fibra Client Foundation P0 在 2026-09-20 按
+[实施计划](../plans/2026-09-15-fibra-client-foundation-p0.md)完成状态模型硬切与当时的本地冻结。
+2026-10-07 已重开最终架构缺口，本轮状态以[关闭计划](../plans/2026-10-07-final-architecture-closeout.md)为准。
+当前保持 `0.5.0-SNAPSHOT` 且未正式发布；独立产品 P1 前置装配仍须等待本轮验收，并由产品仓完成
 自身真实 browser RuntimeDriver、transport 与发行门。
 Model、Agent、Session、MCP 或其它 DSH 产品模块不回填到 Fibra 仓库。
 

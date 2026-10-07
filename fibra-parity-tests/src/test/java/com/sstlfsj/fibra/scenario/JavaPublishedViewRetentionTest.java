@@ -7,9 +7,12 @@ import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.PluginDefinitionRef;
 import com.sstlfsj.fibra.engine.ApplyDeployment;
+import com.sstlfsj.fibra.engine.CurrentPhase;
 import com.sstlfsj.fibra.engine.DeploymentTarget;
 import com.sstlfsj.fibra.engine.DeploymentTargetStore;
 import com.sstlfsj.fibra.engine.EngineState;
+import com.sstlfsj.fibra.engine.EngineOperationOutcome;
+import com.sstlfsj.fibra.engine.EngineOperationKind;
 import com.sstlfsj.fibra.engine.ExecutionObservation;
 import com.sstlfsj.fibra.engine.ExecutionUnitKey;
 import com.sstlfsj.fibra.engine.FibraEngine;
@@ -17,6 +20,7 @@ import com.sstlfsj.fibra.engine.HostServiceRegistry;
 import com.sstlfsj.fibra.engine.PluginSelection;
 import com.sstlfsj.fibra.engine.PublishedView;
 import com.sstlfsj.fibra.engine.TargetConvergence;
+import com.sstlfsj.fibra.engine.TargetSaveState;
 import com.sstlfsj.fibra.runtime.java.JavaRuntimeProvider;
 import fixture.RetentionJavaEntrypoint;
 import org.junit.jupiter.api.Test;
@@ -115,8 +119,15 @@ class JavaPublishedViewRetentionTest {
             currentUnits(failed).get(new ExecutionUnitKey("failing"))
                 .aggregateState());
         assertTrue(failed.engineDiagnostics().mutationGateOpen());
-        assertEquals(TargetConvergence.UNSATISFIED,
+        assertEquals(TargetConvergence.BLOCKED,
             failed.engine().targetConvergence());
+        assertEquals(CurrentPhase.BLOCKED, failed.engine().current().orElseThrow().phase());
+        assertEquals(EngineOperationOutcome.FAILED,
+            failed.engineDiagnostics().operation().orElseThrow().outcome());
+        assertEquals(EngineOperationKind.BOOTSTRAP,
+            failed.engineDiagnostics().operation().orElseThrow().kind());
+        assertEquals(TargetSaveState.NOT_APPLICABLE,
+            failed.engineDiagnostics().operation().orElseThrow().targetSaveState());
         var oldLoader = descriptorLoader(failed);
         var replacement = install(packages, pluginPackage(work, 1, PLUGIN,
             "fixture.RetentionJavaEntrypoint"));

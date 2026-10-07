@@ -1,6 +1,8 @@
 # Fibra Client Foundation 权威架构与 P0 验证设计
 
-状态：2026-09-20 Client Foundation P0 已按第 12 节在当前工作树关闭并本地冻结。本文是 Fibra 逻辑插件、
+状态：2026-10-07 按最终架构复审重开 P0 缺口关闭；本轮验收与合并状态见
+[关闭计划](../plans/2026-10-07-final-architecture-closeout.md)。2026-09-20 的本地冻结是历史验收，
+不能代替本轮最终工作树证据。本文是 Fibra 逻辑插件、
 跨执行域 SPI 与 Client Foundation P0 的权威设计。当前版本仍为 `0.5.0-SNAPSHOT`，未执行正式版本号、
 tag、Maven/npm 发布、合并或推送；冻结只确认架构、实现与本地验收完成，不冒充正式发布。实现不得保留
 旧新兼容层、双格式、双状态源或按开关选择的两套 runtime。
@@ -53,6 +55,12 @@ transport 的证据由产品仓库提供，不能由 Fibra fixture 冒充。
 | Terraform Provider/Resource | provider 显式声明 resource type/schema，配置中的每个 resource block 是独立实例 | Terraform state、RPC 和 provider 生态 | facet 必须显式声明 definition；每个 desired entry 形成独立 execution unit，不能把 artifact 当实例 |
 | DSH/Cordis | Scope/effect 所有权、Host/client 两侧生命周期、renderer 后置装配 | 把 Cordis/React runner 下沉 Fibra | 浏览器 runner 和 renderer 保持产品侧，Fibra 只冻结通用 SPI 与围栏 |
 | Codex app-server | 核心拥有稳定协议类型，transport 可替换 | Agent/Session 业务协议 | Fibra 可发布 client protocol/API，但不实现产品 transport |
+
+本轮失败与回收边界参照 DSH 固定提交 `c291e7961a515f6d7af9304e7fd1d257929aef26` 的
+`vendor/cordis/src/fiber.ts`：`_reload` 保留启动错误、`await()` 在 inertia 结束后重抛，`_unload` 等待 disposer。
+直接采用错误保留与等待原 owner 完成的原则；最小改造为现有 RuntimeDriver 的异步回执。持久 target、
+operation 与精确 unit failure 的映射是 Fibra 特有能力，由 Engine 负责；拒绝把上游卸载时的日志隔离
+照搬为 Fibra lease 清理成功。该参照不证明 Fibra 的持久保存或跨 runtime 回收，仍须真实故障与重启验收。
 
 参照项目只用于验证分层和状态机，不替 Fibra 证明自己的组合可执行性。重新冻结前必须使用本项目真实
 Java/Node runtime 和外部 execution fixture 跑通 walking skeleton。
@@ -187,6 +195,11 @@ provider/runtime；不实现跨 provider package fragment 合并。内建 facet 
 全局 DAG、definition/unit 校验和 runtime slice，不能由 Engine 匿名 catalog 或旁路挂载。每个 facet 的稳定
 artifact identity 由 packageDigest+facetId 派生，不得把 package 当作单 facet。package revision 与实际发布
 二进制/全部声明绑定；Host 升级后旧 revision 不可用时必须明确启动失败，不能以同一 revision 静默运行新代码。
+
+provider 私有 definitions 与 metadata 的集合一致性在引用该 package 的 candidate prepare 中校验；
+不得在 Host 创建前因这类不匹配而阻断管理入口。metadata 的结构合法性、runtime 身份及重复声明仍严格校验。
+可信持久 target 遭 definitions 不匹配时按第 8 节进入可修正的 `PRESENT + BLOCKED`；未引用该 package 的
+完整 replacement 不执行其 definition prepare。不能把缺失 definition 静默忽略或合成为占位插件。
 
 ## 5. 单一 RuntimeDriver 模型
 
@@ -449,7 +462,8 @@ FibraEngine
 
 `TargetConvergence` 只回答持久目标与当前运行事实的关系：无 target 为 `ABSENT`；生命周期命令正在推进为
 `CONVERGING`；全部声明要求满足为 `SATISFIED`；编排已结束但存在合法 PENDING 或未满足要求、且未来
-的可用性事件可继续唤醒收敛为 `UNSATISFIED`；必须修改完整 target 或受控重启才可前进为 `BLOCKED`。
+的可用性事件可继续唤醒收敛为 `UNSATISFIED`；不能仅靠普通可用性事件自动前进，需显式重试当前 target、
+提交完整修正 target 或受控重启为 `BLOCKED`。重试仍须为 FAILED units 创建新运行身份。
 `CurrentPhase.SETTLED` 可与 `SATISFIED` 或 `UNSATISFIED` 组合，但不与 `BLOCKED/FAILED` 混为同一含义。
 
 新 target 的唯一生产路径为：
@@ -506,7 +520,7 @@ message。
 | prepare/validate/seal 或 save 明确失败 | candidate | 不变 / `RUNNING` | 逆序 close/abort candidate；清理成功后移除 candidate，保留 current |
 | candidate close/abort 失败 | candidate | 不变 / `FAIL_STOP` | 保留 candidate 资源现场，封闭 mutation 和 managed contribution 准入，请求 Host termination |
 | save-unconfirmed | candidate | `UNCERTAIN` / `FAIL_STOP` | 不 promote、不猜测磁盘事实；保留需要的 current/candidate 资源并受控退出 |
-| save 后确定性 activate 失败 | current 或精确 unit | 新 target / `RUNNING` | 不回滚 target、不恢复旧准入；current=`BLOCKED`，convergence=`BLOCKED`，允许提交修正 target |
+| save 后确定性 activate 失败 | current 或精确 unit | 新 target / `RUNNING` | 不回滚 target、不恢复旧准入；current=`BLOCKED`，convergence=`BLOCKED`，operation 保留实际阶段并标为 `FAILED`；命令错误回执保留保存结果，允许提交修正 target |
 | current runtime 同步抛错、snapshot 或其它契约违例 | current 或精确 unit | 不变 / `FAIL_STOP` | current=`FAILED`，封闭全局准入并请求 Host termination |
 | drain/stop/release 或 retirement 采样失败 | retirement batch 或精确 unit | 新 target / `FAIL_STOP` | retirement=`FAILED`，current=`BLOCKED`，保留 lease 与现场 |
 | contribution directory、Engine 共享基础设施失败 | Engine | 不变 / `FAIL_STOP` | 不伪造 candidate/current/retirement 失败；封闭准入并受控退出 |
@@ -540,6 +554,10 @@ digest/metadata 不匹配或 prepare 失败时，若 candidate 清理成功，En
 durable target。Host 必须可进入管理 ready，控制面可以基于同一 target revision 提交完整 replacement
 修正，不能伪造一个 FAILED current。只有 target/store 事实无法可信读取、资源所有权不确定或 bootstrap
 清理失败才进入 `FAIL_STOP`。
+
+load 或 token 校验失败时尚无可信 target，durable state 为 `UNCERTAIN`、convergence 为 `BLOCKED`，
+failure 归属 Engine 的 bootstrap 读取边界；封闭准入并请求一次 Host termination。不能把读取错误映射成
+空目标或启动成功；重复 start 观察同一失败，不重试不可信 store。
 
 bootstrap 与首次 close 相交时，本次 operation 尚未建立的准入拒绝直接返回原错误，沿既有 start
 错误缓存终结，不创建虚构 operation 或改写上一项 operation/current。已进入 prepare 的操作遭关闭门拒绝时，

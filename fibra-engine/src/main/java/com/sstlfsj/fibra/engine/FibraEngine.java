@@ -246,7 +246,17 @@ public final class FibraEngine implements AutoCloseable {
         return Mono.defer(() -> {
             if (state != EngineState.NEW) return Mono.just(published.current());
             installHostServices();
-            var stored = targetStore.load();
+            final Optional<DeploymentTargetStore.StoredTarget> stored;
+            try {
+                stored = Objects.requireNonNull(targetStore.load(), "stored target");
+                stored.ifPresent(value -> verifyToken(value.target(), value.token()));
+            } catch (RuntimeException | Error error) {
+                durableState = DurableTargetState.UNCERTAIN;
+                targetConvergence = TargetConvergence.BLOCKED;
+                failStop(engineFailure("TARGET_LOAD_FAILED", error,
+                    FailureStage.BOOTSTRAPPING));
+                return Mono.error(error);
+            }
             state = EngineState.RUNNING;
             if (stored.isEmpty()) {
                 beginOperation(EngineOperationKind.BOOTSTRAP, 0,
@@ -258,7 +268,6 @@ public final class FibraEngine implements AutoCloseable {
             }
             durableTarget = stored.get().target();
             durableToken = stored.get().token();
-            verifyToken(durableTarget, durableToken);
             durableState = DurableTargetState.PRESENT;
             targetConvergence = TargetConvergence.CONVERGING;
             return deploy(durableTarget, false, true, Set.of(),
@@ -421,9 +430,15 @@ public final class FibraEngine implements AutoCloseable {
                             targetConvergence = TargetConvergence.CONVERGING;
                         }
                         promote(staged, Objects.requireNonNull(token, "durable token"), inputsIdentity);
-                        return settleReplacement();
+                        return settleReplacement().then(Mono.fromSupplier(published::current));
                     }));
-            }).onErrorResume(this::deploymentFailed);
+            }).onErrorResume(this::deploymentFailed).flatMap(view -> {
+                if (operation.outcome != EngineOperationOutcome.RUNNING) return Mono.just(view);
+                return loop.call(this::finishCurrentOperation).onErrorMap(error ->
+                    error instanceof EngineChangeException ? error
+                        : new EngineChangeException(published.current(),
+                            operation.targetSaveState, error));
+            });
         });
     }
 
@@ -477,7 +492,7 @@ public final class FibraEngine implements AutoCloseable {
         publish();
     }
 
-    private Mono<PublishedView> settleReplacement() {
+    private Mono<Void> settleReplacement() {
         if (retirement != null) {
             retirement.source.compiled.reverseDependency().stream().filter(retirement.units::containsKey)
                 .forEach(key -> retirement.units.get(key).closeAdmission());
@@ -486,9 +501,9 @@ public final class FibraEngine implements AutoCloseable {
             publish();
         }
         return drainAndStopRetirement()
-            .then(loop.call(() -> reconcile(current.compiled.affectedUnits())))
             .then(loop.call(this::retire))
-            .then(loop.call(this::finishCurrentOperation));
+            .then(loop.call(() -> reconcile(current.compiled.affectedUnits())))
+            .then();
     }
 
     private Mono<Void> drainAndStopRetirement() {
@@ -641,11 +656,12 @@ public final class FibraEngine implements AutoCloseable {
             });
         }
         if (retirement != null) {
+            var stage = failureStage();
             retirement.phase = RetirementPhase.FAILED;
             if (current != null) current.phase = CurrentPhase.BLOCKED;
             targetConvergence = TargetConvergence.BLOCKED;
             failStop(retirementFailure("LIFECYCLE_CLEANUP_FAILED", error,
-                failureStage()));
+                stage));
             return Mono.error(new EngineChangeException(published.current(), saveState, error));
         }
         if (current != null && operation != null
@@ -658,8 +674,10 @@ public final class FibraEngine implements AutoCloseable {
             return Mono.error(new EngineChangeException(published.current(),
                 saveState, error));
         }
-        targetConvergence = durableTarget == null ? TargetConvergence.ABSENT
-            : TargetConvergence.BLOCKED;
+        if (current == null) {
+            targetConvergence = durableTarget == null ? TargetConvergence.ABSENT
+                : TargetConvergence.BLOCKED;
+        }
         failOperation(operation != null
             && operation.kind == EngineOperationKind.BOOTSTRAP
             && durableTarget != null
@@ -973,6 +991,22 @@ public final class FibraEngine implements AutoCloseable {
 
     private Mono<PublishedView> finishCurrentOperation() {
         refreshCurrentObservations();
+        for (var key : current.compiled.dependencyFirst()) {
+            var unit = current.units.get(key);
+            var observed = lastObservations.get(unit);
+            if (observed.aggregateState() != ExecutionObservation.State.FAILED) continue;
+            var detail = observed.executions().stream()
+                .filter(value -> value.state() == ExecutionObservation.State.FAILED)
+                .findFirst().orElseThrow().failure();
+            var error = new IllegalStateException(detail.code() + ": " + detail.message());
+            transitionCurrent(CurrentPhase.BLOCKED);
+            targetConvergence = TargetConvergence.BLOCKED;
+            failOperation(unitFailure("RUNTIME_ACTIVATION_FAILED", current.id,
+                unit, error, FailureStage.RECONCILING));
+            publish();
+            return Mono.error(new EngineChangeException(published.current(),
+                operation.targetSaveState, error));
+        }
         transitionCurrent(CurrentPhase.SETTLED);
         targetConvergence = targetSatisfied(currentObservations())
             ? TargetConvergence.SATISFIED : TargetConvergence.UNSATISFIED;
@@ -1308,9 +1342,11 @@ public final class FibraEngine implements AutoCloseable {
                 var unit = current.units.get(fence.unitKey());
                 if (unit == null || !matchesFence(unit, fence)) return;
                 observeCurrent(fence.unitKey(), unit);
-                targetConvergence = targetSatisfied(currentObservations())
-                    ? TargetConvergence.SATISFIED
-                    : TargetConvergence.UNSATISFIED;
+                if (current.phase != CurrentPhase.BLOCKED) {
+                    targetConvergence = targetSatisfied(currentObservations())
+                        ? TargetConvergence.SATISFIED
+                        : TargetConvergence.UNSATISFIED;
+                }
                 publish();
             });
         }

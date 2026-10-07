@@ -21,8 +21,6 @@ public final class JavaBuiltInPackage {
             !JavaRuntimeProvider.RUNTIME_ID.equals(facet.runtimeId()))) {
             throw new IllegalArgumentException("Java built-in package contains another runtime");
         }
-        var expected = metadata.facets().stream().collect(java.util.stream.Collectors.toMap(
-            facet -> facet.facetId(), facet -> facet.definitionIds()));
         var copied = new LinkedHashMap<FacetId, Map<String, JavaDefinitionEntry<?>>>();
         Objects.requireNonNull(entries, "entries").forEach((facetId, values) -> {
             var byId = new LinkedHashMap<String, JavaDefinitionEntry<?>>();
@@ -35,16 +33,21 @@ public final class JavaBuiltInPackage {
             }
             copied.put(Objects.requireNonNull(facetId, "facetId"), Map.copyOf(byId));
         });
-        if (!copied.keySet().equals(expected.keySet())) {
+        definitions = Map.copyOf(copied);
+    }
+
+    private void validateDefinitions() {
+        var expected = metadata.facets().stream().collect(java.util.stream.Collectors.toMap(
+            facet -> facet.facetId(), facet -> facet.definitionIds()));
+        if (!definitions.keySet().equals(expected.keySet())) {
             throw new IllegalArgumentException("Java built-in facets do not exactly match metadata");
         }
-        copied.forEach((facetId, values) -> {
+        definitions.forEach((facetId, values) -> {
             if (!values.keySet().equals(Set.copyOf(expected.get(facetId)))) {
                 throw new IllegalArgumentException("Java built-in definitions do not exactly match metadata for "
                     + facetId);
             }
         });
-        definitions = Map.copyOf(copied);
     }
 
     public BuiltInPluginPackage metadata() {
@@ -52,6 +55,8 @@ public final class JavaBuiltInPackage {
     }
 
     JavaDefinitionEntry<?> definition(FacetId facetId, String definitionId) {
+        // 在 candidate prepare 内校验，让可信持久目标可进入 BLOCKED 并由管理面修正。
+        validateDefinitions();
         var values = definitions.get(facetId);
         if (values == null || !values.containsKey(definitionId)) {
             throw new IllegalArgumentException("unknown Java built-in definition "

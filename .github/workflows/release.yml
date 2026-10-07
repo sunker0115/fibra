@@ -148,6 +148,9 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      - name: 验证真实 Engine 与客户端契约连接
+        run: node client/tests/engine-connection/consume-snapshots.mjs fibra-parity-tests/target/client-protocol-conformance
+
       - name: 验证 Maven 制品与发行 ZIP/目录树可复现
         run: scripts/verify-reproducible-release.sh
 
@@ -156,6 +159,14 @@ jobs:
 
       - name: 验证架构边界
         run: scripts/verify-architecture-boundaries.sh
+
+      - name: 保存已验证的发行 ZIP
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fibra-distribution-${{ steps.release-ref.outputs.commit }}
+          path: fibra-distribution/target/fibra-*-bin.zip
+          if-no-files-found: error
+          retention-days: 1
 
   publish-central:
     needs: verify-release
@@ -181,6 +192,12 @@ jobs:
           server-username-env-var: CENTRAL_USERNAME
           server-password-env-var: CENTRAL_PASSWORD
 
+      - name: 配置项目锁定的 Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: client/.node-version
+          package-manager-cache: false
+
       - name: 配置项目锁定的 Maven 版本
         shell: bash
         run: |
@@ -194,16 +211,38 @@ jobs:
           tar -xzf "$archive" -C "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/apache-maven-$maven_version/bin" >> "$GITHUB_PATH"
 
+      - name: 配置项目锁定的 ripgrep 版本
+        shell: bash
+        run: |
+          ripgrep_version="$(sed -n 's/.*<ripgrep.runtime.version>\([^<]*\)<\/ripgrep.runtime.version>.*/\1/p' pom.xml)"
+          ripgrep_sha256="$(sed -n 's/.*<ripgrep.runtime.sha256>\([^<]*\)<\/ripgrep.runtime.sha256>.*/\1/p' pom.xml)"
+          archive="$RUNNER_TEMP/ripgrep-v$ripgrep_version-x86_64-unknown-linux-musl.tar.gz"
+          curl --fail --silent --show-error --location \
+            "https://github.com/microsoft/ripgrep-prebuilt/releases/download/v$ripgrep_version/$(basename "$archive")" \
+            --output "$archive"
+          echo "$ripgrep_sha256  $archive" | sha256sum --check -
+          tar -xzf "$archive" -C "$RUNNER_TEMP" rg
+          chmod 0755 "$RUNNER_TEMP/rg"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - name: 下载已验证的发行 ZIP
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: fibra-distribution-${{ needs.verify-release.outputs.commit }}
+          path: ${{ runner.temp }}/fibra-verified-distribution
+
       - name: 签名并上传 Central Portal
         env:
           CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
           CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
           MAVEN_GPG_KEY: ${{ secrets.MAVEN_GPG_KEY }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
-        run: >-
-          mvn --batch-mode --no-transfer-progress clean deploy -Pcentral-release
-          -pl "$(scripts/release-maven-modules.sh csv)"
-          -am -DskipTests -Darchetype.test.skip=true
+        run: |
+          revision="$(sed -n 's/.*<revision>\([^<]*\)<\/revision>.*/\1/p' pom.xml)"
+          mvn --batch-mode --no-transfer-progress clean deploy -Pcentral-release \
+            -pl "$(scripts/release-maven-modules.sh csv)" \
+            -am -DskipTests -Darchetype.test.skip=true \
+            -Dfibra.distribution.verifiedArchive="$RUNNER_TEMP/fibra-verified-distribution/fibra-$revision-bin.zip"
 
   publish-npm:
     needs: verify-release

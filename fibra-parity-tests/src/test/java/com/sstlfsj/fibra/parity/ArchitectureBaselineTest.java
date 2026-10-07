@@ -11,6 +11,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import org.xml.sax.InputSource;
@@ -131,6 +132,114 @@ class ArchitectureBaselineTest {
         assertTrue(pom.contains("<appendAssemblyId>true</appendAssemblyId>"));
         assertTrue(Files.readString(root.resolve("fibra-distribution/src/assembly/bin.xml"))
             .contains("<id>bin</id>"));
+    }
+
+    @Test
+    void centralPublishUsesTheVerifiedDistributionAndPinnedRuntimes() throws Exception {
+        var workflow = Files.readString(reactorRoot().resolve(".github/workflows/release.yml"));
+        var verify = workflowJob(workflow, "verify-release");
+        var publish = workflowJob(workflow, "publish-central");
+
+        var archiveUpload = verify.indexOf("name: fibra-distribution-${{ steps.release-ref.outputs.commit }}");
+        assertTrue(archiveUpload > verify.indexOf("scripts/verify-distribution.sh"),
+            "the distribution artifact must be saved after its independent verification");
+        assertTrue(verify.contains("path: fibra-distribution/target/fibra-*-bin.zip"));
+        assertTrue(publish.contains("name: fibra-distribution-${{ needs.verify-release.outputs.commit }}"));
+        assertTrue(publish.contains("path: ${{ runner.temp }}/fibra-verified-distribution"));
+        assertTrue(publish.contains("node-version-file: client/.node-version"));
+        assertTrue(publish.contains("<ripgrep.runtime.version>"));
+        assertTrue(publish.contains("<ripgrep.runtime.sha256>"));
+        assertTrue(publish.contains("sha256sum --check -"));
+        assertTrue(publish.contains("-Dfibra.distribution.verifiedArchive=\"$RUNNER_TEMP/fibra-verified-distribution/fibra-$revision-bin.zip\""));
+    }
+
+    @Test
+    void centralPublishingUsesTheSameModulePublicationBoundary() throws Exception {
+        var profile = profile(reactorRoot().resolve("pom.xml"), "central-release");
+        var plugin = plugin(profile, "central-publishing-maven-plugin");
+        var configuration = directChildElements(plugin, "configuration").getFirst();
+
+        assertEquals("${maven.deploy.skip}", optionalDirectChildText(configuration, "skipPublishing"));
+        assertEquals("false", directChildText(configuration, "autoPublish"));
+    }
+
+    @Test
+    void centralDistributionComparisonRejectsMissingDifferentOrSameFiles(@TempDir Path work)
+        throws Exception {
+        var profile = profile(reactorRoot().resolve("fibra-distribution/pom.xml"), "central-release");
+        var plugin = plugin(profile, "exec-maven-plugin");
+        var executions = directChildElements(directChildElements(plugin, "executions").getFirst(),
+            "execution");
+        var comparison = executions.stream().filter(execution ->
+            "verify-central-distribution".equals(directChildText(execution, "id")))
+            .findFirst().orElseThrow();
+        assertEquals("verify", directChildText(comparison, "phase"));
+        assertEquals("exec", directChildText(directChildElements(comparison, "goals").getFirst(), "goal"));
+        var configuration = directChildElements(comparison, "configuration").getFirst();
+        assertEquals("bash", directChildText(configuration, "executable"));
+        assertTrue(directChildElements(configuration, "skip").isEmpty(),
+            "the Central archive comparison must not be optional");
+        var arguments = directChildElements(directChildElements(configuration, "arguments").getFirst(),
+            "argument").stream().map(element -> element.getTextContent().trim()).toList();
+        assertEquals(5, arguments.size());
+        assertEquals("-euc", arguments.get(0));
+        assertEquals("${fibra.distribution.verifiedArchive}", arguments.get(3));
+        assertEquals("${project.build.directory}/fibra-${project.version}-bin.zip", arguments.get(4));
+
+        var verified = work.resolve("verified.zip");
+        var rebuilt = work.resolve("rebuilt.zip");
+        Files.writeString(verified, "verified archive");
+        Files.writeString(rebuilt, "verified archive");
+        var script = arguments.get(1);
+        assertEquals(0, compareArchives(script, verified.toString(), rebuilt.toString()));
+        Files.writeString(rebuilt, "changed archive");
+        assertTrue(compareArchives(script, verified.toString(), rebuilt.toString()) != 0);
+        assertTrue(compareArchives(script, work.resolve("missing.zip").toString(), rebuilt.toString()) != 0);
+        assertTrue(compareArchives(script, "", rebuilt.toString()) != 0);
+        assertTrue(compareArchives(script, "${fibra.distribution.verifiedArchive}", rebuilt.toString()) != 0);
+        assertTrue(compareArchives(script, verified.toString(), verified.toString()) != 0,
+            "comparing a rebuilt archive with itself is not verification");
+        var alias = Files.createSymbolicLink(work.resolve("verified-alias.zip"), verified);
+        assertTrue(compareArchives(script, alias.toString(), verified.toString()) != 0,
+            "a symlink must not turn the rebuilt archive into its own verification input");
+    }
+
+    private static int compareArchives(String script, String verified, String rebuilt) throws Exception {
+        var process = new ProcessBuilder("bash", "-euc", script, "fibra-central-distribution", verified, rebuilt)
+            .redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
+        try {
+            assertTrue(process.waitFor(10, TimeUnit.SECONDS), "archive comparison timed out");
+            return process.exitValue();
+        } finally {
+            if (process.isAlive()) {
+                process.destroyForcibly();
+            }
+        }
+    }
+
+    private static String workflowJob(String workflow, String id) {
+        var matcher = Pattern.compile("(?ms)^  " + Pattern.quote(id)
+            + ":\\R(.*?)(?=^  [a-z][a-z-]*:\\R|\\z)").matcher(workflow);
+        assertTrue(matcher.find(), () -> "missing workflow job " + id);
+        return matcher.group(1);
+    }
+
+    private static Element profile(Path pom, String id) throws Exception {
+        var project = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(pom.toFile())
+            .getDocumentElement();
+        var containers = directChildElements(project, "profiles");
+        assertEquals(1, containers.size(), () -> pom + " must declare the release profile");
+        var profile = directChildElements(containers.getFirst(), "profile").stream()
+            .filter(candidate -> id.equals(directChildText(candidate, "id"))).findFirst();
+        assertTrue(profile.isPresent(), () -> pom + " must declare profile " + id);
+        return profile.orElseThrow();
+    }
+
+    private static Element plugin(Element profile, String artifactId) {
+        var build = directChildElements(profile, "build").getFirst();
+        return directChildElements(directChildElements(build, "plugins").getFirst(), "plugin").stream()
+            .filter(plugin -> artifactId.equals(directChildText(plugin, "artifactId")))
+            .findFirst().orElseThrow();
     }
 
     @Test

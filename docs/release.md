@@ -61,6 +61,7 @@ corepack enable
 corepack prepare pnpm@11.19.0 --activate
 pnpm --dir client install --frozen-lockfile
 scripts/verify-client-packages.sh
+node client/tests/engine-connection/consume-snapshots.mjs fibra-parity-tests/target/client-protocol-conformance
 scripts/verify-reproducible-release.sh
 scripts/verify-architecture-boundaries.sh
 ```
@@ -72,6 +73,9 @@ scripts/verify-architecture-boundaries.sh
 - `clean verify`：全 reactor 单元、契约、真实 Java/Node runtime、重启、插件组合、Spring、archetype、API
   签名和 JMH 编译；
 - `verify-client-packages.sh`：TypeScript declaration 基线、严格归档成员、版本关系和离线 tarball 消费者；
+- `consume-snapshots.mjs`：消费本轮 Maven 中真实 Engine 经 Java codec 生成的六阶段 envelope，使用正式
+  TypeScript decoder 与 factory 验证配置、身份及 candidate/retirement 隔离。缺少 fixture 或正式 dist 必须失败；
+  Maven 只生成 fixture，普通 npm 包门不依赖 Maven 输出，由 CI/release 强制串接；
 - `verify-reproducible-release.sh`：28 组主 JAR、sources、Javadoc，30 个 Maven POM，以及发行 ZIP 与完整目录
   树的字节复现；
 - `verify-distribution.sh`：部署到临时文件仓库，并在复制出的独立目录验证 core、Engine、外部
@@ -87,7 +91,7 @@ scripts/verify-architecture-boundaries.sh
 `.github/workflows/ci.yml` 分两层：
 
 1. `maven-verify` 复用同一套锁定的 Java、Maven、Node 与 ripgrep 环境，运行完整 Maven reactor、超时诊断、
-   架构边界和 Maven/发行 ZIP 可复现门；
+   架构边界、Engine→Java codec→TypeScript 连通门和 Maven/发行 ZIP 可复现门；
 2. `npm-verify` 构建、测试、边界检查并消费两个 npm tarball。
 
 空仓分发验证下载量和耗时较高，本地开发与 PR 事件不执行；每次 push 由 GitHub Actions 自动执行，正式
@@ -104,10 +108,13 @@ release workflow 也执行一次。每次执行内部只建立一个全新消费
 `v<major>.<minor>.<patch>`，或带字母开头 qualifier 的预发布版本；根 POM revision 必须是相同的非
 `SNAPSHOT` 版本，且标签提交必须位于 `main` 历史中。两个 npm package 的版本必须与根 revision 完全相同。
 
-`verify-release` 在标签提交上重跑 Maven、npm、可复现、架构边界和一次空仓分发门，并保存本次已验证的 npm
-tarball。通过后：
+`verify-release` 在标签提交上重跑 Maven、npm、真实连接、可复现、架构边界和一次空仓分发门，并保存本次
+已验证的 npm tarball 与发行 ZIP。通过后：
 
-- `publish-central` 使用 `central-release` profile 对严格 30 个 Maven 模块签名并上传 Central Portal；
+- `publish-central` 使用同一锁定 Node/ripgrep 工具链，下载已验证 ZIP；`central-release` profile 在同一次
+  deploy 生命周期的 verify 阶段，将重新构建的 ZIP 与独立下载副本逐字节比较。缺参考物、同文件或内容不同
+  均在上传前失败。Central 插件的 `skipPublishing` 映射各模块 `maven.deploy.skip`，只签名并上传严格
+  30 个 Maven 模块；
 - `publish-npm` 在支持 Trusted Publishing 的 Node/npm 环境中下载并发布上述不可变 tarball，通过 OIDC 生成
   provenance；不重复 build/test/pack。稳定版使用 `latest`，预发布版使用 qualifier 首段作为 npm tag。
 

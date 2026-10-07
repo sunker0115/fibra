@@ -10,6 +10,7 @@ import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 
 import java.nio.file.Path;
+import java.nio.file.Files;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -37,7 +38,7 @@ class RuntimeDriverEngineTest {
             apply(engine, 1, graph(2, "a1", "b1"));
             assertEquals(List.of("prepare:alpha", "prepare:beta", "seal:alpha", "seal:beta", "save:2",
                 "admission:b1", "admission:a1", "drain:b1", "drain:a1", "stop:b1", "stop:a1",
-                "activate:a1", "activate:b1", "retire:beta", "retire:alpha"), events);
+                "retire:beta", "retire:alpha", "activate:a1", "activate:b1"), events);
         }
     }
 
@@ -496,18 +497,139 @@ class RuntimeDriverEngineTest {
     }
 
     @Test
-    void failedCurrentUsesSameTokenButFreshUnitsAndCleansOldBeforeRetry() {
+    void failedCurrentUsesSameTokenButFreshUnitsAndCleansOldBeforeRetry() throws Exception {
         alpha.activationFailure = true;
-        try (var engine = engine(request -> { })) {
-            apply(engine, 0, graph(1, "a1"));
+        try (var engine = engine(request -> fail("ordinary activation failure must not terminate Host"))) {
+            var rejected = assertThrows(EngineChangeException.class,
+                () -> apply(engine, 0, graph(1, "a1")));
+            assertEquals(TargetSaveState.SAVED, rejected.targetSaveState());
+            assertSame(engine.published().current(), rejected.view());
+            assertEquals(EngineState.RUNNING, engine.snapshot().state());
+            assertEquals(CurrentPhase.BLOCKED,
+                engine.snapshot().current().orElseThrow().phase());
+            assertEquals(TargetConvergence.BLOCKED,
+                engine.snapshot().targetConvergence());
+            var diagnostics = rejected.view().engineDiagnostics();
+            assertEquals(EngineOperationStage.RECONCILING,
+                diagnostics.operation().orElseThrow().stage());
+            assertEquals(EngineOperationOutcome.FAILED,
+                diagnostics.operation().orElseThrow().outcome());
+            var fact = diagnostics.failure().orElseThrow();
+            var subject = assertInstanceOf(FailureSubject.Unit.class, fact.subject());
+            assertEquals(engine.snapshot().current().orElseThrow().attemptId(), subject.ownerId());
+            assertEquals(alpha.units.get("a1").fence(), subject.fence());
+            assertEquals(FailureStage.RECONCILING, fact.stage());
+            assertTrue(fact.message().contains("start failed"));
+            assertTrue(diagnostics.mutationGateOpen());
             assertEquals(ExecutionObservation.State.FAILED, detail(engine, "a1").state());
+            var refreshed = nextState(engine, "a1", ExecutionObservation.State.FAILED);
+            alpha.units.get("a1").observe("failed-observation-refresh", ExecutionObservation.State.FAILED);
+            alpha.services.requestObservationRefresh(subject.fence());
+            var refreshedView = refreshed.get(2, TimeUnit.SECONDS);
+            assertEquals(TargetConvergence.BLOCKED, refreshedView.engine().targetConvergence());
+            assertEquals(fact, refreshedView.engineDiagnostics().failure().orElseThrow());
             var previous = detail(engine, "a1").runtimeInstanceId();
+            engine.startAsync().block();
+            assertEquals(1, Collections.frequency(events, "activate:a1"),
+                "reading startup again must not automatically rebuild a failed current");
+            var retried = assertThrows(EngineChangeException.class,
+                () -> engine.submit(new ReconcileCurrent()).block());
+            assertEquals(TargetSaveState.NOT_APPLICABLE, retried.targetSaveState());
+            assertEquals(CurrentPhase.BLOCKED,
+                retried.view().engine().current().orElseThrow().phase());
+            assertNotEquals(previous, detail(engine, "a1").runtimeInstanceId());
+            previous = detail(engine, "a1").runtimeInstanceId();
             alpha.activationFailure = false;
             events.clear();
             engine.submit(new ReconcileCurrent()).block();
             assertEquals(1, store.saves);
             assertNotEquals(previous, detail(engine, "a1").runtimeInstanceId());
             assertTrue(events.indexOf("stop:a1") < events.indexOf("activate:a1"));
+            assertTrue(events.indexOf("retire:alpha") < events.indexOf("activate:a1"));
+            assertEquals(TargetConvergence.SATISFIED, engine.snapshot().targetConvergence());
+            assertTrue(engine.published().current().engineDiagnostics().failure().isEmpty());
+        }
+    }
+
+    @Test
+    void corruptStoredTargetFailsStartupClosesGatesAndNotifiesOnlyOnce() throws Exception {
+        var targetRoot = root.resolve("corrupt-target");
+        var targetStore = new FileDeploymentTargetStore(targetRoot);
+        Files.writeString(targetRoot.resolve("target.json"), "corrupt-target-json");
+        var notifications = new AtomicInteger();
+        var notified = new CountDownLatch(1);
+        var engine = FibraEngine.builder(new PluginPackageStore(root.resolve("corrupt-packages")), targetStore)
+            .runtimeProvider(alpha).hostTerminationPort(request -> {
+                notifications.incrementAndGet();
+                notified.countDown();
+            }).build();
+        try {
+            assertThrows(DeploymentTargetStoreException.class,
+                () -> engine.startAsync().block(Duration.ofSeconds(5)));
+            assertTrue(notified.await(2, TimeUnit.SECONDS));
+            var view = engine.published().current();
+            assertEquals(EngineState.FAIL_STOP, view.engine().state());
+            assertEquals(DurableTargetState.UNCERTAIN, view.engine().durableState());
+            assertEquals(TargetConvergence.BLOCKED, view.engine().targetConvergence());
+            assertTrue(view.engine().target().isEmpty());
+            assertTrue(view.engine().candidate().isEmpty());
+            assertTrue(view.engine().current().isEmpty());
+            var fact = view.engineDiagnostics().failure().orElseThrow();
+            assertInstanceOf(FailureSubject.Engine.class, fact.subject());
+            assertEquals(FailureStage.BOOTSTRAPPING, fact.stage());
+            assertTrue(fact.message().contains("cannot load deployment target"));
+            assertFalse(view.engineDiagnostics().mutationGateOpen());
+            assertFalse(view.engineDiagnostics().contributionAdmissionOpen());
+            assertThrows(RuntimeException.class, () -> engine.startAsync().block(Duration.ofSeconds(5)));
+            assertThrows(MutationGateClosedException.class,
+                () -> engine.submit(new ReconcileCurrent()).block(Duration.ofSeconds(5)));
+            assertEquals(1, notifications.get());
+            assertTrue(events.isEmpty(), "untrusted targets must not prepare runtime resources");
+            assertSame(view, engine.published().current());
+        } finally {
+            engine.closeAsync().block(Duration.ofSeconds(5));
+        }
+        assertEquals(List.of("driver-close:alpha"), events);
+        try (var reopened = new FileDeploymentTargetStore(targetRoot)) {
+            assertThrows(DeploymentTargetStoreException.class, reopened::load);
+        }
+    }
+
+    @Test
+    void disabledRawEntryStillRequiresASelectedPackageBeforeSaving() {
+        try (var engine = engine(request -> { })) {
+            apply(engine, 0, graph(1, "a1"));
+            var current = engine.snapshot().current().orElseThrow();
+            var target = store.current;
+            events.clear();
+            var disabled = new DesiredInputGraph(List.of(entry("b1", "b", 1)))
+                .withEnabled("b1", false);
+            var command = ApplyDeployment.builder(disabled).expectedRevision(1)
+                .selections(List.of(alpha.metadata().selection(true)))
+                .configContext(ConfigContextSnapshot.empty()).build();
+            var rejected = assertThrows(EngineChangeException.class,
+                () -> engine.submit(command).block());
+            assertEquals(TargetSaveState.NOT_SAVED, rejected.targetSaveState());
+            assertSame(target, store.current);
+            assertEquals(1, store.saves);
+            assertEquals(current, engine.snapshot().current().orElseThrow());
+            assertEquals(TargetConvergence.SATISFIED, engine.snapshot().targetConvergence());
+            assertTrue(engine.published().current().engineDiagnostics().mutationGateOpen());
+            assertTrue(events.isEmpty(), "invalid raw references must fail before prepare/save");
+        }
+    }
+
+    @Test
+    void selectedPackageGateFalsePreservesRawEntryWithoutPreparingRuntime() {
+        try (var engine = engine(request -> { })) {
+            var desired = graph(1, "a1");
+            engine.submit(ApplyDeployment.builder(desired)
+                .selections(List.of(alpha.metadata().selection(false)))
+                .configContext(ConfigContextSnapshot.empty()).build()).block();
+            assertEquals(desired, store.current.desiredGraph());
+            assertEquals(List.of("save:1"), events);
+            assertTrue(currentObservations(engine.snapshot()).isEmpty());
+            assertEquals(TargetConvergence.SATISFIED, engine.snapshot().targetConvergence());
         }
     }
 
@@ -696,6 +818,11 @@ class RuntimeDriverEngineTest {
             assertEquals(ExecutionObservation.State.PENDING, detail(engine, "a1").state());
             assertEquals(ExecutionObservation.State.PENDING, detail(engine, "b1").state());
             assertFalse(events.contains("activate:b1"));
+            assertEquals(CurrentPhase.SETTLED, engine.snapshot().current().orElseThrow().phase());
+            assertEquals(TargetConvergence.UNSATISFIED, engine.snapshot().targetConvergence());
+            assertEquals(EngineOperationOutcome.SUCCEEDED,
+                engine.published().current().engineDiagnostics().operation().orElseThrow().outcome());
+            assertTrue(engine.published().current().engineDiagnostics().failure().isEmpty());
             var instance = detail(engine, "a1").runtimeInstanceId();
             alpha.pending = false;
             events.clear();
@@ -891,8 +1018,17 @@ class RuntimeDriverEngineTest {
                     engine.snapshot().retirementBatch().orElseThrow().phase());
                 assertEquals(CurrentPhase.BLOCKED,
                     engine.snapshot().current().orElseThrow().phase());
+                var fact = engine.published().current().engineDiagnostics().failure().orElseThrow();
+                assertEquals(switch (failure) {
+                    case "drain" -> FailureStage.DRAINING;
+                    case "stop" -> FailureStage.STOPPING;
+                    default -> FailureStage.RELEASING;
+                }, fact.stage());
+                assertEquals(EngineOperationStage.RETIRING, fact.operationStage().orElseThrow());
+                var owner = assertInstanceOf(FailureSubject.Retirement.class, fact.subject());
+                assertEquals(engine.snapshot().retirementBatch().orElseThrow().batchId(), owner.batchId());
                 assertFalse(engine.published().current().engineDiagnostics().mutationGateOpen());
-                if (!failure.equals("retire")) assertFalse(events.contains("activate:a1"));
+                assertFalse(events.contains("activate:a1"));
                 if (failure.equals("drain")) assertFalse(events.contains("stop:a1"));
                 var beforeClose = engine.published().current();
                 var retained = beforeClose.engine().retirementBatch().orElseThrow();

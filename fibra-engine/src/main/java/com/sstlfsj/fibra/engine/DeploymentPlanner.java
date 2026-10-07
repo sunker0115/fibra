@@ -21,13 +21,13 @@ final class DeploymentPlanner {
         var artifacts = new LinkedHashMap<String, ArtifactId>();
         var units = new LinkedHashMap<ExecutionUnitKey, ExecutionUnitPlan>();
         desired.entries().forEach((id, resolved) -> {
-            if (!resolved.effective().enabled() || !(resolved.input() instanceof DesiredInputEntry entry)) return;
+            if (!(resolved.input() instanceof DesiredInputEntry entry)) return;
             var ref = entry.definitionRef();
             var selection = target.selections().get(new PluginId(ref.pluginId()));
             if (selection == null) {
-                throw new IllegalArgumentException("active desired entry references an unselected package: " + id);
+                throw new IllegalArgumentException("desired entry references an unselected package: " + id);
             }
-            if (!selection.enabled()) return;
+            if (!resolved.effective().enabled() || !selection.enabled()) return;
             entries.put(id, entry);
             var builtIn = facets.builtInFacets().values().stream().filter(value ->
                 value.pluginPackage().pluginId().value().equals(ref.pluginId()) && value.facet().facetId().value().equals(ref.facetId()))
