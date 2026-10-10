@@ -7,6 +7,8 @@
 
 ## 当前证据链
 
+- [Java 平台类加载修复与复验交付](2026-10-10-java-platform-classloading-verification.md)：SAX/DOM
+  平台可见性、隔离回归、MyBatis/MP 初始化前提与本地修复制品指纹；不替代完整产品/数据库验收。
 - [Cordis 行为映射与验收证据](2026-09-09-cordis-behavior-evidence.md)：DeepSeek 内置 Cordis 与
   cordiverse/cordis 的固定真源、文件摘要、当前落点和 71 项行为边界。
 - [cordis4j 设计对拍与采用边界](2026-09-11-cordis4j-design-evidence.md)：固定提交、设计契约与实现

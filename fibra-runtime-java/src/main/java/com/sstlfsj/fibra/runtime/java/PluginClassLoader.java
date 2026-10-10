@@ -34,7 +34,7 @@ final class PluginClassLoader extends URLClassLoader {
             var loaded = findLoadedClass(name);
             if (loaded == null) {
                 try {
-                    loaded = parentClass(name, getParent(), parentPackages);
+                    loaded = platformOrParentClass(name, getParent(), parentPackages);
                 } catch (ClassNotFoundException ignored) {
                     // Parent-first is a preference, not an export whitelist.
                 }
@@ -89,17 +89,22 @@ final class PluginClassLoader extends URLClassLoader {
         return Collections.enumeration(resources);
     }
 
-    static boolean isParentDefined(String name, ClassLoader parent, List<String> parentPackages) {
+    static boolean isPlatformOrParentDefined(String name, ClassLoader parent, List<String> parentPackages) {
         try {
-            parentClass(name, parent, parentPackages);
+            platformOrParentClass(name, parent, parentPackages);
             return true;
         } catch (ClassNotFoundException ignored) {
             return false;
         }
     }
 
-    private static Class<?> parentClass(String name, ClassLoader parent,
-                                        List<String> parentPackages) throws ClassNotFoundException {
+    private static Class<?> platformOrParentClass(String name, ClassLoader parent,
+                                                  List<String> parentPackages) throws ClassNotFoundException {
+        try {
+            return ClassLoader.getPlatformClassLoader().loadClass(name);
+        } catch (ClassNotFoundException ignored) {
+            // Platform visibility is independent of the host's shared-package preferences.
+        }
         if (parentPackages.stream().noneMatch(name::startsWith)) {
             throw new ClassNotFoundException(name);
         }

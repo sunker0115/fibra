@@ -47,6 +47,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /** Java facet 的唯一 runtime owner。静态 wiring 与实例生命周期均不泄漏到 Engine。 */
 public final class JavaRuntimeDriver implements RuntimeDriver {
+    // Host sharing preferences; platform visibility is resolved independently by PluginClassLoader.
     private static final List<String> DEFAULT_PARENT_PACKAGES = List.of(
         "java.", "javax.", "jdk.", "sun.", "com.sstlfsj.fibra.",
         "reactor.", "org.reactivestreams.", "org.slf4j.");

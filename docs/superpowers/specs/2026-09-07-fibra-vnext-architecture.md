@@ -803,9 +803,13 @@ CLI 投影使用 `content`、可选 `structuredContent`、`isError`、失败时�
 
 - executable 制品显式声明唯一 entrypoint；
 - contract-only 制品省略 entrypoint，只作为依赖图和类型装载节点；省略入口不等于声明 exports；
-- 每制品独立 ClassLoader，按显式依赖图委派；父优先前缀先查 parent，父加载器没有该类时再查本制品与
-  声明依赖。宿主实际导出的公共契约因此仍由 parent 唯一定义，动态 contract 不因使用同一产品命名空间
-  而被误当成宿主必备类；
+- 每制品独立 ClassLoader，类解析顺序为已加载 → `ClassLoader.getPlatformClassLoader()` 实际解析 →
+  配置共享前缀的宿主 parent 实际解析 → 本制品 → 声明依赖。平台能力不依赖包名前缀；宿主共享偏好
+  保留现有 `javax.*` 等前缀，不以这些前缀判断平台类，也不向任意 application classpath 兜底。
+  宿主实际导出的公共契约仍由 parent 唯一定义，parent miss 的动态 contract 继续本地/声明依赖回退。
+  只有 `ClassNotFoundException` 表示继续查找；`LinkageError` 不得吞掉后选择另一份类型。
+  [JDK 21 ClassLoader 合同](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/ClassLoader.html)
+  允许平台 loader 在模块升级/覆盖等启动配置下委派其他具名模块，不能保证任意环境都只看到 JDK 类型；
 - 禁止扫描全部 class 猜入口，不生成 extension index，不维护第二套插件状态机；
 - 替换变化制品及其反向依赖闭包，闭包外装载器保留；旧类型仍被实例、服务槽或调用持有时不得回收；
 - Java driver 的 prepared generation 私有持有 Loaded 图与精确静态资源 lease；Engine 只编排 candidate、current
@@ -819,8 +823,11 @@ CLI 投影使用 `content`、可选 `structuredContent`、`isError`、失败时�
   发布视图仍由正常发布所有权持有；调用方主动保留旧视图、Class 或插件对象不属于框架可回收保证；
 - prepare 按每个 artifact 的实际本地 classpath 校验有效二进制类名：主 JAR 与 lib JAR 一并计入，多 release
   JAR 按当前 JVM 的有效类解析，忽略 module-info；同一 artifact 的主 JAR/lib JAR 或不同 lib JAR 之间
-  的同名有效类须拒绝并报告两个来源，不能让本地 URL 顺序决定代码版本。实际由 parent-first 命中的宿主
-  类仍按宿主归属处理，父优先仅在 parent 实际可解析时成立，保留 parent miss 的动态回退；
+  的同名有效类须拒绝并报告两个来源，不能让本地 URL 顺序决定代码版本。预检与加载共用平台/宿主
+  实际解析方法，平台或共享宿主命中的类不计入本地重复；只有前缀匹配而实际 miss 的类仍参与本地校验。
+  不增加全局 Class 缓存或第二生命周期 owner；
+- 资源继续按本地 → 声明依赖 → parent 查找及去重枚举，不机械套用类解析顺序。本修复不引入隐式
+  TCCL 切换或 SPI 入口；依赖 TCCL/SPI 的第三方消费者需在真实调用入口单独验收；
 - 不同 artifact loader 可以各自定义同名类，包括依赖相连的插件分别携带同一库的相同或不同版本。
   插件自身代码使用自身 loader 的本地定义；依赖方自身缺类时，继续按 manifest 中 `requires` 的声明顺序
   查询依赖 loader，第一条成功路径决定该次直接查找。这个确定顺序只提供隔离和解析规则，不是版本求解：

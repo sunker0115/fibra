@@ -9,16 +9,110 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import javax.tools.ToolProvider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class PluginClassLoaderTest {
+    @Test
+    void platformTypesHavePlatformIdentityWithoutSharedPrefixes(@TempDir Path work) throws Exception {
+        // Invalid local copies must never be defined when the platform supplies the type.
+        var shadow = classJar(work.resolve("platform-shadow.jar"), Map.of(
+            "org.xml.sax.EntityResolver", new byte[]{0},
+            "org.w3c.dom.Document", new byte[]{0}));
+        var rejectingParent = new ClassLoader(null) {
+            @Override public Class<?> loadClass(String name) {
+                throw new AssertionError("platform type reached host parent: " + name);
+            }
+        };
+        try (var loader = new PluginClassLoader(List.of(shadow.toUri().toURL()),
+            rejectingParent, List.of())) {
+            for (var type : List.of(Object.class, org.xml.sax.EntityResolver.class,
+                org.w3c.dom.Document.class, javax.xml.parsers.DocumentBuilderFactory.class,
+                java.sql.Connection.class, org.ietf.jgss.GSSManager.class)) {
+                assertSame(type, loader.loadClass(type.getName(), true));
+                assertSame(type, loader.loadClass(type.getName()));
+            }
+        }
+    }
+
+    @Test
+    void parentMissAllowsLocalDynamicContract(@TempDir Path work) throws Exception {
+        try (var local = loader(compileContract(work))) {
+            assertSame(local, local.loadClass("com.sstlfsj.fibra.plugins.fixture.Contract")
+                .getClassLoader());
+        }
+    }
+
+    @Test
+    void privateVersionsRemainLocalAndDependenciesUseDeclaredOrder(@TempDir Path work) throws Exception {
+        var firstJar = privateLibrary(work.resolve("first"), "one");
+        var secondJar = privateLibrary(work.resolve("second"), "two");
+        try (var first = loader(firstJar); var second = loader(secondJar);
+             var consumer = loader(work.resolve("empty"));
+             var reverse = loader(work.resolve("empty-reverse"))) {
+            first.dependencies(List.of(second));
+            consumer.dependencies(List.of(first, second));
+            reverse.dependencies(List.of(second, first));
+            var one = first.loadClass("privatepkg.Library");
+            var two = second.loadClass("privatepkg.Library");
+            assertNotSame(one, two);
+            assertSame(first, one.getClassLoader());
+            assertSame(second, two.getClassLoader());
+            assertEquals("one", one.getMethod("version").invoke(null));
+            assertEquals("two", two.getMethod("version").invoke(null));
+            assertSame(one, consumer.loadClass("privatepkg.Library"));
+            assertSame(two, reverse.loadClass("privatepkg.Library"));
+        }
+    }
+
+    @Test
+    void nonSharedHostClassesRemainInvisible(@TempDir Path work) throws Exception {
+        try (var local = loader(work)) {
+            assertNotNull(local.getParent().loadClass("org.junit.jupiter.api.Test"));
+            assertThrows(ClassNotFoundException.class,
+                () -> local.loadClass("org.junit.jupiter.api.Test"));
+        }
+    }
+
+    @Test
+    void hostLinkageFailureDoesNotFallBackToLocalCopy(@TempDir Path work) throws Exception {
+        var local = compileContract(work);
+        var failure = new NoClassDefFoundError("host dependency is broken");
+        var brokenParent = new ClassLoader(getClass().getClassLoader()) {
+            @Override public Class<?> loadClass(String name) throws ClassNotFoundException {
+                if (name.equals("com.sstlfsj.fibra.plugins.fixture.Contract")) throw failure;
+                return super.loadClass(name);
+            }
+        };
+        try (var loader = new PluginClassLoader(List.of(local.toUri().toURL()),
+            brokenParent, List.of("com.sstlfsj.fibra."))) {
+            assertSame(failure, assertThrows(NoClassDefFoundError.class,
+                () -> loader.loadClass("com.sstlfsj.fibra.plugins.fixture.Contract")));
+        }
+    }
+
+    @Test
+    void localAndDependencyLinkageFailuresDoNotFallBack(@TempDir Path work) throws Exception {
+        var brokenJar = classJar(work.resolve("broken.jar"),
+            Map.of("privatepkg.Library", new byte[]{0}));
+        try (var valid = loader(privateLibrary(work.resolve("valid"), "valid"));
+             var broken = loader(brokenJar);
+             var consumer = loader(work.resolve("empty"))) {
+            broken.dependencies(List.of(valid));
+            consumer.dependencies(List.of(broken, valid));
+            assertThrows(ClassFormatError.class, () -> broken.loadClass("privatepkg.Library"));
+            assertThrows(ClassFormatError.class, () -> consumer.loadClass("privatepkg.Library"));
+        }
+    }
+
     @Test
     void parentFirstPackagesPreferTheParentAndFallBackToDeclaredDependencies(
         @TempDir Path work) throws Exception {
@@ -70,6 +164,33 @@ class PluginClassLoaderTest {
         return new PluginClassLoader(List.of(jar.toUri().toURL()),
             PluginClassLoaderTest.class.getClassLoader(),
             List.of("java.", "com.sstlfsj.fibra.", "org.reactivestreams.", "reactor."));
+    }
+
+    private static Path privateLibrary(Path work, String version) throws Exception {
+        var source = work.resolve("src/privatepkg/Library.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, """
+            package privatepkg;
+            public class Library {
+                public static String version() { return "%s"; }
+            }
+            """.formatted(version));
+        var classes = Files.createDirectories(work.resolve("classes"));
+        assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null,
+            "-d", classes.toString(), source.toString()));
+        return classJar(work.resolve("library.jar"), Map.of("privatepkg.Library",
+            Files.readAllBytes(classes.resolve("privatepkg/Library.class"))));
+    }
+
+    private static Path classJar(Path path, Map<String, byte[]> classes) throws Exception {
+        try (var output = new JarOutputStream(Files.newOutputStream(path))) {
+            for (var entry : classes.entrySet()) {
+                output.putNextEntry(new JarEntry(entry.getKey().replace('.', '/') + ".class"));
+                output.write(entry.getValue());
+                output.closeEntry();
+            }
+        }
+        return path;
     }
 
     private static Path compileContract(Path work) throws Exception {

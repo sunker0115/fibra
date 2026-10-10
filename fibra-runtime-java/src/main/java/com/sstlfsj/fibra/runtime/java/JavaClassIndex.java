@@ -26,10 +26,10 @@ final class JavaClassIndex {
                             .replace('/', '.');
                         if (className.equals("module-info") || className.endsWith(".module-info")) return;
                         try {
-                            if (PluginClassLoader.isParentDefined(className, parent, parentPackages)) return;
+                            if (PluginClassLoader.isPlatformOrParentDefined(className, parent, parentPackages)) return;
                         } catch (LinkageError failure) {
                             throw new JavaRuntimeException(JavaRuntimePhase.LOAD, owner,
-                                "cannot resolve parent-first Java class " + className, failure);
+                                "cannot resolve platform or parent-first Java class " + className, failure);
                         }
                         var previous = classes.putIfAbsent(className, path);
                         if (previous != null && !previous.equals(path)) {
