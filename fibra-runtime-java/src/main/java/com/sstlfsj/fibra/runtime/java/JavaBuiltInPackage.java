@@ -1,7 +1,7 @@
 package com.sstlfsj.fibra.runtime.java;
 
 import com.sstlfsj.fibra.artifact.FacetId;
-import com.sstlfsj.fibra.engine.BuiltInPluginPackage;
+import com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage;
 
 import java.util.LinkedHashMap;
 import java.util.List;

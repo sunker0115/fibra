@@ -1,5 +1,50 @@
 package com.sstlfsj.fibra.engine;
 
+import com.sstlfsj.fibra.engine.deployment.DeploymentTargetStoreFixture;
+
+import com.sstlfsj.fibra.engine.deployment.BuiltInFacet;
+import com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTarget;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTargetStore;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTargetStoreException;
+import com.sstlfsj.fibra.engine.deployment.DurableTargetToken;
+import com.sstlfsj.fibra.engine.deployment.FileDeploymentTargetStore;
+import com.sstlfsj.fibra.engine.deployment.HostCapabilitySnapshot;
+import com.sstlfsj.fibra.engine.deployment.PluginFacetSource;
+import com.sstlfsj.fibra.engine.execution.CompiledRuntimeSlice;
+import com.sstlfsj.fibra.engine.execution.DefinitionBindingPlan;
+import com.sstlfsj.fibra.engine.execution.ExecutionUnitKey;
+import com.sstlfsj.fibra.engine.execution.ExecutionUnitPlan;
+import com.sstlfsj.fibra.engine.execution.RuntimePlan;
+import com.sstlfsj.fibra.engine.execution.RuntimeUnitFence;
+import com.sstlfsj.fibra.engine.observation.CandidatePhase;
+import com.sstlfsj.fibra.engine.observation.CurrentAttemptSnapshot;
+import com.sstlfsj.fibra.engine.observation.CurrentPhase;
+import com.sstlfsj.fibra.engine.observation.DurableTargetState;
+import com.sstlfsj.fibra.engine.observation.EngineOperationKind;
+import com.sstlfsj.fibra.engine.observation.EngineOperationOutcome;
+import com.sstlfsj.fibra.engine.observation.EngineOperationStage;
+import com.sstlfsj.fibra.engine.observation.EngineSnapshot;
+import com.sstlfsj.fibra.engine.observation.EngineState;
+import com.sstlfsj.fibra.engine.observation.ExecutionObservation;
+import com.sstlfsj.fibra.engine.observation.FailureStage;
+import com.sstlfsj.fibra.engine.observation.FailureSubject;
+import com.sstlfsj.fibra.engine.observation.RetirementPhase;
+import com.sstlfsj.fibra.engine.observation.RuntimeDriverSnapshot;
+import com.sstlfsj.fibra.engine.observation.TargetConvergence;
+import com.sstlfsj.fibra.engine.observation.TargetSaveState;
+import com.sstlfsj.fibra.engine.publication.PublishedView;
+import com.sstlfsj.fibra.engine.runtime.PreparedRuntimeGeneration;
+import com.sstlfsj.fibra.engine.runtime.RuntimeArtifactInspection;
+import com.sstlfsj.fibra.engine.runtime.RuntimeCandidate;
+import com.sstlfsj.fibra.engine.runtime.RuntimeDriver;
+import com.sstlfsj.fibra.engine.runtime.RuntimeHostServices;
+import com.sstlfsj.fibra.engine.runtime.RuntimeProvider;
+import com.sstlfsj.fibra.engine.runtime.RuntimeRecompileReason;
+import com.sstlfsj.fibra.engine.runtime.RuntimeTargetSlice;
+import com.sstlfsj.fibra.engine.runtime.RuntimeUnitDisableRequest;
+import com.sstlfsj.fibra.engine.runtime.RuntimeUnitGeneration;
+
 import com.sstlfsj.fibra.artifact.*;
 import com.sstlfsj.fibra.config.*;
 import com.sstlfsj.fibra.value.LiteralValue;
@@ -2159,7 +2204,7 @@ class RuntimeDriverEngineTest {
                 }
             }
             ensureOpen();
-            return Optional.ofNullable(current).map(StoredTarget::confirmed);
+            return Optional.ofNullable(current).map(DeploymentTargetStoreFixture::confirmed);
         }
         public DurableTargetToken save(long expected, DeploymentTarget target) {
             ensureOpen();
@@ -2167,12 +2212,12 @@ class RuntimeDriverEngineTest {
             saves++;
             if (fail) throw new IllegalStateException("save failed");
             if (uncertain) throw new SaveUnconfirmedException(root, new IllegalStateException("fsync uncertain"));
-            if (wrongToken) return StoredTarget.confirmed(
+            if (wrongToken) return DeploymentTargetStoreFixture.confirmed(
                 Objects.requireNonNull(current, "current")).token();
             DeploymentTargetStore.checkRevision(expected,
                 current == null ? 0 : current.targetRevision(), target);
             current = target;
-            return StoredTarget.confirmed(target).token();
+            return DeploymentTargetStoreFixture.confirmed(target).token();
         }
         public void close() {
             closes++;

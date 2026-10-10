@@ -1,8 +1,8 @@
 package com.sstlfsj.fibra.cli;
 
 import com.sstlfsj.fibra.cli.api.CliApplication;
-import com.sstlfsj.fibra.cli.api.CliProfile;
-import com.sstlfsj.fibra.engine.PublishedRuntime;
+import com.sstlfsj.fibra.cli.api.invocation.CliProfile;
+import com.sstlfsj.fibra.engine.publication.PublishedRuntime;
 
 import java.nio.file.Path;
 import java.util.List;

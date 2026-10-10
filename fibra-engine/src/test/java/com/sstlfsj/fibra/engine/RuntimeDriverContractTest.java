@@ -1,5 +1,23 @@
 package com.sstlfsj.fibra.engine;
 
+import com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage;
+import com.sstlfsj.fibra.engine.deployment.PluginFacetSource;
+import com.sstlfsj.fibra.engine.execution.DefinitionBindingPlan;
+import com.sstlfsj.fibra.engine.execution.ExecutionUnitKey;
+import com.sstlfsj.fibra.engine.execution.ExecutionUnitPlan;
+import com.sstlfsj.fibra.engine.execution.RuntimePlan;
+import com.sstlfsj.fibra.engine.execution.RuntimeUnitFence;
+import com.sstlfsj.fibra.engine.observation.RuntimeDriverSnapshot;
+import com.sstlfsj.fibra.engine.publication.RemoteContributionInvoker;
+import com.sstlfsj.fibra.engine.runtime.RuntimeArtifactInspection;
+import com.sstlfsj.fibra.engine.runtime.RuntimeCandidate;
+import com.sstlfsj.fibra.engine.runtime.RuntimeDriver;
+import com.sstlfsj.fibra.engine.runtime.RuntimeHostServices;
+import com.sstlfsj.fibra.engine.runtime.RuntimeProvider;
+import com.sstlfsj.fibra.engine.runtime.RuntimeRecompileReason;
+import com.sstlfsj.fibra.engine.runtime.RuntimeTargetSlice;
+import com.sstlfsj.fibra.engine.runtime.RuntimeUnitDisableRequest;
+
 import com.sstlfsj.fibra.ScopeView;
 import com.sstlfsj.fibra.artifact.ExecutionTarget;
 import com.sstlfsj.fibra.artifact.RuntimeId;
@@ -223,7 +241,7 @@ class RuntimeDriverContractTest {
         @Override public com.sstlfsj.fibra.bridge.ContributionKindRegistry contributionKinds() {
             return com.sstlfsj.fibra.bridge.ContributionKindRegistry.empty();
         }
-        @Override public com.sstlfsj.fibra.bridge.ContributionAdmission openContributionAdmission(com.sstlfsj.fibra.engine.ExecutionUnitKey key) {
+        @Override public com.sstlfsj.fibra.bridge.ContributionAdmission openContributionAdmission(com.sstlfsj.fibra.engine.execution.ExecutionUnitKey key) {
             throw new UnsupportedOperationException();
         }
         @Override public RemoteContributionInvoker remoteContributions() {

@@ -6,11 +6,11 @@ import com.sstlfsj.fibra.artifact.PluginPackageStore;
 import com.sstlfsj.fibra.bridge.ContributionKindRegistry;
 import com.sstlfsj.fibra.config.ConfigLimits;
 import com.sstlfsj.fibra.config.FileDesiredStateRepository;
-import com.sstlfsj.fibra.engine.FileDeploymentTargetStore;
+import com.sstlfsj.fibra.engine.deployment.FileDeploymentTargetStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.HostTerminationPort;
-import com.sstlfsj.fibra.engine.PluginSelection;
-import com.sstlfsj.fibra.engine.PublishedRuntime;
+import com.sstlfsj.fibra.engine.deployment.PluginSelection;
+import com.sstlfsj.fibra.engine.publication.PublishedRuntime;
 import com.sstlfsj.fibra.plugins.tool.ToolContributions;
 import com.sstlfsj.fibra.registry.FilePluginAuditRepository;
 import com.sstlfsj.fibra.registry.PluginDeploymentRequest;
@@ -58,6 +58,7 @@ final class CliHost implements AutoCloseable {
         FilePluginAuditRepository audit = null;
         ExecutorService termination = null;
         FibraEngine engine = null;
+        boolean storesTransferredToEngine = false;
         try {
             Files.createDirectories(paths.workspaceRoot());
             Files.createDirectories(paths.storageRoot());
@@ -72,13 +73,15 @@ final class CliHost implements AutoCloseable {
                 var host = owner.get();
                 if (host != null) host.close();
             });
-            engine = FibraEngine.builder(packages, targets)
+            var builder = FibraEngine.builder(packages, targets)
                 .contributionKinds(ContributionKindRegistry.of(ToolContributions.KIND))
                 .hostTerminationPort(terminationPort)
                 .runtimeProvider(new JavaRuntimeProvider(List.of()))
                 .runtimeProvider(new NodeRuntimeProvider(NodeRuntimeOptions.defaults(
-                    paths.nodeExecutable(), paths.nodeSessionRoot())))
-                .build();
+                    paths.nodeExecutable(), paths.nodeSessionRoot())));
+            // Engine owns store cleanup even when its constructor fails.
+            storesTransferredToEngine = true;
+            engine = builder.build();
             var registry = new PluginRegistry(engine, packages, audit);
             engine.startAsync().block();
             var host = new CliHost(paths, packages, targets, engine, registry, audit, termination);
@@ -88,8 +91,10 @@ final class CliHost implements AutoCloseable {
         } catch (Throwable failure) {
             close(failure, engine);
             close(failure, audit);
-            close(failure, targets);
-            close(failure, packages);
+            if (!storesTransferredToEngine) {
+                close(failure, targets);
+                close(failure, packages);
+            }
             if (termination != null) termination.shutdownNow();
             throwUnchecked(failure);
             throw new AssertionError("unreachable");

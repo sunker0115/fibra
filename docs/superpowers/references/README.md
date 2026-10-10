@@ -7,6 +7,8 @@
 
 ## 当前证据链
 
+- [Java 包整理前全模块 owner 与分层审计](2026-10-10-package-structure-audit.md)：全部模块、插件族、
+  client 契约与消费者的保留/调整依据，以及 CLI 启动失败清理的 owner 缺口；动态验证见对应执行计划。
 - [Java 平台类加载修复与复验交付](2026-10-10-java-platform-classloading-verification.md)：SAX/DOM
   平台可见性、隔离回归、MyBatis/MP 初始化前提与本地修复制品指纹；不替代完整产品/数据库验收。
 - [Cordis 行为映射与验收证据](2026-09-09-cordis-behavior-evidence.md)：DeepSeek 内置 Cordis 与

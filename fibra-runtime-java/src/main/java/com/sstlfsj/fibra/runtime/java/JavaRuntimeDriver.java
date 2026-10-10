@@ -13,23 +13,23 @@ import com.sstlfsj.fibra.bridge.ContributionAdmission;
 import com.sstlfsj.fibra.bridge.ContributionServices;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.PluginDefinitionRef;
-import com.sstlfsj.fibra.engine.CompiledRuntimeSlice;
-import com.sstlfsj.fibra.engine.DefinitionBindingPlan;
-import com.sstlfsj.fibra.engine.ExecutionObservation;
-import com.sstlfsj.fibra.engine.ExecutionUnitKey;
-import com.sstlfsj.fibra.engine.ExecutionUnitPlan;
-import com.sstlfsj.fibra.engine.PluginFacetSource;
-import com.sstlfsj.fibra.engine.PreparedRuntimeGeneration;
-import com.sstlfsj.fibra.engine.RuntimeArtifactInspection;
-import com.sstlfsj.fibra.engine.RuntimeCandidate;
-import com.sstlfsj.fibra.engine.RuntimeDriver;
-import com.sstlfsj.fibra.engine.RuntimeDriverSnapshot;
-import com.sstlfsj.fibra.engine.RuntimeHostServices;
-import com.sstlfsj.fibra.engine.RuntimePlan;
-import com.sstlfsj.fibra.engine.RuntimeTargetSlice;
-import com.sstlfsj.fibra.engine.RuntimeUnitFence;
-import com.sstlfsj.fibra.engine.RuntimeUnitDisableRequest;
-import com.sstlfsj.fibra.engine.RuntimeUnitGeneration;
+import com.sstlfsj.fibra.engine.execution.CompiledRuntimeSlice;
+import com.sstlfsj.fibra.engine.execution.DefinitionBindingPlan;
+import com.sstlfsj.fibra.engine.observation.ExecutionObservation;
+import com.sstlfsj.fibra.engine.execution.ExecutionUnitKey;
+import com.sstlfsj.fibra.engine.execution.ExecutionUnitPlan;
+import com.sstlfsj.fibra.engine.deployment.PluginFacetSource;
+import com.sstlfsj.fibra.engine.runtime.PreparedRuntimeGeneration;
+import com.sstlfsj.fibra.engine.runtime.RuntimeArtifactInspection;
+import com.sstlfsj.fibra.engine.runtime.RuntimeCandidate;
+import com.sstlfsj.fibra.engine.runtime.RuntimeDriver;
+import com.sstlfsj.fibra.engine.observation.RuntimeDriverSnapshot;
+import com.sstlfsj.fibra.engine.runtime.RuntimeHostServices;
+import com.sstlfsj.fibra.engine.execution.RuntimePlan;
+import com.sstlfsj.fibra.engine.runtime.RuntimeTargetSlice;
+import com.sstlfsj.fibra.engine.execution.RuntimeUnitFence;
+import com.sstlfsj.fibra.engine.runtime.RuntimeUnitDisableRequest;
+import com.sstlfsj.fibra.engine.runtime.RuntimeUnitGeneration;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
@@ -807,7 +807,7 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
     }
 
     private record BuiltInBinding(JavaBuiltInPackage owner,
-                                  com.sstlfsj.fibra.engine.BuiltInFacet facet,
+                                  com.sstlfsj.fibra.engine.deployment.BuiltInFacet facet,
                                   JavaDefinitionEntry<?> definition) { }
 
     private record WiringKey(String packageRevision, String facetId, String payloadDigest,

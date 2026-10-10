@@ -5,22 +5,22 @@ import com.sstlfsj.fibra.bridge.ContributionKind;
 import com.sstlfsj.fibra.bridge.ContributionSnapshot;
 import com.sstlfsj.fibra.bridge.ContributionSnapshotEntry;
 import com.sstlfsj.fibra.cli.api.CliApplication;
-import com.sstlfsj.fibra.cli.api.CliBootstrapCommand;
-import com.sstlfsj.fibra.cli.api.CliCommandContributions;
-import com.sstlfsj.fibra.cli.api.CliCommandDescriptor;
-import com.sstlfsj.fibra.cli.api.CliCommandResult;
-import com.sstlfsj.fibra.cli.api.CliInputResult;
-import com.sstlfsj.fibra.cli.api.CliTerminalFrame;
-import com.sstlfsj.fibra.cli.api.CliTerminalRenderer;
-import com.sstlfsj.fibra.cli.api.CliProfile;
-import com.sstlfsj.fibra.engine.DurableTargetState;
-import com.sstlfsj.fibra.engine.EngineDiagnostics;
-import com.sstlfsj.fibra.engine.EngineSnapshot;
-import com.sstlfsj.fibra.engine.EngineState;
-import com.sstlfsj.fibra.engine.TargetConvergence;
-import com.sstlfsj.fibra.engine.PublishedRuntime;
-import com.sstlfsj.fibra.engine.PublishedView;
-import com.sstlfsj.fibra.engine.RuntimeDiagnostics;
+import com.sstlfsj.fibra.cli.api.command.CliBootstrapCommand;
+import com.sstlfsj.fibra.cli.api.command.CliCommandContributions;
+import com.sstlfsj.fibra.cli.api.command.CliCommandDescriptor;
+import com.sstlfsj.fibra.cli.api.command.CliCommandResult;
+import com.sstlfsj.fibra.cli.api.input.CliInputResult;
+import com.sstlfsj.fibra.cli.api.terminal.CliTerminalFrame;
+import com.sstlfsj.fibra.cli.api.terminal.CliTerminalRenderer;
+import com.sstlfsj.fibra.cli.api.invocation.CliProfile;
+import com.sstlfsj.fibra.engine.observation.DurableTargetState;
+import com.sstlfsj.fibra.engine.observation.EngineDiagnostics;
+import com.sstlfsj.fibra.engine.observation.EngineSnapshot;
+import com.sstlfsj.fibra.engine.observation.EngineState;
+import com.sstlfsj.fibra.engine.observation.TargetConvergence;
+import com.sstlfsj.fibra.engine.publication.PublishedRuntime;
+import com.sstlfsj.fibra.engine.publication.PublishedView;
+import com.sstlfsj.fibra.engine.observation.RuntimeDiagnostics;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.jline.reader.LineReader;
@@ -183,7 +183,7 @@ class CliSessionTest {
         var error = new ByteArrayOutputStream();
         var texts = new ArrayList<String>();
         var cancellations = new ArrayList<com.sstlfsj.fibra.CancellationToken>();
-        var invocationOutput = new AtomicReference<com.sstlfsj.fibra.cli.api.CliOutput>();
+        var invocationOutput = new AtomicReference<com.sstlfsj.fibra.cli.api.invocation.CliOutput>();
         var application = CliApplication.builder("agent").version("1")
             .inputHandler(request -> {
                 texts.add(request.text());
@@ -251,12 +251,12 @@ class CliSessionTest {
                 try (var lease = request.invocation().terminal().acquire()) {
                     lease.run(new CliTerminalRenderer() {
                         @Override public void start(
-                            com.sstlfsj.fibra.cli.api.CliTerminalControl control) {
+                            com.sstlfsj.fibra.cli.api.terminal.CliTerminalControl control) {
                             control.finish();
                         }
 
                         @Override public CliTerminalFrame render(
-                            com.sstlfsj.fibra.cli.api.CliTerminalSize size) {
+                            com.sstlfsj.fibra.cli.api.terminal.CliTerminalSize size) {
                             return new CliTerminalFrame(List.of(), java.util.Optional.empty());
                         }
                     });
@@ -299,13 +299,13 @@ class CliSessionTest {
                                             long expectedRegistrationIdentity,
                                             ContributionKind<D, I, O> kind,
                                             ContributionId id, I input) {
-                var request = (com.sstlfsj.fibra.cli.api.CliCommandRequest) input;
+                var request = (com.sstlfsj.fibra.cli.api.command.CliCommandRequest) input;
                 return (Mono<O>) Mono.fromCallable(() -> {
                     runtimeInvocations.incrementAndGet();
                     try (var lease = request.invocation().terminal().acquire()) {
                         lease.run(new CliTerminalRenderer() {
                             @Override public void start(
-                                com.sstlfsj.fibra.cli.api.CliTerminalControl control)
+                                com.sstlfsj.fibra.cli.api.terminal.CliTerminalControl control)
                                 throws Exception {
                                 renderersEntered.countDown();
                                 assertTrue(releaseRenderers.await(5, TimeUnit.SECONDS));
@@ -313,7 +313,7 @@ class CliSessionTest {
                             }
 
                             @Override public CliTerminalFrame render(
-                                com.sstlfsj.fibra.cli.api.CliTerminalSize size) {
+                                com.sstlfsj.fibra.cli.api.terminal.CliTerminalSize size) {
                                 return new CliTerminalFrame(List.of(),
                                     java.util.Optional.empty());
                             }
@@ -595,7 +595,7 @@ class CliSessionTest {
 
     @Test
     void invocationOutputRejectsWritesAfterTheInvocationEnds(@TempDir Path home) {
-        var captured = new AtomicReference<com.sstlfsj.fibra.cli.api.CliOutput>();
+        var captured = new AtomicReference<com.sstlfsj.fibra.cli.api.invocation.CliOutput>();
         var application = CliApplication.builder("agent").version("1")
             .addBootstrapCommand(new CliBootstrapCommand(command("capture"), request -> {
                 captured.set(request.invocation().output());
@@ -627,7 +627,7 @@ class CliSessionTest {
                 try (var lease = request.invocation().terminal().acquire()) {
                     lease.run(new CliTerminalRenderer() {
                         @Override public void start(
-                            com.sstlfsj.fibra.cli.api.CliTerminalControl control)
+                            com.sstlfsj.fibra.cli.api.terminal.CliTerminalControl control)
                             throws Exception {
                             producer.set(Thread.ofVirtual().start(() -> {
                                 producerStarted.countDown();
@@ -642,7 +642,7 @@ class CliSessionTest {
                         }
 
                         @Override public CliTerminalFrame render(
-                            com.sstlfsj.fibra.cli.api.CliTerminalSize size) {
+                            com.sstlfsj.fibra.cli.api.terminal.CliTerminalSize size) {
                             return new CliTerminalFrame(List.of("frame"),
                                 java.util.Optional.empty());
                         }

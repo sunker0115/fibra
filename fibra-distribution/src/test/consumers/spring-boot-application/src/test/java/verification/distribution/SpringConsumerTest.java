@@ -1,6 +1,6 @@
 package verification.distribution;
 
-import com.sstlfsj.fibra.engine.EngineState;
+import com.sstlfsj.fibra.engine.observation.EngineState;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.registry.PluginRegistry;
 import com.sstlfsj.fibra.spring.boot.FibraAutoConfiguration;

@@ -1,6 +1,6 @@
 package com.sstlfsj.fibra.registry;
 
-import com.sstlfsj.fibra.engine.TargetSaveState;
+import com.sstlfsj.fibra.engine.observation.TargetSaveState;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

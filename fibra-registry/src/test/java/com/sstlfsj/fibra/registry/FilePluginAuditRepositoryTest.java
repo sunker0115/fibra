@@ -1,6 +1,6 @@
 package com.sstlfsj.fibra.registry;
 
-import com.sstlfsj.fibra.engine.TargetSaveState;
+import com.sstlfsj.fibra.engine.observation.TargetSaveState;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

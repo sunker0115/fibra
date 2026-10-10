@@ -5,24 +5,24 @@ import com.sstlfsj.fibra.PluginDefinition;
 import com.sstlfsj.fibra.PluginEntrypoint;
 import com.sstlfsj.fibra.PluginInstanceState;
 import com.sstlfsj.fibra.bridge.ContributionServices;
-import com.sstlfsj.fibra.cli.api.CliCommandContributions;
-import com.sstlfsj.fibra.cli.api.CliCommandDescriptor;
-import com.sstlfsj.fibra.cli.api.CliCommandOption;
-import com.sstlfsj.fibra.cli.api.CliCommandResult;
-import com.sstlfsj.fibra.cli.api.CliExitStatus;
+import com.sstlfsj.fibra.cli.api.command.CliCommandContributions;
+import com.sstlfsj.fibra.cli.api.command.CliCommandDescriptor;
+import com.sstlfsj.fibra.cli.api.command.CliCommandOption;
+import com.sstlfsj.fibra.cli.api.command.CliCommandResult;
+import com.sstlfsj.fibra.cli.api.invocation.CliExitStatus;
 import com.sstlfsj.fibra.cli.api.CliApplication;
-import com.sstlfsj.fibra.cli.api.CliBootstrapCommand;
-import com.sstlfsj.fibra.cli.api.CliTerminalRenderer;
-import com.sstlfsj.fibra.cli.api.CliTerminalFrame;
+import com.sstlfsj.fibra.cli.api.command.CliBootstrapCommand;
+import com.sstlfsj.fibra.cli.api.terminal.CliTerminalRenderer;
+import com.sstlfsj.fibra.cli.api.terminal.CliTerminalFrame;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.PublicationRequirement;
-import com.sstlfsj.fibra.engine.PluginInstanceSnapshot;
+import com.sstlfsj.fibra.engine.observation.PluginInstanceSnapshot;
 import com.sstlfsj.fibra.plugins.tool.ToolContributions;
 import com.sstlfsj.fibra.plugins.tool.ToolDescriptor;
 import com.sstlfsj.fibra.plugins.tool.ToolException;
 import com.sstlfsj.fibra.plugins.tool.ToolFailureCode;
 import com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure;
-import com.sstlfsj.fibra.engine.TargetSaveState;
+import com.sstlfsj.fibra.engine.observation.TargetSaveState;
 import com.sstlfsj.fibra.value.LiteralValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -585,7 +585,7 @@ class FibraCliTest {
                                       PrintWriter error) throws Exception {
         emptyProfile(home);
         var paths = CliPaths.resolve(home, "default", null, null, null, null);
-        var profile = new com.sstlfsj.fibra.cli.api.CliProfile(paths.profile(), paths.home(),
+        var profile = new com.sstlfsj.fibra.cli.api.invocation.CliProfile(paths.profile(), paths.home(),
             paths.configRoot(), paths.pluginsRoot(), paths.dataRoot());
         try (var host = CliHost.open(paths);
              var session = CliSession.builder(application, host.published(), profile)

@@ -11,25 +11,25 @@ import com.sstlfsj.fibra.config.PublicationRequirement;
 import com.sstlfsj.fibra.config.ConfigContextSnapshot;
 import com.sstlfsj.fibra.config.DesiredEvaluation;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
-import com.sstlfsj.fibra.engine.CompiledRuntimeSlice;
-import com.sstlfsj.fibra.engine.DefinitionBindingPlan;
-import com.sstlfsj.fibra.engine.DeploymentTarget;
-import com.sstlfsj.fibra.engine.ExecutionObservation;
-import com.sstlfsj.fibra.engine.ExecutionUnitKey;
-import com.sstlfsj.fibra.engine.ExecutionUnitPlan;
-import com.sstlfsj.fibra.engine.FileDeploymentTargetStore;
+import com.sstlfsj.fibra.engine.execution.CompiledRuntimeSlice;
+import com.sstlfsj.fibra.engine.execution.DefinitionBindingPlan;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTarget;
+import com.sstlfsj.fibra.engine.observation.ExecutionObservation;
+import com.sstlfsj.fibra.engine.execution.ExecutionUnitKey;
+import com.sstlfsj.fibra.engine.execution.ExecutionUnitPlan;
+import com.sstlfsj.fibra.engine.deployment.FileDeploymentTargetStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
-import com.sstlfsj.fibra.engine.PreparedRuntimeGeneration;
-import com.sstlfsj.fibra.engine.RuntimeArtifactInspection;
-import com.sstlfsj.fibra.engine.RuntimeCandidate;
-import com.sstlfsj.fibra.engine.RuntimeDriver;
-import com.sstlfsj.fibra.engine.RuntimeDriverSnapshot;
-import com.sstlfsj.fibra.engine.RuntimeHostServices;
-import com.sstlfsj.fibra.engine.RuntimePlan;
-import com.sstlfsj.fibra.engine.RuntimeProvider;
-import com.sstlfsj.fibra.engine.RuntimeTargetSlice;
-import com.sstlfsj.fibra.engine.RuntimeUnitFence;
-import com.sstlfsj.fibra.engine.RuntimeUnitGeneration;
+import com.sstlfsj.fibra.engine.runtime.PreparedRuntimeGeneration;
+import com.sstlfsj.fibra.engine.runtime.RuntimeArtifactInspection;
+import com.sstlfsj.fibra.engine.runtime.RuntimeCandidate;
+import com.sstlfsj.fibra.engine.runtime.RuntimeDriver;
+import com.sstlfsj.fibra.engine.observation.RuntimeDriverSnapshot;
+import com.sstlfsj.fibra.engine.runtime.RuntimeHostServices;
+import com.sstlfsj.fibra.engine.execution.RuntimePlan;
+import com.sstlfsj.fibra.engine.runtime.RuntimeProvider;
+import com.sstlfsj.fibra.engine.runtime.RuntimeTargetSlice;
+import com.sstlfsj.fibra.engine.execution.RuntimeUnitFence;
+import com.sstlfsj.fibra.engine.runtime.RuntimeUnitGeneration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import reactor.core.publisher.Mono;
@@ -77,7 +77,7 @@ class RuntimeProviderConsumerTest {
         var target = DeploymentTarget.of(1, List.of(), graph, context);
         return RuntimeTargetSlice.builder(ConsumerRuntimeProvider.RUNTIME_ID, target)
             .desired(DesiredEvaluation.evaluate(graph, context))
-            .capabilities(com.sstlfsj.fibra.engine.HostCapabilitySnapshot.empty())
+            .capabilities(com.sstlfsj.fibra.engine.deployment.HostCapabilitySnapshot.empty())
             .affectedEntryIds(Set.of())
             .unitDependencies(Map.of())
             .build();
@@ -90,7 +90,7 @@ class RuntimeProviderConsumerTest {
 
         @Override public RuntimeId id() { return RUNTIME_ID; }
         @Override public String contractIdentity() { return "verification.consumer.runtime/v1"; }
-        @Override public List<com.sstlfsj.fibra.engine.BuiltInPluginPackage> builtInPackages() {
+        @Override public List<com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage> builtInPackages() {
             return List.of();
         }
         @Override public RuntimeDriver create(RuntimeHostServices services) {
@@ -105,7 +105,7 @@ class RuntimeProviderConsumerTest {
 
         @Override public RuntimeId id() { return ConsumerRuntimeProvider.RUNTIME_ID; }
         @Override public Mono<RuntimeArtifactInspection> probe(
-            com.sstlfsj.fibra.engine.PluginFacetSource source) {
+            com.sstlfsj.fibra.engine.deployment.PluginFacetSource source) {
             return Mono.error(new UnsupportedOperationException("fixture has no package probe"));
         }
         @Override public Mono<RuntimeArtifactInspection> inspect(

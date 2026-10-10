@@ -17,20 +17,20 @@ import com.sstlfsj.fibra.config.DesiredEvaluation;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.PluginDefinitionRef;
-import com.sstlfsj.fibra.engine.CompiledRuntimeSlice;
-import com.sstlfsj.fibra.engine.DeploymentTarget;
-import com.sstlfsj.fibra.engine.ExecutionObservation;
-import com.sstlfsj.fibra.engine.ExecutionUnitKey;
-import com.sstlfsj.fibra.engine.HostCapabilitySnapshot;
-import com.sstlfsj.fibra.engine.PluginFacetSource;
-import com.sstlfsj.fibra.engine.PluginSelection;
-import com.sstlfsj.fibra.engine.PreparedRuntimeGeneration;
-import com.sstlfsj.fibra.engine.RemoteContributionInvoker;
-import com.sstlfsj.fibra.engine.RuntimeCandidate;
-import com.sstlfsj.fibra.engine.RuntimeHostServices;
-import com.sstlfsj.fibra.engine.RuntimeRecompileReason;
-import com.sstlfsj.fibra.engine.RuntimeTargetSlice;
-import com.sstlfsj.fibra.engine.RuntimeUnitGeneration;
+import com.sstlfsj.fibra.engine.execution.CompiledRuntimeSlice;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTarget;
+import com.sstlfsj.fibra.engine.observation.ExecutionObservation;
+import com.sstlfsj.fibra.engine.execution.ExecutionUnitKey;
+import com.sstlfsj.fibra.engine.deployment.HostCapabilitySnapshot;
+import com.sstlfsj.fibra.engine.deployment.PluginFacetSource;
+import com.sstlfsj.fibra.engine.deployment.PluginSelection;
+import com.sstlfsj.fibra.engine.runtime.PreparedRuntimeGeneration;
+import com.sstlfsj.fibra.engine.publication.RemoteContributionInvoker;
+import com.sstlfsj.fibra.engine.runtime.RuntimeCandidate;
+import com.sstlfsj.fibra.engine.runtime.RuntimeHostServices;
+import com.sstlfsj.fibra.engine.runtime.RuntimeRecompileReason;
+import com.sstlfsj.fibra.engine.runtime.RuntimeTargetSlice;
+import com.sstlfsj.fibra.engine.runtime.RuntimeUnitGeneration;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
 import com.sstlfsj.fibra.value.LiteralValue;
 import org.junit.jupiter.api.Test;
@@ -225,7 +225,7 @@ class ExternalFixtureRuntimeDriverTest {
     }
 
     private static PreparedRuntimeGeneration generation(
-        com.sstlfsj.fibra.engine.RuntimeDriver driver) {
+        com.sstlfsj.fibra.engine.runtime.RuntimeDriver driver) {
         RuntimeCandidate candidate = driver.createCandidate(slice());
         candidate.prepareAsync().block();
         var plan = candidate.preparedPlan();
@@ -316,7 +316,7 @@ class ExternalFixtureRuntimeDriverTest {
         @Override public ContributionKindRegistry contributionKinds() {
             return ContributionKindRegistry.of(ExternalFixtureRuntimeProvider.REMOTE_KIND);
         }
-        @Override public ContributionAdmission openContributionAdmission(com.sstlfsj.fibra.engine.ExecutionUnitKey key) {
+        @Override public ContributionAdmission openContributionAdmission(com.sstlfsj.fibra.engine.execution.ExecutionUnitKey key) {
             return directory.openAdmission(key.value());
         }
         @Override public RemoteContributionInvoker remoteContributions() {
@@ -326,14 +326,14 @@ class ExternalFixtureRuntimeDriverTest {
             return namespace + ':' + identities.incrementAndGet();
         }
         @Override public void requestReconcile(
-                                               Set<com.sstlfsj.fibra.engine.RuntimeUnitFence> fences,
+                                               Set<com.sstlfsj.fibra.engine.execution.RuntimeUnitFence> fences,
                                                String reason) {
             assertEquals(Set.of(new ExecutionUnitKey("entry-a"),
                 new ExecutionUnitKey("entry-b")), fences.stream()
                 .peek(fence -> assertEquals(
                     ExternalFixtureRuntimeProvider.RUNTIME_ID,
                     fence.runtimeId()))
-                .map(com.sstlfsj.fibra.engine.RuntimeUnitFence::unitKey)
+                .map(com.sstlfsj.fibra.engine.execution.RuntimeUnitFence::unitKey)
                 .collect(java.util.stream.Collectors.toSet()));
             assertTrue(reason.equals("external-fixture-online")
                 || reason.equals("external-fixture-disconnected"));
@@ -341,9 +341,9 @@ class ExternalFixtureRuntimeDriverTest {
             reconcileRequests.incrementAndGet();
         }
         @Override public void requestObservationRefresh(
-            com.sstlfsj.fibra.engine.RuntimeUnitFence fence) { }
+            com.sstlfsj.fibra.engine.execution.RuntimeUnitFence fence) { }
         @Override public void requestDisable(
-            com.sstlfsj.fibra.engine.RuntimeUnitDisableRequest request) { }
+            com.sstlfsj.fibra.engine.runtime.RuntimeUnitDisableRequest request) { }
         @Override public void requestRecompile(RuntimeRecompileReason reason) { }
         @Override public void close() {
             directory.close();

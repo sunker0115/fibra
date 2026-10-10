@@ -1,5 +1,7 @@
 package com.sstlfsj.fibra.engine;
 
+import com.sstlfsj.fibra.engine.deployment.PluginSelection;
+
 import com.sstlfsj.fibra.config.ConfigContextSnapshot;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import java.util.Collection;

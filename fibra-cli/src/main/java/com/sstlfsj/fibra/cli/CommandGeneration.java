@@ -1,12 +1,12 @@
 package com.sstlfsj.fibra.cli;
 
 import com.sstlfsj.fibra.bridge.ContributionId;
-import com.sstlfsj.fibra.cli.api.CliCommandContributions;
-import com.sstlfsj.fibra.cli.api.CliBootstrapCommand;
-import com.sstlfsj.fibra.cli.api.CliCommandDescriptor;
-import com.sstlfsj.fibra.cli.api.CliCommandRequest;
-import com.sstlfsj.fibra.cli.api.CliCommandResult;
-import com.sstlfsj.fibra.engine.PublishedRuntime;
+import com.sstlfsj.fibra.cli.api.command.CliCommandContributions;
+import com.sstlfsj.fibra.cli.api.command.CliBootstrapCommand;
+import com.sstlfsj.fibra.cli.api.command.CliCommandDescriptor;
+import com.sstlfsj.fibra.cli.api.command.CliCommandRequest;
+import com.sstlfsj.fibra.cli.api.command.CliCommandResult;
+import com.sstlfsj.fibra.engine.publication.PublishedRuntime;
 import com.sstlfsj.fibra.plugins.tool.ToolContributions;
 import picocli.CommandLine;
 import reactor.core.publisher.Mono;

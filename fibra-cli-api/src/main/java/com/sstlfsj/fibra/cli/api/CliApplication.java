@@ -1,5 +1,8 @@
 package com.sstlfsj.fibra.cli.api;
 
+import com.sstlfsj.fibra.cli.api.command.CliBootstrapCommand;
+import com.sstlfsj.fibra.cli.api.input.CliInputHandler;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;

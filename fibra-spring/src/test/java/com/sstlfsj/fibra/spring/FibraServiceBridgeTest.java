@@ -2,7 +2,7 @@ package com.sstlfsj.fibra.spring;
 
 import com.sstlfsj.fibra.ServiceKey;
 import com.sstlfsj.fibra.artifact.PluginPackageStore;
-import com.sstlfsj.fibra.engine.DeploymentTargetStore;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTargetStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.HostServiceRegistry;
 import com.sstlfsj.fibra.runtime.java.JavaRuntimeProvider;

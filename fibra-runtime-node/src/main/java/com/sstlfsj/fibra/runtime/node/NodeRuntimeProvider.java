@@ -1,9 +1,9 @@
 package com.sstlfsj.fibra.runtime.node;
 
 import com.sstlfsj.fibra.artifact.RuntimeId;
-import com.sstlfsj.fibra.engine.RuntimeDriver;
-import com.sstlfsj.fibra.engine.RuntimeHostServices;
-import com.sstlfsj.fibra.engine.RuntimeProvider;
+import com.sstlfsj.fibra.engine.runtime.RuntimeDriver;
+import com.sstlfsj.fibra.engine.runtime.RuntimeHostServices;
+import com.sstlfsj.fibra.engine.runtime.RuntimeProvider;
 
 import java.util.List;
 import java.util.Objects;
@@ -30,7 +30,7 @@ public final class NodeRuntimeProvider implements RuntimeProvider {
     }
 
     @Override
-    public List<com.sstlfsj.fibra.engine.BuiltInPluginPackage> builtInPackages() {
+    public List<com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage> builtInPackages() {
         return List.of();
     }
 

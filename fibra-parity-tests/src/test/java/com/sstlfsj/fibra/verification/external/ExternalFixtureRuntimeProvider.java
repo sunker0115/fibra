@@ -3,9 +3,9 @@ package com.sstlfsj.fibra.verification.external;
 import com.sstlfsj.fibra.artifact.RuntimeId;
 import com.sstlfsj.fibra.bridge.ContributionCodec;
 import com.sstlfsj.fibra.bridge.ContributionKind;
-import com.sstlfsj.fibra.engine.RuntimeDriver;
-import com.sstlfsj.fibra.engine.RuntimeHostServices;
-import com.sstlfsj.fibra.engine.RuntimeProvider;
+import com.sstlfsj.fibra.engine.runtime.RuntimeDriver;
+import com.sstlfsj.fibra.engine.runtime.RuntimeHostServices;
+import com.sstlfsj.fibra.engine.runtime.RuntimeProvider;
 import com.sstlfsj.fibra.value.LiteralValue;
 
 import java.util.List;
@@ -35,7 +35,7 @@ public final class ExternalFixtureRuntimeProvider implements RuntimeProvider {
     }
 
     @Override
-    public List<com.sstlfsj.fibra.engine.BuiltInPluginPackage> builtInPackages() {
+    public List<com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage> builtInPackages() {
         return List.of();
     }
 

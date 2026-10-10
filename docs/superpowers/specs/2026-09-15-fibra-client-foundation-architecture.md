@@ -106,6 +106,57 @@ product-client-runtime ──→ engine + bridge + client-protocol
 `RuntimeProvider`。Maven/架构测试必须同时证明禁止箭头和合法箭头上所需数据确实可传递，不能只做负向依赖
 检查。
 
+### 3.1 Java 能力包与模块内依赖
+
+Maven 模块承载已有发布、依赖与 ClassLoader 边界；Java 包表达该模块内的能力和受限访问闭包。
+不按文件数机械分包，不统一套用 application/domain/infrastructure，也不增加 common/shared/utils。
+同一命令 lane、锁或生命周期的包私有协作者保持同包；跨包使用现有公开合同，不为目录整理开放
+许可签发、故障注入、资源登记或生命周期内部操作。纯包迁移不改变 target 编码、协议版本、模块坐标或
+生命周期顺序；Java 二进制名字改变后，所有插件及宿主必须使用同一版制品重新编译。
+
+`com.sstlfsj.fibra.engine` 内部能力分配如下：
+
+| 包 | 能力与边界 |
+|---|---|
+| 根包 | `FibraEngine`、管理命令及编排；`EngineCommandLoop`、`DeploymentPlanner`、`RuntimeProviderRegistry` 和 candidate 的控制操作保持包私有。`HostServiceRegistry` 的冻结由 Engine 执行 |
+| `.deployment` | 完整目标、selection、built-in 元数据、facet 编译结果、规范编码与 durable store；只有存储确认后签发 token |
+| `.execution` | unit identity、fence、不可变 unit/definition plan 与 compiled slice；这些是跨 SPI/观察共享的值，不拥有执行或资源 |
+| `.observation` | engine/current/candidate/retirement/unit 的只读快照、阶段、失败与终止事实；状态仍由对应 Engine/driver owner 冻结 |
+| `.publication` | `PublishedRuntime`、`PublishedView`、带 fence 的远程贡献调用及其异常；公开读取与调用继续经过唯一入口 |
+| `.runtime` | provider/driver/candidate/generation SPI、受限宿主回调和请求；不持有 Engine 编排实现 |
+
+箭头表示源包依赖目标包，允许的内部方向为：
+
+```text
+engine      -> runtime, publication, observation, deployment, execution
+runtime     -> publication, observation, deployment, execution
+publication -> observation
+observation -> deployment, execution
+deployment  -> execution
+execution   -> 无 Engine 内部包
+```
+
+将 execution 合同与 runtime 生命周期 SPI 分开，是因为宿主回调调用 PublishedRuntime，而发布事实又包含
+unit fence；将这些类型全放入 runtime 会造成 runtime/publication/observation 包环。
+`EngineCommand` 与 sealed permits 实现保持同包。`DeploymentTarget.canonicalBytes`、
+`DurableTargetToken.issue`、`StoredTarget.confirmed` 不扩大可见性；跨包测试需要时仅在 test-source
+由同包 fixture 直接委托，不进入正式制品。
+
+`com.sstlfsj.fibra.cli.api` 根包只保留 `CliApplication` 应用描述；`.command` 承载命令声明与贡献，
+`.input` 承载应用原样文本提交，`.invocation` 承载调用上下文/输出/profile/退出状态，`.terminal`
+承载终端租约、渲染和按键事件。依赖为根包 → command/input，input → command/invocation，
+command → invocation，invocation → terminal；子包不反向依赖应用根包。
+终端事件 `CliTerminalInput` 与应用提交 `CliInputRequest` 属于不同能力，不能按名称中的 input 混放。
+
+Config 保持现有同包闭包：输入节点构造与编译共用包私有表达式/策略验证，编译与存储共用读取器和
+字面量转换，图、求值及内存仓库共用包私有异常构造。单独拆 model/compiler/store 会要求扩大可见性、
+复制规则或形成包环；不采用。Core 的 runtime/internal、Java/Node driver 内部资源协作与 CLI 宿主内部
+关闭/终端协作保持现有边界，不为包整理改变 owner。
+
+门禁同时覆盖实际编译产物包集合、允许边与包环、合法编译和受限访问拒绝、公开签名，以及 runtime、
+CLI/Spring、仓外消费者和 Tela 的正式消费。反向依赖/循环检测必须用真实编译夹具证明，访问拒绝先证明
+目标类存在和合法公共调用可编译，不能以类不存在冒充隔离。
+
 ## 4. 逻辑 package、facet 与持久目标
 
 用户安装单位是不可变 `PluginPackage`：
@@ -695,6 +746,9 @@ child Scope 释放操作；不得暴露可关闭根 Scope、目录或 domain。J
 `DeploymentTargetStore`、共享 runtime domain/directory 和其创建的所有 drivers 的关闭所有权；正常关闭按
 逆序释放。构造中途失败也必须关闭已经取得的 drivers、共享资源和两个 stores。调用方不得再单独关闭或复用
 这些对象构造第二个 Engine。
+CLI composition root 在完成 builder 配置、进入 `build()` 时即交出两个 stores 的清理权；配置或更早的
+本地创建失败仍由 CLI 清理，构造失败由 Engine 自身清理。启动/首次 apply 失败后，CLI 只调用 Engine
+的 cached close；若 generation 清理失败而保留现场，不得再以外层兜底关闭 stores、释放其排他锁。
 `RuntimeProviderRegistry` 是 Engine 包内的 composition 实现细节，不属于公共 SPI；外部 composition root 只向
 `FibraEngine.Builder` 注册 providers，不得批量创建并自行持有 drivers。
 Java 的 `ContributionServices.REGISTRAR` 与 `ManagedPluginControl.KEY` 都是 Host 注入的 per-unit 服务：driver

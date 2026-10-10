@@ -1,5 +1,16 @@
 package com.sstlfsj.fibra.engine;
 
+import com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage;
+import com.sstlfsj.fibra.engine.deployment.CompiledDeployment;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTarget;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTargetCompiler;
+import com.sstlfsj.fibra.engine.deployment.HostCapabilitySnapshot;
+import com.sstlfsj.fibra.engine.deployment.ResolvedFacetDependency;
+import com.sstlfsj.fibra.engine.execution.DefinitionBindingPlan;
+import com.sstlfsj.fibra.engine.execution.ExecutionUnitKey;
+import com.sstlfsj.fibra.engine.execution.ExecutionUnitPlan;
+import com.sstlfsj.fibra.engine.execution.RuntimePlan;
+
 import com.sstlfsj.fibra.artifact.*;
 import com.sstlfsj.fibra.config.*;
 import java.util.*;

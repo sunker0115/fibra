@@ -5,10 +5,10 @@ import com.sstlfsj.fibra.artifact.PluginPackageStore;
 import com.sstlfsj.fibra.bridge.ContributionKindRegistry;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.PluginDefinitionRef;
-import com.sstlfsj.fibra.engine.ExecutionObservation;
-import com.sstlfsj.fibra.engine.FileDeploymentTargetStore;
+import com.sstlfsj.fibra.engine.observation.ExecutionObservation;
+import com.sstlfsj.fibra.engine.deployment.FileDeploymentTargetStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
-import com.sstlfsj.fibra.engine.PluginSelection;
+import com.sstlfsj.fibra.engine.deployment.PluginSelection;
 import com.sstlfsj.fibra.plugins.tool.ToolContributions;
 import com.sstlfsj.fibra.plugins.tool.ToolRequest;
 import com.sstlfsj.fibra.plugins.tool.ToolResult;
@@ -164,7 +164,7 @@ class LifecycleConsumerTest {
         var loader = fixture.loader(engine); var pids = fixture.activePids();
         var hold = invokeAsync(engine, ToolRequest.of(Map.of("operation", "hold"))).toFuture(); fixture.awaitHold();
         var revoking = engine.published().views().filter(view -> view.engine().retirementBatch()
-            .map(batch -> batch.phase() == com.sstlfsj.fibra.engine.RetirementPhase.DRAINING)
+            .map(batch -> batch.phase() == com.sstlfsj.fibra.engine.observation.RetirementPhase.DRAINING)
             .orElse(false) && view.contributions().entries().stream().noneMatch(entry ->
                 entry.kind().equals(ToolContributions.KIND.name())
                     && entry.id().equals(ToolContributions.id(INSTANCE, "lifecycle"))))

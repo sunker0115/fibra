@@ -1,14 +1,14 @@
 package com.sstlfsj.fibra.cli;
 
-import com.sstlfsj.fibra.cli.api.CliTerminalControl;
-import com.sstlfsj.fibra.cli.api.CliTerminalFrame;
-import com.sstlfsj.fibra.cli.api.CliTerminalInput;
-import com.sstlfsj.fibra.cli.api.CliTerminalKey;
-import com.sstlfsj.fibra.cli.api.CliTerminalModifier;
-import com.sstlfsj.fibra.cli.api.CliTerminalRenderer;
-import com.sstlfsj.fibra.cli.api.CliTerminalSize;
-import com.sstlfsj.fibra.cli.api.CliTerminalUnavailableException;
-import com.sstlfsj.fibra.cli.api.CliTerminalUnavailableReason;
+import com.sstlfsj.fibra.cli.api.terminal.CliTerminalControl;
+import com.sstlfsj.fibra.cli.api.terminal.CliTerminalFrame;
+import com.sstlfsj.fibra.cli.api.terminal.CliTerminalInput;
+import com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey;
+import com.sstlfsj.fibra.cli.api.terminal.CliTerminalModifier;
+import com.sstlfsj.fibra.cli.api.terminal.CliTerminalRenderer;
+import com.sstlfsj.fibra.cli.api.terminal.CliTerminalSize;
+import com.sstlfsj.fibra.cli.api.terminal.CliTerminalUnavailableException;
+import com.sstlfsj.fibra.cli.api.terminal.CliTerminalUnavailableReason;
 import org.jline.terminal.Attributes;
 import org.jline.terminal.Size;
 import org.jline.terminal.impl.DumbTerminal;

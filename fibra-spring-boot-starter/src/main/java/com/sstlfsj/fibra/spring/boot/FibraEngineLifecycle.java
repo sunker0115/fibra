@@ -1,6 +1,6 @@
 package com.sstlfsj.fibra.spring.boot;
 
-import com.sstlfsj.fibra.engine.EngineState;
+import com.sstlfsj.fibra.engine.observation.EngineState;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import org.springframework.context.SmartLifecycle;
 

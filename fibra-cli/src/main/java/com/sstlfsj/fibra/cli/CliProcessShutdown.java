@@ -1,6 +1,6 @@
 package com.sstlfsj.fibra.cli;
 
-import com.sstlfsj.fibra.cli.api.CliExitStatus;
+import com.sstlfsj.fibra.cli.api.invocation.CliExitStatus;
 
 import java.time.Duration;
 import java.util.Objects;

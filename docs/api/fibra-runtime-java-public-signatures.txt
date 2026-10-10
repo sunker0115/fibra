@@ -2,8 +2,8 @@
 ## com.sstlfsj.fibra.runtime.java.JavaBuiltInPackage
 Compiled from "JavaBuiltInPackage.java"
 public final class com.sstlfsj.fibra.runtime.java.JavaBuiltInPackage {
-  public com.sstlfsj.fibra.runtime.java.JavaBuiltInPackage(com.sstlfsj.fibra.engine.BuiltInPluginPackage, java.util.Map<com.sstlfsj.fibra.artifact.FacetId, java.util.List<com.sstlfsj.fibra.runtime.java.JavaDefinitionEntry<?>>>);
-  public com.sstlfsj.fibra.engine.BuiltInPluginPackage metadata();
+  public com.sstlfsj.fibra.runtime.java.JavaBuiltInPackage(com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage, java.util.Map<com.sstlfsj.fibra.artifact.FacetId, java.util.List<com.sstlfsj.fibra.runtime.java.JavaDefinitionEntry<?>>>);
+  public com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage metadata();
 }
 ## com.sstlfsj.fibra.runtime.java.JavaDefinitionEntry
 Compiled from "JavaDefinitionEntry.java"
@@ -23,12 +23,12 @@ public final class com.sstlfsj.fibra.runtime.java.JavaFacetDescriptor extends ja
 }
 ## com.sstlfsj.fibra.runtime.java.JavaRuntimeDriver
 Compiled from "JavaRuntimeDriver.java"
-public final class com.sstlfsj.fibra.runtime.java.JavaRuntimeDriver implements com.sstlfsj.fibra.engine.RuntimeDriver {
+public final class com.sstlfsj.fibra.runtime.java.JavaRuntimeDriver implements com.sstlfsj.fibra.engine.runtime.RuntimeDriver {
   public com.sstlfsj.fibra.artifact.RuntimeId id();
-  public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.RuntimeArtifactInspection> probe(com.sstlfsj.fibra.engine.PluginFacetSource);
-  public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.RuntimeArtifactInspection> inspect(com.sstlfsj.fibra.artifact.ManagedFacet);
-  public synchronized com.sstlfsj.fibra.engine.RuntimeCandidate createCandidate(com.sstlfsj.fibra.engine.RuntimeTargetSlice);
-  public synchronized com.sstlfsj.fibra.engine.RuntimeDriverSnapshot snapshot();
+  public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.runtime.RuntimeArtifactInspection> probe(com.sstlfsj.fibra.engine.deployment.PluginFacetSource);
+  public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.runtime.RuntimeArtifactInspection> inspect(com.sstlfsj.fibra.artifact.ManagedFacet);
+  public synchronized com.sstlfsj.fibra.engine.runtime.RuntimeCandidate createCandidate(com.sstlfsj.fibra.engine.runtime.RuntimeTargetSlice);
+  public synchronized com.sstlfsj.fibra.engine.observation.RuntimeDriverSnapshot snapshot();
   public synchronized reactor.core.publisher.Mono<java.lang.Void> closeAsync();
 }
 ## com.sstlfsj.fibra.runtime.java.JavaRuntimeException
@@ -49,12 +49,12 @@ public final class com.sstlfsj.fibra.runtime.java.JavaRuntimePhase extends java.
 }
 ## com.sstlfsj.fibra.runtime.java.JavaRuntimeProvider
 Compiled from "JavaRuntimeProvider.java"
-public final class com.sstlfsj.fibra.runtime.java.JavaRuntimeProvider implements com.sstlfsj.fibra.engine.RuntimeProvider {
+public final class com.sstlfsj.fibra.runtime.java.JavaRuntimeProvider implements com.sstlfsj.fibra.engine.runtime.RuntimeProvider {
   public static final com.sstlfsj.fibra.artifact.RuntimeId RUNTIME_ID;
   public static final java.lang.String CONTRACT_IDENTITY;
   public com.sstlfsj.fibra.runtime.java.JavaRuntimeProvider(java.util.List<com.sstlfsj.fibra.runtime.java.JavaBuiltInPackage>);
   public com.sstlfsj.fibra.artifact.RuntimeId id();
   public java.lang.String contractIdentity();
-  public java.util.List<com.sstlfsj.fibra.engine.BuiltInPluginPackage> builtInPackages();
-  public com.sstlfsj.fibra.engine.RuntimeDriver create(com.sstlfsj.fibra.engine.RuntimeHostServices);
+  public java.util.List<com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage> builtInPackages();
+  public com.sstlfsj.fibra.engine.runtime.RuntimeDriver create(com.sstlfsj.fibra.engine.runtime.RuntimeHostServices);
 }

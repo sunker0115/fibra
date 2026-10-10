@@ -8,11 +8,11 @@ import com.sstlfsj.fibra.bridge.ContributionKind;
 import com.sstlfsj.fibra.config.PluginDefinitionRef;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
-import com.sstlfsj.fibra.engine.DeploymentTargetStore;
-import com.sstlfsj.fibra.engine.ExecutionUnitKey;
-import com.sstlfsj.fibra.engine.FileDeploymentTargetStore;
-import com.sstlfsj.fibra.engine.PublishedView;
-import com.sstlfsj.fibra.engine.TargetSaveState;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTargetStore;
+import com.sstlfsj.fibra.engine.execution.ExecutionUnitKey;
+import com.sstlfsj.fibra.engine.deployment.FileDeploymentTargetStore;
+import com.sstlfsj.fibra.engine.publication.PublishedView;
+import com.sstlfsj.fibra.engine.observation.TargetSaveState;
 import com.sstlfsj.fibra.plugins.tool.ToolContent;
 import com.sstlfsj.fibra.plugins.tool.ToolContributions;
 import com.sstlfsj.fibra.plugins.tool.ToolException;
@@ -66,7 +66,7 @@ class FormalMultiPluginIT {
             DeploymentTargetStore.inMemory())) {
             var deployed = harness.deploy(graph, PluginAcceptanceHarness.ALL_PACKAGES);
             assertTrue(deployed.observed().values().stream().allMatch(instance ->
-                instance.aggregateState() == com.sstlfsj.fibra.engine.ExecutionObservation.State.ACTIVE));
+                instance.aggregateState() == com.sstlfsj.fibra.engine.observation.ExecutionObservation.State.ACTIVE));
 
             var written = javaMap(harness.invoke("fs-tools", "write", Map.of(
                 "path", "note.txt", "content", "first")));
@@ -243,7 +243,7 @@ class FormalMultiPluginIT {
             var audit = harness.registry().history().getLast();
             assertTrue(audit.succeeded());
             assertEquals(TargetSaveState.SAVED, audit.targetSaveState());
-            assertEquals(com.sstlfsj.fibra.engine.TargetConvergence.UNSATISFIED,
+            assertEquals(com.sstlfsj.fibra.engine.observation.TargetConvergence.UNSATISFIED,
                 pending.engine().targetConvergence());
             assertFalse(pending.engine().target().orElseThrow().selections()
                 .get(new PluginId("fibra-storage-json")).enabled());
@@ -254,7 +254,7 @@ class FormalMultiPluginIT {
             assertNull(pending.engine().current().orElseThrow().observations()
                 .get(new ExecutionUnitKey("storage-isolated")));
             for (var id : retained.keySet()) {
-                assertEquals(com.sstlfsj.fibra.engine.ExecutionObservation.State.PENDING,
+                assertEquals(com.sstlfsj.fibra.engine.observation.ExecutionObservation.State.PENDING,
                     pending.engine().current().orElseThrow().observations()
                         .get(new ExecutionUnitKey(id)).aggregateState());
                 assertEquals(retained.get(id), instanceIdentity(pending, id));
@@ -264,13 +264,13 @@ class FormalMultiPluginIT {
                 .block(PluginAcceptanceHarness.TIMEOUT);
 
             var recovered = harness.engine().published().current();
-            assertEquals(com.sstlfsj.fibra.engine.TargetConvergence.SATISFIED,
+            assertEquals(com.sstlfsj.fibra.engine.observation.TargetConvergence.SATISFIED,
                 recovered.engine().targetConvergence());
             assertEquals(retained, instanceIdentities(recovered,
                 "config-a", "config-b", "config-c"));
             assertTrue(recovered.engine().current().orElseThrow().observations().values().stream().allMatch(unit ->
                 unit.aggregateState()
-                    == com.sstlfsj.fibra.engine.ExecutionObservation.State.ACTIVE));
+                    == com.sstlfsj.fibra.engine.observation.ExecutionObservation.State.ACTIVE));
             harness.invoke("config-a", "put", Map.of("key", "recovered", "value", true));
             assertEquals(true, javaMap(javaMap(harness.invoke("config-b", "load", Map.of()))
                 .get("values")).get("recovered"));
@@ -300,7 +300,7 @@ class FormalMultiPluginIT {
             for (var entry : beforeIdentities.entrySet()) {
                 assertNotEquals(entry.getValue(), instanceIdentity(upgraded, entry.getKey()));
             }
-            assertEquals(com.sstlfsj.fibra.engine.TargetConvergence.SATISFIED,
+            assertEquals(com.sstlfsj.fibra.engine.observation.TargetConvergence.SATISFIED,
                 upgraded.engine().targetConvergence());
             harness.invoke("config-a", "put", Map.of("key", "contract", "value", "upgraded"));
             assertEquals("upgraded", javaMap(javaMap(harness.invoke("config-b", "load", Map.of()))

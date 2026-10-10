@@ -1,5 +1,7 @@
 package com.sstlfsj.fibra.engine;
 
+import com.sstlfsj.fibra.engine.publication.PublishedView;
+
 import java.util.List;
 
 public record EngineCommandResult(PublishedView view, List<String> warnings) {

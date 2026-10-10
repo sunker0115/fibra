@@ -3,6 +3,18 @@
 本文描述 `0.5.0-SNAPSHOT` 当前公开边界。公共签名以各模块的 `*-public-signatures.txt` 基线和编译后的 API
 为准；本文解释对象的职责、所有权和组合顺序。
 
+## Java 包迁移
+
+Engine 按 `deployment`、`execution`、`observation`、`publication`、`runtime` 划分能力包，
+根包保留 `FibraEngine`、管理命令和编排协作。CLI API 的 `CliApplication` 保留根包，其他类型归入
+`command`、`input`、`invocation`、`terminal`。完整旧名到新名见
+[Java 类型迁移表](2026-10-10-java-package-migration.json)，职责与允许依赖见
+[Client Foundation §3.1](../superpowers/specs/2026-09-15-fibra-client-foundation-architecture.md#31-java-能力包与模块内依赖)。
+
+这是 Java 源码和二进制名字变化：宿主、runtime provider 与插件消费者须同步更新 import/FQCN 并重新编译，
+不得混用迁移前后的同名 SNAPSHOT 制品；旧包不保留转发壳。Maven 坐标、方法与成员可见性、目标文件格式、
+client wire 协议和贡献逻辑身份保持不变。Config 与其他无需迁移的模块保持现有包名。
+
 ## 生命周期内核
 
 `FibraRuntime` 是不含 package、持久部署和 runtime driver 的最小内核。`RuntimeDomain` 持有唯一 lifecycle

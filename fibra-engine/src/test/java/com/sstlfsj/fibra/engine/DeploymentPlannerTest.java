@@ -1,5 +1,13 @@
 package com.sstlfsj.fibra.engine;
 
+import com.sstlfsj.fibra.engine.deployment.CompiledDeployment;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTarget;
+import com.sstlfsj.fibra.engine.deployment.HostCapabilitySnapshot;
+import com.sstlfsj.fibra.engine.deployment.PluginSelection;
+import com.sstlfsj.fibra.engine.execution.DefinitionBindingPlan;
+import com.sstlfsj.fibra.engine.execution.ExecutionUnitKey;
+import com.sstlfsj.fibra.engine.execution.RuntimePlan;
+
 import com.sstlfsj.fibra.artifact.ArtifactId;
 import com.sstlfsj.fibra.artifact.ExecutionTarget;
 import com.sstlfsj.fibra.artifact.FacetDependency;

@@ -2,12 +2,12 @@ package com.sstlfsj.fibra.spring.boot;
 
 import com.sstlfsj.fibra.artifact.PluginPackageStore;
 import com.sstlfsj.fibra.bridge.ContributionKindRegistry;
-import com.sstlfsj.fibra.engine.DeploymentTargetStore;
-import com.sstlfsj.fibra.engine.FileDeploymentTargetStore;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTargetStore;
+import com.sstlfsj.fibra.engine.deployment.FileDeploymentTargetStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.HostServiceRegistry;
 import com.sstlfsj.fibra.engine.HostTerminationPort;
-import com.sstlfsj.fibra.engine.PublishedRuntime;
+import com.sstlfsj.fibra.engine.publication.PublishedRuntime;
 import com.sstlfsj.fibra.registry.FilePluginAuditRepository;
 import com.sstlfsj.fibra.registry.PluginAuditRepository;
 import com.sstlfsj.fibra.registry.PluginRegistry;

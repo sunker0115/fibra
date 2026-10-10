@@ -1,6 +1,6 @@
 package com.sstlfsj.fibra.cli;
 
-import com.sstlfsj.fibra.cli.api.CliCommandDescriptor;
+import com.sstlfsj.fibra.cli.api.command.CliCommandDescriptor;
 
 import java.util.LinkedHashSet;
 import java.util.List;

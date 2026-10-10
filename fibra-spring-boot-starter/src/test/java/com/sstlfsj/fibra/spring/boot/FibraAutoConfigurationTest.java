@@ -1,8 +1,8 @@
 package com.sstlfsj.fibra.spring.boot;
 
-import com.sstlfsj.fibra.engine.EngineState;
+import com.sstlfsj.fibra.engine.observation.EngineState;
 import com.sstlfsj.fibra.engine.FibraEngine;
-import com.sstlfsj.fibra.engine.PublishedRuntime;
+import com.sstlfsj.fibra.engine.publication.PublishedRuntime;
 import com.sstlfsj.fibra.registry.PluginRegistry;
 import com.sstlfsj.fibra.runtime.java.JavaRuntimeProvider;
 import com.sstlfsj.fibra.runtime.node.NodeRuntimeProvider;

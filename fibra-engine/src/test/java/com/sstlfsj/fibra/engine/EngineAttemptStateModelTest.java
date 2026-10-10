@@ -1,5 +1,44 @@
 package com.sstlfsj.fibra.engine;
 
+import com.sstlfsj.fibra.engine.deployment.DeploymentTargetStoreFixture;
+
+import com.sstlfsj.fibra.engine.deployment.BuiltInFacet;
+import com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTarget;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTargetStore;
+import com.sstlfsj.fibra.engine.deployment.DurableTargetToken;
+import com.sstlfsj.fibra.engine.deployment.PluginFacetSource;
+import com.sstlfsj.fibra.engine.execution.CompiledRuntimeSlice;
+import com.sstlfsj.fibra.engine.execution.DefinitionBindingPlan;
+import com.sstlfsj.fibra.engine.execution.ExecutionUnitKey;
+import com.sstlfsj.fibra.engine.execution.ExecutionUnitPlan;
+import com.sstlfsj.fibra.engine.execution.RuntimePlan;
+import com.sstlfsj.fibra.engine.execution.RuntimeUnitFence;
+import com.sstlfsj.fibra.engine.observation.CandidateAttemptSnapshot;
+import com.sstlfsj.fibra.engine.observation.CandidatePhase;
+import com.sstlfsj.fibra.engine.observation.CurrentAttemptSnapshot;
+import com.sstlfsj.fibra.engine.observation.CurrentPhase;
+import com.sstlfsj.fibra.engine.observation.DurableTargetState;
+import com.sstlfsj.fibra.engine.observation.EngineOperationStage;
+import com.sstlfsj.fibra.engine.observation.EngineSnapshot;
+import com.sstlfsj.fibra.engine.observation.EngineState;
+import com.sstlfsj.fibra.engine.observation.ExecutionObservation;
+import com.sstlfsj.fibra.engine.observation.FailureSubject;
+import com.sstlfsj.fibra.engine.observation.HostTerminationRequest;
+import com.sstlfsj.fibra.engine.observation.RetirementBatchSnapshot;
+import com.sstlfsj.fibra.engine.observation.RetirementPhase;
+import com.sstlfsj.fibra.engine.observation.RuntimeDriverSnapshot;
+import com.sstlfsj.fibra.engine.observation.TargetConvergence;
+import com.sstlfsj.fibra.engine.publication.PublishedView;
+import com.sstlfsj.fibra.engine.runtime.PreparedRuntimeGeneration;
+import com.sstlfsj.fibra.engine.runtime.RuntimeArtifactInspection;
+import com.sstlfsj.fibra.engine.runtime.RuntimeCandidate;
+import com.sstlfsj.fibra.engine.runtime.RuntimeDriver;
+import com.sstlfsj.fibra.engine.runtime.RuntimeHostServices;
+import com.sstlfsj.fibra.engine.runtime.RuntimeProvider;
+import com.sstlfsj.fibra.engine.runtime.RuntimeTargetSlice;
+import com.sstlfsj.fibra.engine.runtime.RuntimeUnitGeneration;
+
 import com.sstlfsj.fibra.artifact.ExecutionTarget;
 import com.sstlfsj.fibra.artifact.FacetId;
 import com.sstlfsj.fibra.artifact.ManagedFacet;
@@ -494,7 +533,7 @@ class EngineAttemptStateModelTest {
         @Override
         public Optional<StoredTarget> load() {
             ensureOpen();
-            return Optional.ofNullable(current).map(StoredTarget::confirmed);
+            return Optional.ofNullable(current).map(DeploymentTargetStoreFixture::confirmed);
         }
 
         @Override
@@ -507,7 +546,7 @@ class EngineAttemptStateModelTest {
             DeploymentTargetStore.checkRevision(expectedRevision,
                 current == null ? 0 : current.targetRevision(), target);
             current = target;
-            return StoredTarget.confirmed(target).token();
+            return DeploymentTargetStoreFixture.confirmed(target).token();
         }
 
         @Override

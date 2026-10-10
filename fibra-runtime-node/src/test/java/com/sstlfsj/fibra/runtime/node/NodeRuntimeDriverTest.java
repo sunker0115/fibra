@@ -17,15 +17,15 @@ import com.sstlfsj.fibra.config.DesiredEvaluation;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.PluginDefinitionRef;
-import com.sstlfsj.fibra.engine.CompiledRuntimeSlice;
-import com.sstlfsj.fibra.engine.DeploymentTarget;
-import com.sstlfsj.fibra.engine.ExecutionUnitKey;
-import com.sstlfsj.fibra.engine.HostCapabilitySnapshot;
-import com.sstlfsj.fibra.engine.PluginFacetSource;
-import com.sstlfsj.fibra.engine.PluginSelection;
-import com.sstlfsj.fibra.engine.RuntimeHostServices;
-import com.sstlfsj.fibra.engine.RuntimeRecompileReason;
-import com.sstlfsj.fibra.engine.RuntimeUnitGeneration;
+import com.sstlfsj.fibra.engine.execution.CompiledRuntimeSlice;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTarget;
+import com.sstlfsj.fibra.engine.execution.ExecutionUnitKey;
+import com.sstlfsj.fibra.engine.deployment.HostCapabilitySnapshot;
+import com.sstlfsj.fibra.engine.deployment.PluginFacetSource;
+import com.sstlfsj.fibra.engine.deployment.PluginSelection;
+import com.sstlfsj.fibra.engine.runtime.RuntimeHostServices;
+import com.sstlfsj.fibra.engine.runtime.RuntimeRecompileReason;
+import com.sstlfsj.fibra.engine.runtime.RuntimeUnitGeneration;
 import com.sstlfsj.fibra.runtime.FibraRuntime;
 import com.sstlfsj.fibra.value.LiteralValue;
 import org.junit.jupiter.api.Test;
@@ -95,7 +95,7 @@ class NodeRuntimeDriverTest {
             Path.of(System.getProperty("fibra.test.node", "node")),
             work.resolve("sessions"))).create(new Services());
         var candidate = driver.createCandidate(slice(dependent, "node-entry",
-            List.of(new com.sstlfsj.fibra.engine.ResolvedFacetDependency(
+            List.of(new com.sstlfsj.fibra.engine.deployment.ResolvedFacetDependency(
                 dependency.pluginId(), dependency.packageRevision(),
                 dependency.facet().facetId(), dependency.artifactId())),
             List.of(new ExecutionUnitKey("dependency-entry"))));
@@ -255,7 +255,7 @@ class NodeRuntimeDriverTest {
 
             var failed = sealedUnit(driver, lifecycleFacet(work,
                 Files.createDirectory(work.resolve("failed-pids")), true), "failed-entry");
-            assertEquals(com.sstlfsj.fibra.engine.ExecutionObservation.State.FAILED,
+            assertEquals(com.sstlfsj.fibra.engine.observation.ExecutionObservation.State.FAILED,
                 failed.unit.reconcileAsync("start-failed").block(Duration.ofSeconds(5))
                     .aggregateState());
             failed.unit.closeAdmission();
@@ -283,7 +283,7 @@ class NodeRuntimeDriverTest {
 
             var observation = failed.unit.reconcileAsync("start")
                 .block(Duration.ofSeconds(5));
-            assertEquals(com.sstlfsj.fibra.engine.ExecutionObservation.State.FAILED,
+            assertEquals(com.sstlfsj.fibra.engine.observation.ExecutionObservation.State.FAILED,
                 observation.aggregateState());
             assertEquals(1, services.scopeCloseAttempts.get());
             var sidecarField = failed.unit.getClass().getDeclaredField("sidecar");
@@ -317,7 +317,7 @@ class NodeRuntimeDriverTest {
                 "terminated-entry");
             var started = sealed.unit.reconcileAsync("start")
                 .block(Duration.ofSeconds(5));
-            assertEquals(com.sstlfsj.fibra.engine.ExecutionObservation.State.ACTIVE,
+            assertEquals(com.sstlfsj.fibra.engine.observation.ExecutionObservation.State.ACTIVE,
                 started.aggregateState(), () -> "unexpected Node start result: "
                     + started.executions().getFirst().failure());
 
@@ -326,7 +326,7 @@ class NodeRuntimeDriverTest {
             ((NodeSidecar) sidecarField.get(sealed.unit)).close();
 
             assertTrue(services.reconcileRequested.await(3, TimeUnit.SECONDS));
-            assertEquals(com.sstlfsj.fibra.engine.ExecutionObservation.State.FAILED,
+            assertEquals(com.sstlfsj.fibra.engine.observation.ExecutionObservation.State.FAILED,
                 sealed.unit.snapshot().aggregateState());
             assertEquals(1, services.reconcileRequests.get());
 
@@ -354,13 +354,13 @@ class NodeRuntimeDriverTest {
                 .block(Duration.ofSeconds(5));
             assertTrue(services.admissionClosed.await(3, TimeUnit.SECONDS),
                 "termination during startup must close contribution admission");
-            assertEquals(com.sstlfsj.fibra.engine.ExecutionObservation.State.PENDING,
+            assertEquals(com.sstlfsj.fibra.engine.observation.ExecutionObservation.State.PENDING,
                 assertDoesNotThrow(sealed.unit::snapshot).aggregateState(),
                 "startup termination remains private until failStart publishes FAILED");
             services.registrationRelease.tryEmitEmpty();
 
             var observation = start.get(5, TimeUnit.SECONDS);
-            assertEquals(com.sstlfsj.fibra.engine.ExecutionObservation.State.FAILED,
+            assertEquals(com.sstlfsj.fibra.engine.observation.ExecutionObservation.State.FAILED,
                 observation.aggregateState());
             assertEquals(0, services.reconcileRequests.get(),
                 "a sidecar that never became active must not request replacement");
@@ -388,10 +388,10 @@ class NodeRuntimeDriverTest {
 
             var started = sealed.unit.reconcileAsync("start")
                 .block(Duration.ofSeconds(5));
-            assertEquals(com.sstlfsj.fibra.engine.ExecutionObservation.State.ACTIVE,
+            assertEquals(com.sstlfsj.fibra.engine.observation.ExecutionObservation.State.ACTIVE,
                 started.aggregateState());
             assertTrue(services.reconcileRequested.await(3, TimeUnit.SECONDS));
-            assertEquals(com.sstlfsj.fibra.engine.ExecutionObservation.State.FAILED,
+            assertEquals(com.sstlfsj.fibra.engine.observation.ExecutionObservation.State.FAILED,
                 sealed.unit.snapshot().aggregateState());
 
             sealed.unit.closeAdmission();
@@ -421,7 +421,7 @@ class NodeRuntimeDriverTest {
             var sealed = sealedUnit(driver, stopCleanupFailureFacet(work),
                 "stop-cleanup-failure-entry");
 
-            assertEquals(com.sstlfsj.fibra.engine.ExecutionObservation.State.ACTIVE,
+            assertEquals(com.sstlfsj.fibra.engine.observation.ExecutionObservation.State.ACTIVE,
                 sealed.unit.reconcileAsync("start").block(Duration.ofSeconds(5))
                     .aggregateState());
             sealed.unit.closeAdmission();
@@ -447,7 +447,7 @@ class NodeRuntimeDriverTest {
             var sealed = sealedUnit(driver, disableFacet(work), "disable-entry");
             var active = sealed.unit.reconcileAsync("start-disable")
                 .block(Duration.ofSeconds(5));
-            assertEquals(com.sstlfsj.fibra.engine.ExecutionObservation.State.ACTIVE,
+            assertEquals(com.sstlfsj.fibra.engine.observation.ExecutionObservation.State.ACTIVE,
                 active.aggregateState());
             assertTrue(services.disableRequested.await(3, TimeUnit.SECONDS));
 
@@ -478,7 +478,7 @@ class NodeRuntimeDriverTest {
         var context = ConfigContextSnapshot.empty();
         var target = DeploymentTarget.of(1, List.of(new PluginSelection(
             facet.pluginId(), facet.packageRevision(), true)), graph, context);
-        var slice = com.sstlfsj.fibra.engine.RuntimeTargetSlice.builder(
+        var slice = com.sstlfsj.fibra.engine.runtime.RuntimeTargetSlice.builder(
                 NodeRuntimeProvider.RUNTIME_ID, target)
             .desired(DesiredEvaluation.evaluate(graph, context))
             .capabilities(HostCapabilitySnapshot.of(Map.of("host.process", false)))
@@ -504,15 +504,15 @@ class NodeRuntimeDriverTest {
         }
     }
 
-    private static com.sstlfsj.fibra.engine.RuntimeTargetSlice slice(
+    private static com.sstlfsj.fibra.engine.runtime.RuntimeTargetSlice slice(
         ManagedFacet facet, String entryId,
-        List<com.sstlfsj.fibra.engine.ResolvedFacetDependency> dependencies,
+        List<com.sstlfsj.fibra.engine.deployment.ResolvedFacetDependency> dependencies,
         List<ExecutionUnitKey> unitDependencies) {
         var graph = graph(facet, List.of(entryId));
         var context = ConfigContextSnapshot.empty();
         var target = DeploymentTarget.of(1, List.of(new PluginSelection(
             facet.pluginId(), facet.packageRevision(), true)), graph, context);
-        return com.sstlfsj.fibra.engine.RuntimeTargetSlice.builder(
+        return com.sstlfsj.fibra.engine.runtime.RuntimeTargetSlice.builder(
                 NodeRuntimeProvider.RUNTIME_ID, target)
             .desired(DesiredEvaluation.evaluate(graph, context))
             .capabilities(HostCapabilitySnapshot.empty())
@@ -522,7 +522,7 @@ class NodeRuntimeDriverTest {
             .build();
     }
 
-    private static com.sstlfsj.fibra.engine.RuntimeTargetSlice slice(
+    private static com.sstlfsj.fibra.engine.runtime.RuntimeTargetSlice slice(
         ManagedFacet facet, List<String> entryIds) {
         var graph = graph(facet, entryIds);
         var context = ConfigContextSnapshot.empty();
@@ -530,7 +530,7 @@ class NodeRuntimeDriverTest {
             facet.pluginId(), facet.packageRevision(), true)), graph, context);
         var dependencies = new LinkedHashMap<ExecutionUnitKey, List<ExecutionUnitKey>>();
         entryIds.forEach(id -> dependencies.put(new ExecutionUnitKey(id), List.of()));
-        return com.sstlfsj.fibra.engine.RuntimeTargetSlice.builder(
+        return com.sstlfsj.fibra.engine.runtime.RuntimeTargetSlice.builder(
                 NodeRuntimeProvider.RUNTIME_ID, target)
             .desired(DesiredEvaluation.evaluate(graph, context))
             .capabilities(HostCapabilitySnapshot.empty())
@@ -540,7 +540,7 @@ class NodeRuntimeDriverTest {
             .build();
     }
 
-    private static com.sstlfsj.fibra.engine.RuntimeTargetSlice dependencySlice(
+    private static com.sstlfsj.fibra.engine.runtime.RuntimeTargetSlice dependencySlice(
         ManagedFacet dependent, ManagedFacet dependency) {
         var entryId = "dependent-entry";
         var graph = graph(dependent, List.of(entryId));
@@ -549,10 +549,10 @@ class NodeRuntimeDriverTest {
             new PluginSelection(dependent.pluginId(), dependent.packageRevision(), true),
             new PluginSelection(dependency.pluginId(), dependency.packageRevision(), true)),
             graph, context);
-        var resolved = new com.sstlfsj.fibra.engine.ResolvedFacetDependency(
+        var resolved = new com.sstlfsj.fibra.engine.deployment.ResolvedFacetDependency(
             dependency.pluginId(), dependency.packageRevision(),
             dependency.facet().facetId(), dependency.artifactId());
-        return com.sstlfsj.fibra.engine.RuntimeTargetSlice.builder(
+        return com.sstlfsj.fibra.engine.runtime.RuntimeTargetSlice.builder(
                 NodeRuntimeProvider.RUNTIME_ID, target)
             .desired(DesiredEvaluation.evaluate(graph, context))
             .capabilities(HostCapabilitySnapshot.empty())
@@ -781,7 +781,7 @@ class NodeRuntimeDriverTest {
             .build();
     }
 
-    private static SealedUnit sealedUnit(com.sstlfsj.fibra.engine.RuntimeDriver driver,
+    private static SealedUnit sealedUnit(com.sstlfsj.fibra.engine.runtime.RuntimeDriver driver,
                                          ManagedFacet facet, String entryId) {
         var candidate = driver.createCandidate(slice(facet, List.of(entryId)));
         candidate.prepareAsync().block(Duration.ofSeconds(5));
@@ -807,12 +807,12 @@ class NodeRuntimeDriverTest {
         }
     }
 
-    private static int payloadCount(com.sstlfsj.fibra.engine.RuntimeDriver driver)
+    private static int payloadCount(com.sstlfsj.fibra.engine.runtime.RuntimeDriver driver)
         throws Exception {
         return payloads(driver).size();
     }
 
-    private static int payloadReferences(com.sstlfsj.fibra.engine.RuntimeDriver driver)
+    private static int payloadReferences(com.sstlfsj.fibra.engine.runtime.RuntimeDriver driver)
         throws Exception {
         var payload = payloads(driver).values().stream().findFirst().orElseThrow();
         var references = payload.getClass().getDeclaredField("references");
@@ -821,7 +821,7 @@ class NodeRuntimeDriverTest {
     }
 
     private static int totalPayloadReferences(
-        com.sstlfsj.fibra.engine.RuntimeDriver driver) throws Exception {
+        com.sstlfsj.fibra.engine.runtime.RuntimeDriver driver) throws Exception {
         var total = 0;
         for (var payload : payloads(driver).values()) {
             var references = payload.getClass().getDeclaredField("references");
@@ -833,7 +833,7 @@ class NodeRuntimeDriverTest {
 
     @SuppressWarnings("unchecked")
     private static Map<Object, Object> payloads(
-        com.sstlfsj.fibra.engine.RuntimeDriver driver) throws Exception {
+        com.sstlfsj.fibra.engine.runtime.RuntimeDriver driver) throws Exception {
         Field field = driver.getClass().getDeclaredField("payloads");
         field.setAccessible(true);
         return (Map<Object, Object>) field.get(driver);
@@ -845,7 +845,7 @@ class NodeRuntimeDriverTest {
     }
 
     private record SealedUnit(
-        com.sstlfsj.fibra.engine.PreparedRuntimeGeneration generation,
+        com.sstlfsj.fibra.engine.runtime.PreparedRuntimeGeneration generation,
         RuntimeUnitGeneration unit) { }
 
     private static final class Services implements RuntimeHostServices, AutoCloseable {
@@ -858,7 +858,7 @@ class NodeRuntimeDriverTest {
         private final AtomicInteger scopeCloseAttempts = new AtomicInteger();
         private final AtomicInteger reconcileRequests = new AtomicInteger();
         private final CountDownLatch reconcileRequested = new CountDownLatch(1);
-        private final AtomicReference<com.sstlfsj.fibra.engine.RuntimeUnitDisableRequest>
+        private final AtomicReference<com.sstlfsj.fibra.engine.runtime.RuntimeUnitDisableRequest>
             disableRequest = new AtomicReference<>();
         private final CountDownLatch disableRequested = new CountDownLatch(1);
         private final CountDownLatch registrationStarted = new CountDownLatch(1);
@@ -914,7 +914,7 @@ class NodeRuntimeDriverTest {
                 ? com.sstlfsj.fibra.bridge.ContributionKindRegistry.of(TEST_KIND)
                 : com.sstlfsj.fibra.bridge.ContributionKindRegistry.empty();
         }
-        @Override public com.sstlfsj.fibra.bridge.ContributionAdmission openContributionAdmission(com.sstlfsj.fibra.engine.ExecutionUnitKey key) {
+        @Override public com.sstlfsj.fibra.bridge.ContributionAdmission openContributionAdmission(com.sstlfsj.fibra.engine.execution.ExecutionUnitKey key) {
             var delegate = directory.openAdmission(key.value());
             if (!delayRegistration) return delegate;
             return new com.sstlfsj.fibra.bridge.ContributionAdmission() {
@@ -943,22 +943,22 @@ class NodeRuntimeDriverTest {
                 }
             };
         }
-        @Override public com.sstlfsj.fibra.engine.RemoteContributionInvoker remoteContributions() {
+        @Override public com.sstlfsj.fibra.engine.publication.RemoteContributionInvoker remoteContributions() {
             throw new UnsupportedOperationException();
         }
         @Override public String nextIdentity(String namespace) {
             return namespace + ':' + ++identities;
         }
         @Override public void requestReconcile(
-            Set<com.sstlfsj.fibra.engine.RuntimeUnitFence> fences,
+            Set<com.sstlfsj.fibra.engine.execution.RuntimeUnitFence> fences,
             String reason) {
             reconcileRequests.incrementAndGet();
             reconcileRequested.countDown();
         }
         @Override public void requestObservationRefresh(
-            com.sstlfsj.fibra.engine.RuntimeUnitFence fence) { }
+            com.sstlfsj.fibra.engine.execution.RuntimeUnitFence fence) { }
         @Override public void requestDisable(
-            com.sstlfsj.fibra.engine.RuntimeUnitDisableRequest request) {
+            com.sstlfsj.fibra.engine.runtime.RuntimeUnitDisableRequest request) {
             disableRequest.set(request);
             disableRequested.countDown();
         }

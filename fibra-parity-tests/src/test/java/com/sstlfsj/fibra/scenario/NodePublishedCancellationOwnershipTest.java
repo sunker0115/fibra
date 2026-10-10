@@ -11,13 +11,13 @@ import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.PluginDefinitionRef;
 import com.sstlfsj.fibra.engine.ApplyDeployment;
-import com.sstlfsj.fibra.engine.DeploymentTargetStore;
-import com.sstlfsj.fibra.engine.ExecutionUnitKey;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTargetStore;
+import com.sstlfsj.fibra.engine.execution.ExecutionUnitKey;
 import com.sstlfsj.fibra.engine.FibraEngine;
-import com.sstlfsj.fibra.engine.PluginSelection;
-import com.sstlfsj.fibra.engine.PublishedRevisionConflictException;
-import com.sstlfsj.fibra.engine.PublishedView;
-import com.sstlfsj.fibra.engine.RetirementPhase;
+import com.sstlfsj.fibra.engine.deployment.PluginSelection;
+import com.sstlfsj.fibra.engine.publication.PublishedRevisionConflictException;
+import com.sstlfsj.fibra.engine.publication.PublishedView;
+import com.sstlfsj.fibra.engine.observation.RetirementPhase;
 import com.sstlfsj.fibra.plugins.tool.ToolContributions;
 import com.sstlfsj.fibra.plugins.tool.ToolContent;
 import com.sstlfsj.fibra.plugins.tool.ToolRequest;
@@ -251,7 +251,7 @@ class NodePublishedCancellationOwnershipTest {
         throw new AssertionError("实例停用未进入 contribution 排空阶段");
     }
 
-    private static com.sstlfsj.fibra.engine.ExecutionObservation.Detail detail(
+    private static com.sstlfsj.fibra.engine.observation.ExecutionObservation.Detail detail(
         PublishedView view) {
         var key = new ExecutionUnitKey(INSTANCE);
         var observation = currentUnits(view).get(key);
@@ -260,12 +260,12 @@ class NodePublishedCancellationOwnershipTest {
             .executions().getFirst();
     }
 
-    private static Map<ExecutionUnitKey, com.sstlfsj.fibra.engine.ExecutionObservation>
+    private static Map<ExecutionUnitKey, com.sstlfsj.fibra.engine.observation.ExecutionObservation>
         currentUnits(PublishedView view) {
         return view.engine().current().map(current -> current.observations()).orElse(Map.of());
     }
 
-    private static Map<ExecutionUnitKey, com.sstlfsj.fibra.engine.ExecutionObservation>
+    private static Map<ExecutionUnitKey, com.sstlfsj.fibra.engine.observation.ExecutionObservation>
         retirementUnits(PublishedView view) {
         return view.engine().retirementBatch().map(batch -> batch.observations()).orElse(Map.of());
     }

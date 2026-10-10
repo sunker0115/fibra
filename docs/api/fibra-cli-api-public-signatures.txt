@@ -6,56 +6,56 @@ public final class com.sstlfsj.fibra.cli.api.CliApplication {
   public java.lang.String rootName();
   public java.lang.String description();
   public java.lang.String version();
-  public java.util.List<com.sstlfsj.fibra.cli.api.CliBootstrapCommand> bootstrapCommands();
-  public java.util.Optional<com.sstlfsj.fibra.cli.api.CliInputHandler> inputHandler();
+  public java.util.List<com.sstlfsj.fibra.cli.api.command.CliBootstrapCommand> bootstrapCommands();
+  public java.util.Optional<com.sstlfsj.fibra.cli.api.input.CliInputHandler> inputHandler();
 }
 ## com.sstlfsj.fibra.cli.api.CliApplication$Builder
 Compiled from "CliApplication.java"
 public final class com.sstlfsj.fibra.cli.api.CliApplication$Builder {
   public com.sstlfsj.fibra.cli.api.CliApplication$Builder description(java.lang.String);
   public com.sstlfsj.fibra.cli.api.CliApplication$Builder version(java.lang.String);
-  public com.sstlfsj.fibra.cli.api.CliApplication$Builder addBootstrapCommand(com.sstlfsj.fibra.cli.api.CliBootstrapCommand);
-  public com.sstlfsj.fibra.cli.api.CliApplication$Builder inputHandler(com.sstlfsj.fibra.cli.api.CliInputHandler);
+  public com.sstlfsj.fibra.cli.api.CliApplication$Builder addBootstrapCommand(com.sstlfsj.fibra.cli.api.command.CliBootstrapCommand);
+  public com.sstlfsj.fibra.cli.api.CliApplication$Builder inputHandler(com.sstlfsj.fibra.cli.api.input.CliInputHandler);
   public com.sstlfsj.fibra.cli.api.CliApplication build();
 }
-## com.sstlfsj.fibra.cli.api.CliBootstrapCommand
+## com.sstlfsj.fibra.cli.api.command.CliBootstrapCommand
 Compiled from "CliBootstrapCommand.java"
-public final class com.sstlfsj.fibra.cli.api.CliBootstrapCommand extends java.lang.Record {
-  public com.sstlfsj.fibra.cli.api.CliBootstrapCommand(com.sstlfsj.fibra.cli.api.CliCommandDescriptor, com.sstlfsj.fibra.cli.api.CliCommandHandler);
+public final class com.sstlfsj.fibra.cli.api.command.CliBootstrapCommand extends java.lang.Record {
+  public com.sstlfsj.fibra.cli.api.command.CliBootstrapCommand(com.sstlfsj.fibra.cli.api.command.CliCommandDescriptor, com.sstlfsj.fibra.cli.api.command.CliCommandHandler);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
-  public com.sstlfsj.fibra.cli.api.CliCommandDescriptor descriptor();
-  public com.sstlfsj.fibra.cli.api.CliCommandHandler handler();
+  public com.sstlfsj.fibra.cli.api.command.CliCommandDescriptor descriptor();
+  public com.sstlfsj.fibra.cli.api.command.CliCommandHandler handler();
 }
-## com.sstlfsj.fibra.cli.api.CliCommandContributions
+## com.sstlfsj.fibra.cli.api.command.CliCommandContributions
 Compiled from "CliCommandContributions.java"
-public final class com.sstlfsj.fibra.cli.api.CliCommandContributions {
-  public static final com.sstlfsj.fibra.bridge.ContributionKind<com.sstlfsj.fibra.cli.api.CliCommandDescriptor, com.sstlfsj.fibra.cli.api.CliCommandRequest, com.sstlfsj.fibra.cli.api.CliCommandResult> KIND;
+public final class com.sstlfsj.fibra.cli.api.command.CliCommandContributions {
+  public static final com.sstlfsj.fibra.bridge.ContributionKind<com.sstlfsj.fibra.cli.api.command.CliCommandDescriptor, com.sstlfsj.fibra.cli.api.command.CliCommandRequest, com.sstlfsj.fibra.cli.api.command.CliCommandResult> KIND;
   public static com.sstlfsj.fibra.bridge.ContributionId id(java.lang.String, java.lang.String);
 }
-## com.sstlfsj.fibra.cli.api.CliCommandDescriptor
+## com.sstlfsj.fibra.cli.api.command.CliCommandDescriptor
 Compiled from "CliCommandDescriptor.java"
-public final class com.sstlfsj.fibra.cli.api.CliCommandDescriptor extends java.lang.Record {
-  public com.sstlfsj.fibra.cli.api.CliCommandDescriptor(java.util.List<java.lang.String>, java.lang.String, java.util.List<com.sstlfsj.fibra.cli.api.CliCommandOption>, java.lang.String, java.util.List<java.lang.String>);
+public final class com.sstlfsj.fibra.cli.api.command.CliCommandDescriptor extends java.lang.Record {
+  public com.sstlfsj.fibra.cli.api.command.CliCommandDescriptor(java.util.List<java.lang.String>, java.lang.String, java.util.List<com.sstlfsj.fibra.cli.api.command.CliCommandOption>, java.lang.String, java.util.List<java.lang.String>);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public java.util.List<java.lang.String> path();
   public java.lang.String description();
-  public java.util.List<com.sstlfsj.fibra.cli.api.CliCommandOption> options();
+  public java.util.List<com.sstlfsj.fibra.cli.api.command.CliCommandOption> options();
   public java.lang.String argumentsLabel();
   public java.util.List<java.lang.String> argumentCompletions();
 }
-## com.sstlfsj.fibra.cli.api.CliCommandHandler
+## com.sstlfsj.fibra.cli.api.command.CliCommandHandler
 Compiled from "CliCommandHandler.java"
-public interface com.sstlfsj.fibra.cli.api.CliCommandHandler {
-  public abstract com.sstlfsj.fibra.cli.api.CliCommandResult invoke(com.sstlfsj.fibra.cli.api.CliCommandRequest) throws java.lang.Exception;
+public interface com.sstlfsj.fibra.cli.api.command.CliCommandHandler {
+  public abstract com.sstlfsj.fibra.cli.api.command.CliCommandResult invoke(com.sstlfsj.fibra.cli.api.command.CliCommandRequest) throws java.lang.Exception;
 }
-## com.sstlfsj.fibra.cli.api.CliCommandOption
+## com.sstlfsj.fibra.cli.api.command.CliCommandOption
 Compiled from "CliCommandOption.java"
-public final class com.sstlfsj.fibra.cli.api.CliCommandOption extends java.lang.Record {
-  public com.sstlfsj.fibra.cli.api.CliCommandOption(java.util.List<java.lang.String>, java.lang.String, boolean, boolean, java.util.List<java.lang.String>);
+public final class com.sstlfsj.fibra.cli.api.command.CliCommandOption extends java.lang.Record {
+  public com.sstlfsj.fibra.cli.api.command.CliCommandOption(java.util.List<java.lang.String>, java.lang.String, boolean, boolean, java.util.List<java.lang.String>);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
@@ -65,92 +65,92 @@ public final class com.sstlfsj.fibra.cli.api.CliCommandOption extends java.lang.
   public boolean sensitive();
   public java.util.List<java.lang.String> completions();
 }
-## com.sstlfsj.fibra.cli.api.CliCommandRequest
+## com.sstlfsj.fibra.cli.api.command.CliCommandRequest
 Compiled from "CliCommandRequest.java"
-public final class com.sstlfsj.fibra.cli.api.CliCommandRequest extends java.lang.Record {
-  public com.sstlfsj.fibra.cli.api.CliCommandRequest(java.util.List<java.lang.String>, java.util.Map<java.lang.String, java.lang.String>, com.sstlfsj.fibra.cli.api.CliInvocation);
+public final class com.sstlfsj.fibra.cli.api.command.CliCommandRequest extends java.lang.Record {
+  public com.sstlfsj.fibra.cli.api.command.CliCommandRequest(java.util.List<java.lang.String>, java.util.Map<java.lang.String, java.lang.String>, com.sstlfsj.fibra.cli.api.invocation.CliInvocation);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public java.util.List<java.lang.String> arguments();
   public java.util.Map<java.lang.String, java.lang.String> options();
-  public com.sstlfsj.fibra.cli.api.CliInvocation invocation();
+  public com.sstlfsj.fibra.cli.api.invocation.CliInvocation invocation();
 }
-## com.sstlfsj.fibra.cli.api.CliCommandResult
+## com.sstlfsj.fibra.cli.api.command.CliCommandResult
 Compiled from "CliCommandResult.java"
-public final class com.sstlfsj.fibra.cli.api.CliCommandResult extends java.lang.Record {
-  public com.sstlfsj.fibra.cli.api.CliCommandResult(com.sstlfsj.fibra.cli.api.CliExitStatus);
-  public static com.sstlfsj.fibra.cli.api.CliCommandResult success();
+public final class com.sstlfsj.fibra.cli.api.command.CliCommandResult extends java.lang.Record {
+  public com.sstlfsj.fibra.cli.api.command.CliCommandResult(com.sstlfsj.fibra.cli.api.invocation.CliExitStatus);
+  public static com.sstlfsj.fibra.cli.api.command.CliCommandResult success();
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
-  public com.sstlfsj.fibra.cli.api.CliExitStatus status();
+  public com.sstlfsj.fibra.cli.api.invocation.CliExitStatus status();
 }
-## com.sstlfsj.fibra.cli.api.CliExitStatus
-Compiled from "CliExitStatus.java"
-public final class com.sstlfsj.fibra.cli.api.CliExitStatus extends java.lang.Enum<com.sstlfsj.fibra.cli.api.CliExitStatus> {
-  public static final com.sstlfsj.fibra.cli.api.CliExitStatus SUCCESS;
-  public static final com.sstlfsj.fibra.cli.api.CliExitStatus USAGE_ERROR;
-  public static final com.sstlfsj.fibra.cli.api.CliExitStatus STARTUP_ERROR;
-  public static final com.sstlfsj.fibra.cli.api.CliExitStatus INVOCATION_ERROR;
-  public static final com.sstlfsj.fibra.cli.api.CliExitStatus STALE_OR_REVOKED;
-  public static final com.sstlfsj.fibra.cli.api.CliExitStatus CLOSING;
-  public static final com.sstlfsj.fibra.cli.api.CliExitStatus CLOSE_ERROR;
-  public static final com.sstlfsj.fibra.cli.api.CliExitStatus DRAIN_TIMEOUT;
-  public static final com.sstlfsj.fibra.cli.api.CliExitStatus CANCELLED;
-  public static com.sstlfsj.fibra.cli.api.CliExitStatus[] values();
-  public static com.sstlfsj.fibra.cli.api.CliExitStatus valueOf(java.lang.String);
-  public int code();
-}
-## com.sstlfsj.fibra.cli.api.CliInputHandler
+## com.sstlfsj.fibra.cli.api.input.CliInputHandler
 Compiled from "CliInputHandler.java"
-public interface com.sstlfsj.fibra.cli.api.CliInputHandler {
-  public abstract com.sstlfsj.fibra.cli.api.CliInputResult invoke(com.sstlfsj.fibra.cli.api.CliInputRequest) throws java.lang.Exception;
+public interface com.sstlfsj.fibra.cli.api.input.CliInputHandler {
+  public abstract com.sstlfsj.fibra.cli.api.input.CliInputResult invoke(com.sstlfsj.fibra.cli.api.input.CliInputRequest) throws java.lang.Exception;
 }
-## com.sstlfsj.fibra.cli.api.CliInputRequest
+## com.sstlfsj.fibra.cli.api.input.CliInputRequest
 Compiled from "CliInputRequest.java"
-public final class com.sstlfsj.fibra.cli.api.CliInputRequest extends java.lang.Record {
-  public com.sstlfsj.fibra.cli.api.CliInputRequest(java.lang.String, com.sstlfsj.fibra.cli.api.CliInvocation);
+public final class com.sstlfsj.fibra.cli.api.input.CliInputRequest extends java.lang.Record {
+  public com.sstlfsj.fibra.cli.api.input.CliInputRequest(java.lang.String, com.sstlfsj.fibra.cli.api.invocation.CliInvocation);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public java.lang.String text();
-  public com.sstlfsj.fibra.cli.api.CliInvocation invocation();
+  public com.sstlfsj.fibra.cli.api.invocation.CliInvocation invocation();
 }
-## com.sstlfsj.fibra.cli.api.CliInputResult
+## com.sstlfsj.fibra.cli.api.input.CliInputResult
 Compiled from "CliInputResult.java"
-public final class com.sstlfsj.fibra.cli.api.CliInputResult extends java.lang.Record {
-  public com.sstlfsj.fibra.cli.api.CliInputResult(com.sstlfsj.fibra.cli.api.CliCommandResult, boolean);
-  public static com.sstlfsj.fibra.cli.api.CliInputResult continueWith(com.sstlfsj.fibra.cli.api.CliCommandResult);
-  public static com.sstlfsj.fibra.cli.api.CliInputResult exitWith(com.sstlfsj.fibra.cli.api.CliCommandResult);
+public final class com.sstlfsj.fibra.cli.api.input.CliInputResult extends java.lang.Record {
+  public com.sstlfsj.fibra.cli.api.input.CliInputResult(com.sstlfsj.fibra.cli.api.command.CliCommandResult, boolean);
+  public static com.sstlfsj.fibra.cli.api.input.CliInputResult continueWith(com.sstlfsj.fibra.cli.api.command.CliCommandResult);
+  public static com.sstlfsj.fibra.cli.api.input.CliInputResult exitWith(com.sstlfsj.fibra.cli.api.command.CliCommandResult);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
-  public com.sstlfsj.fibra.cli.api.CliCommandResult commandResult();
+  public com.sstlfsj.fibra.cli.api.command.CliCommandResult commandResult();
   public boolean exitRequested();
 }
-## com.sstlfsj.fibra.cli.api.CliInvocation
+## com.sstlfsj.fibra.cli.api.invocation.CliExitStatus
+Compiled from "CliExitStatus.java"
+public final class com.sstlfsj.fibra.cli.api.invocation.CliExitStatus extends java.lang.Enum<com.sstlfsj.fibra.cli.api.invocation.CliExitStatus> {
+  public static final com.sstlfsj.fibra.cli.api.invocation.CliExitStatus SUCCESS;
+  public static final com.sstlfsj.fibra.cli.api.invocation.CliExitStatus USAGE_ERROR;
+  public static final com.sstlfsj.fibra.cli.api.invocation.CliExitStatus STARTUP_ERROR;
+  public static final com.sstlfsj.fibra.cli.api.invocation.CliExitStatus INVOCATION_ERROR;
+  public static final com.sstlfsj.fibra.cli.api.invocation.CliExitStatus STALE_OR_REVOKED;
+  public static final com.sstlfsj.fibra.cli.api.invocation.CliExitStatus CLOSING;
+  public static final com.sstlfsj.fibra.cli.api.invocation.CliExitStatus CLOSE_ERROR;
+  public static final com.sstlfsj.fibra.cli.api.invocation.CliExitStatus DRAIN_TIMEOUT;
+  public static final com.sstlfsj.fibra.cli.api.invocation.CliExitStatus CANCELLED;
+  public static com.sstlfsj.fibra.cli.api.invocation.CliExitStatus[] values();
+  public static com.sstlfsj.fibra.cli.api.invocation.CliExitStatus valueOf(java.lang.String);
+  public int code();
+}
+## com.sstlfsj.fibra.cli.api.invocation.CliInvocation
 Compiled from "CliInvocation.java"
-public final class com.sstlfsj.fibra.cli.api.CliInvocation extends java.lang.Record {
-  public com.sstlfsj.fibra.cli.api.CliInvocation(com.sstlfsj.fibra.CancellationToken, com.sstlfsj.fibra.cli.api.CliOutput, com.sstlfsj.fibra.cli.api.CliTerminal, com.sstlfsj.fibra.cli.api.CliProfile);
+public final class com.sstlfsj.fibra.cli.api.invocation.CliInvocation extends java.lang.Record {
+  public com.sstlfsj.fibra.cli.api.invocation.CliInvocation(com.sstlfsj.fibra.CancellationToken, com.sstlfsj.fibra.cli.api.invocation.CliOutput, com.sstlfsj.fibra.cli.api.terminal.CliTerminal, com.sstlfsj.fibra.cli.api.invocation.CliProfile);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public com.sstlfsj.fibra.CancellationToken cancellation();
-  public com.sstlfsj.fibra.cli.api.CliOutput output();
-  public com.sstlfsj.fibra.cli.api.CliTerminal terminal();
-  public com.sstlfsj.fibra.cli.api.CliProfile profile();
+  public com.sstlfsj.fibra.cli.api.invocation.CliOutput output();
+  public com.sstlfsj.fibra.cli.api.terminal.CliTerminal terminal();
+  public com.sstlfsj.fibra.cli.api.invocation.CliProfile profile();
 }
-## com.sstlfsj.fibra.cli.api.CliOutput
+## com.sstlfsj.fibra.cli.api.invocation.CliOutput
 Compiled from "CliOutput.java"
-public interface com.sstlfsj.fibra.cli.api.CliOutput {
+public interface com.sstlfsj.fibra.cli.api.invocation.CliOutput {
   public abstract void stdout(java.lang.String);
   public abstract void stderr(java.lang.String);
 }
-## com.sstlfsj.fibra.cli.api.CliProfile
+## com.sstlfsj.fibra.cli.api.invocation.CliProfile
 Compiled from "CliProfile.java"
-public final class com.sstlfsj.fibra.cli.api.CliProfile extends java.lang.Record {
-  public com.sstlfsj.fibra.cli.api.CliProfile(java.lang.String, java.nio.file.Path, java.nio.file.Path, java.nio.file.Path, java.nio.file.Path);
+public final class com.sstlfsj.fibra.cli.api.invocation.CliProfile extends java.lang.Record {
+  public com.sstlfsj.fibra.cli.api.invocation.CliProfile(java.lang.String, java.nio.file.Path, java.nio.file.Path, java.nio.file.Path, java.nio.file.Path);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
@@ -160,128 +160,128 @@ public final class com.sstlfsj.fibra.cli.api.CliProfile extends java.lang.Record
   public java.nio.file.Path pluginsRoot();
   public java.nio.file.Path dataRoot();
 }
-## com.sstlfsj.fibra.cli.api.CliTerminal
+## com.sstlfsj.fibra.cli.api.terminal.CliTerminal
 Compiled from "CliTerminal.java"
-public interface com.sstlfsj.fibra.cli.api.CliTerminal {
+public interface com.sstlfsj.fibra.cli.api.terminal.CliTerminal {
   public abstract boolean interactive();
-  public abstract com.sstlfsj.fibra.cli.api.CliTerminalLease acquire();
+  public abstract com.sstlfsj.fibra.cli.api.terminal.CliTerminalLease acquire();
 }
-## com.sstlfsj.fibra.cli.api.CliTerminalCapabilities
+## com.sstlfsj.fibra.cli.api.terminal.CliTerminalCapabilities
 Compiled from "CliTerminalCapabilities.java"
-public final class com.sstlfsj.fibra.cli.api.CliTerminalCapabilities extends java.lang.Record {
-  public com.sstlfsj.fibra.cli.api.CliTerminalCapabilities(boolean, boolean);
+public final class com.sstlfsj.fibra.cli.api.terminal.CliTerminalCapabilities extends java.lang.Record {
+  public com.sstlfsj.fibra.cli.api.terminal.CliTerminalCapabilities(boolean, boolean);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public boolean color();
   public boolean resize();
 }
-## com.sstlfsj.fibra.cli.api.CliTerminalControl
+## com.sstlfsj.fibra.cli.api.terminal.CliTerminalControl
 Compiled from "CliTerminalControl.java"
-public interface com.sstlfsj.fibra.cli.api.CliTerminalControl {
+public interface com.sstlfsj.fibra.cli.api.terminal.CliTerminalControl {
   public abstract boolean requestRender();
   public abstract boolean finish();
 }
-## com.sstlfsj.fibra.cli.api.CliTerminalCursor
+## com.sstlfsj.fibra.cli.api.terminal.CliTerminalCursor
 Compiled from "CliTerminalCursor.java"
-public final class com.sstlfsj.fibra.cli.api.CliTerminalCursor extends java.lang.Record {
-  public com.sstlfsj.fibra.cli.api.CliTerminalCursor(int, int);
+public final class com.sstlfsj.fibra.cli.api.terminal.CliTerminalCursor extends java.lang.Record {
+  public com.sstlfsj.fibra.cli.api.terminal.CliTerminalCursor(int, int);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public int row();
   public int column();
 }
-## com.sstlfsj.fibra.cli.api.CliTerminalFrame
+## com.sstlfsj.fibra.cli.api.terminal.CliTerminalFrame
 Compiled from "CliTerminalFrame.java"
-public final class com.sstlfsj.fibra.cli.api.CliTerminalFrame extends java.lang.Record {
-  public com.sstlfsj.fibra.cli.api.CliTerminalFrame(java.util.List<java.lang.String>, java.util.Optional<com.sstlfsj.fibra.cli.api.CliTerminalCursor>);
+public final class com.sstlfsj.fibra.cli.api.terminal.CliTerminalFrame extends java.lang.Record {
+  public com.sstlfsj.fibra.cli.api.terminal.CliTerminalFrame(java.util.List<java.lang.String>, java.util.Optional<com.sstlfsj.fibra.cli.api.terminal.CliTerminalCursor>);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public java.util.List<java.lang.String> lines();
-  public java.util.Optional<com.sstlfsj.fibra.cli.api.CliTerminalCursor> cursor();
+  public java.util.Optional<com.sstlfsj.fibra.cli.api.terminal.CliTerminalCursor> cursor();
 }
-## com.sstlfsj.fibra.cli.api.CliTerminalInput
+## com.sstlfsj.fibra.cli.api.terminal.CliTerminalInput
 Compiled from "CliTerminalInput.java"
-public final class com.sstlfsj.fibra.cli.api.CliTerminalInput {
-  public static com.sstlfsj.fibra.cli.api.CliTerminalInput key(com.sstlfsj.fibra.cli.api.CliTerminalKey, java.lang.String, java.util.Set<com.sstlfsj.fibra.cli.api.CliTerminalModifier>);
-  public static com.sstlfsj.fibra.cli.api.CliTerminalInput paste(java.lang.String);
+public final class com.sstlfsj.fibra.cli.api.terminal.CliTerminalInput {
+  public static com.sstlfsj.fibra.cli.api.terminal.CliTerminalInput key(com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey, java.lang.String, java.util.Set<com.sstlfsj.fibra.cli.api.terminal.CliTerminalModifier>);
+  public static com.sstlfsj.fibra.cli.api.terminal.CliTerminalInput paste(java.lang.String);
   public boolean isPaste();
-  public java.util.Optional<com.sstlfsj.fibra.cli.api.CliTerminalKey> key();
+  public java.util.Optional<com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey> key();
   public java.lang.String text();
-  public java.util.Set<com.sstlfsj.fibra.cli.api.CliTerminalModifier> modifiers();
+  public java.util.Set<com.sstlfsj.fibra.cli.api.terminal.CliTerminalModifier> modifiers();
   public boolean equals(java.lang.Object);
   public int hashCode();
   public java.lang.String toString();
 }
-## com.sstlfsj.fibra.cli.api.CliTerminalKey
+## com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey
 Compiled from "CliTerminalKey.java"
-public final class com.sstlfsj.fibra.cli.api.CliTerminalKey extends java.lang.Enum<com.sstlfsj.fibra.cli.api.CliTerminalKey> {
-  public static final com.sstlfsj.fibra.cli.api.CliTerminalKey CHARACTER;
-  public static final com.sstlfsj.fibra.cli.api.CliTerminalKey ENTER;
-  public static final com.sstlfsj.fibra.cli.api.CliTerminalKey TAB;
-  public static final com.sstlfsj.fibra.cli.api.CliTerminalKey BACKSPACE;
-  public static final com.sstlfsj.fibra.cli.api.CliTerminalKey ESCAPE;
-  public static final com.sstlfsj.fibra.cli.api.CliTerminalKey UP;
-  public static final com.sstlfsj.fibra.cli.api.CliTerminalKey DOWN;
-  public static final com.sstlfsj.fibra.cli.api.CliTerminalKey LEFT;
-  public static final com.sstlfsj.fibra.cli.api.CliTerminalKey RIGHT;
-  public static final com.sstlfsj.fibra.cli.api.CliTerminalKey HOME;
-  public static final com.sstlfsj.fibra.cli.api.CliTerminalKey END;
-  public static final com.sstlfsj.fibra.cli.api.CliTerminalKey DELETE;
-  public static final com.sstlfsj.fibra.cli.api.CliTerminalKey PAGE_UP;
-  public static final com.sstlfsj.fibra.cli.api.CliTerminalKey PAGE_DOWN;
-  public static final com.sstlfsj.fibra.cli.api.CliTerminalKey EOF;
-  public static com.sstlfsj.fibra.cli.api.CliTerminalKey[] values();
-  public static com.sstlfsj.fibra.cli.api.CliTerminalKey valueOf(java.lang.String);
+public final class com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey extends java.lang.Enum<com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey> {
+  public static final com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey CHARACTER;
+  public static final com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey ENTER;
+  public static final com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey TAB;
+  public static final com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey BACKSPACE;
+  public static final com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey ESCAPE;
+  public static final com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey UP;
+  public static final com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey DOWN;
+  public static final com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey LEFT;
+  public static final com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey RIGHT;
+  public static final com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey HOME;
+  public static final com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey END;
+  public static final com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey DELETE;
+  public static final com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey PAGE_UP;
+  public static final com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey PAGE_DOWN;
+  public static final com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey EOF;
+  public static com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey[] values();
+  public static com.sstlfsj.fibra.cli.api.terminal.CliTerminalKey valueOf(java.lang.String);
 }
-## com.sstlfsj.fibra.cli.api.CliTerminalLease
+## com.sstlfsj.fibra.cli.api.terminal.CliTerminalLease
 Compiled from "CliTerminalLease.java"
-public interface com.sstlfsj.fibra.cli.api.CliTerminalLease extends java.lang.AutoCloseable {
-  public abstract com.sstlfsj.fibra.cli.api.CliTerminalCapabilities capabilities();
-  public abstract void run(com.sstlfsj.fibra.cli.api.CliTerminalRenderer) throws java.lang.Exception;
+public interface com.sstlfsj.fibra.cli.api.terminal.CliTerminalLease extends java.lang.AutoCloseable {
+  public abstract com.sstlfsj.fibra.cli.api.terminal.CliTerminalCapabilities capabilities();
+  public abstract void run(com.sstlfsj.fibra.cli.api.terminal.CliTerminalRenderer) throws java.lang.Exception;
   public abstract void close();
 }
-## com.sstlfsj.fibra.cli.api.CliTerminalModifier
+## com.sstlfsj.fibra.cli.api.terminal.CliTerminalModifier
 Compiled from "CliTerminalModifier.java"
-public final class com.sstlfsj.fibra.cli.api.CliTerminalModifier extends java.lang.Enum<com.sstlfsj.fibra.cli.api.CliTerminalModifier> {
-  public static final com.sstlfsj.fibra.cli.api.CliTerminalModifier SHIFT;
-  public static final com.sstlfsj.fibra.cli.api.CliTerminalModifier CONTROL;
-  public static com.sstlfsj.fibra.cli.api.CliTerminalModifier[] values();
-  public static com.sstlfsj.fibra.cli.api.CliTerminalModifier valueOf(java.lang.String);
+public final class com.sstlfsj.fibra.cli.api.terminal.CliTerminalModifier extends java.lang.Enum<com.sstlfsj.fibra.cli.api.terminal.CliTerminalModifier> {
+  public static final com.sstlfsj.fibra.cli.api.terminal.CliTerminalModifier SHIFT;
+  public static final com.sstlfsj.fibra.cli.api.terminal.CliTerminalModifier CONTROL;
+  public static com.sstlfsj.fibra.cli.api.terminal.CliTerminalModifier[] values();
+  public static com.sstlfsj.fibra.cli.api.terminal.CliTerminalModifier valueOf(java.lang.String);
 }
-## com.sstlfsj.fibra.cli.api.CliTerminalRenderer
+## com.sstlfsj.fibra.cli.api.terminal.CliTerminalRenderer
 Compiled from "CliTerminalRenderer.java"
-public interface com.sstlfsj.fibra.cli.api.CliTerminalRenderer {
-  public default void start(com.sstlfsj.fibra.cli.api.CliTerminalControl) throws java.lang.Exception;
-  public default void input(com.sstlfsj.fibra.cli.api.CliTerminalInput) throws java.lang.Exception;
-  public default void resize(com.sstlfsj.fibra.cli.api.CliTerminalSize) throws java.lang.Exception;
-  public abstract com.sstlfsj.fibra.cli.api.CliTerminalFrame render(com.sstlfsj.fibra.cli.api.CliTerminalSize) throws java.lang.Exception;
+public interface com.sstlfsj.fibra.cli.api.terminal.CliTerminalRenderer {
+  public default void start(com.sstlfsj.fibra.cli.api.terminal.CliTerminalControl) throws java.lang.Exception;
+  public default void input(com.sstlfsj.fibra.cli.api.terminal.CliTerminalInput) throws java.lang.Exception;
+  public default void resize(com.sstlfsj.fibra.cli.api.terminal.CliTerminalSize) throws java.lang.Exception;
+  public abstract com.sstlfsj.fibra.cli.api.terminal.CliTerminalFrame render(com.sstlfsj.fibra.cli.api.terminal.CliTerminalSize) throws java.lang.Exception;
   public default void stop() throws java.lang.Exception;
 }
-## com.sstlfsj.fibra.cli.api.CliTerminalSize
+## com.sstlfsj.fibra.cli.api.terminal.CliTerminalSize
 Compiled from "CliTerminalSize.java"
-public final class com.sstlfsj.fibra.cli.api.CliTerminalSize extends java.lang.Record {
-  public com.sstlfsj.fibra.cli.api.CliTerminalSize(int, int);
+public final class com.sstlfsj.fibra.cli.api.terminal.CliTerminalSize extends java.lang.Record {
+  public com.sstlfsj.fibra.cli.api.terminal.CliTerminalSize(int, int);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public int columns();
   public int rows();
 }
-## com.sstlfsj.fibra.cli.api.CliTerminalUnavailableException
+## com.sstlfsj.fibra.cli.api.terminal.CliTerminalUnavailableException
 Compiled from "CliTerminalUnavailableException.java"
-public final class com.sstlfsj.fibra.cli.api.CliTerminalUnavailableException extends java.lang.IllegalStateException {
-  public com.sstlfsj.fibra.cli.api.CliTerminalUnavailableException(com.sstlfsj.fibra.cli.api.CliTerminalUnavailableReason);
-  public com.sstlfsj.fibra.cli.api.CliTerminalUnavailableReason reason();
+public final class com.sstlfsj.fibra.cli.api.terminal.CliTerminalUnavailableException extends java.lang.IllegalStateException {
+  public com.sstlfsj.fibra.cli.api.terminal.CliTerminalUnavailableException(com.sstlfsj.fibra.cli.api.terminal.CliTerminalUnavailableReason);
+  public com.sstlfsj.fibra.cli.api.terminal.CliTerminalUnavailableReason reason();
 }
-## com.sstlfsj.fibra.cli.api.CliTerminalUnavailableReason
+## com.sstlfsj.fibra.cli.api.terminal.CliTerminalUnavailableReason
 Compiled from "CliTerminalUnavailableReason.java"
-public final class com.sstlfsj.fibra.cli.api.CliTerminalUnavailableReason extends java.lang.Enum<com.sstlfsj.fibra.cli.api.CliTerminalUnavailableReason> {
-  public static final com.sstlfsj.fibra.cli.api.CliTerminalUnavailableReason UNSUPPORTED;
-  public static final com.sstlfsj.fibra.cli.api.CliTerminalUnavailableReason BUSY;
-  public static final com.sstlfsj.fibra.cli.api.CliTerminalUnavailableReason CLOSED;
-  public static com.sstlfsj.fibra.cli.api.CliTerminalUnavailableReason[] values();
-  public static com.sstlfsj.fibra.cli.api.CliTerminalUnavailableReason valueOf(java.lang.String);
+public final class com.sstlfsj.fibra.cli.api.terminal.CliTerminalUnavailableReason extends java.lang.Enum<com.sstlfsj.fibra.cli.api.terminal.CliTerminalUnavailableReason> {
+  public static final com.sstlfsj.fibra.cli.api.terminal.CliTerminalUnavailableReason UNSUPPORTED;
+  public static final com.sstlfsj.fibra.cli.api.terminal.CliTerminalUnavailableReason BUSY;
+  public static final com.sstlfsj.fibra.cli.api.terminal.CliTerminalUnavailableReason CLOSED;
+  public static com.sstlfsj.fibra.cli.api.terminal.CliTerminalUnavailableReason[] values();
+  public static com.sstlfsj.fibra.cli.api.terminal.CliTerminalUnavailableReason valueOf(java.lang.String);
 }

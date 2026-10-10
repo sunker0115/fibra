@@ -2,7 +2,7 @@ package com.sstlfsj.fibra.registry;
 
 import com.sstlfsj.fibra.config.ConfigContextSnapshot;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
-import com.sstlfsj.fibra.engine.PluginSelection;
+import com.sstlfsj.fibra.engine.deployment.PluginSelection;
 
 import java.util.List;
 import java.util.Objects;

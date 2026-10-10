@@ -1,6 +1,6 @@
 package com.sstlfsj.fibra.cli;
 
-import com.sstlfsj.fibra.cli.api.CliCommandDescriptor;
+import com.sstlfsj.fibra.cli.api.command.CliCommandDescriptor;
 import org.jline.reader.impl.DefaultParser;
 import org.jline.reader.impl.history.DefaultHistory;
 

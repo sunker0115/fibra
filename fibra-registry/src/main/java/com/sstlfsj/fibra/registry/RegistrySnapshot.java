@@ -2,12 +2,12 @@ package com.sstlfsj.fibra.registry;
 
 import com.sstlfsj.fibra.artifact.PluginId;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
-import com.sstlfsj.fibra.engine.CurrentAttemptSnapshot;
-import com.sstlfsj.fibra.engine.DeploymentTarget;
-import com.sstlfsj.fibra.engine.EngineDiagnostics;
-import com.sstlfsj.fibra.engine.EngineSnapshot;
-import com.sstlfsj.fibra.engine.ExecutionObservation;
-import com.sstlfsj.fibra.engine.PluginSelection;
+import com.sstlfsj.fibra.engine.observation.CurrentAttemptSnapshot;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTarget;
+import com.sstlfsj.fibra.engine.observation.EngineDiagnostics;
+import com.sstlfsj.fibra.engine.observation.EngineSnapshot;
+import com.sstlfsj.fibra.engine.observation.ExecutionObservation;
+import com.sstlfsj.fibra.engine.deployment.PluginSelection;
 
 import java.util.List;
 import java.util.Map;

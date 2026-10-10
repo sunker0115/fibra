@@ -1,5 +1,8 @@
 package com.sstlfsj.fibra.engine;
 
+import com.sstlfsj.fibra.engine.observation.TargetSaveState;
+import com.sstlfsj.fibra.engine.publication.PublishedView;
+
 /** 携带失败时已经发布的实际事实；保存成功不表示运行目标已经达成。 */
 public final class EngineChangeException extends RuntimeException {
     private final PublishedView view;

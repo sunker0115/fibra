@@ -2,12 +2,12 @@ package verification.distribution;
 
 import com.sstlfsj.fibra.cli.CliSession;
 import com.sstlfsj.fibra.cli.api.CliApplication;
-import com.sstlfsj.fibra.cli.api.CliBootstrapCommand;
-import com.sstlfsj.fibra.cli.api.CliCommandDescriptor;
-import com.sstlfsj.fibra.cli.api.CliCommandResult;
-import com.sstlfsj.fibra.cli.api.CliProfile;
+import com.sstlfsj.fibra.cli.api.command.CliBootstrapCommand;
+import com.sstlfsj.fibra.cli.api.command.CliCommandDescriptor;
+import com.sstlfsj.fibra.cli.api.command.CliCommandResult;
+import com.sstlfsj.fibra.cli.api.invocation.CliProfile;
 import com.sstlfsj.fibra.artifact.PluginPackageStore;
-import com.sstlfsj.fibra.engine.DeploymentTargetStore;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTargetStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

@@ -214,7 +214,7 @@ final class CliRepl {
         int execute(CommandGeneration generation, String[] arguments,
                     CliTerminalController terminals);
 
-        default List<com.sstlfsj.fibra.cli.api.CliCommandDescriptor> historyDescriptors(
+        default List<com.sstlfsj.fibra.cli.api.command.CliCommandDescriptor> historyDescriptors(
             CommandGeneration generation) {
             return generation.commands().stream().map(CommandGeneration.Command::descriptor).toList();
         }

@@ -2,7 +2,7 @@
 ## com.sstlfsj.fibra.cli.CliSession
 Compiled from "CliSession.java"
 public final class com.sstlfsj.fibra.cli.CliSession implements java.lang.AutoCloseable {
-  public static com.sstlfsj.fibra.cli.CliSession$Builder builder(com.sstlfsj.fibra.cli.api.CliApplication, com.sstlfsj.fibra.engine.PublishedRuntime, com.sstlfsj.fibra.cli.api.CliProfile);
+  public static com.sstlfsj.fibra.cli.CliSession$Builder builder(com.sstlfsj.fibra.cli.api.CliApplication, com.sstlfsj.fibra.engine.publication.PublishedRuntime, com.sstlfsj.fibra.cli.api.invocation.CliProfile);
   public int execute(java.lang.String...);
   public boolean printAbove(java.lang.String);
   public void close();
