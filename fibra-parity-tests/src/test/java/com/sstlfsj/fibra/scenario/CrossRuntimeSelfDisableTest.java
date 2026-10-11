@@ -400,11 +400,16 @@ class CrossRuntimeSelfDisableTest {
         throws Exception {
         var root = Files.createDirectory(work.resolve(id + "-package"));
         var jar = root.resolve("main.jar");
+        var definitionId = switch (entrypoint) {
+            case "fixture.DisableJavaEntrypoint" -> "self-java";
+            case "fixture.DisableJavaEntrypoint$Stable" -> "stable-java";
+            default -> throw new IllegalArgumentException("unknown fixture entrypoint " + entrypoint);
+        };
         Files.writeString(root.resolve("fibra-package.yaml"),
             packageManifest(id, "java", "main.jar"));
         try (var output = new JarOutputStream(Files.newOutputStream(jar))) {
             output.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml"));
-            output.write(("entrypoint: " + entrypoint + '\n')
+            output.write(("entrypoint: " + entrypoint + "\ndefinitionId: " + definitionId + '\n')
                 .getBytes(StandardCharsets.UTF_8));
             output.closeEntry();
             for (var name : List.of("fixture/DisableJavaEntrypoint.class",

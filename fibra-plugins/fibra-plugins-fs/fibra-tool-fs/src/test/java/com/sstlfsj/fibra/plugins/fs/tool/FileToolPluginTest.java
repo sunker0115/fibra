@@ -38,7 +38,7 @@ class FileToolPluginTest {
         try (var input = FileToolPluginTest.class.getResourceAsStream("/META-INF/fibra/plugin.yaml")) {
             var manifest = new String(input.readAllBytes(), StandardCharsets.UTF_8);
             assertEquals("entrypoint: " + FileToolEntrypoint.class.getName()
-                + "\n", manifest);
+                + "\ndefinitionId: tool-fs\n", manifest);
         }
     }
 }

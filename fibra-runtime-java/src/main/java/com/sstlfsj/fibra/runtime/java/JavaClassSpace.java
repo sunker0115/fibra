@@ -4,6 +4,8 @@ import com.sstlfsj.fibra.PluginEntrypoint;
 import com.sstlfsj.fibra.artifact.ArtifactId;
 import tools.jackson.dataformat.yaml.YAMLMapper;
 
+import java.lang.reflect.InvocationTargetException;
+
 /** 从已归属的 loader 物化定义；不拥有或关闭一组 loader。 */
 final class JavaClassSpace {
     private JavaClassSpace() { }
@@ -41,6 +43,11 @@ final class JavaClassSpace {
                     "entrypoint does not implement PluginEntrypoint", null);
             }
             return entry(pluginEntrypoint);
+        } catch (InvocationTargetException failure) {
+            var target = failure.getTargetException();
+            if (target instanceof VirtualMachineError fatal) throw fatal;
+            if (target instanceof ThreadDeath fatal) throw fatal;
+            throw new JavaRuntimeException(JavaRuntimePhase.LOAD, id, "cannot load Java plugin entrypoint", failure);
         } catch (ReflectiveOperationException | LinkageError failure) {
             throw new JavaRuntimeException(JavaRuntimePhase.LOAD, id, "cannot load Java plugin entrypoint", failure);
         }

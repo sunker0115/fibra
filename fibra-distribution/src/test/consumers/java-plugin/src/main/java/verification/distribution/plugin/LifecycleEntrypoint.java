@@ -20,6 +20,17 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public final class LifecycleEntrypoint implements PluginEntrypoint<Map> {
+    static {
+        try (var input = LifecycleEntrypoint.class.getResourceAsStream("/lifecycle-load-marker.txt")) {
+            if (input != null) {
+                Files.writeString(Path.of(new String(input.readAllBytes(),
+                    java.nio.charset.StandardCharsets.UTF_8)), "loaded");
+            }
+        } catch (IOException failure) {
+            throw new IllegalStateException("cannot write lifecycle load marker", failure);
+        }
+    }
+
     private static final ContributionKind<LifecycleDescriptor, Void, Void> LIFECYCLE =
         ContributionKind.local("fixture.lifecycle", LifecycleDescriptor.class, Void.class, Void.class);
 

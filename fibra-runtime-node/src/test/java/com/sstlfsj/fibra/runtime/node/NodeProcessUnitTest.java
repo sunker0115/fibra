@@ -1,6 +1,8 @@
 package com.sstlfsj.fibra.runtime.node;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -14,6 +16,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -23,10 +26,638 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NodeProcessUnitTest {
+    @Test
+    @EnabledOnOs({OS.LINUX, OS.MAC})
+    void supervisorProbeLauncherPreservesRealPayloadAndBundledResource(@TempDir Path work)
+        throws Exception {
+        var fixture = GroupProbeFixture.launch(work, false);
+        try {
+            fixture.unit.input().close();
+            assertDoesNotThrow(fixture.unit::close);
+            assertEquals("QUIESCENT", fixture.unit.finalState().range());
+            assertEquals(0, fixture.unit.finalState().payload().exitCode());
+            fixture.awaitNativeAbsence();
+            assertFalse(Files.exists(fixture.session));
+        } finally {
+            fixture.cleanupAndArchive();
+        }
+    }
+
+    @Test
+    @EnabledOnOs({OS.LINUX, OS.MAC})
+    void closeWaitsForUnknownGroupProbeToBecomeNativelyAbsent(@TempDir Path work)
+        throws Exception {
+        var fixture = GroupProbeFixture.launch(work, true);
+        CompletableFuture<Void> closing = null;
+        try {
+            fixture.unit.input().close();
+            closing = CompletableFuture.runAsync(fixture.unit::close);
+            fixture.awaitTrace("INJECTED_EPERM");
+            assertTrue(Files.exists(fixture.session),
+                "范围查询 UNKNOWN 时必须保留 session owner");
+            assertFalse(closing.isDone(), "范围查询 UNKNOWN 时 close 不能提前完成");
+            Files.writeString(fixture.release, "release\n");
+            fixture.awaitNativeAbsence();
+            var closeResult = closing;
+            assertDoesNotThrow(() -> closeResult.get(3, TimeUnit.SECONDS),
+                "原 termination budget 内 UNKNOWN 转为真实 ABSENT 后 close 应成功释放 owner");
+            assertEquals("QUIESCENT", fixture.unit.finalState().range());
+            assertFalse(Files.exists(fixture.session));
+        } finally {
+            fixture.cleanupAndArchive();
+            if (closing != null) closing.handle((result, failure) -> null).get(3, TimeUnit.SECONDS);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"term-eperm", "kill-eperm"})
+    @EnabledOnOs({OS.LINUX, OS.MAC})
+    void closeRecoversWhenASingleRangeSignalIsPermissionBlocked(String mode, @TempDir Path work)
+        throws Exception {
+        var fixture = GroupProbeFixture.launch(work, mode);
+        try {
+            fixture.unit.input().close();
+            var closing = CompletableFuture.runAsync(fixture.unit::close);
+            var signal = mode.startsWith("term") ? "SIGTERM" : "SIGKILL";
+            fixture.awaitTrace("INJECTED_EPERM operation=" + signal);
+            assertFalse(closing.isDone());
+            assertTrue(Files.exists(fixture.session));
+            fixture.release();
+            fixture.awaitNativeAbsence();
+            assertDoesNotThrow(() -> closing.get(3, TimeUnit.SECONDS));
+            assertEquals("QUIESCENT", fixture.unit.finalState().range());
+            fixture.assertSignalCount("SIGTERM", 1);
+            fixture.assertSignalCount("SIGKILL", mode.startsWith("kill") ? 1 : 0);
+            fixture.assertNoOperationAfterAbsence();
+        } finally {
+            fixture.cleanupAndArchive();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"term-absent", "kill-absent"})
+    @EnabledOnOs({OS.LINUX, OS.MAC})
+    void nativeSignalEsrchIsAnAbsorbingRangeProof(String mode, @TempDir Path work)
+        throws Exception {
+        var fixture = GroupProbeFixture.launch(work, mode);
+        try {
+            fixture.unit.input().close();
+            assertDoesNotThrow(fixture.unit::close);
+            assertEquals("QUIESCENT", fixture.unit.finalState().range());
+            fixture.awaitTrace("NATIVE_ABSENT operation="
+                + (mode.startsWith("term") ? "SIGTERM" : "SIGKILL"));
+            fixture.assertSignalCount("SIGTERM", 1);
+            fixture.assertSignalCount("SIGKILL", mode.startsWith("kill") ? 1 : 0);
+            fixture.assertNoOperationAfterAbsence();
+        } finally {
+            fixture.cleanupAndArchive();
+        }
+    }
+
+    @Test
+    @EnabledOnOs({OS.LINUX, OS.MAC})
+    void acceptedSignalStillNeedsAnAbsenceObservation(@TempDir Path work) throws Exception {
+        var fixture = GroupProbeFixture.launch(work, "accepted-term");
+        try {
+            fixture.unit.input().close();
+            fixture.unit.close();
+            fixture.awaitTrace("NATIVE_ACCEPTED operation=SIGTERM");
+            fixture.awaitTrace("NATIVE_ABSENT operation=0");
+            fixture.assertSignalCount("SIGTERM", 1);
+            fixture.assertSignalCount("SIGKILL", 0);
+            fixture.assertNoOperationAfterAbsence();
+        } finally {
+            fixture.cleanupAndArchive();
+        }
+    }
+
+    @Test
+    @EnabledOnOs({OS.LINUX, OS.MAC})
+    void unknownBecomingPresentDoesNotReleaseTheRangeOwner(@TempDir Path work) throws Exception {
+        var fixture = GroupProbeFixture.launch(work, "unknown-present");
+        try {
+            fixture.unit.input().close();
+            var closing = CompletableFuture.runAsync(fixture.unit::close);
+            fixture.awaitTrace("INJECTED_EPERM operation=0");
+            Files.writeString(work.toRealPath().resolve("probe-release"), "release\n");
+            fixture.awaitTrace("NATIVE_PRESENT operation=0");
+            assertFalse(closing.isDone(), "PRESENT 不能当作 ABSENT");
+            assertTrue(Files.exists(fixture.session));
+            fixture.release();
+            closing.get(3, TimeUnit.SECONDS);
+            assertEquals("QUIESCENT", fixture.unit.finalState().range());
+        } finally {
+            fixture.cleanupAndArchive();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"unknown-dead", "present-live"})
+    @EnabledOnOs({OS.LINUX, OS.MAC})
+    void unresolvedRangeFailsAtTheOriginalBudgetAndCachesFailure(String mode, @TempDir Path work)
+        throws Exception {
+        var fixture = GroupProbeFixture.launch(work, mode);
+        try {
+            fixture.unit.input().close();
+            var closing = CompletableFuture.runAsync(fixture.unit::close);
+            fixture.awaitTrace("STATUS_WRITTEN range=FAILED");
+            fixture.assertOriginalRangeBudget();
+            if (mode.equals("present-live")) {
+                fixture.assertNativePresent();
+                assertFalse(closing.isDone(), "Java close 仍须等待真实 supervisor 退出");
+            } else {
+                fixture.awaitNativeAbsence();
+            }
+            fixture.release();
+            var first = (NodeRpcException) assertThrows(java.util.concurrent.ExecutionException.class,
+                () -> closing.get(3, TimeUnit.SECONDS)).getCause();
+            assertEquals(NodeRpcPhase.TERMINATE, first.phase());
+            assertSame(first, assertThrows(NodeRpcException.class, fixture.unit::close));
+            var repeated = CompletableFuture.runAsync(fixture.unit::close);
+            assertSame(first, assertThrows(java.util.concurrent.ExecutionException.class,
+                () -> repeated.get(1, TimeUnit.SECONDS)).getCause());
+            assertTrue(Files.exists(fixture.session));
+            fixture.assertSignalCount("SIGTERM", 1);
+            fixture.assertSignalCount("SIGKILL", 1);
+            if (mode.equals("unknown-dead")) {
+                var stderr = fixture.error.get(1, TimeUnit.SECONDS);
+                assertEquals(1, stderr.lines().filter(line -> line.contains("first blocked")).count());
+                assertTrue(stderr.contains("operation=0"));
+                assertTrue(stderr.contains("last blocked"));
+                assertTrue(stderr.length() < 1024, "永久 EPERM 诊断必须有界");
+            }
+        } finally {
+            fixture.cleanupAndArchive();
+        }
+    }
+
+    @Test
+    @EnabledOnOs({OS.LINUX, OS.MAC})
+    void otherRangeErrnoStillFailsWithoutBeingAbsorbedAsUnknown(@TempDir Path work) throws Exception {
+        var fixture = GroupProbeFixture.launch(work, "other-errno");
+        try {
+            fixture.unit.input().close();
+            var closing = CompletableFuture.runAsync(fixture.unit::close);
+            fixture.awaitTrace("STATUS_WRITTEN range=FAILED");
+            fixture.release();
+            assertThrows(java.util.concurrent.ExecutionException.class,
+                () -> closing.get(3, TimeUnit.SECONDS));
+            assertTrue(Files.exists(fixture.session));
+            fixture.assertSignalCount("SIGTERM", 0);
+            fixture.assertSignalCount("SIGKILL", 0);
+            assertTrue(fixture.error.get(1, TimeUnit.SECONDS).contains("fixture range EIO"));
+        } finally {
+            fixture.cleanupAndArchive();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"status-failure", "output-failure"})
+    @EnabledOnOs({OS.LINUX, OS.MAC})
+    void recoveredRangeDoesNotEraseAnIndependentSupervisorFailure(String mode, @TempDir Path work)
+        throws Exception {
+        var fixture = GroupProbeFixture.launch(work, mode);
+        try {
+            if (mode.equals("status-failure")) {
+                Files.createDirectory(fixture.session.resolve("termination.status"));
+            }
+            fixture.unit.input().close();
+            var closing = CompletableFuture.runAsync(fixture.unit::close);
+            fixture.awaitTrace("INJECTED_EPERM operation=0");
+            if (mode.equals("output-failure")) {
+                fixture.unit.output().close();
+                Files.writeString(work.toRealPath().resolve("write-output"), "write\n");
+                fixture.awaitTrace("OUTPUT_FAILED");
+            }
+            fixture.release();
+            fixture.awaitTrace("NATIVE_ABSENT operation=0");
+            assertThrows(java.util.concurrent.ExecutionException.class,
+                () -> closing.get(3, TimeUnit.SECONDS));
+            assertTrue(Files.exists(fixture.session));
+            var error = fixture.error.get(1, TimeUnit.SECONDS);
+            assertTrue(error.contains(mode.equals("status-failure")
+                ? "termination status write failed" : "supervisor output failed"));
+        } finally {
+            fixture.cleanupAndArchive();
+        }
+    }
+
+    @Test
+    @EnabledOnOs({OS.LINUX, OS.MAC})
+    void concurrentAndInterruptedCloseShareOnePhysicalRangeCleanup(@TempDir Path work) throws Exception {
+        var fixture = GroupProbeFixture.launch(work, true);
+        var interrupted = new AtomicBoolean();
+        var result = new CompletableFuture<Void>();
+        try {
+            fixture.unit.input().close();
+            var observer = Thread.ofPlatform().start(() -> {
+                Thread.currentThread().interrupt();
+                try {
+                    fixture.unit.close();
+                    interrupted.set(Thread.currentThread().isInterrupted());
+                    result.complete(null);
+                } catch (Throwable failure) {
+                    result.completeExceptionally(failure);
+                }
+            });
+            fixture.awaitTrace("INJECTED_EPERM operation=0");
+            var concurrent = CompletableFuture.runAsync(fixture.unit::close);
+            assertFalse(result.isDone());
+            assertFalse(concurrent.isDone());
+            fixture.release();
+            result.get(3, TimeUnit.SECONDS);
+            concurrent.get(3, TimeUnit.SECONDS);
+            observer.join(1000);
+            assertTrue(interrupted.get(), "调用方中断应恢复，但不能取消物理关闭");
+            var trace = Files.readString(fixture.trace);
+            fixture.unit.close();
+            assertEquals(trace, Files.readString(fixture.trace), "重复 close 不能重新操作旧 PGID");
+            fixture.assertNoOperationAfterAbsence();
+        } finally {
+            fixture.cleanupAndArchive();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"request-unknown", "request-unknown-dead"})
+    @EnabledOnOs({OS.LINUX, OS.MAC})
+    void pendingRequestAndCancelledCloseObserverRetainSharedRangeCleanup(String mode, @TempDir Path work)
+        throws Exception {
+        var fixture = GroupProbeFixture.launch(work, mode);
+        var scheduler = new java.util.concurrent.ScheduledThreadPoolExecutor(1);
+        var constructor = NodeSidecar.class.getDeclaredConstructor(NodeRuntimeOptions.class,
+            NodeProcessUnit.class, Runnable.class, java.util.concurrent.ScheduledExecutorService.class);
+        constructor.setAccessible(true);
+        var sidecar = constructor.newInstance(NodeRuntimeOptions.builder(node(), work)
+            .terminateTimeout(fixture.budget).build(), fixture.unit, (Runnable) () -> { }, scheduler);
+        try {
+            var request = sidecar.beginRequest("unanswered", java.util.Map.of(),
+                com.sstlfsj.fibra.CancellationToken.never());
+            var result = request.result().toFuture();
+            var drain = request.drain().toFuture();
+            GroupProbeFixture.awaitFile(work.toRealPath().resolve("request-started"));
+            var cancelled = sidecar.closeAsync().toFuture();
+            fixture.awaitTrace("INJECTED_EPERM operation=0");
+            assertTrue(cancelled.cancel(true));
+            var observing = sidecar.closeAsync().toFuture();
+            assertFalse(observing.isDone(), "取消观察不能取消同一次物理关闭");
+            assertFalse(result.isDone(), "未取得原请求终态时 UNKNOWN 不能结算结果");
+            assertFalse(drain.isDone(), "未取得原请求终态时 UNKNOWN 不能确认资源排空");
+            assertTrue(Files.exists(fixture.session));
+            if (mode.endsWith("dead")) {
+                fixture.awaitTrace("STATUS_WRITTEN range=FAILED");
+                fixture.assertOriginalRangeBudget();
+                var failure = assertThrows(java.util.concurrent.ExecutionException.class,
+                    () -> observing.get(3, TimeUnit.SECONDS)).getCause();
+                assertSame(failure, assertThrows(java.util.concurrent.CompletionException.class,
+                    drain::join).getCause());
+                assertSame(failure, assertThrows(java.util.concurrent.CompletionException.class,
+                    result::join).getCause());
+                assertSame(failure, assertThrows(NodeRpcException.class, sidecar::close));
+                assertTrue(Files.exists(fixture.session));
+            } else {
+                fixture.release();
+                observing.get(3, TimeUnit.SECONDS);
+                drain.get(1, TimeUnit.SECONDS);
+                assertThrows(java.util.concurrent.CompletionException.class, result::join);
+                sidecar.close();
+                assertFalse(Files.exists(fixture.session));
+                fixture.assertNoOperationAfterAbsence();
+            }
+        } finally {
+            fixture.cleanupAndArchive();
+            scheduler.shutdownNow();
+        }
+    }
+
+    /** 仅 supervisor 使用 --require；payload 和原 materialized resource 均不改写。 */
+    private static final class GroupProbeFixture {
+        private final Path work;
+        private final Path release;
+        private final Path trace;
+        private final Path session;
+        private final NodeProcessUnit unit;
+        private final long payloadPid;
+        private final ProcessHandle payloadHandle;
+        private final Duration budget;
+        private final CompletableFuture<String> output;
+        private final CompletableFuture<String> error;
+
+        private GroupProbeFixture(Path work, Path session, NodeProcessUnit unit, long payloadPid,
+                                  Duration budget, String mode) {
+            this.work = work;
+            this.release = work.resolve("release");
+            this.trace = work.resolve("native-trace.log");
+            this.session = session;
+            this.unit = unit;
+            this.payloadPid = payloadPid;
+            this.payloadHandle = ProcessHandle.of(payloadPid).orElseThrow();
+            assertTrue(payloadHandle.info().startInstant().isPresent(),
+                "fixture 回收必须持有启动时可核验出生时间的 payload 身份");
+            this.budget = budget;
+            output = mode.equals("output-failure") || mode.startsWith("request-")
+                ? CompletableFuture.completedFuture("")
+                : CompletableFuture.supplyAsync(() -> readOutput(unit));
+            error = mode.startsWith("request-") ? CompletableFuture.completedFuture("")
+                : CompletableFuture.supplyAsync(() -> {
+                try {
+                    return new String(unit.error().readAllBytes(), StandardCharsets.UTF_8);
+                } catch (java.io.IOException failure) {
+                    throw new UncheckedIOException(failure);
+                }
+            });
+        }
+
+        private static GroupProbeFixture launch(Path work, boolean injectUnknown) throws Exception {
+            return launch(work, injectUnknown ? "query-unknown" : "positive");
+        }
+
+        private static GroupProbeFixture launch(Path work, String mode) throws Exception {
+            work = work.toRealPath();
+            var json = JsonMapper.builder().build();
+            var payload = work.resolve("payload.mjs");
+            Files.writeString(payload, """
+                import fs from 'node:fs';
+                import { spawnSync } from 'node:child_process';
+                const root = %s;
+                const mode = %s;
+                const group = spawnSync('/bin/ps', ['-o', 'pgid=', '-p', String(process.pid)],
+                  { encoding: 'utf8' });
+                if (group.status !== 0) throw new Error(`PGID lookup failed: ${group.stderr}`);
+                fs.writeFileSync(`${root}/identity.json`, JSON.stringify({
+                  pid: process.pid, pgid: Number(group.stdout.trim()),
+                  execArgv: process.execArgv, entrypoint: process.argv[1]
+                }));
+                if (mode !== 'accepted-term') process.on('SIGTERM', () => {
+                  if (mode === 'kill-absent') process.exit(0);
+                });
+                process.stdin.on('data', () => fs.writeFileSync(`${root}/request-started`, 'started'));
+                process.stdin.resume();
+                process.stdin.once('end', () => {
+                  fs.writeFileSync(`${root}/payload-eof`, 'EOF');
+                  if (mode === 'positive' || mode === 'term-absent'
+                    || mode.endsWith('unknown-dead')) return process.exit(0);
+                  const gate = setInterval(() => {
+                    if (mode === 'output-failure' && fs.existsSync(`${root}/write-output`)) {
+                      fs.writeSync(1, 'x'.repeat(64 * 1024));
+                    }
+                    if (!fs.existsSync(`${root}/release`)) return;
+                    clearInterval(gate);
+                    process.exit(0);
+                  }, 5);
+                });
+                """.formatted(json.writeValueAsString(work.toString()), json.writeValueAsString(mode)));
+            var preload = work.resolve("supervisor-preload.cjs");
+            Files.writeString(preload, """
+                const fs = require('node:fs');
+                const root = %s;
+                const mode = %s;
+                const nativeKill = process.kill.bind(process);
+                const log = event => fs.appendFileSync(`${root}/native-trace.log`,
+                  `${Date.now()} ${event}\\n`);
+                log(`SUPERVISOR_START pid=${process.pid} argv=${JSON.stringify(process.argv)} root=${root}`);
+                if (!process.argv[1].endsWith('/node-process-supervisor.mjs')
+                  || process.argv[2] !== `${root}/payload.mjs`) {
+                  throw new Error('preload must only run in the fixture supervisor');
+                }
+                process.on('exit', code => log(`SUPERVISOR_EXIT ${code}`));
+                const nativeWrite = fs.writeFileSync.bind(fs);
+                fs.writeFileSync = (path, data, options) => {
+                  const result = nativeWrite(path, data, options);
+                  if (path === process.argv[4]) log(`STATUS_WRITTEN range=${JSON.parse(data).range}`);
+                  return result;
+                };
+                // 只记录真实 output error，不替换生产错误或终态。
+                const nativeEmit = require('node:net').Socket.prototype.emit;
+                require('node:net').Socket.prototype.emit = function(event, ...args) {
+                  if (event === 'error' && !this.readable) log('OUTPUT_FAILED');
+                  return nativeEmit.call(this, event, ...args);
+                };
+                let absent = false;
+                let started = false;
+                process.kill = (pid, signal) => {
+                  if (pid >= 0) return nativeKill(pid, signal);
+                  const identity = JSON.parse(fs.readFileSync(`${root}/identity.json`, 'utf8'));
+                  if (-pid !== identity.pid || identity.pgid !== identity.pid) {
+                    throw new Error('refusing a group outside this fixture ownership');
+                  }
+                  if (absent) {
+                    log(`POST_ABSENT_OPERATION operation=${signal} pgid=${identity.pgid}`);
+                    throw new Error('production reused a confirmed-absent fixture PGID');
+                  }
+                  if (!started) {
+                    started = true;
+                    log('FIRST_OPERATION');
+                  }
+                  log(`RANGE_OPERATION operation=${signal} pgid=${identity.pgid}`);
+                  const blockedQuery = signal === 0 && (
+                    mode.endsWith('unknown-dead') || mode.endsWith('-absent')
+                    || mode === 'unknown-present' && !fs.existsSync(`${root}/probe-release`)
+                    || ['query-unknown', 'status-failure', 'output-failure', 'request-unknown'].includes(mode)
+                      && !fs.existsSync(`${root}/release`));
+                  const blockedSignal = signal !== 0 && (
+                    mode.endsWith('unknown-dead')
+                    || mode === 'term-eperm' && signal === 'SIGTERM'
+                    || ['kill-eperm', 'present-live'].includes(mode) && signal === 'SIGKILL');
+                  if (blockedQuery || blockedSignal || mode === 'other-errno' && signal === 0) {
+                    const code = mode === 'other-errno' ? 'EIO' : 'EPERM';
+                    log(`INJECTED_${code} operation=${signal} pgid=${identity.pgid}`);
+                    const error = new Error(`fixture range ${code}`);
+                    error.code = code;
+                    throw error;
+                  }
+                  try {
+                    const result = nativeKill(pid, signal);
+                    log(`NATIVE_${signal === 0 ? 'PRESENT' : 'ACCEPTED'} operation=${signal} pgid=${identity.pgid}`);
+                    return result;
+                  } catch (error) {
+                    if (error.code === 'ESRCH') absent = true;
+                    log(`NATIVE_${absent ? 'ABSENT' : 'ERROR'} operation=${signal} pgid=${identity.pgid} code=${error.code}`);
+                    throw error;
+                  }
+                };
+                """.formatted(json.writeValueAsString(work.toString()), json.writeValueAsString(mode)));
+            var launcher = work.resolve("node-launcher");
+            Files.writeString(launcher, "#!/bin/sh\nexec " + shellQuote(node().toString())
+                + " --require " + shellQuote(preload.toString()) + " \"$@\"\n");
+            assertTrue(launcher.toFile().setExecutable(true));
+            Files.writeString(work.resolve("fixture-mode"), mode);
+            var sessions = work.resolve("sessions");
+            var budget = mode.equals("positive") || mode.equals("query-unknown")
+                ? Duration.ofSeconds(5) : Duration.ofMillis(600);
+            var unit = NodeProcessUnit.launch(payload, NodeRuntimeOptions.builder(launcher, sessions)
+                .terminateTimeout(budget).build());
+            try {
+                awaitFile(work.resolve("identity.json"));
+                var identity = json.readTree(Files.readString(work.resolve("identity.json")));
+                assertEquals(identity.path("pid").longValue(), identity.path("pgid").longValue(),
+                    "真实 payload 必须拥有独立 PGID");
+                assertEquals(0, identity.path("execArgv").size(), "preload 不能传播到真实 payload");
+                assertEquals(payload.toRealPath().toString(), identity.path("entrypoint").stringValue());
+                Path session;
+                try (var paths = Files.list(sessions)) {
+                    session = paths.findFirst().orElseThrow();
+                }
+                var materialized = Files.readAllBytes(session.resolve("node-process-supervisor.mjs"));
+                try (var resource = NodeProcessUnit.class.getResourceAsStream(
+                    "/com/sstlfsj/fibra/runtime/node/node-process-supervisor.mjs")) {
+                    org.junit.jupiter.api.Assertions.assertArrayEquals(resource.readAllBytes(), materialized,
+                        "launch 必须 materialize 原 production resource bytes");
+                }
+                Files.write(work.resolve("materialized-supervisor.mjs"), materialized);
+                return new GroupProbeFixture(work, session, unit, identity.path("pid").longValue(), budget, mode);
+            } catch (Exception | Error failure) {
+                try {
+                    Files.writeString(work.resolve("release"), "release\n");
+                    unit.input().close();
+                    unit.close();
+                } catch (Exception | Error cleanupFailure) {
+                    failure.addSuppressed(cleanupFailure);
+                }
+                if (!unit.isAlive()) {
+                    Files.writeString(work.resolve("supervisor-stderr.log"),
+                        new String(unit.error().readAllBytes(), StandardCharsets.UTF_8));
+                }
+                archiveFiles(work);
+                throw failure;
+            }
+        }
+
+        private void awaitTrace(String event) throws Exception {
+            var deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
+            while (!Files.exists(trace) || !Files.readString(trace).contains(event)) {
+                if (System.nanoTime() >= deadline) {
+                    throw new AssertionError("fixture trace missing " + event + ": "
+                        + (Files.exists(trace) ? Files.readString(trace) : "MISSING"));
+                }
+                Thread.sleep(5);
+            }
+        }
+
+        private void awaitNativeAbsence() throws Exception {
+            awaitNativeState(true);
+        }
+
+        private void assertNativePresent() throws Exception {
+            awaitNativeState(false);
+        }
+
+        private void awaitNativeState(boolean expectAbsent) throws Exception {
+            var deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
+            do {
+                // 独立、只读的原生探测不影响 supervisor 的引用数、退出时序和终态。
+                var probe = new ProcessBuilder(node().toString(), "-e", """
+                    const pgid = Number(process.argv[1]);
+                    try {
+                      process.kill(-pgid, 0);
+                      console.log(`TEST_NATIVE_PRESENT pgid=${pgid}`);
+                      process.exitCode = 2;
+                    } catch (error) {
+                      const state = error.code === 'ESRCH' ? 'ABSENT'
+                        : error.code === 'EPERM' ? 'UNKNOWN' : 'ERROR';
+                      console.log(`TEST_NATIVE_${state} pgid=${pgid} code=${error.code}`);
+                      process.exitCode = error.code === 'ESRCH' ? 0 : error.code === 'EPERM' ? 4 : 3;
+                    }
+                    """, Long.toString(payloadPid)).redirectErrorStream(true).start();
+                try {
+                    assertTrue(probe.waitFor(1, TimeUnit.SECONDS), "原生 group probe 必须及时结算");
+                    var result = new String(probe.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+                    Files.writeString(trace, result, java.nio.file.StandardOpenOption.APPEND,
+                        java.nio.file.StandardOpenOption.CREATE);
+                    var state = probe.exitValue();
+                    if (state == 4) {
+                        // EPERM 只有 UNKNOWN，继续同一次 test budget 内的观察。
+                    } else if (expectAbsent) {
+                        if (state == 0) return;
+                        assertEquals(2, state, "独立原生 group probe 失败: " + result);
+                    } else {
+                        assertEquals(2, state, "必须由真实原生 PRESENT 证明活成员: " + result);
+                        return;
+                    }
+                } finally {
+                    if (probe.isAlive()) probe.destroyForcibly();
+                }
+                Thread.sleep(5);
+            } while (System.nanoTime() < deadline);
+            throw new AssertionError("fixture own group 未得到原生 "
+                + (expectAbsent ? "ABSENT" : "PRESENT") + ": " + Files.readString(trace));
+        }
+
+        private void cleanupAndArchive() throws Exception {
+            release();
+            // 保留启动时的身份，不在原 payload 消失后重新绑定数值 PID。
+            if (payloadHandle.isAlive()) payloadHandle.destroyForcibly();
+            unit.onExit().get(3, TimeUnit.SECONDS);
+            Files.writeString(work.resolve("supervisor-stderr.log"), error.get(3, TimeUnit.SECONDS));
+            Files.writeString(work.resolve("payload-stdout.log"), output.get(3, TimeUnit.SECONDS));
+            var status = session.resolve("termination.status");
+            if (Files.isRegularFile(status)) {
+                Files.copy(status, work.resolve("retained-termination.status"),
+                    StandardCopyOption.REPLACE_EXISTING);
+            }
+            archiveFiles(work);
+        }
+
+        private void release() throws Exception {
+            Files.writeString(release, "release\n");
+        }
+
+        private void assertSignalCount(String signal, long expected) throws Exception {
+            assertEquals(expected, Files.readString(trace).lines()
+                .filter(line -> line.contains("RANGE_OPERATION operation=" + signal + " ")).count());
+        }
+
+        private void assertNoOperationAfterAbsence() throws Exception {
+            var events = Files.readString(trace);
+            assertFalse(events.contains("POST_ABSENT_OPERATION"), events);
+            var absent = events.indexOf(" NATIVE_ABSENT ");
+            assertTrue(absent >= 0, events);
+            assertFalse(events.substring(absent).contains("RANGE_OPERATION"), events);
+        }
+
+        private void assertOriginalRangeBudget() throws Exception {
+            var events = Files.readString(trace).lines().toList();
+            var first = events.stream().filter(line -> line.endsWith("FIRST_OPERATION"))
+                .findFirst().orElseThrow();
+            var status = events.stream().filter(line -> line.contains("STATUS_WRITTEN range=FAILED"))
+                .findFirst().orElseThrow();
+            var elapsed = Long.parseLong(status.split(" ")[0]) - Long.parseLong(first.split(" ")[0]);
+            assertTrue(elapsed >= budget.toMillis() - 40, "不能把一次 UNKNOWN/PRESENT 提早当作终态: " + elapsed);
+            assertTrue(elapsed <= budget.toMillis() + 200, "范围状态必须沿原 budget 写出: " + elapsed);
+        }
+
+        private static void archiveFiles(Path work) throws Exception {
+            var evidence = System.getProperty("fibra.test.lifecycle.evidenceRoot");
+            if (evidence != null) {
+                var destination = Files.createDirectories(Path.of(evidence)
+                    .resolve(Files.readString(work.resolve("fixture-mode")) + "-" + work.getFileName()));
+                try (var paths = Files.list(work)) {
+                    for (var path : paths.filter(Files::isRegularFile).toList()) {
+                        Files.copy(path, destination.resolve(path.getFileName()),
+                            StandardCopyOption.REPLACE_EXISTING);
+                    }
+                }
+            }
+        }
+
+        private static void awaitFile(Path file) throws Exception {
+            var deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
+            while (!Files.exists(file)) {
+                if (System.nanoTime() >= deadline) throw new AssertionError("fixture missing " + file);
+                Thread.sleep(5);
+            }
+        }
+
+        private static String shellQuote(String value) {
+            return "'" + value.replace("'", "'\\''") + "'";
+        }
+    }
+
     @Test
     void blockedPayloadInputStillProducesQuiescenceProofDuringClose(@TempDir Path work)
         throws Exception {

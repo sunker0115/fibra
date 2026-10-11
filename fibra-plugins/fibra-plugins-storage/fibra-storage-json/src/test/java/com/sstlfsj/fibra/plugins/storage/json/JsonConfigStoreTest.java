@@ -111,7 +111,7 @@ class JsonConfigStoreTest {
             "/META-INF/fibra/plugin.yaml")) {
             var manifest = new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             assertEquals("entrypoint: " + JsonStorageEntrypoint.class.getName()
-                + "\n", manifest);
+                + "\ndefinitionId: storage-json\n", manifest);
         }
     }
 

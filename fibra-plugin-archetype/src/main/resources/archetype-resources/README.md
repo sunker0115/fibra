@@ -19,7 +19,9 @@ target/${artifactId}-${version}-plugin/
 `fibra-registry` 选择具体 package revision 进入完整部署目标。目录名随 Maven 的
 `project.build.finalName` 变化；根 `fibra-package.yaml` 是逻辑 package 的唯一身份源，
 声明插件 id、版本、facet、runtime、执行目标、payload、依赖和能力。
-主 JAR 内的 `META-INF/fibra/plugin.yaml` 只声明 Java facet 的 entrypoint。
+主 JAR 内的 `META-INF/fibra/plugin.yaml` 同时声明 Java facet 的 `entrypoint` 和 `definitionId`。
+生成的名称为 `${pluginId}`，与 `FibraPluginEntrypoint.definition()` 完全相同。目录查询只读取声明，实际 prepare
+在 bind 前核真实名称；旧缺名称格式没有回退。升级 runtime 时重新打包插件，通过原完整 target/CAS 选择新 digest。
 正常 Maven 制品 `target/${artifactId}-${version}.jar` 保留，内容与目录中的 `lib/plugin.jar` 完全相同；
 安装目录不会额外打包 `fibra-api` 或动态 contract，也不生成插件 ZIP。
 

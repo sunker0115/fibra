@@ -3,6 +3,9 @@ package com.sstlfsj.fibra.engine;
 import com.sstlfsj.fibra.engine.deployment.DeploymentTargetStoreFixture;
 
 import com.sstlfsj.fibra.engine.deployment.BuiltInFacet;
+import com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException;
+import com.sstlfsj.fibra.engine.deployment.PackageDefinitionCatalog;
+import com.sstlfsj.fibra.engine.deployment.PluginSelection;
 import com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage;
 import com.sstlfsj.fibra.engine.deployment.DeploymentTarget;
 import com.sstlfsj.fibra.engine.deployment.DeploymentTargetStore;
@@ -38,6 +41,7 @@ import com.sstlfsj.fibra.engine.runtime.PreparedRuntimeGeneration;
 import com.sstlfsj.fibra.engine.runtime.RuntimeArtifactInspection;
 import com.sstlfsj.fibra.engine.runtime.RuntimeCandidate;
 import com.sstlfsj.fibra.engine.runtime.RuntimeDriver;
+import com.sstlfsj.fibra.engine.runtime.RuntimeDefinitionQuery;
 import com.sstlfsj.fibra.engine.runtime.RuntimeHostServices;
 import com.sstlfsj.fibra.engine.runtime.RuntimeProvider;
 import com.sstlfsj.fibra.engine.runtime.RuntimeRecompileReason;
@@ -71,6 +75,569 @@ class RuntimeDriverEngineTest {
     private final Store store = new Store();
     private final ProbeProvider alpha = new ProbeProvider("alpha", "a");
     private final ProbeProvider beta = new ProbeProvider("beta", "b");
+
+    @Test
+    void catalogReadsDisabledBuiltInDeclarationsWithoutDynamicSpiOrMutation() {
+        try (var engine = engine(request -> fail("unexpected termination"))) {
+            engine.submit(ApplyDeployment.builder(graph(1)).expectedRevision(0)
+                .selections(List.of(alpha.metadata().selection(false)))
+                .configContext(ConfigContextSnapshot.empty()).build()).block();
+            var before = engine.published().current();
+            int saves = store.saves;
+            events.clear();
+            var publisher = catalog(engine, "a", 1);
+            assertTrue(events.isEmpty());
+            var first = publisher.block();
+            assertEquals(List.of("definition"), first.facets().getFirst().definitionIds());
+            assertEquals(alpha.metadata().packageDigest(), first.packageRevision());
+            assertEquals(first, publisher.block());
+            assertEquals(before, engine.published().current());
+            assertEquals(saves, store.saves);
+            assertTrue(events.isEmpty(), "built-in metadata must not invoke dynamic SPI");
+            assertCatalogCode(DefinitionCatalogException.Code.STALE_TARGET, catalog(engine, "missing", 0));
+            assertCatalogCode(DefinitionCatalogException.Code.NOT_SELECTED, catalog(engine, "missing", 1));
+        }
+    }
+
+    private static Mono<PackageDefinitionCatalog> catalog(FibraEngine engine, String plugin, long revision) {
+        return engine.describeDefinitions(new PluginId(plugin), revision);
+    }
+
+    private static DefinitionCatalogException assertCatalogCode(DefinitionCatalogException.Code code,
+                                                                 Mono<?> publisher) {
+        var completion = assertThrows(CompletionException.class, () -> publisher.toFuture().join());
+        var error = assertInstanceOf(DefinitionCatalogException.class, completion.getCause());
+        assertEquals(code, error.code());
+        assertNull(error.getCause());
+        assertEquals(0, error.getSuppressed().length);
+        return error;
+    }
+
+    @Test
+    void catalogOwnsAllHandlesBeforeSerialReadsAndReverseCloseAndWaitsForCleanup() throws Exception {
+        try (var packages = new PluginPackageStore(root.resolve("catalog-packages"))) {
+            var record = catalogPackage(packages, "sample", "1", "z:beta", "a:alpha");
+            var a = new CatalogProbe("a", List.of("zeta", "same", "alpha"));
+            var z = new CatalogProbe("z", List.of("same"));
+            a.readRelease = Sinks.one();
+            z.closeRelease = Sinks.one();
+            alpha.queryFactory = facet -> a;
+            beta.queryFactory = facet -> z;
+            try (var engine = catalogEngine(packages, List.of(selection(record, false)))) {
+                var before = engine.published().current();
+                events.clear();
+                var publisher = catalog(engine, "sample", 1);
+                assertTrue(events.isEmpty(), "cold publisher must not create a handle");
+                var result = publisher.toFuture();
+                a.readEntered.asMono().block(Duration.ofSeconds(2));
+                assertEquals(List.of("query-create:a", "query-create:z", "query-read:a"), events);
+                assertFalse(result.isDone());
+                a.readRelease.tryEmitEmpty();
+                z.closeEntered.asMono().block(Duration.ofSeconds(2));
+                assertEquals(List.of("query-create:a", "query-create:z", "query-read:a",
+                    "query-read:z", "query-close:z"), events);
+                assertFalse(result.isDone(), "result must wait for actual close completion");
+                z.closeRelease.tryEmitEmpty();
+                var catalog = result.get(2, TimeUnit.SECONDS);
+                assertEquals(List.of("a", "z"), catalog.facets().stream().map(f -> f.facetId().value()).toList());
+                assertEquals(List.of("alpha", "same", "zeta"), catalog.facets().getFirst().definitionIds());
+                assertThrows(UnsupportedOperationException.class, () -> catalog.facets().clear());
+                assertThrows(UnsupportedOperationException.class, () -> catalog.facets().getFirst().definitionIds().clear());
+                assertEquals("query-close:a", events.getLast());
+                assertEquals(before, engine.published().current());
+                assertEquals(0, store.saves);
+            }
+        }
+    }
+
+    @Test
+    void catalogRepeatSubscriptionsCreateIndependentAttemptsAndAcceptEmptyFacet() throws Exception {
+        try (var packages = new PluginPackageStore(root.resolve("repeat-packages"))) {
+            var record = catalogPackage(packages, "sample", "1", "main:alpha");
+            var handles = new ArrayList<CatalogProbe>();
+            alpha.queryFactory = facet -> {
+                var query = new CatalogProbe("main", List.of());
+                handles.add(query);
+                return query;
+            };
+            try (var engine = catalogEngine(packages, List.of(selection(record, false)))) {
+                events.clear();
+                var publisher = catalog(engine, "sample", 1);
+                assertEquals(List.of(), publisher.block().facets().getFirst().definitionIds());
+                assertEquals(List.of(), publisher.block().facets().getFirst().definitionIds());
+                assertEquals(2, handles.size());
+                assertNotSame(handles.getFirst(), handles.getLast());
+                assertEquals(1, handles.getFirst().closes.get());
+                assertEquals(1, handles.getLast().closes.get());
+            }
+        }
+    }
+
+    @Test
+    void canceledCatalogObserverCannotCancelReadsOrLetCloseOvertakeAcceptedCommand() throws Exception {
+        var packages = new PluginPackageStore(root.resolve("cancel-packages"));
+        var record = catalogPackage(packages, "sample", "1", "main:alpha");
+        var query = new CatalogProbe("main", List.of("entry"));
+        query.readRelease = Sinks.one();
+        query.closeRelease = Sinks.one();
+        alpha.queryFactory = facet -> query;
+        var engine = catalogEngine(packages, List.of(selection(record, false)));
+        try {
+            events.clear();
+            var observer = catalog(engine, "sample", 1).toFuture();
+            query.readEntered.asMono().block(Duration.ofSeconds(2));
+            observer.cancel(true);
+            var closing = engine.closeAsync().toFuture();
+            assertCatalogCode(DefinitionCatalogException.Code.ENGINE_UNAVAILABLE, catalog(engine, "sample", 1));
+            assertFalse(closing.isDone());
+            assertFalse(query.readCancelled.get());
+            assertFalse(events.contains("driver-close:alpha"));
+            query.readRelease.tryEmitEmpty();
+            query.closeEntered.asMono().block(Duration.ofSeconds(2));
+            assertFalse(closing.isDone());
+            assertFalse(events.contains("driver-close:alpha"));
+            query.closeRelease.tryEmitEmpty();
+            closing.get(2, TimeUnit.SECONDS);
+            assertFalse(query.readCancelled.get());
+            assertEquals(1, query.closes.get());
+            assertTrue(events.indexOf("query-close:main") < events.indexOf("driver-close:alpha"));
+        } finally {
+            query.readRelease.tryEmitEmpty();
+            query.closeRelease.tryEmitEmpty();
+            engine.close();
+        }
+    }
+
+    @Test
+    void catalogRejectsNewEngineAndUsesRevisionPrecedenceForAbsentTarget() {
+        var engine = FibraEngine.builder(new PluginPackageStore(root.resolve("new-catalog")), store)
+            .runtimeProvider(alpha).hostTerminationPort(request -> { }).build();
+        try {
+            assertCatalogCode(DefinitionCatalogException.Code.ENGINE_UNAVAILABLE, catalog(engine, "a", 0));
+            engine.startAsync().block();
+            assertCatalogCode(DefinitionCatalogException.Code.STALE_TARGET, catalog(engine, "a", 1));
+            assertCatalogCode(DefinitionCatalogException.Code.NOT_SELECTED, catalog(engine, "a", 0));
+        } finally { engine.close(); }
+    }
+
+    @Test
+    void catalogPreflightsAllRootRuntimesBeforeCreatingAnyQuery() throws Exception {
+        try (var packages = new PluginPackageStore(root.resolve("unsupported-packages"))) {
+            var record = catalogPackage(packages, "sample", "1", "a:alpha", "z:absent");
+            alpha.queryFactory = facet -> fail("preflight must precede all SPI calls");
+            try (var engine = catalogEngine(packages, List.of(selection(record, false)))) {
+                events.clear();
+                assertCatalogCode(DefinitionCatalogException.Code.UNSUPPORTED_RUNTIME, catalog(engine, "sample", 1));
+                assertTrue(events.isEmpty());
+                assertTrue(engine.published().current().engineDiagnostics().mutationGateOpen());
+            }
+        }
+    }
+
+    @Test
+    void catalogCleansRegisteredHandlesAfterCreateFailureAndNormalReadFailureKeepsGateOpen() throws Exception {
+        try (var packages = new PluginPackageStore(root.resolve("failure-packages"))) {
+            var record = catalogPackage(packages, "sample", "1", "a:alpha", "z:beta");
+            var first = new CatalogProbe("a", List.of("entry"));
+            alpha.queryFactory = facet -> first;
+            beta.queryFactory = facet -> { throw new AssertionError("foreign create failure"); };
+            try (var engine = catalogEngine(packages, List.of(selection(record, false)))) {
+                var before = engine.published().current();
+                events.clear();
+                assertCatalogCode(DefinitionCatalogException.Code.READ_FAILED, catalog(engine, "sample", 1));
+                assertEquals(List.of("query-create:a", "query-create:z", "query-close:a"), events);
+                assertEquals(1, first.closes.get());
+                assertEquals(before, engine.published().current());
+                alpha.queryFactory = facet -> new CatalogProbe("a", List.of("entry"));
+                beta.queryFactory = facet -> new CatalogProbe("z", List.of("entry"));
+                assertEquals(2, catalog(engine, "sample", 1).block().facets().size());
+                assertTrue(engine.published().current().engineDiagnostics().mutationGateOpen());
+            }
+        }
+    }
+
+    @Test
+    void catalogRejectsMalformedAndAbsentReadResultsAndCleansEachHandle() throws Exception {
+        try (var packages = new PluginPackageStore(root.resolve("malformed-packages"))) {
+            var record = catalogPackage(packages, "sample", "1", "main:alpha");
+            try (var engine = catalogEngine(packages, List.of(selection(record, false)))) {
+                List<Supplier<Mono<List<String>>>> malformed = List.of(
+                    () -> null, Mono::empty, () -> { throw new LinkageError("sync failure"); },
+                    () -> { throw new HostileCatalogRuntimeException(); }, () -> Mono.just(null),
+                    () -> Mono.error(new HostileCatalogError()),
+                    () -> Mono.just(List.of(" ")), () -> Mono.just(List.of("same", "same")),
+                    () -> Mono.just(Arrays.asList("valid", null)));
+                for (var read : malformed) {
+                    var query = new CatalogProbe("main", List.of("entry"));
+                    query.read = read;
+                    alpha.queryFactory = facet -> query;
+                    assertCatalogCode(DefinitionCatalogException.Code.READ_FAILED, catalog(engine, "sample", 1));
+                    assertEquals(1, query.closes.get());
+                    assertTrue(engine.published().current().engineDiagnostics().mutationGateOpen());
+                }
+                alpha.queryFactory = facet -> null;
+                assertCatalogCode(DefinitionCatalogException.Code.READ_FAILED, catalog(engine, "sample", 1));
+            }
+        }
+    }
+
+    @Test
+    void catalogCleanupFailureWinsRetainsOwnerAndStopsShutdownBeforeDependentContexts() throws Exception {
+        var packages = new PluginPackageStore(root.resolve("cleanup-packages"));
+        var record = catalogPackage(packages, "sample", "1", "a:alpha", "z:beta");
+        var first = new CatalogProbe("a", List.of("entry"));
+        var last = new CatalogProbe("z", List.of("entry"));
+        first.read = () -> Mono.error(new HostileCatalogError());
+        last.close = () -> { throw new HostileCatalogError(); };
+        alpha.queryFactory = facet -> first;
+        beta.queryFactory = facet -> last;
+        var termination = Sinks.<com.sstlfsj.fibra.engine.observation.HostTerminationRequest>one();
+        var requests = new AtomicInteger();
+        var engine = catalogEngine(packages, List.of(selection(record, false)), request -> {
+            requests.incrementAndGet(); termination.tryEmitValue(request);
+        });
+        engine.submit(ApplyDeployment.builder(graph(1, "a1")).expectedRevision(1)
+            .selections(List.of(alpha.metadata().selection(true), selection(record, false)))
+            .configContext(ConfigContextSnapshot.empty()).build()).block();
+        var operation = engine.published().current().engineDiagnostics().operation();
+        var current = engine.snapshot().current();
+        events.clear();
+        alpha.closeAdmissionFailure = new HostileCatalogRuntimeException();
+        try {
+            var error = assertCatalogCode(DefinitionCatalogException.Code.CLEANUP_FAILED, catalog(engine, "sample", 2));
+            assertEquals(List.of("query-create:a", "query-create:z", "query-read:a", "query-close:z", "query-close:a",
+                "admission:a1"), events);
+            assertEquals(EngineState.FAIL_STOP, engine.snapshot().state());
+            assertEquals(operation, engine.published().current().engineDiagnostics().operation());
+            assertEquals(current.get().attemptId(), engine.snapshot().current().orElseThrow().attemptId());
+            var fact = engine.published().current().engineDiagnostics().failure().orElseThrow();
+            assertEquals("CATALOG_CLEANUP_FAILED", fact.reason());
+            assertEquals(new FailureSubject.Engine(engine.snapshot().hostInstanceId()), fact.subject());
+            assertEquals(FailureStage.RELEASING, fact.stage());
+            assertTrue(fact.operationStage().isEmpty());
+            assertEquals(2, fact.targetRevision().orElseThrow());
+            assertEquals(List.of("definition catalog fail-stop could not close unit admission"),
+                engine.published().current().engineDiagnostics().cleanupFailures());
+            var request = termination.asMono().block(Duration.ofSeconds(2));
+            assertEquals(fact.subject(), request.subject());
+            assertEquals(1, requests.get());
+            assertCatalogCode(DefinitionCatalogException.Code.ENGINE_UNAVAILABLE, catalog(engine, "sample", 2));
+            assertSame(error, assertCatalogCode(DefinitionCatalogException.Code.CLEANUP_FAILED, engine.closeAsync()));
+            assertSame(error, assertCatalogCode(DefinitionCatalogException.Code.CLEANUP_FAILED, engine.closeAsync()));
+            assertEquals(operation, engine.published().current().engineDiagnostics().operation());
+            assertEquals(1, first.closes.get());
+            assertEquals(1, last.closes.get());
+            assertEquals(0, store.closes);
+            assertFalse(events.stream().anyMatch(value -> value.startsWith("driver-close:")));
+            assertTrue(packages.find(record.pluginId(), record.packageRevision()).isPresent());
+            var field = FibraEngine.class.getDeclaredField("catalogAttempt");
+            field.setAccessible(true);
+            var attempt = field.get(engine);
+            assertNotNull(attempt);
+            assertTrue(Arrays.stream(attempt.getClass().getDeclaredFields()).anyMatch(member -> {
+                try { member.setAccessible(true); var value = member.get(attempt);
+                    return value instanceof Collection<?> owners && owners.contains(last) && !owners.contains(first);
+                } catch (IllegalAccessException failure) { throw new AssertionError(failure); }
+            }), "only failed query owner must remain reachable");
+        } finally { packages.close(); }
+    }
+
+    @Test
+    void catalogNullThrowingAndAsyncFailedClosersAreCachedAndBlockQueuedQueries() throws Exception {
+        List<Supplier<Mono<Void>>> failures = List.of(() -> null,
+            () -> { throw new LinkageError("foreign close"); },
+            () -> { throw new HostileCatalogRuntimeException(); },
+            () -> Mono.error(new HostileCatalogError()));
+        for (var closer : failures) {
+            var packages = new PluginPackageStore(root.resolve(UUID.randomUUID().toString()));
+            var record = catalogPackage(packages, "sample", "1", "main:alpha");
+            var query = new CatalogProbe("main", List.of("entry"));
+            query.readRelease = Sinks.one();
+            query.close = closer;
+            alpha.queryFactory = facet -> query;
+            store.reopen();
+            var engine = catalogEngine(packages, List.of(selection(record, false), alpha.metadata().selection(false)),
+                request -> { });
+            try {
+                events.clear();
+                var failed = catalog(engine, "sample", 1).toFuture();
+                query.readEntered.asMono().block(Duration.ofSeconds(2));
+                var queued = catalog(engine, "a", 1).toFuture();
+                query.readRelease.tryEmitEmpty();
+                var completion = assertThrows(CompletionException.class, failed::join);
+                var error = assertInstanceOf(DefinitionCatalogException.class, completion.getCause());
+                assertEquals(DefinitionCatalogException.Code.CLEANUP_FAILED, error.code());
+                assertNull(error.getCause());
+                assertEquals(0, error.getSuppressed().length);
+                var queuedFailure = assertThrows(CompletionException.class, queued::join);
+                assertEquals(DefinitionCatalogException.Code.ENGINE_UNAVAILABLE,
+                    assertInstanceOf(DefinitionCatalogException.class, queuedFailure.getCause()).code());
+                assertSame(error, assertCatalogCode(DefinitionCatalogException.Code.CLEANUP_FAILED, engine.closeAsync()));
+                assertSame(error, assertCatalogCode(DefinitionCatalogException.Code.CLEANUP_FAILED, engine.closeAsync()));
+                assertEquals(1, query.closes.get());
+                assertFalse(events.stream().anyMatch(value -> value.startsWith("driver-close:")));
+            } finally { packages.close(); }
+        }
+    }
+
+    @Test
+    void catalogLeavesRealTargetBytesAndPublishedRevisionUntouched() throws Exception {
+        var targetsPath = root.resolve("file-target");
+        try (var packages = new PluginPackageStore(root.resolve("file-packages"));
+             var targets = new FileDeploymentTargetStore(targetsPath)) {
+            var record = catalogPackage(packages, "sample", "1", "main:alpha");
+            alpha.queryFactory = facet -> new CatalogProbe("main", List.of("entry"));
+            try (var engine = FibraEngine.builder(packages, targets).runtimeProvider(alpha)
+                .hostTerminationPort(request -> fail("unexpected termination")).build()) {
+                engine.startAsync().block();
+                engine.submit(ApplyDeployment.builder(graph(1)).expectedRevision(0)
+                    .selections(List.of(selection(record, false))).configContext(ConfigContextSnapshot.empty()).build()).block();
+                var before = engine.published().current();
+                var bytes = Files.readAllBytes(targetsPath.resolve("target.json"));
+                assertEquals(1, catalog(engine, "sample", 1).block().targetRevision());
+                assertArrayEquals(bytes, Files.readAllBytes(targetsPath.resolve("target.json")));
+                assertEquals(before, engine.published().current());
+            }
+        }
+    }
+
+    @Test
+    void catalogValidatesOnlyArgumentsBeforeSubscription() {
+        try (var engine = engine(request -> { })) {
+            assertThrows(NullPointerException.class, () -> engine.describeDefinitions(null, 0));
+            assertThrows(IllegalArgumentException.class, () -> engine.describeDefinitions(new PluginId("a"), -1));
+            events.clear();
+            var publisher = engine.describeDefinitions(new PluginId("a"), 0);
+            assertTrue(events.isEmpty());
+            assertCatalogCode(DefinitionCatalogException.Code.NOT_SELECTED, publisher);
+        }
+    }
+
+    @Test
+    void catalogCapturesExactSelectedRevisionAndNeverReadsHistoryOrOtherBadSelection() throws Exception {
+        var packagesPath = root.resolve("exact-packages");
+        try (var packages = new PluginPackageStore(packagesPath)) {
+            var r1 = catalogPackage(packages, "sample", "1", "main:alpha");
+            var r2 = catalogPackage(packages, "sample", "2", "main:alpha");
+            var unrelated = catalogPackage(packages, "unrelated", "1", "main:alpha");
+            var corrupt = packagesPath.resolve("records").resolve(java.util.HexFormat.of()
+                .formatHex("unrelated".getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+                .resolve(unrelated.packageRevision() + ".properties");
+            assertTrue(Files.isRegularFile(corrupt));
+            Files.writeString(corrupt, "broken record");
+            alpha.queryFactory = facet -> new CatalogProbe("main", List.of(
+                facet.packageRevision().equals(r1.packageRevision()) ? "r1" : "r2"));
+            try (var engine = catalogEngine(packages,
+                List.of(selection(r1, false), selection(unrelated, true)))) {
+                assertEquals(TargetConvergence.BLOCKED, engine.snapshot().targetConvergence());
+                var before = engine.published().current();
+                assertEquals(List.of("r1"), catalog(engine, "sample", 1).block().facets().getFirst().definitionIds());
+                assertEquals(before, engine.published().current());
+                assertThrows(EngineChangeException.class, () -> engine.submit(ApplyDeployment.builder(graph(1))
+                    .expectedRevision(1).selections(List.of(selection(r1, false), selection(unrelated, true)))
+                    .configContext(ConfigContextSnapshot.empty()).build()).block());
+                engine.submit(ApplyDeployment.builder(graph(1)).expectedRevision(1)
+                    .selections(List.of(selection(r2, false))).configContext(ConfigContextSnapshot.empty()).build()).block();
+                assertCatalogCode(DefinitionCatalogException.Code.STALE_TARGET, catalog(engine, "sample", 1));
+                var catalog = catalog(engine, "sample", 2).block();
+                assertEquals(r2.packageRevision(), catalog.packageRevision());
+                assertEquals(List.of("r2"), catalog.facets().getFirst().definitionIds());
+            }
+        }
+    }
+
+    @Test
+    void catalogDoesNotResolveMissingDisabledOrCyclicDependenciesButApplyStillRejectsThem() throws Exception {
+        for (var mode : List.of("missing-selection", "missing-package", "disabled-dependency", "cycle")) {
+            try (var packages = new PluginPackageStore(root.resolve(mode))) {
+                var source = Files.createDirectories(root.resolve(mode + "-source"));
+                Files.writeString(source.resolve("main.bin"), mode);
+                Files.writeString(source.resolve(PluginPackage.MANIFEST), """
+                    format: 1
+                    id: sample
+                    version: '1'
+                    facets:
+                      - id: main
+                        role: host
+                        runtime: alpha
+                        target: host
+                        payload: main.bin
+                        dependencies:
+                          - pluginId: %s
+                            facetId: main
+                        capabilities: []
+                    """.formatted(mode.equals("cycle") ? "sample" : "dependency"));
+                PluginPackageRecord record;
+                try (var transaction = packages.prepareInstall(source)) { record = transaction.save(); }
+                var selections = new ArrayList<PluginSelection>();
+                selections.add(selection(record, true));
+                if (mode.equals("missing-package")) {
+                    selections.add(new PluginSelection(new PluginId("dependency"), "c".repeat(64), true));
+                } else if (mode.equals("disabled-dependency")) {
+                    selections.add(selection(catalogPackage(packages, "dependency", "1", "main:alpha"), false));
+                }
+                alpha.queryFactory = facet -> new CatalogProbe("main", List.of("entry"));
+                store.reopen();
+                try (var engine = catalogEngine(packages, selections)) {
+                    assertEquals(TargetConvergence.BLOCKED, engine.snapshot().targetConvergence(), mode);
+                    var before = engine.published().current();
+                    assertEquals(List.of("entry"), catalog(engine, "sample", 1).block().facets().getFirst().definitionIds());
+                    assertEquals(before, engine.published().current());
+                    assertThrows(EngineChangeException.class, () -> engine.submit(ApplyDeployment.builder(graph(1))
+                        .expectedRevision(1).selections(selections)
+                        .configContext(ConfigContextSnapshot.empty()).build()).block(), mode);
+                    assertEquals(0, store.saves);
+                    assertTrue(engine.published().current().engineDiagnostics().mutationGateOpen());
+                }
+            }
+        }
+    }
+
+    @Test
+    void catalogMissingCorruptAndConflictingRootArePackageUnavailable() throws Exception {
+        var packagesPath = root.resolve("unavailable-packages");
+        try (var packages = new PluginPackageStore(packagesPath)) {
+            var record = catalogPackage(packages, "sample", "1", "main:alpha");
+            var conflicting = catalogPackage(packages, "a", "1", "main:alpha");
+            var absent = new PluginSelection(new PluginId("missing"), "c".repeat(64), false);
+            try (var engine = catalogEngine(packages,
+                List.of(selection(record, false), selection(conflicting, false), absent))) {
+                assertCatalogCode(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE, catalog(engine, "missing", 1));
+                assertCatalogCode(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE, catalog(engine, "a", 1));
+                alpha.metadataOverride = List.of(BuiltInPluginPackage.builder().pluginId(new PluginId("a"))
+                    .version("1").packageDigest(conflicting.packageRevision()).facets(alpha.metadata().facets()).build());
+                assertCatalogCode(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE, catalog(engine, "a", 1));
+                alpha.metadataOverride = null;
+                var recordPath = packagesPath.resolve("records").resolve(java.util.HexFormat.of()
+                    .formatHex("sample".getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+                    .resolve(record.packageRevision() + ".properties");
+                var original = Files.readString(recordPath);
+                assertTrue(original.contains("pluginId=sample"));
+                Files.writeString(recordPath, original.replace("pluginId=sample", "pluginId=other"));
+                assertCatalogCode(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE, catalog(engine, "sample", 1));
+                Files.writeString(recordPath, "corrupted");
+                assertCatalogCode(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE, catalog(engine, "sample", 1));
+            }
+        }
+    }
+
+    @Test
+    void catalogQueuedBeforeQuiesceExecutesDespiteCloseFlagWhileFollowingQueriesAreRejected() throws Exception {
+        var packages = new PluginPackageStore(root.resolve("queued-query"));
+        var record = catalogPackage(packages, "sample", "1", "main:alpha");
+        var query = new CatalogProbe("main", List.of("entry"));
+        query.readRelease = Sinks.one();
+        alpha.queryFactory = facet -> query;
+        var engine = catalogEngine(packages, List.of(selection(record, false), alpha.metadata().selection(false)));
+        try {
+            var reading = catalog(engine, "sample", 1).toFuture();
+            query.readEntered.asMono().block(Duration.ofSeconds(2));
+            var accepted = catalog(engine, "a", 1).toFuture();
+            var closing = engine.closeAsync().toFuture();
+            assertFalse(accepted.isDone());
+            assertFalse(closing.isDone());
+            assertCatalogCode(DefinitionCatalogException.Code.ENGINE_UNAVAILABLE, catalog(engine, "a", 1));
+            query.readRelease.tryEmitEmpty();
+            reading.get(2, TimeUnit.SECONDS);
+            assertEquals(1, accepted.get(2, TimeUnit.SECONDS).targetRevision());
+            closing.get(2, TimeUnit.SECONDS);
+        } finally {
+            query.readRelease.tryEmitEmpty();
+            engine.close();
+        }
+    }
+
+    @Test
+    void catalogBuiltInMetadataIsFreshAndDuplicateWrongRuntimeAndWrongDigestAreRejected() {
+        try (var engine = engine(request -> fail("unexpected termination"))) {
+            engine.submit(ApplyDeployment.builder(graph(1)).expectedRevision(0)
+                .selections(List.of(alpha.metadata().selection(false)))
+                .configContext(ConfigContextSnapshot.empty()).build()).block();
+            var fresh = BuiltInPluginPackage.builder().pluginId(new PluginId("a")).version("1")
+                .packageDigest("a".repeat(64)).facets(List.of(BuiltInFacet.builder(new FacetId("main"), alpha.id(),
+                    new ExecutionTarget("host")).definitionIds(Set.of("new", "entry")).build())).build();
+            alpha.metadataOverride = List.of(fresh);
+            assertEquals(List.of("entry", "new"), catalog(engine, "a", 1).block().facets().getFirst().definitionIds());
+            alpha.metadataOverride = List.of(fresh, fresh);
+            assertCatalogCode(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE, catalog(engine, "a", 1));
+            alpha.metadataOverride = List.of(beta.metadata());
+            assertCatalogCode(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE, catalog(engine, "a", 1));
+            alpha.metadataOverride = List.of(BuiltInPluginPackage.builder().pluginId(new PluginId("a")).version("1")
+                .packageDigest("c".repeat(64)).facets(fresh.facets()).build());
+            assertCatalogCode(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE, catalog(engine, "a", 1));
+        } finally { alpha.metadataOverride = null; }
+    }
+
+    private static final class HostileCatalogError extends AssertionError {
+        @Override public String getMessage() { throw new AssertionError("must not inspect foreign message"); }
+        @Override public String toString() { throw new AssertionError("must not stringify foreign error"); }
+    }
+
+    private static final class HostileCatalogRuntimeException extends RuntimeException {
+        @Override public String getMessage() { throw new AssertionError("must not inspect foreign message"); }
+        @Override public String toString() { throw new AssertionError("must not stringify foreign error"); }
+    }
+
+    private class CatalogProbe implements RuntimeDefinitionQuery {
+        final String facet;
+        final List<String> names;
+        final AtomicInteger closes = new AtomicInteger();
+        final AtomicBoolean readCancelled = new AtomicBoolean();
+        final Sinks.One<Void> readEntered = Sinks.one();
+        final Sinks.One<Void> closeEntered = Sinks.one();
+        Sinks.One<Void> readRelease;
+        Sinks.One<Void> closeRelease;
+        Supplier<Mono<List<String>>> read;
+        Supplier<Mono<Void>> close;
+        CatalogProbe(String facet, List<String> names) { this.facet = facet; this.names = names; }
+        public Mono<List<String>> readAsync() {
+            events.add("query-read:" + facet);
+            readEntered.tryEmitEmpty();
+            if (read != null) return read.get();
+            var result = Mono.just(names);
+            return (readRelease == null ? result : readRelease.asMono().then(result))
+                .doOnCancel(() -> readCancelled.set(true));
+        }
+        public Mono<Void> closeAsync() {
+            events.add("query-close:" + facet);
+            closes.incrementAndGet();
+            closeEntered.tryEmitEmpty();
+            if (close != null) return close.get();
+            return closeRelease == null ? Mono.empty() : closeRelease.asMono();
+        }
+    }
+
+    private PluginPackageRecord catalogPackage(PluginPackageStore packages, String plugin, String version,
+                                               String... facets) throws Exception {
+        var source = Files.createDirectories(root.resolve(UUID.randomUUID().toString()));
+        var yaml = new StringBuilder("format: 1\nid: " + plugin + "\nversion: '" + version + "'\nfacets:\n");
+        for (var value : facets) {
+            var parts = value.split(":");
+            Files.writeString(source.resolve(parts[0] + ".bin"), version + value);
+            yaml.append("  - id: ").append(parts[0]).append("\n    role: host\n    runtime: ")
+                .append(parts[1]).append("\n    target: host\n    payload: ").append(parts[0])
+                .append(".bin\n    dependencies: []\n    capabilities: []\n");
+        }
+        Files.writeString(source.resolve(PluginPackage.MANIFEST), yaml);
+        try (var transaction = packages.prepareInstall(source)) { return transaction.save(); }
+    }
+
+    private static PluginSelection selection(PluginPackageRecord record, boolean enabled) {
+        return new PluginSelection(record.pluginId(), record.packageRevision(), enabled);
+    }
+
+    private FibraEngine catalogEngine(PluginPackageStore packages, List<PluginSelection> selections) {
+        return catalogEngine(packages, selections, request -> fail("unexpected termination"));
+    }
+
+    private FibraEngine catalogEngine(PluginPackageStore packages, List<PluginSelection> selections,
+                                      HostTerminationPort port) {
+        store.current = DeploymentTarget.of(1, selections, graph(1), ConfigContextSnapshot.empty());
+        var engine = FibraEngine.builder(packages, store).runtimeProvider(alpha).runtimeProvider(beta)
+            .hostTerminationPort(port).build();
+        engine.startAsync().block();
+        return engine;
+    }
 
     @Test
     void everyRuntimeSealsBeforeSaveAndGlobalDependencyOrderControlsReplacement() {
@@ -2233,6 +2800,8 @@ class RuntimeDriverEngineTest {
     }
 
     private class ProbeProvider implements RuntimeProvider {
+        java.util.function.Function<ManagedFacet, RuntimeDefinitionQuery> queryFactory;
+        List<BuiltInPluginPackage> metadataOverride;
         final RuntimeId runtimeId;
         final String plugin;
         List<FacetDependency> dependencies = List.of();
@@ -2261,7 +2830,9 @@ class RuntimeDriverEngineTest {
         ProbeProvider(String runtime, String plugin) { runtimeId = new RuntimeId(runtime); this.plugin = plugin; }
         public RuntimeId id() { return runtimeId; }
         public String contractIdentity() { return contract; }
-        public List<BuiltInPluginPackage> builtInPackages() { return List.of(metadata()); }
+        public List<BuiltInPluginPackage> builtInPackages() {
+            return metadataOverride == null ? List.of(metadata()) : metadataOverride;
+        }
         BuiltInPluginPackage metadata() {
             return BuiltInPluginPackage.builder().pluginId(new PluginId(plugin)).version("1")
                 .packageDigest(plugin.equals("a") ? "a".repeat(64) : "b".repeat(64))
@@ -2275,6 +2846,11 @@ class RuntimeDriverEngineTest {
                 public RuntimeId id() { return runtimeId; }
                 public Mono<RuntimeArtifactInspection> probe(PluginFacetSource source) { return Mono.error(new UnsupportedOperationException()); }
                 public Mono<RuntimeArtifactInspection> inspect(ManagedFacet facet) { return Mono.error(new UnsupportedOperationException()); }
+                @Override public RuntimeDefinitionQuery createDefinitionQuery(ManagedFacet facet) {
+                    if (queryFactory == null) throw new AssertionError("pure built-in provider must not use dynamic SPI");
+                    events.add("query-create:" + facet.facet().facetId().value());
+                    return queryFactory.apply(facet);
+                }
                 public RuntimeDriverSnapshot snapshot() { return new RuntimeDriverSnapshot(runtimeId, Map.of()); }
                 public Mono<Void> closeAsync() {
                     Mono<Void> close = Mono.fromRunnable(() -> {

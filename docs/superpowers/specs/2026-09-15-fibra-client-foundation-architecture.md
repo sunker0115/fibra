@@ -21,6 +21,10 @@ tag 或 Maven/npm 发布；工作分支推送与本地 main 合并按关闭计�
 
 ## 1. 最终目标与边界
 
+上游变更以通用能力为准：Fibra不专属于Tela或任何单一产品，不能仅因产品需要就修改Fibra。消费者需求可以触发缺口核对；只有证据证明缺少通用能力或存在通用缺陷，才进入Fibra设计与实现。产品组合、政策及业务规则由产品拥有，不通过名称特判或通用包装下沉内核。
+
+问题按最终架构的职责、合同与生命周期归属解决：先确认不变量由哪个owner负责，再使受影响路径遵守同一实现。不得用产品特判、旁路入口、重复状态或调度器兜底掩盖边界错误；最小修改以责任闭合为准，不以改动行数为准。
+
 Fibra 是通用插件执行内核，不是 Desktop/Web 产品框架。它负责：
 
 - 唯一的逻辑 `PluginPackage`、package selection、desired target 和 Registry 控制面；
@@ -187,8 +191,9 @@ PluginPackage
 
 `fibra-package.yaml` 是 plugin/facet/dependency 的唯一清单。runtime-local descriptor 只描述入口和 runtime
 私有元数据，不再次声明 plugin/facet 身份或求解版本，但必须显式产出该 facet 提供的 `definitionId`；不得以
-artifactId、facetId、文件名或入口类名作为隐式 definitionId。Java 动态 facet 由受信 `definition().name()`
-产出一个 definition；Node P0 descriptor 必填一个 `definitionId`；同一 definition 可被多个 desired entry
+artifactId、facetId、文件名或入口类名作为隐式 definitionId。可执行 Java 动态 facet 在制品中声明一个
+`definitionId`，prepare 再核对受信 `definition().name()` 与声明一致；无入口的 contract-only facet
+声明为空。Node P0 descriptor 必填一个 `definitionId`；同一 definition 可被多个 desired entry
 引用。旧 `plugin.properties` 单 artifact 格式直接拒绝，不保留读取器。
 
 `PluginPackageStore` 先以 content-addressed 原子事务发布不可变 package，再由目标选择引用它。发布 package
@@ -276,8 +281,13 @@ RuntimeDriver
   id() -> RuntimeId
   probe(PluginFacetSource) -> Mono<RuntimeArtifactInspection>
   inspect(ManagedFacet) -> Mono<RuntimeArtifactInspection>
+  createDefinitionQuery(ManagedFacet) -> RuntimeDefinitionQuery
   createCandidate(RuntimeTargetSlice) -> RuntimeCandidate
   snapshot() -> RuntimeDriverSnapshot
+  closeAsync() -> Mono<Void>
+
+RuntimeDefinitionQuery
+  readAsync() -> Mono<List<String>>
   closeAsync() -> Mono<Void>
 
 RuntimeCandidate
@@ -323,6 +333,11 @@ HostTerminationPort
   `create(RuntimeHostServices)` 必须返回只绑定本次 Host 的全新、相互独立 driver；provider 不得缓存 services、
   driver 或任何 Host 可变资源。并发 `create` 不在 P0 保证内。Engine 独占每个 driver 的关闭权，创建失败后同一
   provider 仍可用于下一次 Host 构造；
+- `createDefinitionQuery` 是所有 driver 的必需合同，只创建 inert bookkeeping，不做 I/O 或取得资源。
+  Engine 先登记 query，`readAsync` 再由原 runtime parser 读取静态名称声明，不执行目标插件 metadata、
+  构造器或工厂。read/close 各缓存一次真实终态，取消只取消观察；close 等已接纳读取实际结束，清理失败
+  保留同一 owner 的真实现场。目录不创建实例，也不证明 prepare 或实际加载成功。完整选择、错误与资源
+  边界见[目录设计](2026-10-11-definition-catalog-design.md)和[公共 API](../../api/README.md#已选择包的-definition-目录)；
 - `createCandidate` 只能创建 inert bookkeeping，不得 I/O 或取得尚未登记的外部资源。Engine 必须在同一
   command-lane 调用栈内把返回值加入 `DeploymentCandidate`，之后才允许订阅 `prepareAsync`；
 - `RuntimeTargetSlice` 必须携带该 runtime 的动态 facets、内建 package metadata 和本次 affected desired

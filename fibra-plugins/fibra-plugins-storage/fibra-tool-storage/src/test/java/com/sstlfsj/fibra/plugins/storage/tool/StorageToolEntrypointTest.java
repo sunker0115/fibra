@@ -60,7 +60,7 @@ class StorageToolEntrypointTest {
         try (var input = StorageToolEntrypointTest.class.getResourceAsStream("/META-INF/fibra/plugin.yaml")) {
             var manifest = new String(input.readAllBytes(), StandardCharsets.UTF_8);
             assertEquals("entrypoint: " + StorageToolEntrypoint.class.getName()
-                + "\n", manifest);
+                + "\ndefinitionId: tool-storage\n", manifest);
         }
     }
 

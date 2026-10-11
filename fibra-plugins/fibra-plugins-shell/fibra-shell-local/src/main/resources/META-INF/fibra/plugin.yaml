@@ -1,1 +1,2 @@
 entrypoint: com.sstlfsj.fibra.plugins.shell.local.ShellLocalEntrypoint
+definitionId: fibra-shell-local

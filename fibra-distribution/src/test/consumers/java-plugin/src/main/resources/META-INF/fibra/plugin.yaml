@@ -1,1 +1,2 @@
 entrypoint: verification.distribution.plugin.Entrypoint
+definitionId: external

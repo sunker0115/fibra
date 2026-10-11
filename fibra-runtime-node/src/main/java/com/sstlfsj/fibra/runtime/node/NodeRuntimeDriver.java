@@ -13,6 +13,7 @@ import com.sstlfsj.fibra.engine.runtime.PreparedRuntimeGeneration;
 import com.sstlfsj.fibra.engine.runtime.RuntimeArtifactInspection;
 import com.sstlfsj.fibra.engine.runtime.RuntimeCandidate;
 import com.sstlfsj.fibra.engine.runtime.RuntimeDriver;
+import com.sstlfsj.fibra.engine.runtime.RuntimeDefinitionQuery;
 import com.sstlfsj.fibra.engine.runtime.RuntimeHostServices;
 import com.sstlfsj.fibra.engine.runtime.RuntimeTargetSlice;
 import com.sstlfsj.fibra.engine.runtime.RuntimeUnitDisableRequest;
@@ -41,13 +42,118 @@ public final class NodeRuntimeDriver implements RuntimeDriver {
     private final RuntimeHostServices services;
     private final NodeRuntimeOptions options;
     private final NodeFacetDescriptorReader descriptors = new NodeFacetDescriptorReader();
+    private final NodeFacetDescriptorReader.ResourceAccess descriptorAccess;
+    private final Set<DescriptorRead> descriptorReads = new LinkedHashSet<>();
     private final Map<PayloadKey, Payload> payloads = new LinkedHashMap<>();
     private final Map<ExecutionUnitKey, RuntimeUnitGeneration> published = new ConcurrentHashMap<>();
     private Mono<Void> close;
 
     NodeRuntimeDriver(RuntimeHostServices services, NodeRuntimeOptions options) {
+        this(services, options, new NodeFacetDescriptorReader.ResourceAccess());
+    }
+
+    NodeRuntimeDriver(RuntimeHostServices services, NodeRuntimeOptions options,
+                      NodeFacetDescriptorReader.ResourceAccess descriptorAccess) {
         this.services = Objects.requireNonNull(services, "services");
         this.options = Objects.requireNonNull(options, "options");
+        this.descriptorAccess = Objects.requireNonNull(descriptorAccess, "descriptorAccess");
+    }
+
+    @Override
+    public synchronized RuntimeDefinitionQuery createDefinitionQuery(ManagedFacet facet) {
+        return new DefinitionQuery(createDescriptorRead(facet));
+    }
+
+    private synchronized DescriptorRead createDescriptorRead(ManagedFacet facet) {
+        open();
+        if (!id().equals(Objects.requireNonNull(facet, "facet").facet().runtimeId())) throw new IllegalArgumentException("facet runtime is not node");
+        var owner = new DescriptorRead(facet);
+        descriptorReads.add(owner);
+        return owner;
+    }
+
+    private NodeFacetDescriptor readDescriptor(ManagedFacet facet, Candidate candidate) {
+        var owner = createDescriptorRead(facet);
+        if (candidate != null) candidate.descriptorReads.add(owner);
+        boolean fatal = false;
+        try {
+            return owner.read();
+        } catch (VirtualMachineError | ThreadDeath failure) {
+            fatal = true;
+            throw failure;
+        } finally {
+            if (!fatal) {
+                owner.close();
+                if (candidate != null) candidate.descriptorReads.remove(owner);
+            }
+        }
+    }
+
+    /** The sole file owner, used directly by synchronous paths or one query adapter. */
+    private final class DescriptorRead {
+        private final ManagedFacet facet;
+        private final NodeFacetDescriptorReader.Resources resources;
+        private boolean closeAttempted;
+        private Throwable closeFailure;
+        private DescriptorRead(ManagedFacet facet) {
+            this.facet = facet;
+            resources = new NodeFacetDescriptorReader.Resources(descriptorAccess, facet.artifactId());
+        }
+        private NodeFacetDescriptor read() {
+            try {
+                return descriptors.read(facet, resources);
+            } catch (VirtualMachineError | ThreadDeath fatal) {
+                throw fatal;
+            } catch (Throwable failure) {
+                throw new NodeRuntimeException(facet.artifactId(),
+                    "cannot read Node definition declaration: " + failure.getClass().getName()
+                        + ": " + failure.getMessage(), null);
+            }
+        }
+        private synchronized void close() {
+            if (!closeAttempted) {
+                closeAttempted = true;
+                try {
+                    resources.close();
+                    synchronized (NodeRuntimeDriver.this) { descriptorReads.remove(this); }
+                } catch (RuntimeException | Error failure) {
+                    closeFailure = failure;
+                }
+            }
+            if (closeFailure instanceof RuntimeException failure) throw failure;
+            if (closeFailure instanceof Error failure) throw failure;
+        }
+    }
+
+    private final class DefinitionQuery implements RuntimeDefinitionQuery {
+        private final DescriptorRead owner;
+        private final Mono<NodeFacetDescriptor> descriptor;
+        private boolean started, closing;
+        private Mono<Void> closeResult;
+        private DefinitionQuery(DescriptorRead owner) {
+            this.owner = owner;
+            descriptor = Mono.defer(() -> {
+                synchronized (this) {
+                    if (closing) return Mono.error(new IllegalStateException("Node definition query is closed"));
+                    started = true;
+                }
+                return Mono.fromCallable(owner::read)
+                    .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic());
+            }).cache();
+        }
+        @Override public Mono<List<String>> readAsync() {
+            return descriptor.map(value -> List.of(value.definitionId()));
+        }
+        @Override public synchronized Mono<Void> closeAsync() {
+            if (closeResult == null) closeResult = Mono.defer(() -> {
+                final boolean wait;
+                synchronized (this) { closing = true; wait = started; }
+                var terminal = wait ? descriptor.onErrorResume(ignored -> Mono.empty()).then() : Mono.<Void>empty();
+                return terminal.then(Mono.fromRunnable(owner::close)
+                    .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic()));
+            }).then().cache();
+            return closeResult;
+        }
     }
 
     @Override public RuntimeId id() { return NodeRuntimeProvider.RUNTIME_ID; }
@@ -70,6 +176,7 @@ public final class NodeRuntimeDriver implements RuntimeDriver {
     @Override public synchronized Mono<Void> closeAsync() {
         if (close == null) close = Mono.<Void>fromRunnable(() -> {
             synchronized (NodeRuntimeDriver.this) {
+                if (!descriptorReads.isEmpty()) throw new IllegalStateException("Node runtime driver still has descriptor reads");
                 if (payloads.values().stream().anyMatch(value -> value.references != 0)) throw new IllegalStateException("Node runtime driver still has leased payloads");
                 payloads.clear(); published.clear();
             }
@@ -80,17 +187,17 @@ public final class NodeRuntimeDriver implements RuntimeDriver {
     private RuntimeArtifactInspection inspectFacet(ManagedFacet facet) {
         open();
         if (!id().equals(Objects.requireNonNull(facet, "facet").facet().runtimeId())) throw new IllegalArgumentException("facet runtime is not node");
-        descriptors.read(facet);
+        readDescriptor(facet, null);
         return new RuntimeArtifactInspection(id(), facet.artifactId());
     }
     private synchronized void open() { if (close != null) throw new IllegalStateException("Node runtime driver is closed"); }
     private synchronized PayloadLease acquire(PluginFacetSource source,
-                                              Map<ArtifactId, PluginFacetSource> sources) {
-        return acquire(source, sources, new LinkedHashSet<>());
+                                              Map<ArtifactId, PluginFacetSource> sources, Candidate candidate) {
+        return acquire(source, sources, new LinkedHashSet<>(), candidate);
     }
     private PayloadLease acquire(PluginFacetSource source,
                                  Map<ArtifactId, PluginFacetSource> sources,
-                                 Set<ArtifactId> visiting) {
+                                 Set<ArtifactId> visiting, Candidate candidate) {
         var facet = source.facet();
         if (!visiting.add(facet.artifactId())) {
             throw new IllegalArgumentException(
@@ -101,7 +208,7 @@ public final class NodeRuntimeDriver implements RuntimeDriver {
             for (var dependency : source.dependencies()) {
                 var local = sources.get(dependency.artifactId());
                 if (local != null) {
-                    dependencies.add(acquire(local, sources, visiting));
+                    dependencies.add(acquire(local, sources, visiting, candidate));
                 }
             }
             var dependencyKeys = dependencies.stream()
@@ -111,7 +218,7 @@ public final class NodeRuntimeDriver implements RuntimeDriver {
                 dependencyKeys, NodeRuntimeProvider.CONTRACT_IDENTITY);
             var payload = payloads.get(key);
             if (payload == null) {
-                payload = new Payload(key, facet, descriptors.read(facet));
+                payload = new Payload(key, facet, readDescriptor(facet, candidate));
                 validate(payload);
                 payloads.put(key, payload);
             }
@@ -141,6 +248,7 @@ public final class NodeRuntimeDriver implements RuntimeDriver {
         private boolean started, sealed, closed;
         private RuntimePlan plan;
         private Map<ExecutionUnitKey, Prepared> prepared = Map.of();
+        private final Set<DescriptorRead> descriptorReads = new LinkedHashSet<>();
         private Mono<Void> close;
         private Candidate(RuntimeTargetSlice target) { this.target = target; }
         @Override public Mono<Void> prepareAsync() {
@@ -167,9 +275,26 @@ public final class NodeRuntimeDriver implements RuntimeDriver {
                 synchronized (Candidate.this) { closed = true; }
                 return started ? preparation.onErrorResume(ignored -> Mono.empty()) : Mono.empty();
             }).then(Mono.<Void>fromRunnable(() -> {
-                synchronized (Candidate.this) { if (!sealed) releasePrepared(prepared); prepared = Map.of(); plan = null; }
+                synchronized (Candidate.this) {
+                    closeDescriptorReads();
+                    if (!sealed) releasePrepared(prepared);
+                    prepared = Map.of(); plan = null;
+                }
             })).cache();
             return close;
+        }
+        private void closeDescriptorReads() {
+            Throwable failure = null;
+            for (var owner : List.copyOf(descriptorReads)) {
+                try { owner.close(); descriptorReads.remove(owner); }
+                catch (VirtualMachineError | ThreadDeath fatal) { throw fatal; }
+                catch (RuntimeException | Error cleanup) {
+                    if (failure == null) failure = cleanup;
+                    else if (failure != cleanup) failure.addSuppressed(cleanup);
+                }
+            }
+            if (failure instanceof RuntimeException cleanup) throw cleanup;
+            if (failure instanceof Error cleanup) throw cleanup;
         }
         private void prepare() {
             var sources = index(target.facets());
@@ -179,7 +304,7 @@ public final class NodeRuntimeDriver implements RuntimeDriver {
                     var resolved = target.desired().require(entryId);
                     if (!(resolved.input() instanceof DesiredInputEntry entry) || !resolved.effective().enabled()) throw new IllegalArgumentException("affected Node entry is not enabled: " + entryId);
                     var source = source(entry.definitionRef(), sources);
-                    var lease = acquire(source, sources);
+                    var lease = acquire(source, sources, this);
                     try {
                         if (!lease.payload.descriptor.definitionId().equals(entry.definitionRef().definitionId())) throw new IllegalArgumentException("Node definition id does not match " + entryId);
                         var key = new ExecutionUnitKey(entryId);

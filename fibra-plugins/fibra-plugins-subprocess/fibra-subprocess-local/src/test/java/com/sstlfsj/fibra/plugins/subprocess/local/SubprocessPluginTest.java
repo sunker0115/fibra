@@ -14,7 +14,7 @@ class SubprocessPluginTest {
         try (resource) {
             var text = new String(resource.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             assertEquals("entrypoint: " + SubprocessLocalEntrypoint.class.getName()
-                + "\n", text);
+                + "\ndefinitionId: fibra-subprocess-local\n", text);
         }
         var entrypoint = (PluginEntrypoint<?>) Class.forName(
             "com.sstlfsj.fibra.plugins.subprocess.local.SubprocessLocalEntrypoint").getConstructor().newInstance();

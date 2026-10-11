@@ -52,6 +52,27 @@ class ExternalFixtureRuntimeDriverTest {
     private static final String REVISION = "a".repeat(64);
 
     @Test
+    void declaredDefinitionQueryIsInertCachedAndRejectsReadAfterClosingUnstartedHandle() {
+        try (var services = new Services()) {
+            var driver = (ExternalFixtureRuntimeDriver) new ExternalFixtureRuntimeProvider().create(services);
+            var before = driver.fixtureSnapshot();
+            var facet = slice().facets().getFirst().facet();
+            var query = driver.createDefinitionQuery(facet);
+            assertEquals(before, driver.fixtureSnapshot());
+            assertEquals(List.of(ExternalFixtureRuntimeProvider.DEFINITION_ID), query.readAsync().block());
+            query.closeAsync().block();
+            query.closeAsync().block();
+            assertEquals(List.of(ExternalFixtureRuntimeProvider.DEFINITION_ID), query.readAsync().block());
+            assertEquals(before, driver.fixtureSnapshot());
+            var unopened = driver.createDefinitionQuery(facet);
+            unopened.closeAsync().block();
+            assertThrows(IllegalStateException.class, () -> unopened.readAsync().block());
+            driver.closeAsync().block();
+            assertThrows(IllegalStateException.class, () -> driver.createDefinitionQuery(facet));
+        }
+    }
+
+    @Test
     void sealingReplacementDoesNotTakeControlOfCurrentUnits() {
         verifyCandidateDoesNotReplaceCurrentControl(false);
     }

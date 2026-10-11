@@ -335,9 +335,15 @@ class JavaPublishedViewRetentionTest {
         var version = "1.0." + round;
         var root = Files.createDirectories(work.resolve(pluginId + "-source-" + round));
         var jar = root.resolve("plugin.jar");
+        var definitionId = switch (entrypoint) {
+            case "fixture.RetentionJavaEntrypoint" -> "retention";
+            case "fixture.RetentionJavaEntrypoint$Failing" -> "retention-failure";
+            case "fixture.RetentionJavaEntrypoint$Peer" -> "retention-peer";
+            default -> throw new IllegalArgumentException("unknown fixture entrypoint " + entrypoint);
+        };
         try (var output = new JarOutputStream(Files.newOutputStream(jar))) {
             output.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml"));
-            output.write(("entrypoint: " + entrypoint + "\n")
+            output.write(("entrypoint: " + entrypoint + "\ndefinitionId: " + definitionId + "\n")
                 .getBytes(StandardCharsets.UTF_8));
             output.closeEntry();
             for (var name : List.of("fixture/RetentionJavaEntrypoint.class",

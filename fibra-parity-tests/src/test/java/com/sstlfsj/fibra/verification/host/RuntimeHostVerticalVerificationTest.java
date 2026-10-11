@@ -367,7 +367,7 @@ class RuntimeHostVerticalVerificationTest {
         var jar = root.resolve("plugin.jar");
         try (var output = new JarOutputStream(Files.newOutputStream(jar))) {
             jarEntry(output, "META-INF/fibra/plugin.yaml",
-                "entrypoint: " + DynamicJavaEntrypoint.class.getName() + '\n');
+                "entrypoint: " + DynamicJavaEntrypoint.class.getName() + "\ndefinitionId: java\n");
             var className = DynamicJavaEntrypoint.class.getName()
                 .replace('.', '/') + ".class";
             output.putNextEntry(new JarEntry(className));

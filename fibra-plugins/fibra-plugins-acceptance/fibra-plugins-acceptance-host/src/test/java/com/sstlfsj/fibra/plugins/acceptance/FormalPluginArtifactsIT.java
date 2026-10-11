@@ -60,9 +60,9 @@ class FormalPluginArtifactsIT {
             assertTrue(facet.dependencies().stream()
                 .allMatch(value -> value.facetId().value().equals("main")));
             var descriptor = PluginAcceptanceHarness.manifest(jar);
-            assertFalse(descriptor.contains("id:"));
-            assertFalse(descriptor.contains("version:"));
-            assertFalse(descriptor.contains("requires:"));
+            assertFalse(descriptor.lines().anyMatch(line -> line.matches("\\s*id\\s*:.*")));
+            assertFalse(descriptor.lines().anyMatch(line -> line.matches("\\s*version\\s*:.*")));
+            assertFalse(descriptor.lines().anyMatch(line -> line.matches("\\s*requires\\s*:.*")));
             if (CONTRACT_PACKAGES.contains(pluginId)) {
                 assertEquals("{}\n", descriptor,
                     pluginId + " contract facet descriptor must be empty");

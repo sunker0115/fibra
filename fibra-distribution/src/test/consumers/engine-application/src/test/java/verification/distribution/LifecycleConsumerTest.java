@@ -4,7 +4,13 @@ import com.sstlfsj.fibra.artifact.PluginId;
 import com.sstlfsj.fibra.artifact.PluginPackageStore;
 import com.sstlfsj.fibra.bridge.ContributionKindRegistry;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
+import com.sstlfsj.fibra.config.DesiredInputGraph;
+import com.sstlfsj.fibra.config.ConfigContextSnapshot;
 import com.sstlfsj.fibra.config.PluginDefinitionRef;
+import com.sstlfsj.fibra.engine.ApplyDeployment;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTarget;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTargetStore;
+import com.sstlfsj.fibra.engine.deployment.DurableTargetToken;
 import com.sstlfsj.fibra.engine.observation.ExecutionObservation;
 import com.sstlfsj.fibra.engine.deployment.FileDeploymentTargetStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
@@ -21,6 +27,7 @@ import com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions;
 import com.sstlfsj.fibra.runtime.node.NodeRuntimeProvider;
 import com.sstlfsj.fibra.value.LiteralValue;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -44,6 +51,95 @@ class LifecycleConsumerTest {
     private static final Duration TIMEOUT = Duration.ofSeconds(20);
     private static final PluginId PLUGIN = new PluginId("lifecycle");
     private static final String INSTANCE = "lifecycle-instance";
+
+    @Test
+    void discoversAnUnknownDisabledJavaPackageAndCreatesFromItsCatalog(@TempDir Path work)
+        throws Exception {
+        var loadMarker = work.resolve("entrypoint-loaded");
+        var fixture = new JavaFixture(work, loadMarker);
+        var source = fixture.packageSource("discovered", "1.0.0");
+        var manifest = Files.readString(source.resolve("fibra-package.yaml"))
+            .replace("id: lifecycle", "id: unknown-author-package")
+            .replace("id: main", "id: executable-slot");
+        Files.writeString(source.resolve("fibra-package.yaml"), manifest);
+        var targets = new CountingTargets(work.resolve("target-store"));
+        try (var packages = new PluginPackageStore(work.resolve("package-store"));
+             var engine = FibraEngine.builder(packages, targets)
+                 .runtimeProvider(new JavaRuntimeProvider(List.of()))
+                 .contributionKinds(ContributionKindRegistry.of(ToolContributions.KIND))
+                 .hostTerminationPort(request -> { }).build()) {
+            engine.startAsync().block(TIMEOUT);
+            var registry = new PluginRegistry(engine, packages, new InMemoryPluginAuditRepository());
+            var installed = registry.install(new PluginInstallRequest(source, false)).block(TIMEOUT);
+            var pluginId = new PluginId("unknown-author-package");
+            var selection = installed.selections().get(pluginId);
+            assertFalse(selection.enabled());
+            var before = engine.published().current();
+            var revision = before.engine().target().orElseThrow().targetRevision();
+            var bytes = Files.readAllBytes(work.resolve("target-store/target.json"));
+            var saves = targets.saves;
+            var history = registry.history().size();
+
+            var catalog = engine.describeDefinitions(pluginId, revision).block(TIMEOUT);
+            assertEquals(revision, catalog.targetRevision());
+            assertEquals(selection.packageRevision(), catalog.packageRevision());
+            assertEquals(pluginId, catalog.pluginId());
+            assertEquals(1, catalog.facets().size());
+            var facet = catalog.facets().getFirst();
+            assertEquals("executable-slot", facet.facetId().value());
+            assertEquals(List.of("lifecycle"), facet.definitionIds());
+            assertSame(before, engine.published().current());
+            assertArrayEquals(bytes, Files.readAllBytes(work.resolve("target-store/target.json")));
+            assertEquals(saves, targets.saves);
+            assertEquals(history, registry.history().size());
+            assertTrue(before.engine().current().orElseThrow().observations().isEmpty());
+            assertTrue(before.contributions().entries().isEmpty());
+            assertTrue(before.diagnostics().plugins().isEmpty());
+            assertFalse(Files.exists(loadMarker), "catalog must not initialize the Java entrypoint");
+
+            var ref = new PluginDefinitionRef(catalog.pluginId().value(),
+                facet.facetId().value(), facet.definitionIds().getFirst());
+            var graph = new DesiredInputGraph(List.of(DesiredInputEntry.builder(INSTANCE, ref)
+                .config(LiteralValue.of(Map.of())).build()));
+            var applied = engine.submit(ApplyDeployment.builder(graph).expectedRevision(revision)
+                .selections(List.of(new PluginSelection(pluginId, catalog.packageRevision(), true)))
+                .configContext(ConfigContextSnapshot.empty()).build()).block(TIMEOUT).view();
+            assertEquals(revision + 1, applied.engine().target().orElseThrow().targetRevision());
+            assertEquals(saves + 1, targets.saves);
+            assertEquals(ExecutionObservation.State.ACTIVE,
+                applied.engine().current().orElseThrow().observations().values().iterator().next()
+                    .aggregateState());
+            var facts = map(invoke(engine, ToolRequest.of(Map.of("operation", "facts")))
+                .structuredContent().orElseThrow().toJava());
+            assertEquals("discovered", facts.get("variant"));
+            assertEquals(Map.of(), facts.get("config"));
+            assertEquals("loaded", Files.readString(loadMarker));
+            var appliedBytes = Files.readAllBytes(work.resolve("target-store/target.json"));
+            assertThrows(IllegalStateException.class, () ->
+                engine.submit(ApplyDeployment.builder(graph).expectedRevision(revision)
+                    .selections(List.of(new PluginSelection(pluginId, catalog.packageRevision(), true)))
+                    .configContext(ConfigContextSnapshot.empty()).build()).block(TIMEOUT));
+            assertEquals(saves + 1, targets.saves, "stale original CAS must not save or rewrite target");
+            assertArrayEquals(appliedBytes, Files.readAllBytes(work.resolve("target-store/target.json")));
+        }
+        try (var reopened = new FileDeploymentTargetStore(work.resolve("target-store"));
+             var packages = new PluginPackageStore(work.resolve("package-store"))) {
+            assertEquals(2, reopened.load().orElseThrow().target().targetRevision());
+        }
+    }
+
+    private static final class CountingTargets implements DeploymentTargetStore {
+        private final FileDeploymentTargetStore delegate;
+        private int saves;
+        private CountingTargets(Path root) { delegate = new FileDeploymentTargetStore(root); }
+        @Override public java.util.Optional<StoredTarget> load() { return delegate.load(); }
+        @Override public DurableTargetToken save(long expectedRevision, DeploymentTarget target) {
+            var token = delegate.save(expectedRevision, target);
+            saves++;
+            return token;
+        }
+        @Override public void close() { delegate.close(); }
+    }
 
     @ParameterizedTest(name = "{0} 仓外生命周期")
     @EnumSource(RuntimeFlavor.class)
@@ -185,13 +281,20 @@ class LifecycleConsumerTest {
         final Path work() { return work; } final Path holdEntered() { return holdEntered; } final Path releaseFile() { return release; } java.util.Optional<Path> pidFile() { return java.util.Optional.empty(); } final void awaitHold() throws Exception { awaitFile(holdEntered, "调用没有进入 hold"); } final void release() throws Exception { Files.writeString(release, "release"); }
     }
     private static final class JavaFixture extends Fixture {
-        private JavaFixture(Path work) { super(work); }
+        private final Path loadMarker;
+        private JavaFixture(Path work) { this(work, null); }
+        private JavaFixture(Path work, Path loadMarker) { super(work); this.loadMarker = loadMarker; }
         @Override Path packageSource(String variant, String version) throws Exception {
             var root = Files.createDirectories(work().resolve("java-" + variant)); var source = Path.of(System.getProperty("plugin.jar")); var payload = root.resolve("plugin.jar");
             try (var input = new JarFile(source.toFile()); var output = new JarOutputStream(Files.newOutputStream(payload))) {
                 var entries = input.entries(); while (entries.hasMoreElements()) { var entry = entries.nextElement(); if (entry.getName().equals("META-INF/fibra/plugin.yaml")) continue; output.putNextEntry(new JarEntry(entry.getName())); if (!entry.isDirectory()) input.getInputStream(entry).transferTo(output); output.closeEntry(); }
-                output.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml")); output.write("entrypoint: verification.distribution.plugin.LifecycleEntrypoint\n".getBytes(StandardCharsets.UTF_8)); output.closeEntry();
+                output.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml")); output.write("entrypoint: verification.distribution.plugin.LifecycleEntrypoint\ndefinitionId: lifecycle\n".getBytes(StandardCharsets.UTF_8)); output.closeEntry();
                 output.putNextEntry(new JarEntry("lifecycle-variant.txt")); output.write(variant.getBytes(StandardCharsets.UTF_8)); output.closeEntry();
+                if (loadMarker != null) {
+                    output.putNextEntry(new JarEntry("lifecycle-load-marker.txt"));
+                    output.write(loadMarker.toString().getBytes(StandardCharsets.UTF_8));
+                    output.closeEntry();
+                }
             }
             Files.writeString(root.resolve("fibra-package.yaml"), javaManifest(version)); return root;
         }

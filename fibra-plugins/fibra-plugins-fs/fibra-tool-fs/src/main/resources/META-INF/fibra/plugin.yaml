@@ -1,1 +1,2 @@
 entrypoint: com.sstlfsj.fibra.plugins.fs.tool.FileToolEntrypoint
+definitionId: tool-fs

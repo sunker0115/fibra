@@ -59,6 +59,9 @@ final class ClientProtocolFixtureProvider implements RuntimeProvider {
             @Override public RuntimeId id() { return delegate.id(); }
             @Override public Mono<RuntimeArtifactInspection> probe(PluginFacetSource source) { return delegate.probe(source); }
             @Override public Mono<RuntimeArtifactInspection> inspect(ManagedFacet facet) { return delegate.inspect(facet); }
+            @Override public com.sstlfsj.fibra.engine.runtime.RuntimeDefinitionQuery createDefinitionQuery(ManagedFacet facet) {
+                return delegate.createDefinitionQuery(facet);
+            }
             @Override public RuntimeDriverSnapshot snapshot() { return delegate.snapshot(); }
             @Override public Mono<Void> closeAsync() { return delegate.closeAsync(); }
             @Override public RuntimeCandidate createCandidate(RuntimeTargetSlice target) {

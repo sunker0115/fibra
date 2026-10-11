@@ -305,9 +305,14 @@ class CrossRuntimeConditionalConfigTest {
         throws Exception {
         var root = Files.createDirectory(work.resolve(id + "-package"));
         var jar = root.resolve("main.jar");
+        var definitionId = switch (entrypoint) {
+            case "fixture.ContextJavaEntrypoint" -> "conditional-java";
+            case "fixture.ContextJavaEntrypoint$Stable" -> "stable-java";
+            default -> throw new IllegalArgumentException("unknown fixture entrypoint " + entrypoint);
+        };
         try (var output = new JarOutputStream(Files.newOutputStream(jar))) {
             jarEntry(output, "META-INF/fibra/plugin.yaml",
-                "entrypoint: " + entrypoint + '\n');
+                "entrypoint: " + entrypoint + "\ndefinitionId: " + definitionId + '\n');
             copyClass(output, "fixture/ContextJavaEntrypoint.class");
             copyClass(output, "fixture/ContextJavaEntrypoint$Stable.class");
         }

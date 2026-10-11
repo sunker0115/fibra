@@ -1,1 +1,2 @@
 entrypoint: com.sstlfsj.fibra.plugins.storage.tool.StorageToolEntrypoint
+definitionId: tool-storage

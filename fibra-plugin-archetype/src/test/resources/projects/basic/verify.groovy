@@ -35,9 +35,10 @@ new ZipFile(jar).withCloseable { zip ->
     def manifest = zip.getInputStream(zip.getEntry("META-INF/fibra/plugin.yaml"))
         .getText("UTF-8")
     assert manifest.contains("entrypoint: org.example.fibra.FibraPluginEntrypoint")
-    assert !manifest.contains("id:")
-    assert !manifest.contains("version:")
-    assert !manifest.contains("requires:")
+    assert manifest.readLines().contains("definitionId: sample-fibra-plugin")
+    assert !manifest.readLines().any { it ==~ /\s*id\s*:.*/ }
+    assert !manifest.readLines().any { it ==~ /\s*version\s*:.*/ }
+    assert !manifest.readLines().any { it ==~ /\s*requires\s*:.*/ }
     assert !manifest.contains('${')
 }
 

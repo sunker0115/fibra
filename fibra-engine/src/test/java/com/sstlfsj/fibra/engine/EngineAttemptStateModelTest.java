@@ -608,6 +608,10 @@ class EngineAttemptStateModelTest {
             return new RuntimeDriver() {
                 @Override public RuntimeId id() { return runtimeId; }
 
+                @Override public com.sstlfsj.fibra.engine.runtime.RuntimeDefinitionQuery createDefinitionQuery(ManagedFacet facet) {
+                    throw new AssertionError("pure built-in fixture must not invoke dynamic query");
+                }
+
                 @Override
                 public Mono<RuntimeArtifactInspection> probe(
                     PluginFacetSource source

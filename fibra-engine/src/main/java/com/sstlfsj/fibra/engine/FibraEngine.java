@@ -1,6 +1,10 @@
 package com.sstlfsj.fibra.engine;
 
 import com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage;
+import com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException;
+import com.sstlfsj.fibra.engine.deployment.FacetDefinitionNames;
+import com.sstlfsj.fibra.engine.deployment.PackageDefinitionCatalog;
+import com.sstlfsj.fibra.engine.deployment.PluginSelection;
 import com.sstlfsj.fibra.engine.deployment.CompiledDeployment;
 import com.sstlfsj.fibra.engine.deployment.DeploymentTarget;
 import com.sstlfsj.fibra.engine.deployment.DeploymentTargetCompiler;
@@ -42,6 +46,7 @@ import com.sstlfsj.fibra.engine.publication.PublishedView;
 import com.sstlfsj.fibra.engine.publication.RemoteContributionInvoker;
 import com.sstlfsj.fibra.engine.runtime.PreparedRuntimeGeneration;
 import com.sstlfsj.fibra.engine.runtime.RuntimeDriver;
+import com.sstlfsj.fibra.engine.runtime.RuntimeDefinitionQuery;
 import com.sstlfsj.fibra.engine.runtime.RuntimeHostServices;
 import com.sstlfsj.fibra.engine.runtime.RuntimeProvider;
 import com.sstlfsj.fibra.engine.runtime.RuntimeRecompileReason;
@@ -119,6 +124,7 @@ public final class FibraEngine implements AutoCloseable {
     private final List<String> cleanupFailures = new ArrayList<>();
     private final Map<RuntimeUnitGeneration, ExecutionObservation> lastObservations = new IdentityHashMap<>();
     private FailureFact failure;
+    private transient CatalogAttempt catalogAttempt;
 
     private final PublishedRuntime published = new PublishedRuntime() {
         public PublishedView current() { return publication.get().view(); }
@@ -290,6 +296,209 @@ public final class FibraEngine implements AutoCloseable {
     }
     public Mono<Void> closeAsync() { return close; }
     @Override public void close() { closeAsync().block(); }
+
+    /** 读取当前精确 selection 的名称声明；不编译目标或启动执行入口。 */
+    public Mono<PackageDefinitionCatalog> describeDefinitions(PluginId pluginId,
+                                                             long expectedTargetRevision) {
+        Objects.requireNonNull(pluginId, "pluginId");
+        if (expectedTargetRevision < 0) {
+            throw new IllegalArgumentException("expected target revision must not be negative");
+        }
+        return Mono.defer(() -> loop.submit(() -> describeSelectedDefinitions(pluginId,
+                expectedTargetRevision)))
+            .onErrorMap(error -> {
+                rethrowCatalogFatal(error);
+                return error instanceof DefinitionCatalogException ? error
+                    : catalogError(DefinitionCatalogException.Code.ENGINE_UNAVAILABLE);
+            });
+    }
+
+    private Mono<PackageDefinitionCatalog> describeSelectedDefinitions(PluginId pluginId,
+                                                                      long expectedRevision) {
+        if (!mutationGate || state != EngineState.RUNNING) {
+            return Mono.error(catalogError(DefinitionCatalogException.Code.ENGINE_UNAVAILABLE));
+        }
+        long revision = durableTarget == null ? 0 : durableTarget.targetRevision();
+        if (revision != expectedRevision) {
+            return Mono.error(catalogError(DefinitionCatalogException.Code.STALE_TARGET));
+        }
+        var selection = durableTarget == null ? null : durableTarget.selections().get(pluginId);
+        if (selection == null) {
+            return Mono.error(catalogError(DefinitionCatalogException.Code.NOT_SELECTED));
+        }
+        final BuiltInPluginPackage builtIn;
+        final ManagedPluginPackage managed;
+        try {
+            builtIn = captureBuiltIns().stream().filter(value -> value.pluginId().equals(pluginId))
+                .findFirst().orElse(null);
+            var record = packageStore.find(pluginId, selection.packageRevision()).orElse(null);
+            if (builtIn != null) {
+                if (record != null || !builtIn.packageDigest().equals(selection.packageRevision())) {
+                    return Mono.error(catalogError(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE));
+                }
+                managed = null;
+            } else {
+                if (record == null || !record.pluginId().equals(pluginId)
+                    || !record.packageRevision().equals(selection.packageRevision())) {
+                    return Mono.error(catalogError(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE));
+                }
+                managed = record.managedPackage();
+                if (!managed.pluginId().equals(pluginId)
+                    || !managed.packageRevision().equals(selection.packageRevision())) {
+                    return Mono.error(catalogError(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE));
+                }
+            }
+        } catch (RuntimeException | Error foreign) {
+            rethrowCatalogFatal(foreign);
+            return Mono.error(catalogError(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE));
+        }
+        var runtimes = builtIn == null
+            ? managed.facets().stream().map(facet -> facet.facet().runtimeId()).toList()
+            : builtIn.facets().stream().map(facet -> facet.runtimeId()).toList();
+        if (runtimes.stream().anyMatch(id -> !drivers.containsKey(id))) {
+            return Mono.error(catalogError(DefinitionCatalogException.Code.UNSUPPORTED_RUNTIME));
+        }
+        if (builtIn != null) {
+            return Mono.just(new PackageDefinitionCatalog(revision, pluginId, selection.packageRevision(),
+                builtIn.facets().stream().map(facet -> new FacetDefinitionNames(facet.facetId(),
+                    facet.runtimeId(), facet.executionTarget(), List.copyOf(facet.definitionIds()))).toList()));
+        }
+        var attempt = new CatalogAttempt(revision, selection, managed.facets());
+        catalogAttempt = attempt;
+        return attempt.readAndClose();
+    }
+
+    private static DefinitionCatalogException catalogError(DefinitionCatalogException.Code code) {
+        return new DefinitionCatalogException(code, switch (code) {
+            case ENGINE_UNAVAILABLE -> "engine is unavailable for definition catalog queries";
+            case STALE_TARGET -> "definition catalog target revision is stale";
+            case NOT_SELECTED -> "definition catalog package is not selected";
+            case PACKAGE_UNAVAILABLE -> "selected definition catalog package is unavailable";
+            case UNSUPPORTED_RUNTIME -> "definition catalog runtime provider is unavailable";
+            case READ_FAILED -> "definition catalog declaration read failed";
+            case CLEANUP_FAILED -> "definition catalog resource cleanup failed";
+        });
+    }
+
+    @SuppressWarnings("removal")
+    private static void rethrowCatalogFatal(Throwable error) {
+        if (error instanceof VirtualMachineError fatal) throw fatal;
+        if (error instanceof ThreadDeath fatal) throw fatal;
+    }
+
+    /** 仅持有一次命令的真实句柄；成功引用随释放移除，失败终态不重试。 */
+    private final class CatalogAttempt {
+        private final long revision;
+        private final PluginSelection selection;
+        private final List<ManagedFacet> facets;
+        private final List<RuntimeDefinitionQuery> queries = new ArrayList<>();
+        private final List<FacetDefinitionNames> names = new ArrayList<>();
+        private DefinitionCatalogException readFailure;
+        private boolean cleanupFailed;
+        private final Mono<Void> closed;
+
+        private CatalogAttempt(long revision, PluginSelection selection, List<ManagedFacet> facets) {
+            this.revision = revision;
+            this.selection = selection;
+            this.facets = facets;
+            closed = Mono.defer(() -> closeQuery(queries.size() - 1))
+                .then(loop.<Void>call(() -> {
+                    if (!cleanupFailed) return Mono.empty();
+                    var error = catalogError(DefinitionCatalogException.Code.CLEANUP_FAILED);
+                    catalogFailStop(revision);
+                    return Mono.error(error);
+                })).cache();
+        }
+
+        private Mono<PackageDefinitionCatalog> readAndClose() {
+            try {
+                for (var facet : facets) {
+                    queries.add(Objects.requireNonNull(drivers.get(facet.facet().runtimeId())
+                        .createDefinitionQuery(facet), "definition query"));
+                }
+            } catch (RuntimeException | Error foreign) {
+                rethrowCatalogFatal(foreign);
+                readFailure = catalogError(DefinitionCatalogException.Code.READ_FAILED);
+            }
+            var reading = readFailure == null ? readQuery(0) : Mono.<Void>empty();
+            return reading.then(closed).then(loop.call(() -> {
+                catalogAttempt = null;
+                if (readFailure != null) return Mono.error(readFailure);
+                return Mono.just(new PackageDefinitionCatalog(revision, selection.pluginId(),
+                    selection.packageRevision(), names));
+            }));
+        }
+
+        private Mono<Void> readQuery(int index) {
+            if (index == queries.size()) return Mono.empty();
+            final Mono<List<String>> reading;
+            try {
+                reading = Objects.requireNonNull(queries.get(index).readAsync(), "definition read");
+            } catch (RuntimeException | Error foreign) {
+                rethrowCatalogFatal(foreign);
+                readFailure = catalogError(DefinitionCatalogException.Code.READ_FAILED);
+                return Mono.empty();
+            }
+            return reading.switchIfEmpty(Mono.error(catalogError(DefinitionCatalogException.Code.READ_FAILED)))
+                .flatMap(ids -> loop.call(() -> {
+                    try {
+                        var facet = facets.get(index).facet();
+                        names.add(new FacetDefinitionNames(facet.facetId(), facet.runtimeId(),
+                            facet.executionTarget(), ids));
+                    } catch (RuntimeException | Error foreign) {
+                        rethrowCatalogFatal(foreign);
+                        return Mono.error(catalogError(DefinitionCatalogException.Code.READ_FAILED));
+                    }
+                    return readQuery(index + 1);
+                }))
+                .onErrorResume(foreign -> {
+                    rethrowCatalogFatal(foreign);
+                    return loop.call(() -> {
+                        readFailure = catalogError(DefinitionCatalogException.Code.READ_FAILED);
+                        return Mono.empty();
+                    });
+                }).then();
+        }
+
+        private Mono<Void> closeQuery(int index) {
+            if (index < 0) return Mono.empty();
+            final Mono<Void> closingQuery;
+            try {
+                closingQuery = Objects.requireNonNull(queries.get(index).closeAsync(), "definition close");
+            } catch (RuntimeException | Error foreign) {
+                rethrowCatalogFatal(foreign);
+                cleanupFailed = true;
+                return closeQuery(index - 1);
+            }
+            return closingQuery.then(loop.call(() -> {
+                    queries.remove(index);
+                    return Mono.<Void>empty();
+                }))
+                .onErrorResume(foreign -> {
+                    rethrowCatalogFatal(foreign);
+                    return loop.call(() -> {
+                        cleanupFailed = true;
+                        return Mono.empty();
+                    });
+                }).then(loop.call(() -> closeQuery(index - 1)));
+        }
+    }
+
+    private void catalogFailStop(long revision) {
+        var fact = new FailureFact("CATALOG_CLEANUP_FAILED", new FailureSubject.Engine(hostInstanceId),
+            FailureStage.RELEASING, Optional.empty(),
+            revision < 1 ? OptionalLong.empty() : OptionalLong.of(revision),
+            "definition catalog resource cleanup failed; ownership retained for host termination");
+        enterFailStop(fact);
+        for (var unit : ownedUnits()) {
+            try { unit.closeAdmission(); }
+            catch (RuntimeException | Error foreign) {
+                rethrowCatalogFatal(foreign);
+                cleanupFailures.add("definition catalog fail-stop could not close unit admission");
+            }
+        }
+        notifyFailStop(fact);
+    }
 
     private Mono<PublishedView> bootstrap() {
         return Mono.defer(() -> {
@@ -766,10 +975,7 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private void failStop(FailureFact fact) {
-        mutationGate = false;
-        admissionOpen = false;
-        state = EngineState.FAIL_STOP;
-        failure = Objects.requireNonNull(fact, "fact");
+        enterFailStop(fact);
         if (operation != null) operation.outcome = EngineOperationOutcome.FAILED;
         switch (fact.subject()) {
             case FailureSubject.Candidate subject -> {
@@ -805,19 +1011,34 @@ public final class FibraEngine implements AutoCloseable {
             case FailureSubject.DurableTarget ignored -> { }
             case FailureSubject.Operation ignored -> { }
         }
-        var owned = Collections.newSetFromMap(
-            new IdentityHashMap<RuntimeUnitGeneration, Boolean>());
-        if (current != null) owned.addAll(current.units.values());
-        if (retirement != null) owned.addAll(retirement.units.values());
-        if (candidate != null) candidate.deployment.generations().values()
-            .forEach(value -> owned.addAll(value.units().values()));
-        for (var unit : owned) {
+        for (var unit : ownedUnits()) {
             try {
                 unit.closeAdmission();
             } catch (RuntimeException | Error violation) {
                 cleanupFailures.add(violation.toString());
             }
         }
+        notifyFailStop(fact);
+    }
+
+    private void enterFailStop(FailureFact fact) {
+        mutationGate = false;
+        admissionOpen = false;
+        state = EngineState.FAIL_STOP;
+        failure = Objects.requireNonNull(fact, "fact");
+    }
+
+    private Set<RuntimeUnitGeneration> ownedUnits() {
+        var owned = Collections.newSetFromMap(
+            new IdentityHashMap<RuntimeUnitGeneration, Boolean>());
+        if (current != null) owned.addAll(current.units.values());
+        if (retirement != null) owned.addAll(retirement.units.values());
+        if (candidate != null) candidate.deployment.generations().values()
+            .forEach(value -> owned.addAll(value.units().values()));
+        return owned;
+    }
+
+    private void notifyFailStop(FailureFact fact) {
         publish();
         if (terminationRequest == null) {
             terminationRequest = new HostTerminationRequest(hostInstanceId,
@@ -833,6 +1054,9 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private Mono<Void> shutdown() {
+        if (catalogAttempt != null) {
+            return catalogAttempt.closed.then(loop.call(this::shutdown));
+        }
         var retainedFailure = failure;
         mutationGate = false;
         admissionOpen = false;

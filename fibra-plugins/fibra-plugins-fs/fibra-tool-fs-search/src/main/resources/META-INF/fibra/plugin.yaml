@@ -1,1 +1,2 @@
 entrypoint: com.sstlfsj.fibra.plugins.fs.search.ToolFsSearchEntrypoint
+definitionId: tool-fs-search

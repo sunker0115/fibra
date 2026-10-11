@@ -1,1 +1,2 @@
 entrypoint: com.sstlfsj.fibra.plugins.subprocess.local.SubprocessLocalEntrypoint
+definitionId: fibra-subprocess-local

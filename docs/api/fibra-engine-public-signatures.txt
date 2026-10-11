@@ -60,6 +60,7 @@ public final class com.sstlfsj.fibra.engine.FibraEngine implements java.lang.Aut
   public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.EngineCommandResult> submit(com.sstlfsj.fibra.engine.EngineCommand);
   public reactor.core.publisher.Mono<java.lang.Void> closeAsync();
   public void close();
+  public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.deployment.PackageDefinitionCatalog> describeDefinitions(com.sstlfsj.fibra.artifact.PluginId, long);
 }
 ## com.sstlfsj.fibra.engine.FibraEngine$Builder
 Compiled from "FibraEngine.java"
@@ -179,6 +180,25 @@ public final class com.sstlfsj.fibra.engine.deployment.CompiledDeployment$Builde
   public com.sstlfsj.fibra.engine.deployment.CompiledDeployment$Builder retainedUnits(java.util.Set<com.sstlfsj.fibra.engine.execution.ExecutionUnitKey>);
   public com.sstlfsj.fibra.engine.deployment.CompiledDeployment build();
 }
+## com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException
+Compiled from "DefinitionCatalogException.java"
+public final class com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException extends java.lang.RuntimeException {
+  public com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException(com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException$Code, java.lang.String);
+  public com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException$Code code();
+}
+## com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException$Code
+Compiled from "DefinitionCatalogException.java"
+public final class com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException$Code extends java.lang.Enum<com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException$Code> {
+  public static final com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException$Code ENGINE_UNAVAILABLE;
+  public static final com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException$Code STALE_TARGET;
+  public static final com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException$Code NOT_SELECTED;
+  public static final com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException$Code PACKAGE_UNAVAILABLE;
+  public static final com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException$Code UNSUPPORTED_RUNTIME;
+  public static final com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException$Code READ_FAILED;
+  public static final com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException$Code CLEANUP_FAILED;
+  public static com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException$Code[] values();
+  public static com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException$Code valueOf(java.lang.String);
+}
 ## com.sstlfsj.fibra.engine.deployment.DeploymentTarget
 Compiled from "DeploymentTarget.java"
 public final class com.sstlfsj.fibra.engine.deployment.DeploymentTarget {
@@ -261,6 +281,18 @@ public final class com.sstlfsj.fibra.engine.deployment.DurableTargetToken {
   public long targetRevision();
   public java.lang.String targetDigest();
 }
+## com.sstlfsj.fibra.engine.deployment.FacetDefinitionNames
+Compiled from "FacetDefinitionNames.java"
+public final class com.sstlfsj.fibra.engine.deployment.FacetDefinitionNames extends java.lang.Record {
+  public com.sstlfsj.fibra.engine.deployment.FacetDefinitionNames(com.sstlfsj.fibra.artifact.FacetId, com.sstlfsj.fibra.artifact.RuntimeId, com.sstlfsj.fibra.artifact.ExecutionTarget, java.util.List<java.lang.String>);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public com.sstlfsj.fibra.artifact.FacetId facetId();
+  public com.sstlfsj.fibra.artifact.RuntimeId runtimeId();
+  public com.sstlfsj.fibra.artifact.ExecutionTarget executionTarget();
+  public java.util.List<java.lang.String> definitionIds();
+}
 ## com.sstlfsj.fibra.engine.deployment.FileDeploymentTargetStore
 Compiled from "FileDeploymentTargetStore.java"
 public final class com.sstlfsj.fibra.engine.deployment.FileDeploymentTargetStore implements com.sstlfsj.fibra.engine.deployment.DeploymentTargetStore {
@@ -279,6 +311,18 @@ public final class com.sstlfsj.fibra.engine.deployment.HostCapabilitySnapshot {
   public java.lang.String fingerprint();
   public boolean equals(java.lang.Object);
   public int hashCode();
+}
+## com.sstlfsj.fibra.engine.deployment.PackageDefinitionCatalog
+Compiled from "PackageDefinitionCatalog.java"
+public final class com.sstlfsj.fibra.engine.deployment.PackageDefinitionCatalog extends java.lang.Record {
+  public com.sstlfsj.fibra.engine.deployment.PackageDefinitionCatalog(long, com.sstlfsj.fibra.artifact.PluginId, java.lang.String, java.util.List<com.sstlfsj.fibra.engine.deployment.FacetDefinitionNames>);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public long targetRevision();
+  public com.sstlfsj.fibra.artifact.PluginId pluginId();
+  public java.lang.String packageRevision();
+  public java.util.List<com.sstlfsj.fibra.engine.deployment.FacetDefinitionNames> facets();
 }
 ## com.sstlfsj.fibra.engine.deployment.PluginFacetSource
 Compiled from "PluginFacetSource.java"
@@ -917,12 +961,19 @@ public interface com.sstlfsj.fibra.engine.runtime.RuntimeCandidate {
   public abstract com.sstlfsj.fibra.engine.runtime.PreparedRuntimeGeneration seal(com.sstlfsj.fibra.engine.execution.CompiledRuntimeSlice);
   public abstract reactor.core.publisher.Mono<java.lang.Void> closeAsync();
 }
+## com.sstlfsj.fibra.engine.runtime.RuntimeDefinitionQuery
+Compiled from "RuntimeDefinitionQuery.java"
+public interface com.sstlfsj.fibra.engine.runtime.RuntimeDefinitionQuery {
+  public abstract reactor.core.publisher.Mono<java.util.List<java.lang.String>> readAsync();
+  public abstract reactor.core.publisher.Mono<java.lang.Void> closeAsync();
+}
 ## com.sstlfsj.fibra.engine.runtime.RuntimeDriver
 Compiled from "RuntimeDriver.java"
 public interface com.sstlfsj.fibra.engine.runtime.RuntimeDriver {
   public abstract com.sstlfsj.fibra.artifact.RuntimeId id();
   public abstract reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.runtime.RuntimeArtifactInspection> probe(com.sstlfsj.fibra.engine.deployment.PluginFacetSource);
   public abstract reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.runtime.RuntimeArtifactInspection> inspect(com.sstlfsj.fibra.artifact.ManagedFacet);
+  public abstract com.sstlfsj.fibra.engine.runtime.RuntimeDefinitionQuery createDefinitionQuery(com.sstlfsj.fibra.artifact.ManagedFacet);
   public abstract com.sstlfsj.fibra.engine.runtime.RuntimeCandidate createCandidate(com.sstlfsj.fibra.engine.runtime.RuntimeTargetSlice);
   public abstract com.sstlfsj.fibra.engine.observation.RuntimeDriverSnapshot snapshot();
   public abstract reactor.core.publisher.Mono<java.lang.Void> closeAsync();

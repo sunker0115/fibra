@@ -38,6 +38,9 @@ let shutdown;
 let payloadOutcome;
 let resolvePayloadOutcome;
 let stderrFailed = false;
+let rangeAbsent = false;
+let firstBlockedRangeOperation;
+let lastBlockedRangeOperation;
 const payloadCompletion = new Promise(resolve => { resolvePayloadOutcome = resolve; });
 
 process.stderr.on('error', () => {
@@ -98,7 +101,7 @@ function beginShutdown() {
     .then(async quiescent => {
       if (!quiescent) {
         writeTerminationStatus('FAILED');
-        reportFailure('Fibra Node managed process range did not become quiescent\n');
+        reportFailure(`Fibra Node managed process range did not become quiescent${blockedRangeDiagnostic()}\n`);
         process.exitCode = 1;
       } else {
         await payloadCompletion;
@@ -146,16 +149,16 @@ async function terminateManagedRange() {
     return waitUntilQuiescent(startedAt + terminateTimeout);
   }
 
-  signalProcessGroup('SIGTERM');
+  if (signalProcessGroup('SIGTERM') === 'ABSENT') return true;
   const termDeadline = startedAt + Math.max(2, Math.floor(terminateTimeout * 2 / 3));
   if (await waitUntilQuiescent(termDeadline)) return true;
 
-  signalProcessGroup('SIGKILL');
+  if (signalProcessGroup('SIGKILL') === 'ABSENT') return true;
   return waitUntilQuiescent(startedAt + terminateTimeout);
 }
 
 async function waitUntilQuiescent(deadline) {
-  while (managedRangeExists()) {
+  while (managedRangeState() !== 'ABSENT') {
     const remaining = deadline - Date.now();
     if (remaining <= 0) return false;
     await delay(Math.min(20, remaining));
@@ -163,25 +166,46 @@ async function waitUntilQuiescent(deadline) {
   return true;
 }
 
-function managedRangeExists() {
-  if (!Number.isInteger(payload.pid)) return false;
-  if (process.platform === 'win32') return payload.exitCode === null;
+function managedRangeState() {
+  if (rangeAbsent) return 'ABSENT';
+  if (!Number.isInteger(payload.pid)) return 'ABSENT';
+  if (process.platform === 'win32') return payload.exitCode === null ? 'PRESENT' : 'ABSENT';
   try {
     process.kill(-payload.pid, 0);
-    return true;
+    return 'PRESENT';
   } catch (error) {
-    if (error.code === 'ESRCH') return false;
-    throw error;
+    return rangeOperationFailure(0, error);
   }
 }
 
 function signalProcessGroup(signal) {
-  if (!Number.isInteger(payload.pid)) return;
+  if (rangeAbsent || !Number.isInteger(payload.pid)) return 'ABSENT';
   try {
     process.kill(-payload.pid, signal);
+    return 'PRESENT';
   } catch (error) {
-    if (error.code !== 'ESRCH') throw error;
+    return rangeOperationFailure(signal, error);
   }
+}
+
+function rangeOperationFailure(operation, error) {
+  if (error.code === 'ESRCH') {
+    // 本次 owner 的消失证明不可逆，随后不再使用可能复用的 PGID。
+    rangeAbsent = true;
+    return 'ABSENT';
+  }
+  if (error.code === 'EPERM') {
+    const blocked = `operation=${operation} errno=EPERM pgid=${payload.pid}`;
+    firstBlockedRangeOperation ??= blocked;
+    lastBlockedRangeOperation = blocked;
+    return 'UNKNOWN';
+  }
+  throw error;
+}
+
+function blockedRangeDiagnostic() {
+  return firstBlockedRangeOperation === undefined ? ''
+    : ` (first blocked ${firstBlockedRangeOperation}; last blocked ${lastBlockedRangeOperation})`;
 }
 
 function delay(milliseconds) {

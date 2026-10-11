@@ -13,6 +13,14 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ShellToolTest {
+    @Test void declaresTheActualDefinitionName() throws Exception {
+        try (var input = getClass().getResourceAsStream("/META-INF/fibra/plugin.yaml")) {
+            assertNotNull(input);
+            assertEquals("entrypoint: " + ShellToolEntrypoint.class.getName()
+                + "\ndefinitionId: fibra-tool-shell\n",
+                new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+        }
+    }
     @Test void publishesBashWithActualInstanceIdAndPropagatesCancellation() {
         try (var runtime = FibraRuntime.create(); var directory = new ContributionDirectory()) {
             var caller = runtime.rootScope().context();

@@ -19,6 +19,7 @@ import com.sstlfsj.fibra.engine.runtime.PreparedRuntimeGeneration;
 import com.sstlfsj.fibra.engine.runtime.RuntimeArtifactInspection;
 import com.sstlfsj.fibra.engine.runtime.RuntimeCandidate;
 import com.sstlfsj.fibra.engine.runtime.RuntimeDriver;
+import com.sstlfsj.fibra.engine.runtime.RuntimeDefinitionQuery;
 import com.sstlfsj.fibra.engine.observation.RuntimeDriverSnapshot;
 import com.sstlfsj.fibra.engine.runtime.RuntimeHostServices;
 import com.sstlfsj.fibra.engine.execution.RuntimePlan;
@@ -80,6 +81,29 @@ public final class ExternalFixtureRuntimeDriver implements RuntimeDriver {
     public Mono<RuntimeArtifactInspection> inspect(ManagedFacet facet) {
         return Mono.fromCallable(() -> inspectSource(new PluginFacetSource(
             Objects.requireNonNull(facet, "facet"), List.of())));
+    }
+
+    @Override
+    public synchronized RuntimeDefinitionQuery createDefinitionQuery(ManagedFacet facet) {
+        if (closed) throw new IllegalStateException("external fixture runtime driver is closed");
+        if (!id().equals(Objects.requireNonNull(facet, "facet").facet().runtimeId())) {
+            throw new IllegalArgumentException("external fixture query requires its runtime facet");
+        }
+        // 此可信 fixture 格式只有固定入口，无私有目录文件或 I/O 资源。
+        return new RuntimeDefinitionQuery() {
+            private boolean closed;
+            private final Mono<List<String>> read = Mono.defer(() -> {
+                synchronized (this) {
+                    return closed ? Mono.<List<String>>error(new IllegalStateException("definition query is closed"))
+                        : Mono.just(List.of(ExternalFixtureRuntimeProvider.DEFINITION_ID));
+                }
+            }).cache();
+            private final Mono<Void> close = Mono.<Void>fromRunnable(() -> {
+                synchronized (this) { closed = true; }
+            }).cache();
+            @Override public Mono<List<String>> readAsync() { return read; }
+            @Override public Mono<Void> closeAsync() { return close; }
+        };
     }
 
     @Override

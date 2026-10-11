@@ -1,6 +1,8 @@
 package verification.distribution;
 
 import com.sstlfsj.fibra.artifact.PluginPackageStore;
+import com.sstlfsj.fibra.artifact.PluginId;
+import com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException;
 import com.sstlfsj.fibra.config.ConfigContextSnapshot;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
@@ -35,6 +37,9 @@ import java.util.regex.Pattern;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class EngineConsumerTest {
     private static final Duration TIMEOUT = Duration.ofSeconds(20);
@@ -50,6 +55,51 @@ class EngineConsumerTest {
         realm("fibra.shell", "shells");
     private static final Map<String, LiteralValue> STORAGE_REALM =
         realm("fibra.storage", "shared");
+
+    @Test
+    void rejectsLegacyEntrypointOnlyAndKeepsContractOnlyCatalogEmpty(@TempDir Path work)
+        throws Exception {
+        var legacy = Files.createDirectories(work.resolve("legacy"));
+        try (var jar = new java.util.jar.JarOutputStream(
+            Files.newOutputStream(legacy.resolve("legacy.jar")))) {
+            jar.putNextEntry(new java.util.jar.JarEntry("META-INF/fibra/plugin.yaml"));
+            jar.write("entrypoint: verification.distribution.plugin.LifecycleEntrypoint\n"
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            jar.closeEntry();
+        }
+        Files.writeString(legacy.resolve("fibra-package.yaml"),
+            packageManifest("legacy-author", "legacy.jar", List.of()));
+        try (var packages = new PluginPackageStore(work.resolve("packages"));
+             var targets = new FileDeploymentTargetStore(work.resolve("targets"));
+             var engine = FibraEngine.builder(packages, targets)
+                 .runtimeProvider(new JavaRuntimeProvider(List.of()))
+                 .hostTerminationPort(request -> { }).build()) {
+            engine.startAsync().block(TIMEOUT);
+            var registry = new PluginRegistry(engine, packages, new InMemoryPluginAuditRepository());
+            registry.install(new PluginInstallRequest(legacy, false)).block(TIMEOUT);
+            var contract = installRequest(work.resolve("package-sources"), "fibra-fs",
+                Path.of(System.getProperty("fibra.pluginArtifacts"), "fibra-fs.jar"));
+            registry.install(new PluginInstallRequest(contract.source(), false)).block(TIMEOUT);
+            var before = engine.published().current();
+            var revision = before.engine().target().orElseThrow().targetRevision();
+            var bytes = Files.readAllBytes(work.resolve("targets/target.json"));
+            for (var attempt = 0; attempt < 2; attempt++) {
+                var failed = assertThrows(DefinitionCatalogException.class, () ->
+                    engine.describeDefinitions(new PluginId("legacy-author"), revision).block(TIMEOUT));
+                assertEquals(DefinitionCatalogException.Code.READ_FAILED, failed.code());
+                var empty = engine.describeDefinitions(new PluginId("fibra-fs"), revision).block(TIMEOUT);
+                assertEquals(1, empty.facets().size());
+                assertEquals(List.of(), empty.facets().getFirst().definitionIds());
+            }
+            assertSame(before, engine.published().current());
+            assertArrayEquals(bytes, Files.readAllBytes(work.resolve("targets/target.json")));
+            engine.closeAsync().block(TIMEOUT);
+        }
+        try (var reopened = new FileDeploymentTargetStore(work.resolve("targets"));
+             var packages = new PluginPackageStore(work.resolve("packages"))) {
+            assertEquals(2, reopened.load().orElseThrow().target().targetRevision());
+        }
+    }
 
     @Test
     void resolvesAndInvokesPublishedFormalPluginsFromAnEmptyConsumerRepository(@TempDir Path work)
@@ -174,14 +224,15 @@ class EngineConsumerTest {
         var lib = Files.createDirectory(root.resolve("lib"));
         var payload = lib.resolve(source.getFileName());
         if ("external".equals(pluginId)) rewriteJavaDescriptor(source, payload,
-            "verification.distribution.plugin.Entrypoint");
+            "verification.distribution.plugin.Entrypoint", "external");
         else Files.copy(source, payload);
         Files.writeString(root.resolve("fibra-package.yaml"), packageManifest(pluginId,
             "lib/" + source.getFileName(), dependencies(pluginId)));
         return new PluginInstallRequest(root, true);
     }
 
-    private static void rewriteJavaDescriptor(Path source, Path destination, String entrypoint)
+    private static void rewriteJavaDescriptor(Path source, Path destination, String entrypoint,
+                                              String definitionId)
         throws IOException {
         try (var input = new java.util.jar.JarFile(source.toFile());
              var output = new java.util.jar.JarOutputStream(Files.newOutputStream(destination))) {
@@ -194,7 +245,7 @@ class EngineConsumerTest {
                 output.closeEntry();
             }
             output.putNextEntry(new java.util.jar.JarEntry("META-INF/fibra/plugin.yaml"));
-            output.write(("entrypoint: " + entrypoint + "\n")
+            output.write(("entrypoint: " + entrypoint + "\ndefinitionId: " + definitionId + "\n")
                 .getBytes(java.nio.charset.StandardCharsets.UTF_8));
             output.closeEntry();
         }

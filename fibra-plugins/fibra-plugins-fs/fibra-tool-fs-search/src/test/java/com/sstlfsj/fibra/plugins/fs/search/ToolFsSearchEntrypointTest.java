@@ -84,10 +84,10 @@ class ToolFsSearchEntrypointTest {
     }
 
     @Test
-    void runtimeDescriptorDeclaresOnlyTheEntrypoint() throws Exception {
+    void runtimeDescriptorDeclaresEntrypointAndDefinitionName() throws Exception {
         var manifest = Files.readString(Path.of("target/classes/META-INF/fibra/plugin.yaml"));
         assertEquals("entrypoint: " + ToolFsSearchEntrypoint.class.getName()
-            + "\n", manifest);
+            + "\ndefinitionId: tool-fs-search\n", manifest);
     }
 
     private static ProcessUnit successUnit(String stdout) {

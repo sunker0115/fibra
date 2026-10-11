@@ -1,1 +1,2 @@
 entrypoint: ${package}.FibraPluginEntrypoint
+definitionId: ${pluginId}

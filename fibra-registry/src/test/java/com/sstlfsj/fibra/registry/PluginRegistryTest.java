@@ -46,6 +46,18 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class PluginRegistryTest {
+    @Test
+    void fixtureDefinitionQueryReturnsItsActualRunEntryWithoutCreatingUnits() throws Exception {
+        try (var fixture = fixture()) {
+            fixture.registry.install(new PluginInstallRequest(source("catalog", "1"), false)).block();
+            var before = fixture.engine.published().current();
+            var catalog = fixture.engine.describeDefinitions(PLUGIN, 1).block();
+            assertEquals(2, catalog.facets().size());
+            assertTrue(catalog.facets().stream().allMatch(facet -> facet.definitionIds().equals(List.of("run"))));
+            assertEquals(before, fixture.engine.published().current());
+        }
+    }
+
     @TempDir Path root;
     private static final PluginId PLUGIN = new PluginId("sample");
     private static final RuntimeId RUNTIME = new RuntimeId("probe");
@@ -407,6 +419,23 @@ class PluginRegistryTest {
                 public RuntimeId id() { return RUNTIME; }
                 public Mono<RuntimeArtifactInspection> probe(PluginFacetSource source) { return Mono.error(new UnsupportedOperationException()); }
                 public Mono<RuntimeArtifactInspection> inspect(ManagedFacet facet) { return Mono.error(new UnsupportedOperationException()); }
+                @Override public com.sstlfsj.fibra.engine.runtime.RuntimeDefinitionQuery createDefinitionQuery(ManagedFacet facet) {
+                    Objects.requireNonNull(facet, "facet");
+                    return new com.sstlfsj.fibra.engine.runtime.RuntimeDefinitionQuery() {
+                        private boolean closed;
+                        private final Mono<List<String>> read = Mono.defer(() -> {
+                            synchronized (this) {
+                                return closed ? Mono.<List<String>>error(new IllegalStateException("definition query is closed"))
+                                    : Mono.just(List.of("run"));
+                            }
+                        }).cache();
+                        private final Mono<Void> close = Mono.<Void>fromRunnable(() -> {
+                            synchronized (this) { closed = true; }
+                        }).cache();
+                        public Mono<List<String>> readAsync() { return read; }
+                        public Mono<Void> closeAsync() { return close; }
+                    };
+                }
                 public RuntimeDriverSnapshot snapshot() { return new RuntimeDriverSnapshot(RUNTIME, Map.of()); }
                 public Mono<Void> closeAsync() { return Mono.empty(); }
                 public RuntimeCandidate createCandidate(RuntimeTargetSlice slice) {

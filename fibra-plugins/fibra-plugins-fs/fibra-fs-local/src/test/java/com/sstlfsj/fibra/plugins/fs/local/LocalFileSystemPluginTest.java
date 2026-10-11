@@ -19,7 +19,7 @@ class LocalFileSystemPluginTest {
         try (var input = LocalFileSystemPluginTest.class.getResourceAsStream("/META-INF/fibra/plugin.yaml")) {
             var manifest = new String(input.readAllBytes(), StandardCharsets.UTF_8);
             assertEquals("entrypoint: " + LocalFileSystemEntrypoint.class.getName()
-                + "\n", manifest);
+                + "\ndefinitionId: fs-local\n", manifest);
         }
     }
 }

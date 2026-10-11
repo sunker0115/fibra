@@ -22,6 +22,17 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class PluginClassLoaderTest {
     @Test
+    void validatesConstructorInputsBeforeCreatingTheClassLoader() {
+        assertThrows(NullPointerException.class, () -> {
+            try (var ignored = new PluginClassLoader(List.of(), null, List.of())) { }
+        });
+        assertThrows(NullPointerException.class, () -> new PluginClassLoader(
+            java.util.Arrays.asList((java.net.URL) null), getClass().getClassLoader(), List.of()));
+        assertThrows(NullPointerException.class, () -> new PluginClassLoader(
+            List.of(), getClass().getClassLoader(), java.util.Arrays.asList((String) null)));
+    }
+
+    @Test
     void platformTypesHavePlatformIdentityWithoutSharedPrefixes(@TempDir Path work) throws Exception {
         // Invalid local copies must never be defined when the platform supplies the type.
         var shadow = classJar(work.resolve("platform-shadow.jar"), Map.of(

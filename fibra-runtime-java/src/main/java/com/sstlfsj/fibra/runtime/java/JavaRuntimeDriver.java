@@ -23,6 +23,7 @@ import com.sstlfsj.fibra.engine.runtime.PreparedRuntimeGeneration;
 import com.sstlfsj.fibra.engine.runtime.RuntimeArtifactInspection;
 import com.sstlfsj.fibra.engine.runtime.RuntimeCandidate;
 import com.sstlfsj.fibra.engine.runtime.RuntimeDriver;
+import com.sstlfsj.fibra.engine.runtime.RuntimeDefinitionQuery;
 import com.sstlfsj.fibra.engine.observation.RuntimeDriverSnapshot;
 import com.sstlfsj.fibra.engine.runtime.RuntimeHostServices;
 import com.sstlfsj.fibra.engine.execution.RuntimePlan;
@@ -58,7 +59,10 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
     private final List<String> parentPackages;
     private final LoaderCloser closer;
     private final JavaFacetDescriptorReader descriptors = new JavaFacetDescriptorReader();
+    private final JavaFacetDescriptorReader.ResourceAccess descriptorAccess;
+    private final Set<DescriptorRead> descriptorReads = new LinkedHashSet<>();
     private final Map<WiringKey, StaticWiring> wiringPool = new LinkedHashMap<>();
+    private final Set<AcquisitionOwner> acquisitions = new LinkedHashSet<>();
     private final Map<ExecutionUnitKey, RuntimeUnitGeneration> publishedUnits = new ConcurrentHashMap<>();
     private Mono<Void> close;
 
@@ -70,11 +74,133 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
     JavaRuntimeDriver(RuntimeHostServices services, List<JavaBuiltInPackage> builtIns,
                       ClassLoader parent,
                       List<String> parentPackages, LoaderCloser closer) {
+        this(services, builtIns, parent, parentPackages, closer,
+            new JavaFacetDescriptorReader.ResourceAccess());
+    }
+
+    JavaRuntimeDriver(RuntimeHostServices services, List<JavaBuiltInPackage> builtIns,
+                      ClassLoader parent, List<String> parentPackages, LoaderCloser closer,
+                      JavaFacetDescriptorReader.ResourceAccess descriptorAccess) {
         this.services = Objects.requireNonNull(services, "services");
         this.builtIns = List.copyOf(Objects.requireNonNull(builtIns, "builtIns"));
         this.parent = Objects.requireNonNull(parent, "parent");
         this.parentPackages = List.copyOf(parentPackages);
         this.closer = Objects.requireNonNull(closer, "closer");
+        this.descriptorAccess = Objects.requireNonNull(descriptorAccess, "descriptorAccess");
+    }
+
+    @Override
+    public synchronized RuntimeDefinitionQuery createDefinitionQuery(ManagedFacet facet) {
+        return new DefinitionQuery(createDescriptorRead(facet));
+    }
+
+    private synchronized DescriptorRead createDescriptorRead(ManagedFacet facet) {
+        Objects.requireNonNull(facet, "facet");
+        if (!id().equals(facet.facet().runtimeId())) {
+            throw new IllegalArgumentException("facet runtime is not Java");
+        }
+        requireOpen();
+        var read = new DescriptorRead(facet);
+        descriptorReads.add(read);
+        return read;
+    }
+
+    private JavaFacetDescriptor readDescriptor(ManagedFacet facet, AcquisitionNode node) {
+        var read = createDescriptorRead(facet);
+        if (node != null) node.descriptorRead = read;
+        boolean fatalRead = false;
+        try {
+            return read.read();
+        } catch (VirtualMachineError | ThreadDeath fatal) {
+            fatalRead = true;
+            throw fatal;
+        } finally {
+            if (!fatalRead) {
+                read.close();
+                if (node != null) node.descriptorRead = null;
+            }
+        }
+    }
+
+    /** The file owner is read by either the synchronous path or one query adapter. */
+    private final class DescriptorRead {
+        private final ManagedFacet facet;
+        private final JavaFacetDescriptorReader.Resources resources =
+            new JavaFacetDescriptorReader.Resources(descriptorAccess);
+        private boolean closeAttempted;
+        private Throwable closeFailure;
+
+        private DescriptorRead(ManagedFacet facet) { this.facet = facet; }
+
+        private JavaFacetDescriptor read() {
+            try {
+                return descriptors.read(facet.facet(), resources);
+            } catch (Throwable failure) {
+                rethrowFatal(failure);
+                // Never retain a nonfatal original exception graph in a cached query result.
+                throw new JavaRuntimeException(JavaRuntimePhase.MANIFEST, facet.artifactId(),
+                    "cannot read Java definition declaration: " + failure.getClass().getName()
+                        + ": " + failure.getMessage(), null);
+            }
+        }
+
+        private synchronized void close() {
+            if (!closeAttempted) {
+                closeAttempted = true;
+                try {
+                    resources.close();
+                    synchronized (JavaRuntimeDriver.this) {
+                        descriptorReads.remove(this);
+                    }
+                } catch (RuntimeException | Error failure) {
+                    closeFailure = failure;
+                    throw failure;
+                }
+            }
+            if (closeFailure instanceof RuntimeException failure) throw failure;
+            if (closeFailure instanceof Error failure) throw failure;
+        }
+    }
+
+    /** Observes one owner asynchronously; it never owns or closes file handles itself. */
+    private final class DefinitionQuery implements RuntimeDefinitionQuery {
+        private final DescriptorRead owner;
+        private final Mono<JavaFacetDescriptor> descriptor;
+        private boolean started;
+        private boolean closing;
+        private Mono<Void> closeResult;
+
+        private DefinitionQuery(DescriptorRead owner) {
+            this.owner = owner;
+            descriptor = Mono.defer(() -> {
+                synchronized (this) {
+                    if (closing) return Mono.error(new IllegalStateException("Java definition query is closed"));
+                    started = true;
+                }
+                return Mono.fromCallable(owner::read)
+                    .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic());
+            }).cache();
+        }
+
+        @Override public Mono<List<String>> readAsync() {
+            return descriptor.map(value -> value.definitionId().map(List::of).orElseGet(List::of));
+        }
+
+        @Override public synchronized Mono<Void> closeAsync() {
+            if (closeResult == null) {
+                closeResult = Mono.defer(() -> {
+                    final boolean waitForRead;
+                    synchronized (this) {
+                        closing = true;
+                        waitForRead = started;
+                    }
+                    var readTerminal = waitForRead
+                        ? descriptor.onErrorResume(failure -> Mono.empty()).then() : Mono.<Void>empty();
+                    return readTerminal.then(Mono.fromRunnable(owner::close));
+                }).then().cache();
+            }
+            return closeResult;
+        }
     }
 
     @Override public RuntimeId id() { return JavaRuntimeProvider.RUNTIME_ID; }
@@ -111,6 +237,12 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
         if (close == null) {
             close = Mono.<Void>fromRunnable(() -> {
                 synchronized (JavaRuntimeDriver.this) {
+                    if (!descriptorReads.isEmpty()) {
+                        throw new IllegalStateException("Java runtime driver still has descriptor reads");
+                    }
+                    if (!acquisitions.isEmpty()) {
+                        throw new IllegalStateException("Java runtime driver still has acquisition owners");
+                    }
                     if (wiringPool.values().stream().anyMatch(wiring -> wiring.references != 0)) {
                         throw new IllegalStateException("Java runtime driver still has leased class spaces");
                     }
@@ -127,7 +259,7 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
         if (!id().equals(Objects.requireNonNull(facet, "facet").facet().runtimeId())) {
             throw new IllegalArgumentException("facet runtime is not Java");
         }
-        descriptors.read(facet.facet());
+        readDescriptor(facet, null);
         return new RuntimeArtifactInspection(id(), facet.artifactId());
     }
 
@@ -136,13 +268,15 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
     }
 
     private synchronized StaticLease acquire(PluginFacetSource source,
-                                             Map<ArtifactId, PluginFacetSource> sources) {
-        return acquire(source, sources, new LinkedHashSet<>());
+                                             Map<ArtifactId, PluginFacetSource> sources,
+                                             AcquisitionNode node) {
+        requireOpen();
+        return acquire(source, sources, new LinkedHashSet<>(), node);
     }
 
     private StaticLease acquire(PluginFacetSource source,
                                 Map<ArtifactId, PluginFacetSource> sources,
-                                Set<ArtifactId> visiting) {
+                                Set<ArtifactId> visiting, AcquisitionNode node) {
         var artifactId = source.facet().artifactId();
         if (!visiting.add(artifactId)) {
             throw new IllegalArgumentException("Java static dependency cycle at " + artifactId);
@@ -151,9 +285,13 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
         try {
             for (var dependency : source.dependencies()) {
                 var local = sources.get(dependency.artifactId());
-                if (local != null) dependencyLeases.add(acquire(local, sources, visiting));
+                if (local != null) {
+                    var child = new AcquisitionNode(local.facet().artifactId());
+                    node.children.add(child);
+                    dependencyLeases.add(acquire(local, sources, visiting, child));
+                }
             }
-            var descriptor = descriptors.read(source.facet().facet());
+            var descriptor = readDescriptor(source.facet(), node);
             JavaClassIndex.validate(artifactId, List.of(source.facet().facet().payload()), parent,
                 parentPackages);
             var dependencyKeys = dependencyLeases.stream().map(lease -> lease.wiring.key.identity())
@@ -162,16 +300,29 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
                 source.facet().facet().facetId().value(), source.facet().facet().payloadDigest(),
                 dependencyKeys, JavaRuntimeProvider.CONTRACT_IDENTITY);
             var wiring = wiringPool.get(key);
+            var publish = wiring == null;
             if (wiring == null) {
                 wiring = createWiring(key, source.facet(), descriptor,
-                    dependencyLeases.stream().map(lease -> lease.wiring).toList());
-                wiringPool.put(key, wiring);
+                    dependencyLeases.stream().map(lease -> lease.wiring).toList(), node);
+            }
+            if (descriptor.definitionId().isPresent() != (wiring.definition != null)) {
+                throw new JavaRuntimeException(JavaRuntimePhase.LOAD, artifactId,
+                    "Java definition presence does not match declared definitionId", null);
+            }
+            if (wiring.definition != null
+                && !wiring.definition.definition().name().equals(descriptor.definitionId().orElseThrow())) {
+                throw new JavaRuntimeException(JavaRuntimePhase.LOAD, artifactId,
+                    "Java metadata definition name does not match declared definitionId", null);
             }
             wiring.references++;
-            return new StaticLease(wiring, List.copyOf(dependencyLeases));
-        } catch (RuntimeException failure) {
-            releaseAll(dependencyLeases, failure);
-            throw failure;
+            node.lease = new StaticLease(wiring, List.copyOf(dependencyLeases));
+            if (publish) wiringPool.put(key, wiring);
+            node.loader = null;
+            node.children.clear();
+            return node.lease;
+        } catch (RuntimeException | Error failure) {
+            rethrowFatal(failure);
+            throw acquisitionFailure(artifactId, failure);
         } finally {
             visiting.remove(artifactId);
         }
@@ -179,31 +330,18 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
 
     private StaticWiring createWiring(WiringKey key, ManagedFacet facet,
                                       JavaFacetDescriptor descriptor,
-                                      List<StaticWiring> dependencies) {
-        PluginClassLoader loader = null;
+                                      List<StaticWiring> dependencies, AcquisitionNode node) {
         try {
-            loader = new PluginClassLoader(List.of(facet.facet().payload().toUri().toURL()), parent,
+            var loader = new PluginClassLoader(List.of(facet.facet().payload().toUri().toURL()), parent,
                 parentPackages);
+            node.loader = loader;
             loader.dependencies(dependencies.stream().map(value -> value.loader).toList());
             JavaClassSpace.validate(facet.artifactId(), descriptor, loader);
-            return new StaticWiring(key, facet, loader,
-                JavaClassSpace.entry(facet.artifactId(), descriptor, loader));
+            var entry = JavaClassSpace.entry(facet.artifactId(), descriptor, loader);
+            return new StaticWiring(key, facet, loader, entry);
         } catch (MalformedURLException failure) {
             throw new JavaRuntimeException(JavaRuntimePhase.LOAD, facet.artifactId(),
                 "cannot create Java facet loader", failure);
-        } catch (RuntimeException failure) {
-            if (loader != null) close(loader, failure);
-            throw failure;
-        }
-    }
-
-    private void releaseAll(List<StaticLease> leases, RuntimeException primary) {
-        for (var lease : leases.reversed()) {
-            try {
-                lease.close();
-            } catch (RuntimeException cleanup) {
-                primary.addSuppressed(cleanup);
-            }
         }
     }
 
@@ -213,20 +351,24 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
             try {
                 closer.close(wiring.loader);
                 wiringPool.remove(wiring.key, wiring);
-            } catch (IOException | RuntimeException failure) {
+            } catch (IOException | RuntimeException | Error failure) {
                 wiring.references++;
+                rethrowFatal(failure);
                 throw new JavaRuntimeException(JavaRuntimePhase.CLOSE, wiring.facet.artifactId(),
                     "cannot close Java class space", failure);
             }
         }
     }
 
-    private void close(PluginClassLoader loader, RuntimeException primary) {
-        try {
-            closer.close(loader);
-        } catch (IOException | RuntimeException cleanup) {
-            primary.addSuppressed(cleanup);
-        }
+    private static JavaRuntimeException acquisitionFailure(ArtifactId id, Throwable failure) {
+        return failure instanceof JavaRuntimeException javaFailure ? javaFailure
+            : new JavaRuntimeException(JavaRuntimePhase.LOAD, id,
+                "cannot prepare Java class space", failure);
+    }
+
+    private static void rethrowFatal(Throwable failure) {
+        if (failure instanceof VirtualMachineError fatal) throw fatal;
+        if (failure instanceof ThreadDeath fatal) throw fatal;
     }
 
     private void closeUnusedWireings() {
@@ -245,6 +387,7 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
 
     private final class Candidate implements RuntimeCandidate {
         private final RuntimeTargetSlice target;
+        private final AcquisitionOwner acquisition = new AcquisitionOwner();
         private final Mono<Void> preparation = Mono.<Void>fromRunnable(this::prepare).cache();
         private boolean closed;
         private boolean started;
@@ -252,6 +395,8 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
         private RuntimePlan plan;
         private Map<ExecutionUnitKey, PreparedUnit> prepared = Map.of();
         private Mono<Void> close;
+        private boolean cleanupAttempted;
+        private RuntimeException cleanupFailure;
 
         private Candidate(RuntimeTargetSlice target) { this.target = target; }
 
@@ -278,10 +423,10 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
                 || !compiled.plan().definitions().equals(plan.definitions())) {
                 throw new IllegalArgumentException("compiled Java runtime slice does not match prepared plan");
             }
-            sealed = true;
             var generation = new Generation(compiled, prepared,
                 target.target().targetRevision(),
                 target.capabilities().availableNames());
+            sealed = true;
             prepared = Map.of();
             return generation;
         }
@@ -294,7 +439,7 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
                     return started ? preparation.onErrorResume(ignored -> Mono.empty()) : Mono.empty();
                 }).then(Mono.<Void>fromRunnable(() -> {
                     synchronized (Candidate.this) {
-                        if (!sealed) releasePrepared(prepared);
+                        if (!sealed) cleanup();
                         prepared = Map.of();
                         plan = null;
                     }
@@ -306,6 +451,8 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
         private void prepare() {
             var sources = sourceIndex(target.facets());
             var values = new LinkedHashMap<ExecutionUnitKey, PreparedUnit>();
+            synchronized (this) { prepared = values; }
+            ArtifactId artifactId = null;
             try {
                 for (var entryId : target.affectedEntryIds().stream().sorted().toList()) {
                     var resolved = target.desired().entries().get(entryId);
@@ -315,56 +462,155 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
                     }
                     var definitionRef = entry.definitionRef();
                     var source = dynamicSource(definitionRef, sources);
-                    var lease = source == null ? NoopLease.INSTANCE : acquire(source, sources);
-                    try {
-                        var catalog = source == null
-                            ? builtIn(definitionRef, target).definition
-                            : Objects.requireNonNull(((StaticLease) lease).wiring.definition,
-                                "Java facet has no plugin definition");
-                        if (!catalog.definition().name().equals(definitionRef.definitionId())) {
-                            throw new IllegalArgumentException("Java definition id does not match " + entryId);
-                        }
-                        var binding = bind(catalog, resolved.resolvedConfig().orElseThrow(() ->
-                            new IllegalArgumentException("missing resolved config for " + entryId)));
-                        var key = new ExecutionUnitKey(entryId);
-                        var unit = source == null
-                            ? builtInPlan(key, definitionRef, target, requireDependencies(key))
-                            : ExecutionUnitPlan.builder(key, id(), source.facet().facet().executionTarget())
-                                .artifactId(source.facet().artifactId())
-                                .provenance(source.facet().pluginId().value(),
-                                    source.facet().facet().facetId().value(), source.facet().packageRevision())
-                            .dependencies(requireDependencies(key)).build();
-                        values.put(key, new PreparedUnit(unit, definitionRef,
-                            entry.publicationRequirement(), binding,
-                            resolved.effective().realms(),
-                            resolved.effective().intercepts(), lease));
-                    } catch (RuntimeException failure) {
-                        try {
-                            lease.close();
-                        } catch (RuntimeException cleanup) {
-                            failure.addSuppressed(cleanup);
-                        }
-                        throw failure;
+                    artifactId = source == null ? null : source.facet().artifactId();
+                    var node = source == null ? null : acquisition.root(artifactId);
+                    var lease = source == null ? NoopLease.INSTANCE : acquire(source, sources, node);
+                    var catalog = source == null
+                        ? builtIn(definitionRef, target).definition
+                        : Objects.requireNonNull(((StaticLease) lease).wiring.definition,
+                            "Java facet has no plugin definition");
+                    if (!catalog.definition().name().equals(definitionRef.definitionId())) {
+                        throw new IllegalArgumentException("Java definition id does not match " + entryId);
                     }
+                    var binding = bind(catalog, resolved.resolvedConfig().orElseThrow(() ->
+                        new IllegalArgumentException("missing resolved config for " + entryId)));
+                    var key = new ExecutionUnitKey(entryId);
+                    var unit = source == null
+                        ? builtInPlan(key, definitionRef, target, requireDependencies(key))
+                        : ExecutionUnitPlan.builder(key, id(), source.facet().facet().executionTarget())
+                            .artifactId(source.facet().artifactId())
+                            .provenance(source.facet().pluginId().value(),
+                                source.facet().facet().facetId().value(), source.facet().packageRevision())
+                        .dependencies(requireDependencies(key)).build();
+                    values.put(key, new PreparedUnit(unit, definitionRef,
+                        entry.publicationRequirement(), binding,
+                        resolved.effective().realms(),
+                        resolved.effective().intercepts(), lease));
+                    if (node != null) acquisition.transfer(node);
                 }
                 var definitions = values.entrySet().stream().map(value ->
                     DefinitionBindingPlan.builder(value.getValue().definition, value.getKey().value())
                         .unitKey(value.getKey()).publicationRequirement(value.getValue().publication).build()).toList();
                 synchronized (this) {
                     if (closed) throw new IllegalStateException("Java runtime candidate is closed");
-                    prepared = Map.copyOf(values);
                     plan = RuntimePlan.of(id(), values.values().stream().map(PreparedUnit::plan).toList(), definitions);
                 }
-            } catch (RuntimeException failure) {
-                releasePrepared(values);
-                throw failure;
+            } catch (RuntimeException | Error failure) {
+                rethrowFatal(failure);
+                var primary = acquisitionFailure(artifactId, failure);
+                try { cleanup(); } catch (RuntimeException cleanup) {
+                    if (cleanup != primary) primary.addSuppressed(cleanup);
+                }
+                throw primary;
             }
+        }
+
+        private synchronized void cleanup() {
+            if (!cleanupAttempted) {
+                cleanupAttempted = true;
+                try { acquisition.close(); } catch (RuntimeException failure) {
+                    cleanupFailure = failure;
+                }
+                try { releasePrepared(prepared); } catch (RuntimeException failure) {
+                    if (cleanupFailure == null) cleanupFailure = failure;
+                    else if (cleanupFailure != failure) cleanupFailure.addSuppressed(failure);
+                }
+            }
+            if (cleanupFailure != null) throw cleanupFailure;
         }
 
         private List<ExecutionUnitKey> requireDependencies(ExecutionUnitKey key) {
             var dependencies = target.unitDependencies().get(key);
             if (dependencies == null) throw new IllegalArgumentException("missing Java unit dependencies for " + key);
             return dependencies;
+        }
+    }
+
+    /** Owns partial acquisitions until the candidate has installed a complete prepared unit. */
+    private final class AcquisitionOwner {
+        private final List<AcquisitionNode> roots = new ArrayList<>();
+        private boolean closed;
+        private RuntimeException failure;
+
+        private AcquisitionNode root(ArtifactId id) {
+            synchronized (JavaRuntimeDriver.this) {
+                requireOpen();
+                var node = new AcquisitionNode(id);
+                roots.add(node);
+                acquisitions.add(this);
+                return node;
+            }
+        }
+
+        private void transfer(AcquisitionNode node) {
+            synchronized (JavaRuntimeDriver.this) {
+                roots.remove(node);
+                if (roots.isEmpty()) acquisitions.remove(this);
+            }
+        }
+
+        private void close() {
+            synchronized (JavaRuntimeDriver.this) {
+                if (!closed) {
+                    closed = true;
+                    for (var index = roots.size() - 1; index >= 0; index--) {
+                        try {
+                            roots.get(index).close();
+                            roots.remove(index);
+                        } catch (RuntimeException cleanup) {
+                            if (failure == null) failure = cleanup;
+                            else if (failure != cleanup) failure.addSuppressed(cleanup);
+                        }
+                    }
+                    if (failure == null) {
+                        acquisitions.remove(this);
+                    }
+                }
+                if (failure != null) throw failure;
+            }
+        }
+    }
+
+    private final class AcquisitionNode {
+        private final ArtifactId artifactId;
+        private final List<AcquisitionNode> children = new ArrayList<>();
+        private PluginClassLoader loader;
+        private StaticLease lease;
+        private DescriptorRead descriptorRead;
+
+        private AcquisitionNode(ArtifactId artifactId) { this.artifactId = artifactId; }
+
+        private void close() {
+            if (descriptorRead != null) {
+                descriptorRead.close();
+                descriptorRead = null;
+            }
+            if (lease != null) {
+                lease.close();
+                lease = null;
+                return;
+            }
+            if (loader != null) {
+                try {
+                    closer.close(loader);
+                    loader = null;
+                } catch (IOException | RuntimeException | Error cleanup) {
+                    rethrowFatal(cleanup);
+                    throw new JavaRuntimeException(JavaRuntimePhase.CLOSE, artifactId,
+                        "cannot close partially acquired Java class space", cleanup);
+                }
+            }
+            RuntimeException failure = null;
+            for (var index = children.size() - 1; index >= 0; index--) {
+                try {
+                    children.get(index).close();
+                    children.remove(index);
+                } catch (RuntimeException cleanup) {
+                    if (failure == null) failure = cleanup;
+                    else if (failure != cleanup) failure.addSuppressed(cleanup);
+                }
+            }
+            if (failure != null) throw failure;
         }
     }
 
@@ -779,8 +1025,11 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
 
     private static void releasePrepared(Map<ExecutionUnitKey, PreparedUnit> values) {
         RuntimeException failure = null;
-        for (var unit : new ArrayList<>(values.values()).reversed()) {
-            try { unit.lease.close(); } catch (RuntimeException cleanup) {
+        for (var entry : new ArrayList<>(values.entrySet()).reversed()) {
+            try {
+                entry.getValue().lease.close();
+                values.remove(entry.getKey());
+            } catch (RuntimeException cleanup) {
                 if (failure == null) failure = cleanup; else failure.addSuppressed(cleanup);
             }
         }
@@ -838,7 +1087,7 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
     }
 
     private final class StaticLease implements PrivateLease {
-        private final StaticWiring wiring;
+        private StaticWiring wiring;
         private final List<StaticLease> dependencies;
         private boolean wiringReleased;
         private boolean closed;
@@ -850,6 +1099,7 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
             if (!wiringReleased) {
                 release(wiring);
                 wiringReleased = true;
+                wiring = null;
             }
             RuntimeException failure = null;
             for (var index = dependencies.size() - 1; index >= 0; index--) {

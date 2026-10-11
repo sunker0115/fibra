@@ -700,7 +700,8 @@ dependencies 与 required capabilities。所有字段封闭，payload 必须位�
 Java facet payload 是含 `META-INF/fibra/plugin.yaml` 的主 JAR；同 package 的私有依赖按明确 payload 布局加入该插件的
 唯一 ClassLoader，主 JAR 固定最先，私有依赖不进入宿主或其他插件 ClassLoader。主 JAR 和纳入该
 ClassLoader 的私有依赖 JAR 若 `MANIFEST.MF Class-Path` 非空则拒绝，避免 URLClassLoader 隐式引入未受管
-路径。JAR 内 runtime-local descriptor 只保留 Java `entrypoint`；逻辑 package id/version/dependencies 只在
+路径。JAR 内 runtime-local descriptor 对可执行制品同时声明 Java `entrypoint` 与 `definitionId`，名称等于真实
+definition.name；contract-only 两字段均省略。逻辑 package id/version/dependencies 只在
 根清单出现。Node facet payload 必须是目录，其中 `fibra-plugin.yaml` 只声明 protocol、definitionId、
 相对 entrypoint 与 contributions；entrypoint 不能是绝对路径或逃出 payload。
 
@@ -801,8 +802,11 @@ CLI 投影使用 `content`、可选 `structuredContent`、`isError`、失败时�
 
 标准 Java 制品使用 `META-INF/fibra/plugin.yaml`：
 
-- executable 制品显式声明唯一 entrypoint；
-- contract-only 制品省略 entrypoint，只作为依赖图和类型装载节点；省略入口不等于声明 exports；
+- executable 制品显式声明唯一 entrypoint 与非空白 definitionId；prepare 在 wiring 发布/bind 前核真实 name 相等；
+- contract-only 制品同时省略 entrypoint/definitionId，只作为依赖图和类型装载节点；省略入口不等于声明 exports；
+- 缺名称的旧 executable 格式直接拒绝，无 metadata 回退或兼容分支。公开 descriptor 构造器、runtime/provider、
+  作者制品与消费者同步迁移；仅安装/selection 不承诺已校私有格式。目录经 Engine 读取所选精确包的声明，
+  不加载目标类或解析依赖闭包；合同及取得/失败 owner 见[definition 目录设计](2026-10-11-definition-catalog-design.md)。
 - 每制品独立 ClassLoader，类解析顺序为已加载 → `ClassLoader.getPlatformClassLoader()` 实际解析 →
   配置共享前缀的宿主 parent 实际解析 → 本制品 → 声明依赖。平台能力不依赖包名前缀；宿主共享偏好
   保留现有 `javax.*` 等前缀，不以这些前缀判断平台类，也不向任意 application classpath 兜底。
@@ -862,12 +866,18 @@ Node 插件作为受管 sidecar，通过版本化 JSON-RPC 协议参与 Node `Ru
 - retire 停止接入并请求协作关闭，独立截止推动软终止、强终止与范围确认，不以先取得 writer 锁为前提。
   监督器在退出前写出范围终态，Java 在退出后校验；调用方中断不取消这条共享关闭链。缺少证明、明确
   失败或监督器仍未退出均传播到请求 Scope 与实例清理，并保留会话目录；
-- 请求结果、请求资源清理与 session 清理分别结算。协议结果可以先失败，但原请求终态或受管范围静默
-  尚未证明时，不得成功完成请求资源清理、释放调用租约或 runtime participant。启动与握手的资源所有权
+- 请求结果、请求资源清理与 session 清理分别结算。协议结果可以先失败，但既未取得原请求终态、也未取得
+  受管范围静默证明时，不得成功完成该请求资源清理或释放相应调用租约；session及runtime payload owner
+  仍需自身关闭证明，已成功的独立Scope可结算。启动与握手的资源所有权
   必须覆盖启动失败和订阅取消，不能只依赖 doOnError 补清理；
 - POSIX payload 在独立进程组中运行，按 PGID 发信号并检查进程组消失；Windows 使用
   `taskkill /PID <pid> /T /F` 作为公开的较弱后端。后代主动离开进程组、Windows breakaway、监督器不可执行
   清理或机器失效不在本地 sidecar 的保证内，非可信插件必须交给 container、Job Object 或外部 sandbox；
+- 原supervisor在一次关闭预算内依次观察EOF、发送TERM、发送KILL。POSIX同组操作的EPERM只表示观察或
+  控制受阻，不能当作范围消失；只有真实ESRCH形成不可逆的消失事实，确认后停止该旧PGID的所有操作。
+  原截止时仍存在或未知则失败并保留session/payload owner，不刷新预算或退回只判断direct child。
+  原请求完整终态仍可独立结算该request的drain，不能据此证明session范围完成。完整合同及固定源码参照见
+  [Node关闭设计](2026-10-11-node-managed-range-close-design.md)；不增强数字PGID复用或离组后代保证；
 - Engine snapshot 不暴露 Process、channel 或协议对象。
 
 `ProcessHandle.descendants()` 只能用于诊断快照，不能成为生命周期所有权来源。此段只定义 Node runtime：

@@ -1,1 +1,2 @@
 entrypoint: com.sstlfsj.fibra.plugins.shell.tool.ShellToolEntrypoint
+definitionId: fibra-tool-shell

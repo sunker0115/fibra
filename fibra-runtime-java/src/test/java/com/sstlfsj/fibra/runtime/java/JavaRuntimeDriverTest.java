@@ -55,6 +55,643 @@ class JavaRuntimeDriverTest {
     @TempDir Path work;
 
     @Test
+    void fatalSynchronousDescriptorReadPropagatesItsOriginalObjectWithoutCleanup() throws Exception {
+        var fatal = new OutOfMemoryError("prebuilt descriptor read fatal");
+        var handles = new ArrayList<java.io.Closeable>(); var closes = new AtomicInteger();
+        var driver = queryDriver(new JavaFacetDescriptorReader.ResourceAccess() {
+            @Override java.util.jar.JarFile open(Path path) throws java.io.IOException {
+                var jar = super.open(path); handles.add(jar); return jar;
+            }
+            @Override java.io.InputStream open(java.util.jar.JarFile jar, java.util.jar.JarEntry entry) throws java.io.IOException {
+                var stream = new java.io.FilterInputStream(super.open(jar, entry)) {
+                    @Override public byte[] readNBytes(int n) { throw fatal; }
+                };
+                handles.add(stream); return stream;
+            }
+            @Override void close(java.io.InputStream stream) throws java.io.IOException { closes.incrementAndGet(); super.close(stream); }
+        });
+        try {
+            Throwable observed;
+            try { driver.inspect(facet("fatal-reader", "{}\n", null)).block(java.time.Duration.ofSeconds(2)); observed = null; }
+            catch (Throwable failure) { observed = failure; }
+            org.junit.jupiter.api.Assertions.assertSame(fatal, observed);
+            assertEquals(0, closes.get(), "fatal read must not enter ordinary cleanup");
+            assertEquals(1, descriptorReadCount(driver));
+            assertThrows(IllegalStateException.class, () -> driver.closeAsync().block());
+        } finally { for (var handle : handles.reversed()) handle.close(); }
+    }
+
+    @Test
+    void fatalSynchronousDescriptorCloseCachesItsOriginalObjectWithoutRetry() throws Exception {
+        var fatal = new ThreadDeath();
+        var handles = new ArrayList<java.io.Closeable>(); var closes = new AtomicInteger();
+        var driver = queryDriver(new JavaFacetDescriptorReader.ResourceAccess() {
+            @Override java.util.jar.JarFile open(Path path) throws java.io.IOException {
+                var jar = super.open(path); handles.add(jar); return jar;
+            }
+            @Override java.io.InputStream open(java.util.jar.JarFile jar, java.util.jar.JarEntry entry) throws java.io.IOException {
+                var stream = super.open(jar, entry); handles.add(stream); return stream;
+            }
+            @Override void close(java.io.InputStream stream) { closes.incrementAndGet(); throw fatal; }
+        });
+        try {
+            Throwable observed;
+            try { driver.inspect(facet("fatal-closer", "{}\n", null)).block(); observed = null; }
+            catch (Throwable failure) { observed = failure; }
+            org.junit.jupiter.api.Assertions.assertSame(fatal, observed);
+            var owner = indexedOwners(driver).iterator().next();
+            org.junit.jupiter.api.Assertions.assertSame(fatal, assertThrows(Error.class, () -> closeDescriptorOwner(owner)));
+            org.junit.jupiter.api.Assertions.assertSame(fatal, assertThrows(Error.class, () -> closeDescriptorOwner(owner)));
+            assertEquals(1, closes.get()); assertEquals(1, descriptorReadCount(driver));
+            assertThrows(IllegalStateException.class, () -> driver.closeAsync().block());
+        } finally { for (var handle : handles.reversed()) handle.close(); }
+    }
+
+    private static void closeDescriptorOwner(Object owner) throws Throwable {
+        var method = owner.getClass().getDeclaredMethod("close"); method.setAccessible(true);
+        try { method.invoke(owner); }
+        catch (java.lang.reflect.InvocationTargetException failure) { throw failure.getTargetException(); }
+    }
+
+    @Test
+    void synchronousInspectionRemainsUsableOnParallelSubscribers() throws Exception {
+        synchronousOperationOnParallel("inspect");
+    }
+
+    @Test
+    void synchronousProbeRemainsUsableOnParallelSubscribers() throws Exception {
+        synchronousOperationOnParallel("probe");
+    }
+
+    @Test
+    void synchronousPreparationAndCleanupRemainUsableOnParallelSubscribers() throws Exception {
+        synchronousOperationOnParallel("prepare");
+    }
+
+    private void synchronousOperationOnParallel(String operation) throws Exception {
+        var facet = facet("parallel-" + operation, "entrypoint: fixture.SampleEntrypoint\ndefinitionId: sample\n",
+            fixture.SampleEntrypoint.class);
+        var driver = new JavaRuntimeDriver(new NoopHostServices(), List.of());
+        var source = new PluginFacetSource(facet, List.of());
+        if (operation.equals("inspect")) driver.inspect(facet).subscribeOn(reactor.core.scheduler.Schedulers.parallel())
+            .block(java.time.Duration.ofSeconds(5));
+        else if (operation.equals("probe")) driver.probe(source).subscribeOn(reactor.core.scheduler.Schedulers.parallel())
+            .block(java.time.Duration.ofSeconds(5));
+        else {
+            var candidate = driver.createCandidate(slice(source));
+            candidate.prepareAsync().subscribeOn(reactor.core.scheduler.Schedulers.parallel()).block(java.time.Duration.ofSeconds(5));
+            assertEquals(1, candidate.preparedPlan().units().size());
+            candidate.closeAsync().subscribeOn(reactor.core.scheduler.Schedulers.parallel()).block(java.time.Duration.ofSeconds(5));
+        }
+        assertEquals(0, descriptorReadCount(driver)); driver.closeAsync().block();
+    }
+
+    @Test
+    void failedDescriptorCandidateCleanupOnParallelReplaysItsRealFailure() throws Exception {
+        var facet = facet("parallel-close-failure", "{}\n", null);
+        var handles = new ArrayList<java.io.Closeable>(); var closes = new AtomicInteger();
+        var driver = queryDriver(new JavaFacetDescriptorReader.ResourceAccess() {
+            @Override java.util.jar.JarFile open(Path path) throws java.io.IOException {
+                var jar = super.open(path); handles.add(jar); return jar;
+            }
+            @Override java.io.InputStream open(java.util.jar.JarFile jar, java.util.jar.JarEntry entry) throws java.io.IOException {
+                var stream = super.open(jar, entry); handles.add(stream); return stream;
+            }
+            @Override void close(java.io.InputStream stream) throws java.io.IOException {
+                closes.incrementAndGet(); throw new java.io.IOException("actual descriptor close failed");
+            }
+        });
+        var candidate = driver.createCandidate(slice(new PluginFacetSource(facet, List.of())));
+        try {
+            var prepared = assertThrows(JavaRuntimeException.class, () -> candidate.prepareAsync()
+                .subscribeOn(reactor.core.scheduler.Schedulers.parallel()).block(java.time.Duration.ofSeconds(5)));
+            assertEquals(JavaRuntimePhase.CLOSE, prepared.phase());
+            var closed = assertThrows(JavaRuntimeException.class, () -> candidate.closeAsync()
+                .subscribeOn(reactor.core.scheduler.Schedulers.parallel()).block(java.time.Duration.ofSeconds(5)));
+            org.junit.jupiter.api.Assertions.assertSame(prepared, closed);
+            org.junit.jupiter.api.Assertions.assertSame(closed, assertThrows(JavaRuntimeException.class,
+                () -> candidate.closeAsync().block()));
+            assertEquals(1, closes.get()); assertEquals(1, descriptorReadCount(driver));
+            assertThrows(IllegalStateException.class, () -> driver.closeAsync().block());
+        } finally { for (var handle : handles.reversed()) handle.close(); }
+    }
+
+    @Test
+    void reusedContractDependencyRejectsAnExecutableDeclarationBeforeParentMetadataOrBinding() throws Exception {
+        rejectsReusedDependencyPresenceChange(false);
+    }
+
+    @Test
+    void reusedExecutableDependencyExplicitlyRejectsAContractDeclarationWithoutChangingItsLease() throws Exception {
+        rejectsReusedDependencyPresenceChange(true);
+    }
+
+    private void rejectsReusedDependencyPresenceChange(boolean initiallyExecutable) throws Exception {
+        var executable = "entrypoint: fixture.SampleEntrypoint\ndefinitionId: sample\n";
+        var base = facet("presence-base", initiallyExecutable ? executable : "{}\n",
+            initiallyExecutable ? fixture.SampleEntrypoint.class : null, "c".repeat(64), "d".repeat(64));
+        var retainedRoot = facet("presence-retained", "entrypoint: fixture.PreparationEntrypoint\ndefinitionId: sample\n",
+            fixture.PreparationEntrypoint.class);
+        var rejectedRoot = facet("presence-rejected", "entrypoint: fixture.PreparationEntrypoint\ndefinitionId: sample\n",
+            fixture.PreparationEntrypoint.class, "e".repeat(64), "f".repeat(64));
+        var baseSource = new PluginFacetSource(base, List.of());
+        var retainedSource = new PluginFacetSource(retainedRoot, List.of(dependency(base)));
+        var rejectedSource = new PluginFacetSource(rejectedRoot, List.of(dependency(base)));
+        var metadata = new AtomicInteger(); var closes = new java.util.LinkedHashMap<String, Integer>();
+        fixture.PreparationObserver.callback = ignored -> metadata.incrementAndGet();
+        var driver = new JavaRuntimeDriver(new NoopHostServices(), List.of(), getClass().getClassLoader(),
+            List.of("java.", "com.sstlfsj.fibra.", "reactor.", "fixture.PreparationObserver"), loader -> {
+                closes.merge(loader.getURLs()[0].getPath(), 1, Integer::sum); loader.close();
+            });
+        var retained = driver.createCandidate(singleEntrySlice(retainedSource, baseSource, retainedSource));
+        try {
+            retained.prepareAsync().block();
+            assertEquals(1, metadata.get());
+            var references = wiringReferences(driver);
+            assertEquals(Map.of("presence-base", 1, "presence-retained", 1), references);
+            // Deliberately replace this SPI fixture with the same key; this is not PackageStore permission.
+            var replacement = work.resolve("presence-replacement.jar");
+            try (var jar = new JarOutputStream(Files.newOutputStream(replacement))) {
+                entry(jar, JavaFacetDescriptorReader.LOCATION, initiallyExecutable ? "{}\n" : executable);
+                if (!initiallyExecutable) copyClass(jar, fixture.SampleEntrypoint.class);
+            }
+            Files.move(replacement, base.facet().payload(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            var rejected = driver.createCandidate(singleEntrySlice(rejectedSource, baseSource, rejectedSource));
+            var failure = assertThrows(JavaRuntimeException.class, () -> rejected.prepareAsync().block());
+            assertTrue(failure.getMessage().contains("definition presence"), "presence mismatch must be explicit");
+            assertEquals(1, metadata.get(), "the dependent parent must not reach metadata or binding");
+            assertEquals(references, wiringReferences(driver)); assertTrue(closes.isEmpty());
+            rejected.closeAsync().block(); rejected.closeAsync().block();
+            assertEquals(references, wiringReferences(driver)); assertTrue(closes.isEmpty());
+            retained.closeAsync().block();
+            assertEquals(Map.of(base.facet().payload().toString(), 1, retainedRoot.facet().payload().toString(), 1), closes);
+            assertEquals(Map.of(), wiringReferences(driver)); driver.closeAsync().block();
+        } finally { fixture.PreparationObserver.callback = ignored -> { }; }
+    }
+
+    private static Map<String, Integer> wiringReferences(JavaRuntimeDriver driver) throws Exception {
+        var poolField = JavaRuntimeDriver.class.getDeclaredField("wiringPool"); poolField.setAccessible(true);
+        var values = new java.util.LinkedHashMap<String, Integer>();
+        for (var wiring : ((Map<?, ?>) poolField.get(driver)).values()) {
+            var facetField = wiring.getClass().getDeclaredField("facet"); facetField.setAccessible(true);
+            var referencesField = wiring.getClass().getDeclaredField("references"); referencesField.setAccessible(true);
+            values.put(((ManagedFacet) facetField.get(wiring)).artifactId().value(), referencesField.getInt(wiring));
+        }
+        return Map.copyOf(values);
+    }
+
+    @Test
+    void reusedWiringStillChecksItsMetadataAgainstTheCurrentDeclaration() throws Exception {
+        var facet = facet("reused-name", "entrypoint: fixture.SampleEntrypoint\ndefinitionId: sample\n", fixture.SampleEntrypoint.class);
+        var closes = new AtomicInteger();
+        var driver = new JavaRuntimeDriver(new NoopHostServices(), List.of(), getClass().getClassLoader(),
+            List.of("java.", "com.sstlfsj.fibra.", "reactor."), loader -> { closes.incrementAndGet(); loader.close(); });
+        var source = new PluginFacetSource(facet, List.of());
+        var retained = driver.createCandidate(slice(source)); retained.prepareAsync().block();
+        // Deliberately replace this SPI fixture with the same key to expose the reuse check.
+        // PackageStore's immutable content contract is outside this test.
+        var replacement = work.resolve("replacement.jar");
+        try (var jar = new JarOutputStream(Files.newOutputStream(replacement))) {
+            entry(jar, JavaFacetDescriptorReader.LOCATION, "entrypoint: fixture.SampleEntrypoint\ndefinitionId: other-declaration\n");
+            copyClass(jar, fixture.SampleEntrypoint.class);
+        }
+        Files.move(replacement, facet.facet().payload(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        var candidate = driver.createCandidate(slice(source));
+        assertThrows(JavaRuntimeException.class, () -> candidate.prepareAsync().block());
+        candidate.closeAsync().block();
+        assertEquals(0, closes.get(), "rejected reuse must retain the original candidate's lease");
+        retained.closeAsync().block(); assertEquals(1, closes.get()); driver.closeAsync().block();
+    }
+
+    @Test
+    void failedDescriptorCleanupKeepsCandidateAndItsDependencyOwner() throws Exception {
+        var base = facet("query-base", "{}\n", null, "c".repeat(64), "d".repeat(64));
+        var app = facet("query-app", "{}\n", null);
+        var appSource = new PluginFacetSource(app, List.of(dependency(base)));
+        var handles = new ArrayList<java.io.Closeable>();
+        var closes = new AtomicInteger();
+        var failedStreams = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<java.io.InputStream, Boolean>());
+        var driver = new JavaRuntimeDriver(new NoopHostServices(), List.of(), getClass().getClassLoader(),
+            List.of("java.", "com.sstlfsj.fibra.", "reactor."), loader -> { closes.incrementAndGet(); loader.close(); },
+            new JavaFacetDescriptorReader.ResourceAccess() {
+                @Override java.util.jar.JarFile open(Path path) throws java.io.IOException {
+                    var jar = super.open(path); handles.add(jar); return jar;
+                }
+                @Override java.io.InputStream open(java.util.jar.JarFile jar, java.util.jar.JarEntry entry) throws java.io.IOException {
+                    var stream = super.open(jar, entry); handles.add(stream);
+                    if (jar.getName().equals(app.facet().payload().toString())) failedStreams.add(stream);
+                    return stream;
+                }
+                @Override void close(java.io.InputStream stream) throws java.io.IOException {
+                    if (failedStreams.contains(stream)) throw new java.io.IOException("app descriptor cleanup failed");
+                    super.close(stream);
+                }
+            });
+        var candidate = driver.createCandidate(singleEntrySlice(appSource, new PluginFacetSource(base, List.of()), appSource));
+        var failure = assertThrows(JavaRuntimeException.class, () -> candidate.prepareAsync().block());
+        org.junit.jupiter.api.Assertions.assertSame(failure,
+            assertThrows(JavaRuntimeException.class, () -> candidate.closeAsync().block()));
+        assertEquals(0, closes.get(), "failed inner query cleanup must retain the dependency loader");
+        assertEquals(1, descriptorReadCount(driver));
+        var acquisitionsField = JavaRuntimeDriver.class.getDeclaredField("acquisitions");
+        acquisitionsField.setAccessible(true); assertEquals(1, ((Set<?>) acquisitionsField.get(driver)).size());
+        assertThrows(IllegalStateException.class, () -> driver.closeAsync().block());
+        for (var handle : handles.reversed()) handle.close();
+        var wiringField = JavaRuntimeDriver.class.getDeclaredField("wiringPool"); wiringField.setAccessible(true);
+        for (var wiring : ((Map<?, ?>) wiringField.get(driver)).values()) {
+            var loaderField = wiring.getClass().getDeclaredField("loader"); loaderField.setAccessible(true);
+            ((PluginClassLoader) loaderField.get(wiring)).close();
+        }
+    }
+
+    @Test
+    void closeWaitsForAdmittedReadBeforeItsWorkerStarts() throws Exception {
+        var entered = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var closed = new java.util.concurrent.CountDownLatch(1);
+        var testThread = Thread.currentThread();
+        var hook = "java-definition-query-admission";
+        reactor.core.scheduler.Schedulers.onScheduleHook(hook, task -> {
+            if (Thread.currentThread() != testThread) return task;
+            return () -> {
+                entered.countDown();
+                try {
+                    if (!release.await(5, java.util.concurrent.TimeUnit.SECONDS)) throw new AssertionError("worker gate timeout");
+                } catch (InterruptedException failure) { throw new AssertionError(failure); }
+                task.run();
+            };
+        });
+        var driver = queryDriver(new JavaFacetDescriptorReader.ResourceAccess());
+        var query = driver.createDefinitionQuery(facet("queued-query", "entrypoint: missing.Entry\ndefinitionId: sample\n", null));
+        var failure = new AtomicReference<Throwable>();
+        try {
+            var reading = query.readAsync().subscribe(ignored -> { }, failure::set);
+            assertTrue(entered.await(5, java.util.concurrent.TimeUnit.SECONDS));
+            reading.dispose();
+            query.closeAsync().subscribe(ignored -> { }, error -> { failure.set(error); closed.countDown(); }, closed::countDown);
+            assertEquals(1, closed.getCount(), "admitted read must reach its real terminal before close");
+            assertEquals(Set.of(descriptorOwner(query)), indexedOwners(driver));
+            release.countDown();
+            assertTrue(closed.await(5, java.util.concurrent.TimeUnit.SECONDS));
+            assertNull(failure.get());
+            assertEquals(List.of("sample"), query.readAsync().block());
+            assertEquals(0, descriptorReadCount(driver)); driver.closeAsync().block();
+        } finally {
+            release.countDown(); reactor.core.scheduler.Schedulers.resetOnScheduleHook(hook);
+        }
+    }
+
+    @Test
+    void manifestClassPathIsRejectedRegardlessOfEntryCase() throws Exception {
+        for (var location : List.of("META-INF/MANIFEST.MF", "meta-inf/manifest.mf")) {
+            var facet = facet("manifest-query", "{}\n", null);
+            try (var jar = new JarOutputStream(Files.newOutputStream(facet.facet().payload()))) {
+                entry(jar, location, "Manifest-Version: 1.0\r\nClass-Path: hidden.jar\r\n\r\n");
+                entry(jar, JavaFacetDescriptorReader.LOCATION, "{}\n");
+            }
+            var driver = queryDriver(new JavaFacetDescriptorReader.ResourceAccess());
+            var query = driver.createDefinitionQuery(facet);
+            assertThrows(JavaRuntimeException.class, () -> query.readAsync().block());
+            query.closeAsync().block(); driver.closeAsync().block();
+        }
+    }
+
+    @Test
+    void queryDoesNotExecuteGeneratedStaticConstructorMetadataOrFactory() throws Exception {
+        var source = work.resolve("fixture/ObservedEntrypoint.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, """
+            package fixture;
+            public final class ObservedEntrypoint implements com.sstlfsj.fibra.PluginEntrypoint<Void> {
+                static { fixture.PreparationObserver.callback.accept(ObservedEntrypoint.class.getClassLoader()); }
+                public ObservedEntrypoint() { fixture.PreparationObserver.callback.accept(getClass().getClassLoader()); }
+                public com.sstlfsj.fibra.PluginDefinition<Void> definition() {
+                    fixture.PreparationObserver.callback.accept(getClass().getClassLoader());
+                    return com.sstlfsj.fibra.PluginDefinition.builder("sample", Void.class, () -> {
+                        fixture.PreparationObserver.callback.accept(getClass().getClassLoader());
+                        return (context, config) -> reactor.core.publisher.Mono.empty();
+                    }).build();
+                }
+            }
+            """);
+        assertEquals(0, javax.tools.ToolProvider.getSystemJavaCompiler().run(null, null, null,
+            "-classpath", System.getProperty("java.class.path"), "-d", work.toString(), source.toString()));
+        var facet = facet("generated-query", "{}\n", null);
+        try (var jar = new JarOutputStream(Files.newOutputStream(facet.facet().payload()))) {
+            entry(jar, JavaFacetDescriptorReader.LOCATION, "entrypoint: fixture.ObservedEntrypoint\ndefinitionId: sample\n");
+            jar.putNextEntry(new JarEntry("fixture/ObservedEntrypoint.class"));
+            jar.write(Files.readAllBytes(work.resolve("fixture/ObservedEntrypoint.class"))); jar.closeEntry();
+        }
+        var effects = new AtomicInteger();
+        fixture.PreparationObserver.callback = ignored -> effects.incrementAndGet();
+        var driver = new JavaRuntimeDriver(new NoopHostServices(), List.of(), getClass().getClassLoader(),
+            List.of("java.", "com.sstlfsj.fibra.", "reactor.", "fixture.PreparationObserver"), PluginClassLoader::close);
+        var query = driver.createDefinitionQuery(facet);
+        var candidate = driver.createCandidate(slice(new PluginFacetSource(facet, List.of())));
+        try {
+            assertEquals(List.of("sample"), query.readAsync().block());
+            assertEquals(0, effects.get(), "no generated target path may execute during catalog reading");
+            query.closeAsync().block();
+            assertEquals(0, effects.get());
+            candidate.prepareAsync().block();
+            assertTrue(effects.get() >= 3, "real prepare must initialize, construct and read metadata from generated JAR");
+            candidate.closeAsync().block(); driver.closeAsync().block();
+        } finally { fixture.PreparationObserver.callback = ignored -> { }; }
+    }
+
+    @Test
+    void descriptorReadFailureStillCleansIndependentManifestStreamAndRetainsJar() throws Exception {
+        var facet = facet("two-streams", "{}\n", null);
+        try (var jar = new JarOutputStream(Files.newOutputStream(facet.facet().payload()))) {
+            entry(jar, "META-INF/MANIFEST.MF", "Manifest-Version: 1.0\r\n\r\n");
+            entry(jar, JavaFacetDescriptorReader.LOCATION, "{}\n");
+        }
+        var actual = new ArrayList<java.io.Closeable>();
+        var closes = new ArrayList<String>();
+        var streams = new java.util.IdentityHashMap<java.io.InputStream, String>();
+        var driver = queryDriver(new JavaFacetDescriptorReader.ResourceAccess() {
+            @Override java.util.jar.JarFile open(Path path) throws java.io.IOException {
+                var jar = super.open(path); actual.add(jar); return jar;
+            }
+            @Override java.io.InputStream open(java.util.jar.JarFile jar, java.util.jar.JarEntry entry) throws java.io.IOException {
+                var stream = super.open(jar, entry);
+                if (entry.getName().equals(JavaFacetDescriptorReader.LOCATION)) {
+                    stream = new java.io.FilterInputStream(stream) {
+                        @Override public byte[] readNBytes(int n) { throw new AssertionError("read failure graph"); }
+                    };
+                }
+                actual.add(stream); streams.put(stream, entry.getName()); return stream;
+            }
+            @Override void close(java.io.InputStream stream) throws java.io.IOException {
+                var location = streams.get(stream); closes.add(location);
+                if (location.equals(JavaFacetDescriptorReader.LOCATION)) throw new java.io.IOException("descriptor close failed");
+                super.close(stream);
+            }
+            @Override void close(java.util.jar.JarFile jar) throws java.io.IOException {
+                closes.add("jar"); super.close(jar);
+            }
+        });
+        var query = driver.createDefinitionQuery(facet);
+        var failure = assertThrows(JavaRuntimeException.class, () -> query.readAsync().block());
+        assertNull(failure.getCause());
+        assertThrows(JavaRuntimeException.class, () -> query.closeAsync().block());
+        assertEquals(List.of(JavaFacetDescriptorReader.LOCATION, "META-INF/MANIFEST.MF"), closes);
+        assertEquals(Set.of(descriptorOwner(query)), indexedOwners(driver));
+        assertThrows(IllegalStateException.class, () -> driver.closeAsync().block());
+        for (var handle : actual.reversed()) handle.close();
+    }
+
+    @Test
+    void normalInspectProbeAndPrepareRetainTheirFailedDescriptorCleanupOwner() throws Exception {
+        for (var path : List.of("inspect", "probe", "prepare")) {
+            var facet = facet("normal-owner", "{}\n", null);
+            var handles = new ArrayList<java.io.Closeable>();
+            var streamCloses = new AtomicInteger(); var jarCloses = new AtomicInteger();
+            var driver = queryDriver(new JavaFacetDescriptorReader.ResourceAccess() {
+                @Override java.util.jar.JarFile open(Path path) throws java.io.IOException {
+                    var jar = super.open(path); handles.add(jar); return jar;
+                }
+                @Override java.io.InputStream open(java.util.jar.JarFile jar, java.util.jar.JarEntry entry) throws java.io.IOException {
+                    var stream = super.open(jar, entry); handles.add(stream); return stream;
+                }
+                @Override void close(java.io.InputStream stream) throws java.io.IOException {
+                    streamCloses.incrementAndGet(); throw new java.io.IOException("descriptor cleanup failed");
+                }
+                @Override void close(java.util.jar.JarFile jar) throws java.io.IOException { jarCloses.incrementAndGet(); super.close(jar); }
+            });
+            var source = new PluginFacetSource(facet, List.of());
+            if (path.equals("inspect")) assertThrows(JavaRuntimeException.class, () -> driver.inspect(facet).block());
+            else if (path.equals("probe")) assertThrows(JavaRuntimeException.class, () -> driver.probe(source).block());
+            else {
+                var candidate = driver.createCandidate(slice(source));
+                var prepareFailure = assertThrows(JavaRuntimeException.class, () -> candidate.prepareAsync().block());
+                var closeFailure = assertThrows(JavaRuntimeException.class, () -> candidate.closeAsync().block());
+                org.junit.jupiter.api.Assertions.assertSame(prepareFailure, closeFailure);
+                org.junit.jupiter.api.Assertions.assertSame(closeFailure,
+                    assertThrows(JavaRuntimeException.class, () -> candidate.closeAsync().block()));
+            }
+            assertEquals(1, descriptorReadCount(driver));
+            var owner = indexedOwners(driver).iterator().next();
+            assertThrows(JavaRuntimeException.class, () -> closeDescriptorOwner(owner));
+            assertEquals(1, streamCloses.get()); assertEquals(0, jarCloses.get());
+            assertThrows(IllegalStateException.class, () -> driver.closeAsync().block());
+            for (var handle : handles.reversed()) handle.close();
+        }
+    }
+
+    private static Set<?> indexedOwners(JavaRuntimeDriver driver) throws Exception {
+        var field = JavaRuntimeDriver.class.getDeclaredField("descriptorReads"); field.setAccessible(true);
+        return Set.copyOf((Set<?>) field.get(driver));
+    }
+
+    private static Object descriptorOwner(com.sstlfsj.fibra.engine.runtime.RuntimeDefinitionQuery query) throws Exception {
+        var field = query.getClass().getDeclaredField("owner"); field.setAccessible(true);
+        return field.get(query);
+    }
+
+    @Test
+    void definitionQueriesAreInertStaticAndReplayTheirReadAndClose() throws Exception {
+        var facet = facet("static-query", "entrypoint: missing.Entrypoint\ndefinitionId: ' sample '\n", null);
+        var opens = new AtomicInteger();
+        var streams = new AtomicInteger();
+        var jars = new AtomicInteger();
+        var driver = queryDriver(new JavaFacetDescriptorReader.ResourceAccess() {
+            @Override java.util.jar.JarFile open(Path path) throws java.io.IOException {
+                opens.incrementAndGet(); return super.open(path);
+            }
+            @Override void close(java.io.InputStream stream) throws java.io.IOException {
+                streams.incrementAndGet(); super.close(stream);
+            }
+            @Override void close(java.util.jar.JarFile jar) throws java.io.IOException {
+                jars.incrementAndGet(); super.close(jar);
+            }
+        });
+        var query = driver.createDefinitionQuery(facet);
+        var unread = query.readAsync();
+        assertEquals(0, opens.get());
+        assertEquals(List.of(" sample "), unread.block());
+        assertEquals(List.of(" sample "), query.readAsync().block());
+        assertEquals(1, opens.get());
+        assertEquals(0, streams.get());
+        query.closeAsync().block(); query.closeAsync().block();
+        assertEquals(1, streams.get()); assertEquals(1, jars.get());
+        assertEquals(List.of(" sample "), unread.block());
+        assertEquals(0, descriptorReadCount(driver));
+        var owner = descriptorOwner(query);
+        var resourcesField = owner.getClass().getDeclaredField("resources");
+        resourcesField.setAccessible(true);
+        var resources = resourcesField.get(owner);
+        var jarField = resources.getClass().getDeclaredField("jar");
+        jarField.setAccessible(true); assertNull(jarField.get(resources));
+        var streamsField = resources.getClass().getDeclaredField("streams");
+        streamsField.setAccessible(true); assertTrue(((List<?>) streamsField.get(resources)).isEmpty());
+        driver.closeAsync().block();
+    }
+
+    @Test
+    void contractQueryAndCloseBeforeReadAcquireNoUnexpectedResources() throws Exception {
+        var contract = facet("contract-query", "{}\n", null);
+        var driver = queryDriver(new JavaFacetDescriptorReader.ResourceAccess());
+        var query = driver.createDefinitionQuery(contract);
+        assertEquals(List.of(), query.readAsync().block());
+        query.closeAsync().block();
+        var missing = new ManagedFacet(contract.artifactId(), contract.pluginId(), contract.packageRevision(),
+            new PluginFacet(contract.facet().facetId(), contract.facet().role(), contract.facet().runtimeId(),
+                contract.facet().executionTarget(), work.resolve("absent.jar"), contract.facet().payloadDigest(), List.of(), List.of()));
+        var inert = driver.createDefinitionQuery(missing);
+        var deferred = inert.readAsync();
+        inert.closeAsync().block();
+        assertThrows(IllegalStateException.class, () -> deferred.block());
+        assertEquals(0, descriptorReadCount(driver));
+        driver.closeAsync().block();
+        assertThrows(IllegalStateException.class, () -> driver.createDefinitionQuery(contract));
+        assertThrows(NullPointerException.class, () -> driver.createDefinitionQuery(null));
+    }
+
+    @Test
+    void definitionQueryUsesStrictDescriptorParser() throws Exception {
+        for (var yaml : List.of("entrypoint: missing.Entry\n", "definitionId: sample\n",
+            "entrypoint: 42\ndefinitionId: sample\n", "entrypoint: missing.Entry\ndefinitionId: 42\n",
+            "entrypoint: missing.Entry\ndefinitionId: ''\n", "entrypoint: ''\ndefinitionId: sample\n",
+            "entrypoint: missing.Entry\ndefinitionId: sample\ndefinitionId: sample\n",
+            "entrypoint: missing.Entry\nentrypoint: missing.Entry\ndefinitionId: sample\n",
+            "entrypoint: missing.Entry\ndefinitionId: sample\nunknown: true\n", "#".repeat(65537))) {
+            var driver = queryDriver(new JavaFacetDescriptorReader.ResourceAccess());
+            var query = driver.createDefinitionQuery(facet("invalid-query", yaml, null));
+            var failure = assertThrows(JavaRuntimeException.class, () -> query.readAsync().block());
+            assertEquals(failure, assertThrows(JavaRuntimeException.class, () -> query.readAsync().block()));
+            assertNull(failure.getCause(), "cached failure must not retain original exception graph");
+            query.closeAsync().block();
+            assertEquals(0, descriptorReadCount(driver)); driver.closeAsync().block();
+        }
+        assertThrows(NullPointerException.class, () -> new JavaFacetDescriptor(null, java.util.Optional.empty()));
+        assertThrows(IllegalArgumentException.class, () -> new JavaFacetDescriptor(java.util.Optional.of("x"), java.util.Optional.empty()));
+        assertThrows(IllegalArgumentException.class, () -> new JavaFacetDescriptor(java.util.Optional.of("x"), java.util.Optional.of(" ")));
+        assertEquals(" sample ", new JavaFacetDescriptor(java.util.Optional.of(" x "), java.util.Optional.of(" sample ")).definitionId().orElseThrow());
+    }
+
+    @Test
+    void queryCleanupFailureRetainsItsSameOwnerWithoutRetry() throws Exception {
+        for (var streamFails : List.of(true, false)) {
+            for (var readFails : List.of(true, false)) {
+                var streamCloses = new AtomicInteger(); var jarCloses = new AtomicInteger();
+                var handles = new ArrayList<java.io.Closeable>();
+                var driver = queryDriver(new JavaFacetDescriptorReader.ResourceAccess() {
+                    @Override java.util.jar.JarFile open(Path path) throws java.io.IOException {
+                        var jar = super.open(path); handles.add(jar); return jar;
+                    }
+                    @Override java.io.InputStream open(java.util.jar.JarFile jar, java.util.jar.JarEntry entry) throws java.io.IOException {
+                        var stream = super.open(jar, entry); handles.add(stream); return stream;
+                    }
+                    @Override void close(java.io.InputStream stream) throws java.io.IOException {
+                        streamCloses.incrementAndGet();
+                        if (streamFails) throw new java.io.IOException("stream close failed");
+                        super.close(stream);
+                    }
+                    @Override void close(java.util.jar.JarFile jar) throws java.io.IOException {
+                        jarCloses.incrementAndGet(); throw new java.io.IOException("jar close failed");
+                    }
+                });
+                var query = driver.createDefinitionQuery(facet("close-query", readFails ? "unknown: true\n"
+                    : "entrypoint: missing.Entry\ndefinitionId: sample\n", null));
+                if (readFails) assertThrows(JavaRuntimeException.class, () -> query.readAsync().block());
+                else assertEquals(List.of("sample"), query.readAsync().block());
+                var failure = assertThrows(JavaRuntimeException.class, () -> query.closeAsync().block());
+                assertEquals(failure, assertThrows(JavaRuntimeException.class, () -> query.closeAsync().block()));
+                assertEquals(1, streamCloses.get()); assertEquals(streamFails ? 0 : 1, jarCloses.get());
+                assertEquals(1, descriptorReadCount(driver));
+                assertThrows(IllegalStateException.class, () -> driver.closeAsync().block());
+                assertEquals(1, streamCloses.get());
+                for (var handle : handles.reversed()) handle.close();
+            }
+        }
+    }
+
+    @Test
+    void queryReadCancellationDoesNotReleaseRealReadAndCloseWaitsForItsTerminal() throws Exception {
+        var entered = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var terminal = new java.util.concurrent.CountDownLatch(1);
+        var closes = new AtomicInteger();
+        var driver = queryDriver(new JavaFacetDescriptorReader.ResourceAccess() {
+            @Override java.io.InputStream open(java.util.jar.JarFile jar, java.util.jar.JarEntry entry) throws java.io.IOException {
+                var actual = super.open(jar, entry);
+                return new java.io.FilterInputStream(actual) {
+                    @Override public byte[] readNBytes(int n) throws java.io.IOException {
+                        entered.countDown();
+                        try {
+                            if (!release.await(5, java.util.concurrent.TimeUnit.SECONDS)) throw new java.io.IOException("read gate timeout");
+                        } catch (InterruptedException failure) { throw new java.io.IOException(failure); }
+                        return super.readNBytes(n);
+                    }
+                };
+            }
+            @Override void close(java.io.InputStream stream) throws java.io.IOException {
+                closes.incrementAndGet(); super.close(stream);
+            }
+        });
+        var query = driver.createDefinitionQuery(facet("gated-query", "entrypoint: missing.Entry\ndefinitionId: sample\n", null));
+        var reading = query.readAsync().subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic()).subscribe();
+        try {
+            assertTrue(entered.await(5, java.util.concurrent.TimeUnit.SECONDS));
+            reading.dispose();
+            var closing = query.closeAsync().subscribe(ignored -> { }, failure -> terminal.countDown(), terminal::countDown);
+            assertEquals(1, terminal.getCount()); assertEquals(0, closes.get());
+            closing.dispose();
+            query.closeAsync().subscribe(ignored -> { }, failure -> terminal.countDown(), terminal::countDown);
+            release.countDown();
+            assertTrue(terminal.await(5, java.util.concurrent.TimeUnit.SECONDS));
+            assertEquals(List.of("sample"), query.readAsync().block());
+            assertEquals(1, closes.get()); assertEquals(0, descriptorReadCount(driver));
+            closing.dispose(); driver.closeAsync().block();
+        } finally { release.countDown(); }
+    }
+
+    private JavaRuntimeDriver queryDriver(JavaFacetDescriptorReader.ResourceAccess access) {
+        return new JavaRuntimeDriver(new NoopHostServices(), List.of(), getClass().getClassLoader(),
+            List.of("java.", "com.sstlfsj.fibra.", "reactor."), PluginClassLoader::close, access);
+    }
+
+    private static int descriptorReadCount(JavaRuntimeDriver driver) throws Exception {
+        var field = JavaRuntimeDriver.class.getDeclaredField("descriptorReads");
+        field.setAccessible(true); return ((Set<?>) field.get(driver)).size();
+    }
+
+    @Test
+    void rejectsMissingOrIsolatedDefinitionName() throws Exception {
+        for (var descriptor : List.of("entrypoint: fixture.SampleEntrypoint\n",
+            "definitionId: sample\n")) {
+            var facet = facet("missing-name", descriptor, fixture.SampleEntrypoint.class);
+            var driver = new JavaRuntimeDriver(new NoopHostServices(), List.of());
+            assertThrows(JavaRuntimeException.class, () -> driver.inspect(facet).block());
+            driver.closeAsync().block();
+        }
+    }
+
+    @Test
+    void rejectsMetadataNameBeforeBindingAndClosesLoader() throws Exception {
+        var facet = facet("name-mismatch", "entrypoint: fixture.PreparationEntrypoint\ndefinitionId: other\n",
+            fixture.PreparationEntrypoint.class);
+        var closes = new AtomicInteger();
+        var metadata = new AtomicInteger();
+        fixture.PreparationObserver.callback = ignored -> metadata.incrementAndGet();
+        var driver = new JavaRuntimeDriver(new NoopHostServices(), List.of(), getClass().getClassLoader(),
+            List.of("java.", "com.sstlfsj.fibra.", "reactor.", "fixture.PreparationObserver"),
+            loader -> { closes.incrementAndGet(); loader.close(); });
+        var candidate = driver.createCandidate(slice(new PluginFacetSource(facet, List.of())));
+        try {
+            var failure = assertThrows(JavaRuntimeException.class, () -> candidate.prepareAsync().block());
+            assertTrue(failure.getMessage().contains("definition"));
+            assertEquals(1, metadata.get(), "real entrypoint metadata must have returned");
+            candidate.closeAsync().block();
+            assertEquals(1, closes.get());
+            driver.closeAsync().block();
+        } finally {
+            fixture.PreparationObserver.callback = ignored -> { };
+        }
+    }
+
+    @Test
     void activePluginFailureClosesAdmissionAndRequestsOneReplacement() {
         var health = reactor.core.publisher.Sinks.<Void>one();
         var mounted = new AtomicReference<PluginInstance<?>>();
@@ -135,7 +772,7 @@ class JavaRuntimeDriverTest {
 
     @Test
     void preparationBuildsAnEntryUnitWithoutStartingThePlugin() throws Exception {
-        var facet = facet("app", "entrypoint: fixture.SampleEntrypoint\n",
+        var facet = facet("app", "entrypoint: fixture.SampleEntrypoint\ndefinitionId: sample\n",
             fixture.SampleEntrypoint.class);
         var driver = new JavaRuntimeDriver(new NoopHostServices(), List.of());
         var candidate = driver.createCandidate(slice(
@@ -161,8 +798,8 @@ class JavaRuntimeDriverTest {
 
     @Test
     void preparedPlanUsesDesiredEntryIdsAndEngineDependencies() throws Exception {
-        var base = facet("base", "entrypoint: fixture.SampleEntrypoint\n", fixture.SampleEntrypoint.class);
-        var app = facet("app", "entrypoint: fixture.SampleEntrypoint\n", fixture.SampleEntrypoint.class);
+        var base = facet("base", "entrypoint: fixture.SampleEntrypoint\ndefinitionId: sample\n", fixture.SampleEntrypoint.class);
+        var app = facet("app", "entrypoint: fixture.SampleEntrypoint\ndefinitionId: sample\n", fixture.SampleEntrypoint.class);
         var baseSource = new PluginFacetSource(base, List.of());
         var appSource = new PluginFacetSource(app, List.of(
             new ResolvedFacetDependency(base.pluginId(), base.packageRevision(),
@@ -174,6 +811,403 @@ class JavaRuntimeDriverTest {
 
         assertEquals(List.of(new ExecutionUnitKey("base")), candidate.preparedPlan()
             .units().get(new ExecutionUnitKey("app")).dependencies());
+    }
+
+    @Test
+    void failedMetadataRetainsUnclosedLoaderAndCachesCleanupFailure() throws Exception {
+        failedAcquisitionCleanup(0);
+    }
+
+    @Test
+    void failedDescriptorRetainsUnclosedDependencyAndCachesCleanupFailure() throws Exception {
+        failedAcquisitionCleanup(1);
+    }
+
+    @Test
+    void failedParentCleanupDoesNotReleaseItsDependency() throws Exception {
+        failedAcquisitionCleanup(2);
+    }
+
+    private void failedAcquisitionCleanup(int scenario) throws Exception {
+        var base = facet("acquire-base", "{}\n", null,
+            "c".repeat(64), "d".repeat(64));
+        var app = facet("acquire-app", scenario == 1 ? "invalid: true\n"
+            : "entrypoint: fixture.PreparationEntrypoint\ndefinitionId: sample\n",
+            scenario == 1 ? null : fixture.PreparationEntrypoint.class);
+        var baseSource = new PluginFacetSource(base, List.of());
+        var appSource = new PluginFacetSource(app, scenario == 0 ? List.of()
+            : List.of(dependency(base)));
+        var closes = new ArrayList<PluginClassLoader>();
+        var dependencyCloses = new AtomicInteger();
+        fixture.PreparationObserver.callback = ignored -> {
+            throw new IllegalStateException("injected metadata failure");
+        };
+        var driver = new JavaRuntimeDriver(new NoopHostServices(), List.of(),
+            getClass().getClassLoader(), List.of("java.", "com.sstlfsj.fibra.",
+                "reactor.", "fixture.PreparationObserver"), loader -> {
+                closes.add(loader);
+                if (loader.getURLs()[0].equals(base.facet().payload().toUri().toURL())) {
+                    dependencyCloses.incrementAndGet();
+                }
+                throw new java.io.IOException("injected cleanup failure");
+            });
+        var candidate = driver.createCandidate(singleEntrySlice(appSource,
+            baseSource, appSource));
+        try {
+            assertThrows(RuntimeException.class, () -> candidate.prepareAsync().block());
+            var cleanup = assertThrows(JavaRuntimeException.class,
+                () -> candidate.closeAsync().block());
+            assertEquals(JavaRuntimePhase.CLOSE, cleanup.phase());
+            assertEquals(cleanup, assertThrows(JavaRuntimeException.class,
+                () -> candidate.closeAsync().block()));
+            assertEquals(1, closes.size(), "candidate cleanup must not retry");
+            assertEquals(scenario == 1 ? 1 : 0, dependencyCloses.get(),
+                "an unclosed parent must retain every dependency");
+            assertThrows(IllegalStateException.class, () -> driver.closeAsync().block());
+            assertEquals(1, closes.size(), "driver must reject before releasing owned loaders");
+        } finally {
+            fixture.PreparationObserver.callback = null;
+            for (var loader : closes) loader.close();
+        }
+    }
+
+    private static ResolvedFacetDependency dependency(ManagedFacet facet) {
+        return new ResolvedFacetDependency(facet.pluginId(), facet.packageRevision(),
+            facet.facet().facetId(), facet.artifactId());
+    }
+
+    @Test
+    void nonfatalMetadataErrorsAreNormalizedAndKeepTheirCleanupOwner() throws Exception {
+        for (var error : List.of(new AssertionError("metadata assertion"),
+            new NoClassDefFoundError("metadata linkage"), new Error("custom nonfatal metadata error"))) {
+            var facet = facet("error-app", "entrypoint: fixture.PreparationEntrypoint\ndefinitionId: sample\n",
+                fixture.PreparationEntrypoint.class);
+            var closes = new AtomicInteger();
+            fixture.PreparationObserver.callback = ignored -> { throw error; };
+            var driver = new JavaRuntimeDriver(new NoopHostServices(), List.of(),
+                getClass().getClassLoader(), List.of("java.", "com.sstlfsj.fibra.",
+                    "reactor.", "fixture.PreparationObserver"), loader -> {
+                    closes.incrementAndGet();
+                    loader.close();
+                    throw new java.io.IOException("cleanup failed");
+                });
+            var candidate = driver.createCandidate(slice(new PluginFacetSource(facet, List.of())));
+            try {
+                var failure = assertThrows(JavaRuntimeException.class,
+                    () -> candidate.prepareAsync().block());
+                assertEquals(error, failure.getCause());
+                assertThrows(JavaRuntimeException.class, () -> candidate.closeAsync().block());
+                assertThrows(IllegalStateException.class, () -> driver.closeAsync().block());
+                assertEquals(1, closes.get());
+            } finally {
+                fixture.PreparationObserver.callback = null;
+            }
+        }
+    }
+
+    @Test
+    void constructorVirtualMachineErrorEscapesWithoutCleanupAndRetainsItsOwner() throws Exception {
+        fatalConstructorFailure(new OutOfMemoryError("prebuilt constructor fatal"));
+    }
+
+    @Test
+    @SuppressWarnings("removal")
+    void constructorThreadDeathEscapesWithoutCleanupAndRetainsItsOwner() throws Exception {
+        fatalConstructorFailure(new ThreadDeath());
+    }
+
+    private void fatalConstructorFailure(Error fatal) throws Exception {
+        var source = work.resolve("fixture/FatalConstructorEntrypoint.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, """
+            package fixture;
+            public final class FatalConstructorEntrypoint implements com.sstlfsj.fibra.PluginEntrypoint<Void> {
+                public FatalConstructorEntrypoint() {
+                    PreparationObserver.callback.accept(getClass().getClassLoader());
+                }
+                public com.sstlfsj.fibra.PluginDefinition<Void> definition() {
+                    PreparationObserver.callback.accept(null);
+                    throw new AssertionError("definition must not run");
+                }
+            }
+            """);
+        assertEquals(0, javax.tools.ToolProvider.getSystemJavaCompiler().run(null, null, null,
+            "-classpath", System.getProperty("java.class.path"), "-d", work.toString(), source.toString()));
+        var base = facet("constructor-base", "{}\n", null, "c".repeat(64), "d".repeat(64));
+        var app = facet("constructor-app", "{}\n", null);
+        try (var jar = new JarOutputStream(Files.newOutputStream(app.facet().payload()))) {
+            entry(jar, JavaFacetDescriptorReader.LOCATION, "entrypoint: fixture.FatalConstructorEntrypoint\ndefinitionId: sample\n");
+            jar.putNextEntry(new JarEntry("fixture/FatalConstructorEntrypoint.class"));
+            jar.write(Files.readAllBytes(work.resolve("fixture/FatalConstructorEntrypoint.class")));
+            jar.closeEntry();
+        }
+        var baseSource = new PluginFacetSource(base, List.of());
+        var appSource = new PluginFacetSource(app, List.of(dependency(base)));
+        var handles = new ArrayList<PluginClassLoader>();
+        var closes = new AtomicInteger();
+        var definitions = new AtomicInteger();
+        fixture.PreparationObserver.callback = loader -> {
+            if (loader == null) definitions.incrementAndGet();
+            else {
+                var parentLoader = (PluginClassLoader) loader;
+                handles.add(parentLoader);
+                try {
+                    handles.addAll((List<PluginClassLoader>) field(parentLoader, "dependencies"));
+                } catch (ReflectiveOperationException failure) {
+                    throw new AssertionError(failure);
+                }
+                throw fatal;
+            }
+        };
+        var driver = new JavaRuntimeDriver(new NoopHostServices(), List.of(),
+            getClass().getClassLoader(), List.of("java.", "com.sstlfsj.fibra.",
+                "reactor.", "fixture.PreparationObserver"),
+            loader -> { closes.incrementAndGet(); loader.close(); });
+        var candidate = driver.createCandidate(singleEntrySlice(appSource, baseSource, appSource));
+        try {
+            var observed = assertThrows(Throwable.class, () -> candidate.prepareAsync().block());
+            org.junit.jupiter.api.Assertions.assertAll(
+                () -> org.junit.jupiter.api.Assertions.assertSame(fatal, observed),
+                () -> assertEquals(0, closes.get(), "fatal acquisition must not enter cleanup"),
+                () -> assertEquals(0, definitions.get()),
+                () -> assertThrows(IllegalStateException.class, () -> driver.closeAsync().block()));
+        } finally {
+            fixture.PreparationObserver.callback = null;
+            // Release test handles directly; the fatal candidate has no controlled close completion.
+            for (var loader : handles) loader.close();
+        }
+    }
+
+    @Test
+    void driverRejectsAnAcquisitionBeforeItsWiringEntersThePool() throws Exception {
+        var facet = facet("inflight-app", "entrypoint: fixture.PreparationEntrypoint\ndefinitionId: sample\n",
+            fixture.PreparationEntrypoint.class);
+        var closes = new AtomicInteger();
+        var driver = new JavaRuntimeDriver(new NoopHostServices(), List.of(),
+            getClass().getClassLoader(), List.of("java.", "com.sstlfsj.fibra.",
+                "reactor.", "fixture.PreparationObserver"),
+            loader -> { closes.incrementAndGet(); loader.close(); });
+        fixture.PreparationObserver.callback = ignored -> {
+            assertThrows(IllegalStateException.class, () -> driver.closeAsync().block());
+            assertEquals(0, closes.get());
+            throw new IllegalStateException("metadata failed after close rejection");
+        };
+        try {
+            var candidate = driver.createCandidate(slice(new PluginFacetSource(facet, List.of())));
+            assertThrows(RuntimeException.class, () -> candidate.prepareAsync().block());
+            candidate.closeAsync().block();
+            assertEquals(1, closes.get());
+        } finally {
+            fixture.PreparationObserver.callback = null;
+        }
+    }
+
+    @Test
+    void partialDependencyFailureStillClosesIndependentSiblingLeases() throws Exception {
+        partialDependencyFailure(false);
+    }
+
+    @Test
+    void failedPartialCleanupContinuesReleasingIndependentSiblings() throws Exception {
+        partialDependencyFailure(true);
+    }
+
+    private void partialDependencyFailure(boolean cleanupFails) throws Exception {
+        var base = facet("partial-base", "{}\n", null, "c".repeat(64), "d".repeat(64));
+        var peer = facet("partial-peer", "{}\n", null, "1".repeat(64), "2".repeat(64));
+        var broken = facet("partial-broken", "entrypoint: 42\n", null,
+            "e".repeat(64), "f".repeat(64));
+        var app = facet("partial-app", "entrypoint: fixture.SampleEntrypoint\ndefinitionId: sample\n",
+            fixture.SampleEntrypoint.class);
+        var baseSource = new PluginFacetSource(base, List.of());
+        var peerSource = new PluginFacetSource(peer, List.of());
+        var brokenSource = new PluginFacetSource(broken, List.of());
+        var appSource = new PluginFacetSource(app, List.of(
+            dependency(base), dependency(peer), dependency(broken)));
+        var closes = new ArrayList<String>();
+        var driver = new JavaRuntimeDriver(new NoopHostServices(), List.of(),
+            getClass().getClassLoader(), List.of("java.", "com.sstlfsj.fibra.", "reactor."),
+            loader -> {
+                closes.add(loader.getURLs()[0].getPath());
+                loader.close();
+                if (cleanupFails && loader.getURLs()[0].getPath().equals(peer.facet().payload().toString())) {
+                    throw new java.io.IOException("peer cleanup failed");
+                }
+            });
+        var candidate = driver.createCandidate(singleEntrySlice(appSource,
+            baseSource, peerSource, brokenSource, appSource));
+        assertThrows(JavaRuntimeException.class, () -> candidate.prepareAsync().block());
+        if (cleanupFails) {
+            assertThrows(JavaRuntimeException.class, () -> candidate.closeAsync().block());
+            assertThrows(IllegalStateException.class, () -> driver.closeAsync().block());
+            var roots = (List<?>) field(field(candidate, "acquisition"), "roots");
+            assertEquals(1, roots.size());
+            var retained = (List<?>) field(roots.getFirst(), "children");
+            assertEquals(1, retained.size(), "only the failed sibling may stay owned");
+            assertEquals(peer.artifactId(), field(retained.getFirst(), "artifactId"));
+        } else {
+            candidate.closeAsync().block();
+            driver.closeAsync().block();
+        }
+        assertEquals(List.of(peer.facet().payload().toString(), base.facet().payload().toString()), closes);
+    }
+
+    @Test
+    void builtInBindingErrorsAreNormalized() {
+        var definition = PluginDefinition.builder("sample", Void.class,
+            () -> (context, config) -> reactor.core.publisher.Mono.empty()).build();
+        var metadata = builtIn(definition).metadata();
+        var builtIn = new JavaBuiltInPackage(metadata, Map.of(new FacetId("host"), List.of(
+            new JavaDefinitionEntry<>(definition, ignored -> {
+                throw new AssertionError("bind failed");
+            }))));
+        var key = new ExecutionUnitKey("bind-unit");
+        var target = DeploymentTarget.of(1, List.of(),
+            new DesiredInputGraph(List.of(builtInEntry(key.value(), "sample"))),
+            ConfigContextSnapshot.empty());
+        var slice = RuntimeTargetSlice.builder(JavaRuntimeProvider.RUNTIME_ID, target)
+            .desired(DesiredEvaluation.evaluate(target.desiredGraph(), target.configContext()))
+            .capabilities(HostCapabilitySnapshot.empty()).builtInPackages(List.of(metadata))
+            .facets(List.of()).affectedEntryIds(Set.of(key.value()))
+            .unitDependencies(Map.of(key, List.of())).build();
+        var driver = new JavaRuntimeDriver(new NoopHostServices(), List.of(builtIn));
+        var candidate = driver.createCandidate(slice);
+        assertThrows(JavaRuntimeException.class, () -> candidate.prepareAsync().block());
+        candidate.closeAsync().block();
+        driver.closeAsync().block();
+    }
+
+    @Test
+    void dynamicBindingFailureRetainsItsAcquiredLeaseWithoutRetryingCleanup() throws Exception {
+        failedDynamicPreparation(false);
+    }
+
+    @Test
+    void dynamicPlanFailureRetainsItsAcquiredLeaseWithoutRetryingCleanup() throws Exception {
+        failedDynamicPreparation(true);
+    }
+
+    private void failedDynamicPreparation(boolean failPlan) throws Exception {
+        var source = work.resolve("fixture/BindingEntrypoint.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, """
+            package fixture;
+            public final class BindingEntrypoint implements com.sstlfsj.fibra.PluginEntrypoint<Integer> {
+                public com.sstlfsj.fibra.PluginDefinition<Integer> definition() {
+                    return com.sstlfsj.fibra.PluginDefinition.builder("sample", Integer.class,
+                        () -> (context, config) -> reactor.core.publisher.Mono.empty()).build();
+                }
+            }
+            """);
+        assertEquals(0, javax.tools.ToolProvider.getSystemJavaCompiler().run(null, null, null,
+            "-classpath", System.getProperty("java.class.path"), "-d", work.toString(), source.toString()));
+        var facet = facet("binding-app", "{}\n", null);
+        try (var jar = new JarOutputStream(Files.newOutputStream(facet.facet().payload()))) {
+            entry(jar, JavaFacetDescriptorReader.LOCATION, "entrypoint: fixture.BindingEntrypoint\ndefinitionId: sample\n");
+            jar.putNextEntry(new JarEntry("fixture/BindingEntrypoint.class"));
+            jar.write(Files.readAllBytes(work.resolve("fixture/BindingEntrypoint.class")));
+            jar.closeEntry();
+        }
+        var key = new ExecutionUnitKey("binding-app");
+        var entry = DesiredInputEntry.builder(key.value(), new PluginDefinitionRef(
+            facet.pluginId().value(), "host", "sample"))
+            .config(com.sstlfsj.fibra.value.LiteralValue.of(failPlan ? 1 : Map.of("invalid", true))).build();
+        var target = DeploymentTarget.of(1, List.of(new PluginSelection(facet.pluginId(),
+            facet.packageRevision(), true)), new DesiredInputGraph(List.of(entry)), ConfigContextSnapshot.empty());
+        var slice = RuntimeTargetSlice.builder(JavaRuntimeProvider.RUNTIME_ID, target)
+            .desired(DesiredEvaluation.evaluate(target.desiredGraph(), target.configContext()))
+            .capabilities(HostCapabilitySnapshot.empty())
+            .facets(List.of(new PluginFacetSource(facet, List.of())))
+            .affectedEntryIds(Set.of(key.value()))
+            .unitDependencies(Map.of(key, failPlan ? List.of(key) : List.of())).build();
+        var closes = new AtomicInteger();
+        var driver = new JavaRuntimeDriver(new NoopHostServices(), List.of(),
+            getClass().getClassLoader(), List.of("java.", "com.sstlfsj.fibra.", "reactor."),
+            loader -> {
+                closes.incrementAndGet();
+                loader.close();
+                throw new java.io.IOException("dynamic cleanup failed");
+            });
+        var candidate = driver.createCandidate(slice);
+        var preparation = assertThrows(RuntimeException.class, () -> candidate.prepareAsync().block());
+        var cause = preparation instanceof JavaRuntimeException ? preparation.getCause() : preparation;
+        if (failPlan) {
+            assertTrue(cause instanceof IllegalArgumentException);
+            assertTrue(cause.getMessage().contains("execution unit cannot depend on itself"));
+        } else {
+            var mismatch = org.junit.jupiter.api.Assertions.assertInstanceOf(
+                tools.jackson.databind.exc.MismatchedInputException.class, cause);
+            assertEquals(Integer.class, mismatch.getTargetType());
+        }
+        var cleanup = assertThrows(JavaRuntimeException.class, () -> candidate.closeAsync().block());
+        assertEquals(JavaRuntimePhase.CLOSE, cleanup.phase());
+        assertEquals(cleanup, assertThrows(JavaRuntimeException.class, () -> candidate.closeAsync().block()));
+        assertEquals(1, closes.get());
+        assertThrows(IllegalStateException.class, () -> driver.closeAsync().block());
+    }
+
+    @Test
+    void candidateRetainsOnlyPreparedUnitsWhoseCleanupFailed() throws Exception {
+        var first = facet("a-prepared", "entrypoint: fixture.SampleEntrypoint\ndefinitionId: sample\n",
+            fixture.SampleEntrypoint.class, "c".repeat(64), "d".repeat(64));
+        var second = facet("z-prepared", "entrypoint: fixture.SampleEntrypoint\ndefinitionId: sample\n",
+            fixture.SampleEntrypoint.class, "e".repeat(64), "f".repeat(64));
+        var closes = new ArrayList<String>();
+        var driver = new JavaRuntimeDriver(new NoopHostServices(), List.of(),
+            getClass().getClassLoader(), List.of("java.", "com.sstlfsj.fibra.", "reactor."),
+            loader -> {
+                var path = loader.getURLs()[0].getPath();
+                closes.add(path);
+                loader.close();
+                if (path.equals(second.facet().payload().toString())) {
+                    throw new java.io.IOException("prepared cleanup failed");
+                }
+            });
+        var candidate = driver.createCandidate(slice(new PluginFacetSource(first, List.of()),
+            new PluginFacetSource(second, List.of())));
+        candidate.prepareAsync().block();
+        var failure = assertThrows(JavaRuntimeException.class, () -> candidate.closeAsync().block());
+        assertEquals(Set.of(new ExecutionUnitKey("z-prepared")),
+            ((Map<?, ?>) field(candidate, "prepared")).keySet());
+        assertEquals(failure, assertThrows(JavaRuntimeException.class, () -> candidate.closeAsync().block()));
+        assertEquals(List.of(second.facet().payload().toString(), first.facet().payload().toString()), closes);
+        assertThrows(IllegalStateException.class, () -> driver.closeAsync().block());
+    }
+
+    @Test
+    void diamondKeepsOneLeasePerEdgeAndTransfersWithoutExtraReferences() throws Exception {
+        var base = facet("diamond-base", "{}\n", null, "c".repeat(64), "d".repeat(64));
+        var left = facet("diamond-left", "{}\n", null, "e".repeat(64), "f".repeat(64));
+        var right = facet("diamond-right", "{}\n", null, "1".repeat(64), "2".repeat(64));
+        var app = facet("diamond-app", "entrypoint: fixture.SampleEntrypoint\ndefinitionId: sample\n",
+            fixture.SampleEntrypoint.class);
+        var baseSource = new PluginFacetSource(base, List.of());
+        var leftSource = new PluginFacetSource(left, List.of(dependency(base)));
+        var rightSource = new PluginFacetSource(right, List.of(dependency(base)));
+        var appSource = new PluginFacetSource(app, List.of(dependency(left), dependency(right)));
+        var closes = new ArrayList<String>();
+        var driver = new JavaRuntimeDriver(new NoopHostServices(), List.of(),
+            getClass().getClassLoader(), List.of("java.", "com.sstlfsj.fibra.", "reactor."),
+            loader -> { closes.add(loader.getURLs()[0].getPath()); loader.close(); });
+        var candidate = driver.createCandidate(singleEntrySlice(appSource,
+            baseSource, leftSource, rightSource, appSource));
+        candidate.prepareAsync().block();
+        var pool = (Map<?, ?>) field(driver, "wiringPool");
+        assertEquals(4, pool.size());
+        var baseWiring = pool.values().stream().filter(value -> {
+            try { return ((ManagedFacet) field(value, "facet")).artifactId().equals(base.artifactId()); }
+            catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
+        }).findFirst().orElseThrow();
+        assertEquals(2, field(baseWiring, "references"));
+        var generation = candidate.seal(CompiledRuntimeSlice.of(candidate.preparedPlan(),
+            List.of(new ExecutionUnitKey("diamond-app"))));
+        candidate.closeAsync().block();
+        assertEquals(0, closes.size());
+        generation.abortAsync().block();
+        assertEquals(List.of(app, right, left, base).stream()
+            .map(value -> value.facet().payload().toString()).toList(), closes);
+        assertTrue(pool.isEmpty());
+        driver.closeAsync().block();
     }
 
     @Test
@@ -192,7 +1226,7 @@ class JavaRuntimeDriverTest {
 
     @Test
     void staticClassSpaceIsSharedAcrossAttemptsAndClosesAfterTheLastLease() throws Exception {
-        var facet = facet("app", "entrypoint: fixture.PreparationEntrypoint\n",
+        var facet = facet("app", "entrypoint: fixture.PreparationEntrypoint\ndefinitionId: sample\n",
             fixture.PreparationEntrypoint.class);
         var definitions = new ArrayList<ClassLoader>();
         var closes = new ArrayList<PluginClassLoader>();
@@ -226,10 +1260,10 @@ class JavaRuntimeDriverTest {
     void stoppedUnitReleasesItsPrivateClassSpaceWhileItsGenerationKeepsARetainedPeer()
         throws Exception {
         var replacedFacet = facet("replaced",
-            "entrypoint: fixture.PreparationEntrypoint\n",
+            "entrypoint: fixture.PreparationEntrypoint\ndefinitionId: sample\n",
             fixture.PreparationEntrypoint.class);
         var retainedFacet = facet("retained",
-            "entrypoint: fixture.PreparationEntrypoint\n",
+            "entrypoint: fixture.PreparationEntrypoint\ndefinitionId: sample\n",
             fixture.PreparationEntrypoint.class,
             "c".repeat(64), "d".repeat(64));
         var closes = new ArrayList<PluginClassLoader>();
@@ -295,10 +1329,42 @@ class JavaRuntimeDriverTest {
     }
 
     @Test
+    void builtInPrepareRejectsActualDefinitionSetMismatchBeforeBindingOrPublishingPlan() {
+        var bindings = new java.util.concurrent.atomic.AtomicInteger();
+        var declared = PluginDefinition.builder("sample", Void.class,
+            () -> (context, config) -> reactor.core.publisher.Mono.empty()).build();
+        var extra = PluginDefinition.builder("extra", Void.class,
+            () -> (context, config) -> reactor.core.publisher.Mono.empty()).build();
+        var metadata = builtIn(declared).metadata();
+        var actual = new JavaBuiltInPackage(metadata, Map.of(new FacetId("host"), List.of(
+            new JavaDefinitionEntry<>(declared, ignored -> { bindings.incrementAndGet(); return null; }),
+            new JavaDefinitionEntry<>(extra, ignored -> { bindings.incrementAndGet(); return null; }))));
+        var key = new ExecutionUnitKey("mismatched-built-in");
+        var target = DeploymentTarget.of(1, List.of(),
+            new DesiredInputGraph(List.of(builtInEntry(key.value(), "sample"))),
+            ConfigContextSnapshot.empty());
+        var slice = RuntimeTargetSlice.builder(JavaRuntimeProvider.RUNTIME_ID, target)
+            .desired(DesiredEvaluation.evaluate(target.desiredGraph(), target.configContext()))
+            .capabilities(HostCapabilitySnapshot.empty()).builtInPackages(List.of(metadata))
+            .facets(List.of()).affectedEntryIds(Set.of(key.value()))
+            .unitDependencies(Map.of(key, List.of())).build();
+        var driver = new JavaRuntimeDriver(new NoopHostServices(), List.of(actual));
+        var candidate = driver.createCandidate(slice);
+        try {
+            assertThrows(JavaRuntimeException.class, () -> candidate.prepareAsync().block());
+            assertEquals(0, bindings.get());
+            assertThrows(IllegalStateException.class, candidate::preparedPlan);
+        } finally {
+            candidate.closeAsync().block();
+            driver.closeAsync().block();
+        }
+    }
+
+    @Test
     void runningJavaUnitPublishesItsOwnedRegistrarAndClosesRealRoutes()
         throws Exception {
         var facet = facet("contribution",
-            "entrypoint: fixture.ContributionEntrypoint\n",
+            "entrypoint: fixture.ContributionEntrypoint\ndefinitionId: sample\n",
             fixture.ContributionEntrypoint.class);
         var published = new AtomicReference<fixture.ContributionObserver.Published>();
         fixture.ContributionObserver.callback = published::set;
@@ -347,7 +1413,7 @@ class JavaRuntimeDriverTest {
     void failedStartRetainsScopeAndClassSpaceUntilFailedCleanupCanBeRetried()
         throws Exception {
         var facet = facet("failed-start",
-            "entrypoint: fixture.ContributionEntrypoint\n",
+            "entrypoint: fixture.ContributionEntrypoint\ndefinitionId: sample\n",
             fixture.ContributionEntrypoint.class);
         var startFailure = new IllegalStateException("injected start failure");
         fixture.ContributionObserver.callback = ignored -> { throw startFailure; };
@@ -402,7 +1468,7 @@ class JavaRuntimeDriverTest {
     void realScopeCleanupFailureRetainsTheUnitClassSpaceLease()
         throws Exception {
         var facet = facet("cleanup-failure",
-            "entrypoint: fixture.ContributionEntrypoint\n",
+            "entrypoint: fixture.ContributionEntrypoint\ndefinitionId: sample\n",
             fixture.ContributionEntrypoint.class);
         fixture.ContributionObserver.start = context ->
             context.effects().add(() -> reactor.core.publisher.Mono.error(
@@ -448,13 +1514,13 @@ class JavaRuntimeDriverTest {
     @Test
     void staticLeaseRetriesOnlyDependenciesWhoseReleaseFailed() throws Exception {
         var firstBase = facet("lease-base-first",
-            "entrypoint: fixture.SampleEntrypoint\n",
+            "entrypoint: fixture.SampleEntrypoint\ndefinitionId: sample\n",
             fixture.SampleEntrypoint.class);
         var secondBase = facet("lease-base-second",
-            "entrypoint: fixture.SampleEntrypoint\n",
+            "entrypoint: fixture.SampleEntrypoint\ndefinitionId: sample\n",
             fixture.SampleEntrypoint.class, "c".repeat(64), "d".repeat(64));
         var app = facet("lease-app",
-            "entrypoint: fixture.SampleEntrypoint\n",
+            "entrypoint: fixture.SampleEntrypoint\ndefinitionId: sample\n",
             fixture.SampleEntrypoint.class);
         var firstBaseSource = new PluginFacetSource(firstBase, List.of());
         var secondBaseSource = new PluginFacetSource(secondBase, List.of());

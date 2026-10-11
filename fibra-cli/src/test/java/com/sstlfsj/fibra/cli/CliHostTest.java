@@ -153,7 +153,7 @@ class CliHostTest {
         try (var output = new JarOutputStream(Files.newOutputStream(jar))) {
             output.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml"));
             output.write(("entrypoint: " + ContextEntrypoint.class.getName()
-                + '\n').getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                + "\ndefinitionId: context\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
             output.closeEntry();
             var className = ContextEntrypoint.class.getName()
                 .replace('.', '/') + ".class";

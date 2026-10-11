@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 
 final class PluginClassLoader extends URLClassLoader {
     static {
@@ -17,8 +18,13 @@ final class PluginClassLoader extends URLClassLoader {
     private volatile List<PluginClassLoader> dependencies = List.of();
 
     PluginClassLoader(List<URL> jars, ClassLoader parent, List<String> parentPackages) {
-        super(jars.toArray(URL[]::new), parent);
-        this.parentPackages = List.copyOf(parentPackages);
+        this(List.copyOf(jars).toArray(URL[]::new), Objects.requireNonNull(parent, "parent"),
+            List.copyOf(parentPackages));
+    }
+
+    private PluginClassLoader(URL[] jars, ClassLoader parent, List<String> parentPackages) {
+        super(jars, parent);
+        this.parentPackages = parentPackages;
     }
 
     void dependencies(List<PluginClassLoader> values) {

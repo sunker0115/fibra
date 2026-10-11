@@ -193,7 +193,7 @@ class CliHostOwnershipTest {
         Files.createDirectories(root);
         try (var output = new JarOutputStream(Files.newOutputStream(root.resolve("plugin.jar")))) {
             output.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml"));
-            output.write(("entrypoint: " + OwnershipEntrypoint.class.getName() + '\n')
+            output.write(("entrypoint: " + OwnershipEntrypoint.class.getName() + "\ndefinitionId: ownership\n")
                 .getBytes(StandardCharsets.UTF_8));
             output.closeEntry();
             var className = OwnershipEntrypoint.class.getName().replace('.', '/') + ".class";

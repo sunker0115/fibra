@@ -15,7 +15,7 @@ class ShellPluginTest {
         try (resource) {
             var text = new String(resource.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             assertEquals("entrypoint: " + ShellLocalEntrypoint.class.getName()
-                + "\n", text);
+                + "\ndefinitionId: fibra-shell-local\n", text);
         }
         var entrypoint = (PluginEntrypoint<?>) Class.forName(
             "com.sstlfsj.fibra.plugins.shell.local.ShellLocalEntrypoint").getConstructor().newInstance();

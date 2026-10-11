@@ -629,7 +629,7 @@ class FibraCliTest {
             root.resolve("plugin.jar")))) {
             jar.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml"));
             jar.write(("entrypoint: " + FailingToolEntrypoint.class.getName()
-                + '\n').getBytes(StandardCharsets.UTF_8));
+                + "\ndefinitionId: failer\n").getBytes(StandardCharsets.UTF_8));
             jar.closeEntry();
             var className = FailingToolEntrypoint.class.getName().replace('.', '/') + ".class";
             jar.putNextEntry(new JarEntry(className));
@@ -653,7 +653,7 @@ class FibraCliTest {
             root.resolve("plugin.jar")))) {
             jar.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml"));
             jar.write(("entrypoint: " + DynamicCommandEntrypoint.class.getName()
-                + '\n').getBytes(StandardCharsets.UTF_8));
+                + "\ndefinitionId: command\n").getBytes(StandardCharsets.UTF_8));
             jar.closeEntry();
             var className = DynamicCommandEntrypoint.class.getName().replace('.', '/') + ".class";
             jar.putNextEntry(new JarEntry(className));

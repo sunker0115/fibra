@@ -114,8 +114,9 @@ facets:
 package 禁止符号链接。`PluginPackage` 对受控文件树计算内容身份，`PluginPackageStore` 以完整 package 为事务
 单位保存不可变副本。
 
-Java facet 的 payload 是主 JAR。JAR 中的 `META-INF/fibra/plugin.yaml` 只描述 Java 本地定义和入口；
-contract-only JAR 可使用空对象，不复制 package 身份、版本和 facet 依赖。Node facet 的 payload 目录包含
+Java facet 的 payload 是主 JAR。JAR 中的 `META-INF/fibra/plugin.yaml` 对可执行入口同时声明 `entrypoint` 与
+`definitionId`，后者必须等于真实 definition 名称；contract-only JAR 使用空对象。它不复制 package 身份、
+版本和 facet 依赖。旧 entrypoint-only 格式直接拒绝，作者制品与 runtime 必须同步迁移。Node facet 的 payload 目录包含
 Node 本地 descriptor 和入口。runtime 只能从 store 管理的 package 读取 payload，不能从安装候选路径执行。
 
 ## Runtime SPI
@@ -126,14 +127,20 @@ contract identity、内建 package，并作为不可变、可复用 factory 为�
 driver 负责：
 
 1. 探测和检查 facet；
-2. 从完整 `RuntimeTargetSlice` 创建 candidate；
-3. 准备 candidate，并以已编译 slice 封存 generation；
-4. 按 `ExecutionUnitKey` 返回 execution unit；
-5. 在同一生命周期 lane 上 reconcile、关闭准入、drain、stop 和采样观察事实。
+2. 通过必需 `createDefinitionQuery(ManagedFacet)` 读取名称声明并持有资源至真实关闭；
+3. 从完整 `RuntimeTargetSlice` 创建 candidate；
+4. 准备 candidate，并以已编译 slice 封存 generation；
+5. 按 `ExecutionUnitKey` 返回 execution unit；
+6. 在同一生命周期 lane 上 reconcile、关闭准入、drain、stop 和采样观察事实。
 
 Engine 只理解这组中立协议，不按 Java、Node 或 browser 类型分支。Java 和 Node provider 在本仓实现；产品侧
 可基于公开 SPI 实现其他 runtime。浏览器端代码执行、页面渲染绑定、连接载体和产品重连状态机不得进入
 Fibra 正式发布物。
+
+未知包安装并选入 target 后，可用 `engine.describeDefinitions(pluginId, expectedTargetRevision)` 查询精确包的
+全部 facet/definition，disabled 包也可查询。目录不执行目标插件或创建实例；消费者选取返回的完整引用后，
+经原 `ApplyDeployment` 完整 target/CAS 创建。多项不自动组成运行组合，缺依赖或无 renderer 不阻塞静态声明，
+但实际部署仍须满足原 runtime 合同。结果、错误、资源与无兼容迁移边界见[公共 API](docs/api/README.md#已选择包的-definition-目录)。
 
 ## 身份与调用
 

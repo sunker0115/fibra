@@ -36,6 +36,15 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class RuntimeDriverContractTest {
     @Test
+    void definitionQueryIsMandatorySingleFacetSpiWithoutDefaultFallback() throws Exception {
+        var method = RuntimeDriver.class.getMethod("createDefinitionQuery",
+            com.sstlfsj.fibra.artifact.ManagedFacet.class);
+        assertEquals(com.sstlfsj.fibra.engine.runtime.RuntimeDefinitionQuery.class, method.getReturnType());
+        assertFalse(method.isDefault());
+        org.junit.jupiter.api.Assertions.assertTrue(java.lang.reflect.Modifier.isAbstract(method.getModifiers()));
+    }
+
+    @Test
     void providerRegistryIsAnEngineInternalCompositionDetail() {
         assertFalse(java.lang.reflect.Modifier.isPublic(
             RuntimeProviderRegistry.class.getModifiers()));
@@ -195,6 +204,10 @@ class RuntimeDriverContractTest {
 
     private record ProbeDriver(RuntimeId id, AtomicInteger closes)
         implements RuntimeDriver {
+        @Override public com.sstlfsj.fibra.engine.runtime.RuntimeDefinitionQuery createDefinitionQuery(
+            com.sstlfsj.fibra.artifact.ManagedFacet facet) {
+            throw new AssertionError("driver contract fixture has no dynamic definitions");
+        }
         @Override
         public Mono<RuntimeArtifactInspection> probe(PluginFacetSource source) {
             return Mono.error(new UnsupportedOperationException());

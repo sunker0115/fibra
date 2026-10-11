@@ -33,6 +33,9 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.lang.reflect.Field;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.FilterInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -45,6 +48,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
@@ -55,8 +59,531 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 class NodeRuntimeDriverTest {
+    @Test
+    void definitionQueryReadsDescriptorWithoutStartingOrPreparingNode(@TempDir Path work)
+        throws Exception {
+        var marker = work.resolve("node-started");
+        var facet = facet(work, "catalog-plugin", "catalog-artifact", marker);
+        Files.writeString(facet.facet().payload().resolve("fibra-plugin.yaml"), """
+            protocol: 1
+            definitionId: descriptor-name
+            entrypoint: index.mjs
+            contributions: []
+            """);
+        try (var services = new Services()) {
+            var driver = new NodeRuntimeDriver(services, options(work));
+            var query = definitionQuery(driver, facet);
+            assertEquals(0, payloadCount(driver));
+            assertTrue(driver.snapshot().units().isEmpty());
+            assertFalse(Files.exists(work.resolve("sessions")));
+            assertEquals(List.of("descriptor-name"), query.readAsync().block());
+            assertEquals(List.of("descriptor-name"), query.readAsync().block());
+            query.closeAsync().block();
+            query.closeAsync().block();
+            assertFalse(Files.exists(marker));
+            assertEquals(0, payloadCount(driver));
+            assertTrue(driver.snapshot().units().isEmpty());
+            driver.closeAsync().block();
+        }
+    }
+
+    @Test
+    void unstartedDefinitionQueryClosesWithoutReadingMissingPayload(@TempDir Path work)
+        throws Exception {
+        var facet = facet(work, "closed-query", "closed-artifact", work.resolve("marker"));
+        Files.delete(facet.facet().payload().resolve("fibra-plugin.yaml"));
+        try (var services = new Services()) {
+            var driver = new NodeRuntimeDriver(services, options(work));
+            var query = definitionQuery(driver, facet);
+            var unobserved = query.readAsync();
+            query.closeAsync().block();
+            assertThrows(IllegalStateException.class, unobserved::block);
+            driver.closeAsync().block();
+        }
+    }
+
+    private static com.sstlfsj.fibra.engine.runtime.RuntimeDefinitionQuery definitionQuery(
+        NodeRuntimeDriver driver, ManagedFacet facet) {
+        return driver.createDefinitionQuery(facet);
+    }
+
+    @Test
+    void definitionQueryCancellationAndCloseWaitForActualRead(@TempDir Path work)
+        throws Exception {
+        var entered = new CountDownLatch(1);
+        var resume = new CountDownLatch(1);
+        var closerCompleted = new CountDownLatch(1);
+        var access = new CountingAccess() {
+            @Override Stream<Path> walk(Path root) throws IOException {
+                entered.countDown();
+                try {
+                    if (!resume.await(5, TimeUnit.SECONDS)) throw new IOException("read not resumed");
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException(interrupted);
+                }
+                return super.walk(root);
+            }
+            @Override void close(Stream<Path> paths) {
+                super.close(paths);
+                closerCompleted.countDown();
+            }
+        };
+        var facet = facet(work, "waiting", "waiting-artifact", work.resolve("marker"));
+        try (var services = new Services()) {
+            var driver = new NodeRuntimeDriver(services, options(work), access);
+            var query = driver.createDefinitionQuery(facet);
+            try {
+                var observer = query.readAsync().subscribe();
+                assertTrue(entered.await(5, TimeUnit.SECONDS));
+                observer.dispose();
+                var closed = new CountDownLatch(1);
+                var cleanupFailure = new AtomicReference<Throwable>();
+                var closeObserver = query.closeAsync().subscribe(ignored -> {},
+                    cleanupFailure::set, closed::countDown);
+                assertFalse(closed.await(100, TimeUnit.MILLISECONDS));
+                closeObserver.dispose();
+                assertFalse(closerCompleted.await(100, TimeUnit.MILLISECONDS));
+                assertEquals(0, access.walkCloses.get());
+                assertEquals(0, access.streamCloses.get());
+                resume.countDown();
+                assertTrue(closerCompleted.await(5, TimeUnit.SECONDS),
+                    "cleanup must finish without a new close observer");
+                assertEquals(1, access.walkCloses.get());
+                assertEquals(1, access.streamCloses.get());
+                query.closeAsync().block(Duration.ofSeconds(5));
+                assertNull(cleanupFailure.get());
+                assertEquals(List.of("main"), query.readAsync().block());
+                assertEquals(1, access.walks.get());
+                assertEquals(1, access.opens.get());
+                assertEquals(1, access.walkCloses.get());
+                assertEquals(1, access.streamCloses.get());
+                assertTrue(descriptorOwners(driver).isEmpty());
+                driver.closeAsync().block();
+            } finally {
+                resume.countDown();
+                query.closeAsync().block(Duration.ofSeconds(5));
+            }
+        } finally { resume.countDown(); }
+    }
+
+    @Test
+    void admittedDefinitionReadWaitsEvenBeforeWorkerStartsIo(@TempDir Path work)
+        throws Exception {
+        var scheduled = new CountDownLatch(1);
+        var resume = new CountDownLatch(1);
+        var firstSchedule = new java.util.concurrent.atomic.AtomicBoolean(false);
+        var subscribingThread = Thread.currentThread();
+        var hook = "node-definition-admission";
+        reactor.core.scheduler.Schedulers.onScheduleHook(hook, task -> {
+            if (Thread.currentThread() != subscribingThread || !firstSchedule.compareAndSet(true, false)) return task;
+            return () -> {
+                scheduled.countDown();
+                try {
+                    if (!resume.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("worker not resumed");
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(interrupted);
+                }
+                task.run();
+            };
+        });
+        var access = new CountingAccess();
+        try (var services = new Services()) {
+            try {
+                var driver = new NodeRuntimeDriver(services, options(work), access);
+                var facet = facet(work, "admitted", "admitted-artifact", work.resolve("marker"));
+                var query = driver.createDefinitionQuery(facet);
+                firstSchedule.set(true);
+                var observer = query.readAsync().subscribe();
+                assertTrue(scheduled.await(5, TimeUnit.SECONDS));
+                assertEquals(0, access.walks.get(), "worker is paused before file I/O");
+                observer.dispose();
+                var terminal = new CountDownLatch(1);
+                var failure = new AtomicReference<Throwable>();
+                query.closeAsync().subscribe(ignored -> {}, error -> { failure.set(error); terminal.countDown(); }, terminal::countDown);
+                assertFalse(terminal.await(100, TimeUnit.MILLISECONDS), "close must wait for the already admitted read");
+                assertEquals(0, access.walkCloses.get());
+                resume.countDown();
+                assertTrue(terminal.await(5, TimeUnit.SECONDS));
+                assertNull(failure.get());
+                assertEquals(List.of("main"), query.readAsync().block());
+                assertEquals(1, access.walks.get());
+                assertEquals(1, access.walkCloses.get());
+                assertEquals(1, access.streamCloses.get());
+                driver.closeAsync().block();
+            } finally {
+                resume.countDown();
+                reactor.core.scheduler.Schedulers.resetOnScheduleHook(hook);
+            }
+        } finally {
+            resume.countDown();
+            reactor.core.scheduler.Schedulers.resetOnScheduleHook(hook);
+        }
+    }
+
+    @Test
+    void candidateIndependentFileCleanupPreservesFatalFailure(@TempDir Path work)
+        throws Exception {
+        var fatal = new InternalError("fatal second descriptor close");
+        var ordinary = new IllegalStateException("first descriptor close");
+        var access = new CountingAccess() {
+            @Override void close(InputStream input) {
+                if (streamCloses.incrementAndGet() == 1) throw ordinary;
+                throw fatal;
+            }
+        };
+        try (var services = new Services()) {
+            var driver = new NodeRuntimeDriver(services, options(work), access);
+            var facet = facet(work, "candidate-fatal", "candidate-fatal-artifact", work.resolve("marker"));
+            var candidate = driver.createCandidate(slice(facet, List.of("entry")));
+            var read = NodeRuntimeDriver.class.getDeclaredMethod("readDescriptor", ManagedFacet.class, candidate.getClass());
+            read.setAccessible(true);
+            var normal = assertThrows(java.lang.reflect.InvocationTargetException.class,
+                () -> read.invoke(driver, facet, candidate)).getCause();
+            assertTrue(normal instanceof NodeRuntimeException);
+            assertNull(normal.getCause(), "normal cleanup must not retain the original exception graph");
+            assertSame(fatal, assertThrows(java.lang.reflect.InvocationTargetException.class,
+                () -> read.invoke(driver, facet, candidate)).getCause());
+            var cleanup = candidate.getClass().getDeclaredMethod("closeDescriptorReads");
+            cleanup.setAccessible(true);
+            assertSame(fatal, assertThrows(java.lang.reflect.InvocationTargetException.class,
+                () -> cleanup.invoke(candidate)).getCause());
+            assertEquals(2, access.streamCloses.get(), "cached file closes never retry");
+            assertEquals(1, access.walkCloses.get(), "fatal close stops immediately and retains its walk");
+            assertEquals(2, descriptorOwners(driver).size());
+            access.disposeRetained();
+        }
+    }
+
+    @Test
+    void definitionReadFailureIsCachedWithoutOriginalExceptionGraph(@TempDir Path work)
+        throws Exception {
+        var external = new IOException("external file failure");
+        var access = new CountingAccess() {
+            @Override InputStream open(Path path) throws IOException {
+                var actual = super.open(path);
+                return new FilterInputStream(actual) {
+                    @Override public byte[] readNBytes(int length) throws IOException { throw external; }
+                };
+            }
+        };
+        try (var services = new Services()) {
+            var driver = new NodeRuntimeDriver(services, options(work), access);
+            var facet = facet(work, "failed-read", "failed-artifact", work.resolve("marker"));
+            var query = driver.createDefinitionQuery(facet);
+            var first = assertThrows(NodeRuntimeException.class, () -> query.readAsync().block());
+            assertSame(first, assertThrows(NodeRuntimeException.class, () -> query.readAsync().block()));
+            assertNull(first.getCause());
+            assertEquals(facet.artifactId(), first.artifactId());
+            query.closeAsync().block();
+            assertEquals(1, access.streamCloses.get());
+            assertEquals(1, access.walkCloses.get());
+            driver.closeAsync().block();
+        }
+    }
+
+    @Test
+    void independentFileCloseFailuresRemainReachableAndNeverRetry(@TempDir Path work)
+        throws Exception {
+        for (boolean failRead : List.of(false, true)) {
+            for (boolean failStream : List.of(false, true)) {
+                var access = new CountingAccess();
+                access.failStreamClose = failStream;
+                access.failWalkClose = !failStream;
+                var facet = facet(work.resolve("case-" + failRead + '-' + failStream),
+                    "retained", "retained-artifact", work.resolve("marker"));
+                if (failRead) Files.writeString(facet.facet().payload().resolve("fibra-plugin.yaml"), "unknown: value");
+                try (var services = new Services()) {
+                    var driver = new NodeRuntimeDriver(services, options(work), access);
+                    var query = driver.createDefinitionQuery(facet);
+                    var owner = descriptorOwners(driver).iterator().next();
+                    if (failRead) assertThrows(NodeRuntimeException.class, () -> query.readAsync().block());
+                    else assertEquals(List.of("main"), query.readAsync().block());
+                    var failure = assertThrows(NodeRuntimeException.class, () -> query.closeAsync().block());
+                    assertNull(failure.getCause());
+                    assertSame(failure, assertThrows(NodeRuntimeException.class, () -> query.closeAsync().block()));
+                    assertEquals(1, access.streamCloses.get());
+                    assertEquals(1, access.walkCloses.get(), "independent walk closer must continue after stream failure");
+                    assertSame(owner, descriptorOwners(driver).iterator().next());
+                    var resources = field(owner, "resources");
+                    assertEquals(failStream, field(resources, "input") != null);
+                    assertEquals(!failStream, field(resources, "paths") != null);
+                    assertThrows(IllegalStateException.class, () -> driver.closeAsync().block());
+                    access.disposeRetained();
+                }
+            }
+        }
+    }
+
+    @Test
+    void failedWalkTraversalAndReadCleanupAreOwnedBeforeFailure(@TempDir Path work)
+        throws Exception {
+        var access = new CountingAccess() {
+            @Override Stream<Path> walk(Path root) throws IOException {
+                return super.walk(root).map(path -> { throw new IllegalArgumentException("walk failed"); });
+            }
+        };
+        access.failWalkClose = true;
+        try (var services = new Services()) {
+            var driver = new NodeRuntimeDriver(services, options(work), access);
+            var query = driver.createDefinitionQuery(facet(work, "walk-read-failure", "walk-read-artifact", work.resolve("marker")));
+            assertThrows(NodeRuntimeException.class, () -> query.readAsync().block());
+            assertThrows(NodeRuntimeException.class, () -> query.closeAsync().block());
+            assertEquals(0, access.opens.get());
+            assertEquals(1, access.walkCloses.get());
+            assertNotNull(field(field(descriptorOwners(driver).iterator().next(), "resources"), "paths"));
+            assertThrows(IllegalStateException.class, () -> driver.closeAsync().block());
+            access.disposeRetained();
+        }
+    }
+
+    @Test
+    void bothFileCloseFailuresRetainOnlySafeHostErrors(@TempDir Path work)
+        throws Exception {
+        var external = new IOException("external close graph", new IllegalArgumentException("foreign cause"));
+        var access = new CountingAccess() {
+            @Override void close(InputStream input) throws IOException {
+                streamCloses.incrementAndGet();
+                throw external;
+            }
+            @Override void close(Stream<Path> paths) {
+                walkCloses.incrementAndGet();
+                throw new AssertionError("nonfatal walk close", external);
+            }
+        };
+        try (var services = new Services()) {
+            var driver = new NodeRuntimeDriver(services, options(work), access);
+            var query = driver.createDefinitionQuery(facet(work, "both-failed", "both-failed-artifact", work.resolve("marker")));
+            assertEquals(List.of("main"), query.readAsync().block());
+            var observed = new AtomicReference<Throwable>();
+            var terminal = new CountDownLatch(1);
+            query.closeAsync().subscribe(ignored -> {}, error -> { observed.set(error); terminal.countDown(); }, terminal::countDown);
+            assertTrue(terminal.await(5, TimeUnit.SECONDS));
+            assertTrue(observed.get() instanceof NodeRuntimeException);
+            var failure = (NodeRuntimeException) observed.get();
+            assertNull(failure.getCause());
+            assertEquals(1, failure.getSuppressed().length);
+            assertTrue(failure.getSuppressed()[0] instanceof NodeRuntimeException);
+            assertNull(failure.getSuppressed()[0].getCause());
+            assertSame(failure, assertThrows(java.util.concurrent.CompletionException.class,
+                () -> query.closeAsync().toFuture().join()).getCause());
+            assertEquals(1, access.streamCloses.get());
+            assertEquals(1, access.walkCloses.get());
+            var resources = field(descriptorOwners(driver).iterator().next(), "resources");
+            assertNotNull(field(resources, "input"));
+            assertNotNull(field(resources, "paths"));
+            assertThrows(IllegalStateException.class, () -> driver.closeAsync().block());
+            access.disposeRetained();
+        }
+    }
+
+    @Test
+    void synchronousProbeInspectAndPrepareWorkOnNonBlockingScheduler(@TempDir Path work)
+        throws Exception {
+        var access = new CountingAccess();
+        try (var services = new Services()) {
+            var driver = new NodeRuntimeDriver(services, options(work), access);
+            var facet = facet(work, "nonblocking", "nonblocking-artifact", work.resolve("marker"));
+            driver.probe(new PluginFacetSource(facet, List.of()))
+                .subscribeOn(reactor.core.scheduler.Schedulers.parallel()).block();
+            driver.inspect(facet).subscribeOn(reactor.core.scheduler.Schedulers.parallel()).block();
+            var candidate = driver.createCandidate(slice(facet, List.of("entry")));
+            candidate.prepareAsync().subscribeOn(reactor.core.scheduler.Schedulers.parallel()).block();
+            candidate.closeAsync().subscribeOn(reactor.core.scheduler.Schedulers.parallel()).block();
+            assertEquals(3, access.walkCloses.get());
+            assertEquals(3, access.streamCloses.get());
+            assertTrue(descriptorOwners(driver).isEmpty());
+            driver.closeAsync().block();
+        }
+    }
+
+    @Test
+    void candidateRetainsTheSameFailedFileOwnerAndReplaysCleanupFailure(@TempDir Path work)
+        throws Exception {
+        var access = new CountingAccess();
+        access.failStreamClose = true;
+        try (var services = new Services()) {
+            var driver = new NodeRuntimeDriver(services, options(work), access);
+            var facet = facet(work, "candidate-files", "candidate-artifact", work.resolve("marker"));
+            var candidate = driver.createCandidate(slice(facet, List.of("entry")));
+            var failure = assertThrows(NodeRuntimeException.class, () -> candidate.prepareAsync()
+                .subscribeOn(reactor.core.scheduler.Schedulers.parallel()).block());
+            var owner = descriptorOwners(driver).iterator().next();
+            assertSame(owner, ((Set<?>) field(candidate, "descriptorReads")).iterator().next());
+            assertSame(failure, assertThrows(NodeRuntimeException.class, () -> candidate.closeAsync()
+                .subscribeOn(reactor.core.scheduler.Schedulers.parallel()).block()));
+            assertSame(failure, assertThrows(NodeRuntimeException.class, () -> candidate.closeAsync().block()));
+            assertEquals(1, access.streamCloses.get());
+            assertEquals(1, access.walkCloses.get());
+            assertSame(owner, descriptorOwners(driver).iterator().next());
+            assertThrows(IllegalStateException.class, () -> driver.closeAsync().block());
+            access.disposeRetained();
+        }
+    }
+
+    @Test
+    void synchronousFatalReadRetainsCandidateOwnerUntilExplicitCleanup(@TempDir Path work)
+        throws Exception {
+        var fatal = new InternalError("fatal file read");
+        var access = new CountingAccess() {
+            @Override InputStream open(Path path) throws IOException {
+                return new FilterInputStream(super.open(path)) {
+                    @Override public byte[] readNBytes(int length) { throw fatal; }
+                };
+            }
+        };
+        try (var services = new Services()) {
+            var driver = new NodeRuntimeDriver(services, options(work), access);
+            var facet = facet(work, "fatal-read", "fatal-artifact", work.resolve("marker"));
+            var candidate = driver.createCandidate(slice(facet, List.of("entry")));
+            var prepare = candidate.getClass().getDeclaredMethod("prepare");
+            prepare.setAccessible(true);
+            var failure = assertThrows(java.lang.reflect.InvocationTargetException.class,
+                () -> prepare.invoke(candidate));
+            assertSame(fatal, failure.getCause(), "fatal must escape its original synchronous call stack");
+            var owner = descriptorOwners(driver).iterator().next();
+            assertSame(owner, ((Set<?>) field(candidate, "descriptorReads")).iterator().next());
+            assertEquals(0, access.streamCloses.get());
+            assertEquals(0, access.walkCloses.get());
+            candidate.closeAsync().block();
+            assertEquals(1, access.streamCloses.get());
+            assertEquals(1, access.walkCloses.get());
+            assertTrue(descriptorOwners(driver).isEmpty());
+            driver.closeAsync().block();
+        }
+    }
+
+    @Test
+    void fatalFileCloseIsCachedAndRetainsUnclosedResources(@TempDir Path work)
+        throws Exception {
+        var fatal = new InternalError("fatal stream close");
+        var access = new CountingAccess() {
+            @Override void close(InputStream input) {
+                streamCloses.incrementAndGet();
+                throw fatal;
+            }
+        };
+        try (var services = new Services()) {
+            var driver = new NodeRuntimeDriver(services, options(work), access);
+            var facet = facet(work, "fatal-close", "fatal-close-artifact", work.resolve("marker"));
+            var inspect = NodeRuntimeDriver.class.getDeclaredMethod("inspectFacet", ManagedFacet.class);
+            inspect.setAccessible(true);
+            assertSame(fatal, assertThrows(java.lang.reflect.InvocationTargetException.class,
+                () -> inspect.invoke(driver, facet)).getCause());
+            var owner = descriptorOwners(driver).iterator().next();
+            var close = owner.getClass().getDeclaredMethod("close");
+            close.setAccessible(true);
+            assertSame(fatal, assertThrows(java.lang.reflect.InvocationTargetException.class,
+                () -> close.invoke(owner)).getCause());
+            assertEquals(1, access.streamCloses.get());
+            assertEquals(0, access.walkCloses.get());
+            assertNotNull(field(field(owner, "resources"), "input"));
+            assertNotNull(field(field(owner, "resources"), "paths"));
+            assertThrows(IllegalStateException.class, () -> driver.closeAsync().block());
+            access.disposeRetained();
+        }
+    }
+
+    @Test
+    void malformedDescriptorKeepsOriginalValidationAndClosesOnNonBlockingPaths(@TempDir Path work)
+        throws Exception {
+        var invalid = List.of(
+            "protocol: 1\ndefinitionId: main\nentrypoint: index.mjs\ncontributions: []\nunknown: true\n",
+            "protocol: 1\ndefinitionId: main\ndefinitionId: duplicate\nentrypoint: index.mjs\ncontributions: []\n",
+            "protocol: 0\ndefinitionId: main\nentrypoint: index.mjs\ncontributions: []\n",
+            "protocol: 1\ndefinitionId: ' '\nentrypoint: index.mjs\ncontributions: []\n",
+            "protocol: 1\ndefinitionId: main\nentrypoint: ../index.mjs\ncontributions: []\n",
+            "protocol: 1\ndefinitionId: main\nentrypoint: index.mjs\n",
+            "#" + "x".repeat(64 * 1024));
+        for (int index = 0; index < invalid.size(); index++) {
+            var access = new CountingAccess();
+            var facet = facet(work.resolve("invalid-" + index), "invalid", "invalid-artifact", work.resolve("marker"));
+            Files.writeString(facet.facet().payload().resolve("fibra-plugin.yaml"), invalid.get(index));
+            try (var services = new Services()) {
+                var driver = new NodeRuntimeDriver(services, options(work), access);
+                assertThrows(NodeRuntimeException.class, () -> driver.probe(new PluginFacetSource(facet, List.of()))
+                    .subscribeOn(reactor.core.scheduler.Schedulers.parallel()).block());
+                assertThrows(NodeRuntimeException.class, () -> driver.inspect(facet)
+                    .subscribeOn(reactor.core.scheduler.Schedulers.parallel()).block());
+                var candidate = driver.createCandidate(slice(facet, List.of("entry")));
+                assertThrows(NodeRuntimeException.class, () -> candidate.prepareAsync()
+                    .subscribeOn(reactor.core.scheduler.Schedulers.parallel()).block());
+                candidate.closeAsync().subscribeOn(reactor.core.scheduler.Schedulers.parallel()).block();
+                assertEquals(3, access.walkCloses.get());
+                assertEquals(index == invalid.size() - 1 ? 0 : 3, access.streamCloses.get());
+                assertTrue(descriptorOwners(driver).isEmpty());
+                driver.closeAsync().block();
+            }
+        }
+    }
+
+    @Test
+    void payloadSymbolicLinkIsRejectedWithoutLosingWalkOwner(@TempDir Path work)
+        throws Exception {
+        var access = new CountingAccess();
+        var facet = facet(work, "symlink", "symlink-artifact", work.resolve("marker"));
+        Files.createSymbolicLink(facet.facet().payload().resolve("linked.mjs"), Path.of("index.mjs"));
+        try (var services = new Services()) {
+            var driver = new NodeRuntimeDriver(services, options(work), access);
+            var query = driver.createDefinitionQuery(facet);
+            assertThrows(NodeRuntimeException.class, () -> query.readAsync().block());
+            query.closeAsync().block();
+            assertEquals(1, access.walkCloses.get());
+            assertEquals(0, access.streamCloses.get());
+            driver.closeAsync().block();
+        }
+    }
+
+    private static Set<?> descriptorOwners(NodeRuntimeDriver driver) throws Exception {
+        return (Set<?>) field(driver, "descriptorReads");
+    }
+
+    private static Object field(Object owner, String name) throws Exception {
+        var field = owner.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(owner);
+    }
+
+    private static class CountingAccess extends NodeFacetDescriptorReader.ResourceAccess {
+        final AtomicInteger walks = new AtomicInteger(), opens = new AtomicInteger();
+        final AtomicInteger walkCloses = new AtomicInteger(), streamCloses = new AtomicInteger();
+        boolean failStreamClose, failWalkClose;
+        InputStream retainedInput;
+        Stream<Path> retainedWalk;
+        final java.util.ArrayList<InputStream> openedInputs = new java.util.ArrayList<>();
+        final java.util.ArrayList<Stream<Path>> openedWalks = new java.util.ArrayList<>();
+        @Override Stream<Path> walk(Path root) throws IOException {
+            walks.incrementAndGet();
+            retainedWalk = super.walk(root);
+            openedWalks.add(retainedWalk);
+            return retainedWalk;
+        }
+        @Override InputStream open(Path path) throws IOException {
+            opens.incrementAndGet();
+            retainedInput = super.open(path);
+            openedInputs.add(retainedInput);
+            return retainedInput;
+        }
+        @Override void close(InputStream input) throws IOException {
+            streamCloses.incrementAndGet();
+            if (failStreamClose) throw new IllegalStateException("stream close failed");
+            super.close(input); retainedInput = null;
+        }
+        @Override void close(Stream<Path> paths) {
+            walkCloses.incrementAndGet();
+            if (failWalkClose) throw new IllegalStateException("walk close failed");
+            super.close(paths); retainedWalk = null;
+        }
+        void disposeRetained() throws IOException {
+            for (var input : openedInputs) input.close();
+            for (var paths : openedWalks) paths.close();
+        }
+    }
+
     private static final String REVISION = "a".repeat(64);
     private static final int REPLACEMENT_ROUNDS = 50;
     private static final ContributionCodec<String, String, String> TEST_CODEC =

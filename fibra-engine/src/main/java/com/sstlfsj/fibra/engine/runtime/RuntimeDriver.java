@@ -14,6 +14,9 @@ public interface RuntimeDriver {
 
     Mono<RuntimeArtifactInspection> inspect(ManagedFacet facet);
 
+    /** 创建单 facet 的惰性声明查询；资源所有权持续到真实 close 终态。 */
+    RuntimeDefinitionQuery createDefinitionQuery(ManagedFacet facet);
+
     RuntimeCandidate createCandidate(RuntimeTargetSlice target);
 
     RuntimeDriverSnapshot snapshot();

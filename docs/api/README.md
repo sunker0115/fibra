@@ -73,6 +73,7 @@ FibraEngine.builder(PluginPackageStore, DeploymentTargetStore)
 
 engine.startAsync();
 engine.submit(command);
+engine.describeDefinitions(pluginId, expectedTargetRevision);
 engine.published();
 engine.snapshot();
 engine.closeAsync();
@@ -80,6 +81,55 @@ engine.closeAsync();
 
 `FibraEngine` 独占 command lane、target CAS、编译、运行时协调和事实发布。宿主不能绕过 Engine 直接改变
 driver 或 execution unit。
+
+### 已选择包的 definition 目录
+
+安装并将包选入 target 后，消费者可沿 `describeDefinitions(PluginId, long)` 发现此前不知道名称的类型。
+查询只读取该 selection 的精确 package revision；disabled 包和 RUNNING/BLOCKED target 也可读。
+无 durable target 时 revision 为 0；revision 不匹配先拒绝，匹配但包未选中再拒绝。
+
+```java
+var catalog = engine.describeDefinitions(pluginId, expectedTargetRevision).block();
+// chosenFacet 与 chosenDefinitionId 来自该 catalog 中用户明确选择的项。
+var ref = new PluginDefinitionRef(catalog.pluginId().value(),
+    chosenFacet.facetId().value(), chosenDefinitionId);
+// 产品将 ref 加入完整 desired graph，并保留全部 selection 与 config context。
+engine.submit(ApplyDeployment.builder(fullDesiredGraph)
+    .expectedRevision(catalog.targetRevision())
+    .selections(fullSelections)
+    .configContext(fullConfigContext)
+    .build()).block();
+```
+
+创建需要原 `ApplyDeployment` 完整 replacement/CAS，相关包仍须 enabled。查询不会自动创建任何实例、选择
+默认 definition 或启用所有 facet；target 在选择和提交之间改变时，消费者重读目录及完整 target 后重新决定。
+
+`PackageDefinitionCatalog` 返回 `targetRevision`、`pluginId`、`packageRevision` 和 `facets`；每个
+`FacetDefinitionNames` 返回 `facetId`、`runtimeId`、`executionTarget`、`definitionIds`。值深度不可变，facet
+按原始 facetId 排序，名称按原始字符串排序；facet 内唯一且非空白，允许跨 facet 同名。合法零入口 facet
+仍返回空 `definitionIds`。结果不包含 readiness、schema、payload 路径或执行句柄；所有 facet 成功才返回。
+
+动态名称由原 runtime 解释不可变制品声明；built-in 使用本次捕获的公开 metadata。不加载 Java 入口、不执行
+目标插件 metadata/binder/factory、不启动 Node、不 attach/import client，不解析依赖闭包或其他 selection。
+缺依赖、disabled 依赖、cycle 等仍由原 Apply/prepare 拒绝，目录成功不证明实例可以运行。Java prepare
+核声明与真实名称；Node/client 分别沿原准备和实际加载保证，不宣称 prepare 已验证全部导出。
+
+`DefinitionCatalogException.code()` 的错误顺序及含义：
+
+| Code | 条件 |
+|---|---|
+| ENGINE_UNAVAILABLE | 未运行、FAIL_STOP、已关闭，或命令准入已停止 |
+| STALE_TARGET | expectedTargetRevision 与捕获的 durable revision 不同 |
+| NOT_SELECTED | revision 匹配但 root 包未选中，包括无 target |
+| PACKAGE_UNAVAILABLE | 精确 root 缺失、损坏、身份/digest 不符或动态/内建冲突 |
+| UNSUPPORTED_RUNTIME | root 某 facet 没有 runtime driver；在取得查询句柄前预检 |
+| READ_FAILED | runtime create/read 失败、缺必需声明、非法名称或无结果；合法空集合不是失败 |
+| CLEANUP_FAILED | 真实资源关闭失败，优先于读取错误；保留 owner 并关闭管理/贡献准入，请求宿主终止 |
+
+null pluginId 和负 revision 在方法调用时拒绝；业务读取为冷 Mono，无订阅不入队，重复订阅独立查询。
+取消只取消结果观察，不能取消已接纳的读取或清理。成功或普通读取失败不保存 target、不改变旧 operation；
+结果等待真实 cleanup。cleanup 失败时 Engine 的 shutdown 不释放仍被 query 依赖的 driver/store，重复关闭
+观察同一失败，不重试资源。文件 I/O 或不合作 provider 可阻塞真实终态，不承诺有界关闭。
 
 `RuntimeProvider` 是 runtime 的进程级扩展点：
 
@@ -93,8 +143,14 @@ provider 必须是配置不可变、可顺序复用的 factory。每次 `create`
 不得缓存 Host services、driver 或 Host 生命周期资源；并发 `create` 不属于 P0 保证。Engine 在构造成功后取得
 driver、package store 与 target store 的关闭所有权，构造中途失败也会释放已取得资源。
 
-`RuntimeDriver` 探测 `PluginFacetSource`、检查 `ManagedFacet`、从完整 `RuntimeTargetSlice` 创建 candidate，并
-公开只读 snapshot。candidate 的协议是 `prepareAsync()`、`preparedPlan()`、`seal(compiledSlice)` 和
+`RuntimeDriver` 探测 `PluginFacetSource`、检查 `ManagedFacet`、以必需方法
+`createDefinitionQuery(ManagedFacet)` 创建单 facet 惰性 `RuntimeDefinitionQuery`、从完整
+`RuntimeTargetSlice` 创建 candidate，并公开只读 snapshot。query 的 `readAsync()` 返回名称声明，
+`closeAsync()` 观察真实关闭；创建只做 bookkeeping，Engine 先登记全部句柄再串行读、逆序关。
+read/close 各缓存一次真实终态；先 close 的 inert 句柄拒绝后续首次读，已接纳读必须结束，取消观察不取消执行。
+runtime 的原 parser 与同步 probe/inspect/prepare 共用同类私有文件 owner，失败仍可达，driver 仅索引同 owner，
+不复制关闭权或反向阻塞 query。本 SPI 无 default fallback，外部 provider 必须同步重编实现。
+candidate 的协议是 `prepareAsync()`、`preparedPlan()`、`seal(compiledSlice)` 和
 `closeAsync()`；只有准备成功的 candidate 才能封存 generation。
 
 `PreparedRuntimeGeneration.units()` 以 `ExecutionUnitKey` 返回本代 execution unit。unit 通过
@@ -158,14 +214,34 @@ watch 和审计。
 
 ## Java 与 Node provider
 
-Java facet 的 payload 是包含 `META-INF/fibra/plugin.yaml` 的 JAR。descriptor 只声明 Java 本地定义和可选
-entrypoint；空对象表示 contract-only JAR。`JavaRuntimeProvider` 为每个 execution unit 建立隔离 class space
+Java facet 的 payload 是包含 `META-INF/fibra/plugin.yaml` 的 JAR。executable descriptor 同时声明非空白
+`entrypoint` 与 `definitionId`，名称必须等于真实 `PluginDefinition.name()`；空对象表示 contract-only JAR。
+只声明一个字段、名称类型错误或空白均为非法制品，实际 probe/inspect/query/prepare 读取时拒绝；安装/仅选择
+不承诺已校私有格式。prepare 在 wiring 发布和 bind 前核真实名称，取得失败仍由原 candidate owner 清理。
+
+```yaml
+entrypoint: example.WidgetEntrypoint
+definitionId: widget
+```
+
+`JavaFacetDescriptor` 只保留包含两个 Optional 字段的规范构造器；没有旧单参数重载。宿主、外部 runtime
+provider、executable Java 包和作者模板必须统一更新并重新编译/打包。旧 entrypoint-only 格式没有部署或目录
+回退；新 digest 经原 CAS 更新精确 selection，不自动改写旧 target，不覆盖已保存的不可变包，也不混用同坐标
+的不同 SNAPSHOT 制品。
+
+`JavaRuntimeProvider` 为每个 execution unit 建立隔离 class space
 和 unit-local service/control realm，按 facet 依赖图委派，按 dependent-first 顺序关闭。Java 实例状态变化会
 触发实时观察刷新。
 
 Node facet 的 payload 是包含本地 descriptor 和 `.js`、`.mjs` 或 `.cjs` 入口的目录。
 `NodeRuntimeProvider` 以受管进程范围启动 sidecar，处理有界消息、deadline、取消、心跳和异常退出。运行时不
 执行包管理器，也不联网补依赖；第三方依赖必须已经进入 payload。
+
+POSIX范围关闭由原supervisor在`terminateTimeout`内沿EOF、TERM、KILL推进。EPERM保持为尚未取得消失证明，
+真实ESRCH确认后停止旧PGID操作；到期仍存在或未知则关闭失败并保留session。payload退出和完整响应不代替
+范围证明；完整原请求响应可独立完成该request的drain，session及runtime payload lease仍守其关闭门。
+此合同不增强数字PGID身份或离组后代保证，Windows保持原较弱后端。状态与验证矩阵见
+[Node关闭设计](../superpowers/specs/2026-10-11-node-managed-range-close-design.md)。
 
 ## Client API 与协议
 

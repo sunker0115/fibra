@@ -46,6 +46,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RuntimeProviderConsumerTest {
     @Test
+    void externalProviderImplementsCachedDeclaredNameQueryWithAnExplicitCloseBoundary() {
+        var driver = new ConsumerRuntimeDriver();
+        var facet = new com.sstlfsj.fibra.artifact.ManagedFacet(new ArtifactId("consumer-artifact"),
+            new PluginId("consumer-plugin"), "a".repeat(64), new com.sstlfsj.fibra.artifact.PluginFacet(
+                new FacetId("consumer-facet"), com.sstlfsj.fibra.artifact.FacetRole.HOST,
+                driver.id(), new ExecutionTarget("consumer-host"), Path.of("fixture"),
+                "b".repeat(64), List.of(), List.of()));
+        var query = driver.createDefinitionQuery(facet);
+        assertEquals(List.of("consumer"), query.readAsync().block());
+        query.closeAsync().block();
+        query.closeAsync().block();
+        assertEquals(List.of("consumer"), query.readAsync().block());
+        var unopened = driver.createDefinitionQuery(facet);
+        unopened.closeAsync().block();
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () -> unopened.readAsync().block());
+    }
+
+    @Test
     void registersAnExternalRuntimeProviderUsingOnlyPublishedSpi(@TempDir Path work) {
         var provider = new ConsumerRuntimeProvider();
         try (var packages = new PluginPackageStore(work.resolve("packages"));
@@ -111,6 +129,24 @@ class RuntimeProviderConsumerTest {
         @Override public Mono<RuntimeArtifactInspection> inspect(
             com.sstlfsj.fibra.artifact.ManagedFacet facet) {
             return Mono.error(new UnsupportedOperationException("fixture has no package inspection"));
+        }
+        @Override public com.sstlfsj.fibra.engine.runtime.RuntimeDefinitionQuery createDefinitionQuery(
+            com.sstlfsj.fibra.artifact.ManagedFacet facet) {
+            java.util.Objects.requireNonNull(facet, "facet");
+            return new com.sstlfsj.fibra.engine.runtime.RuntimeDefinitionQuery() {
+                private boolean closed;
+                private final Mono<List<String>> read = Mono.defer(() -> {
+                    synchronized (this) {
+                        return closed ? Mono.<List<String>>error(new IllegalStateException("definition query is closed"))
+                            : Mono.just(List.of("consumer"));
+                    }
+                }).cache();
+                private final Mono<Void> close = Mono.<Void>fromRunnable(() -> {
+                    synchronized (this) { closed = true; }
+                }).cache();
+                @Override public Mono<List<String>> readAsync() { return read; }
+                @Override public Mono<Void> closeAsync() { return close; }
+            };
         }
         @Override public RuntimeCandidate createCandidate(RuntimeTargetSlice target) {
             java.util.Objects.requireNonNull(target, "target");
