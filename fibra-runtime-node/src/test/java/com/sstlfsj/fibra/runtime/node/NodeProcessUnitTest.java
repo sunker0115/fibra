@@ -299,8 +299,9 @@ class NodeProcessUnitTest {
             var request = sidecar.beginRequest("unanswered", java.util.Map.of(),
                 com.sstlfsj.fibra.CancellationToken.never());
             var result = request.result().toFuture();
-            var drain = request.drain().toFuture();
             GroupProbeFixture.awaitFile(work.toRealPath().resolve("request-started"));
+            // drain 会发起取消，须先确认原请求已送达 payload。
+            var drain = request.drain().toFuture();
             var cancelled = sidecar.closeAsync().toFuture();
             fixture.awaitTrace("INJECTED_EPERM operation=0");
             assertTrue(cancelled.cancel(true));
