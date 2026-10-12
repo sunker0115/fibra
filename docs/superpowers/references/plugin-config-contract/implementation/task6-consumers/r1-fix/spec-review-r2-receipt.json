@@ -1,0 +1,58 @@
+{
+  "source": {
+    "final_inputs": 482,
+    "changed": 4,
+    "patch_recomputed": true,
+    "clean_copy": "482 old inputs + only updated Host test",
+    "desktop_target_exists": false,
+    "lock_sha256": "40b48ef63ab5a7942a48c7404abe1bea1bd7343505efdd7b61d1e343e7ec27da"
+  },
+  "reuse": "Fibra 3 / external 24 inputs, formal npm tgz, author schema/JAR, product JS, two ZIP and wire unchanged",
+  "current_xml": {
+    "clean-host": {
+      "tests": 1,
+      "xml": 1
+    },
+    "tela": {
+      "tests": 34,
+      "xml": 5
+    }
+  },
+  "native_exits": "five checked, all zero",
+  "node": {
+    "npm_test": 29,
+    "renderer_wire": 28
+  },
+  "canary": "absent in four final logs",
+  "evidence_sha256": {
+    "tela-changed-inputs.json": "3345767ec3ac622b3dd4b563998fced963420ece29a1b186e63fd30f8c788140",
+    "npm-test.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "receipt-sha256.json": "4649c237d4268013b8baa2ac3eb6a05b6d28542237770109bfee877fcade55cb",
+    "fix.patch": "5675197cf4c71372d9b6ced7bd243f42485790609fc7602dd2d48aa902fb60f8",
+    "tela-focused.log": "19d53185e5cf0a611672f0131c0b1fca09252bc645513c2ae43e84d750831579",
+    "npm-test.log": "9ea8f1aeb2a1fb42a8c2d67bc6fb7bb732523638c336b00aad37350b89775f33",
+    "tela-focused.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "reused-evidence-sha256.json": "3341b38471c308cd2408ae2aed9acdb2c9a83811da8274ed41c4d6951f597846",
+    "tela-adaptation.patch": "cff53eaef4a648a52345e4bc0a715eaeaf2603d8406fc8f9fed95033997e8fd2",
+    "REPORT.md": "3c90b05a43db64e55844c2845083b8a7887671590db93f61ed1afe048d9b461a",
+    "COMMANDS.md": "788c14043a27d907ffbd9806a7d7402b769bdefa1ba88e115dcafab06c5afe45",
+    "renderer-wire.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "renderer-wire.log": "a3843617584866e4b15218a0dbf45f059e6265feb6688386b52f5b20a05cc3a7",
+    "final-reports.json": "e490d5398ca1cd0a8ab6b778d430ea11c2ac5197e8898605ea3c0ada3349b9be",
+    "tela-input-sha256.json": "40b48ef63ab5a7942a48c7404abe1bea1bd7343505efdd7b61d1e343e7ec27da",
+    "changed-since-r1.json": "6babd9f5f7f644a84ce6e55fbd4c3ac48b052aef963c6d823352412bc213bd60",
+    "clean-host-green.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "clean-host-green.log": "e5ec9731bc83c2057ef18ec10f1050c96717b56ea67ae313beff202e3c5c63fd",
+    "desktop-target-absence.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  "review_result": {
+    "status": "PASS",
+    "blocker": 0,
+    "important": 0,
+    "minor": 0,
+    "ready": true
+  },
+  "report_sha256": "ca965660541a0e0c45b0693bd178b242a3d15ee63dd8d922dee6bc655d86c953",
+  "final_input_recheck": "482 + 3 + 24 unchanged",
+  "execution": "all commands exited; no Maven or background processes started by reviewer; Maven released"
+}

@@ -1,0 +1,51 @@
+{
+  "reviewedAt": "2026-10-12T07:38:30.359469+00:00",
+  "head": "0a674176b8b762b4e77044bcba7f051bf06c41d9",
+  "branch": "codex/plugin-config-contract",
+  "matchesImplementerSourceHashes": true,
+  "testNativeExit": 0,
+  "testSuites": [
+    {
+      "name": "com.sstlfsj.fibra.engine.deployment.BuiltInConfigurationBootstrapTest",
+      "tests": "1",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackageTest",
+      "tests": "10",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.sstlfsj.fibra.engine.RuntimeDriverEngineTest",
+      "tests": "4",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.sstlfsj.fibra.runtime.java.JavaBuiltInRecoveryTest",
+      "tests": "3",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.sstlfsj.fibra.verification.host.HostRestartRecoveryTest",
+      "tests": "2",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0"
+    }
+  ],
+  "compiledClassesSha256": {
+    "fibra-engine/target/classes/com/sstlfsj/fibra/engine/deployment/BuiltInFacet.class": "68f3683bc22724fb7c543ec540faebad2739a8265800b3a46609dc58420c4a54",
+    "fibra-engine/target/classes/com/sstlfsj/fibra/engine/deployment/BuiltInFacet$Builder.class": "f3440e707d7683fa63c00985311f45b8062c31ac4571124a430c723633575cb5",
+    "fibra-engine/target/classes/com/sstlfsj/fibra/engine/deployment/BuiltInPluginPackage.class": "0204933e11deac007d22281595454fe69d8626675dbf713f3391c5dd7713f3b4",
+    "fibra-engine/target/classes/com/sstlfsj/fibra/engine/deployment/BuiltInPluginPackage$Builder.class": "0451dffe3f07d42f4b7ee3adb63c34b30765837ab9f4e922647f384953513c56"
+  },
+  "logSha256": "66f6d66481a81ffe76e3929ae5b58728b62ccbf082c16cd9af7a140e9900177c"
+}

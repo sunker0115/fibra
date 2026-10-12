@@ -4,7 +4,7 @@
 
 ```text
 api/          Java 侧贡献契约、类型和跨语言 codec
-node-plugin/  正式 Node package（fibra-package.yaml + payload/）
+node-plugin/  正式 Node package（fibra-package.yaml + fibra-config.json + payload/）
 spring-host/  通过 Starter 接入并暴露 HTTP API 的宿主
 ```
 
@@ -19,6 +19,15 @@ mvn -pl :spring-host -am clean verify
 ```
 
 Node 不在 `PATH` 时增加 `-Dfibra.test.node=/absolute/path/to/node`。集成测试会启动真实 Node sidecar，完成 deploy、贡献调用并验证 Spring HTTP 链路。
+
+唯一配置合同源是 `node-plugin/fibra-config.json`，复制/发布时与整个包一起保留。根配置必须为 object；
+可选 `replacement` 接受 string/null，可选 `rules` 接受 array/null，条目仅允许 `email`、`bearer-token`、
+`api-key`，空数组及重复条目均合法。字段省略或 null 的默认行为由 Node 实现提供，schema 不写 default；
+整项 null、错误字段类型和未知字段由 Engine 在 runtime prepare 前拒绝。这是主动收紧的结构合同。
+
+作者资格从完整复制包安装后的精确 revision 读取，比较静态目录全部 facets/definitions，执行完整
+`ConfigSchema.checkSources`，即使包停用也拒绝缺失、孤儿和坏 schema。读资源必须真实 close 后再解析；
+close 失败保留句柄及 Engine/store 依赖并转宿主终止，不能 finally 无条件关闭 Engine。
 
 ## Spring Boot 接入
 

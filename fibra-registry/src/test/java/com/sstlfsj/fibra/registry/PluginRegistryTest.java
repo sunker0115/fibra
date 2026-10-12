@@ -193,7 +193,9 @@ class PluginRegistryTest {
     @Test
     void groupOperationsPreserveLocalFlagsAndCompleteEntryData() throws Exception {
         try (var fixture = fixture()) {
-            var published = fixture.publish(source("one", "1"));
+            var source = source("one", "1");
+            Files.writeString(source.resolve("fibra-config.json"), "{\"format\":1,\"profile\":\"fibra-config-1\",\"facets\":{\"main\":{\"run\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"value\":{\"type\":\"integer\"}},\"required\":[\"value\"],\"additionalProperties\":false}},\"aux\":{\"run\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"null\"}}}}");
+            var published = fixture.publish(source);
             var entry = DesiredInputEntry.builder("entry", new PluginDefinitionRef("sample", "main", "run"))
                 .config(new LiteralValue.ObjectValue(Map.of("value", LiteralValue.of(1))))
                 .publicationRequirement(PublicationRequirement.PENDING_ALLOWED).build();
@@ -370,6 +372,7 @@ class PluginRegistryTest {
                 dependencies: []
                 capabilities: []
             """.formatted(version));
+        Files.writeString(source.resolve("fibra-config.json"), "{\"format\":1,\"profile\":\"fibra-config-1\",\"facets\":{\"main\":{\"run\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"null\"}},\"aux\":{\"run\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"null\"}}}}");
         return source;
     }
 

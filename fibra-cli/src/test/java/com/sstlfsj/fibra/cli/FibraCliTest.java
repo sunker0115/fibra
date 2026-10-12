@@ -623,6 +623,7 @@ class FibraCliTest {
             "- {id: failer, plugin: {id: failer, facet: main, definition: failer}}\n");
         Files.writeString(profiles.resolve("default.packages.yaml"), "- failer\n");
         var root = Files.createDirectories(home.resolve("plugins/failer"));
+        Files.writeString(root.resolve("fibra-config.json"), "{\"format\":1,\"profile\":\"fibra-config-1\",\"facets\":{\"main\":{\"failer\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"null\"}}}}");
         Files.writeString(root.resolve("fibra-package.yaml"),
             packageManifest("failer"));
         try (var jar = new JarOutputStream(Files.newOutputStream(
@@ -647,6 +648,7 @@ class FibraCliTest {
             "- {id: command, plugin: {id: command, facet: main, definition: command}}\n");
         Files.writeString(profiles.resolve("default.packages.yaml"), "- command\n");
         var root = Files.createDirectories(home.resolve("plugins/command"));
+        Files.writeString(root.resolve("fibra-config.json"), "{\"format\":1,\"profile\":\"fibra-config-1\",\"facets\":{\"main\":{\"command\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"null\"}}}}");
         Files.writeString(root.resolve("fibra-package.yaml"),
             packageManifest("command"));
         try (var jar = new JarOutputStream(Files.newOutputStream(

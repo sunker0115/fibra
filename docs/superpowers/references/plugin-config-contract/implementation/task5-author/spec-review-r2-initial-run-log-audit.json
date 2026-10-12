@@ -1,0 +1,817 @@
+{
+  "log_classes": 134,
+  "xml_files": 134,
+  "log_totals": {
+    "tests": 1059,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "mismatches": [],
+  "log_suites": {
+    "com.sstlfsj.fibra.CancellationSourceTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.value.LiteralValueTest": [
+      5,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.RuntimeDomainSettlementTest": [
+      8,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.LoggingCapabilityContractTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.PropertyCapabilityContractTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.EventModeContractTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.ScopeOwnershipBoundaryTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.CleanupFailureDiagnosticsTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.RuntimeDomainDiagnosticsTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.RuntimeDomainIsolationTest": [
+      3,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.EffectCreationContractTest": [
+      3,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.NamedContextPolicyContractTest": [
+      6,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.PluginInstanceLifecycleContractTest": [
+      20,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.EventContractReloadTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.PluginDisableRequestContractTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.EffectCleanupContractTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.InvocationContextCancellationTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.ScopeRegistrationRaceTest": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.PluginIdentityContractTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.OnceEventContractTest": [
+      13,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.RuntimeScopeContractTest": [
+      5,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.ScopeOwnedCapabilitiesContractTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.AnnotationInjectionContractTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.DrainLifecycleTest": [
+      14,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.EventDispatchContractTest": [
+      5,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.internal.RuntimeCloseCompletionTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.config.ConfigDocumentStoreTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.config.ConfigSchemaBatchOrderTest": [
+      5,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.config.ConfigExpressionEvaluatorTest": [
+      5,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.config.DesiredStateRepositoryTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.config.LiteralValuesTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.config.DesiredConfigCompilerTest": [
+      10,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.config.DesiredConfigPatchTest": [
+      22,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.config.ConfigSchemaBudgetTest": [
+      8,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.config.DesiredInputGraphTest": [
+      6,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.config.PluginDefinitionRefTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.config.ConfigSchemaTest": [
+      9,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.config.ConfigSchemaBatchAllocationTest": [
+      5,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.config.ConfigSchemaBootstrapTest": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.config.DesiredEvaluationTest": [
+      5,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.config.DefinitionConfigDocumentTest": [
+      3,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.config.ConfigContextSnapshotTest": [
+      3,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.artifact.PluginConfigurationResourceBootstrapTest": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.artifact.PluginPackageTest": [
+      46,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.artifact.PluginConfigurationResourceTest": [
+      16,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.artifact.FixedPluginConfigurationResourceTest": [
+      10,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.artifact.PluginPackageStoreTest": [
+      15,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.bridge.ContributionCallTest": [
+      10,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.bridge.ContributionDirectoryTest": [
+      14,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.bridge.ContributionDrainLifecycleTest": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.bridge.ContributionAdmissionTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.bridge.ContributionKindRegistryTest": [
+      3,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.engine.EngineAttemptStateModelTest": [
+      11,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.engine.publication.RemoteContributionInvokerTest": [
+      3,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.engine.EngineCommandLoopTest": [
+      7,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.engine.EngineConfigurationContractTest": [
+      20,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.engine.DeploymentPlannerTest": [
+      5,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.engine.runtime.RuntimeTargetSliceTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.engine.EngineReadAttemptTest": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.engine.deployment.DeploymentTargetCompilerTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackageTest": [
+      10,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.engine.deployment.PackageDefinitionCatalogTest": [
+      15,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.engine.deployment.BuiltInConfigurationBootstrapTest": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.engine.deployment.DeploymentTargetContextContractTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.engine.deployment.DeploymentTargetContractTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.engine.deployment.HostCapabilitySnapshotTest": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.engine.deployment.DeploymentTargetStoreTest": [
+      3,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.engine.RuntimeDriverContractTest": [
+      8,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.engine.RuntimeDriverEngineTest": [
+      80,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.java.JavaClassIndexTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.java.JavaBuiltInRecoveryTest": [
+      3,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.java.JavaRuntimeDriverTest": [
+      52,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.java.PluginClassLoaderTest": [
+      9,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.tool.ToolOutcomesTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.tool.ToolApiTest": [
+      12,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.node.NodeSidecarTest": [
+      32,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.node.NodeRuntimeDriverTest": [
+      27,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.runtime.node.NodeProcessUnitTest": [
+      49,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.registry.FilePluginAuditRepositoryTest": [
+      10,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.registry.PluginRegistryTest": [
+      14,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.cli.api.CliApiContractTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.cli.CliSessionTest": [
+      16,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.cli.CliInvocationCoordinatorTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.cli.CliHostOwnershipTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.cli.CliProcessSignalHandlersTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.cli.CliPathsTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.cli.CliProcessShutdownTest": [
+      10,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.cli.CliReplTest": [
+      13,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.cli.CliTerminalSignalBridgeTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.cli.ProfilePackageSourceTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.cli.CliTerminalControllerTest": [
+      20,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.cli.FibraCliTest": [
+      30,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.cli.CliHostTest": [
+      3,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.spring.FibraServiceExporterTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.spring.FibraServiceBridgeTest": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.spring.boot.FibraAutoConfigurationTest": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.archetype.FibraPluginArchetypeIT": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.fs.FileSystemContractTest": [
+      9,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.fs.local.LocalFileSystemPluginTest": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.fs.local.LocalFileSystemTest": [
+      27,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.fs.local.WindowsFilePublisherTest": [
+      5,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.fs.tool.FileToolHandlersTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.fs.tool.FileToolPluginTest": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.subprocess.SubprocessContractTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.fs.search.SearchOutputParserTest": [
+      3,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.fs.search.ToolFsSearchEntrypointTest": [
+      3,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.fs.search.SearchCommandsTest": [
+      3,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.fs.search.SearchRunnerTest": [
+      12,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.fs.search.SearchTimingTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.subprocess.local.JnaWindowsJobOwnerTest": [
+      8,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.subprocess.local.LocalSubprocessLinuxSelectionTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.subprocess.local.WindowsJobProcessUnitTest": [
+      10,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.subprocess.local.SystemdScopeOwnerTest": [
+      9,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.subprocess.local.SubprocessPluginTest": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.subprocess.local.WindowsExecutableResolverTest": [
+      3,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.subprocess.local.LocalSubprocessTest": [
+      11,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.subprocess.local.SupervisorFailureTest": [
+      3,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.subprocess.local.SystemdScopeLauncherTest": [
+      8,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.subprocess.local.LinuxScopeProcessUnitTest": [
+      17,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.shell.ShellContractTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.shell.local.ShellPluginTest": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.shell.local.LocalShellTest": [
+      3,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.shell.local.ShellLifecycleTest": [
+      5,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.shell.tool.ShellToolTest": [
+      10,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.storage.StorageContractTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.storage.json.JsonConfigStoreTest": [
+      10,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.storage.tool.StorageToolEntrypointTest": [
+      4,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.acceptance.AuthorConfigurationQualificationTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.acceptance.FormalPluginArtifactsIT": [
+      7,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.acceptance.FormalCliIT": [
+      3,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.plugins.acceptance.FormalMultiPluginIT": [
+      7,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.example.sanitizer.ContentSanitizerContributionTest": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.example.SanitizerAuthorConfigurationIT": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "com.sstlfsj.fibra.example.FibraSpringHostIT": [
+      1,
+      0,
+      0,
+      0
+    ]
+  }
+}

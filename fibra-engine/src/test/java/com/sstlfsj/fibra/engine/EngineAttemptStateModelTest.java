@@ -593,11 +593,13 @@ class EngineAttemptStateModelTest {
             return BuiltInPluginPackage.builder()
                 .pluginId(new PluginId("a"))
                 .version("1")
-                .packageDigest("a".repeat(64))
+                .implementationDigest("a".repeat(64))
                 .facets(List.of(BuiltInFacet.builder(
                         new FacetId("main"), runtimeId,
                         new ExecutionTarget("host"))
                     .definitionIds(Set.of("definition"))
+                    .configSchemas(Map.of("definition", new com.sstlfsj.fibra.config.ConfigSchemaSource("fibra-config-1",
+                        (LiteralValue.ObjectValue) LiteralValue.of(Map.of("$schema", "https://json-schema.org/draft/2020-12/schema", "type", "integer")))))
                     .build()))
                 .build();
         }
@@ -703,7 +705,7 @@ class EngineAttemptStateModelTest {
                             UNIT, runtimeId, new ExecutionTarget("host"))
                         .artifactId(metadata().artifactId(
                             new FacetId("main")))
-                        .provenance("a", "main", "a".repeat(64))
+                        .provenance("a", "main", metadata().packageDigest())
                         .build();
                     plan = RuntimePlan.of(runtimeId, List.of(unitPlan),
                         List.of(DefinitionBindingPlan.builder(

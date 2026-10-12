@@ -262,7 +262,10 @@ definition、配置和有效继承策略。完整 target 先编译为 entry-keye
 facet 依赖同时决定静态资源闭包和 unit 依赖。新增、删除、配置、definition、realm/intercept、capability、
 provider contract 或依赖边变化都通过旧新编译输入计算 affected closure，不能把 artifact identity 当 unit key。
 
-每个 runtime provider 创建一个长期 driver。一次变更先创建 inert candidate，`prepareAsync()` 只解析与绑定
+每个 runtime provider 创建一个长期 driver。一次需要重建的变更先对候选精确包完成静态名称读取、配置合同读取及
+全部 active 实例的 effective 配置结构校验，真实关闭读取资源后才创建 inert candidate。配置合同属于作者包，
+纯 profile/预算/校验属于 `fibra-config`，固定根文件与摘要绑定属于 artifact，读取与命令失败投影由 Engine 持有。
+不通过 runtime 执行插件来生成规则，也不在缺少根文件时回退到 JAR。`prepareAsync()` 只解析与绑定
 受影响输入，`seal()` 只把 driver-private 准备结果转成交由 Engine 持有的 generation；保存成功后才
 `reconcileAsync()` 启动 units。Java 的 ClassLoader/definition/binder 只留在 Java driver，Node payload、
 sidecar/session 只留在 Node driver；Engine 只看公共 plan、observation 与生命周期端口。
@@ -393,8 +396,11 @@ observe -> validate / prepare affected facets / bind changed entries
 配置上下文是持久 desired 的组成部分。任何会改变 enabled、config、realm 或 intercept 求值的上下文变更，
 都必须提交包含完整 `ConfigContextSnapshot` 的新 `DeploymentTarget`，参与 canonical target digest，并走同一
 save/reconcile 路径；不存在 `ReplaceConfigContext` 这种只切换内存求值而不推进 target revision 的旁路。
-保存前先以候选 snapshot 对 raw graph 完整求值和绑定；失败时旧 target、evaluation、实例、effects 与
-PublishedView 全部保持不变。
+保存前先以候选 snapshot 对 raw graph 按原语义求值，完成结构门及运行时绑定；普通失败保留旧 target、
+current 实例与 effects，同时发布本次 operation 的实际失败事实，不能声称整个 PublishedView 不变。
+静态查询普通失败不修改 PublishedView；读取清理失败关闭准入并保留失败句柄及依赖。规则不填默认、不转换值，
+不会替代运行时业务校验。停用、升级、查询和预算的完整合同见
+[插件配置合同](2026-10-11-plugin-config-contract-design.md)。
 
 - prepare 读取并冻结输入，完成制品摘要、依赖图和受影响声明的配置绑定；不执行插件启动，不拆旧运行态。
 - save 成功后 Engine 只在 command lane 内原子提升完整 candidate 为 current；随后同步关闭 retirement batch

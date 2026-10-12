@@ -37,6 +37,29 @@
         <version>3.8.0</version>
         <executions>
           <execution>
+            <id>stage-plugin-configuration</id>
+            <phase>process-resources</phase>
+            <goals><goal>single</goal></goals>
+            <configuration>
+              <attach>false</attach>
+              <appendAssemblyId>false</appendAssemblyId>
+              <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+              <finalName>.</finalName>
+              <archiverConfig><forced>true</forced></archiverConfig>
+              <inlineDescriptors><inlineDescriptor>
+                <id>plugin-configuration</id>
+                <formats><format>dir</format></formats>
+                <includeBaseDirectory>false</includeBaseDirectory>
+                <files><file>
+                  <source>${project.basedir}/src/plugin/fibra-config.json</source>
+                  <outputDirectory>META-INF/fibra</outputDirectory>
+                  <destName>config.json</destName>
+                  <filtered>false</filtered>
+                </file></files>
+              </inlineDescriptor></inlineDescriptors>
+            </configuration>
+          </execution>
+          <execution>
             <id>package-plugin</id>
             <phase>package</phase>
             <goals><goal>single</goal></goals>

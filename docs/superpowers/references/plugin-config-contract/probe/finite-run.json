@@ -1,0 +1,11 @@
+{
+  "argv": [
+    "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home/bin/java",
+    "-Xmx64m",
+    "-ea",
+    "-cp",
+    "/private/tmp/fibra-schema-qualification-probe:/private/tmp/tela-networknt-3.0.8/validator.jar:/private/tmp/tela-networknt-3.0.8/lib/itu-1.14.0.jar:/private/tmp/fibra-definition-m2.PXJ3Pa/tools/jackson/core/jackson-databind/3.1.5/jackson-databind-3.1.5.jar:/private/tmp/fibra-definition-m2.PXJ3Pa/tools/jackson/core/jackson-core/3.1.5/jackson-core-3.1.5.jar:/private/tmp/fibra-definition-m2.PXJ3Pa/com/fasterxml/jackson/core/jackson-annotations/2.21/jackson-annotations-2.21.jar:/private/tmp/fibra-definition-m2.PXJ3Pa/org/slf4j/slf4j-api/2.0.18/slf4j-api-2.0.18.jar",
+    "FiniteProfileProbe"
+  ],
+  "nativeExit": 0
+}

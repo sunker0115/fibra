@@ -7,6 +7,8 @@
 
 ## 当前证据链
 
+- [通用插件配置合同的来源与适用边界](2026-10-11-plugin-config-contract-evidence.md)：Pi/OpenCode/DSH
+  固定源码、静态描述与实例值分工、候选schema库资格；对应设计仍为候选，不代表生产能力已交付。
 - [Java 包整理前全模块 owner 与分层审计](2026-10-10-package-structure-audit.md)：全部模块、插件族、
   client 契约与消费者的保留/调整依据，以及 CLI 启动失败清理的 owner 缺口；动态验证见对应执行计划。
 - [Java 平台类加载修复与复验交付](2026-10-10-java-platform-classloading-verification.md)：SAX/DOM

@@ -1,0 +1,10 @@
+[
+  {
+    "path": "/private/tmp/fibra-config-contract-evidence/consumers/tela-distributions/tela-distribution-0.1.0-SNAPSHOT-desktop-macos-aarch64.zip",
+    "sha256": "ef4c9f92f1aaed74210e9e76cbd81c51a648d301273d7f416920f505b9698815"
+  },
+  {
+    "path": "/private/tmp/fibra-config-contract-evidence/consumers/tela-distributions/tela-distribution-0.1.0-SNAPSHOT-bin.zip",
+    "sha256": "5c33548cac0696acb2b6d0ea4f6bc9be1c798053f8d9579f0c411491a52e34e1"
+  }
+]

@@ -318,6 +318,11 @@ class CrossRuntimeConditionalConfigTest {
         }
         Files.writeString(root.resolve("fibra-package.yaml"), packageManifest(
             id, "java", "main.jar"));
+        Files.writeString(root.resolve("fibra-config.json"), """
+            {"format":1,"profile":"fibra-config-1","facets":{"main":{"%s":{
+              "$schema":"https://json-schema.org/draft/2020-12/schema","type":"%s"
+            }}}}
+            """.formatted(definitionId, definitionId.equals("conditional-java") ? "string" : "null"));
         return root;
     }
 
@@ -337,6 +342,13 @@ class CrossRuntimeConditionalConfigTest {
         var payload = Files.createDirectory(root.resolve("payload"));
         Files.writeString(root.resolve("fibra-package.yaml"), packageManifest(
             id, "node", "payload"));
+        Files.writeString(root.resolve("fibra-config.json"), """
+            {"format":1,"profile":"fibra-config-1","facets":{"main":{"%s":{
+              "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
+              "properties":{"probe":{"type":"string"},"holdEntered":{"type":"string"},"value":{"type":"string"}},
+              "required":["probe","holdEntered","value"],"additionalProperties":false
+            }}}}
+            """.formatted(id));
         Files.writeString(payload.resolve("fibra-plugin.yaml"), """
             protocol: 1
             definitionId: %s

@@ -1,0 +1,174 @@
+diff --git a/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/CrossRuntimeConditionalConfigTest.java b/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/CrossRuntimeConditionalConfigTest.java
+index 4a3d3c0..317119e 100644
+--- a/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/CrossRuntimeConditionalConfigTest.java
++++ b/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/CrossRuntimeConditionalConfigTest.java
+@@ -318,6 +318,11 @@ class CrossRuntimeConditionalConfigTest {
+         }
+         Files.writeString(root.resolve("fibra-package.yaml"), packageManifest(
+             id, "java", "main.jar"));
++        Files.writeString(root.resolve("fibra-config.json"), """
++            {"format":1,"profile":"fibra-config-1","facets":{"main":{"%s":{
++              "$schema":"https://json-schema.org/draft/2020-12/schema","type":"%s"
++            }}}}
++            """.formatted(definitionId, definitionId.equals("conditional-java") ? "string" : "null"));
+         return root;
+     }
+ 
+@@ -337,6 +342,13 @@ class CrossRuntimeConditionalConfigTest {
+         var payload = Files.createDirectory(root.resolve("payload"));
+         Files.writeString(root.resolve("fibra-package.yaml"), packageManifest(
+             id, "node", "payload"));
++        Files.writeString(root.resolve("fibra-config.json"), """
++            {"format":1,"profile":"fibra-config-1","facets":{"main":{"%s":{
++              "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
++              "properties":{"probe":{"type":"string"},"holdEntered":{"type":"string"},"value":{"type":"string"}},
++              "required":["probe","holdEntered","value"],"additionalProperties":false
++            }}}}
++            """.formatted(id));
+         Files.writeString(payload.resolve("fibra-plugin.yaml"), """
+             protocol: 1
+             definitionId: %s
+diff --git a/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/CrossRuntimeSelfDisableTest.java b/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/CrossRuntimeSelfDisableTest.java
+index 918b9c7..5bcfa02 100644
+--- a/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/CrossRuntimeSelfDisableTest.java
++++ b/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/CrossRuntimeSelfDisableTest.java
+@@ -407,6 +407,11 @@ class CrossRuntimeSelfDisableTest {
+         };
+         Files.writeString(root.resolve("fibra-package.yaml"),
+             packageManifest(id, "java", "main.jar"));
++        Files.writeString(root.resolve("fibra-config.json"), """
++            {"format":1,"profile":"fibra-config-1","facets":{"main":{"%s":{
++              "$schema":"https://json-schema.org/draft/2020-12/schema","type":"null"
++            }}}}
++            """.formatted(definitionId));
+         try (var output = new JarOutputStream(Files.newOutputStream(jar))) {
+             output.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml"));
+             output.write(("entrypoint: " + entrypoint + "\ndefinitionId: " + definitionId + '\n')
+@@ -432,6 +437,13 @@ class CrossRuntimeSelfDisableTest {
+         var payload = Files.createDirectory(root.resolve("payload"));
+         Files.writeString(root.resolve("fibra-package.yaml"),
+             packageManifest(id, "node", "payload"));
++        Files.writeString(root.resolve("fibra-config.json"), """
++            {"format":1,"profile":"fibra-config-1","facets":{"main":{"%s":{
++              "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
++              "properties":{"probe":{"type":"string"},"holdEntered":{"type":"string"}},
++              "required":["probe","holdEntered"],"additionalProperties":false
++            }}}}
++            """.formatted(id));
+         Files.writeString(payload.resolve("fibra-plugin.yaml"), """
+             protocol: 1
+             definitionId: %s
+diff --git a/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/JavaPublishedViewRetentionTest.java b/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/JavaPublishedViewRetentionTest.java
+index c079b1e..7a52c1f 100644
+--- a/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/JavaPublishedViewRetentionTest.java
++++ b/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/JavaPublishedViewRetentionTest.java
+@@ -341,6 +341,11 @@ class JavaPublishedViewRetentionTest {
+             case "fixture.RetentionJavaEntrypoint$Peer" -> "retention-peer";
+             default -> throw new IllegalArgumentException("unknown fixture entrypoint " + entrypoint);
+         };
++        Files.writeString(root.resolve("fibra-config.json"), """
++            {"format":1,"profile":"fibra-config-1","facets":{"main":{"%s":{
++              "$schema":"https://json-schema.org/draft/2020-12/schema","type":"null"
++            }}}}
++            """.formatted(definitionId));
+         try (var output = new JarOutputStream(Files.newOutputStream(jar))) {
+             output.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml"));
+             output.write(("entrypoint: " + entrypoint + "\ndefinitionId: " + definitionId + "\n")
+diff --git a/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/NodePublishedCancellationOwnershipTest.java b/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/NodePublishedCancellationOwnershipTest.java
+index 29efa60..d18b316 100644
+--- a/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/NodePublishedCancellationOwnershipTest.java
++++ b/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/NodePublishedCancellationOwnershipTest.java
+@@ -153,6 +153,14 @@ class NodePublishedCancellationOwnershipTest {
+     private static Path nodePackage(Path work) throws Exception {
+         var root = Files.createDirectory(work.resolve(INSTANCE));
+         var payload = Files.createDirectory(root.resolve("payload"));
++        Files.writeString(root.resolve("fibra-config.json"), """
++            {"format":1,"profile":"fibra-config-1","facets":{"main":{"node-tool":{
++              "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
++              "properties":{"pidFile":{"type":"string"},"holdEntered":{"type":"string"},
++                "cancelObserved":{"type":"string"},"lifecycleEvents":{"type":"string"},"release":{"type":"string"}},
++              "required":["pidFile","holdEntered","cancelObserved","lifecycleEvents","release"],"additionalProperties":false
++            }}}}
++            """);
+         Files.writeString(root.resolve("fibra-package.yaml"), """
+             format: 1
+             id: node-tool
+diff --git a/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/host/ClientProtocolVerticalVerificationTest.java b/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/host/ClientProtocolVerticalVerificationTest.java
+index fa7aeca..f8d8eea 100644
+--- a/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/host/ClientProtocolVerticalVerificationTest.java
++++ b/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/host/ClientProtocolVerticalVerificationTest.java
+@@ -193,6 +193,12 @@ class ClientProtocolVerticalVerificationTest {
+     private Path packageSource() throws Exception {
+         var root = Files.createDirectories(work.resolve("source"));
+         var payload = Files.createDirectories(root.resolve("client"));
++        Files.writeString(root.resolve("fibra-config.json"), """
++            {"format":1,"profile":"fibra-config-1","facets":{"main":{"fixture":{
++              "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
++              "properties":{"mode":{"type":"string"}},"required":["mode"],"additionalProperties":false
++            }}}}
++            """);
+         Files.writeString(payload.resolve("index.mjs"), "export const definitions = [];\n");
+         Files.writeString(root.resolve("fibra-package.yaml"), """
+             format: 1
+diff --git a/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/host/RuntimeHostVerticalVerificationTest.java b/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/host/RuntimeHostVerticalVerificationTest.java
+index 3c75dc6..21f679f 100644
+--- a/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/host/RuntimeHostVerticalVerificationTest.java
++++ b/fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/host/RuntimeHostVerticalVerificationTest.java
+@@ -380,6 +380,13 @@ class RuntimeHostVerticalVerificationTest {
+         }
+         Files.writeString(root.resolve("fibra-package.yaml"), packageManifest(
+             JAVA_PLUGIN, "java", "plugin.jar", List.of()));
++        Files.writeString(root.resolve("fibra-config.json"), """
++            {"format":1,"profile":"fibra-config-1","facets":{"main":{"java":{
++              "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
++              "properties":{"prefix":{"type":"string"},"startMarker":{"type":"string"},"targetPath":{"type":"string"}},
++              "required":["prefix","startMarker","targetPath"],"additionalProperties":false
++            }}}}
++            """);
+         return root;
+     }
+ 
+@@ -400,6 +407,13 @@ class RuntimeHostVerticalVerificationTest {
+         Files.writeString(root.resolve("fibra-package.yaml"), packageManifest(
+             NODE_PLUGIN, "node", "node", List.of(
+                 new FacetDependency(new PluginId(JAVA_PLUGIN), new FacetId("main")))));
++        Files.writeString(root.resolve("fibra-config.json"), """
++            {"format":1,"profile":"fibra-config-1","facets":{"main":{"node":{
++              "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
++              "properties":{"prefix":{"type":"string"},"javaMarker":{"type":"string"},"targetPath":{"type":"string"}},
++              "required":["prefix","javaMarker","targetPath"],"additionalProperties":false
++            }}}}
++            """);
+         return root;
+     }
+ 
+@@ -410,6 +424,12 @@ class RuntimeHostVerticalVerificationTest {
+             EXTERNAL_PLUGIN, ExternalFixtureRuntimeProvider.RUNTIME_ID.value(),
+             "external", List.of(new FacetDependency(
+                 new PluginId(NODE_PLUGIN), new FacetId("main")))));
++        Files.writeString(root.resolve("fibra-config.json"), """
++            {"format":1,"profile":"fibra-config-1","facets":{"main":{"fixture":{
++              "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
++              "properties":{"mode":{"type":"string"}},"required":["mode"],"additionalProperties":false
++            }}}}
++            """);
+         return root;
+     }
+ 
+diff --git a/fibra-runtime-node/src/test/java/com/sstlfsj/fibra/runtime/node/NodeProcessUnitTest.java b/fibra-runtime-node/src/test/java/com/sstlfsj/fibra/runtime/node/NodeProcessUnitTest.java
+index 15cdb91..7139bb3 100644
+--- a/fibra-runtime-node/src/test/java/com/sstlfsj/fibra/runtime/node/NodeProcessUnitTest.java
++++ b/fibra-runtime-node/src/test/java/com/sstlfsj/fibra/runtime/node/NodeProcessUnitTest.java
+@@ -390,10 +390,11 @@ class NodeProcessUnitTest {
+                 const group = spawnSync('/bin/ps', ['-o', 'pgid=', '-p', String(process.pid)],
+                   { encoding: 'utf8' });
+                 if (group.status !== 0) throw new Error(`PGID lookup failed: ${group.stderr}`);
+-                fs.writeFileSync(`${root}/identity.json`, JSON.stringify({
++                fs.writeFileSync(`${root}/identity.tmp`, JSON.stringify({
+                   pid: process.pid, pgid: Number(group.stdout.trim()),
+                   execArgv: process.execArgv, entrypoint: process.argv[1]
+                 }));
++                fs.renameSync(`${root}/identity.tmp`, `${root}/identity.json`);
+                 if (mode !== 'accepted-term') process.on('SIGTERM', () => {
+                   if (mode === 'kill-absent') process.exit(0);
+                 });

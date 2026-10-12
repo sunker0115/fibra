@@ -1,0 +1,6 @@
+{
+  "path": "/private/tmp/fibra-config-contract-evidence/consumers/tela-client-snapshot.json",
+  "sha256": "cae3a06ce7b73867652ede6b03cb5c09c878c5e9b6d786eda523e9489dc6689f",
+  "producer": "TelaClientCatalogIntegrationTest: actual Engine assignment encoded by formal Java ClientProtocolCodec",
+  "consumer": "renderer-load.test.mjs: TELA_CONFIG_WIRE actual create config"
+}

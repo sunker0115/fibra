@@ -1,0 +1,2 @@
+PASS 1 multipleOf 3 falsely rejects large exact integer via double conversion
+PASS 2 underflow divisor silently disables multipleOf

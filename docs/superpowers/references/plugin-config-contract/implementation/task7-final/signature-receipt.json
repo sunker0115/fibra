@@ -1,0 +1,120 @@
+{
+  "generator": "ApiSignatureBaselineTest -Dfibra.updateApiBaseline=true",
+  "nativeExit": 0,
+  "baselines": [
+    {
+      "path": "docs/api/fibra-core-public-signatures.txt",
+      "before": "b77c26c24396e4770686069b6f0e96b72afd53b6220ecc356b0593e98cef45f8",
+      "after": "b77c26c24396e4770686069b6f0e96b72afd53b6220ecc356b0593e98cef45f8",
+      "changed": false
+    },
+    {
+      "path": "docs/api/fibra-tool-api-public-signatures.txt",
+      "before": "b2d6835e2f90665a4f379413780997889bb6063cbc26ed4afbb114e62fd5656a",
+      "after": "b2d6835e2f90665a4f379413780997889bb6063cbc26ed4afbb114e62fd5656a",
+      "changed": false
+    },
+    {
+      "path": "docs/api/fibra-storage-public-signatures.txt",
+      "before": "095c8f0809436ee4ed19398173ff6408b59db8547adc12ff644d5af875211815",
+      "after": "095c8f0809436ee4ed19398173ff6408b59db8547adc12ff644d5af875211815",
+      "changed": false
+    },
+    {
+      "path": "docs/api/fibra-shell-public-signatures.txt",
+      "before": "ec9868b243b09e72c45e73377a2bc0159b7907688f12d93ff52681a887720c97",
+      "after": "ec9868b243b09e72c45e73377a2bc0159b7907688f12d93ff52681a887720c97",
+      "changed": false
+    },
+    {
+      "path": "docs/api/fibra-config-public-signatures.txt",
+      "before": "0e01224f13cb4786e7e327d3d94a6449e371f4ba7942c286b8af20415af1104d",
+      "after": "357775b9a357854fb9cfa3cace44e882805533c96bf5d09a1c7a30c4264a124b",
+      "changed": true
+    },
+    {
+      "path": "docs/api/fibra-subprocess-public-signatures.txt",
+      "before": "3b5466c4f0a3d1b06d6c5c9604e2cb07ff5691762659e39426ffc15d93dd3ca9",
+      "after": "3b5466c4f0a3d1b06d6c5c9604e2cb07ff5691762659e39426ffc15d93dd3ca9",
+      "changed": false
+    },
+    {
+      "path": "docs/api/fibra-fs-public-signatures.txt",
+      "before": "49e609c1794fb26321223e8cdd50acd3f01d853f2311cb58257cc17de931a413",
+      "after": "49e609c1794fb26321223e8cdd50acd3f01d853f2311cb58257cc17de931a413",
+      "changed": false
+    },
+    {
+      "path": "docs/api/fibra-artifact-public-signatures.txt",
+      "before": "6402b49640d3edc96c19e3e79135744700f593f0a5828b872b2c20d789d22dc3",
+      "after": "7ab0a297365347bf70fdef20a52cd0b3b959730b12ef2ab9074b2bb7d241f8b6",
+      "changed": true
+    },
+    {
+      "path": "docs/api/fibra-cli-api-public-signatures.txt",
+      "before": "6bd4f20ac62ade670ceff45c214c5f88edc7012a1ac1b4970df9de9cbcfb8730",
+      "after": "6bd4f20ac62ade670ceff45c214c5f88edc7012a1ac1b4970df9de9cbcfb8730",
+      "changed": false
+    },
+    {
+      "path": "docs/api/fibra-bridge-public-signatures.txt",
+      "before": "4b76f6da6e3d7fdc40c57c78b0d03c214c2b3a9c784d3decfa91dae4596c4213",
+      "after": "4b76f6da6e3d7fdc40c57c78b0d03c214c2b3a9c784d3decfa91dae4596c4213",
+      "changed": false
+    },
+    {
+      "path": "docs/api/fibra-runtime-java-public-signatures.txt",
+      "before": "c7e13df3acc6329d031e10d49fbf936e7a35e51f9c567233122427cdcffdf686",
+      "after": "c7e13df3acc6329d031e10d49fbf936e7a35e51f9c567233122427cdcffdf686",
+      "changed": false
+    },
+    {
+      "path": "docs/api/fibra-runtime-node-public-signatures.txt",
+      "before": "dc786cbc3ecdcb591f05ae8b996d2634416483e4af5c7034ed3fdf7a2d01155d",
+      "after": "dc786cbc3ecdcb591f05ae8b996d2634416483e4af5c7034ed3fdf7a2d01155d",
+      "changed": false
+    },
+    {
+      "path": "docs/api/fibra-spring-boot-starter-public-signatures.txt",
+      "before": "5fdc0a73cd60c9f47f9e08c581d1a609cbd706283b63b49ba660b0d798e3d797",
+      "after": "5fdc0a73cd60c9f47f9e08c581d1a609cbd706283b63b49ba660b0d798e3d797",
+      "changed": false
+    },
+    {
+      "path": "docs/api/fibra-engine-public-signatures.txt",
+      "before": "dd42324b30e3ccca3d7daf69c6e60880efd79fb1b29d00c6d0c3d4bdac137486",
+      "after": "a0bea1697900184209ebcfdb170003048a4903524806d37ba6211e92e2940439",
+      "changed": true
+    },
+    {
+      "path": "docs/api/fibra-registry-public-signatures.txt",
+      "before": "dee3ed02dac2e074b2e0f3f776d8283b4f7478443b6e4b1cb66bcfda41b68054",
+      "after": "dee3ed02dac2e074b2e0f3f776d8283b4f7478443b6e4b1cb66bcfda41b68054",
+      "changed": false
+    },
+    {
+      "path": "docs/api/fibra-client-protocol-public-signatures.txt",
+      "before": "a8960d1067071392baf8128439d8e7005c3217547547dcb2530d3ed1625e4f7a",
+      "after": "a8960d1067071392baf8128439d8e7005c3217547547dcb2530d3ed1625e4f7a",
+      "changed": false
+    },
+    {
+      "path": "docs/api/fibra-api-public-signatures.txt",
+      "before": "c3b56f6bbc92252792ab7afac20775ec8678e2fe1f02a215b8fc85c7480ec76d",
+      "after": "c3b56f6bbc92252792ab7afac20775ec8678e2fe1f02a215b8fc85c7480ec76d",
+      "changed": false
+    },
+    {
+      "path": "docs/api/fibra-spring-public-signatures.txt",
+      "before": "689d99bd49c28af7bb331456867e2be1b64d3981fb9cd29e8db45d8640d2fb84",
+      "after": "689d99bd49c28af7bb331456867e2be1b64d3981fb9cd29e8db45d8640d2fb84",
+      "changed": false
+    },
+    {
+      "path": "docs/api/fibra-cli-public-signatures.txt",
+      "before": "e573c44ab3e8240b55eca8e2257b3712e94b346817cb6ac1c1ab65aa9e689e97",
+      "after": "e573c44ab3e8240b55eca8e2257b3712e94b346817cb6ac1c1ab65aa9e689e97",
+      "changed": false
+    }
+  ]
+}

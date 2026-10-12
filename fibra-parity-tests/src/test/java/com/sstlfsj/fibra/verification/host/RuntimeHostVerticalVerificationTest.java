@@ -380,6 +380,13 @@ class RuntimeHostVerticalVerificationTest {
         }
         Files.writeString(root.resolve("fibra-package.yaml"), packageManifest(
             JAVA_PLUGIN, "java", "plugin.jar", List.of()));
+        Files.writeString(root.resolve("fibra-config.json"), """
+            {"format":1,"profile":"fibra-config-1","facets":{"main":{"java":{
+              "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
+              "properties":{"prefix":{"type":"string"},"startMarker":{"type":"string"},"targetPath":{"type":"string"}},
+              "required":["prefix","startMarker","targetPath"],"additionalProperties":false
+            }}}}
+            """);
         return root;
     }
 
@@ -400,6 +407,13 @@ class RuntimeHostVerticalVerificationTest {
         Files.writeString(root.resolve("fibra-package.yaml"), packageManifest(
             NODE_PLUGIN, "node", "node", List.of(
                 new FacetDependency(new PluginId(JAVA_PLUGIN), new FacetId("main")))));
+        Files.writeString(root.resolve("fibra-config.json"), """
+            {"format":1,"profile":"fibra-config-1","facets":{"main":{"node":{
+              "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
+              "properties":{"prefix":{"type":"string"},"javaMarker":{"type":"string"},"targetPath":{"type":"string"}},
+              "required":["prefix","javaMarker","targetPath"],"additionalProperties":false
+            }}}}
+            """);
         return root;
     }
 
@@ -410,6 +424,12 @@ class RuntimeHostVerticalVerificationTest {
             EXTERNAL_PLUGIN, ExternalFixtureRuntimeProvider.RUNTIME_ID.value(),
             "external", List.of(new FacetDependency(
                 new PluginId(NODE_PLUGIN), new FacetId("main")))));
+        Files.writeString(root.resolve("fibra-config.json"), """
+            {"format":1,"profile":"fibra-config-1","facets":{"main":{"fixture":{
+              "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
+              "properties":{"mode":{"type":"string"}},"required":["mode"],"additionalProperties":false
+            }}}}
+            """);
         return root;
     }
 

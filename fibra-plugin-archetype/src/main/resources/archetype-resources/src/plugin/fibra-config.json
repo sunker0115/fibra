@@ -1,0 +1,30 @@
+{
+  "format": 1,
+  "profile": "fibra-config-1",
+  "facets": {
+    "main": {
+      "${pluginId}": {
+        "#[[$defs]]#": {
+          "message": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "message": {
+            "#[[$ref]]#": "#/#[[$defs]]#/message"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "additionalProperties": false,
+        "#[[$schema]]#": "https://json-schema.org/draft/2020-12/schema"
+      }
+    }
+  }
+}

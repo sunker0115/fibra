@@ -1,0 +1,1 @@
+/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn --batch-mode --no-transfer-progress -Dmaven.repo.local=/private/tmp/fibra-config-contract-m2 -pl fibra-config org.apache.maven.plugins:maven-help-plugin:3.5.1:effective-pom -Doutput=/private/tmp/fibra-config-contract-evidence/final/effective-config-pom.xml 

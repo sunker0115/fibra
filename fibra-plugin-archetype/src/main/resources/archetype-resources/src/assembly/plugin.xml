@@ -7,6 +7,12 @@
   <includeBaseDirectory>false</includeBaseDirectory>
   <files>
     <file>
+      <source>${project.basedir}/src/plugin/fibra-config.json</source>
+      <outputDirectory>/</outputDirectory>
+      <destName>fibra-config.json</destName>
+      <filtered>false</filtered>
+    </file>
+    <file>
       <source>${project.basedir}/src/plugin/fibra-package.yaml</source>
       <outputDirectory>/</outputDirectory>
       <destName>fibra-package.yaml</destName>

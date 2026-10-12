@@ -1316,7 +1316,7 @@ class JavaRuntimeDriverTest {
             .definitionIds(Set.of("sample")).build();
         var metadata = com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage.builder()
             .pluginId(new PluginId("built-in")).version("1")
-            .packageDigest("a".repeat(64)).facets(List.of(facet)).build();
+            .implementationDigest("a".repeat(64)).facets(List.of(facet)).build();
         var definition = PluginDefinition.builder("sample", Void.class,
             () -> (context, config) -> reactor.core.publisher.Mono.empty()).build();
 
@@ -1854,7 +1854,7 @@ class JavaRuntimeDriverTest {
             .build();
         var metadata = com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage.builder()
             .pluginId(new PluginId("java-test-built-in")).version("1")
-            .packageDigest("d".repeat(64)).facets(List.of(facet)).build();
+            .implementationDigest("d".repeat(64)).facets(List.of(facet)).build();
         var entries = new ArrayList<JavaDefinitionEntry<?>>();
         java.util.Arrays.stream(definitions).forEach(definition -> entries.add(
             new JavaDefinitionEntry<>(definition, ignored -> null)));

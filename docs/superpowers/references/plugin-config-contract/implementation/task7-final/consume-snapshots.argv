@@ -1,0 +1,1 @@
+node client/tests/engine-connection/consume-snapshots.mjs fibra-parity-tests/target/client-protocol-conformance 

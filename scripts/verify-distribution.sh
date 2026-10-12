@@ -38,7 +38,18 @@ readonly spring_boot_version="$(read_property spring-boot.version)"
 readonly archetype_plugin_version="$(read_property maven-archetype-plugin.version)"
 readonly dependency_plugin_version="$(read_property maven-dependency-plugin.version)"
 readonly temporary_root="$(mktemp -d)"
-trap 'rm -rf "$temporary_root"' EXIT
+cleanup() {
+  local status=$?
+  if [[ -n "${FIBRA_DISTRIBUTION_EVIDENCE_DIR:-}" ]]; then
+    mkdir -p "$FIBRA_DISTRIBUTION_EVIDENCE_DIR"
+    printf '%s\n' "$status" > "$FIBRA_DISTRIBUTION_EVIDENCE_DIR/native.exit"
+    # Preserve this exact independent publication and its consumer reports for follow-up qualification.
+    mv "$temporary_root" "$FIBRA_DISTRIBUTION_EVIDENCE_DIR/run"
+    return
+  fi
+  rm -rf "$temporary_root"
+}
+trap cleanup EXIT
 
 fibra_java_executable=""
 if [[ -n "${JAVA_HOME:-}" && -x "$JAVA_HOME/bin/java" ]]; then
@@ -343,6 +354,7 @@ unzip -q "$distribution_archive" -d "$external_cli_extract"
 mkdir -p "$external_cli_install/plugins/external/lib" \
   "$external_cli_install/config/profiles"
 cp "$external_cli_plugin" "$external_cli_install/plugins/external/lib/main.jar"
+bash "$repository_root/fibra-distribution/src/main/scripts/stage-plugin-configurations.sh" "$external_cli_install"
 printf '%s\n' \
   'format: 1' \
   'id: external' \

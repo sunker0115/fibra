@@ -1,0 +1,58 @@
+[
+  {
+    "path": "distribution/run/distribution/spring-boot-application/target/surefire-reports/TEST-verification.distribution.SpringConsumerTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "3998ea0907397e04e831590a5610bceebba90aea4496efc35240f6cd3454ae66"
+  },
+  {
+    "path": "distribution/run/distribution/core-application/target/surefire-reports/TEST-verification.distribution.CoreConsumerTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "74127d745a31b02803277b601cd0fac84b1427c969b25c8ff8b921cbc0dbb9ec"
+  },
+  {
+    "path": "distribution/run/distribution/engine-application/target/surefire-reports/TEST-verification.distribution.EngineConsumerTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "38ac68618c7bc1ed8a4378b3a60f3e58edc7e181f84121a1a3ac963b161b18d1"
+  },
+  {
+    "path": "distribution/run/distribution/engine-application/target/surefire-reports/TEST-verification.distribution.LifecycleConsumerTest.xml",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "ea94635fba139e211dc0ab3660bbec6876a6821cff30ff0bb504cfbefc0a338d"
+  },
+  {
+    "path": "distribution/run/distribution/cli-application/target/surefire-reports/TEST-verification.distribution.CliConsumerTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "96399cfabc2e98c44dad5a666df514404061704a1acbfbb8232ba44b7a5a13e8"
+  },
+  {
+    "path": "distribution/run/distribution/runtime-provider-application/target/surefire-reports/TEST-verification.distribution.ClientProtocolConsumerTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "8f5b3c90183795e152f17f4147e11011e991bc43441bcb5a31bf72f4ceb7c1c2"
+  },
+  {
+    "path": "distribution/run/distribution/runtime-provider-application/target/surefire-reports/TEST-verification.distribution.RuntimeProviderConsumerTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "3197225466afea111f0fafe363935950be5e599f51b6c0d2d0cb2c6455ad67e6"
+  }
+]

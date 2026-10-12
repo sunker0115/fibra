@@ -1,0 +1,23 @@
+{
+  "scope": "isolated Assembly 3.8.0 opt-in and byte-copy probe; not formal plugins/shade/archetype qualification",
+  "jar": "/private/tmp/fibra-config-assembly.er5wzdhx/active/target/active-1.jar",
+  "jarSha256": "94ea1e89363dfe3a51057bda778f288b9e0b3fdb914e7303480eb84e05bd5cff",
+  "sourceSha256": "e4ff20fc0a4f45e6d361d434d8f652adf48795c0bcaad9f8d0f8e31fbeb9339d",
+  "assertions": [
+    "unique final JAR entry equals author source and custom output bytes",
+    "output directory with space preserved existing resources",
+    "parent pluginManagement configuration-only does not activate idle module",
+    "forced copy updates same-size same-mtime changed source"
+  ],
+  "nativeExits": {
+    "02-incremental.exit": 0,
+    "03-jar.exit": 0,
+    "01-resources.exit": 0
+  },
+  "inputs": {
+    "pom.xml": "5568c644cad72e2bacc34f694296da1e4a1bd284e8b9d1976c1a48530af5be95",
+    "active/pom.xml": "859e813a4a09113607e936580fe34d87dc9c0218518578afa4cfa3fd8e9bf5a9",
+    "idle/pom.xml": "364bc3e2f5000737c9db580481a039a69d092e65b073e065c5fcd7caedc26abd",
+    "active/src/plugin/fibra-config.json": "e4ff20fc0a4f45e6d361d434d8f652adf48795c0bcaad9f8d0f8e31fbeb9339d"
+  }
+}

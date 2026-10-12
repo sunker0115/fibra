@@ -1,0 +1,22 @@
+{
+  "finalZipSha256": "d1ddccfa380f38d70712228bcb454ee3fe3323fc41dff18fab1c219f4375c30b",
+  "entries": [
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/itu-1.14.0.jar",
+      "sha256": "5cf40ab0cc77828ab2b875b1f3ecd71c8295d7721933476abc2e08fddcea164a",
+      "bytes": 57633,
+      "compressedBytes": 51666
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/json-schema-validator-3.0.8.jar",
+      "sha256": "d3f4c61ba35c3543bdf1ab42462bf89721542f4adea5b092ee7b430dfd467181",
+      "bytes": 585170,
+      "compressedBytes": 526444
+    }
+  ],
+  "jarBytes": 642803,
+  "compressedBytes": 578110,
+  "meaning": "two added library entries only; not whole release delta or startup benchmark",
+  "reusedOsvInventorySha256": "db960c0d1e9b89fd5e8381865427d29875c79d9734b47c52f29f7261f7579c11",
+  "all38RuntimeJarBytesUnchanged": true
+}

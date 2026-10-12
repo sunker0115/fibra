@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "profile": "fibra-config-1",
+  "facets": {
+    "main": {
+      "fibra-tool-shell": {
+        "type": "null",
+        "$schema": "https://json-schema.org/draft/2020-12/schema"
+      }
+    }
+  }
+}

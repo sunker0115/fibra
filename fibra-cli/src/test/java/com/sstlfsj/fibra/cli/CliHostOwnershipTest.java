@@ -203,6 +203,7 @@ class CliHostOwnershipTest {
             }
             output.closeEntry();
         }
+        Files.writeString(root.resolve("fibra-config.json"), "{\"format\":1,\"profile\":\"fibra-config-1\",\"facets\":{\"main\":{\"ownership\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"string\"}}}}");
         Files.writeString(root.resolve("fibra-package.yaml"),
             "format: 1\nid: ownership\nversion: 1.0.0\nfacets:\n"
                 + "  - id: main\n    role: host\n    runtime: java\n"

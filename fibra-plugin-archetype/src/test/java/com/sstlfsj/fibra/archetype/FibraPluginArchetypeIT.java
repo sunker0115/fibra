@@ -15,6 +15,9 @@ import com.sstlfsj.fibra.engine.execution.ExecutionUnitKey;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.deployment.PluginSelection;
 import com.sstlfsj.fibra.runtime.java.JavaRuntimeProvider;
+import com.sstlfsj.fibra.plugins.acceptance.AuthorConfigurationQualification;
+import com.sstlfsj.fibra.config.ConfigSchema;
+import com.sstlfsj.fibra.value.LiteralValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -27,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FibraPluginArchetypeIT {
+    private static final List<AuthorConfigurationQualification> FAILED_AUTHOR_OWNERS = new java.util.ArrayList<>();
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
 
     @Test
@@ -57,13 +61,31 @@ class FibraPluginArchetypeIT {
                 "generated-plugin", new PluginDefinitionRef(
                     "sample-fibra-plugin", "main", "sample-fibra-plugin"))
             .build()));
-        try (var engine = FibraEngine.builder(packages,
-                DeploymentTargetStore.inMemory())
+        var targets = DeploymentTargetStore.inMemory();
+        var engine = FibraEngine.builder(packages, targets)
             .runtimeProvider(new JavaRuntimeProvider(List.of()))
-            .hostTerminationPort(ignored -> { }).build()) {
+            .hostTerminationPort(ignored -> { }).build();
+        try (var qualification = new AuthorConfigurationQualification(engine, packages, targets,
+                owner -> {
+                    FAILED_AUTHOR_OWNERS.add(owner);
+                    throw new AssertionError("QA cleanup requires host termination");
+                })) {
             engine.startAsync().block(TIMEOUT);
-            var deployed = engine.submit(ApplyDeployment.builder(graph)
+            var selected = engine.submit(ApplyDeployment.builder(new DesiredInputGraph(List.of()))
                 .expectedRevision(0)
+                .selections(List.of(new PluginSelection(installed.pluginId(), installed.packageRevision(), false)))
+                .configContext(ConfigContextSnapshot.empty()).build()).block(TIMEOUT).view();
+            var revision = selected.engine().target().orElseThrow().targetRevision();
+            var document = qualification.qualify(new PluginSelection(installed.pluginId(),
+                installed.packageRevision(), false), revision);
+            var schema = ConfigSchema.compile(document.facets().get("main").get("sample-fibra-plugin"));
+            assertTrue(schema.validate(LiteralValue.of(null)).isEmpty());
+            assertTrue(schema.validate(LiteralValue.of(java.util.Map.of("message", "hello"))).isEmpty());
+            assertTrue(schema.validate(LiteralValue.of(java.util.Map.of())).isPresent());
+            assertTrue(schema.validate(LiteralValue.of(java.util.Map.of("message", ""))).isPresent());
+            assertTrue(schema.validate(LiteralValue.of(java.util.Map.of("message", "hello", "unknown", true))).isPresent());
+            var deployed = engine.submit(ApplyDeployment.builder(graph)
+                .expectedRevision(revision)
                 .selections(List.of(new PluginSelection(installed.pluginId(),
                     installed.packageRevision(), true)))
                 .configContext(ConfigContextSnapshot.empty()).build())

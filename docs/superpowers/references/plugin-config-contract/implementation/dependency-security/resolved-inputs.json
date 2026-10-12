@@ -1,0 +1,22 @@
+[
+  {
+    "path": "com/networknt/json-schema-validator/3.0.8/json-schema-validator-3.0.8.jar",
+    "bytes": 585170,
+    "sha256": "d3f4c61ba35c3543bdf1ab42462bf89721542f4adea5b092ee7b430dfd467181"
+  },
+  {
+    "path": "com/networknt/json-schema-validator/3.0.8/json-schema-validator-3.0.8.pom",
+    "bytes": 17637,
+    "sha256": "49771cfe401dba1c7348aad0db5a7c827a736227211f066a1a46f8fa983f1930"
+  },
+  {
+    "path": "com/ethlo/time/itu/1.14.0/itu-1.14.0.jar",
+    "bytes": 57633,
+    "sha256": "5cf40ab0cc77828ab2b875b1f3ecd71c8295d7721933476abc2e08fddcea164a"
+  },
+  {
+    "path": "com/ethlo/time/itu/1.14.0/itu-1.14.0.pom",
+    "bytes": 18267,
+    "sha256": "0d5ae0bec09495529c63cc8a6c13253870686832a4e3b206c138165035ae4bc5"
+  }
+]

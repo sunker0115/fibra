@@ -153,6 +153,14 @@ class NodePublishedCancellationOwnershipTest {
     private static Path nodePackage(Path work) throws Exception {
         var root = Files.createDirectory(work.resolve(INSTANCE));
         var payload = Files.createDirectory(root.resolve("payload"));
+        Files.writeString(root.resolve("fibra-config.json"), """
+            {"format":1,"profile":"fibra-config-1","facets":{"main":{"node-tool":{
+              "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
+              "properties":{"pidFile":{"type":"string"},"holdEntered":{"type":"string"},
+                "cancelObserved":{"type":"string"},"lifecycleEvents":{"type":"string"},"release":{"type":"string"}},
+              "required":["pidFile","holdEntered","cancelObserved","lifecycleEvents","release"],"additionalProperties":false
+            }}}}
+            """);
         Files.writeString(root.resolve("fibra-package.yaml"), """
             format: 1
             id: node-tool

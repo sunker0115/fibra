@@ -1,0 +1,50 @@
+[
+  {
+    "path": "internal-reports/fibra-plugin-archetype/target/failsafe-reports/TEST-com.sstlfsj.fibra.archetype.FibraPluginArchetypeIT.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "abdf4adf240403c0710a7257c9fd77d90126c6c54effd3799dc49f4c978b7d8b",
+    "execution": "failsafe:integration-test",
+    "report_mtime": "2026-10-12T17:23:49.196054+08:00",
+    "execution_log": "internal.log",
+    "execution_log_line": 687
+  },
+  {
+    "path": "internal-reports/fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/target/failsafe-reports/TEST-com.sstlfsj.fibra.plugins.acceptance.FormalPluginArtifactsIT.xml",
+    "tests": "7",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "91cb091da54c3c8c3715bbe0541f6aba8a72d0da70b02037f123179370631b74",
+    "execution": "failsafe:integration-test",
+    "report_mtime": "2026-10-12T17:23:55.595819+08:00",
+    "execution_log": "internal.log",
+    "execution_log_line": 1280
+  },
+  {
+    "path": "internal-reports/fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.acceptance.AuthorConfigurationQualificationTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "e85df549b0ff3bfff1aba0728d55e2cadaa12b7c83ccbd3e651335cea66145c5",
+    "execution": "surefire:test",
+    "report_mtime": "2026-10-12T17:23:53.489515+08:00",
+    "execution_log": "internal.log",
+    "execution_log_line": 1257
+  },
+  {
+    "path": "internal-reports/fibra-example/content-sanitizer/spring-host/target/failsafe-reports/TEST-com.sstlfsj.fibra.example.SanitizerAuthorConfigurationIT.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "8b2f8ca1754516278a35c5b966d9b3ac28bdeced152c86737e42ac34ff7b46d5",
+    "execution": "failsafe:integration-test",
+    "report_mtime": "2026-10-12T17:23:56.871260+08:00",
+    "execution_log": "internal.log",
+    "execution_log_line": 1375
+  }
+]

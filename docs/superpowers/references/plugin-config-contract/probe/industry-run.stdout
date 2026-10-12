@@ -1,0 +1,19 @@
+PASS 1 local with typed environment passes
+PASS 2 remote with typed headers and false oauth passes
+PASS 3 remote oauth object passes
+PASS 4 local missing command fails
+PASS 5 remote with local-only command fails
+PASS 6 numeric header fails
+PASS 7 oauth true fails
+PASS 8 unknown oauth field fails
+PASS 9 number-or-disabled accepts exact decimal
+PASS 10 number-or-disabled accepts literal disabled
+PASS 11 number string is not coerced
+PASS 12 negative timeout fails
+PASS 13 oneOf rejects two matching branches
+PASS 14 oneOf rejects zero matching branches
+PASS 15 oneOf accepts exactly one branch
+PASS 16 allOf string intersection passes
+PASS 17 allOf enforces both constraints
+PASS 18 allOf does not merge closed object properties
+ASSERTIONS=18

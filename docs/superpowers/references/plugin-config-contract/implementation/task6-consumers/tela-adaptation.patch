@@ -1,0 +1,606 @@
+--- a/tela-agent-plugin/pom.xml
++++ b/tela-agent-plugin/pom.xml
+@@ -80,6 +80,29 @@
+     <plugins>
+       <plugin>
+         <groupId>org.apache.maven.plugins</groupId>
++        <artifactId>maven-assembly-plugin</artifactId>
++        <executions><execution>
++          <id>stage-plugin-configuration</id><phase>process-resources</phase>
++          <goals><goal>single</goal></goals>
++          <configuration>
++            <attach>false</attach><appendAssemblyId>false</appendAssemblyId>
++            <outputDirectory>${project.build.outputDirectory}</outputDirectory><finalName>.</finalName>
++            <archiverConfig><forced>true</forced></archiverConfig>
++            <inlineDescriptors><inlineDescriptor>
++              <id>plugin-configuration</id><formats><format>dir</format></formats>
++              <includeBaseDirectory>false</includeBaseDirectory>
++              <files><file>
++                <source>${project.basedir}/src/plugin/fibra-config.json</source>
++                <outputDirectory>META-INF/fibra</outputDirectory><destName>config.json</destName>
++                <filtered>false</filtered>
++              </file></files>
++            </inlineDescriptor></inlineDescriptors>
++          </configuration>
++        </execution></executions>
++      </plugin>
++
++      <plugin>
++        <groupId>org.apache.maven.plugins</groupId>
+         <artifactId>maven-shade-plugin</artifactId>
+         <executions>
+           <execution>
+--- a/tela-agent-plugin/src/plugin/fibra-config.json
++++ b/tela-agent-plugin/src/plugin/fibra-config.json
+@@ -0,0 +1,22 @@
++{
++  "format": 1,
++  "profile": "fibra-config-1",
++  "facets": {
++    "main": {
++      "tela-agent": {
++        "$schema": "https://json-schema.org/draft/2020-12/schema",
++        "type": "object",
++        "properties": {
++          "dataRoot": {
++            "type": "string",
++            "minLength": 1
++          }
++        },
++        "additionalProperties": false,
++        "required": [
++          "dataRoot"
++        ]
++      }
++    }
++  }
++}
+--- a/tela-desktop/plugins/agent-view/fibra-config.json
++++ b/tela-desktop/plugins/agent-view/fibra-config.json
+@@ -0,0 +1,14 @@
++{
++  "format": 1,
++  "profile": "fibra-config-1",
++  "facets": {
++    "main": {
++      "agent-view": {
++        "$schema": "https://json-schema.org/draft/2020-12/schema",
++        "type": "object",
++        "properties": {},
++        "additionalProperties": false
++      }
++    }
++  }
++}
+--- a/tela-desktop/scripts/build.mjs
++++ b/tela-desktop/scripts/build.mjs
+@@ -7,10 +7,13 @@
+ const target = resolve(root, "target");
+ const app = resolve(target, "app");
+ const plugin = resolve(target, "client-plugin");
++const packageRoot = resolve(target, "client-package");
+ 
+ await rm(target, { recursive: true, force: true });
+ await mkdir(app, { recursive: true });
+ await mkdir(plugin, { recursive: true });
++await mkdir(packageRoot, { recursive: true });
++await cp(resolve(root, "plugins/agent-view/fibra-config.json"), resolve(packageRoot, "fibra-config.json"));
+ 
+ await Promise.all([
+   build({
+--- a/tela-desktop/test/renderer-load.test.mjs
++++ b/tela-desktop/test/renderer-load.test.mjs
+@@ -138,6 +138,65 @@
+     assert.equal(message.payload.outcome.kind, kind);
+     return message.payload.outcome;
+   }
++
++  test("formal agent-view product module creates, activates and releases its root and scope", async () => {
++    const built = spawnSync(process.execPath, ["scripts/build.mjs"], { cwd: root, encoding: "utf8" });
++    assert.equal(built.status, 0, built.stdout + built.stderr);
++    assert.deepEqual(await readFile(resolve(root, "target/client-package/fibra-config.json")),
++      await readFile(resolve(root, "plugins/agent-view/fibra-config.json")));
++    const product = await readFile(resolve(root, "target/client-plugin/agent-view.js"), "utf8");
++    const calls = [];
++    const h = await renderer(product, {
++      assignment(value) { value.definitionId = "agent-view"; },
++      globals: {
++        TelaReact: { createElement(type, props) { return { type, props }; } },
++        TelaUi: {
++          mount(id) { calls.push(["mount", id]); return {}; },
++          createRoot() {
++            calls.push(["createRoot"]);
++            return { render(element) { assert.equal(typeof element.type, "function"); calls.push(["render"]); },
++              unmount() { calls.push(["unmount"]); } };
++          }
++        }
++      }
++    });
++    await h.action("prepare");
++    outcome(h, "APPLIED");
++    assert.deepEqual(calls, []);
++    await h.action("activate");
++    outcome(h, "APPLIED");
++    assert.deepEqual(calls, [["mount", "entry"], ["createRoot"], ["render"]]);
++    assert.equal(h.units.size, 1);
++    const productScope = h.units.get("runtime").scope;
++    assert.equal(productScope.closed, false);
++    await h.action("stop");
++    outcome(h, "APPLIED");
++    assert.deepEqual(calls, [["mount", "entry"], ["createRoot"], ["render"], ["unmount"]]);
++    assert.equal(h.units.size, 0);
++    assert.equal(productScope.closed, true);
++    assert.deepEqual(h.revoked, h.created);
++    await h.action("stop");
++    assert.equal(calls.filter(call => call[0] === "unmount").length, 1);
++  });
++
++  test("actual create receives the protocol tagged decimal without Number conversion", async () => {
++    const config = process.env.TELA_CONFIG_WIRE
++      ? JSON.parse(await readFile(process.env.TELA_CONFIG_WIRE, "utf8")).payload.assignments[0].config
++      : { kind: "NUMBER", value: "9007199254740993" };
++    const h = await renderer(entry(`globalThis.receivedConfig = context.config;
++      context.scope.effect(() => events.push("closed")); return { stop() { events.push("stop"); } };`), {
++      assignment(value) { value.config = config; }
++    });
++    await h.action("prepare");
++    outcome(h, "APPLIED");
++    assert.equal(h.context.receivedConfig.kind, "NUMBER");
++    assert.equal(h.context.receivedConfig.value, "9007199254740993");
++    assert.equal(typeof h.context.receivedConfig.value, "string");
++    await h.action("stop");
++    assert.deepEqual(h.events, ["stop", "closed"]);
++    assert.equal(h.context.observedScope.closed, true);
++    assert.deepEqual(h.revoked, h.created);
++  });
+ 
+   async function loadFailure(harness) {
+     let failure;
+--- a/tela-distribution/pom.xml
++++ b/tela-distribution/pom.xml
+@@ -119,6 +119,15 @@
+         <version>3.5.0</version>
+         <executions>
+           <execution>
++            <id>stage-plugin-configurations</id><phase>prepare-package</phase>
++            <goals><goal>exec</goal></goals>
++            <configuration><executable>sh</executable><arguments>
++              <argument>${project.basedir}/scripts/stage-plugin-configurations.sh</argument>
++              <argument>${project.basedir}/..</argument><argument>${project.version}</argument>
++              <argument>${project.build.directory}/plugin-configurations</argument>
++            </arguments></configuration>
++          </execution>
++          <execution>
+             <id>build-macos-desktop-distribution</id>
+             <phase>package</phase>
+             <goals><goal>exec</goal></goals>
+--- a/tela-distribution/scripts/stage-plugin-configurations.sh
++++ b/tela-distribution/scripts/stage-plugin-configurations.sh
+@@ -0,0 +1,17 @@
++#!/bin/sh
++set -eu
++root=$1
++version=$2
++output=$3
++stage() {
++  module=$1
++  plugin=$2
++  classifier=$3
++  mkdir -p "$output/$plugin"
++  unzip -p "$root/$module/target/$module-$version$classifier.jar" META-INF/fibra/config.json > "$output/$plugin/fibra-config.json"
++  cmp "$root/$module/src/plugin/fibra-config.json" "$output/$plugin/fibra-config.json"
++}
++stage tela-model-api tela-model-api ''
++stage tela-agent-plugin tela-agent '-plugin'
++stage tela-model-deterministic-plugin tela-model-deterministic ''
++stage tela-model-openai-plugin tela-model-openai '-plugin'
+--- a/tela-distribution/src/main/assembly/bin.xml
++++ b/tela-distribution/src/main/assembly/bin.xml
+@@ -35,6 +35,27 @@
+     </fileSet>
+   </fileSets>
+   <files>
++    <file>
++      <source>${project.build.directory}/plugin-configurations/tela-model-api/fibra-config.json</source>
++      <outputDirectory>/fibra/plugins/tela-model-api</outputDirectory>
++    </file>
++    <file>
++      <source>${project.build.directory}/plugin-configurations/tela-agent/fibra-config.json</source>
++      <outputDirectory>/fibra/plugins/tela-agent</outputDirectory>
++    </file>
++    <file>
++      <source>${project.build.directory}/plugin-configurations/tela-model-deterministic/fibra-config.json</source>
++      <outputDirectory>/fibra/plugins/tela-model-deterministic</outputDirectory>
++    </file>
++    <file>
++      <source>${project.build.directory}/plugin-configurations/tela-model-openai/fibra-config.json</source>
++      <outputDirectory>/fibra/plugins/tela-model-openai</outputDirectory>
++    </file>
++    <file>
++      <source>${project.basedir}/../tela-desktop/target/client-package/fibra-config.json</source>
++      <outputDirectory>/fibra/plugins/tela-agent-view</outputDirectory>
++    </file>
++
+     <file>
+       <source>src/main/assembly/THIRD_PARTY_NOTICES.md</source>
+       <outputDirectory>/</outputDirectory>
+--- a/tela-distribution/src/test/java/com/sstlfsj/tela/distribution/TelaJavaDefinitionConsumptionTest.java
++++ b/tela-distribution/src/test/java/com/sstlfsj/tela/distribution/TelaJavaDefinitionConsumptionTest.java
+@@ -57,6 +57,85 @@
+     @TempDir Path temporary;
+ 
+     @Test
++    void actualAuthorJarsExposeOneContractAndHostEngineRejectsBeforeBusinessExecution() throws Exception {
++        var modules = Map.of("tela-model-api", "tela-model-api", "tela-agent-plugin", "tela-agent",
++            "tela-model-deterministic-plugin", "tela-model-deterministic", "tela-model-openai-plugin", "tela-model-openai");
++        var sources = new LinkedHashMap<String, Path>();
++        for (var author : modules.entrySet()) {
++            var module = author.getKey(); var id = author.getValue();
++            var classifier = module.equals("tela-agent-plugin") || module.equals("tela-model-openai-plugin") ? "-plugin" : "";
++            var jarPath = Path.of("..", module, "target", module + "-0.1.0-SNAPSHOT" + classifier + ".jar");
++            var source = Files.createDirectories(temporary.resolve(id));
++            Files.createDirectories(source.resolve("lib"));
++            Files.copy(jarPath, source.resolve("lib/main.jar"));
++            try (var jar = new JarFile(jarPath.toFile())) {
++                var entry = jar.getJarEntry("META-INF/fibra/config.json");
++                assertTrue(entry != null, "actual published author JAR must contain configuration");
++                var bytes = jar.getInputStream(entry).readAllBytes();
++                assertArrayEquals(Files.readAllBytes(Path.of("..", module, "src/plugin/fibra-config.json")), bytes);
++                Files.write(source.resolve("fibra-config.json"), bytes);
++            }
++            Files.writeString(source.resolve("fibra-package.yaml"), Files.readString(Path.of(
++                "src/main/tela-plugins", id, "fibra-package.yaml")).replace("${project.version}", "0.1.0-SNAPSHOT"));
++            sources.put(id, source);
++        }
++        try (var packages = new com.sstlfsj.fibra.artifact.PluginPackageStore(temporary.resolve("packages"));
++             var targets = new com.sstlfsj.fibra.engine.deployment.FileDeploymentTargetStore(temporary.resolve("targets"));
++             var engine = com.sstlfsj.fibra.engine.FibraEngine.builder(packages, targets)
++                 .runtimeProvider(new JavaRuntimeProvider(List.of())).hostTerminationPort(ignored -> { }).build()) {
++            engine.startAsync().block();
++            var registry = new com.sstlfsj.fibra.registry.PluginRegistry(engine, packages,
++                new com.sstlfsj.fibra.registry.InMemoryPluginAuditRepository());
++            for (var source : sources.values()) registry.install(new com.sstlfsj.fibra.registry.PluginInstallRequest(source, false)).block();
++            var before = engine.published().current();
++            var target = before.engine().target().orElseThrow();
++            var bytes = Files.readAllBytes(temporary.resolve("targets/target.json"));
++            var history = registry.history().size();
++            for (var id : sources.keySet()) {
++                var ref = new PluginDefinitionRef(id, "main", id);
++                var catalog = engine.describeDefinitions(new PluginId(id), target.targetRevision()).block();
++                assertEquals(List.of(id), catalog.facets().getFirst().definitionIds());
++                var contract = engine.describeConfiguration(ref, target.targetRevision()).block();
++                assertEquals(catalog.packageRevision(), contract.packageRevision());
++                assertEquals(target.targetRevision(), contract.targetRevision());
++                var schema = com.sstlfsj.fibra.config.ConfigSchema.compile(contract.source());
++                Map<String, Object> config = id.equals("tela-agent") ? Map.of("dataRoot", temporary.resolve("store").toString())
++                    : id.equals("tela-model-openai") ? Map.of("model", "fixture-model") : Map.of();
++                assertTrue(schema.validate(LiteralValue.of(config)).isEmpty());
++                assertTrue(schema.validate(LiteralValue.of(Map.of("UNKNOWN_KEY_CANARY", "SECRET_VALUE_CANARY"))).isPresent());
++                assertTrue(schema.validate(LiteralValue.of(null)).isPresent());
++                if (id.equals("tela-model-openai")) {
++                    var nullable = new LinkedHashMap<String, Object>(config);
++                    nullable.put("baseUrl", null); nullable.put("requestTimeoutMillis", null);
++                    assertTrue(schema.validate(LiteralValue.of(nullable)).isEmpty());
++                    nullable.put("requestTimeoutMillis", new java.math.BigDecimal("9223372036854775808"));
++                    assertTrue(schema.validate(LiteralValue.of(nullable)).isPresent());
++                }
++            }
++            assertSame(before, engine.published().current());
++            assertEquals(history, registry.history().size());
++            assertArrayEquals(bytes, Files.readAllBytes(temporary.resolve("targets/target.json")));
++            var selections = target.selections().values().stream().map(value ->
++                new PluginSelection(value.pluginId(), value.packageRevision(), true)).toList();
++            var invalid = DesiredInputEntry.builder("invalid-agent", new PluginDefinitionRef("tela-agent", "main", "tela-agent"))
++                .config(LiteralValue.of(Map.of("UNKNOWN_KEY_CANARY", "SECRET_VALUE_CANARY"))).build();
++            var failure = assertThrows(com.sstlfsj.fibra.engine.EngineChangeException.class, () -> engine.submit(
++                com.sstlfsj.fibra.engine.ApplyDeployment.builder(new DesiredInputGraph(List.of(invalid)))
++                    .expectedRevision(target.targetRevision()).selections(selections)
++                    .configContext(ConfigContextSnapshot.empty()).build()).block());
++            assertEquals(com.sstlfsj.fibra.engine.observation.TargetSaveState.NOT_SAVED, failure.targetSaveState());
++            assertArrayEquals(bytes, Files.readAllBytes(temporary.resolve("targets/target.json")));
++            assertFalse(Files.exists(temporary.resolve("store")));
++            var valid = DesiredInputEntry.builder("model-api", new PluginDefinitionRef("tela-model-api", "main", "tela-model-api"))
++                .config(LiteralValue.of(Map.of())).build();
++            engine.submit(com.sstlfsj.fibra.engine.ApplyDeployment.builder(new DesiredInputGraph(List.of(valid)))
++                .expectedRevision(target.targetRevision()).selections(selections)
++                .configContext(ConfigContextSnapshot.empty()).build()).block();
++            assertEquals(target.targetRevision() + 1, engine.snapshot().target().orElseThrow().targetRevision());
++        }
++    }
++
++    @Test
+     void actualAgentDeclarationSupportsCatalogAndCandidatePreparation() throws Exception {
+         assertExecutable("tela-agent-plugin", "tela-agent", Map.of("dataRoot", temporary.resolve("data").toString()));
+         assertFalse(Files.exists(temporary.resolve("data")), "prepare must not start the Agent store");
+--- a/tela-host/src/test/java/com/sstlfsj/tela/host/client/TelaClientCatalogIntegrationTest.java
++++ b/tela-host/src/test/java/com/sstlfsj/tela/host/client/TelaClientCatalogIntegrationTest.java
+@@ -66,7 +66,12 @@
+             assertEquals(DefinitionCatalogException.Code.STALE_TARGET, stale.code());
+             var ref = new PluginDefinitionRef(catalog.pluginId().value(), catalog.facets().getFirst().facetId().value(),
+                     catalog.facets().getFirst().definitionIds().getFirst());
+-            var entry = DesiredInputEntry.builder(entryId, ref).publicationRequirement(PublicationRequirement.PENDING_ALLOWED).build();
++            var contract = engine.describeConfiguration(ref, selected.targetRevision()).block();
++            assertEquals(catalog.packageRevision(), contract.packageRevision());
++            assertSame(beforeCatalog, engine.published().current());
++            var entry = DesiredInputEntry.builder(entryId, ref)
++                    .config(com.sstlfsj.fibra.value.LiteralValue.of(new java.math.BigDecimal("9007199254740993")))
++                    .publicationRequirement(PublicationRequirement.PENDING_ALLOWED).build();
+             var apply = ApplyDeployment.builder(new DesiredInputGraph(List.of(entry)))
+                     .expectedRevision(catalog.targetRevision())
+                     .selections(List.of(new PluginSelection(catalog.pluginId(), catalog.packageRevision(), true)))
+@@ -78,6 +83,13 @@
+             assertEquals(entryId, hub.assignments().getFirst().desiredEntryId());
+             assertEquals(declaration, hub.assignments().getFirst().definitionId());
+             assertEquals("PENDING", hub.observations().getFirst().aggregateState().name());
++            var snapshotWire = wire(new ClientMessage.Snapshot(new SessionFence("host", "execution"),
++                engine.published().current().viewRevision(), created.targetRevision(), created.targetDigest(),
++                hub.assignments(), List.of()));
++            assertTrue(snapshotWire.contains("\"kind\":\"NUMBER\",\"value\":\"9007199254740993\""));
++            assertEquals(entry.config(), ((ClientMessage.Snapshot) codec.decode(snapshotWire).message()).assignments().getFirst().config());
++            if (System.getProperty("tela.config.wire.archive") != null)
++                Files.writeString(Path.of(System.getProperty("tela.config.wire.archive")), snapshotWire);
+             assertThrows(IllegalStateException.class, () -> engine.submit(apply).block());
+             assertEquals(created, engine.snapshot().target().orElseThrow(), "stale CAS cannot replace the target");
+             String execution = hub.connect("catalog-owner", wire(new ClientMessage.Hello(
+@@ -120,6 +132,10 @@
+                     dependencies: []
+                     capabilities: []
+                 """.formatted(id));
++        Files.writeString(source.resolve("fibra-config.json"), """
++            {"format":1,"profile":"fibra-config-1","facets":{"web-facet":{"%s":{
++            "$schema":"https://json-schema.org/draft/2020-12/schema","type":"integer","maximum":9007199254740993}}}}
++            """.formatted(declaration));
+         return source;
+     }
+ 
+--- a/tela-host/src/test/java/com/sstlfsj/tela/host/client/TelaClientRuntimeTest.java
++++ b/tela-host/src/test/java/com/sstlfsj/tela/host/client/TelaClientRuntimeTest.java
+@@ -444,6 +444,10 @@
+                 {"format":1,"definitions":["agent-view"],"entryModule":"view.js",
+                  "resources":[{"path":"view.js","digest":"%s","byteLength":%d}]}
+                 """.formatted(digest, script.length));
++        Files.writeString(source.resolve("fibra-config.json"), """
++                {"format":1,"profile":"fibra-config-1","facets":{"web":{"agent-view":{
++                "$schema":"https://json-schema.org/draft/2020-12/schema","type":"null"}}}}
++                """);
+         Files.writeString(source.resolve("fibra-package.yaml"), """
+                 format: 1
+                 id: client-view
+--- a/tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostClientShutdownIntegrationTest.java
++++ b/tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostClientShutdownIntegrationTest.java
+@@ -843,6 +843,10 @@
+                 {"format":1,"definitions":["agent-view"],"entryModule":"view.js",
+                  "resources":[{"path":"view.js","digest":"%s","byteLength":%d}]}
+                 """.formatted(digest, script.length));
++        Files.writeString(source.resolve("fibra-config.json"), """
++                {"format":1,"profile":"fibra-config-1","facets":{"web":{"agent-view":{
++                "$schema":"https://json-schema.org/draft/2020-12/schema","type":"null"}}}}
++                """);
+         Files.writeString(source.resolve("fibra-package.yaml"), """
+                 format: 1
+                 id: client-view
+--- a/tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostGatewayErrorTest.java
++++ b/tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostGatewayErrorTest.java
+@@ -43,6 +43,50 @@
+ import static org.mockito.Mockito.when;
+ 
+ class TelaHostGatewayErrorTest {
++    @Test
++    @org.junit.jupiter.api.extension.ExtendWith(org.springframework.boot.test.system.OutputCaptureExtension.class)
++    void actualClientContractFailureUsesSafeGatewayProjectionAndLogs(@TempDir Path temporary,
++            org.springframework.boot.test.system.CapturedOutput output) throws Exception {
++        var source = Files.createDirectories(temporary.resolve("agent-view"));
++        var payload = Files.createDirectories(source.resolve("client"));
++        var desktop = Path.of("../tela-desktop");
++        for (var name : java.util.List.of("agent-view.js", "tela-client.json"))
++            Files.copy(desktop.resolve("target/client-plugin").resolve(name), payload.resolve(name));
++        Files.copy(desktop.resolve("target/client-package/fibra-config.json"), source.resolve("fibra-config.json"));
++        Files.writeString(source.resolve("fibra-package.yaml"), Files.readString(Path.of(
++            "../tela-distribution/src/main/tela-plugins/tela-agent-view/fibra-package.yaml"))
++            .replace("${project.version}", "0.1.0-SNAPSHOT"));
++        try (var hub = new TelaClientTransportHub();
++             var packages = new com.sstlfsj.fibra.artifact.PluginPackageStore(temporary.resolve("packages"));
++             var engine = com.sstlfsj.fibra.engine.FibraEngine.builder(packages,
++                 com.sstlfsj.fibra.engine.deployment.DeploymentTargetStore.inMemory())
++                 .runtimeProvider(new com.sstlfsj.tela.host.client.TelaClientRuntimeProvider(hub))
++                 .hostTerminationPort(ignored -> { }).build()) {
++            hub.bindPublishedRuntime(engine.published());
++            engine.startAsync().block();
++            var registry = new com.sstlfsj.fibra.registry.PluginRegistry(engine, packages,
++                new com.sstlfsj.fibra.registry.InMemoryPluginAuditRepository());
++            registry.install(new com.sstlfsj.fibra.registry.PluginInstallRequest(source, true)).block();
++            var ref = new com.sstlfsj.fibra.config.PluginDefinitionRef("tela-agent-view", "main", "agent-view");
++            var before = engine.snapshot().target().orElseThrow();
++            var contract = engine.describeConfiguration(ref, before.targetRevision()).block();
++            assertFalse(contract.source().schema().canonicalJson().contains("CANARY"));
++            var invalid = com.sstlfsj.fibra.config.DesiredInputEntry.builder("view", ref)
++                .config(com.sstlfsj.fibra.value.LiteralValue.of(java.util.Map.of("UNKNOWN_KEY_CANARY", "SECRET_VALUE_CANARY")))
++                .publicationRequirement(com.sstlfsj.fibra.config.PublicationRequirement.PENDING_ALLOWED).build();
++            var failure = org.junit.jupiter.api.Assertions.assertThrows(EngineChangeException.class,
++                () -> registry.upsert(null, invalid).block());
++            var body = TelaHostGateway.errorBody(failure);
++            assertTrue(body.contains("targetSaveState=NOT_SAVED"));
++            assertTrue(body.contains("viewRevision=" + engine.published().current().viewRevision()));
++            assertFalse(body.contains("CANARY"));
++            assertFalse(registry.history().getLast().detail().contains("CANARY"));
++            assertEquals(before, engine.snapshot().target().orElseThrow());
++            assertTrue(hub.assignments().isEmpty());
++            assertFalse(output.getAll().contains("CANARY"));
++        }
++    }
++
+     @Test
+     void missingDetachSessionIdReturnsHostIdentifiedErrorWithoutRemovingSession(
+             @TempDir Path temporary) throws Exception {
+--- a/tela-model-api/pom.xml
++++ b/tela-model-api/pom.xml
+@@ -33,4 +33,30 @@
+       <scope>test</scope>
+     </dependency>
+   </dependencies>
++  <build>
++    <plugins>
++      <plugin>
++        <groupId>org.apache.maven.plugins</groupId>
++        <artifactId>maven-assembly-plugin</artifactId>
++        <executions><execution>
++          <id>stage-plugin-configuration</id><phase>process-resources</phase>
++          <goals><goal>single</goal></goals>
++          <configuration>
++            <attach>false</attach><appendAssemblyId>false</appendAssemblyId>
++            <outputDirectory>${project.build.outputDirectory}</outputDirectory><finalName>.</finalName>
++            <archiverConfig><forced>true</forced></archiverConfig>
++            <inlineDescriptors><inlineDescriptor>
++              <id>plugin-configuration</id><formats><format>dir</format></formats>
++              <includeBaseDirectory>false</includeBaseDirectory>
++              <files><file>
++                <source>${project.basedir}/src/plugin/fibra-config.json</source>
++                <outputDirectory>META-INF/fibra</outputDirectory><destName>config.json</destName>
++                <filtered>false</filtered>
++              </file></files>
++            </inlineDescriptor></inlineDescriptors>
++          </configuration>
++        </execution></executions>
++      </plugin>
++    </plugins>
++  </build>
+ </project>
+--- a/tela-model-api/src/plugin/fibra-config.json
++++ b/tela-model-api/src/plugin/fibra-config.json
+@@ -0,0 +1,14 @@
++{
++  "format": 1,
++  "profile": "fibra-config-1",
++  "facets": {
++    "main": {
++      "tela-model-api": {
++        "$schema": "https://json-schema.org/draft/2020-12/schema",
++        "type": "object",
++        "properties": {},
++        "additionalProperties": false
++      }
++    }
++  }
++}
+--- a/tela-model-deterministic-plugin/pom.xml
++++ b/tela-model-deterministic-plugin/pom.xml
+@@ -33,4 +33,30 @@
+       <scope>test</scope>
+     </dependency>
+   </dependencies>
++  <build>
++    <plugins>
++      <plugin>
++        <groupId>org.apache.maven.plugins</groupId>
++        <artifactId>maven-assembly-plugin</artifactId>
++        <executions><execution>
++          <id>stage-plugin-configuration</id><phase>process-resources</phase>
++          <goals><goal>single</goal></goals>
++          <configuration>
++            <attach>false</attach><appendAssemblyId>false</appendAssemblyId>
++            <outputDirectory>${project.build.outputDirectory}</outputDirectory><finalName>.</finalName>
++            <archiverConfig><forced>true</forced></archiverConfig>
++            <inlineDescriptors><inlineDescriptor>
++              <id>plugin-configuration</id><formats><format>dir</format></formats>
++              <includeBaseDirectory>false</includeBaseDirectory>
++              <files><file>
++                <source>${project.basedir}/src/plugin/fibra-config.json</source>
++                <outputDirectory>META-INF/fibra</outputDirectory><destName>config.json</destName>
++                <filtered>false</filtered>
++              </file></files>
++            </inlineDescriptor></inlineDescriptors>
++          </configuration>
++        </execution></executions>
++      </plugin>
++    </plugins>
++  </build>
+ </project>
+--- a/tela-model-deterministic-plugin/src/plugin/fibra-config.json
++++ b/tela-model-deterministic-plugin/src/plugin/fibra-config.json
+@@ -0,0 +1,14 @@
++{
++  "format": 1,
++  "profile": "fibra-config-1",
++  "facets": {
++    "main": {
++      "tela-model-deterministic": {
++        "$schema": "https://json-schema.org/draft/2020-12/schema",
++        "type": "object",
++        "properties": {},
++        "additionalProperties": false
++      }
++    }
++  }
++}
+--- a/tela-model-openai-plugin/pom.xml
++++ b/tela-model-openai-plugin/pom.xml
+@@ -51,6 +51,29 @@
+     <plugins>
+       <plugin>
+         <groupId>org.apache.maven.plugins</groupId>
++        <artifactId>maven-assembly-plugin</artifactId>
++        <executions><execution>
++          <id>stage-plugin-configuration</id><phase>process-resources</phase>
++          <goals><goal>single</goal></goals>
++          <configuration>
++            <attach>false</attach><appendAssemblyId>false</appendAssemblyId>
++            <outputDirectory>${project.build.outputDirectory}</outputDirectory><finalName>.</finalName>
++            <archiverConfig><forced>true</forced></archiverConfig>
++            <inlineDescriptors><inlineDescriptor>
++              <id>plugin-configuration</id><formats><format>dir</format></formats>
++              <includeBaseDirectory>false</includeBaseDirectory>
++              <files><file>
++                <source>${project.basedir}/src/plugin/fibra-config.json</source>
++                <outputDirectory>META-INF/fibra</outputDirectory><destName>config.json</destName>
++                <filtered>false</filtered>
++              </file></files>
++            </inlineDescriptor></inlineDescriptors>
++          </configuration>
++        </execution></executions>
++      </plugin>
++
++      <plugin>
++        <groupId>org.apache.maven.plugins</groupId>
+         <artifactId>maven-shade-plugin</artifactId>
+         <executions>
+           <execution>
+--- a/tela-model-openai-plugin/src/plugin/fibra-config.json
++++ b/tela-model-openai-plugin/src/plugin/fibra-config.json
+@@ -0,0 +1,37 @@
++{
++  "format": 1,
++  "profile": "fibra-config-1",
++  "facets": {
++    "main": {
++      "tela-model-openai": {
++        "$schema": "https://json-schema.org/draft/2020-12/schema",
++        "type": "object",
++        "properties": {
++          "model": {
++            "type": "string",
++            "minLength": 1
++          },
++          "baseUrl": {
++            "type": [
++              "string",
++              "null"
++            ],
++            "minLength": 1
++          },
++          "requestTimeoutMillis": {
++            "type": [
++              "integer",
++              "null"
++            ],
++            "minimum": 1,
++            "maximum": 9223372036854775807
++          }
++        },
++        "additionalProperties": false,
++        "required": [
++          "model"
++        ]
++      }
++    }
++  }
++}

@@ -1,0 +1,35 @@
+{
+  "format": 1,
+  "profile": "fibra-config-1",
+  "facets": {
+    "main": {
+      "content-sanitizer": {
+        "type": "object",
+        "properties": {
+          "replacement": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rules": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string",
+              "enum": [
+                "email",
+                "bearer-token",
+                "api-key"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "https://json-schema.org/draft/2020-12/schema"
+      }
+    }
+  }
+}

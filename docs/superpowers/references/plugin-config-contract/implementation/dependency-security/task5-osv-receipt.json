@@ -1,0 +1,62 @@
+{
+  "checkedAt": "2026-10-12T09:47:56.818960+00:00",
+  "url": "https://api.osv.dev/v1/querybatch",
+  "status": 200,
+  "queries": 26,
+  "hits": [
+    {
+      "query": {
+        "package": {
+          "ecosystem": "Maven",
+          "name": "tools.jackson.core:jackson-core"
+        },
+        "version": "3.1.5"
+      },
+      "result": {
+        "vulns": [
+          {
+            "id": "GHSA-7hhh-6rmp-j9qf",
+            "modified": "2026-10-01T15:30:05.552671Z"
+          },
+          {
+            "id": "GHSA-p6pp-m3f8-5c89",
+            "modified": "2026-10-01T15:30:13.452657Z"
+          }
+        ]
+      }
+    },
+    {
+      "query": {
+        "package": {
+          "ecosystem": "Maven",
+          "name": "tools.jackson.core:jackson-databind"
+        },
+        "version": "3.1.5"
+      },
+      "result": {
+        "vulns": [
+          {
+            "id": "GHSA-cxp5-3px4-pw24",
+            "modified": "2026-09-30T15:46:18.051343Z"
+          },
+          {
+            "id": "GHSA-gx83-3vf8-gh7j",
+            "modified": "2026-09-28T21:00:05.608227Z"
+          },
+          {
+            "id": "GHSA-q4xh-88c3-wmh7",
+            "modified": "2026-09-28T20:30:05.315085Z"
+          },
+          {
+            "id": "GHSA-wjgm-6hv5-3cvf",
+            "modified": "2026-09-28T20:30:05.331167Z"
+          },
+          {
+            "id": "GHSA-wv8q-qhhj-9h54",
+            "modified": "2026-09-30T15:46:18.451708Z"
+          }
+        ]
+      }
+    }
+  ]
+}

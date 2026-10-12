@@ -1,0 +1,107 @@
+--- a/tela-desktop/package.json
++++ b/tela-desktop/package.json
+@@ -10,7 +10,8 @@
+   },
+   "scripts": {
+     "build": "tsc --noEmit && node scripts/build.mjs",
+-    "test": "node --test test/*.test.mjs"
++    "test": "node scripts/build.mjs && node --test test/*.test.mjs",
++    "test:renderer": "node scripts/build.mjs && node --experimental-vm-modules --test test/renderer-load.test.mjs"
+   },
+   "dependencies": {
+     "@sstlfsj/fibra-client-api": "file:vendor/sstlfsj-fibra-client-api-0.5.0-SNAPSHOT.tgz",
+--- a/tela-desktop/test/module-boundaries.test.mjs
++++ b/tela-desktop/test/module-boundaries.test.mjs
+@@ -5,7 +5,6 @@
+ import { resolve } from "node:path";
+ import vm from "node:vm";
+ import { webcrypto } from "node:crypto";
+-import { spawnSync } from "node:child_process";
+ 
+ test("injected client runtime starts and detaches without window or document", async () => {
+   const runtimePath = resolve("src/renderer/runtime/client-runtime.ts");
+@@ -54,10 +53,7 @@
+       assert.doesNotMatch(await readFile(path, "utf8"), /\b(?:window|document)\b/);
+     }
+   }
+-  // This is the only test that writes target; verify the real release build options.
+-  const built = spawnSync(process.execPath, ["scripts/build.mjs"], { encoding: "utf8", timeout: 30_000 });
+-  assert.ifError(built.error);
+-  assert.equal(built.status, 0, built.stdout + built.stderr);
++  // The test entry builds once before starting parallel read-only test files.
+   const plugin = await readFile("target/client-plugin/agent-view.js", "utf8");
+   assert.match(plugin, /TelaReact\.createElement/);
+   assert.doesNotMatch(plugin, /react-jsx-runtime|react\/cjs|node_modules|\b(?:import|require)\s*\(/);
+--- a/tela-desktop/test/renderer-load.test.mjs
++++ b/tela-desktop/test/renderer-load.test.mjs
+@@ -11,7 +11,7 @@
+ const filename = fileURLToPath(import.meta.url);
+ const root = resolve(dirname(filename), "..");
+ 
+-// Keep the ordinary `node --test` entry usable without changing package scripts.
++// The test entry builds the product first; this wrapper enables VM execution.
+ if (typeof vm.SourceTextModule !== "function") {
+   test("renderer load contracts in an isolated VM", () => {
+     const env = { ...process.env };
+@@ -140,8 +140,6 @@
+   }
+ 
+   test("formal agent-view product module creates, activates and releases its root and scope", async () => {
+-    const built = spawnSync(process.execPath, ["scripts/build.mjs"], { cwd: root, encoding: "utf8" });
+-    assert.equal(built.status, 0, built.stdout + built.stderr);
+     assert.deepEqual(await readFile(resolve(root, "target/client-package/fibra-config.json")),
+       await readFile(resolve(root, "plugins/agent-view/fibra-config.json")));
+     const product = await readFile(resolve(root, "target/client-plugin/agent-view.js"), "utf8");
+--- a/tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostGatewayErrorTest.java
++++ b/tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostGatewayErrorTest.java
+@@ -47,15 +47,33 @@
+     @org.junit.jupiter.api.extension.ExtendWith(org.springframework.boot.test.system.OutputCaptureExtension.class)
+     void actualClientContractFailureUsesSafeGatewayProjectionAndLogs(@TempDir Path temporary,
+             org.springframework.boot.test.system.CapturedOutput output) throws Exception {
+-        var source = Files.createDirectories(temporary.resolve("agent-view"));
++        var source = Files.createDirectories(temporary.resolve("client-fixture"));
+         var payload = Files.createDirectories(source.resolve("client"));
+-        var desktop = Path.of("../tela-desktop");
+-        for (var name : java.util.List.of("agent-view.js", "tela-client.json"))
+-            Files.copy(desktop.resolve("target/client-plugin").resolve(name), payload.resolve(name));
+-        Files.copy(desktop.resolve("target/client-package/fibra-config.json"), source.resolve("fibra-config.json"));
+-        Files.writeString(source.resolve("fibra-package.yaml"), Files.readString(Path.of(
+-            "../tela-distribution/src/main/tela-plugins/tela-agent-view/fibra-package.yaml"))
+-            .replace("${project.version}", "0.1.0-SNAPSHOT"));
++        var script = "throw new Error('structure rejection must precede client import');".getBytes(StandardCharsets.UTF_8);
++        Files.write(payload.resolve("view.js"), script);
++        var digest = java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(script));
++        Files.writeString(payload.resolve("tela-client.json"), """
++            {"format":1,"definitions":["fixture-view"],"entryModule":"view.js",
++             "resources":[{"path":"view.js","digest":"%s","byteLength":%d}]}
++            """.formatted(digest, script.length));
++        Files.writeString(source.resolve("fibra-config.json"), """
++            {"format":1,"profile":"fibra-config-1","facets":{"main":{"fixture-view":{
++            "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
++            "properties":{},"additionalProperties":false}}}}
++            """);
++        Files.writeString(source.resolve("fibra-package.yaml"), """
++            format: 1
++            id: gateway-fixture
++            version: "1.0.0"
++            facets:
++              - id: main
++                role: client
++                runtime: client
++                target: client:web
++                payload: client
++                dependencies: []
++                capabilities: []
++            """);
+         try (var hub = new TelaClientTransportHub();
+              var packages = new com.sstlfsj.fibra.artifact.PluginPackageStore(temporary.resolve("packages"));
+              var engine = com.sstlfsj.fibra.engine.FibraEngine.builder(packages,
+@@ -67,7 +85,7 @@
+             var registry = new com.sstlfsj.fibra.registry.PluginRegistry(engine, packages,
+                 new com.sstlfsj.fibra.registry.InMemoryPluginAuditRepository());
+             registry.install(new com.sstlfsj.fibra.registry.PluginInstallRequest(source, true)).block();
+-            var ref = new com.sstlfsj.fibra.config.PluginDefinitionRef("tela-agent-view", "main", "agent-view");
++            var ref = new com.sstlfsj.fibra.config.PluginDefinitionRef("gateway-fixture", "main", "fixture-view");
+             var before = engine.snapshot().target().orElseThrow();
+             var contract = engine.describeConfiguration(ref, before.targetRevision()).block();
+             assertFalse(contract.source().schema().canonicalJson().contains("CANARY"));

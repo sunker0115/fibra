@@ -1,0 +1,14 @@
+[
+  {
+    "path": "fibra-distribution/src/test/consumers/engine-application/pom.xml",
+    "sha256": "48d3002c7a52a4ac7a79096312d4b0d42d2fbc637138c285ce016f25f29e405e"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/engine-application/src/test/java/verification/distribution/LifecycleConsumerTest.java",
+    "sha256": "189f5e71080d97d4a69c772c30041e3041bf8672f88dad9a4a7aaa6e2bd5a682"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/java-plugin/src/main/java/verification/distribution/plugin/LifecycleEntrypoint.java",
+    "sha256": "873d5cf94959f6309011536736290c602a85562e1c9cbb56eb3d0ab48740534a"
+  }
+]

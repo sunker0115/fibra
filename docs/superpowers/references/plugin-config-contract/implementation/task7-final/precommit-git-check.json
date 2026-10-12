@@ -1,0 +1,332 @@
+{
+  "scope": "提交前Git格式检查；代码、说明文档与机器清单正常检查，原始日志/argv/patch/stdout/stderr按证据字节保留。",
+  "completeStagedCheck": {
+    "nativeExit": 2,
+    "issueCount": 1645,
+    "affectedFiles": 54,
+    "onlyCapturedRawEvidence": true,
+    "diagnostics": [
+      "trailing whitespace",
+      "new blank line at EOF"
+    ]
+  },
+  "codeDocsAndStructuredReceiptsCheck": {
+    "nativeExit": 0,
+    "fileCount": 443
+  },
+  "rawEvidencePolicy": "没有修改Git whitespace配置或禁用hook；所有报告的问题均属于原样归档数据，不修改原始字节以保持SHA和补丁语义。",
+  "rawEvidenceInputs": [
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/npm-node22.14/verify-client-packages.log",
+      "sha256": "072c0c4a09695f94f525d47b7e99f8242eb33522ca04c19683f8696f11985f45"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/npm/verify-client-packages.log",
+      "sha256": "efd7a29a094c52900fe85d7a55329d927aa19aa882ef69330fb75e5b871983c0"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task1-config/all-behavior-red.log",
+      "sha256": "3812d7191276a8169c857fbdf4dfd9e862da241345db75dc966e59e0919c5af8"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task1-config/batch-allocation-green.log",
+      "sha256": "52faa4b7c99e205676cfcba86c35e33c090e6e2ff500fb30becf94daa476f100"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task1-config/batch-allocation-red.log",
+      "sha256": "3ffd140b00c8ed6bb42c7ec21dfc50cff984d5fcdf6ebb01ac8d4e4100bd00ec"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task1-config/batch-order-green.log",
+      "sha256": "13cae2ee0f00bb5b483082697b805d234543221e6e8d6dcc0c3f447bdef0bbf2"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task1-config/batch-order-red-2.log",
+      "sha256": "b17acdbe31862749a387720a7804b3fdcf71b51b1424fea93d7d73097d3df5b2"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task1-config/batch-order-red.log",
+      "sha256": "0c6bdd53a055c385a425e48f139aea0aceb9c95eacb5a8471db09fa61d47dbfe"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task1-config/behavior-red.log",
+      "sha256": "6ed891cb5d86dd821397513c2cb627f4097057e162d7d5d7f2b8fcbe9dc6b489"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task1-config/bootstrap-red.log",
+      "sha256": "3ab95d18523adb2de85cef4eb041187ce16e7071902c4fdb6cbe4dd411f0b362"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task1-config/config-allocation-fix-final.log",
+      "sha256": "4b8a673420bf25db4434b4cb7772bb708af76d5b1e516b704aa677316d6d6ada"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task1-config/config-final.log",
+      "sha256": "8b0e4684869719cd87dadff37774464d914c732b648c0df20e96b789d0eb007f"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task1-config/config-regression.log",
+      "sha256": "3350aee907e654f20df75f30b8e9a4a5ab2e5e3fc2e1beea86cf786c305637be"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task1-config/config-review-fix-final.log",
+      "sha256": "d34ea0fbfaabf05e93083f4c40d602ac598bc1c215079a82fc8e3da06d5c0afe"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task1-config/dependency-tree.log",
+      "sha256": "591848f9815f9419614dfa1aa67d4c8412ea2465088d84b11aaa07e0cddaf483"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task1-config/implementation-1.log",
+      "sha256": "c2d0fd8c2de6d55a752b1f9b6a740bb388716012745bd79c68a5e66895a54729"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task1-config/implementation-2.log",
+      "sha256": "72c2e76f714cc49c821d217443db40eaeacafb6ccf031f129444ff07bb48a887"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task1-config/spec-review-r1-test.log",
+      "sha256": "990b256ef5176052036ec3467ecaf36fa58f95af786ebcb5543707e512c26504"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task1-config/spec-review-r2-test.log",
+      "sha256": "7961658a59155af3b2a1bab16a6a41b31213184e334d3c8036c9a52dff0819c7"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task1-config/spec-review-r3-test.log",
+      "sha256": "d7fe4ea80555114cf3590d77ddb919ed0c525b589ccd867bcb459180a9a59a27"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task2-artifact/green-1.log",
+      "sha256": "4005c784997d0c02fdefba03e24b4b0caa3e8d242a5f2c3103a4dad1fcda471e"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task2-artifact/green-final.log",
+      "sha256": "e2e9f9497ca5fd7395944b7dedc3a688b4f9125057890dccc5a0ac182cb6073c"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task2-artifact/red-behavior.log",
+      "sha256": "76a390ae4d21ee9071b994bcf01a39bc394db332c144884721d8c31a5afd6543"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task2-artifact/red-bootstrap.log",
+      "sha256": "995fa063e13c6c08f0a96c6a0b9f955d9095fb0f57aef6de454639533667ad25"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task2-artifact/red-error-terminal.log",
+      "sha256": "f291443afd5fe469d6a920bacc2e1729a8c5881f6f3988b5a8fa21cc5a023368"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task2-artifact/red-fatal-state.log",
+      "sha256": "8ce1fbc9c149a35dc9403dc5a11e2123f0af49d526321173deb8713bea07e050"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task2-artifact/spec-review-r1-maven.log",
+      "sha256": "a5ecddd15cd4aeadafdcc27f83f395cf7a77292cdb2259008bc6444c58718519"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task2-artifact/task2.patch",
+      "sha256": "f72a6e33251d23b800a63096b6d75a6abd3816b8367315078d83badc5f43c4cf"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task3-builtin/bootstrap-red.log",
+      "sha256": "265979314a89fc759d5904a9ddc796b331613eca79ba8fd4c8bf755d1e100c5b"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task3-builtin/consumers-1.log",
+      "sha256": "be349bb5885a487dd71a119d95c0494c61be8d4fe250a26e8f5681cb180fc9bb"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task3-builtin/green-1.log",
+      "sha256": "8f7fb39dce8a3d9abfc6cbe474851d6fa145f35217c44e5250232aa4f8eb40c8"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task3-builtin/green-2.log",
+      "sha256": "d51a1c9bbbafdfa90b1da14358538471e7a31839a5dcff39de07b6d3a3ccd0f0"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task3-builtin/green-3.log",
+      "sha256": "86c1ce12c996b3dda77f3e7e840c2225881719ade4b9e7fb01ced8639b65c542"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task3-builtin/identity-red.log",
+      "sha256": "2f9536315511a7c6da7902b7aedeec1f270ad1554d07bec5a1adc143fb193fae"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task3-builtin/spec-review-r1-tests.log",
+      "sha256": "66f6d66481a81ffe76e3929ae5b58728b62ccbf082c16cd9af7a140e9900177c"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task5-author/quality-stage-r1.log",
+      "sha256": "c4daabeb81d8efa8ad59eb174e58b491d51d350707a05aae7e187b611bd50e93"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task6-consumers/fibra-task6.patch",
+      "sha256": "e9d4e8d4a11aa5b0ca908e79f670998aa556fea817581aae5f5c7adf9d8dc5d4"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task6-consumers/r1-fix/fix.patch",
+      "sha256": "5675197cf4c71372d9b6ced7bd243f42485790609fc7602dd2d48aa902fb60f8"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task6-consumers/r1-fix/tela-adaptation.patch",
+      "sha256": "cff53eaef4a648a52345e4bc0a715eaeaf2603d8406fc8f9fed95033997e8fd2"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task6-consumers/tela-adaptation.patch",
+      "sha256": "3a44cf8254d8ffd505fabf1e43f3407e4aeafb672c9073a87600eed3c1743403"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task7-final/architecture.argv",
+      "sha256": "ef8087697de1d02651c4a84dd4cc4122e880a30e652b2d5eb2d4025af51f472a"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task7-final/clean-verify-node-flake.argv",
+      "sha256": "962fd5c940ebc08c0d81812db76da04e1685f973a7429224c8835e192521cd63"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task7-final/clean-verify-red.argv",
+      "sha256": "962fd5c940ebc08c0d81812db76da04e1685f973a7429224c8835e192521cd63"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task7-final/clean-verify.argv",
+      "sha256": "962fd5c940ebc08c0d81812db76da04e1685f973a7429224c8835e192521cd63"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task7-final/consume-snapshots.argv",
+      "sha256": "598184692d53fc7b64b940d271288ee2998c6797a321d92251278363480bd58b"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task7-final/dependency-tree-release.argv",
+      "sha256": "c4153970f6747ee4c139093bffc0db5730f15e040dbd7ca52b89e279d7918721"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task7-final/dependency-tree-release.log",
+      "sha256": "0d5d23af0b411e0014623db606acb89635a4c16dacf7df37babac45482ce1396"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task7-final/diff-check.argv",
+      "sha256": "e34962efe3181e7251d3af0c3911c5752f605e21f7a38187d8acc5b19d2b271b"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task7-final/effective-config-pom.argv",
+      "sha256": "d112a17782c0fba14e4501c7750eefd40fa3cd91046ccd22f41f8b5c4a32f34d"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task7-final/final-archive.argv",
+      "sha256": "32b63cac5ba75c4cd84956aec3697af70f9c536e3a7a92d04f1009ab1208fb15"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task7-final/final-zip-coordinate-first.argv",
+      "sha256": "a76c6aeb738c87c68a3a724056d008d8741ad7c528c65af9cca48799c9a61a1f"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task7-final/final-zip-coordinate.argv",
+      "sha256": "37c4353bf5681fa7e82cfe13c7af52794168cbcd401141c32a7cfdb2331f5a13"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task7-final/node-identity-green.argv",
+      "sha256": "3faf3e1d4076dca2478ecdcff3828c32c41ba6e05c9ef869dbe6c8542f3d6466"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task7-final/parity-fixture-green.argv",
+      "sha256": "b7591919ce23fcea3705c24f5d83fe5fcc40d97e1926ca4860ee8b0a2d6e07fd"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task7-final/reproducible-release.argv",
+      "sha256": "c989492b7bffb968f33526a0d25b71e0092b8557f43500b7e5739d6f44f600cb"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task7-final/signatures.argv",
+      "sha256": "1c943bf59f53aee455be7f84f5f38c1cc66532e6b710081c146af8de94acb09e"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task7-final/task7-tests.patch",
+      "sha256": "25684d02ccfad0d7018b988f880e014d8842f8d73b97dcadd27216212dbecd28"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/implementation/task7-final/tools.log",
+      "sha256": "4e6d7d3040c2b6641f9695da065eaca7a93ef41d8a99fb1aa5ddf4cd24ca8c14"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/probe/compile.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/probe/compile.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/probe/compile2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/probe/compile2.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/probe/finite-compile.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/probe/finite-compile.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/probe/finite-run.stderr",
+      "sha256": "2c58b87a0350a39bb1c3b5f4891defeeb9a785e84aa11a466dc9ddb21253bf58"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/probe/finite-run.stdout",
+      "sha256": "ddea900cd255b0b1f416eaff926071ffaf13ebe2a23fb4dcd97f1a60308684cc"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/probe/industry-compile.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/probe/industry-compile.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/probe/industry-run.stderr",
+      "sha256": "2c58b87a0350a39bb1c3b5f4891defeeb9a785e84aa11a466dc9ddb21253bf58"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/probe/industry-run.stdout",
+      "sha256": "08fbfb1a572c0e69f9ac5e1cedf80a435b9b285abc51837b9f0aef04b71a0f31"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/probe/profile-compile.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/probe/profile-compile.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/probe/profile-run.stderr",
+      "sha256": "2c58b87a0350a39bb1c3b5f4891defeeb9a785e84aa11a466dc9ddb21253bf58"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/probe/profile-run.stdout",
+      "sha256": "0009d7c19dcf1590d0444bd393dadd36e9cccfd2ad1c4a69d2082fc0149e230c"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/probe/run.stderr",
+      "sha256": "4426b23190fb7b1d7514df1f17393fca32d77cce1791cba1b4bf76cf6beb358e"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/probe/run.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/probe/run2.stderr",
+      "sha256": "06630f677a7514d0e04e3e94c0057f901a012c29dc35b960de36d41bb3d9def6"
+    },
+    {
+      "path": "docs/superpowers/references/plugin-config-contract/probe/run2.stdout",
+      "sha256": "24af62cb8d8a681a1b8bb671eb4cbe63228e7f02f3832d71e3c566a20f01b457"
+    }
+  ]
+}

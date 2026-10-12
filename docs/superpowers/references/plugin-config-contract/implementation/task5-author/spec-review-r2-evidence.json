@@ -1,0 +1,24 @@
+{
+  "external_source_files": 24,
+  "resolved_jars_matching_remote": 27,
+  "external_xml": {
+    "files": 8,
+    "tests": 14,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "all_external_test_fibra_classpath_jars": 15,
+  "archetype_publication_reuse": true,
+  "helper_logic_unchanged_only_location_comment": true,
+  "current_internal_xml": {
+    "files": 4,
+    "tests": 11,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "final_source_hash_recheck": "54/54",
+  "corrected_report_sha256": "e743191f57cebc77eda6f39c4ee092d736294e433860a2e3d0dfad57202af376",
+  "corrected_internal_index_sha256": "590bd1aa49d1f9080435628543e2cf69eaeb8b7356f6056a1779e7d948025d5c"
+}

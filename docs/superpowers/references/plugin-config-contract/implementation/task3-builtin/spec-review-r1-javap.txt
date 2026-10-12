@@ -1,0 +1,16 @@
+Compiled from "BuiltInPluginPackage.java"
+public final class com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage$Builder {
+  public com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage$Builder pluginId(com.sstlfsj.fibra.artifact.PluginId);
+  public com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage$Builder version(java.lang.String);
+  public com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage$Builder implementationDigest(java.lang.String);
+  public com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage$Builder facets(java.util.List<com.sstlfsj.fibra.engine.deployment.BuiltInFacet>);
+  public com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage build();
+}
+Compiled from "BuiltInFacet.java"
+public final class com.sstlfsj.fibra.engine.deployment.BuiltInFacet$Builder {
+  public com.sstlfsj.fibra.engine.deployment.BuiltInFacet$Builder dependencies(java.util.List<com.sstlfsj.fibra.artifact.FacetDependency>);
+  public com.sstlfsj.fibra.engine.deployment.BuiltInFacet$Builder requiredCapabilities(java.util.Set<java.lang.String>);
+  public com.sstlfsj.fibra.engine.deployment.BuiltInFacet$Builder definitionIds(java.util.Set<java.lang.String>);
+  public com.sstlfsj.fibra.engine.deployment.BuiltInFacet$Builder configSchemas(java.util.Map<java.lang.String, com.sstlfsj.fibra.config.ConfigSchemaSource>);
+  public com.sstlfsj.fibra.engine.deployment.BuiltInFacet build();
+}

@@ -65,7 +65,7 @@ public class EngineTransactionBenchmark {
         var definition = PluginDefinition.builder(DEFINITION_NAME, Void.class,
             () -> (context, config) -> Mono.empty()).build();
         var metadata = BuiltInPluginPackage.builder().pluginId(PLUGIN_ID)
-            .version("1.0.0").packageDigest("a".repeat(64))
+            .version("1.0.0").implementationDigest("a".repeat(64))
             .facets(List.of(BuiltInFacet.builder(FACET_ID,
                     JavaRuntimeProvider.RUNTIME_ID, new ExecutionTarget("host"))
                 .definitionIds(Set.of(DEFINITION_NAME)).build()))

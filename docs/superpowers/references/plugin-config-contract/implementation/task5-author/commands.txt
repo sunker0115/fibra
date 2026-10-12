@@ -1,0 +1,20 @@
+Environment:
+JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home
+Maven=/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn
+local repository=/private/tmp/fibra-config-contract-m2
+final Node=/private/tmp/fibra-config-contract-node22.14/node-v22.14.0-darwin-arm64/bin/node (v22.14.0)
+wrapper=/private/tmp/fibra-config-contract-evidence/author/mvn.sh
+
+Desired RED:
+verify -pl fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host -am -Dtest=FormalPluginArtifactsIT#everyFinalJarCarriesTheExactAuthorConfiguration -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=FormalPluginArtifactsIT#everyFinalJarCarriesTheExactAuthorConfiguration -Dfailsafe.failIfNoSpecifiedTests=false -Dmaven.javadoc.skip=true
+verify -pl fibra-plugin-archetype -am -Dtest=NoMatchingTest -Dsurefire.failIfNoSpecifiedTests=false -Dmaven.javadoc.skip=true
+bash fibra-distribution/src/test/scripts/verify-archive.sh fibra-distribution/target/fibra-0.5.0-SNAPSHOT-bin.zip 0.5.0-SNAPSHOT
+
+Full author gate (no test selection; required native process permissions):
+/private/tmp/fibra-config-contract-evidence/author/mvn.sh -o -pl fibra-plugin-archetype,fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host,fibra-example/content-sanitizer/spring-host -am verify -Dmaven.javadoc.skip=true
+
+Extraction edge cases:
+bash fibra-distribution/src/test/scripts/verify-stage-plugin-configurations.sh "$PWD/fibra-distribution/src/main/scripts/stage-plugin-configurations.sh"
+
+Original distribution gate (no extra skip properties beyond script's existing production publish skipTests):
+JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home PATH=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home/bin:/private/tmp/fibra-config-contract-node22.14/node-v22.14.0-darwin-arm64/bin:/Users/sunke/.nvm/versions/node/v22.22.2/bin:$PATH MVN=/private/tmp/fibra-config-contract-evidence/author/mvn.sh FIBRA_DISTRIBUTION_EVIDENCE_DIR=/private/tmp/fibra-config-contract-evidence/author/distribution bash scripts/verify-distribution.sh

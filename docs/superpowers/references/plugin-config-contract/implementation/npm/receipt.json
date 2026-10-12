@@ -1,0 +1,135 @@
+{
+  "node": "22.22.2",
+  "pnpm": "11.19.0",
+  "revision": "0.5.0-SNAPSHOT",
+  "command": "FIBRA_NPM_PACK_DIR=<fresh empty directory> bash scripts/verify-client-packages.sh",
+  "nativeExit": 0,
+  "packRoot": "/private/tmp/fibra-config-contract-npm.g4QgkR",
+  "sourceInputs": [
+    {
+      "path": "client/api-baseline/client-api.d.ts",
+      "sha256": "28c10b6df99bbbcfc0656df9b65970817e46c174af1cebb0ff49279abaf68b59"
+    },
+    {
+      "path": "client/api-baseline/client-protocol.d.ts",
+      "sha256": "c2f1ae98490c443d8efb0cebf3c55e8fbc5c09c7be7d17c4b0be88de1d5dd782"
+    },
+    {
+      "path": "client/package.json",
+      "sha256": "208ea2ea72e0d0c19bd00b8a4e42be2dbda1f79b8333dfeb2f5ae55898e02d2b"
+    },
+    {
+      "path": "client/packages/client-api/LICENSE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "client/packages/client-api/NOTICE",
+      "sha256": "86908e706deb33dd5ad627d6ae3449b8003dc7a9004df5bb285b08e6d416ce76"
+    },
+    {
+      "path": "client/packages/client-api/package.json",
+      "sha256": "c0f2501d3e6b11d1fffc7013ca4cd3aa4190d230fed5f7967716a21ed019a7da"
+    },
+    {
+      "path": "client/packages/client-api/src/index.ts",
+      "sha256": "307a0ce7f6cd6b933bc70ef70b62d559f37b616b1d4a3b98385f6ff6fdf86393"
+    },
+    {
+      "path": "client/packages/client-api/tests/api-boundary.spec.mjs",
+      "sha256": "b5c5aba3ce80acef6f54454d146948942e1cfb042a2b4482c0ccaefac209b51e"
+    },
+    {
+      "path": "client/packages/client-api/tests/client-module-contract.spec.mjs",
+      "sha256": "2f21621f3ca5e576598555fe700ec9b39e26e9a21df74507ddb7a145f615e6ae"
+    },
+    {
+      "path": "client/packages/client-api/tests/client-module-contract.spec.ts",
+      "sha256": "526e502747aaea979ccc5e7363ff12baa856bc316584859f726b286cd232d471"
+    },
+    {
+      "path": "client/packages/client-api/tsconfig.json",
+      "sha256": "2f9588772af25d8616f749ff62028b5914cb0450d5dab67129a2f29a4948f8eb"
+    },
+    {
+      "path": "client/packages/client-api/tsconfig.test.json",
+      "sha256": "6cce0c167fb9bda0678706d9292e625b8d1b50ef8a728d858128d5be69db896a"
+    },
+    {
+      "path": "client/packages/client-protocol/LICENSE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "client/packages/client-protocol/NOTICE",
+      "sha256": "86908e706deb33dd5ad627d6ae3449b8003dc7a9004df5bb285b08e6d416ce76"
+    },
+    {
+      "path": "client/packages/client-protocol/package.json",
+      "sha256": "b60224e1a2ae93cea1a53c71bfbf5435fdfe407346324363763f9d1b4824532c"
+    },
+    {
+      "path": "client/packages/client-protocol/src/index.ts",
+      "sha256": "8f8bf35a113bca1af064fa3d15b3eebf8f7c68a99aac39fa790758123203d619"
+    },
+    {
+      "path": "client/packages/client-protocol/tests/protocol-fixtures.spec.ts",
+      "sha256": "3019ceb0fc12b95bd61eba9357b16277ba4721af903fd1081011f3e62e47d8c1"
+    },
+    {
+      "path": "client/packages/client-protocol/tsconfig.json",
+      "sha256": "2f9588772af25d8616f749ff62028b5914cb0450d5dab67129a2f29a4948f8eb"
+    },
+    {
+      "path": "client/pnpm-lock.yaml",
+      "sha256": "8de8e7e9c6b9395bd8cba6c0b145700f7d68ed5202fb5d4816f1bd1f71c45a92"
+    },
+    {
+      "path": "client/pnpm-workspace.yaml",
+      "sha256": "d115dc6c83ba283a7d17146ad456056f3f70b003edb8c312a52880b48b034001"
+    },
+    {
+      "path": "client/scripts/check-core-boundaries.mjs",
+      "sha256": "f0a06bcd9a4b6eee97f9b07cb50ec99143b975fedeb1ec5e737d46e9a2957866"
+    },
+    {
+      "path": "client/tests/engine-connection/consume-snapshots.mjs",
+      "sha256": "9f6c993974f750fd4dfc6b3e0d5e423881a83ab4e7fd427cd6b8c76425b17ad0"
+    },
+    {
+      "path": "client/tests/package-consumer/package.json",
+      "sha256": "b1e7031da584e10401e011a10cd0c156dae359021a44e4bb3d9a5c0c6c4a5292"
+    },
+    {
+      "path": "client/tests/package-consumer/src/index.ts",
+      "sha256": "40979c5462c6b460c93fbf90c89fa637fc00f53a8b412f1c3421d9f06254bde0"
+    },
+    {
+      "path": "client/tests/package-consumer/tsconfig.json",
+      "sha256": "0e06a30cf18b41f32cd4b35395c43dfd11dac484c906ee78cfa5609bd5f5625d"
+    },
+    {
+      "path": "client/tsconfig.core.json",
+      "sha256": "d4ee8e9b0f705298acb5d7777daac97330cb9ee727293f70a74f096a35e030b5"
+    },
+    {
+      "path": "client/tsconfig.json",
+      "sha256": "fe519b41f1e9dd37292a381d80b96d35ad991b1de1e0852e9b93f044a8e492f9"
+    },
+    {
+      "path": "scripts/verify-client-packages.sh",
+      "sha256": "17b5283664a4242c08fd89d30cf4d0ffba8035a9cc679995e9c32285e01a5498"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "/private/tmp/fibra-config-contract-npm.g4QgkR/sstlfsj-fibra-client-api-0.5.0-SNAPSHOT.tgz",
+      "size": 5691,
+      "sha256": "de07c38c5413c1648389554144049f6d4dc0f89ceeb7ea0f9156b280997f27ac"
+    },
+    {
+      "path": "/private/tmp/fibra-config-contract-npm.g4QgkR/sstlfsj-fibra-client-protocol-0.5.0-SNAPSHOT.tgz",
+      "size": 9810,
+      "sha256": "b41a942ef9c8990532dbc8dd7b313052572f8d5bf97f9334b19299570aad51a5"
+    }
+  ],
+  "logSha256": "efd7a29a094c52900fe85d7a55329d927aa19aa882ef69330fb75e5b871983c0"
+}

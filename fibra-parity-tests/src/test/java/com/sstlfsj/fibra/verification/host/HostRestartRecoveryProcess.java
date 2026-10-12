@@ -318,6 +318,11 @@ public final class HostRestartRecoveryProcess {
             require(view.engineDiagnostics().terminationRequest().isEmpty(),
                 "recoverable bootstrap refusal requested host termination");
             var failure = view.engineDiagnostics().failure().orElseThrow();
+            if ("metadata-definition-mismatch".equals(scenario) || replacement) {
+                require(failure.stage() == com.sstlfsj.fibra.engine.observation.FailureStage.PREPARING
+                        && failure.message().contains("cannot prepare Java class space"),
+                    "definition mismatch did not reach Java runtime validation");
+            }
             require(failure.subject()
                     instanceof FailureSubject.DurableTarget,
                 "bootstrap failure does not belong to the durable target");
@@ -482,8 +487,7 @@ public final class HostRestartRecoveryProcess {
         PluginPackageRecord javaPackage, PluginPackageRecord nodePackage,
         PluginPackageRecord externalPackage, String builtInDigest) {
         return List.of(selection(javaPackage), selection(nodePackage),
-            selection(externalPackage), new PluginSelection(
-                new PluginId(BUILT_IN_PLUGIN), builtInDigest, true));
+            selection(externalPackage), builtIn(builtInDigest, false).metadata().selection(true));
     }
 
     private static PluginSelection selection(PluginPackageRecord value) {
@@ -500,16 +504,15 @@ public final class HostRestartRecoveryProcess {
 
     private static JavaBuiltInPackage builtIn(String digest,
                                                boolean mismatch) {
-        var definitions = mismatch
-            ? Set.of(BUILT_IN_DEFINITION, "missing")
-            : Set.of(BUILT_IN_DEFINITION);
+        var definitions = Set.of(BUILT_IN_DEFINITION);
         var metadata = BuiltInPluginPackage.builder()
             .pluginId(new PluginId(BUILT_IN_PLUGIN)).version("1.0.0")
-            .packageDigest(digest)
+            .implementationDigest(digest)
             .facets(List.of(BuiltInFacet.builder(MAIN_FACET,
                     JavaRuntimeProvider.RUNTIME_ID,
                     new ExecutionTarget("host"))
-                .definitionIds(definitions).build()))
+                .definitionIds(definitions).configSchemas(Map.of(BUILT_IN_DEFINITION,
+                    new com.sstlfsj.fibra.config.ConfigSchemaSource("fibra-config-1", stringObjectSchema("prefix")))).build()))
             .build();
         var definition = PluginDefinition.builder(BUILT_IN_DEFINITION,
                 Map.class, () -> (context, config) -> {
@@ -525,7 +528,7 @@ public final class HostRestartRecoveryProcess {
         var entry = new JavaDefinitionEntry<>(definition,
             value -> (Map) value);
         return new JavaBuiltInPackage(metadata,
-            Map.of(MAIN_FACET, List.of(entry)));
+            Map.of(MAIN_FACET, mismatch ? List.of() : List.of(entry)));
     }
 
     private static Path javaPackage(Path root) throws IOException {
@@ -546,6 +549,7 @@ public final class HostRestartRecoveryProcess {
         }
         Files.writeString(root.resolve("fibra-package.yaml"), packageManifest(
             JAVA_PLUGIN, "java", "plugin.jar", List.of()));
+        writeConfiguration(root, "java", "prefix", "startMarker", "targetPath");
         return root;
     }
 
@@ -566,6 +570,7 @@ public final class HostRestartRecoveryProcess {
         Files.writeString(root.resolve("fibra-package.yaml"), packageManifest(
             NODE_PLUGIN, "node", "node", List.of(new FacetDependency(
                 new PluginId(JAVA_PLUGIN), MAIN_FACET))));
+        writeConfiguration(root, "node", "prefix", "javaMarker", "targetPath");
         return root;
     }
 
@@ -577,7 +582,22 @@ public final class HostRestartRecoveryProcess {
             ExternalFixtureRuntimeProvider.RUNTIME_ID.value(), "external",
             List.of(new FacetDependency(new PluginId(NODE_PLUGIN),
                 MAIN_FACET))));
+        writeConfiguration(root, ExternalFixtureRuntimeProvider.DEFINITION_ID, "mode");
         return root;
+    }
+
+    private static LiteralValue.ObjectValue stringObjectSchema(String... fields) {
+        var properties = new java.util.LinkedHashMap<String, Object>();
+        for (var field : fields) properties.put(field, Map.of("type", "string"));
+        return (LiteralValue.ObjectValue) LiteralValue.of(Map.of(
+            "$schema", "https://json-schema.org/draft/2020-12/schema", "type", "object",
+            "properties", properties, "required", List.of(fields), "additionalProperties", false));
+    }
+
+    private static void writeConfiguration(Path root, String definition, String... fields) throws IOException {
+        Files.writeString(root.resolve("fibra-config.json"), LiteralValue.of(Map.of("format", 1,
+            "profile", "fibra-config-1", "facets", Map.of("main", Map.of(definition,
+                stringObjectSchema(fields).toJava())))).canonicalJson());
     }
 
     private static String packageManifest(String pluginId, String runtime,

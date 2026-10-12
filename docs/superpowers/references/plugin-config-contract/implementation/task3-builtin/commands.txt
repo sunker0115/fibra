@@ -1,0 +1,23 @@
+bootstrap-red
+JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home PATH="$JAVA_HOME/bin:$PATH" /Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn -o -Dmaven.repo.local=/private/tmp/fibra-config-contract-m2 -pl fibra-engine -am test -Dtest=BuiltInConfigurationBootstrapTest -Dsurefire.failIfNoSpecifiedTests=false
+nativeExit=1
+
+identity-red
+JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home PATH="$JAVA_HOME/bin:$PATH" /Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn -o -Dmaven.repo.local=/private/tmp/fibra-config-contract-m2 -pl fibra-engine -am test -Dtest=BuiltInPluginPackageTest#facetRenameChangesContentIdentityWithoutImplementationChange -Dsurefire.failIfNoSpecifiedTests=false
+nativeExit=1
+
+green-1
+JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home PATH="$JAVA_HOME/bin:$PATH" /Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn -o -Dmaven.repo.local=/private/tmp/fibra-config-contract-m2 -pl fibra-engine,fibra-runtime-java -am test
+nativeExit=1
+
+green-2
+JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home PATH="$JAVA_HOME/bin:$PATH" /Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn -o -Dmaven.repo.local=/private/tmp/fibra-config-contract-m2 -pl fibra-engine,fibra-runtime-java -am test
+nativeExit=1
+
+green-3
+JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home PATH="$JAVA_HOME/bin:$PATH" /Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn -o -Dmaven.repo.local=/private/tmp/fibra-config-contract-m2 -pl fibra-engine,fibra-runtime-java -am test
+nativeExit=0
+
+consumers-1
+JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home PATH="$JAVA_HOME/bin:$PATH" /Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn -o -Dmaven.repo.local=/private/tmp/fibra-config-contract-m2 -pl fibra-parity-tests,fibra-benchmarks -am test -Dtest=HostRestartRecoveryTest -Dsurefire.failIfNoSpecifiedTests=false
+nativeExit=0

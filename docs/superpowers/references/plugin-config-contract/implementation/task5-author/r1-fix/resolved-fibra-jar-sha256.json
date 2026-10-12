@@ -1,0 +1,137 @@
+[
+  {
+    "resolved": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/consumer-m2/com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/fibra-api-0.5.0-SNAPSHOT.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/fibra-api-0.5.0-20261012.090531-1.jar",
+    "sha256": "f5a711f7045b78670c3b9f68b0530518daba3a0b7cba8fe15fd3f36d8f0188b8"
+  },
+  {
+    "resolved": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/consumer-m2/com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/fibra-artifact-0.5.0-SNAPSHOT.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/fibra-artifact-0.5.0-20261012.090531-1.jar",
+    "sha256": "705e7235f9acf2827b5b05b6943766c2dd713293d8843707f984487cff493b1e"
+  },
+  {
+    "resolved": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/consumer-m2/com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/fibra-bridge-0.5.0-SNAPSHOT.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/fibra-bridge-0.5.0-20261012.090531-1.jar",
+    "sha256": "33b7ccc639c3a547a36c169e95a4de37714495f2e740ed1aa3303e654de7cb82"
+  },
+  {
+    "resolved": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/consumer-m2/com/sstlfsj/fibra-cli-api/0.5.0-SNAPSHOT/fibra-cli-api-0.5.0-SNAPSHOT.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-cli-api/0.5.0-SNAPSHOT/fibra-cli-api-0.5.0-20261012.090531-1.jar",
+    "sha256": "c33a540fb62ea285f255d648eb1622e45f5d54b6054991f8d04330402b702af5"
+  },
+  {
+    "resolved": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/consumer-m2/com/sstlfsj/fibra-cli/0.5.0-SNAPSHOT/fibra-cli-0.5.0-SNAPSHOT.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-cli/0.5.0-SNAPSHOT/fibra-cli-0.5.0-20261012.090531-1.jar",
+    "sha256": "5fe296d3a1aae67098163a4d708edffcaaed14063d6707d4dc3f3bedc6f94827"
+  },
+  {
+    "resolved": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/consumer-m2/com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/fibra-client-protocol-0.5.0-SNAPSHOT.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/fibra-client-protocol-0.5.0-20261012.090531-1.jar",
+    "sha256": "dc0292ac593e181e57c490db5cf741f35cf44eed86c16431196e5e83560844cb"
+  },
+  {
+    "resolved": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/consumer-m2/com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/fibra-config-0.5.0-SNAPSHOT.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/fibra-config-0.5.0-20261012.090531-1.jar",
+    "sha256": "0e617c9f148c124ca3fc63268d3688115728367b517778593838aecfd379aab0"
+  },
+  {
+    "resolved": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/consumer-m2/com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/fibra-core-0.5.0-SNAPSHOT.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/fibra-core-0.5.0-20261012.090531-1.jar",
+    "sha256": "030e9457ff674aa054244ffe47c43c53493a99777becf4d91a3be219e38155a0"
+  },
+  {
+    "resolved": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/consumer-m2/com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/fibra-engine-0.5.0-SNAPSHOT.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/fibra-engine-0.5.0-20261012.090531-1.jar",
+    "sha256": "eb45f515cbbb59852496278979c069197009eba0e29d60f277895b2293fdc219"
+  },
+  {
+    "resolved": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/consumer-m2/com/sstlfsj/fibra-registry/0.5.0-SNAPSHOT/fibra-registry-0.5.0-SNAPSHOT.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-registry/0.5.0-SNAPSHOT/fibra-registry-0.5.0-20261012.090531-1.jar",
+    "sha256": "ccc1fbacc0605f2ecc27ad2cd8afebc68afde40ab250d49445a183e46ab067ed"
+  },
+  {
+    "resolved": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/consumer-m2/com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/fibra-runtime-java-0.5.0-SNAPSHOT.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/fibra-runtime-java-0.5.0-20261012.090531-1.jar",
+    "sha256": "fc2cc52f6c8060ce8a254220987a4b8ab19187ef69f51cc21ea7c7f02b86f5f5"
+  },
+  {
+    "resolved": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/consumer-m2/com/sstlfsj/fibra-runtime-node/0.5.0-SNAPSHOT/fibra-runtime-node-0.5.0-SNAPSHOT.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-runtime-node/0.5.0-SNAPSHOT/fibra-runtime-node-0.5.0-20261012.090531-1.jar",
+    "sha256": "09542dee60070e982a856cdb9d7a4cf73b6ca0de29faa08d4a20490d1bc92830"
+  },
+  {
+    "resolved": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/consumer-m2/com/sstlfsj/fibra-spring-boot-starter/0.5.0-SNAPSHOT/fibra-spring-boot-starter-0.5.0-SNAPSHOT.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-spring-boot-starter/0.5.0-SNAPSHOT/fibra-spring-boot-starter-0.5.0-20261012.090531-1.jar",
+    "sha256": "98f1e4ba2b4ca219b452c619abee69a030eabc8317580235a96e8901cf5da7b1"
+  },
+  {
+    "resolved": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/consumer-m2/com/sstlfsj/fibra-spring/0.5.0-SNAPSHOT/fibra-spring-0.5.0-SNAPSHOT.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-spring/0.5.0-SNAPSHOT/fibra-spring-0.5.0-20261012.090531-1.jar",
+    "sha256": "83064ebfcfb163dcdc54a418b4e00ade4830c4dd890b86b3b4f954bac4693f65"
+  },
+  {
+    "resolved": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/consumer-m2/com/sstlfsj/fibra-tool-api/0.5.0-SNAPSHOT/fibra-tool-api-0.5.0-SNAPSHOT.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-tool-api/0.5.0-SNAPSHOT/fibra-tool-api-0.5.0-20261012.090531-1.jar",
+    "sha256": "6ebc4072818b1fdd37ffc9e9e60864528194a851e8ed9a5c00d987e181151f7d"
+  },
+  {
+    "staged": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/consumer/engine-application/target/plugin-artifacts/fibra-fs-local.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-fs-local/0.5.0-SNAPSHOT/fibra-fs-local-0.5.0-20261012.090531-1.jar",
+    "sha256": "f56f69842d2f11942bb05cac8c6480d5100b2220d58d8f87bde97174c9573dbe"
+  },
+  {
+    "staged": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/consumer/engine-application/target/plugin-artifacts/fibra-fs.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-fs/0.5.0-SNAPSHOT/fibra-fs-0.5.0-20261012.090531-1.jar",
+    "sha256": "0d1828792f9c35dbdeb6720f9ad2af40f1c2eb619bc9f1c64429d25c629dfcea"
+  },
+  {
+    "staged": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/consumer/engine-application/target/plugin-artifacts/fibra-shell-local.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-shell-local/0.5.0-SNAPSHOT/fibra-shell-local-0.5.0-20261012.090531-1.jar",
+    "sha256": "4533da2ed99d05f68a97737f9c085d2f66e56e19091581c52a40d9b2b2789bef"
+  },
+  {
+    "staged": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/consumer/engine-application/target/plugin-artifacts/fibra-shell.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-shell/0.5.0-SNAPSHOT/fibra-shell-0.5.0-20261012.090531-1.jar",
+    "sha256": "6d7fa5351d370adc8ccb0f3efab76723c6448d59806c0ce7554519a7798e277e"
+  },
+  {
+    "staged": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/consumer/engine-application/target/plugin-artifacts/fibra-storage-json.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-storage-json/0.5.0-SNAPSHOT/fibra-storage-json-0.5.0-20261012.090531-1.jar",
+    "sha256": "8c6adca7460bacc5c150d3f80b9ae4a8688d0d0693d966886b985ccccfe4bcd8"
+  },
+  {
+    "staged": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/consumer/engine-application/target/plugin-artifacts/fibra-storage.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-storage/0.5.0-SNAPSHOT/fibra-storage-0.5.0-20261012.090531-1.jar",
+    "sha256": "d6f49d890f68f70b0ebb3c9506eb911067606a73c4d7966cc456239bac4f73b5"
+  },
+  {
+    "staged": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/consumer/engine-application/target/plugin-artifacts/fibra-subprocess-local.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-subprocess-local/0.5.0-SNAPSHOT/fibra-subprocess-local-0.5.0-20261012.090531-1.jar",
+    "sha256": "8bd3a3b8ffc464b46a44251457a58b42a226383752baece0cf34f103063e7f51"
+  },
+  {
+    "staged": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/consumer/engine-application/target/plugin-artifacts/fibra-subprocess.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-subprocess/0.5.0-SNAPSHOT/fibra-subprocess-0.5.0-20261012.090531-1.jar",
+    "sha256": "f5f00552b73915bff32650074d1a6347027ae627fe270960b73900817ffd2140"
+  },
+  {
+    "staged": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/consumer/engine-application/target/plugin-artifacts/fibra-tool-fs-search.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-tool-fs-search/0.5.0-SNAPSHOT/fibra-tool-fs-search-0.5.0-20261012.090531-1.jar",
+    "sha256": "2d787e763f3087fc42ee8d513108d0d89e77c18be98af831cfce9dbc116fe727"
+  },
+  {
+    "staged": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/consumer/engine-application/target/plugin-artifacts/fibra-tool-fs.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-tool-fs/0.5.0-SNAPSHOT/fibra-tool-fs-0.5.0-20261012.090531-1.jar",
+    "sha256": "f2ea89fda37b1aefad140f63f69ccb487dd01d0fb725d46aa811e09744a713b2"
+  },
+  {
+    "staged": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/consumer/engine-application/target/plugin-artifacts/fibra-tool-shell.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-tool-shell/0.5.0-SNAPSHOT/fibra-tool-shell-0.5.0-20261012.090531-1.jar",
+    "sha256": "7290c8cd2d8fc7eb09a65c7c6d934e98c4b1fd851ed74310529be685ba407b1f"
+  },
+  {
+    "staged": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/consumer/engine-application/target/plugin-artifacts/fibra-tool-storage.jar",
+    "published": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-tool-storage/0.5.0-SNAPSHOT/fibra-tool-storage-0.5.0-20261012.090531-1.jar",
+    "sha256": "131ea0907f82e03e724a1566b685a60698f11804cf088588651fdc6344d238a9"
+  }
+]

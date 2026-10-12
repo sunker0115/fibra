@@ -1,0 +1,12 @@
+[
+  {
+    "resolved": "/private/tmp/tela-config-consumer.7vs6zn1a/tela/tela-desktop/vendor/sstlfsj-fibra-client-api-0.5.0-SNAPSHOT.tgz",
+    "published": "/private/tmp/fibra-config-contract-npm-node22.14/sstlfsj-fibra-client-api-0.5.0-SNAPSHOT.tgz",
+    "sha256": "de07c38c5413c1648389554144049f6d4dc0f89ceeb7ea0f9156b280997f27ac"
+  },
+  {
+    "resolved": "/private/tmp/tela-config-consumer.7vs6zn1a/tela/tela-desktop/vendor/sstlfsj-fibra-client-protocol-0.5.0-SNAPSHOT.tgz",
+    "published": "/private/tmp/fibra-config-contract-npm-node22.14/sstlfsj-fibra-client-protocol-0.5.0-SNAPSHOT.tgz",
+    "sha256": "b41a942ef9c8990532dbc8dd7b313052572f8d5bf97f9334b19299570aad51a5"
+  }
+]

@@ -44,6 +44,12 @@ Java JAR 内的 `META-INF/fibra/plugin.yaml` 只描述 Java 本地定义和可�
 空 descriptor，不复制逻辑 package 身份。宿主可见契约依赖使用 `provided`；JNA、Jackson 等实现依赖只能按
 对应插件的受控打包策略进入实现 JAR，不能传递到宿主。
 
+插件配置规则的唯一作者源为 `src/plugin/fibra-config.json`，构建原字节派生 JAR 内的
+`META-INF/fibra/config.json`；发行装配从已选定的正式主 JAR 提取为 package 根 `fibra-config.json`。
+固定 entry 必须唯一且为普通文件，缺失时构建失败；运行时只读根文件，不提供 JAR 回退或旧格式兼容。
+shade 后的最终 JAR、安装根及 ZIP 必须逐字节一致。发布资格对全包真实静态名称检查 missing/orphan/空 facet，
+并调用 `ConfigSchema.checkSources` 检查全部规则，包括停用和零 definition 的包；仅验证活跃实例不足以证明作者包合格。
+
 Node payload 必须已包含可执行入口和生产依赖。runtime 不执行 `npm install`，不联网补依赖。市场、下载、
 签名、信任和上传鉴权属于宿主策略，不属于 Fibra package 协议。
 

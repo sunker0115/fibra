@@ -7,7 +7,15 @@ def installation = new File(project, "target/sample-fibra-plugin-1.0.0-plugin")
 assert pom.isFile()
 assert jar.isFile()
 assert installation.isDirectory()
-assert installation.list().toList().sort() == ["fibra-package.yaml", "lib"]
+assert installation.list().toList().sort() == ["fibra-config.json", "fibra-package.yaml", "lib"]
+def configuration = new File(project, "src/plugin/fibra-config.json")
+assert configuration.isFile()
+assert configuration.bytes == new File(installation, "fibra-config.json").bytes
+assert configuration.text.contains('"$schema"')
+assert configuration.text.contains('"$defs"')
+assert configuration.text.contains('"$ref"')
+assert configuration.text.contains('#/$defs/message')
+assert !configuration.text.contains('${')
 assert new File(installation, "lib").list().toList() == ["plugin.jar"]
 assert new File(installation, "lib/plugin.jar").bytes == jar.bytes
 def packageManifest = new File(installation, "fibra-package.yaml").getText("UTF-8")
@@ -28,6 +36,8 @@ assert pomText.contains("maven-assembly-plugin")
 new ZipFile(jar).withCloseable { zip ->
     def entries = zip.entries().toList()*.name
     assert entries.contains("META-INF/fibra/plugin.yaml")
+    assert entries.count("META-INF/fibra/config.json") == 1
+    assert zip.getInputStream(zip.getEntry("META-INF/fibra/config.json")).bytes == configuration.bytes
     assert entries.contains("org/example/fibra/FibraPluginEntrypoint.class")
     assert entries.contains("org/example/fibra/PluginConfig.class")
     assert !entries.any { it.startsWith("com/sstlfsj/fibra/") }

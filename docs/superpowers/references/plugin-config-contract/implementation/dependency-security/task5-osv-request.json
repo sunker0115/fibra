@@ -1,0 +1,186 @@
+{
+  "queries": [
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "com.ethlo.time:itu"
+      },
+      "version": "1.14.0"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "com.fasterxml.jackson.core:jackson-annotations"
+      },
+      "version": "2.21"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "com.networknt:json-schema-validator"
+      },
+      "version": "3.0.8"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "info.picocli:picocli"
+      },
+      "version": "4.7.7"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "io.projectreactor:reactor-core"
+      },
+      "version": "3.8.6"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "net.java.dev.jna:jna"
+      },
+      "version": "5.17.0"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "org.jline:jansi-core"
+      },
+      "version": "4.4.3"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "org.jline:jline"
+      },
+      "version": "4.4.3"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "org.jline:jline-builtins"
+      },
+      "version": "4.4.3"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "org.jline:jline-native"
+      },
+      "version": "4.4.3"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "org.jline:jline-reader"
+      },
+      "version": "4.4.3"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "org.jline:jline-remote-ssh"
+      },
+      "version": "4.4.3"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "org.jline:jline-remote-telnet"
+      },
+      "version": "4.4.3"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "org.jline:jline-shell"
+      },
+      "version": "4.4.3"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "org.jline:jline-style"
+      },
+      "version": "4.4.3"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "org.jline:jline-terminal"
+      },
+      "version": "4.4.3"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "org.jline:jline-terminal-ffm"
+      },
+      "version": "4.4.3"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "org.jline:jline-terminal-jni"
+      },
+      "version": "4.4.3"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "org.jspecify:jspecify"
+      },
+      "version": "1.0.0"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "org.reactivestreams:reactive-streams"
+      },
+      "version": "1.0.4"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "org.slf4j:slf4j-api"
+      },
+      "version": "2.0.18"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "org.slf4j:slf4j-simple"
+      },
+      "version": "2.0.18"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "org.snakeyaml:snakeyaml-engine"
+      },
+      "version": "3.0.1"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "tools.jackson.core:jackson-core"
+      },
+      "version": "3.1.5"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "tools.jackson.core:jackson-databind"
+      },
+      "version": "3.1.5"
+    },
+    {
+      "package": {
+        "ecosystem": "Maven",
+        "name": "tools.jackson.dataformat:jackson-dataformat-yaml"
+      },
+      "version": "3.1.5"
+    }
+  ]
+}

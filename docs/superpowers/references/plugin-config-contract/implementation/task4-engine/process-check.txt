@@ -1,0 +1,4 @@
+2026-10-12 Asia/Shanghai, after run 20 completion
+Read-only escalated command: /bin/ps -axo pid=,ppid=,command= | /usr/bin/awk filtered org.codehaus.plexus.classworlds, surefirebooter, HostRestartRecoveryProcess, node.*fibra
+Native exit: 0
+Matched processes: none

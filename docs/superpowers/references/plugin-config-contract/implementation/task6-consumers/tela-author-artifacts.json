@@ -1,0 +1,49 @@
+[
+  {
+    "module": "tela-model-api",
+    "pluginId": "tela-model-api",
+    "source": "/private/tmp/tela-config-consumer.7vs6zn1a/tela/tela-model-api/src/plugin/fibra-config.json",
+    "schemaSha256": "99605a048253ce922eb70ffa0790d4775124e1f66975e9aa343ae3e325abc0ec",
+    "jar": "/private/tmp/tela-config-consumer.7vs6zn1a/tela/tela-model-api/target/tela-model-api-0.1.0-SNAPSHOT.jar",
+    "jarSha256": "3c1a3dc958ccc35dbc58b07b88cfa2758e6373243e3591a38598d9f1203900fd",
+    "zipRootEntry": "tela-0.1.0-SNAPSHOT/fibra/plugins/tela-model-api/fibra-config.json",
+    "equalSourceJarPackageZip": true
+  },
+  {
+    "module": "tela-agent-plugin",
+    "pluginId": "tela-agent",
+    "source": "/private/tmp/tela-config-consumer.7vs6zn1a/tela/tela-agent-plugin/src/plugin/fibra-config.json",
+    "schemaSha256": "cb1ba24d98200f35c400b950c2fc319b992adbd3e406a924002073d7807d84bd",
+    "jar": "/private/tmp/tela-config-consumer.7vs6zn1a/tela/tela-agent-plugin/target/tela-agent-plugin-0.1.0-SNAPSHOT-plugin.jar",
+    "jarSha256": "6af70365fd545339ff3abb23b317a157d068a4898c04ad152eb8f04fe7604b0f",
+    "zipRootEntry": "tela-0.1.0-SNAPSHOT/fibra/plugins/tela-agent/fibra-config.json",
+    "equalSourceJarPackageZip": true
+  },
+  {
+    "module": "tela-model-deterministic-plugin",
+    "pluginId": "tela-model-deterministic",
+    "source": "/private/tmp/tela-config-consumer.7vs6zn1a/tela/tela-model-deterministic-plugin/src/plugin/fibra-config.json",
+    "schemaSha256": "9e872a7f57dfc23e365e077273ba8c5dfed873815aa4c8641a743d758b8a155a",
+    "jar": "/private/tmp/tela-config-consumer.7vs6zn1a/tela/tela-model-deterministic-plugin/target/tela-model-deterministic-plugin-0.1.0-SNAPSHOT.jar",
+    "jarSha256": "f25086dab5e1ef7b77adc2d99404b2caef1f302c4ad1737d73a1d7323211f94c",
+    "zipRootEntry": "tela-0.1.0-SNAPSHOT/fibra/plugins/tela-model-deterministic/fibra-config.json",
+    "equalSourceJarPackageZip": true
+  },
+  {
+    "module": "tela-model-openai-plugin",
+    "pluginId": "tela-model-openai",
+    "source": "/private/tmp/tela-config-consumer.7vs6zn1a/tela/tela-model-openai-plugin/src/plugin/fibra-config.json",
+    "schemaSha256": "fe798a7cb46efe75b3c0e9a8a9145f22d9d33c82466b67a2446e64e87cc0add7",
+    "jar": "/private/tmp/tela-config-consumer.7vs6zn1a/tela/tela-model-openai-plugin/target/tela-model-openai-plugin-0.1.0-SNAPSHOT-plugin.jar",
+    "jarSha256": "ad440b040143f0d6ca3102ca08a1a928fef3b113a2e0c1c82c3462e15c3a3457",
+    "zipRootEntry": "tela-0.1.0-SNAPSHOT/fibra/plugins/tela-model-openai/fibra-config.json",
+    "equalSourceJarPackageZip": true
+  },
+  {
+    "pluginId": "tela-agent-view",
+    "source": "/private/tmp/tela-config-consumer.7vs6zn1a/tela/tela-desktop/plugins/agent-view/fibra-config.json",
+    "schemaSha256": "c2a8fdf716dc6cdfc1b8bc23c6c68bc5cd2dbb608f024162e9b4c89130d43a79",
+    "productModuleSha256": "a2774e64b1210cdd1749a03b8be18b0985f22af1a17e6a22d314dc40b4c14b85",
+    "equalSourcePackageZip": true
+  }
+]

@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "profile": "fibra-config-1",
+  "facets": {
+    "main": {
+      "fibra-subprocess-local": {
+        "type": "object",
+        "properties": {
+          "nodeExecutable": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "nodeExecutable"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema"
+      }
+    }
+  }
+}

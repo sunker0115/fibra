@@ -1,0 +1,3386 @@
+[
+  {
+    "path": ".github/workflows/ci.yml",
+    "sha256": "28214d006e1a39a929eb80590653716636567e909b7b8b0b98d47e5fa2378fcd"
+  },
+  {
+    "path": ".github/workflows/release.yml",
+    "sha256": "5377c885b8856fe48c9c33a21246b047ce5732aee44fe9b07617aadd0b04d87f"
+  },
+  {
+    "path": ".gitignore",
+    "sha256": "58b1f2682076a2f42b627f38f218287ad34a3a874aa2d79969fe9b4068de34f5"
+  },
+  {
+    "path": "CHANGELOG.md",
+    "sha256": "da34d59d82e41730e88ee257794333e60cc41bc76e7929ae9291cdcfbfd113cc"
+  },
+  {
+    "path": "CONTRIBUTING.md",
+    "sha256": "83482441aacb19e1995a1563a4e79731852fcbdf26151fcd4d8dcade9e000f81"
+  },
+  {
+    "path": "LICENSE",
+    "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+  },
+  {
+    "path": "LICENSES/Cordis-MIT.txt",
+    "sha256": "034fb52b1d57360ecbae6cb1632a88f86fd7c3d3f5631a5f082710203dda0be7"
+  },
+  {
+    "path": "README.md",
+    "sha256": "abb312316ec37c0d0503ed222fbf8f31c5d68bec71b4faa1dbecddbfd05f3052"
+  },
+  {
+    "path": "SECURITY.md",
+    "sha256": "d81a95585f256e47607ff3126458997cd2b4445919d458ac1b85d26816557125"
+  },
+  {
+    "path": "THIRD_PARTY_NOTICES.md",
+    "sha256": "dfb19c43d27a796a6d3721e3ac86a3210763177f6824cf92a82105b121c6172a"
+  },
+  {
+    "path": "client/.node-version",
+    "sha256": "c989649ac5c541692f22f2e41f5fbc34927c02bf1644e5dcca46bb4c88281f87"
+  },
+  {
+    "path": "client/api-baseline/client-api.d.ts",
+    "sha256": "28c10b6df99bbbcfc0656df9b65970817e46c174af1cebb0ff49279abaf68b59"
+  },
+  {
+    "path": "client/api-baseline/client-protocol.d.ts",
+    "sha256": "c2f1ae98490c443d8efb0cebf3c55e8fbc5c09c7be7d17c4b0be88de1d5dd782"
+  },
+  {
+    "path": "client/package.json",
+    "sha256": "208ea2ea72e0d0c19bd00b8a4e42be2dbda1f79b8333dfeb2f5ae55898e02d2b"
+  },
+  {
+    "path": "client/packages/client-api/LICENSE",
+    "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+  },
+  {
+    "path": "client/packages/client-api/NOTICE",
+    "sha256": "86908e706deb33dd5ad627d6ae3449b8003dc7a9004df5bb285b08e6d416ce76"
+  },
+  {
+    "path": "client/packages/client-api/package.json",
+    "sha256": "c0f2501d3e6b11d1fffc7013ca4cd3aa4190d230fed5f7967716a21ed019a7da"
+  },
+  {
+    "path": "client/packages/client-api/src/index.ts",
+    "sha256": "307a0ce7f6cd6b933bc70ef70b62d559f37b616b1d4a3b98385f6ff6fdf86393"
+  },
+  {
+    "path": "client/packages/client-api/tests/api-boundary.spec.mjs",
+    "sha256": "b5c5aba3ce80acef6f54454d146948942e1cfb042a2b4482c0ccaefac209b51e"
+  },
+  {
+    "path": "client/packages/client-api/tests/client-module-contract.spec.mjs",
+    "sha256": "2f21621f3ca5e576598555fe700ec9b39e26e9a21df74507ddb7a145f615e6ae"
+  },
+  {
+    "path": "client/packages/client-api/tests/client-module-contract.spec.ts",
+    "sha256": "526e502747aaea979ccc5e7363ff12baa856bc316584859f726b286cd232d471"
+  },
+  {
+    "path": "client/packages/client-api/tsconfig.json",
+    "sha256": "2f9588772af25d8616f749ff62028b5914cb0450d5dab67129a2f29a4948f8eb"
+  },
+  {
+    "path": "client/packages/client-api/tsconfig.test.json",
+    "sha256": "6cce0c167fb9bda0678706d9292e625b8d1b50ef8a728d858128d5be69db896a"
+  },
+  {
+    "path": "client/packages/client-protocol/LICENSE",
+    "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+  },
+  {
+    "path": "client/packages/client-protocol/NOTICE",
+    "sha256": "86908e706deb33dd5ad627d6ae3449b8003dc7a9004df5bb285b08e6d416ce76"
+  },
+  {
+    "path": "client/packages/client-protocol/package.json",
+    "sha256": "b60224e1a2ae93cea1a53c71bfbf5435fdfe407346324363763f9d1b4824532c"
+  },
+  {
+    "path": "client/packages/client-protocol/src/index.ts",
+    "sha256": "8f8bf35a113bca1af064fa3d15b3eebf8f7c68a99aac39fa790758123203d619"
+  },
+  {
+    "path": "client/packages/client-protocol/tests/protocol-fixtures.spec.ts",
+    "sha256": "3019ceb0fc12b95bd61eba9357b16277ba4721af903fd1081011f3e62e47d8c1"
+  },
+  {
+    "path": "client/packages/client-protocol/tsconfig.json",
+    "sha256": "2f9588772af25d8616f749ff62028b5914cb0450d5dab67129a2f29a4948f8eb"
+  },
+  {
+    "path": "client/pnpm-lock.yaml",
+    "sha256": "8de8e7e9c6b9395bd8cba6c0b145700f7d68ed5202fb5d4816f1bd1f71c45a92"
+  },
+  {
+    "path": "client/pnpm-workspace.yaml",
+    "sha256": "d115dc6c83ba283a7d17146ad456056f3f70b003edb8c312a52880b48b034001"
+  },
+  {
+    "path": "client/scripts/check-core-boundaries.mjs",
+    "sha256": "f0a06bcd9a4b6eee97f9b07cb50ec99143b975fedeb1ec5e737d46e9a2957866"
+  },
+  {
+    "path": "client/tests/engine-connection/consume-snapshots.mjs",
+    "sha256": "9f6c993974f750fd4dfc6b3e0d5e423881a83ab4e7fd427cd6b8c76425b17ad0"
+  },
+  {
+    "path": "client/tests/package-consumer/package.json",
+    "sha256": "b1e7031da584e10401e011a10cd0c156dae359021a44e4bb3d9a5c0c6c4a5292"
+  },
+  {
+    "path": "client/tests/package-consumer/src/index.ts",
+    "sha256": "40979c5462c6b460c93fbf90c89fa637fc00f53a8b412f1c3421d9f06254bde0"
+  },
+  {
+    "path": "client/tests/package-consumer/tsconfig.json",
+    "sha256": "0e06a30cf18b41f32cd4b35395c43dfd11dac484c906ee78cfa5609bd5f5625d"
+  },
+  {
+    "path": "client/tsconfig.core.json",
+    "sha256": "d4ee8e9b0f705298acb5d7777daac97330cb9ee727293f70a74f096a35e030b5"
+  },
+  {
+    "path": "client/tsconfig.json",
+    "sha256": "fe519b41f1e9dd37292a381d80b96d35ad991b1de1e0852e9b93f044a8e492f9"
+  },
+  {
+    "path": "fibra-api/pom.xml",
+    "sha256": "fa07a3a526d8487aa8e7cd7c66a829f5106ae2e043ab0adca95959e2eabff7c2"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/Associated.java",
+    "sha256": "4b4720262c69e146f2d5a3f27566fcd98f2c9f17c1ae49e96f6cbadd29b9a3b3"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/CancellationSource.java",
+    "sha256": "4fb9267d92e5e3d53ab92394a99ba127a5dc8c5070ad23be7082988d860bf54e"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/CancellationToken.java",
+    "sha256": "3f1a9cb4af4f227566019e0947782123378fb909eaaa41a53abcbaf51fcedb75"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/ConfigValidator.java",
+    "sha256": "f3fd2c21a65db1cfd949a167dbf792d723dd67dee3f52e707efe4a1bf4049c59"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/Context.java",
+    "sha256": "60b1bcabd2c60176bc508bc2fd2cf9d3b125b5d788ca325735d3d7b3b10e8db4"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/Disposable.java",
+    "sha256": "2d29893d40bd7104c500cfc5167634c7eb0a8fd00fd2380ec3b6242383107f74"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/Disposables.java",
+    "sha256": "d8e2a60e0dff972f609a9e162f2260188d70bc9175e747f957003869c19c0966"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/DrainingDisposable.java",
+    "sha256": "00a8b6974c9d3c53a25e8a8c1d77dbbb73cbab17466fe9448716bd55034ac7a9"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/EffectHandle.java",
+    "sha256": "20d11a2c422ec72a64c6228d106457cd1f4e1f18e573b96e7e31072d2f7891d4"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/EffectMetadata.java",
+    "sha256": "6d6dd06974b5d17233423432542dae9ec17597a68609db9a9047bfe321fe8cf3"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/Effects.java",
+    "sha256": "998d0fdd9a641707ea1eb52ab98392de3f36d231f60783f0a83daefa5bb8408c"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/Events.java",
+    "sha256": "066e5b3b232c3374731a9e90fc5fc09e972ff1f10b5f4cec9b76f00817b97b6b"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/FibraException.java",
+    "sha256": "ac80d1c4ac45dfcf4bd5be64add43a4f1bfda6fa34a6d390ce77747f39e3c6f8"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/InvocationContext.java",
+    "sha256": "bc744e1f27c876daa2734661942fcc0e9111aa5d08793f63a87bbed64eaf249b"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/ManagedPluginControl.java",
+    "sha256": "f62aec96fde4ce7bab8387a3b59ee5d80a82a2115b038577cb4fcf9f0932a925"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/Plugin.java",
+    "sha256": "b1377c45ace8aaff9b69aaf1d4b3618b20fb127b2d854102820d243de86fabb4"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/PluginDefinition.java",
+    "sha256": "855a5afba78d165cf0c59afdc9528a1ce80d3246d279f8cabf9b197fa56d66a0"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/PluginEntrypoint.java",
+    "sha256": "80c7a073305f283a81a5eab9c555410c3b5e409df55d3bab6fafb2ff821ec4af"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/PluginFactory.java",
+    "sha256": "4cdb55c5f84832b481419d4c5c2cba5d1af8199fc4a63cfaa48433ecdd5c01ae"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/PluginInstance.java",
+    "sha256": "5b71f4128deb8c6e78b282f78366eb5c6d267197a1d46a36a3d7d590ffaef462"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/PluginInstanceState.java",
+    "sha256": "35f7fba9d4137eb9672fd2a5fa6923c2a3011978301ed7530dc761faf32851c6"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/Plugins.java",
+    "sha256": "dc62f52df9b5c953de86086ce7cf9a7421abbda21d9c5dbb1c0cbd2775da805b"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/Properties.java",
+    "sha256": "6b8d35c6b4062f3a97fadd359934cf5cb0da34dba869f25b723013ffe38d5ef7"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/PropertyAccessor.java",
+    "sha256": "a0ddb9246fec3c3f993ac7782026aa1fc9bf41a411c0defc7e9de5f00f05f958"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/PropertyKey.java",
+    "sha256": "ff237e7cd316ff055cc4cd474d863ae1071695a9dc41a575371b4be99880ea14"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/Scope.java",
+    "sha256": "503da710c7c0dba5c546f91e787765054cb6e5bc0ff0c7c2f6ac77663cc8b3ba"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/ScopeView.java",
+    "sha256": "9ace49c8eaf1cff67579d95e3f3635a7fdcf73920f22af7479b689160f96d1bc"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/ServiceKey.java",
+    "sha256": "3aeee187234930afced927c5889ffb7685cdb28c1e6e573c6a31e6e6a8be5f29"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/ServiceRef.java",
+    "sha256": "367042ff423269b8b3137282b1de25a24662d859964f6221a3747573903df5e5"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/ServiceRegistration.java",
+    "sha256": "b251b20af77a104eb8f9a2302a002f37cb7d5efa42994f9c12e07a6443f086df"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/Services.java",
+    "sha256": "f0bdd667fc93fa9b6bc7c8af02b17f328409219e93306a0e6c3e82f0b44c2243"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/annotation/InjectService.java",
+    "sha256": "c78b4b711acd7ff155519bb71754f5dcb9cd1236be5375f86b62622f8c732c5f"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/annotation/InjectServices.java",
+    "sha256": "497200dbae36473a72ff89f58b88dc34480f05319d520b72dacd470ba6977ef0"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/event/AggregateEventException.java",
+    "sha256": "7b06c1d5b16d375401d1834f4c1607601484d473bcfc3c8c225bd2478315bd7c"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/event/EventKey.java",
+    "sha256": "b76331272e3d4c27ad5bd48c02722f10878dd7022e0d4c687aa3d13d4cd94801"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/event/EventMode.java",
+    "sha256": "7c0274a18d166c4a70b22d3c51fe623c33e9fc26e394cda708de920f0c760457"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/event/EventOptions.java",
+    "sha256": "5cd1e5833c98eca98ccb913299687892c66e378b255e3bcf58c1b8ebaa9e88ec"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/event/EventTarget.java",
+    "sha256": "c7f5f87f0de590ebed034f5768112dd31d56d7984102dce901ac0d92c534d7ff"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/event/Next.java",
+    "sha256": "579ba46a2eadfd6343e98c3c731f9b687166f8672e0758387fdfe96aef6e8578"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/logging/FibraLogger.java",
+    "sha256": "c55fa05e33fba477ff3a617f43e5284b384b2f9e217d766695e8d17b46f49120"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/logging/LogExporter.java",
+    "sha256": "32d72e25f43966df62cdcb4662e6c2a8d867d4992e698dcdbfb721f97717c7fd"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/logging/LogLevel.java",
+    "sha256": "9ded41cff42379cc2159c155a41e82bd2255c2b8b39abc5511ac84756cb68427"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/logging/LogMessage.java",
+    "sha256": "2458bcdf98824443fbe0355e64cca2f6b6c6e16156d7249a1ddb0bc6c7b2b36f"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/logging/LoggerIntercept.java",
+    "sha256": "8132effe43a9a68187c05b1f42c61c96d3fb1e32f68d9c8fd402a133dea400db"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/logging/LoggerService.java",
+    "sha256": "c123b2bebf21290594efef2733a4310811e80531e1e9ea461afd9e4cc6cdfb17"
+  },
+  {
+    "path": "fibra-api/src/main/java/com/sstlfsj/fibra/value/LiteralValue.java",
+    "sha256": "b99815bdfae4fa6627ab30082004e613215f97ef5ddac64996d7a451301f86f4"
+  },
+  {
+    "path": "fibra-api/src/test/java/com/sstlfsj/fibra/CancellationSourceTest.java",
+    "sha256": "9912a5591e3eb30c83df78c9ef9b28ded359853e960c1797275b3bcf23b33c1a"
+  },
+  {
+    "path": "fibra-artifact/pom.xml",
+    "sha256": "a8625b9d89b9346bbdce6616cf53fcbce251330ef96482efd70a10045511836f"
+  },
+  {
+    "path": "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/ArtifactException.java",
+    "sha256": "2a21c807b9b510c684ff188ba9d5328bc64f89cb08bceb0a07dd8451ae763db3"
+  },
+  {
+    "path": "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/ArtifactId.java",
+    "sha256": "03d65196c7c19ae4c453d0127519d6b38b8f5def41dc0fa8a3e507b80289d294"
+  },
+  {
+    "path": "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/ArtifactPhase.java",
+    "sha256": "833d8d12b0b05afaf85beaa181c67fd96bff59130ce49f1aac81de50a4d4ddaa"
+  },
+  {
+    "path": "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/ArtifactState.java",
+    "sha256": "c1890662999b9e5bb2cee27c8e56d29e6144e2e5bc31b0795f6b08f7c331ccc1"
+  },
+  {
+    "path": "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/ConfigurationResourceEvidence.java",
+    "sha256": "5395805af8fe6d43d1d283a1b0f2c37869e6bb7273d673e3bd8b1ef83e02b903"
+  },
+  {
+    "path": "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/ExecutionTarget.java",
+    "sha256": "7c1aab3004967d6d60dda8d46508ce0fbead11d008301e4ee214627a099e496e"
+  },
+  {
+    "path": "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/FacetDependency.java",
+    "sha256": "5556e8075e961832c3adc04a02e689b837645b19790e54b42cb4a42baa4eecfb"
+  },
+  {
+    "path": "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/FacetId.java",
+    "sha256": "19c27597cc0698b2f44faaa656ce517c8ce940e60be03f4f91915acbacc68dfa"
+  },
+  {
+    "path": "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/FacetRole.java",
+    "sha256": "47606013117e3cb9294b3f13d2d69336850d704293e377f40b25f7d03a1721c0"
+  },
+  {
+    "path": "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/FixedPluginConfigurationResource.java",
+    "sha256": "4d58a7c4aa0d2e77ad2a49b1f05fb8a50d3abb1749c7a66498e80d439b41abde"
+  },
+  {
+    "path": "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/ManagedFacet.java",
+    "sha256": "ff2c1d2c6759573cf678d27724e83b4e8cd4b9d34b5739b18b5a5fae925daf0d"
+  },
+  {
+    "path": "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/ManagedPluginPackage.java",
+    "sha256": "272bc7a290567a640c6db9df981e8a360cd0db51a0aa25885798f90dfa0fffd0"
+  },
+  {
+    "path": "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginConfigurationResource.java",
+    "sha256": "37ef1e7ff3ea0fe6ade5e87aee84f0a9672a9ce888fa2ea1576ecac94164b2ed"
+  },
+  {
+    "path": "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginFacet.java",
+    "sha256": "0f7f1d028862529c19c38bfafe491f18977a72d54450faab3c672d515ec36b4a"
+  },
+  {
+    "path": "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginId.java",
+    "sha256": "a06302fbce2ec89e847e16b4ff0793050ede978a9c9b5eae8b8bc8433274524b"
+  },
+  {
+    "path": "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginPackage.java",
+    "sha256": "2b03e7c6e730875f1d2416ec38e350b55e82bc9d01136238042f87a2678c9a89"
+  },
+  {
+    "path": "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginPackageInstallTransaction.java",
+    "sha256": "77d7018280fd8f6ec714147686c942a4f86703b7b0bb80d438576e20305709f1"
+  },
+  {
+    "path": "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginPackageRecord.java",
+    "sha256": "ba003081af0a7ad0b71522b09cd48b47d55f91a6d400eacaecb20cec02d7c178"
+  },
+  {
+    "path": "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginPackageStore.java",
+    "sha256": "df4733bde43a363768a2933c520410490a8fe14f6ca8eb2707b56de82b9cf349"
+  },
+  {
+    "path": "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/RuntimeId.java",
+    "sha256": "7f6c0fab8fa3fdabfae11ab0d2a4425aa34698d32d2d3a562a272688d719b5f6"
+  },
+  {
+    "path": "fibra-artifact/src/test/java/com/sstlfsj/fibra/artifact/FixedPluginConfigurationResourceTest.java",
+    "sha256": "39e31499815a2ddd9b6d5b8c6366a5b1cd0ef92dbd0963d43a1d318e1b9b2881"
+  },
+  {
+    "path": "fibra-artifact/src/test/java/com/sstlfsj/fibra/artifact/PluginConfigurationResourceBootstrapTest.java",
+    "sha256": "c11bda71b569baf104b016e63a26cfeda3450606c251236718d21d19df77689e"
+  },
+  {
+    "path": "fibra-artifact/src/test/java/com/sstlfsj/fibra/artifact/PluginConfigurationResourceTest.java",
+    "sha256": "72dc7571eedd98466070a3bbb7de3746380543ce7165d38526fa305bd0ded186"
+  },
+  {
+    "path": "fibra-artifact/src/test/java/com/sstlfsj/fibra/artifact/PluginPackageStoreTest.java",
+    "sha256": "a5232759522cbafddd414dcc15c1ee3d4adc2df85e74f1e282f04944b12022a5"
+  },
+  {
+    "path": "fibra-artifact/src/test/java/com/sstlfsj/fibra/artifact/PluginPackageTest.java",
+    "sha256": "ec65d04b1fb6efd7c4d1e6dddf02342e020aa0c0142fa28bb4de13510b511793"
+  },
+  {
+    "path": "fibra-benchmarks/README.md",
+    "sha256": "e3908b49a8724aeff13f3a476739238db71489642ae2dbc6a4777211c4b098bc"
+  },
+  {
+    "path": "fibra-benchmarks/pom.xml",
+    "sha256": "21403411eeef33dca6f0e2a9d0b2a878133d51267cb6778da46a92e077cbbb7f"
+  },
+  {
+    "path": "fibra-benchmarks/src/main/java/com/sstlfsj/fibra/benchmarks/BenchmarkFixtures.java",
+    "sha256": "b5c8b05570c1587ff2bdb2c17169e282592f53a6daec26c589c1b572781a8c11"
+  },
+  {
+    "path": "fibra-benchmarks/src/main/java/com/sstlfsj/fibra/benchmarks/ContributionInvocationBenchmark.java",
+    "sha256": "7a80de8b6b75ba8e6356dc7213134097180d7200f4bceaa2142fcafd4228912f"
+  },
+  {
+    "path": "fibra-benchmarks/src/main/java/com/sstlfsj/fibra/benchmarks/EngineTransactionBenchmark.java",
+    "sha256": "99c57a2248d3cad384c4aa6cd61277406119385daa6f8abce802e76a8854da13"
+  },
+  {
+    "path": "fibra-benchmarks/src/main/java/com/sstlfsj/fibra/benchmarks/EventDispatchBenchmark.java",
+    "sha256": "5d93e3b4d7a9a02877cf026608eccc765f1e4df08c834f35654064ae021a0b87"
+  },
+  {
+    "path": "fibra-benchmarks/src/main/java/com/sstlfsj/fibra/benchmarks/LifecycleDispatchBenchmark.java",
+    "sha256": "c5736b3d94884b7dfe41775cd569c991997c33c0d5470946fadf03fe5a4f2f45"
+  },
+  {
+    "path": "fibra-benchmarks/src/main/java/com/sstlfsj/fibra/benchmarks/ServiceResolutionBenchmark.java",
+    "sha256": "8261fa5d5bd27b7435c9ef5194dadab6be8c38c2de2e19a5987428145cd6d731"
+  },
+  {
+    "path": "fibra-benchmarks/src/main/resources/simplelogger.properties",
+    "sha256": "62089873924c371d10fee20c6cde9045972911f31d0605ea90f039af78ec3c73"
+  },
+  {
+    "path": "fibra-bom/pom.xml",
+    "sha256": "34975819136b6b5e69932b5174e0cf5385b24eed1d1cdbfd0f1557c79411ae1d"
+  },
+  {
+    "path": "fibra-bridge/pom.xml",
+    "sha256": "595dd872054eef31e5a0260c3fbcd61f19808edc8476d70ea734550b0e277e43"
+  },
+  {
+    "path": "fibra-bridge/src/main/java/com/sstlfsj/fibra/bridge/ContributionAdapter.java",
+    "sha256": "fb3b08ac044259edab6c4d07b1bd8f6a4815c83e27436ea2238ef7c605e11d30"
+  },
+  {
+    "path": "fibra-bridge/src/main/java/com/sstlfsj/fibra/bridge/ContributionAdmission.java",
+    "sha256": "8b8b38f56452e612adaebd62ec314a585f6d95b96d0a236e2aa0d16df4c7eea3"
+  },
+  {
+    "path": "fibra-bridge/src/main/java/com/sstlfsj/fibra/bridge/ContributionBinding.java",
+    "sha256": "bb10bd3ae74b5db1b12f9023e96b5f0d572a2653d5856f8a27453828e9e60a6e"
+  },
+  {
+    "path": "fibra-bridge/src/main/java/com/sstlfsj/fibra/bridge/ContributionCall.java",
+    "sha256": "158baf0d6670c0d0ea35c5d4a3e6ced2413c0e098a303a29ab3f165096574a72"
+  },
+  {
+    "path": "fibra-bridge/src/main/java/com/sstlfsj/fibra/bridge/ContributionCodec.java",
+    "sha256": "a763b8351c158abf6ee8f338ac2c6a1f1005544c923d38f612cf253408903549"
+  },
+  {
+    "path": "fibra-bridge/src/main/java/com/sstlfsj/fibra/bridge/ContributionDirectory.java",
+    "sha256": "5135835cc8ebe8a72d0fbe7cafd25ceaf0a9c7a8b905a5c6e42e4938f576fca7"
+  },
+  {
+    "path": "fibra-bridge/src/main/java/com/sstlfsj/fibra/bridge/ContributionDirectoryView.java",
+    "sha256": "f0d61109b74e3cc41a2017dbc1397f17aeac0420f062ff6fa66f1f24edd350d7"
+  },
+  {
+    "path": "fibra-bridge/src/main/java/com/sstlfsj/fibra/bridge/ContributionDrainException.java",
+    "sha256": "a881c0dfb8b0a428ca777ebb9b6aaefe0f8b35cc04a8df344da0d0fb4d79d932"
+  },
+  {
+    "path": "fibra-bridge/src/main/java/com/sstlfsj/fibra/bridge/ContributionHandler.java",
+    "sha256": "394ec92299b2a09266b4d23301cf5f31e089055ca291bf40047f48cb94672aed"
+  },
+  {
+    "path": "fibra-bridge/src/main/java/com/sstlfsj/fibra/bridge/ContributionId.java",
+    "sha256": "2a5338012f0dbe3729a9bfa53d7e53b9a785d016491743309c6f074aef039c42"
+  },
+  {
+    "path": "fibra-bridge/src/main/java/com/sstlfsj/fibra/bridge/ContributionKind.java",
+    "sha256": "ad2a8d498feb0502224fc7b8f383fb34c3bfe6f174c6cd35d9341789cea435da"
+  },
+  {
+    "path": "fibra-bridge/src/main/java/com/sstlfsj/fibra/bridge/ContributionKindRegistry.java",
+    "sha256": "bf7f76e49327d4710a42147c8d07a3d34800c354ad64cc78b36ad60ddd7ec1af"
+  },
+  {
+    "path": "fibra-bridge/src/main/java/com/sstlfsj/fibra/bridge/ContributionRegistrar.java",
+    "sha256": "86f3d2a049b6bf83dff753923502c204d13f36c34a49737f55f2cfe9f508415d"
+  },
+  {
+    "path": "fibra-bridge/src/main/java/com/sstlfsj/fibra/bridge/ContributionRegistration.java",
+    "sha256": "365fd33259f51e9c77e3656aa16d03c8b1bf56dc6a329e384e39ef937adb657c"
+  },
+  {
+    "path": "fibra-bridge/src/main/java/com/sstlfsj/fibra/bridge/ContributionRoutes.java",
+    "sha256": "1d1a21fe39d3fef555e32408f37d648a67f1595a93073ec91220fde72879011b"
+  },
+  {
+    "path": "fibra-bridge/src/main/java/com/sstlfsj/fibra/bridge/ContributionServices.java",
+    "sha256": "944df45234e08b3aca81386214ace8b7f694ea44bca467c97176228337c224aa"
+  },
+  {
+    "path": "fibra-bridge/src/main/java/com/sstlfsj/fibra/bridge/ContributionSnapshot.java",
+    "sha256": "c8a4ba6791bac2b4c4d554fedb001209e3ce7ed7fd1d9fdcb18ef39dbc772b82"
+  },
+  {
+    "path": "fibra-bridge/src/main/java/com/sstlfsj/fibra/bridge/ContributionSnapshotEntry.java",
+    "sha256": "9e98b63af4d40aacd1b40900f580fc25af1a46f2f74602b524d339c91df68214"
+  },
+  {
+    "path": "fibra-bridge/src/main/java/com/sstlfsj/fibra/bridge/ContributionUnavailableException.java",
+    "sha256": "3a937d22896c2ca93833b182452a46cc67efd18bd2ff89c267efb8448ecb1bd0"
+  },
+  {
+    "path": "fibra-bridge/src/main/java/com/sstlfsj/fibra/bridge/RemoteContributionFailure.java",
+    "sha256": "e6df819ad8f810038b4a7c99ac5aa62ef71802298b992c1155e5a329c38ff687"
+  },
+  {
+    "path": "fibra-bridge/src/test/java/com/sstlfsj/fibra/bridge/ContributionAdmissionTest.java",
+    "sha256": "bc52227bfc12cc5c37f598c4cb368f2943c8a99936323f5dbdf9cbae51e593e3"
+  },
+  {
+    "path": "fibra-bridge/src/test/java/com/sstlfsj/fibra/bridge/ContributionCallTest.java",
+    "sha256": "be45cc5560513abeef4a6c064fcf5d40220dd1c874cd721c889bb2eeb5030e01"
+  },
+  {
+    "path": "fibra-bridge/src/test/java/com/sstlfsj/fibra/bridge/ContributionDirectoryTest.java",
+    "sha256": "823bfb5477cf5252701cbb3d7b27d2aa33919290bdcb807746f9dca328765ce4"
+  },
+  {
+    "path": "fibra-bridge/src/test/java/com/sstlfsj/fibra/bridge/ContributionDrainLifecycleTest.java",
+    "sha256": "1f94c612ecdbb5e2885950f6c2aa49819749ede72b83751512248ab03a0dc8de"
+  },
+  {
+    "path": "fibra-bridge/src/test/java/com/sstlfsj/fibra/bridge/ContributionKindRegistryTest.java",
+    "sha256": "6a3d8c491cd08d0972f5fe69dad7c4e6d8d3dc5e861d06862f3774e995e34c22"
+  },
+  {
+    "path": "fibra-cli-api/pom.xml",
+    "sha256": "6a77fd8c90d7d953acc9e4d5a8943cbf8cfdf31958602eb3e87284d3c607436f"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/CliApplication.java",
+    "sha256": "999b30315c0cc5acc6aa3d3e2f15a3d801b1814ffc8bd3c895329066092bd482"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/command/CliBootstrapCommand.java",
+    "sha256": "51d8acc32be5fddec035c3608aab4203309b804f7e279a874003b5f16efc1d3c"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/command/CliCommandContributions.java",
+    "sha256": "9f200258b90da77bc6a408eeb5624c41a206d8bcf0db9e33eebeb8216ebd4f5b"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/command/CliCommandDescriptor.java",
+    "sha256": "f7e9491c856cf407b07573611365a2793aa81ff9ea804c3d1b478f9aded410ae"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/command/CliCommandHandler.java",
+    "sha256": "696bf8d53f005dfb9fe671e4d40069b20aa1b1c6558fb6d07e470e35fa263886"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/command/CliCommandOption.java",
+    "sha256": "eb89d21879105c5c3972cd9b00a71cdba167ac39d4e4525061cc1152604b421a"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/command/CliCommandRequest.java",
+    "sha256": "89dd4ed99676bd80fc0392f6bc9b61c7183a25bf0f2d38aa1edc5da7623eb0c1"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/command/CliCommandResult.java",
+    "sha256": "a58bd3fcde38cac87b377667aeab94343c09fe577b252f70a973b3a2e0d2d385"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/input/CliInputHandler.java",
+    "sha256": "4413c0aab89c19e0e866f26081bfc70535180ddfddc1552e7518f1544b02395a"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/input/CliInputRequest.java",
+    "sha256": "08b42f5d466dcd0261e0b74a2b58b1bcd57b58e1bdef4e98744847f3225c1b60"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/input/CliInputResult.java",
+    "sha256": "d6038fa4987cc1f5b29224377d35d2f46ce6f49d8aca919bdcd238d2ee7b5b29"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/invocation/CliExitStatus.java",
+    "sha256": "8f43cd950efed3c7c34a07f1bb6b222f96c791eb2725e81f9d61056fd27875f9"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/invocation/CliInvocation.java",
+    "sha256": "3807b5f6a0e03432dab2b649268382e0a39444b82a2177de7bc3f192743d155d"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/invocation/CliOutput.java",
+    "sha256": "0951082e4ee279bbd43e216f2a7ef3b18e5d43b32f4c526f8bf834262bcec47d"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/invocation/CliProfile.java",
+    "sha256": "a48372d9193847d34a3b7ddab6d24442875589cff4dd1dd585b2f2b6e8474ce5"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/terminal/CliTerminal.java",
+    "sha256": "ff9d1ce57b5e69d37cc05405aef478dd77f4f7e407323f6830d0f710bcd7f961"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/terminal/CliTerminalCapabilities.java",
+    "sha256": "bd11c76f60ffb4851cc9e4efd4e813e0dc922b2621a74d1c02f13eaaff9e6cf9"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/terminal/CliTerminalControl.java",
+    "sha256": "96ca4f8d42f0297db372122c3c1b8f8184fd75bf57400403597e0a50afa0c937"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/terminal/CliTerminalCursor.java",
+    "sha256": "eab6eb55192d565e9d2f3eca35c0e4d71099ec4d04628951f2a9b6db18bf7ce2"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/terminal/CliTerminalFrame.java",
+    "sha256": "005d5ab988e344d9b21aa983bc13e4d2c3c7e9e6c27c3d067f40a93602af887e"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/terminal/CliTerminalInput.java",
+    "sha256": "215e812016a595e325fbbe7d263686e0d6f1aced2e3457fdb0216305d13f24b8"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/terminal/CliTerminalKey.java",
+    "sha256": "ec5978a1c2c815d5c5eea4d9db9ce91252b31da0fee167b073ea21de6bb37c7a"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/terminal/CliTerminalLease.java",
+    "sha256": "479b5aca8171cad291cf110d591b213ae2f2a8025282fad611f870137494af8c"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/terminal/CliTerminalModifier.java",
+    "sha256": "7d3224009099380bd5561ccaca9bb29df48f87985aee1db48d413d52f487a801"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/terminal/CliTerminalRenderer.java",
+    "sha256": "d0b223bba66766369df9c3709100590fefcc647b397dab9728246f3aa75ccf0a"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/terminal/CliTerminalSize.java",
+    "sha256": "1f4dc7bf11817e35e97602cc3f305b7466e7b36e79e9536992310d24406cbef6"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/terminal/CliTerminalUnavailableException.java",
+    "sha256": "47c4bb7f6c6e01b0dea6fb82588046dd558a3930e0b39da8d84a3a6ff357a4d8"
+  },
+  {
+    "path": "fibra-cli-api/src/main/java/com/sstlfsj/fibra/cli/api/terminal/CliTerminalUnavailableReason.java",
+    "sha256": "f10b4097c34871286ef8c991e6222213301151a1de73d18588dbb179c7577e77"
+  },
+  {
+    "path": "fibra-cli-api/src/test/java/com/sstlfsj/fibra/cli/api/CliApiContractTest.java",
+    "sha256": "2e66857012555c6fd09629e3a5b799d2adae98860188270d29616343235f5539"
+  },
+  {
+    "path": "fibra-cli/pom.xml",
+    "sha256": "8afbf507c6e3c237bf9684391c8c7c9439d23754dbb7ead148ec6faabafdd5ac"
+  },
+  {
+    "path": "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/CliApplicationRunner.java",
+    "sha256": "3aeaef71024fda96eb6cba7e9375b5e5d5233653f800564b312ef6fa51f330bf"
+  },
+  {
+    "path": "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/CliCommandCompleter.java",
+    "sha256": "360bd0acef4e0de4f19ec30191d9ef9f9445aece8c3b6b53488baaaeb40093e9"
+  },
+  {
+    "path": "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/CliCommandFailure.java",
+    "sha256": "490547780085d0f79e80abc5efbe464ea0ff2c63e5095c4accc0169faa2ff2ca"
+  },
+  {
+    "path": "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/CliCommandHighlighter.java",
+    "sha256": "8fbc171772b54224fa33d294ea2b52bd151ce87918975f84831c845e65cdd2f6"
+  },
+  {
+    "path": "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/CliExecutionSession.java",
+    "sha256": "1780f6255b04ce96f52da181dc6f67c140085a9002bda33476e7b4914cc5fae4"
+  },
+  {
+    "path": "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/CliHistory.java",
+    "sha256": "5f9ed74ee0512ac5a8d04a6f35edf38afb2f751c42fdd2e3da8b71a375247f1c"
+  },
+  {
+    "path": "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/CliHost.java",
+    "sha256": "c9d236dc4a5a09e5360880715654873758de47d58a73fea0d97d1778eb51e9e9"
+  },
+  {
+    "path": "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/CliInvocationCoordinator.java",
+    "sha256": "3834c34d55b8600fda5d86d6befac5c672311271d2a69b77b2a4290bc694af72"
+  },
+  {
+    "path": "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/CliPaths.java",
+    "sha256": "b98a5f392c2867d85a8784f5b9a569931518b14d3b34d98c79497d85643e855e"
+  },
+  {
+    "path": "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/CliProcessShutdown.java",
+    "sha256": "eece734e9cf1df3a6e2a875da46a8b1513261111dc05fae26b7f6ccadc36ef1f"
+  },
+  {
+    "path": "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/CliProcessSignalHandlers.java",
+    "sha256": "091e0d2acde3caf96d51e7e9b283e3cab90fb0b363df8746d19ff469bdaa8ff0"
+  },
+  {
+    "path": "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/CliRepl.java",
+    "sha256": "f3752214840253ca604f44439b6b7df2b6ffa35a44640a8db670a1c42b52b84a"
+  },
+  {
+    "path": "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/CliSensitiveInput.java",
+    "sha256": "208217ae0c25f7a3bc342670ba0221026b9054a16947900eccf1ddb30e1ffb28"
+  },
+  {
+    "path": "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/CliSession.java",
+    "sha256": "514c6e89f306724cc89c78731f9fc7cc68a60e6f8a89bcf29bdc476a20ae6e56"
+  },
+  {
+    "path": "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/CliTerminalController.java",
+    "sha256": "42192e9e0cad79a41b35a2b0e809e2377a37bc30fa0ffa853f2524e2850b8a71"
+  },
+  {
+    "path": "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/CliTerminalSession.java",
+    "sha256": "8763dacf2f25736a8925bbf78f97b92d14b0010d53c7c3836d21dd7092845227"
+  },
+  {
+    "path": "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/CliTerminalSignalBridge.java",
+    "sha256": "1082763f57304dfd188bcf96998ab1ead5dfa420e8c63dce3816cb6c447ab0fb"
+  },
+  {
+    "path": "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/CommandGeneration.java",
+    "sha256": "6750d1e7a5a228098f30bd67fe8667ea17746e52b51c53fc5ce30494704251bc"
+  },
+  {
+    "path": "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/FibraCli.java",
+    "sha256": "0e5cafa6c1be283f3f4c6edac69232bf39bb5f7010f4f63a4f9723780c94fd24"
+  },
+  {
+    "path": "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/ProfilePackageSource.java",
+    "sha256": "11214c966138e1ab17670c82457391e28cdacd15c8194f42a3418b8758852cad"
+  },
+  {
+    "path": "fibra-cli/src/main/resources/META-INF/fibra-cli-version",
+    "sha256": "b936bb89cfbe9224968a2fec8a73a973931f40f3f06efc98e3e4641dc0b37af3"
+  },
+  {
+    "path": "fibra-cli/src/test/java/com/sstlfsj/fibra/cli/CliHostOwnershipTest.java",
+    "sha256": "e0f222016e6ab4b4f818d937a8ab151c423b500beaf3cea10f20c7049f00c15a"
+  },
+  {
+    "path": "fibra-cli/src/test/java/com/sstlfsj/fibra/cli/CliHostTest.java",
+    "sha256": "39ea0d9c7352668923cf6501a9ee1ea75d785dc7d02adb3d266d4214270a71c1"
+  },
+  {
+    "path": "fibra-cli/src/test/java/com/sstlfsj/fibra/cli/CliInvocationCoordinatorTest.java",
+    "sha256": "7e6bfa0be454c26649346f36c97d083e0bbf0afbf5ab1f2533cdd193fcb3af84"
+  },
+  {
+    "path": "fibra-cli/src/test/java/com/sstlfsj/fibra/cli/CliPathsTest.java",
+    "sha256": "3b895034a3e77698b5956db825f40f1376a634f9906304b1ce9d444f63ee92b0"
+  },
+  {
+    "path": "fibra-cli/src/test/java/com/sstlfsj/fibra/cli/CliProcessShutdownTest.java",
+    "sha256": "6ae9d607c67dea1127222ca8ba0f9eedc2397b2ff1b5b4e6e18c131e7cdbdaf7"
+  },
+  {
+    "path": "fibra-cli/src/test/java/com/sstlfsj/fibra/cli/CliProcessSignalHandlersTest.java",
+    "sha256": "b1d0896100ec24a143adb69b990c2ebc7403055f53b7810c2a1304a6ce8c7fc6"
+  },
+  {
+    "path": "fibra-cli/src/test/java/com/sstlfsj/fibra/cli/CliReplTest.java",
+    "sha256": "93718691e15e52560e1505843003b42fdc8b4d8d6f3d0da617767ce731a84633"
+  },
+  {
+    "path": "fibra-cli/src/test/java/com/sstlfsj/fibra/cli/CliSessionTest.java",
+    "sha256": "14b860e14aec6b0e1b2eaef4cbdb3dc8d848297baaf1f64a160433d3ee124ef8"
+  },
+  {
+    "path": "fibra-cli/src/test/java/com/sstlfsj/fibra/cli/CliTerminalControllerTest.java",
+    "sha256": "99ca66da7fda220767cc10dcbb767a25144479ef0cca96d50e1f3e9e1d84068c"
+  },
+  {
+    "path": "fibra-cli/src/test/java/com/sstlfsj/fibra/cli/CliTerminalSignalBridgeTest.java",
+    "sha256": "0fd1de2209eec8450179555779ae7385f73fbe9cdf647085455d90c8f6b3a990"
+  },
+  {
+    "path": "fibra-cli/src/test/java/com/sstlfsj/fibra/cli/FibraCliTest.java",
+    "sha256": "2d1af8965eb14f7a171ec5f219cf3963f7fba49fcaa4ad75a701c59224537e15"
+  },
+  {
+    "path": "fibra-cli/src/test/java/com/sstlfsj/fibra/cli/ProfilePackageSourceTest.java",
+    "sha256": "23af382559c7ddd7dd761d4774392f76f385ac1874e0d875748ddd565e53c341"
+  },
+  {
+    "path": "fibra-client-protocol/pom.xml",
+    "sha256": "770e4eef367b2ee11cb10c373cc1ed66b3f58b33c865678eb44f9f74bf563fc7"
+  },
+  {
+    "path": "fibra-client-protocol/src/main/java/com/sstlfsj/fibra/client/protocol/CallFence.java",
+    "sha256": "1b70cf707a89e9f17a6be51925313586516f2a9f25382b35c4bfffbccabff377"
+  },
+  {
+    "path": "fibra-client-protocol/src/main/java/com/sstlfsj/fibra/client/protocol/ClientEnvelope.java",
+    "sha256": "f8675769a1219e07ea78528c0daee2e128d9d8a48c7d0e501e23554ae7d01575"
+  },
+  {
+    "path": "fibra-client-protocol/src/main/java/com/sstlfsj/fibra/client/protocol/ClientMessage.java",
+    "sha256": "df10b9dcaab19494db8a445a8a54c566a911ff97245748c6ad7d86b2b858eae5"
+  },
+  {
+    "path": "fibra-client-protocol/src/main/java/com/sstlfsj/fibra/client/protocol/ClientProtocolCodec.java",
+    "sha256": "6b413149c02fff276f58a17ebefdffec71fe904a7c13e14fb8984d262ba921e1"
+  },
+  {
+    "path": "fibra-client-protocol/src/main/java/com/sstlfsj/fibra/client/protocol/HelloIdentity.java",
+    "sha256": "85832277fe02d00b4bdba33a822bbd7fa5c2aeab66f06f749ee3d3bf84c716a4"
+  },
+  {
+    "path": "fibra-client-protocol/src/main/java/com/sstlfsj/fibra/client/protocol/LifecycleFence.java",
+    "sha256": "46fea71d3863f5730686d80778491fc92bbf9e3629b737cf9c55a7393b83ba63"
+  },
+  {
+    "path": "fibra-client-protocol/src/main/java/com/sstlfsj/fibra/client/protocol/SessionFence.java",
+    "sha256": "d1c4f8019fbd8b23fce0598f2a699185fcf9abf2c0f314043409fb197725be15"
+  },
+  {
+    "path": "fibra-client-protocol/src/main/resources/com/sstlfsj/fibra/client/protocol/v1-fixtures.json",
+    "sha256": "09275910e2fc23f6419da8e30ed435b4e76431f0530f5862dc6af03c940e19c4"
+  },
+  {
+    "path": "fibra-client-protocol/src/test/java/com/sstlfsj/fibra/client/protocol/ClientProtocolCodecTest.java",
+    "sha256": "9f9216b664370cf668971c500b219f0728450e66dca7a5dcebf229f0bcd3044b"
+  },
+  {
+    "path": "fibra-client-protocol/src/test/java/com/sstlfsj/fibra/client/protocol/ClientProtocolFenceTest.java",
+    "sha256": "ba82d9297aaa9c5d6ad1cee836fafee4deabcf49fa050374bb204952af546455"
+  },
+  {
+    "path": "fibra-config/pom.xml",
+    "sha256": "b0d47941ac8e795b6ae1a635c735034548fa24f47d5b84e6e6e483799a2a9161"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigBatchFailure.java",
+    "sha256": "c5a4b955b72a810a0192d83d8c3d8073a0900cb2c98bee7af466b4944675562d"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigContextSnapshot.java",
+    "sha256": "0396b864ccaa19aeda99e1ca3de6cfc4a78d10405171f1e6780e1302a0dec4f7"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigDiagnostic.java",
+    "sha256": "c1bd7eb65d304835ec521c1ae5c8183c0bcee6525f29984688e27d2b9a234c72"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigDocumentReader.java",
+    "sha256": "b3638f313d34d31ec934543db326ec81346cb52880747d6e7b74b1c84b6b87c2"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigDocumentSnapshot.java",
+    "sha256": "5aab0e6f7fdaee7736dd8f08903de0d569ca3a11dc0d65ed56fde212fe071abf"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigDocumentStore.java",
+    "sha256": "39a733507bd7df4f4388c9504e384e193fef25695ed3c8bcf685d79f532c2a0a"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigException.java",
+    "sha256": "3ee8ec462405ae66bada3b7a84d0662ee90e8e4b147c46482e04e7f0bd30e6cb"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigExpressionEvaluator.java",
+    "sha256": "773b7a2d82079fba69f9042773ee25f6477f42b380777871ff45b6a6f11c9b19"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigLimits.java",
+    "sha256": "5e01debbbaecf3c216a9adee37f14a92538ffd231f36c0748aac69b206891f29"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigPatchApplier.java",
+    "sha256": "d0709ca3e7b23db5fe6193deed9783685b4f08ae1e73413c27ddc7a820fa61ff"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigSchema.java",
+    "sha256": "9900b68b9c8a68752e074d21af9dc1247599dea1a594fe6c96a66022715ec645"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigSchemaException.java",
+    "sha256": "0113198316dcf9e9ae7dbf6f33c151da48ba08d9eecc125cb07100fbeea8a755"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigSchemaSource.java",
+    "sha256": "2b456a3ceb753f239ea646aca91c90fcee81ed3134f0b3c1d253b8d8a228e4c8"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigStage.java",
+    "sha256": "ca5b889becf44ff63ac1fc168c705ea31c9e4c4094305f54ea317a6f720bb82c"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigValidationInput.java",
+    "sha256": "072c7d7fed10452b1801fc3d93c756ef49b6c72d8d03a74c4f7a8961b6f1a9a8"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigViolation.java",
+    "sha256": "438117e2dfc2883af047f28fc4806417659900263b5edbe3de2ae0662725fd1e"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigWriteTransaction.java",
+    "sha256": "afb69a4f73b509cea79b0cece6ed23635d207c2db62ce71e2e2fbbab4cf2596a"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/DefinitionConfigDocument.java",
+    "sha256": "eeba432867504019507e81c8b27e6b16e9f739eaf98b9f3fbec393821a8a3393"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/DesiredCompilation.java",
+    "sha256": "801d9ac9ae7aebd5b68dac029f24d50ff07de672b954fbff02694491330703d7"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/DesiredConfigCompiler.java",
+    "sha256": "04f79219ce9d539b5e31681ab513b632bee68bb425e27105b37265e3249017c6"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/DesiredEvaluation.java",
+    "sha256": "d5080f8ff3eb42d343a2054d4ef4ef504c3018633c411a3e251522bf4e1ebda2"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/DesiredIncludeContent.java",
+    "sha256": "5de949c361ab088f29cb4b843615cfd45153111e437511fcb99514cc11aeb447"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/DesiredInputEntry.java",
+    "sha256": "beeae11ae921641750722f061a86d6341c9f4a69e006ac241dfe923f8577552d"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/DesiredInputGraph.java",
+    "sha256": "3ddb7434d6197ef7371c366068282e78f39c1735d2a5aa95ec829ab7dbbb5482"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/DesiredInputGroup.java",
+    "sha256": "414391a0c96569a803aec8886969989404b98d01c27b4b3c9f536b909e1aea93"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/DesiredInputInclude.java",
+    "sha256": "64279b6e70fc1a46ccfd10918a5daa747a883fb50f4809b8aef8416f70585395"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/DesiredInputNode.java",
+    "sha256": "b867c9578d75a7d17830fb2145d3979652b6177f0853f1edd769cfca7c56dd59"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/DesiredSourceSnapshot.java",
+    "sha256": "ad3c5002e717d61160a1d23a2bbba3250a91b49615f2352b360fa88748a0ca76"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/DesiredStateRepository.java",
+    "sha256": "f65b92a1464b2d78771a937a7b5f8c65035cdbbd5b42f7348e23708f25992af5"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/DesiredStateWriteTransaction.java",
+    "sha256": "098b0b3eaa2cc532c2aa7e634aea4b0fb192c31110edd576fa1738fcae766fad"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/FileDesiredStateRepository.java",
+    "sha256": "a8b7db50b3806cdf41ec4981e7d2958eacd3c300e62e5670e3385d6f37852d92"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/InMemoryDesiredStateRepository.java",
+    "sha256": "664e3654613bc5ed5cc0caa510199352d83c7bf737b289d0f163ba81607cb961"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/LiteralValues.java",
+    "sha256": "a4a12c2371fe82673b2c3b57f15f846d2d19ba66aec9bd1423aa0e2b37feab00"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/PluginDefinitionRef.java",
+    "sha256": "4afe1886a11a428c062b658191aac8842f3d0f4478782dfe5a1e19da7739ac1e"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/PolicyValues.java",
+    "sha256": "5f333066261bc0feb1ac05413e980e8183293bdafbee9be5030bd938aca17958"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/PublicationRequirement.java",
+    "sha256": "e9764e9415037a0b9459b6d56215cca975320934a899b7671dc2a64f1067483e"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/ResolvedDesiredEntry.java",
+    "sha256": "3224e50e0d111237b9a226070d1dceddccd0d1695fc8b2a911a149c17b065131"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/SchemaBudget.java",
+    "sha256": "09d52b0605318276e1bd19123ce3c8f43d080aca62feecd3a1d3eaa494b3f164"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/SchemaDiagnostics.java",
+    "sha256": "4102d48ac94aa4db181d2109bac21a7f7558a6410d3a7abfc8d2ec0162be7efd"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/SchemaDocumentReader.java",
+    "sha256": "b1eeebc6d1530e7ec5d89def2be1e581e175433e09b213152b832d3ca4bf6f44"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/SchemaLibrary.java",
+    "sha256": "27d945e7f33ec1bb39a9a9ce804beacea6f1ebd59171419fe63449cc13aa7fde"
+  },
+  {
+    "path": "fibra-config/src/main/java/com/sstlfsj/fibra/config/SchemaProfile.java",
+    "sha256": "de62f669c7dfbc22ecfc861ec1868f76c39be7c992fcb26167ee6ecfc89d9cd9"
+  },
+  {
+    "path": "fibra-config/src/test/java/com/sstlfsj/fibra/config/ConfigContextSnapshotTest.java",
+    "sha256": "e3ac1ba35a67a4cd2d776c8dff81d0af7191538c84f155ae076379fcd6011e91"
+  },
+  {
+    "path": "fibra-config/src/test/java/com/sstlfsj/fibra/config/ConfigDocumentStoreTest.java",
+    "sha256": "ddeffd5d9799643083d48f212facd38f1b23d87865474ffce86eb42058ded4ab"
+  },
+  {
+    "path": "fibra-config/src/test/java/com/sstlfsj/fibra/config/ConfigExpressionEvaluatorTest.java",
+    "sha256": "f07cc9622840508d5d716bb101113e1985651b4efc88f87e8ad47dc6a4500a7a"
+  },
+  {
+    "path": "fibra-config/src/test/java/com/sstlfsj/fibra/config/ConfigSchemaBatchAllocationTest.java",
+    "sha256": "cd09f3ae8a81458e45a95c794845d04b4cb3f9bf680e47e215de21f33372593a"
+  },
+  {
+    "path": "fibra-config/src/test/java/com/sstlfsj/fibra/config/ConfigSchemaBatchOrderTest.java",
+    "sha256": "c5115396194bef36b11e6d70da0df699401594567a37559ce43bc0faef127988"
+  },
+  {
+    "path": "fibra-config/src/test/java/com/sstlfsj/fibra/config/ConfigSchemaBootstrapTest.java",
+    "sha256": "03fe9a8590a2119c485d327076945f1aacebc6188816fa3715aec7c17e02dd7b"
+  },
+  {
+    "path": "fibra-config/src/test/java/com/sstlfsj/fibra/config/ConfigSchemaBudgetTest.java",
+    "sha256": "5c8ab484d03c0278a67793b778327a92a52153a4b119d42996ea6ec17b76d09f"
+  },
+  {
+    "path": "fibra-config/src/test/java/com/sstlfsj/fibra/config/ConfigSchemaTest.java",
+    "sha256": "78e85634b1b24e472c1fc2e702c1597378e315058cd429cc1d49ffe4dd0aefbf"
+  },
+  {
+    "path": "fibra-config/src/test/java/com/sstlfsj/fibra/config/DefinitionConfigDocumentTest.java",
+    "sha256": "6bbf259f3c39f11db1dd5d75232f7c39a9a801dc465b8af4e6c9b94016477a03"
+  },
+  {
+    "path": "fibra-config/src/test/java/com/sstlfsj/fibra/config/DesiredConfigCompilerTest.java",
+    "sha256": "10bf4bd9521e7a2447cd5b18a1aadf9efe725b64165f8d06d330411750f027d2"
+  },
+  {
+    "path": "fibra-config/src/test/java/com/sstlfsj/fibra/config/DesiredConfigPatchTest.java",
+    "sha256": "c94154ebfc7c871cec8d1acf914a66784a9663100c6f118da26f5eadff4084ee"
+  },
+  {
+    "path": "fibra-config/src/test/java/com/sstlfsj/fibra/config/DesiredEvaluationTest.java",
+    "sha256": "4fc891affa9c4e74b8115c2fb0d3ae7b5b8cb083a54e523de33becee83f4fa2e"
+  },
+  {
+    "path": "fibra-config/src/test/java/com/sstlfsj/fibra/config/DesiredInputGraphTest.java",
+    "sha256": "b51ebdf929fa4c429cab1adb082b98ee374c0897ad09e6eabc5cb8dfad14b0a4"
+  },
+  {
+    "path": "fibra-config/src/test/java/com/sstlfsj/fibra/config/DesiredStateRepositoryTest.java",
+    "sha256": "94c3f4edc1e1373f4cdaaa97a58681ad29a92ce9d8e4835a956d5ca7aeb0dfe1"
+  },
+  {
+    "path": "fibra-config/src/test/java/com/sstlfsj/fibra/config/LiteralValuesTest.java",
+    "sha256": "bf80e87be4051e7d9b78767f4d9fdf73dc6719c4f98cc0e77cf55b4cc9431424"
+  },
+  {
+    "path": "fibra-config/src/test/java/com/sstlfsj/fibra/config/PluginDefinitionRefTest.java",
+    "sha256": "f06f66d28316899e7b215b32fee607aeb536ac9a21e53cf09df973e985df8caf"
+  },
+  {
+    "path": "fibra-core/pom.xml",
+    "sha256": "96e524127e57d719218ebc38643a8f2511db4abc4d03ab31e89a94cc8b2ecaa4"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/BoundLoggerService.java",
+    "sha256": "2845050748d06c453834fa2ac4a9e7073119324f985f648f154fab67e30e30bb"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/Cleanup.java",
+    "sha256": "dce2c3e0d92ed8e1cb64e54e4bdae38d8d402b784a71f0324902bd3fe4534754"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/DefaultContext.java",
+    "sha256": "dec5c7a98d800dae21ae4f73ee4cbf1b03aee23862954e68529b5ed1773aa87e"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/DefaultEffects.java",
+    "sha256": "d6f5501082a324100218deb7e42872d553349219d4c99714518b8083b52237fa"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/DefaultEvents.java",
+    "sha256": "7b1fa1367ce21448c25da1f595490e3d3ac964cdd1f3fc4ac4f5439dd60bf317"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/DefaultFibraLogger.java",
+    "sha256": "9ee0c31c88a315707b60afd8fc97cc4325b5c8bf27fed15b572309c852118b9d"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/DefaultFibraRuntime.java",
+    "sha256": "d3517243d234b8ca6ff35e6b52a76b9fe558e54f5457f5d7a935b35bac24a054"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/DefaultLoggerService.java",
+    "sha256": "4b6cfc3128fb6bb4bd79b78adb8a20b545378691bdfcfe7c0022a782f1a760aa"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/DefaultPlugins.java",
+    "sha256": "5d694a956e68509ec5ab1701533c50e04be73da9b76e55092e544f2ed33e6727"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/DefaultProperties.java",
+    "sha256": "6a33a53a6b25f4bf4e3475b9418819f87f86458d4e171dd3b6a278f55adf8de4"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/DefaultRuntimeDomain.java",
+    "sha256": "cd27d6d786ccf76cdcdeeb0a3ddaf8f6238335ee701f17a2dc953bc1b1918026"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/DefaultScope.java",
+    "sha256": "d0c13f91c1e4ffe9ca31c22bd56c66893af7ce33834bd7e469b5b3459a030a7d"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/DefaultServices.java",
+    "sha256": "80fec175892831e5fc86d27b042751506b7e47ac98cfe5d8dae36c58a59d9ef8"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/EventBus.java",
+    "sha256": "73a8c056ab9e5f0cf547fe6e05945eb135b73c26921220c5db14a1dedd29359b"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/IdentityList.java",
+    "sha256": "d431bacbae7a0a3d125d952c8b15db435cc2689c9b28d03491a360aae905e1f6"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/InjectProcessor.java",
+    "sha256": "27e453b723644f3c0f44cb7df5641068ea3db9737c07e0801475f9d8fa5f3b8c"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/LifecycleDispatcher.java",
+    "sha256": "e283ece243eb846e0982971de21fcdc533f37b696168fb04095d331c959b1fdf"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/OwnedEffect.java",
+    "sha256": "48038d104adeffc20fc3d913fa87b4d5ca3d1d680819d417e7c57f7a02090c02"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/OwnedResource.java",
+    "sha256": "e4df091a911a4bd5974c8a84f3613807fd9558a28c878cf1ec9c08e3ba37981b"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/PluginInstanceImpl.java",
+    "sha256": "aed8ac3f3be51a846c61a2ac55767e726f3649e617adb1a098fcc0d766ba2c7c"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/PropertyRegistry.java",
+    "sha256": "49d51a9feec01cd2b6a148b4c9e5f94b2b8a646c6bd6309fa82101ff96268382"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/ResourceDrain.java",
+    "sha256": "8ce770a78423dbb3421eaacfc66c0a3a34f88d495e38acefa8d4862b5f465d6f"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/ResourceOwner.java",
+    "sha256": "44fbefa171cfe52274e75786a0859ec52d48bc82be6ad1e609cc5332d4e9ecdc"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/ServiceRegistry.java",
+    "sha256": "34d825438d96420466d73d6c19ba5f4fd60969865698aa86499e3f94b07b3625"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/internal/SupervisedResource.java",
+    "sha256": "d3542643447b7e60e7ead39bb240d0694f3b01f650feff92580fab8af3f2c381"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/runtime/FibraRuntime.java",
+    "sha256": "8207c2880e76338a14750a7b8ebfb90bab0bf0e8f85e86a78ddb7e1b1c8a64c4"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/runtime/PluginUpdate.java",
+    "sha256": "5f94252c342270713b0809e513f9c39d92bc3a5bbac9aec98afd28b838d125ec"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/runtime/RuntimeDomain.java",
+    "sha256": "53f7522e9727aae834c79c05412c441fb63f303ea20f9ee901a6bfa0a8c6ddff"
+  },
+  {
+    "path": "fibra-core/src/main/java/com/sstlfsj/fibra/runtime/RuntimeDomainSnapshot.java",
+    "sha256": "06e090f3b7eee82153c28288034883884969ac88e0aef6106e5b01575afd0581"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/internal/RuntimeCloseCompletionTest.java",
+    "sha256": "9bda74d4311eb098955b8137533842c029ec0c6d2a234271f912e8d09ed221ad"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/AnnotationInjectionContractTest.java",
+    "sha256": "bf011705f1732f971fb9af160b365f2bbd19f442ec7381d0a3d074358e56feae"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/CleanupFailureDiagnosticsTest.java",
+    "sha256": "bf5e854d888ef652ae19ba89d3ccb8655dc27803e2e07f7522581154b14fdbf5"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/DrainLifecycleTest.java",
+    "sha256": "e290593ce8ccff4907b2ffed0ff91afc879ee7e74d17affb3e6e0279236942e2"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/EffectCleanupContractTest.java",
+    "sha256": "f5039f55b273c2b73b0525053fdfe5dd801eb1c8d907280765fa34ebcb4d1e30"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/EffectCreationContractTest.java",
+    "sha256": "04b12b92e25aa8f0d71aa3aae21b158e1f6f5051d3962a34de3df793188424d4"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/EventContractReloadTest.java",
+    "sha256": "983810204ff48fcb330ab4119cc0f187e8f05c55491f02a740ca41de9a491c7b"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/EventDispatchContractTest.java",
+    "sha256": "8866a1a96c7b01ec9003f70470177f3c7098b53ca7440a14a7c834397769081e"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/EventModeContractTest.java",
+    "sha256": "17407d7664b3edc9af93cfc0841a5459a15e9bdb45e6517acbdd31b63f9b95c4"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/InvocationContextCancellationTest.java",
+    "sha256": "554f59421d6028876a2616f0aa83e9afbbb2fded18c5c06d852e1700a4e3150d"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/LoggingCapabilityContractTest.java",
+    "sha256": "f8b68e94c5bc4c81de13e5df521cfbe8c7d1242fbfbadf4cefd62b257ad5011a"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/NamedContextPolicyContractTest.java",
+    "sha256": "343839a0067e485b49ce0348e1c3a3bdea70593ede39464c59a66a3f61ec3d10"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/OnceEventContractTest.java",
+    "sha256": "0acf3aff9bb5c1dec35dab8c4892a45917518705fa2c370ce236d2fe072382b8"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/PluginDisableRequestContractTest.java",
+    "sha256": "7824e5fdf85a19f1539fd59842cc6d0b8dfd22cf2c7f9ea7eb20003ee8c39092"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/PluginIdentityContractTest.java",
+    "sha256": "71bff484bc83d0d675d35bf15d0430c03e6e36fe0731baefefe73e7ec2220e91"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/PluginInstanceLifecycleContractTest.java",
+    "sha256": "e12b282a5f16e8a92fe5a330654fda18ece9931eef6444fdfdbcb4ffc598dec4"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/PropertyCapabilityContractTest.java",
+    "sha256": "a10653f9ff9b6b7f0b3a983861a968a70888ab41868ed248433e629c33d376a5"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/RuntimeDomainDiagnosticsTest.java",
+    "sha256": "4d63828bf22a06ea2cca8ee2658e86e05ba18796a7ecbc22ce9b0480aba6a373"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/RuntimeDomainIsolationTest.java",
+    "sha256": "d65998f1645135adbbbc647a88955ca3c32b4e81caf11c052a19151db538e8e3"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/RuntimeDomainSettlementTest.java",
+    "sha256": "ebebe8c07b3ef391b503e9ef9679e85c8c7ea1d73ba67151303d6d956decdf6d"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/RuntimeScopeContractTest.java",
+    "sha256": "77c3883813831b2a6084e6da85bc08457396724e426ef558fd3711a564f2d794"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/ScopeOwnedCapabilitiesContractTest.java",
+    "sha256": "9ebad388198cebc795791b41afe1c1da932a779bdae6378c3c4b599ef25db457"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/ScopeOwnershipBoundaryTest.java",
+    "sha256": "8ba90ba2a9664474e071af037843f1b68516d034d10878356d2ba84f056f1e44"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/runtime/ScopeRegistrationRaceTest.java",
+    "sha256": "1bff9cffc77734fd9d0906070fb27697d274df24ed51d34bacb7805a3ffdf8d4"
+  },
+  {
+    "path": "fibra-core/src/test/java/com/sstlfsj/fibra/value/LiteralValueTest.java",
+    "sha256": "8a6a32e3422e567a5745548c729449d89a8a58477e71e8a701bd7eda914c5825"
+  },
+  {
+    "path": "fibra-distribution/pom.xml",
+    "sha256": "3fdf13fb50434ea74f89937e9977627518ed20370b1daa8b413bcfa60d7f0d41"
+  },
+  {
+    "path": "fibra-distribution/src/assembly/bin.xml",
+    "sha256": "3dfd0df43de883505e9ebf2cf82bd3f158576d815f64b22a83850ef80cba7707"
+  },
+  {
+    "path": "fibra-distribution/src/main/distribution/bin/fibra",
+    "sha256": "e2feab591b925de8c3577410e097de18e04df1e643d684e6b072f33f214176fd"
+  },
+  {
+    "path": "fibra-distribution/src/main/distribution/config/profiles/default.packages.yaml",
+    "sha256": "b74d55f62d6375193f8ef7381674721ed074c2923b95510ad84fc42b4add9a17"
+  },
+  {
+    "path": "fibra-distribution/src/main/distribution/config/profiles/default.yaml",
+    "sha256": "a3d8203456ca50ae0de9fb2bd6aa4987772857cf213410f94c6711817041cf86"
+  },
+  {
+    "path": "fibra-distribution/src/main/distribution/plugins/fibra-fs-local/fibra-package.yaml",
+    "sha256": "d1e77667de6967e6b30f458b7820db8e103c652bd20b05ad12d7e8fe32f06c5f"
+  },
+  {
+    "path": "fibra-distribution/src/main/distribution/plugins/fibra-fs/fibra-package.yaml",
+    "sha256": "841ccc124140c1c04eb2092da78796073214bf16c1ce4a6b0c0fe70ae0bc643f"
+  },
+  {
+    "path": "fibra-distribution/src/main/distribution/plugins/fibra-shell-local/fibra-package.yaml",
+    "sha256": "66ead7cacf7be109d1d7189a7e0ca81fc85c922a467afc379cd6a65c8389d513"
+  },
+  {
+    "path": "fibra-distribution/src/main/distribution/plugins/fibra-shell/fibra-package.yaml",
+    "sha256": "5373c58450ccf3906bed7777e9c4c166b8a5be9be7a085808ea254602a0b9e2f"
+  },
+  {
+    "path": "fibra-distribution/src/main/distribution/plugins/fibra-storage-json/fibra-package.yaml",
+    "sha256": "7c38cc1e947ef6b128029f2e0bbe4d052d10117f3f92110a88cf7ac1a6587df7"
+  },
+  {
+    "path": "fibra-distribution/src/main/distribution/plugins/fibra-storage/fibra-package.yaml",
+    "sha256": "940186f7f51720f7615acc0c6524165e8325ce8384d0bfa21b7a49db956b54fc"
+  },
+  {
+    "path": "fibra-distribution/src/main/distribution/plugins/fibra-subprocess-local/fibra-package.yaml",
+    "sha256": "143af7189f9cf15ae3a59825f5238a93b6fde5bc508894e7cd8b917db645aee3"
+  },
+  {
+    "path": "fibra-distribution/src/main/distribution/plugins/fibra-subprocess/fibra-package.yaml",
+    "sha256": "643d3e9331e5011db8ed9d4aa47d7be546c1eaafc8a1a259b8301b69087f21cd"
+  },
+  {
+    "path": "fibra-distribution/src/main/distribution/plugins/fibra-tool-fs-search/fibra-package.yaml",
+    "sha256": "69d43481f6bee4416e4c90591ad89e58bd9ef9db101642b9506b13ddf24908a7"
+  },
+  {
+    "path": "fibra-distribution/src/main/distribution/plugins/fibra-tool-fs/fibra-package.yaml",
+    "sha256": "061a37bc2622afe2611dfc392a343e90da2b438d552d2fce3311c5b6732c50cc"
+  },
+  {
+    "path": "fibra-distribution/src/main/distribution/plugins/fibra-tool-shell/fibra-package.yaml",
+    "sha256": "fac02c52b9124fa51de8c958b286194c22da4565d7ba24d8eb823dc91e233db3"
+  },
+  {
+    "path": "fibra-distribution/src/main/distribution/plugins/fibra-tool-storage/fibra-package.yaml",
+    "sha256": "787d9b764d5effa08b55543c222160fb5827884963ef00335ee6f5d1a340fc8a"
+  },
+  {
+    "path": "fibra-distribution/src/main/scripts/stage-plugin-configurations.sh",
+    "sha256": "47ef4573783732cc884fbe4b568cc62e29e9b7b446570f4731204ceb01af7b99"
+  },
+  {
+    "path": "fibra-distribution/src/main/scripts/stage-runtime.sh",
+    "sha256": "80be606d8104ae0f72bb1949e1b1496df235b34c341cf642c03cc00bcf462d6a"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/README.md",
+    "sha256": "7344c7d3046733dd6774be61ffcb7dea2a657f3859324135ce8d65c96e57f356"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/cli-application/pom.xml",
+    "sha256": "2186e12f5668dd0d12eb1bf5b255ef8cf1f8bdc22b457ccf69f664b2d8933214"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/cli-application/src/main/java/verification/distribution/InteractiveCliFixture.java",
+    "sha256": "e3cadb3526d52747612e95694a3fd53c73b042f6e1340b85949e9e828a8a621c"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/cli-application/src/test/java/verification/distribution/CliConsumerTest.java",
+    "sha256": "9a5c9531c2f0aa91dddaf9c5abfbbfc1fd7217c0490476556f5a1e5befbcaccf"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/core-application/pom.xml",
+    "sha256": "9a3dd0673732844a483aa5b2153c63e7115eba62fffa8802fb12c24ee9b01f78"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/core-application/src/test/java/verification/distribution/CoreConsumerTest.java",
+    "sha256": "bc33c4d55995f269780cf3689892b580c2fb77dcc9b3652bb704bc1c5d730862"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/engine-application/pom.xml",
+    "sha256": "48d3002c7a52a4ac7a79096312d4b0d42d2fbc637138c285ce016f25f29e405e"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/engine-application/src/author-qa/java/com/sstlfsj/fibra/plugins/acceptance/AuthorConfigurationQualification.java",
+    "sha256": "821330dbb517140798e51e0e8153a9920481f94e558ab8235beb69ee1a49e56e"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/engine-application/src/test/java/verification/distribution/AuthorConfigurationConsumerTest.java",
+    "sha256": "7ae0eac89898aef9a77ade46eb3eed20be2c1da184e19846c9ca231df62be6f7"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/engine-application/src/test/java/verification/distribution/EngineConsumerTest.java",
+    "sha256": "8596095e2ca7af70555c068755f8dd9beff9945af4c20f61719dfa90edf4fd95"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/engine-application/src/test/java/verification/distribution/LifecycleConsumerTest.java",
+    "sha256": "189f5e71080d97d4a69c772c30041e3041bf8672f88dad9a4a7aaa6e2bd5a682"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/java-plugin/pom.xml",
+    "sha256": "f0ff1a5e1b8aadb1cc2538dc390958e39abfce30997e3e4f0fa62634f5153004"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/java-plugin/src/main/java/verification/distribution/plugin/Entrypoint.java",
+    "sha256": "a281d86d2c3b0bbc0223f5f3e77810968058168c9646095c5ff2eedde365a914"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/java-plugin/src/main/java/verification/distribution/plugin/LifecycleEntrypoint.java",
+    "sha256": "873d5cf94959f6309011536736290c602a85562e1c9cbb56eb3d0ab48740534a"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/java-plugin/src/main/resources/META-INF/fibra/plugin.yaml",
+    "sha256": "93e5b41be6aa1f95d2a3e2adffb12ffb6da34be18148a72c29cac04041776b45"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/java-plugin/src/plugin/fibra-config.json",
+    "sha256": "4450aa8e4ad8d913638d693b52f8b251fef5a5e7ad098f7a36deedb938ea56ff"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/pom.xml",
+    "sha256": "21868ce9414be1b4601813317cf4705745fe13de8e2209cb72751130446d5818"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/runtime-provider-application/pom.xml",
+    "sha256": "581373c0c427fc8c3124eb5a93e1ca5b34c58917af57611085971e78959e9dca"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/runtime-provider-application/src/test/java/verification/distribution/ClientProtocolConsumerTest.java",
+    "sha256": "625bbcf2b894913ce8bfee918b75f7edc985a60611a4a5bb0824d4cab7f5eeab"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/runtime-provider-application/src/test/java/verification/distribution/RuntimeProviderConsumerTest.java",
+    "sha256": "427dfd61718e42f118326d9936b1a1ed0244982a499ca5c6fc498e24f9762980"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/settings.xml",
+    "sha256": "bfae61723291dc95bac9826332ead9351dd8591161b992b874f09abc188f8f6d"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/spring-boot-application/pom.xml",
+    "sha256": "c18afb96dbcd9976234674ca18f6bf2ca3bc4eecd8bfc9476272cfcfa83d07c7"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/spring-boot-application/src/test/java/verification/distribution/SpringConsumerTest.java",
+    "sha256": "35d92301dba0ae5301dcd153d0dd6bd788333ce4461e33e6a0b33f7239e0841d"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/verify-cli-tty.py",
+    "sha256": "9407dc13eed23bb61f7900bfea5daa6c90498c1826c3a240c999c4d0d24b4f8d"
+  },
+  {
+    "path": "fibra-distribution/src/test/python/test_verify_cli_tty.py",
+    "sha256": "f2b9b953d432753ef2970dfe2d46b72ba41d805a6e05974be861caadc553f5cf"
+  },
+  {
+    "path": "fibra-distribution/src/test/scripts/verify-archive.sh",
+    "sha256": "f4afca253e19e6761e93fa7826abb58040adb1a208d3822983bf64f0b0362ade"
+  },
+  {
+    "path": "fibra-distribution/src/test/scripts/verify-stage-plugin-configurations.sh",
+    "sha256": "958ff31b5388bc49ffbeaf19534cb4120ae224686024edd702d5054ae79ffdc6"
+  },
+  {
+    "path": "fibra-distribution/src/test/scripts/verify-stage-runtime.sh",
+    "sha256": "23c8bc412511a5595accaddccdf42a42cc475723d8f2f2052fb056852eb37c40"
+  },
+  {
+    "path": "fibra-engine/pom.xml",
+    "sha256": "b6e359b51686d6247f20cfe77b2b7816c40d3d6e72bf545b74ae8b2f58d44783"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/ApplyDeployment.java",
+    "sha256": "3dc6c3375883e64cfc2ae82364277a1ecb09888ac60b54a07b94dc0f262d0892"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/DeploymentCandidate.java",
+    "sha256": "031425707fc7f9ec49fd9bd32473c839783c9dc70b7a182fb1c861fa1ccb661c"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/DeploymentPlanner.java",
+    "sha256": "14270b7977628e02bfec09afbcf2340330ab9f3253c17fad8947ade360edc9e3"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/DesiredBindingException.java",
+    "sha256": "74db774db385cf41ffb3404485f349d4ebcb06c6c91a9f3e7db7d1ebbf45315f"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/EngineChangeException.java",
+    "sha256": "8691fe53efca369511f60f16c22e382664b264fa6023182a7732db8b2b0d644b"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/EngineCommand.java",
+    "sha256": "c077ef2c3b3d3968d8cb3bb4de0d4ab8390d52d44a5854e821387db163424d0d"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/EngineCommandLoop.java",
+    "sha256": "663b1b81bc17ff4aed320bf5ea8363b01d773ecaa9e0816467461c27d3bfe2d0"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/EngineCommandResult.java",
+    "sha256": "404a1fc44c129a268cf8067ebca91f52ff7d198820d1c8eee885e633bd245298"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/EngineConfigurationContracts.java",
+    "sha256": "e0cac26bc9824ec0d6fc3bfc1ab05fb0b36ced6b388f242a122b8154496ee6eb"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/EngineReadAttempt.java",
+    "sha256": "5b65e77eb0ac4d8549d234dafd85758dda8beba05a0f09321a41bfdb21c279cb"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/FibraEngine.java",
+    "sha256": "2a9084a3ed69e19ae12ff60b9af29a21227175abb0b48913959a9be503ead4a8"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/HostServiceRegistry.java",
+    "sha256": "4c43b5e994e4128e2a0ad8544ce792496b3b873127a2cf9b44841285a439e208"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/HostTerminationPort.java",
+    "sha256": "9346e75aa8ae20d801f96f6890090566a4ebc7f433cc589ff7c522811dec15b8"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/MutationGateClosedException.java",
+    "sha256": "82a61ab905326069cf8571aecf78cff5384d0bb384a8c370cac5e21697cc5589"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/PluginCatalog.java",
+    "sha256": "23f9575c8e51ec509330fc1719e46f43c15b4379f57d43999d06db760b2120ee"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/PluginCatalogEntry.java",
+    "sha256": "5dac0411d3a6404c4fc4dfe4b9eaae56d6431c48e87ad8f5b53c5b730012e48a"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/ReconcileCurrent.java",
+    "sha256": "4756ee015a9f67bf106049f08b62c4b2f74f96b924dd337b4a2ea4ec95a0709d"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/RuntimeProviderRegistry.java",
+    "sha256": "61c91449b880b52d1b0cf2958fa6cea89b8d957d4012bfc633d16acb9b537003"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/UnknownRuntimeException.java",
+    "sha256": "7f18635da5c72e78273b1ffbe22c4237fe2b43065813a70f941d0c2d0de56ea7"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/BuiltInFacet.java",
+    "sha256": "11f5e8239d4a4371a8a407190a6ccc742dca023d170ddbaff14ddbcc5f4c18cb"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/BuiltInPluginPackage.java",
+    "sha256": "50127ce8a18b458df0320a72532d44975331edab555c1b03ea14794d1924d46f"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/CompiledDeployment.java",
+    "sha256": "17fa0d5f2c15e0f8f512ffaadfd32a816df8103415dc6889b58384bb276e4ae3"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/ConfigContractException.java",
+    "sha256": "67f96de3e2f926ddc872687d48d13f989f4953e01465b98bb467c4b759377729"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/DefinitionCatalogException.java",
+    "sha256": "c525b2de6873a354f8d88c8e58fdf70521a843e7511b8db00cd01a6093113a66"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/DefinitionConfigContract.java",
+    "sha256": "eef9ea0332d75039c43316c92633279c11927b531106b7a1618b670ca9154f6e"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/DeploymentTarget.java",
+    "sha256": "bb906837cb423cf5337a75cbe23d916c8a046aab98ac9794d3b3c20fafed80d9"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/DeploymentTargetCodec.java",
+    "sha256": "e6cb427daeb088c416cc653848e20d2a7f65d2a4d13500aa38c849cf4227d9ac"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/DeploymentTargetCompiler.java",
+    "sha256": "47ddb4763121a989d2fa2c1aaa7b79b77accb0d7a5b5b10ea4eec1f8882b03f2"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/DeploymentTargetStore.java",
+    "sha256": "fa1e31db42961e9634fd6988cad7f06382df279b6de2ce74b0259100778799a6"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/DeploymentTargetStoreException.java",
+    "sha256": "369a68d438dd98351308a7ef1e8a30d402edbd4b97e0716e94f69bc7748dd22b"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/DurableTargetToken.java",
+    "sha256": "e3827990ac89ada3c408c1f963a650f9b49349ad60fbe839fe4270c2bdbde463"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/FacetDefinitionNames.java",
+    "sha256": "a9c23c05d276f4990cccb23a12c39acf615bef1b2390be5219ad2c61b97ee0b0"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/FileDeploymentTargetStore.java",
+    "sha256": "b785ffae4db69bc24bdf6ee87c93b3c0665d565525d7e16baf3adc5ebd303e98"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/HostCapabilitySnapshot.java",
+    "sha256": "3e3fcf10748a52a714e93849c8330975d57d74731223302bf31096e485ad3ed7"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/PackageDefinitionCatalog.java",
+    "sha256": "bd70f292e0ee288b3e06ff431f8506153b31ede83d4e1a23eea58f53f7390b83"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/PluginFacetSource.java",
+    "sha256": "1fc74cacc4556aee1b2b38efa5ea2782a398dcb8b2e2424c68db36a1b5522dac"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/PluginSelection.java",
+    "sha256": "e1334f8003efbe8751e201ffaac2fbeecb54a966b39aa3009ee76d498a3962ac"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/ResolvedFacetDependency.java",
+    "sha256": "aed5cc615b961ee86bcb141697993e0e05a78e0c57c3d1f6f87f3f52a30c17bb"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/execution/CompiledRuntimeSlice.java",
+    "sha256": "3e1be59806f6462f515d05d8df84863fb5c3c35e549cbc69e44b50df06d8cacc"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/execution/DefinitionBindingPlan.java",
+    "sha256": "efa840bf85fa8f7a3120362866569f1ac9738f790b9df2dcd2c00b99cbe8cee5"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/execution/ExecutionUnitKey.java",
+    "sha256": "2a4d25db96d652fbbe996e502620177703f7946d317fa790a471289eb201e54d"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/execution/ExecutionUnitPlan.java",
+    "sha256": "c7cf6b3843ccec4aa4d4350ae976162f8e00a2e249f8a698037d98212884bda3"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/execution/RuntimePlan.java",
+    "sha256": "80689ec3484226f3ea7c5766f4705f1ae94092080d1b07dcbe544cee10fee0dc"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/execution/RuntimeUnitFence.java",
+    "sha256": "58f9ea942bcf2d86624a9c17e6d3a5c35c7552429fdc0231aef25c28c3ea5f36"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/CandidateAttemptSnapshot.java",
+    "sha256": "ada3094fd9db17f51b2241ce711879452f02b4311e109d3ac1419bde8bfa84c7"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/CandidatePhase.java",
+    "sha256": "8660afa2177f99eff1e1025cdf82978555db85256fcf56a5332068458da65fa7"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/CurrentAttemptSnapshot.java",
+    "sha256": "84403d7b3405ee3d0308f85dffeb3bf68b87569279c78c1e0d72ec7a0fc8d7a2"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/CurrentPhase.java",
+    "sha256": "f1e747202abc32cc6c6a4884af65449c358353b0dc6095147a1ef279ec40397a"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/DurableTargetState.java",
+    "sha256": "b1de4221d65319b947066f575f7884c4c4afea013920c5f230a93f8c943feec1"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/EngineDiagnostics.java",
+    "sha256": "68c425d929ee7b9c2c32ab2c96a26c88fb6adfcee424403ef9edb5efef00460c"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/EngineOperationKind.java",
+    "sha256": "0eee75c0beb7ae88be330dd9bb394038e01474ff68fb668a1f5c2fcdb02a4c3a"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/EngineOperationOutcome.java",
+    "sha256": "058b8446b8d878fa4b68019e0e97e9f996c28b5aeebbf772d88e21b4af0955c7"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/EngineOperationSnapshot.java",
+    "sha256": "37647cdc53aec8e6898158799c6f9ae3d3db91b62284e17f49066eafd11c0765"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/EngineOperationStage.java",
+    "sha256": "eacdcf04a3aa3ec1c2eb04df79d2d224ad0c88d53aff1786a7097256e915003b"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/EngineSnapshot.java",
+    "sha256": "0866d739fd2c271e611346584ea2a48c1e7b49b61aa8ce7e233b8a5e35e015db"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/EngineState.java",
+    "sha256": "dd15a4c3d5e33139f2f6f7e8ec37a92fbaae36ce24d37f558bc1c9463b5a5e6f"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/ExecutionObservation.java",
+    "sha256": "d217c9cda2c9954adffe8aa55cf71c9a4d024931d9e508e604bbb8da18d1d270"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/FailureFact.java",
+    "sha256": "69fe7023801915a3e98efa28fcb6654a09c198fedf821db250a1331fd5e24d7b"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/FailureStage.java",
+    "sha256": "f3c2e7cd5b3f5ee0be11abeb036dee808563504e26934f2a9ed9e781b3de5dab"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/FailureSubject.java",
+    "sha256": "3a012f047a5653bb92c973da070142b975424099b51a6c0b07cdbc4f09cd5b3f"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/HostTerminationRequest.java",
+    "sha256": "0836d1601ed07526d5b856fca39a2d1df8dc27c9f054414b8155a509ea8feaac"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/PluginInstanceSnapshot.java",
+    "sha256": "0a6ad427a7358c3f31cb6bb733e7082ab6c9279549bebc272da2205f1d9d0648"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/RetirementBatchSnapshot.java",
+    "sha256": "a9d6fee936a62c11eaa999938afd190017e6cca692742db7f81a8c7235c0466f"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/RetirementPhase.java",
+    "sha256": "30ad8c06eb5a5a8641957307e8c73f09ba7faa48e75f01915d1f46674d6fe623"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/RuntimeDiagnostics.java",
+    "sha256": "ba5a3d5c042b70ceb0c907f3d19ffac8984e4582498ab4157a9a071ece2f2e81"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/RuntimeDriverSnapshot.java",
+    "sha256": "02294c0303913da8db0cb6d31073c1fa04d0cecb46d92b1301b0a262ed58c2d6"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/TargetConvergence.java",
+    "sha256": "e11c5fb07df5082d65ac77ce23287e26d663b7ded4ec8ccec6313b0b766e2637"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/observation/TargetSaveState.java",
+    "sha256": "eb3f10517bd41983e747ca6a5e8a3c425b98fef990a670b057e4eb66e4a023c0"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/publication/PublishedRevisionConflictException.java",
+    "sha256": "e42493263889649f02cb985adbbe4312194d8575df254f40b7c026ad83a65f3b"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/publication/PublishedRuntime.java",
+    "sha256": "82e7823ada64455b31c8bd0d838900a0c5ad6e6837b6637a96b9ca85eb7f83e0"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/publication/PublishedView.java",
+    "sha256": "fa4b722fb7fb7f031989a542ec1fccbdc210ac524b8d4dc45edbd13e74a8198c"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/publication/RemoteContributionInvocationException.java",
+    "sha256": "68e85caff1c3bf66d1726c91af275e54013bff5d1b5ee22833f1215f282a37a9"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/publication/RemoteContributionInvoker.java",
+    "sha256": "4d2076b6ccaa0d241cc9e9cf745e7f77e6200b3e3adfddce290364479c0ac0c0"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/runtime/PreparedRuntimeGeneration.java",
+    "sha256": "cbade7411cec5d872d7c2fd1a5390659a184c843bb3d937db0744e9287ce9f1f"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/runtime/RuntimeArtifactInspection.java",
+    "sha256": "5cbe1c2001e8f8981fd0aa109b19024617e6667f0274ca18b6bf8a41fd9ca73d"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/runtime/RuntimeCandidate.java",
+    "sha256": "55b9d7109e7e68c54b066bd674677ebd51d722c19eb6e992883c354b8e293b1c"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/runtime/RuntimeDefinitionQuery.java",
+    "sha256": "1ff270560d9f038f737bb3071d6b71d492a6a177f97765cca55c6103f43b57dc"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/runtime/RuntimeDriver.java",
+    "sha256": "9894d4890ddad1a3d253ec25a3a8bf56c25b6322b016f8c0bed458553c2e0f3d"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/runtime/RuntimeHostServices.java",
+    "sha256": "bbb17b6d0bde438864dc52304d9ba5b568973d0740e243d51e022f912d5ac010"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/runtime/RuntimeProvider.java",
+    "sha256": "430ddc99cc9bf370277bd0b7e5c1c42791e6c0743417bd40e5a84dbfcccbad32"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/runtime/RuntimeRecompileReason.java",
+    "sha256": "cec154ac63362258c826073e45d327cf13a1ac07e0b8dc7efb144dca1e83a6ca"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/runtime/RuntimeTargetSlice.java",
+    "sha256": "ff7f91dca9accd86cc58e35f1baee46903deb7805b35dee69b623a06f8b5b782"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/runtime/RuntimeUnitDisableRequest.java",
+    "sha256": "ded1a4e75d9d787bbe3571479396ef75980d22c203ebf19540db3bad4f4af0de"
+  },
+  {
+    "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/runtime/RuntimeUnitGeneration.java",
+    "sha256": "4091559fa053d03661561892b2af1cd294f75fdb1d2bbcc559488b10635f64a3"
+  },
+  {
+    "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/DeploymentPlannerTest.java",
+    "sha256": "633712ca816201b138777af5cc87a58af130a578e8b6df0f7f6087a08db88ab3"
+  },
+  {
+    "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineAttemptStateModelTest.java",
+    "sha256": "b127b575ed35aa5c0bd18267bdd8e469561158ffcafbd968b48c1261b9268d65"
+  },
+  {
+    "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineCommandLoopTest.java",
+    "sha256": "8501ae507a139124df74fd1e0a6e4b56d6db31a962be919d1e3b00abb599a5e6"
+  },
+  {
+    "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineConfigurationContractTest.java",
+    "sha256": "7ddc9a016937fe4a7f524d7fa8b044e746a7acd2e5ee84cde7617fa9178712a6"
+  },
+  {
+    "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineReadAttemptTest.java",
+    "sha256": "794220feb0f4f9ce92c30b8ce5eb44da9e9b340a3b0a73c4b36f5e8c82996989"
+  },
+  {
+    "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/RuntimeDriverContractTest.java",
+    "sha256": "e2aefe7c27a5659fa7f78542ac005dbf995a3b42965a8d887a3c156374781c1d"
+  },
+  {
+    "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/RuntimeDriverEngineTest.java",
+    "sha256": "b33987e113b9a77f5c9aea7d370a1bd96f2730f1fdeccf8e8ea1ff05d01d4589"
+  },
+  {
+    "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/deployment/BuiltInConfigurationBootstrapTest.java",
+    "sha256": "5ca5e8e2cb51297314685d420fdb0096ea1b0c4c46d7c8d9e3b8f1fb96b9cabc"
+  },
+  {
+    "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/deployment/BuiltInPluginPackageTest.java",
+    "sha256": "70d27e8f087327be16c2e4f6832c618e4968ed81e32b475892770c5198a7c8c0"
+  },
+  {
+    "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/deployment/DeploymentTargetCompilerTest.java",
+    "sha256": "cdc5eee514b8340615cba652ea82a94ff6d4c3005b080ebee60cd571c0623d52"
+  },
+  {
+    "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/deployment/DeploymentTargetContextContractTest.java",
+    "sha256": "01389dd5363146bf033d60c5872cb9beb9a4080a34c2bd56760326ebdb7e7f27"
+  },
+  {
+    "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/deployment/DeploymentTargetContractTest.java",
+    "sha256": "ae2f78859e9fcec89407338bd62122d2fe150b1c4049fbfc2929aa3700da6c30"
+  },
+  {
+    "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/deployment/DeploymentTargetStoreFixture.java",
+    "sha256": "da1232295a46bb2d24b24fa601f01a535fd374a8996c57e96dafbff82ebeccef"
+  },
+  {
+    "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/deployment/DeploymentTargetStoreTest.java",
+    "sha256": "8f5be08cfd12a8b03266f819609eef0f1c5773edc491fdc49308453bf948a89c"
+  },
+  {
+    "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/deployment/HostCapabilitySnapshotTest.java",
+    "sha256": "8cd93d5efc1cf51d9af4d33ca583990ea37afd67d6ca43ede73aa235d9634451"
+  },
+  {
+    "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/deployment/PackageDefinitionCatalogTest.java",
+    "sha256": "151fbc2f74ca734e3663a4715d7125f0078081f9fc71e7c0e887e61ef4a7ba99"
+  },
+  {
+    "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/publication/RemoteContributionInvokerTest.java",
+    "sha256": "ad81f0dd7014b554107265bfc349e012fb25896470066edfc7522cb809c17c53"
+  },
+  {
+    "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/runtime/RuntimeTargetSliceTest.java",
+    "sha256": "47a8c4245791b827f4fc1a85a1bcdf270de9cc523f411fd35d1a9a4d26cc6029"
+  },
+  {
+    "path": "fibra-example/README.md",
+    "sha256": "5cd4795ea8f33562173c7db6161245c79f0e120b280bb3206eac3cfac6ffe188"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/README.md",
+    "sha256": "a334daffa4bd7d58c63d51a58c5cdf1b6cdc071071db32c3fcd361dece0e3213"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/api/pom.xml",
+    "sha256": "1170e0145aaa13a8ff00107d9eab720f50931d39aedbd9fcda0aac5b693c28ed"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/api/src/main/java/com/sstlfsj/fibra/example/sanitizer/ContentSanitizerContribution.java",
+    "sha256": "5c0f1f045793c5bd25e4c980b4f0965e3d59241bc0222865fdeec080ac232e4c"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/api/src/main/java/com/sstlfsj/fibra/example/sanitizer/SanitizeRequest.java",
+    "sha256": "8b2e744558936e0f0fb7fd767099fab803a4d05f033dd575f22e220eeb96c1c9"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/api/src/main/java/com/sstlfsj/fibra/example/sanitizer/SanitizeResult.java",
+    "sha256": "7b6504aa1738815c1300a464fa9a3c3fb52525f246352cddbcadac7460e84d10"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/api/src/main/java/com/sstlfsj/fibra/example/sanitizer/SanitizerDescriptor.java",
+    "sha256": "712cccbccc2d9c6634919433743d416f64a62c4082a297343dc66bc610a409c0"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/api/src/test/java/com/sstlfsj/fibra/example/sanitizer/ContentSanitizerContributionTest.java",
+    "sha256": "f323a2658d54ec1dad317bcf560801f12480b4088769d8f32790f17d91c3ad3c"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/node-plugin/fibra-config.json",
+    "sha256": "f696d14ffec9273dd5f67de6994d290946e4779b23ed73aea9f7e92d6c6c0f86"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/node-plugin/fibra-package.yaml",
+    "sha256": "eb14ae573813637cced83c30c3464dcd9087ce380d52b6d7962206687460f4d7"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/node-plugin/payload/fibra-plugin.yaml",
+    "sha256": "3bf081a703988c0828d4920068395bdf771f91885cb5472b10c7873c440361be"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/node-plugin/payload/index.mjs",
+    "sha256": "e8c930ce89fadf68532225d9af2393870b22494358c0e06d70ae6ccdf8297de2"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/pom.xml",
+    "sha256": "dbd06f51c3b472e38cc5da4667a7633ad2157d5e21cf28eb540f0af37fc19baf"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/spring-host/pom.xml",
+    "sha256": "4acfe99ac5cd776bfbd342f23c292dfa6f9e0e43388f2fb1c29b8d1b7c9c23e4"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/spring-host/src/main/java/com/sstlfsj/fibra/example/FibraSpringHost.java",
+    "sha256": "89a8071f30b116af12b3b8c0ca8df7f6e11ee4375b369291ba4edaa37db1060b"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/spring-host/src/main/java/com/sstlfsj/fibra/example/SanitizerController.java",
+    "sha256": "86642cb85891ba394023002366aedb4f55430317926d62793ac77701d405349e"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/spring-host/src/main/java/com/sstlfsj/fibra/example/SanitizerExampleProperties.java",
+    "sha256": "c99ea0540b09ce268b7d45fdc503f758a8d8ceebeb18c3ed52ce8cfb35e88fac"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/spring-host/src/main/java/com/sstlfsj/fibra/example/SanitizerPluginManager.java",
+    "sha256": "cc2035ca9356e6ece6b0d170783eba7317ee72b9044c7f1b21e0d5241fed2f70"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/spring-host/src/main/java/com/sstlfsj/fibra/example/SanitizerRuntimeConfiguration.java",
+    "sha256": "818baff42b7ba32bc02fa60862095683f2a545b5995e0891ed156a1428483e40"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/spring-host/src/test/java/com/sstlfsj/fibra/example/FibraSpringHostIT.java",
+    "sha256": "8bae80f14cb5e46cf5958a93c88406bff379525d36b8403e282da3322335ac6e"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/spring-host/src/test/java/com/sstlfsj/fibra/example/SanitizerAuthorConfigurationIT.java",
+    "sha256": "638fbfe08d5e65ccdd68e6263aad80d300c3c78b08db2f116869faf7888b0042"
+  },
+  {
+    "path": "fibra-example/pom.xml",
+    "sha256": "7f4b820fa77139a3fdb52957b801f0a1c424efdefd1dd3385a2fee669343d13d"
+  },
+  {
+    "path": "fibra-parity-tests/pom.xml",
+    "sha256": "d9087fcc8f8bc24e37727b94500fe0aea2390c798b7eb94aefbf0a614824df59"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/fixtures/HangingJvmFixture.java",
+    "sha256": "6aaef4aae60dbd0492d80b20390c7d66ee816a97fb3aeab5a219ffdf86ecf33d"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/migration/AnnotationInjectionParityTest.java",
+    "sha256": "9a34316a220537e3540ff7cc4277329248a50783c3fe7f4c3b1e50a20c4512fc"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/migration/ContextPropertyParityTest.java",
+    "sha256": "f295c03466b78f58752924502ea75a870cee232d46860e59b48a1f064f5e81d1"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/migration/CoreEventsParityTest.java",
+    "sha256": "650070375c63e662a638962bb10edd1e2b36e17b85e9fa6cfc25d8daeab7184b"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/migration/EffectParityTest.java",
+    "sha256": "bff7271cb152e80aa5e5529fba0ebf5136b82b37c0245c244a718a193d6b0b26"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/migration/EventParityTest.java",
+    "sha256": "ff88b8d2bd321b007531bb05480b9e9f69c6ef36a98bc8cb513f54146ff60f88"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/migration/FibraDisposalParityTest.java",
+    "sha256": "8fcbb7878b197b456a38cddd9630a4a07bf8077ddb5ac4261a4fbffa5e2ebdbc"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/migration/FibraInertiaParityTest.java",
+    "sha256": "a3c5147320d0242299154734c1e7d7399eb2dd365a3f6465fa11f197cfdf9822"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/migration/LoggerParityTest.java",
+    "sha256": "2a696e76772426cebca4df8aab1d3215a1a43399ad43006763e04e393f6a2d29"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/migration/MigrationTestSupport.java",
+    "sha256": "6bee386c5861bc1088cd655770bc83a96f59726d524cba084f36fb286e717ba6"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/migration/PluginAndInvocationParityTest.java",
+    "sha256": "f4ff7630d8c500832950dc63cd96661ceebb5e72be132e32a1b3975dee0072fa"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/migration/ReadmeExampleTest.java",
+    "sha256": "fe29a80fd2703c540110ed6e7881c6fb5490ed74604a2d0a882d6d2084d58796"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/migration/ServiceFibraParityTest.java",
+    "sha256": "0a531c7506a153dd7963d0ddd8ede623bb200f910a71cb9e26b9c3966dd5b6b3"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/ApiSignatureBaselineTest.java",
+    "sha256": "cba38f89c7334ac702ed685e35c6fb34677c3a311600cb4174e5310316fa0bd1"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/ArchitectureBaselineTest.java",
+    "sha256": "68b18f7248097b383d4824ac98b38c61ed4556795da4d02380eff3ea2a7aa7a0"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/AssociateSpecParityTest.java",
+    "sha256": "c6976d5cb6ce33bf90f5d3018ba5cc8ee3f789ced14fb08fff3e0612520a499e"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/CordisSpecSupport.java",
+    "sha256": "f4ed6bb35dcdc2a2b31bd1ef67e91446b1f68c8d4f85d8617698de936cf21401"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/DecoratorSpecParityTest.java",
+    "sha256": "bde61b418eda53a966de5c720f32075562137d30cc53246f358f921b552a0400"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/DisposeSpecParityTest.java",
+    "sha256": "d9bbac2b357fc73e88277461848e40bf7ea20cdebb55c4cc63d0e1d5cb55044d"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/EventsSpecParityTest.java",
+    "sha256": "7c77e9b6bb4a39942b3675fc627fb5d99c59efffc2e686cb418fee16906a181f"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/FibraSpecParityTest.java",
+    "sha256": "7c273c1da4cbaba197e1181cf307de1d24affeee9b7268641319afbdf2aacb78"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/InvokeSpecParityTest.java",
+    "sha256": "c5445e0e26009b596a4d52155592a8b63b9b3552db2b9d06675deb4b77594e25"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/IsolateSpecParityTest.java",
+    "sha256": "bcc6453c56b1d3a294d0b8795d15c074531d8cd2a5b842c349fff08e8f43c267"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/JavaPackageArchitectureTest.java",
+    "sha256": "af18a7b0f5b181da3a7aa023fcce7bfd72ef649c1cc6e3d90716a8f620245dcb"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/LoggerSpecParityTest.java",
+    "sha256": "d0a69db7bd9097bd583f85dd10d881edaa37979124a91c261523be2b0496585c"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/PluginSpecParityTest.java",
+    "sha256": "fde1812fd7c78957485001a3eba2504dba219c8e49b09808f55a8bfdb5f648f8"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/ReflectSpecParityTest.java",
+    "sha256": "259fb0125fc1e0a5e2ce5e90fdb8d0cf5b61cdb3a03ca71b050f8d7357782802"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/ServiceSpecParityTest.java",
+    "sha256": "3d1295856a3a2dccc882a81f7b1199b0fb84434eac5809beae00718f32ab597b"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/ShadowSpecParityTest.java",
+    "sha256": "8efb997ae165d7c1fbc97787e0d31e8809c657ccdf988a13b72a508468f231ca"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/VNextScenarioTest.java",
+    "sha256": "5ae0317bacdab898cc98825a7ebf89ddab4281caf198024d97aa7284e1224c54"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/CrossRuntimeConditionalConfigTest.java",
+    "sha256": "93d70c58e906c56c98181401e0207c1ab1f48fb4a1802210372a0dbd396384a8"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/CrossRuntimeSelfDisableTest.java",
+    "sha256": "d46fca459e82301ed63dc07abb0188a8056401380055fd0bf40f2b98f95fdd4e"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/JavaPublishedViewRetentionTest.java",
+    "sha256": "31abb618bc039723ef757f9c7e7446e5bcc057dc530aa1ef072d973102daf4a1"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/scenario/NodePublishedCancellationOwnershipTest.java",
+    "sha256": "6fb35623a6bceaa78b2ab59cd5e9437d56f6af542bacaa0214259b2c7dfb81ce"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/external/ExternalFixtureCounters.java",
+    "sha256": "9142b2dc726a5947917d51110ffacc038e4cc765f4e5801e2f6b98d2c942f8a9"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/external/ExternalFixtureEvent.java",
+    "sha256": "bb34e4be9ca2741bb400caf710a83d1d3f8168658ca492fa3ab331fcd29c3743"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/external/ExternalFixtureRuntimeController.java",
+    "sha256": "2c22594454097cc50de373b6f0f7ffe49596bee38a2185d7d721188a22043e8b"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/external/ExternalFixtureRuntimeDriver.java",
+    "sha256": "29e888c5c72af21b5fe80671397e87bbbe7f7cf9b6032ecaa4c41aae7ddc221f"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/external/ExternalFixtureRuntimeDriverTest.java",
+    "sha256": "22736a5601e3ae718bbc4c4b6972a843c6133af7d6d0e0d3cc54d8b3a9cfc866"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/external/ExternalFixtureRuntimeHarness.java",
+    "sha256": "1e3fb469f2abfab2bd889125382e7faec2fd3c3ff3507ff8bdc2024f657b039d"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/external/ExternalFixtureRuntimeProvider.java",
+    "sha256": "86e593e32d5a193e6fcda12cc8a7d4bbd899f4a6bc96235bdbba25844c3e4e7e"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/external/ExternalFixtureRuntimeSnapshot.java",
+    "sha256": "dd19cb4b7a3b5bef36d82136e63724bd0e27713e5e14e3dde57786550bcdb5f5"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/host/ClientProtocolFixtureProvider.java",
+    "sha256": "47efd312d5a0be97f0c1dfcac4654235c7d8f58d9ed272d5db92fb1d7cc0c961"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/host/ClientProtocolVerticalVerificationTest.java",
+    "sha256": "bdf2d55ffe1519fe698f3ce89dd659e0e707f6639ef7cda36b27e052b874c9ea"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/host/HostRestartRecoveryProcess.java",
+    "sha256": "3053c2d9286c28e8c304300ce9604f35f1347ae52642b7b19585f0075f899253"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/host/HostRestartRecoveryTest.java",
+    "sha256": "75798a77a009178095ce7c8277ba2940dc1996909814284d717fc65f0cb45a4f"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/host/HostVerificationContract.java",
+    "sha256": "2283327c4c7a018042989dfee729e3e419424f208026f142e8be10d78ecca838"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/host/RuntimeHostVerticalVerificationTest.java",
+    "sha256": "76558c04e555749b33e5f1ab3a34038ed5ae326631eafe825a6b06c8d158577b"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/fixture/ContextJavaEntrypoint.java",
+    "sha256": "e1e0fb967ccd69cc90dbca547c5ccbf6bf0e8cecd178cfa1a72af5055b4dbc5a"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/fixture/DisableJavaEntrypoint.java",
+    "sha256": "fd2ff6804410e0de3ec64e9f0a10d026b72a07faf5f403437691a4db230152d3"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/fixture/RetentionJavaEntrypoint.java",
+    "sha256": "f4498d093b940107b6ee352ca9c08ff6feaf1eff954b9e4fdcbd43d73dd9d47a"
+  },
+  {
+    "path": "fibra-parity-tests/src/test/java/verification/host/fixture/DynamicJavaEntrypoint.java",
+    "sha256": "195102437e110bb0269deb555baeaa77ed6b12a183d80f3b76d3b0f983a23e31"
+  },
+  {
+    "path": "fibra-plugin-archetype/pom.xml",
+    "sha256": "fc477ad0e96af2359ce7ffbd641ff7cfaf88001f8520aca680a24b393669e4f9"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/main/resources/META-INF/maven/archetype-metadata.xml",
+    "sha256": "fbf38f6baf580003977bc8f8ec0325d733192ec3d65bd1f46a890362d6b31579"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/main/resources/archetype-resources/README.md",
+    "sha256": "344f3239ef218c79e81aeaad212a413d6739ae75173258838b54ed6ba1b4be58"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/main/resources/archetype-resources/pom.xml",
+    "sha256": "5cb8cbc5717f15d290217564250a46182482e5dd92a201969bbcd38fba104675"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/main/resources/archetype-resources/src/assembly/plugin.xml",
+    "sha256": "e21f94f0451242bcfc40fcd98776d0be0fdfd5b44810fde7d6df8496bc8b0d26"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/main/resources/archetype-resources/src/main/java/FibraPluginEntrypoint.java",
+    "sha256": "9f8651ec67c51c5a812adad17a0273f98f3d692ca1e485fbc9b7621dd6a1771c"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/main/resources/archetype-resources/src/main/java/PluginConfig.java",
+    "sha256": "9a78610ca1d31d57fb9a64a6baf4c09739cc06b50e23592e46543fb883fba12d"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/main/resources/archetype-resources/src/main/resources/META-INF/fibra/plugin.yaml",
+    "sha256": "a1ef88790e50668707aa04bcf805ca4722a31f6aed2ceaeafbac951a591a93f5"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/main/resources/archetype-resources/src/plugin/fibra-config.json",
+    "sha256": "996ec7495d53636b85441e353d5801e683d71d420e647642008d8ed020577ef5"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/main/resources/archetype-resources/src/plugin/fibra-package.yaml",
+    "sha256": "d35315f1d02a3b7772785a626f60aa3c965d8a20d08b1552c6a703b490fd3c86"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/test/java/com/sstlfsj/fibra/archetype/FibraPluginArchetypeIT.java",
+    "sha256": "00a88db05ca07d73b46986ebd1a528920b48f61aa294f475259e1e776b1de086"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/test/resources/projects/basic/archetype.properties",
+    "sha256": "23f2da47759482405654ca12661e3a1024c89100010b17f1e5f2a81e5ca30d3c"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/test/resources/projects/basic/goal.txt",
+    "sha256": "b749d167d8e0f38416943430adfa89509826c07b8e95d43f0f3bea9294362ebf"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/test/resources/projects/basic/verify.groovy",
+    "sha256": "9bdd33c862fa06b318cf009dcbfa63f6eb5cbdc51ed4ad0c6cd85e512533e4bf"
+  },
+  {
+    "path": "fibra-plugins/README.md",
+    "sha256": "7471a6bf57b43dc7b0d5f18f9c2c4dcca0da67130d297f5ecaff7f4ac6b7cea7"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/pom.xml",
+    "sha256": "e7d9fe9abe8cc800a795a1fbdfe7b24c10433c844d285c8172763e54f927ac96"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/src/test/java/com/sstlfsj/fibra/plugins/acceptance/AuthorConfigurationQualificationTest.java",
+    "sha256": "ad1e8f2c1a1a98bea211312b3c4db9b867470afa83d21e52dfed6c30312fd1dd"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/src/test/java/com/sstlfsj/fibra/plugins/acceptance/FormalCliIT.java",
+    "sha256": "e2bbcc4a6b5c410224bf89a1131b4b28d1b9460c12956d750a5a52b567a59a90"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/src/test/java/com/sstlfsj/fibra/plugins/acceptance/FormalMultiPluginIT.java",
+    "sha256": "6d849427e746ac4293efdec7db48f0787d56a4574926dd07a8dbb0d7989c51ee"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/src/test/java/com/sstlfsj/fibra/plugins/acceptance/FormalPluginArtifactsIT.java",
+    "sha256": "be90efca46944254acd7666ff32aa7e7f5ca64979fbec07b39f370c65712ba57"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/src/test/java/com/sstlfsj/fibra/plugins/acceptance/PluginAcceptanceHarness.java",
+    "sha256": "7dcd18137761bc6dee4317832aabf0f7ecab5a178cfc9ef00530f380b4f29f37"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-acceptance/pom.xml",
+    "sha256": "59b5a7535a8e0b14b4f56786e5259f89958fd8f93dc0791b343d10989bc4c385"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs-local/pom.xml",
+    "sha256": "4fab2172fcf2d10c8c79630b8e201bd8a9f2113c7295e0fd86edaed5c54dae6e"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs-local/src/main/java/com/sstlfsj/fibra/plugins/fs/local/LocalFileSystem.java",
+    "sha256": "e5c1258bb133e394c6378f7c1cc5f1113d6fd2c7b7a7c0d59c2c7fa939c031f9"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs-local/src/main/java/com/sstlfsj/fibra/plugins/fs/local/LocalFileSystemConfig.java",
+    "sha256": "ed9ad5acf72394835e30312547a2aeae5d9c03822e769d0327365b2fa6443720"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs-local/src/main/java/com/sstlfsj/fibra/plugins/fs/local/LocalFileSystemEntrypoint.java",
+    "sha256": "c4f6e4a69c7e33b861816d5048ca4f39da38784c3e9e555c6f3d6f1c3c7ff3f9"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs-local/src/main/java/com/sstlfsj/fibra/plugins/fs/local/LocalResultSpillStore.java",
+    "sha256": "7e0fcb8e7758d4df75ff661a5e7238cd6d07e2dc321d40785235399f2e5f01df"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs-local/src/main/java/com/sstlfsj/fibra/plugins/fs/local/WindowsFilePublisher.java",
+    "sha256": "c37561e48d1c83996320ffe31df67010ec4ab3f65ad45024f7652d38b992deb9"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs-local/src/main/resources/META-INF/fibra/plugin.yaml",
+    "sha256": "a25e7610dbd3ea545b634cda6b0f42477035fa5a787c7b31c134b2ed686021bb"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs-local/src/plugin/fibra-config.json",
+    "sha256": "071bd1e705dda3951adfbc244c49cb4da65eaa1a69cea303911782660756e028"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs-local/src/test/java/com/sstlfsj/fibra/plugins/fs/local/LocalFileSystemPluginTest.java",
+    "sha256": "ddf9678fdec7a1725f971e2d85480274a85f042df78e524316c17cf567854562"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs-local/src/test/java/com/sstlfsj/fibra/plugins/fs/local/LocalFileSystemTest.java",
+    "sha256": "473e5c24f0a3f690b7abb44892aa4ab70367d178c272dd4b4ef698d8d94d0517"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs-local/src/test/java/com/sstlfsj/fibra/plugins/fs/local/WindowsFilePublisherTest.java",
+    "sha256": "5a91e6296328b5260d24dba073a7d6da4c81a70c1b8bc496e58d0d80d5b44f6f"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/pom.xml",
+    "sha256": "e69f9651f330daa3eb03cc92b511f8bc0e3bc97b7de3297fc72e2d5d0699da6e"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/src/main/java/com/sstlfsj/fibra/plugins/fs/FileSystem.java",
+    "sha256": "a7e3303c51b232a7275789f867d24c004d762c3b9e4158fb6b1877f06f850d40"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/src/main/java/com/sstlfsj/fibra/plugins/fs/FileSystemServices.java",
+    "sha256": "1ef51364de5833d965419848f5b9824288c06435dcbf67e5b775ce467f3062ed"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/src/main/java/com/sstlfsj/fibra/plugins/fs/FsEdit.java",
+    "sha256": "6a5e43796b2c0cd25764c8b20ca5a856cdf4b5b398e7e63b7cf90b9540a8f011"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/src/main/java/com/sstlfsj/fibra/plugins/fs/FsEditIntent.java",
+    "sha256": "60856792999f61f114e7a1004b9bdcd5a757026a5e4a4b26874d62829e5fb6e3"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/src/main/java/com/sstlfsj/fibra/plugins/fs/FsEditResult.java",
+    "sha256": "0f0cd9c60b6c3c3cc2283a268790550859f4c6ad2105c542a44711b65e336998"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/src/main/java/com/sstlfsj/fibra/plugins/fs/FsErrorCode.java",
+    "sha256": "ddfc7732b12672373ae5295243a4fe3c00e68950deae1ced0d52aa573aa4ccda"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/src/main/java/com/sstlfsj/fibra/plugins/fs/FsException.java",
+    "sha256": "51a9877029ce8b6597888819c0f2754987e49f7e74a5132c8a919a452f905a4b"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/src/main/java/com/sstlfsj/fibra/plugins/fs/FsFileType.java",
+    "sha256": "3ce6fced8bbdb1d8b3c40efbf3a203a1b7d491f2481113b3835af8c464879238"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/src/main/java/com/sstlfsj/fibra/plugins/fs/FsInfo.java",
+    "sha256": "ca37694c396a25f8c53fcb16fca64c6c67664818330c064c738a0131dfed2215"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/src/main/java/com/sstlfsj/fibra/plugins/fs/FsTarget.java",
+    "sha256": "c5211f666c6fb07d38247c8b1fa8d13661f619ee816d526591a9b9c276d52c0a"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/src/main/java/com/sstlfsj/fibra/plugins/fs/FsVersion.java",
+    "sha256": "be79d987e5a21d052f7c34d0e75c47d3218567e88848859b73dcb5c9e27c8735"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/src/main/java/com/sstlfsj/fibra/plugins/fs/FsWriteIntent.java",
+    "sha256": "d0a73ce4c614ae0073c02f52228f5c864e33538b325cec4921eaac5669535e0e"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/src/main/java/com/sstlfsj/fibra/plugins/fs/FsWriteOperation.java",
+    "sha256": "9517b291984d02334c45ed53b04ab3cc72c025985bddd4afab8bb60535f04905"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/src/main/java/com/sstlfsj/fibra/plugins/fs/FsWriteResult.java",
+    "sha256": "7bae9ee9b47b088e464cdc89322120e8f5a7646066adb2c236d516203568bdcb"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/src/main/resources/META-INF/fibra/plugin.yaml",
+    "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/src/plugin/fibra-config.json",
+    "sha256": "9c94315c2bd2962f2c8550de9590a742787cb09d7ebed99c2e9b0523d30a2cd3"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/src/test/java/com/sstlfsj/fibra/plugins/fs/FileSystemContractTest.java",
+    "sha256": "586c68281de778486ee8a5cb3534d30f6f19425622feeff7ec8e1eaedf51cf7e"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/pom.xml",
+    "sha256": "1db4d8d5927f8c1447148c24a0f056ceb6513aa3068d22c4970f32498f0e3a8d"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/src/main/java/com/sstlfsj/fibra/plugins/fs/search/SearchCommands.java",
+    "sha256": "4794e0f9d96ca77f677e4e7d8103822842f5aa55b3eccbab1b3029d757d30e9a"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/src/main/java/com/sstlfsj/fibra/plugins/fs/search/SearchLimits.java",
+    "sha256": "8ec26f0fd7d76b3a71bf9dbc7ba8a3705d4dc6c0abe387de585f5af8c940e6ef"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/src/main/java/com/sstlfsj/fibra/plugins/fs/search/SearchMatch.java",
+    "sha256": "c93e79057b92d50e0e64a0b1bd7c0be34aa750cc5ff7857aea6c5c47b7548bff"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/src/main/java/com/sstlfsj/fibra/plugins/fs/search/SearchOutputParser.java",
+    "sha256": "bd2e74205d0403653dca066cb3c25d8c1a28f3ee1ac08e03b326b4a26a4879ff"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/src/main/java/com/sstlfsj/fibra/plugins/fs/search/SearchPluginConfig.java",
+    "sha256": "beb95db3dfdc2d045ee2dc45370c11eec74dd7dc86814b3e4837ccaa9dd3cc5a"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/src/main/java/com/sstlfsj/fibra/plugins/fs/search/SearchRunner.java",
+    "sha256": "3b23f6299b1a8f876b97faec99de88749faf8e5365ea9c26c4a104c7b017ed37"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/src/main/java/com/sstlfsj/fibra/plugins/fs/search/SearchTiming.java",
+    "sha256": "7e751f8deeafba0e78b595482e5d609af8a498282b3bbc7af0aad27b8d844b42"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/src/main/java/com/sstlfsj/fibra/plugins/fs/search/ToolFsSearchEntrypoint.java",
+    "sha256": "2e4fe55501e4389a18cdf9522bd2c74c2aa7afa6725cd0f24db21fac7f7e9087"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/src/main/resources/META-INF/fibra/plugin.yaml",
+    "sha256": "2e14da2795d1f0f405f1e7f484f3feb5c74f3a79822214d382c355b7fe5f6831"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/src/plugin/fibra-config.json",
+    "sha256": "89c00b1fdfdd19707431d00274404e208014e9513be91e4a24ff5d33ea95eb72"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/src/test/java/com/sstlfsj/fibra/plugins/fs/search/SearchCommandsTest.java",
+    "sha256": "b594c5270df29a8afa4dee1334153fd03ba12df73d0f91869502fa617444ada6"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/src/test/java/com/sstlfsj/fibra/plugins/fs/search/SearchOutputParserTest.java",
+    "sha256": "4cbfeb46e4f576a0ae89321c7d5f9f73863784e5c015c7a23da3150c9a60f6bd"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/src/test/java/com/sstlfsj/fibra/plugins/fs/search/SearchRunnerTest.java",
+    "sha256": "01ee3061662b50841b4abddbf969b895946ba22e68435efa3a9622ad41c41111"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/src/test/java/com/sstlfsj/fibra/plugins/fs/search/SearchTimingTest.java",
+    "sha256": "5a84714dc9cce5eec62e0e7a214ac57a3913625157256c0c7ef98da40463618f"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/src/test/java/com/sstlfsj/fibra/plugins/fs/search/ToolFsSearchEntrypointTest.java",
+    "sha256": "7065b37634e02309764135f0e6b82647c95de3b171fc98f60fb5a7787f2453fe"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs/pom.xml",
+    "sha256": "eed5ca7cbd8bd7bf9d7322723c0a854cdf7220682c7f930b3d8ea6d144d02b40"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs/src/main/java/com/sstlfsj/fibra/plugins/fs/tool/FileToolConfig.java",
+    "sha256": "59c484f76e222ea22c02dfd87b5ae50d24c073e7c6781ad7721701d7d5b26833"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs/src/main/java/com/sstlfsj/fibra/plugins/fs/tool/FileToolEntrypoint.java",
+    "sha256": "b8fa30581bf6309003fb2a6ff5dcac66c1185c5aaa1f37b3a6ceda63475baf34"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs/src/main/java/com/sstlfsj/fibra/plugins/fs/tool/FileToolHandlers.java",
+    "sha256": "955f1e73748975742b6f782b35de0788266eab18963da8e6ffec5785b7d2448f"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs/src/main/resources/META-INF/fibra/plugin.yaml",
+    "sha256": "318a615dcd6938bcb9cf3c472b1ac67171fc8dd06f98b0208d8804243d48142f"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs/src/plugin/fibra-config.json",
+    "sha256": "cc07274f9efd39011054381d641e46dd8542894ac03ae8bdd0b3377ac7af64c0"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs/src/test/java/com/sstlfsj/fibra/plugins/fs/tool/FileToolHandlersTest.java",
+    "sha256": "05d620f18f2c13ae79308c3db2bd5581590c6d70319b473ee77df9b34896e789"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs/src/test/java/com/sstlfsj/fibra/plugins/fs/tool/FileToolPluginTest.java",
+    "sha256": "8e738d33e22b99ff7b2f4f293c5dbd33485afafb9334cdfd39919c36e66f6e06"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/pom.xml",
+    "sha256": "c4bb141cb326291dc58b3ec2a41751e22a09902492ceef0563ae0c96ec7f1cd2"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell-local/pom.xml",
+    "sha256": "8b8ed22ea57143c7a03e644bab6b0c7a22e7f728928cf52820d8a450ddd02385"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell-local/src/main/java/com/sstlfsj/fibra/plugins/shell/local/LocalShell.java",
+    "sha256": "7bb02a6c751982d9333ce53221ce06af99bd333b220e14dba509b35b54a29e41"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell-local/src/main/java/com/sstlfsj/fibra/plugins/shell/local/ShellLocalConfig.java",
+    "sha256": "537ebb4337779e31281996f3bfdd17137c3e0d533079eb1225cce88d8cc42ca6"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell-local/src/main/java/com/sstlfsj/fibra/plugins/shell/local/ShellLocalEntrypoint.java",
+    "sha256": "e38454f6655e801eb2fcaf03b4b2f6b1d0fdd98ba1cd648771a93079366349bb"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell-local/src/main/resources/META-INF/fibra/plugin.yaml",
+    "sha256": "79ac84e6962c1929319a27c1066663887cd9e3feb626c73b5f9f7b47214bffea"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell-local/src/plugin/fibra-config.json",
+    "sha256": "fd9034cb2c9c16fd7a498024ed1b093908033f738d525292a3d1d47d22f31033"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell-local/src/test/java/com/sstlfsj/fibra/plugins/shell/local/LocalShellTest.java",
+    "sha256": "186b0c199dbe3ea3faf617870b1e5dd994c3822c2f07af54af8fa57a00d2fd89"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell-local/src/test/java/com/sstlfsj/fibra/plugins/shell/local/ShellLifecycleTest.java",
+    "sha256": "810fb4c450d193a8127d123ee94dd43704cf3e5350529f17e23ff1a7aa4aa140"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell-local/src/test/java/com/sstlfsj/fibra/plugins/shell/local/ShellPluginTest.java",
+    "sha256": "8088198bf04823d4b0230b0793c3e59a2e2a86eb789e473de20f8512bbf0c493"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell/pom.xml",
+    "sha256": "e78cfa0438d4e967423b26f7cd4d74a7128675a9a19012dfa3dda91d74d6c7a0"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell/src/main/java/com/sstlfsj/fibra/plugins/shell/Shell.java",
+    "sha256": "67c57a8f83200764eb27d5eba0ddabab4b7d02e1da1f199518026c4db960e5d2"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell/src/main/java/com/sstlfsj/fibra/plugins/shell/ShellErrorCode.java",
+    "sha256": "ae4910dc3cc86ddf45de214378f8ed119e2916a6f3e001bc8b7d864a840694d0"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell/src/main/java/com/sstlfsj/fibra/plugins/shell/ShellException.java",
+    "sha256": "3862d3ec5642c060b06b5f4fb05f02e6e98d5e05760fb9cef9de95669a0851e9"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell/src/main/java/com/sstlfsj/fibra/plugins/shell/ShellOutput.java",
+    "sha256": "c9256b06caf7ab1926a455e2bf3d180d3711c778f16317ecf411a943d8748f22"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell/src/main/java/com/sstlfsj/fibra/plugins/shell/ShellRequest.java",
+    "sha256": "c22dc14015f979a5b1f797cb9aa6b9b25f2dd6cd9c081185ffe7905bb455a646"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell/src/main/java/com/sstlfsj/fibra/plugins/shell/ShellResult.java",
+    "sha256": "3b395f328a8808c5b21c6740d42c102f90d29579ba9c375b41a3579078f58b53"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell/src/main/java/com/sstlfsj/fibra/plugins/shell/ShellServices.java",
+    "sha256": "cffe8a9bfb8ac28ccaff6c74c735181fc28135b8efe109ae0d9dd69a66af927f"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell/src/main/resources/META-INF/fibra/plugin.yaml",
+    "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell/src/plugin/fibra-config.json",
+    "sha256": "9c94315c2bd2962f2c8550de9590a742787cb09d7ebed99c2e9b0523d30a2cd3"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell/src/test/java/com/sstlfsj/fibra/plugins/shell/ShellContractTest.java",
+    "sha256": "ed86eff34f9ea1bfd40c9e803fd9ccfa6a1caeca179cf1e154a16dc6a8d84d84"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-tool-shell/pom.xml",
+    "sha256": "1989796dab313a424abe5d68cbfa0a4fd9ddbd3e4ddc9a2d37cdd7e2a9d17ee5"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-tool-shell/src/main/java/com/sstlfsj/fibra/plugins/shell/tool/ShellResultFormatter.java",
+    "sha256": "e04529e82ccbb7ac2a470df4cf27c7b95bfb24ceb23ed4a42ba6668cf0745513"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-tool-shell/src/main/java/com/sstlfsj/fibra/plugins/shell/tool/ShellToolEntrypoint.java",
+    "sha256": "8099660b6f95eb660c9c50d2315185fb1c9ec3cad6f9e76e75d99a9d2d96f251"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-tool-shell/src/main/resources/META-INF/fibra/plugin.yaml",
+    "sha256": "49d87e5b19c1e26947daf65227609938ff765025e491a7691057650b2934e3c1"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-tool-shell/src/plugin/fibra-config.json",
+    "sha256": "4ca464d430ead11289d6ddd1b33b455e3fe983905f1b8efea4db2a04ccb9cbf5"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-tool-shell/src/test/java/com/sstlfsj/fibra/plugins/shell/tool/ShellToolTest.java",
+    "sha256": "1c85ea497b94c2de54f9c9e04be0850a044d9f52adf405e702852bb04fd9c0c2"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/pom.xml",
+    "sha256": "b7635329f6a5448c1455fbd7c079253d55962477af239b52fb5260043284fb85"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage-json/pom.xml",
+    "sha256": "71c1139eebe040e5c1a6b4b9f0cb3fd4c3a1ddb52a9c387c20dcf64721731fd5"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage-json/src/main/java/com/sstlfsj/fibra/plugins/storage/json/JsonConfigStore.java",
+    "sha256": "fcb9481692493eb69004bba9d73cef506233ae3569c7a2501b0e727298bdf603"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage-json/src/main/java/com/sstlfsj/fibra/plugins/storage/json/JsonDocumentCodec.java",
+    "sha256": "c52204585108923b96e9fec0b4a7d9bae68501b4365297b8623d2ada647042bf"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage-json/src/main/java/com/sstlfsj/fibra/plugins/storage/json/JsonStorageConfig.java",
+    "sha256": "c3481793c07186ee5a391e5424ddf30d79de2a121e4d8df549f1ef2202b6524c"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage-json/src/main/java/com/sstlfsj/fibra/plugins/storage/json/JsonStorageEntrypoint.java",
+    "sha256": "3db7380bff218bec899cff399b4f493c94b3caff9d643fcb257c3a032e70e0d9"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage-json/src/main/resources/META-INF/fibra/plugin.yaml",
+    "sha256": "5bf0f8be64a030d79c821b9e28d03a6f8392bd844f1d22dd75b8a0b67a82923a"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage-json/src/plugin/fibra-config.json",
+    "sha256": "2db836338ac6119eb1cf34ef7070cd383bde2567f7b190647cb76c0dd1c41ea8"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage-json/src/test/java/com/sstlfsj/fibra/plugins/storage/json/JsonConfigStoreTest.java",
+    "sha256": "6a6eaac3432c5e83a5e106ed6f6ef4ff9f4235cc9237cd22a330069b25f8a0b4"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage/pom.xml",
+    "sha256": "0aa3c75e3f15c1442e3162d3bcdd3c238de0a690a669f89f850260fce250e9fc"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage/src/main/java/com/sstlfsj/fibra/plugins/storage/ConfigChange.java",
+    "sha256": "551e6cfbf0a1b8c810ddbffb9a788c1b6c63b29c4d802e9dae9590bc10e05f3e"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage/src/main/java/com/sstlfsj/fibra/plugins/storage/ConfigChangeListener.java",
+    "sha256": "3c6a0e21391fc692bb997a28c5f4cc609fbe00ca5a6fd5b11cb396bdecea4191"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage/src/main/java/com/sstlfsj/fibra/plugins/storage/ConfigChangeOperation.java",
+    "sha256": "c8c5694d85be6b1e0734924b77389b654e99194d4cc5ee286ccc75d695731253"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage/src/main/java/com/sstlfsj/fibra/plugins/storage/ConfigDocument.java",
+    "sha256": "a6b7cc1dd6e207c97c47e874ffeb8bceceee8c726b9bb218a08292679df1dc4a"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage/src/main/java/com/sstlfsj/fibra/plugins/storage/ConfigStore.java",
+    "sha256": "aff7fa9cd286c313ecddba2c2165acc55244917e7fe5bb5a447e4a9e93e90fb0"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage/src/main/java/com/sstlfsj/fibra/plugins/storage/StorageErrorCode.java",
+    "sha256": "35b38892cf3ba8d6a861aeb814d43948f17417efdfe1a595707fa5440be49dad"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage/src/main/java/com/sstlfsj/fibra/plugins/storage/StorageException.java",
+    "sha256": "b4e443b9a1039f4a64f1978f23ca98605f55a077ac013f59b8be4b85cb1a7da7"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage/src/main/java/com/sstlfsj/fibra/plugins/storage/StorageServices.java",
+    "sha256": "8533d65aa22d1ae62fab18955017d1c50d5b5a629420b7ce549651050af88657"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage/src/main/resources/META-INF/fibra/plugin.yaml",
+    "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage/src/plugin/fibra-config.json",
+    "sha256": "9c94315c2bd2962f2c8550de9590a742787cb09d7ebed99c2e9b0523d30a2cd3"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage/src/test/java/com/sstlfsj/fibra/plugins/storage/StorageContractTest.java",
+    "sha256": "6a63abdb28866ab94eaad2bd1f45a7b3e7cb27cddc1ec9808300c7eecc53cf79"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-tool-storage/pom.xml",
+    "sha256": "a17d8fca5c58388cf463f1b23764b5734e2f93f8f09a755353c61dbee845a70a"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-tool-storage/src/main/java/com/sstlfsj/fibra/plugins/storage/tool/StorageToolEntrypoint.java",
+    "sha256": "818066af4b6557ac929b0df468f7b607c227963fef2c95b2488026cc5bb0a1b0"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-tool-storage/src/main/resources/META-INF/fibra/plugin.yaml",
+    "sha256": "93d57d54300d2058154b093374bfc9cf8895910898305e2755306faeaaa176c2"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-tool-storage/src/plugin/fibra-config.json",
+    "sha256": "7023608fa76beb0f70f1b61a4b4e86b9b4c4c746a0951b3f9301443c191557a6"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-tool-storage/src/test/java/com/sstlfsj/fibra/plugins/storage/tool/StorageToolEntrypointTest.java",
+    "sha256": "48e390d49217db8e3fc7d74b554177103d8520e73ac54e35b9adb1fa85f7ab63"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/pom.xml",
+    "sha256": "04a3d1a4af274b85c8b6bd5b417d9fb8944ebd3848160bb3b120530c79f166b4"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/pom.xml",
+    "sha256": "1e236687252a9709204e4af280a78eeac472d08b394dd1b37cf18a9075b3026a"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/main/java/com/sstlfsj/fibra/plugins/subprocess/local/JnaWindowsJobKernel.java",
+    "sha256": "8d3b005a0e6ed963802620540ea19d054a5e9db206b838ffc29be1d15864cad7"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/main/java/com/sstlfsj/fibra/plugins/subprocess/local/JnaWindowsJobOwner.java",
+    "sha256": "d62c36f06373efdd5b66b2fce05c2a30ca24ea2cc60e8feb0a2956557435e21d"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/main/java/com/sstlfsj/fibra/plugins/subprocess/local/LinuxScopeProcessUnit.java",
+    "sha256": "8e72652d0d1d651e03f8da397d7e015557df31984014c41a274b84b1c88276d7"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/main/java/com/sstlfsj/fibra/plugins/subprocess/local/LocalProcessUnit.java",
+    "sha256": "f56b4df130d4c113cfc410e6601f6b96c02cad54ad057f8d7a5e11bdaba61620"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/main/java/com/sstlfsj/fibra/plugins/subprocess/local/LocalSubprocess.java",
+    "sha256": "d466137aa9adb1a86fe2bf17a786b1f03dc98d8649ede2ccbde69ccb575b0f13"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/main/java/com/sstlfsj/fibra/plugins/subprocess/local/SubprocessLocalConfig.java",
+    "sha256": "a23801285e3522b4babd6504a281dd58728729c050916391cb77701813acf880"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/main/java/com/sstlfsj/fibra/plugins/subprocess/local/SubprocessLocalEntrypoint.java",
+    "sha256": "0d00a7a89749604b0156ddc3527abd308f7c5f020a07d6ee52c7b81f10751dce"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/main/java/com/sstlfsj/fibra/plugins/subprocess/local/SystemdScopeLauncher.java",
+    "sha256": "88e2ac1105f14edea5ad0c1712d9961c1a54d37f89b19de83a6a6db88d5c5f6a"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/main/java/com/sstlfsj/fibra/plugins/subprocess/local/SystemdScopeOwner.java",
+    "sha256": "7d72490a1bb837c4bbf9fcd57d65c86d6a9d48a60be8c3d39314e84b6f3ad31a"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/main/java/com/sstlfsj/fibra/plugins/subprocess/local/WindowsExecutableResolver.java",
+    "sha256": "012c03d441d3ad9c7bdc06763daca20c8cddc53a7721647c4fc54e28e2f3f426"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/main/java/com/sstlfsj/fibra/plugins/subprocess/local/WindowsJobKernel.java",
+    "sha256": "1f2454149cfcf7aa96ec31b3dd380580d95c55aa91376e1aa9e1302af4c8ec23"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/main/java/com/sstlfsj/fibra/plugins/subprocess/local/WindowsJobOwner.java",
+    "sha256": "0bff68cb4cba82841f55ba8ce8efe4cedb8ea847ed90795c605742b644cca978"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/main/java/com/sstlfsj/fibra/plugins/subprocess/local/WindowsJobOwnerFactory.java",
+    "sha256": "f0c22072105ff432e6b69e0e31bb75ea8fd6c1885a1af60f72ef1e5838528331"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/main/java/com/sstlfsj/fibra/plugins/subprocess/local/WindowsJobProcessUnit.java",
+    "sha256": "14f0ebb877a10d52f5629e6188bcf90eb6326ec9d596d9915d53a53255a28a49"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/main/resources/META-INF/fibra/plugin.yaml",
+    "sha256": "b77ce49dc90a854ada6739e1ab3f0705e2ab8fde04d01e3c2b477f9bc0cc2725"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/main/resources/com/sstlfsj/fibra/plugins/subprocess/local/process-supervisor.mjs",
+    "sha256": "f60c1368d863879567ba9df9a26f3531ffb7db1a7aaaf5dc754569cfabdf2a0d"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/plugin/fibra-config.json",
+    "sha256": "51032e1301cca6c0c7ee87529a542c73f1ef4da2970b9bee0299d2627f58932e"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/test/java/com/sstlfsj/fibra/plugins/subprocess/local/JnaWindowsJobOwnerTest.java",
+    "sha256": "587d2d46fc08639933b4f5e7350c8730eae8cf728cdcdc3d1efea63023b822e7"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/test/java/com/sstlfsj/fibra/plugins/subprocess/local/LinuxScopeProcessUnitTest.java",
+    "sha256": "0e69d587f5e58e6d2a3a0f41c54768f04ab287ea02415411cd687ccce5ff442e"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/test/java/com/sstlfsj/fibra/plugins/subprocess/local/LocalSubprocessLinuxSelectionTest.java",
+    "sha256": "554cca2beb92da13a1ec04307a1479844fbdc866badbcef9368b2f446aa8fc34"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/test/java/com/sstlfsj/fibra/plugins/subprocess/local/LocalSubprocessTest.java",
+    "sha256": "8c611c478a07c4ae0af13a57bac5bd893642babf6c0edf974ca0fded6758799f"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/test/java/com/sstlfsj/fibra/plugins/subprocess/local/SubprocessPluginTest.java",
+    "sha256": "00f8b2bb3f5c238ef29fbf6a9b2bc644c8d82a8d6d0869ddf0e96516710454b8"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/test/java/com/sstlfsj/fibra/plugins/subprocess/local/SupervisorFailureTest.java",
+    "sha256": "98e8ee5362844743f2a5800c2a684274277d342a256cc8a25ffae426c6ae07ae"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/test/java/com/sstlfsj/fibra/plugins/subprocess/local/SystemdScopeLauncherTest.java",
+    "sha256": "a84984c07adbfd89d87f9d2731396152441d77b245181006c8ae3804135f7f7f"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/test/java/com/sstlfsj/fibra/plugins/subprocess/local/SystemdScopeOwnerTest.java",
+    "sha256": "4ad0c58e4cb744f1af644ac65bd33fda543ac227d4e19e70c8c62677f2fdc183"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/test/java/com/sstlfsj/fibra/plugins/subprocess/local/WindowsExecutableResolverTest.java",
+    "sha256": "f2ba74cfd97dc0a42fd4bdbc82d1fa2d23ad27f7dc0fc89ffe664cdd5c3629cd"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/test/java/com/sstlfsj/fibra/plugins/subprocess/local/WindowsJobProcessUnitTest.java",
+    "sha256": "49c9f65608d251afa45139d36e7be6e835f84e08504b772b2e9de78af3ea112c"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/pom.xml",
+    "sha256": "45f515f462919a8f7cb8635d91c2007a960170346ba427eaf792dc9015417904"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/src/main/java/com/sstlfsj/fibra/plugins/subprocess/ProcessUnit.java",
+    "sha256": "7d3fe3753de22e506f94bdcd32b5d3a5a2fee44c18167ffed8619fdd304dbc86"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/src/main/java/com/sstlfsj/fibra/plugins/subprocess/Subprocess.java",
+    "sha256": "866f9d7e2c4b2909610ef75b2207cf18b50fba500bd47d612be98957c52d0904"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/src/main/java/com/sstlfsj/fibra/plugins/subprocess/SubprocessErrorCode.java",
+    "sha256": "3db0b97ddabea8a8c6db29ee06046815de7c64f37caf093ee69898362bfd6398"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/src/main/java/com/sstlfsj/fibra/plugins/subprocess/SubprocessException.java",
+    "sha256": "1e2538335a3553996cec5610db712195773b0eb3e7a09bab702dc3942e5b4fdb"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/src/main/java/com/sstlfsj/fibra/plugins/subprocess/SubprocessOutcome.java",
+    "sha256": "b8bac9051ce78fcbd72f7689c6d1be3dd53f75a50dad887ef3e3f6dd35ea007b"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/src/main/java/com/sstlfsj/fibra/plugins/subprocess/SubprocessOutput.java",
+    "sha256": "25c65cc1e1958ece3db685de671a372bc8b1b848a35a9c612c7ab0ec4e141832"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/src/main/java/com/sstlfsj/fibra/plugins/subprocess/SubprocessServices.java",
+    "sha256": "dcdb37898f427c0340941a38d8d1b3fe004fd8f93dbeb49553fef4deb2f8bdc8"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/src/main/java/com/sstlfsj/fibra/plugins/subprocess/SubprocessSpec.java",
+    "sha256": "449344bb70c355ba38f3689d8ea47f917d484c3bc90e29846b24d26958117980"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/src/main/resources/META-INF/fibra/plugin.yaml",
+    "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/src/plugin/fibra-config.json",
+    "sha256": "9c94315c2bd2962f2c8550de9590a742787cb09d7ebed99c2e9b0523d30a2cd3"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/src/test/java/com/sstlfsj/fibra/plugins/subprocess/SubprocessContractTest.java",
+    "sha256": "1dd1d5866d8ccc0a1fc8254190da07af392d75174486a2a46bc549830a912553"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/pom.xml",
+    "sha256": "cb3077a7f5527de0ff94099243f7563ec6ace455d27d59f67ceb31374b297535"
+  },
+  {
+    "path": "fibra-plugins/fibra-tool-api/pom.xml",
+    "sha256": "bd736ecea9a87aeceefedd99cd06aa833215f3c1ae85a078e4e234c47eeb5b10"
+  },
+  {
+    "path": "fibra-plugins/fibra-tool-api/src/main/java/com/sstlfsj/fibra/plugins/tool/ResultSpillStore.java",
+    "sha256": "2bf67028997ffdcaf99e08838c77bf7d5c505b480871fcc318357a54e97ee2d2"
+  },
+  {
+    "path": "fibra-plugins/fibra-tool-api/src/main/java/com/sstlfsj/fibra/plugins/tool/ToolContent.java",
+    "sha256": "d5f68b9c63e61cdd0898c3852c25401026f3ceea5c39a375ce3528e86f7109e3"
+  },
+  {
+    "path": "fibra-plugins/fibra-tool-api/src/main/java/com/sstlfsj/fibra/plugins/tool/ToolContributionCodec.java",
+    "sha256": "b1952d820cbe24d9523a7d8ba692113114fb8db2d42b3af8c9058ba09c42697e"
+  },
+  {
+    "path": "fibra-plugins/fibra-tool-api/src/main/java/com/sstlfsj/fibra/plugins/tool/ToolContributions.java",
+    "sha256": "219a000672e34976de714b33491f6f5dea819ae30239cc2c6d11d8abd2701f2e"
+  },
+  {
+    "path": "fibra-plugins/fibra-tool-api/src/main/java/com/sstlfsj/fibra/plugins/tool/ToolDescriptor.java",
+    "sha256": "5080f2a992647717aaabbadf9e9f8bb72d12ccca9bbaf3e22b7e89cf06e6332f"
+  },
+  {
+    "path": "fibra-plugins/fibra-tool-api/src/main/java/com/sstlfsj/fibra/plugins/tool/ToolException.java",
+    "sha256": "27c73c901c59af3efb25cafa604ea06d98f98cc7a2be28f70be29b1f7fcdbcb3"
+  },
+  {
+    "path": "fibra-plugins/fibra-tool-api/src/main/java/com/sstlfsj/fibra/plugins/tool/ToolFailure.java",
+    "sha256": "d6f80125a9d3fcfa156e3529f3e3fe799f9ae1be9b12c60e9319efb261b2e878"
+  },
+  {
+    "path": "fibra-plugins/fibra-tool-api/src/main/java/com/sstlfsj/fibra/plugins/tool/ToolFailureCode.java",
+    "sha256": "e17cb1864bbe75364828be6e80a4ca66d9da5f4340c2df176ed7626369231fe9"
+  },
+  {
+    "path": "fibra-plugins/fibra-tool-api/src/main/java/com/sstlfsj/fibra/plugins/tool/ToolOutcome.java",
+    "sha256": "7518b4d5b23096c894ef3edcfd9d532aa4cf44842824bed8690340c9a1a835aa"
+  },
+  {
+    "path": "fibra-plugins/fibra-tool-api/src/main/java/com/sstlfsj/fibra/plugins/tool/ToolOutcomes.java",
+    "sha256": "5bd74944338cdc58f2ef89f241ccd41a2523cbfa9faf315db03ab537e0f16d09"
+  },
+  {
+    "path": "fibra-plugins/fibra-tool-api/src/main/java/com/sstlfsj/fibra/plugins/tool/ToolRequest.java",
+    "sha256": "c0e89535a04365a44fc85bd6baf27f468d8362c4b1a28aaeb89e31dbdb985dda"
+  },
+  {
+    "path": "fibra-plugins/fibra-tool-api/src/main/java/com/sstlfsj/fibra/plugins/tool/ToolResult.java",
+    "sha256": "d48068a37d95e139b9e18f9c10990766e987935d64cf7e4f938469f7ea061d58"
+  },
+  {
+    "path": "fibra-plugins/fibra-tool-api/src/main/java/com/sstlfsj/fibra/plugins/tool/ToolServices.java",
+    "sha256": "27896442e6020a19207c98008e2ef166d782492c071b6fd99a0446568c26fe43"
+  },
+  {
+    "path": "fibra-plugins/fibra-tool-api/src/test/java/com/sstlfsj/fibra/plugins/tool/ToolApiTest.java",
+    "sha256": "0f519aa9eee49ce4a8db278e8698f87afbcbba9789e3b18fb3c0ac469a239a3d"
+  },
+  {
+    "path": "fibra-plugins/fibra-tool-api/src/test/java/com/sstlfsj/fibra/plugins/tool/ToolOutcomesTest.java",
+    "sha256": "a1d3ce8521ddf076692f6a1e9011a3764d77c1a34f102e621163bbe008e011b4"
+  },
+  {
+    "path": "fibra-plugins/pom.xml",
+    "sha256": "efc95c6ce5753ad52148e77ac4cf7192c849a26f1f3d89cb1155eb368a560475"
+  },
+  {
+    "path": "fibra-registry/pom.xml",
+    "sha256": "7f932e0ab4c0bc35bf8ce7c214fe6047cffe33f1ad00dae890c787d4d202b4c8"
+  },
+  {
+    "path": "fibra-registry/src/main/java/com/sstlfsj/fibra/registry/FilePluginAuditRepository.java",
+    "sha256": "f547f82e7cb83fa4ad07b2469501cc57c2b9b17be079f8492f6f70cb8ce6d71e"
+  },
+  {
+    "path": "fibra-registry/src/main/java/com/sstlfsj/fibra/registry/InMemoryPluginAuditRepository.java",
+    "sha256": "c06c9d29ffae8485e18030b3c02f42494f2d45c7f6724e4e0894753b7c48aef3"
+  },
+  {
+    "path": "fibra-registry/src/main/java/com/sstlfsj/fibra/registry/PluginAuditDeliveryFailure.java",
+    "sha256": "4078d2bec1bbe0b81801451aa187898d5346ef9e51284e2f455ea3326a8dee7e"
+  },
+  {
+    "path": "fibra-registry/src/main/java/com/sstlfsj/fibra/registry/PluginAuditEntry.java",
+    "sha256": "c61611e5ecf1ef8bbfe41a32712b90a154a886cf0b5104278ee945ede25fad2f"
+  },
+  {
+    "path": "fibra-registry/src/main/java/com/sstlfsj/fibra/registry/PluginAuditRepository.java",
+    "sha256": "506868a0269296bd524bb12e95af21f8e3aece392f70a5b14ce824b200cd8eb2"
+  },
+  {
+    "path": "fibra-registry/src/main/java/com/sstlfsj/fibra/registry/PluginDeploymentRequest.java",
+    "sha256": "6ffc6fe8e4e78be9ef63a705f44c471b117f3dc643d67b8325242a7c8ee757eb"
+  },
+  {
+    "path": "fibra-registry/src/main/java/com/sstlfsj/fibra/registry/PluginInstallRequest.java",
+    "sha256": "f4099d984563c6da9e093ccb1062377b15771d6d7687cc65f3ddbbd6e11075d6"
+  },
+  {
+    "path": "fibra-registry/src/main/java/com/sstlfsj/fibra/registry/PluginRegistry.java",
+    "sha256": "c19f2fad6c87862cac4d96a3c773a5810723a62f93a6b236a4578adf8b1ecfc2"
+  },
+  {
+    "path": "fibra-registry/src/main/java/com/sstlfsj/fibra/registry/RegistryPluginState.java",
+    "sha256": "34323560e1d31e031118008dfb6afef7e2a372021876482cab6e39cc7dc3fa69"
+  },
+  {
+    "path": "fibra-registry/src/main/java/com/sstlfsj/fibra/registry/RegistrySnapshot.java",
+    "sha256": "7fa8b06d1ab26905f07df1b7fc687c1e1cac0a49b56a1a791132d00531d404a4"
+  },
+  {
+    "path": "fibra-registry/src/test/java/com/sstlfsj/fibra/registry/FilePluginAuditRepositoryTest.java",
+    "sha256": "7002b97880e86cb02559ad8620723424f69c31f80ff59b5d580f2f6ab977596a"
+  },
+  {
+    "path": "fibra-registry/src/test/java/com/sstlfsj/fibra/registry/PluginRegistryTest.java",
+    "sha256": "cccc47dad9f9e40fdb3468fc7cdeed978a6968d02572c053b4ab2be828913491"
+  },
+  {
+    "path": "fibra-runtime-java/pom.xml",
+    "sha256": "feff0578902c9710c0570ea3359102d26742fd7cfad46302bf4eb486bff90670"
+  },
+  {
+    "path": "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaBuiltInPackage.java",
+    "sha256": "7fa94b0efeeb67384f821341e85640c6130305f3fea61a3f9262e4988fee17c4"
+  },
+  {
+    "path": "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaClassIndex.java",
+    "sha256": "42dc95ba9183931bd628cce7b6b3591755e69e04bc824eef27524cb2dd525b40"
+  },
+  {
+    "path": "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaClassSpace.java",
+    "sha256": "fe36a004cf8ace041af5b852603c05ae3e68eb4fb8eb5a1b59eafa86e2b77aa2"
+  },
+  {
+    "path": "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaDefinitionEntry.java",
+    "sha256": "9686faa3f86d26dffd3cb208ac9995ce9ba860591833b6a302fc35b43c3d67b2"
+  },
+  {
+    "path": "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaFacetDescriptor.java",
+    "sha256": "bafc27a3f23ae7525af931c386f9ed13055411d22fe777100bde0bbbbe5f1add"
+  },
+  {
+    "path": "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaFacetDescriptorReader.java",
+    "sha256": "4ddf534acd4d2360b9ed159656cca1fda3f73bfcb0654d8c3eb323f25741de38"
+  },
+  {
+    "path": "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaRuntimeDriver.java",
+    "sha256": "f6bb7558a501be5b0c55fc2c19e4afec8ebd6b3b36d323c4ac2f82a6bf795177"
+  },
+  {
+    "path": "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaRuntimeException.java",
+    "sha256": "35662f8806e6cd98f4d26d032ac92411c528cf9bf16871c70761360603f2e4d8"
+  },
+  {
+    "path": "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaRuntimePhase.java",
+    "sha256": "ad31df71e4087450d4b8cb74b310ef5566a6f28b9f1db6c993d62ddac1417202"
+  },
+  {
+    "path": "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaRuntimeProvider.java",
+    "sha256": "d9b53c732161f808424e856f7aa9fc26d17227e864e7165b067f91cc03fa9ad7"
+  },
+  {
+    "path": "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/PluginClassLoader.java",
+    "sha256": "6029142adee5ea55ddc723aea189332718c4ba1f30f29720ad3bf606eca3acf2"
+  },
+  {
+    "path": "fibra-runtime-java/src/test/java/com/sstlfsj/fibra/runtime/java/JavaBuiltInRecoveryTest.java",
+    "sha256": "85253001ecd51e7bb03587e1347ea4ff458e9435e2fa99f25576bd76680edae8"
+  },
+  {
+    "path": "fibra-runtime-java/src/test/java/com/sstlfsj/fibra/runtime/java/JavaClassIndexTest.java",
+    "sha256": "9dbd07a9d7975b3f4b7b6b5001a5b84fdaeafff0484589a5b19862c7e9f5f6f8"
+  },
+  {
+    "path": "fibra-runtime-java/src/test/java/com/sstlfsj/fibra/runtime/java/JavaRuntimeDriverTest.java",
+    "sha256": "a169afb34c37cacaeb6510ffccea8630ebaac942110e434f9f9900a6c210965d"
+  },
+  {
+    "path": "fibra-runtime-java/src/test/java/com/sstlfsj/fibra/runtime/java/PluginClassLoaderTest.java",
+    "sha256": "7d26cc771658f231dc50ed7add717c87c9396d7aada9e8d9efbd737ad3919eeb"
+  },
+  {
+    "path": "fibra-runtime-java/src/test/java/fixture/ContributionEntrypoint.java",
+    "sha256": "884ca586b20e3b0d75cb6e9968c700b21bf68b8aab5c9b08d408f1f214adaa4f"
+  },
+  {
+    "path": "fibra-runtime-java/src/test/java/fixture/ContributionObserver.java",
+    "sha256": "e45df185dc179f09161e0d9cb39b0827781796946d2902aa5e44f3e7746f2d76"
+  },
+  {
+    "path": "fibra-runtime-java/src/test/java/fixture/PreparationEntrypoint.java",
+    "sha256": "2af004d46545738a7b874369d82a9fcc7cdaa3cc51b5e7aff5d9970a39ce989d"
+  },
+  {
+    "path": "fibra-runtime-java/src/test/java/fixture/PreparationObserver.java",
+    "sha256": "e496bd124b14b3788b8fed3a2161b7cc2d10af9aa1c47e731fcefaa71e714042"
+  },
+  {
+    "path": "fibra-runtime-java/src/test/java/fixture/SampleEntrypoint.java",
+    "sha256": "4beb6f6f01623598d828c445d1fdf7a9f601f7e12e4b503cdbba4bcc8148b947"
+  },
+  {
+    "path": "fibra-runtime-node/pom.xml",
+    "sha256": "26356a8439947d9f536ace986c43e171f17bf6288cf5da9a5ff05eca9613af8d"
+  },
+  {
+    "path": "fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeEndpointManifest.java",
+    "sha256": "a73615c4c85eb33055de1f01f3570cbf96860ee270bdb978c24f66ce4a6f87a8"
+  },
+  {
+    "path": "fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeFacetDescriptor.java",
+    "sha256": "4022a3ad46ecd6498e0c63b937d7dcecd3828cfe7a96815c355adebf7881bd8d"
+  },
+  {
+    "path": "fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeFacetDescriptorReader.java",
+    "sha256": "8ead2a5dbab425be958404d2bc44de5b155d827ae1b79a3b75f5949917ba9568"
+  },
+  {
+    "path": "fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeProcessUnit.java",
+    "sha256": "20e6c9d48bf42a0266735f89de31578f8ceb3ed2250bba0fe12922e65aee1565"
+  },
+  {
+    "path": "fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeRpcChannel.java",
+    "sha256": "89da0963108877512d528f256234a752b16bb08cdb99d60a29a10f6eb00694a4"
+  },
+  {
+    "path": "fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeRpcException.java",
+    "sha256": "4c9061f302b8505c43e0fa362431fab91ac6cf8d02aca8a8ea02312045d95130"
+  },
+  {
+    "path": "fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeRpcPhase.java",
+    "sha256": "c3f1fe91787c0d3b3e39ae1e039dc06c8346cced1ff41fe5c47426c40a6a0272"
+  },
+  {
+    "path": "fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeRuntimeDriver.java",
+    "sha256": "3a966711d059db78656c9f2b05e58db15ac46d553f9d3cbe6a93ebfc46250ceb"
+  },
+  {
+    "path": "fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeRuntimeException.java",
+    "sha256": "597858fd5623fcc744c29ed4bc05c1022b4fb72bbf1ff163f769421e1aee272b"
+  },
+  {
+    "path": "fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeRuntimeOptions.java",
+    "sha256": "ef91e70ec4758b96bbba06373a26b565bb5a33dccae411deca1227f1b9b7eac5"
+  },
+  {
+    "path": "fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeRuntimeProvider.java",
+    "sha256": "bd832b5e004dd1afb2ecbdef6aeae395aff6c8f07d455a2e5057024fabad0651"
+  },
+  {
+    "path": "fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeSidecar.java",
+    "sha256": "7f63d0cea53527350c7b8200359a7e5c1ffc49be69767fae6ca0707a908adea8"
+  },
+  {
+    "path": "fibra-runtime-node/src/main/resources/com/sstlfsj/fibra/runtime/node/node-process-supervisor.mjs",
+    "sha256": "d93e6c69090f18ee87eda8f2dc39855b221401b419283c01fe84e1e3207456c5"
+  },
+  {
+    "path": "fibra-runtime-node/src/test/java/com/sstlfsj/fibra/runtime/node/NodeProcessUnitTest.java",
+    "sha256": "f399b7d18c3433c65feae00784e48a39bc2138037ee76a72334949334b17772c"
+  },
+  {
+    "path": "fibra-runtime-node/src/test/java/com/sstlfsj/fibra/runtime/node/NodeRuntimeDriverTest.java",
+    "sha256": "0921545a7c1b71255bb5c135e96211077ce728e92981fecb9ee69d008c3f9cfc"
+  },
+  {
+    "path": "fibra-runtime-node/src/test/java/com/sstlfsj/fibra/runtime/node/NodeSidecarTest.java",
+    "sha256": "b1f550fe0f8aabdc71dbdcee43af86edc0eeafaa83a2ff7c8c1d14befef6d90b"
+  },
+  {
+    "path": "fibra-spring-boot-starter/pom.xml",
+    "sha256": "983903e450974c040654d1378ae5c706263295ca84bfbd9965b5b1b4f978d5d2"
+  },
+  {
+    "path": "fibra-spring-boot-starter/src/main/java/com/sstlfsj/fibra/spring/boot/FibraAutoConfiguration.java",
+    "sha256": "e4ec838f303aa850c3392d199d8d9f86820aab009e57e35ae46f22bd361f0191"
+  },
+  {
+    "path": "fibra-spring-boot-starter/src/main/java/com/sstlfsj/fibra/spring/boot/FibraEngineLifecycle.java",
+    "sha256": "abcd67adbedbb81c0db18744541353f01dcea40f07671a496a23e160900b0080"
+  },
+  {
+    "path": "fibra-spring-boot-starter/src/main/java/com/sstlfsj/fibra/spring/boot/FibraProperties.java",
+    "sha256": "075aec5cfaf2a415ec6f5141b6090173ef01e3f37cafdf263a6aa28048dbe108"
+  },
+  {
+    "path": "fibra-spring-boot-starter/src/main/resources/META-INF/additional-spring-configuration-metadata.json",
+    "sha256": "f858b99a87508f4388b6b71b6de8b1ae7172a2f96028c50fb60c5c6f07158041"
+  },
+  {
+    "path": "fibra-spring-boot-starter/src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports",
+    "sha256": "c97c8f6f043e48798017ece49a2ff8470f43982445624a95c07b1e9fef7d18cc"
+  },
+  {
+    "path": "fibra-spring-boot-starter/src/test/java/com/sstlfsj/fibra/spring/boot/FibraAutoConfigurationTest.java",
+    "sha256": "eeedd16d3485a9fc36e455d0f529426bf8f636f4e05956c4c6a4e5af122d6acf"
+  },
+  {
+    "path": "fibra-spring/pom.xml",
+    "sha256": "199b7a9dafe5991c46c1497aa82cc208f08b07c15ae6951cd1ef19ca850967bb"
+  },
+  {
+    "path": "fibra-spring/src/main/java/com/sstlfsj/fibra/spring/FibraService.java",
+    "sha256": "b89d376bfad121556a8754db993ba5313b2587ff54e52361bd2674ad345f8ac4"
+  },
+  {
+    "path": "fibra-spring/src/main/java/com/sstlfsj/fibra/spring/FibraServiceBridge.java",
+    "sha256": "4def7228a03cf6f3d7eeff5c90c338afae73a7b18a5f9f3f377b5e6163d48960"
+  },
+  {
+    "path": "fibra-spring/src/main/java/com/sstlfsj/fibra/spring/FibraServiceExporter.java",
+    "sha256": "556e53e098b1a1d1c2df7274791a1f58e35451adf8821ecdf5ebffcfa26cfa51"
+  },
+  {
+    "path": "fibra-spring/src/test/java/com/sstlfsj/fibra/spring/FibraServiceBridgeTest.java",
+    "sha256": "bc699759969d9a44e0bc71bf4ea94684f2cee66654316c66f4326c256c4de027"
+  },
+  {
+    "path": "fibra-spring/src/test/java/com/sstlfsj/fibra/spring/FibraServiceExporterTest.java",
+    "sha256": "ecf404059311e3f4c779fc157ed25b097df1abe43bc4efcb67ab636cfc6c2acc"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-23-standardize-plugin-packages/.openspec.yaml",
+    "sha256": "cef97c66dca8a4822d16808d0c827486f612c60b5fa247f48cdf6eb25f768e94"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-23-standardize-plugin-packages/design.md",
+    "sha256": "912ab95373cd5e4b41076a9838fb83fc259672c6c65842ac45274920be630047"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-23-standardize-plugin-packages/proposal.md",
+    "sha256": "b7e15d315e0a8da6ed8aaa75fc8bf6cf905b3fd8192f5b28609dcfb9fcc5b711"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-23-standardize-plugin-packages/specs/plugin-dependency-resolution/spec.md",
+    "sha256": "f7860fad41cf5178cdef47be8d2b79b3c3b5970975401339f528619a8000ed82"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-23-standardize-plugin-packages/specs/plugin-package-format/spec.md",
+    "sha256": "f12570c817de4c0ffb2361c4b08c0e53c7cf4d0df7269978610a0d498d2bd7c4"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-23-standardize-plugin-packages/specs/plugin-update-transaction/spec.md",
+    "sha256": "67cadac0fd7d33858401929b771a8ce05c60b569f84080ec4700e2ca4d48e3f9"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-23-standardize-plugin-packages/tasks.md",
+    "sha256": "2e73b36a72263aa70a6606594aa5972a2087b732322bdeeb1f00cca45482656a"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-24-establish-fibra-engine/design.md",
+    "sha256": "a2b7c224f2de0f05fd5407f5a4c9f3fefb999f079821d84cc63d320414e9c9c5"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-24-establish-fibra-engine/proposal.md",
+    "sha256": "e5acfbe10e5d4944f1eaaea9fc05757401cd9dbe5c0f98cf9a31543837a484d4"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-24-establish-fibra-engine/specs/deployment-package-format/spec.md",
+    "sha256": "1931331655d6937f16dc5422572e51a121ec4b32cdcb0bba0a14cc8f38bcdbd2"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-24-establish-fibra-engine/specs/deployment-transaction/spec.md",
+    "sha256": "fdc92dac14937f9a95b4769aefa3b30c716c0d0822bb4b630bc5b317015f47e9"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-24-establish-fibra-engine/specs/engine-desired-state-reconciliation/spec.md",
+    "sha256": "78808e9b73fdf093ac157869fc30e05de51fcfbe78a1247d65cf186b5b63404d"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-24-establish-fibra-engine/specs/engine-runtime-ownership/spec.md",
+    "sha256": "279a8d4cf82dbc69b1608617747a7395acf66752c03a1b07c845ebfa9dd8010d"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-24-establish-fibra-engine/specs/plugin-update-transaction/spec.md",
+    "sha256": "67a99c7ffea7c0eb9aad593fbef7eab3770af3e744debc440b0850f1b76138e7"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-24-establish-fibra-engine/tasks.md",
+    "sha256": "a8ac839fa21ef7026d2cc53f69dedd36697b689f54bf444535e7fe8e087369a7"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-24-publish-plugin-archetype/design.md",
+    "sha256": "427d3f822b91e21be97f58db44641efed71c499b91e26cba626fbb01cc890ef0"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-24-publish-plugin-archetype/proposal.md",
+    "sha256": "e20a117fdd3b549089892edd1c5ce46fd414e4190f3e999701f6f516ebbabfbb"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-24-publish-plugin-archetype/specs/plugin-project-archetype/spec.md",
+    "sha256": "acecfc93b36aed9533086ea7f3836e050913e60c7e322d42b4e1d2a74521a929"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-24-publish-plugin-archetype/tasks.md",
+    "sha256": "0eaea73d36cd3834d4063dd12567e1274ffa9dc78c1140c5880b788a22c98748"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-24-standardize-spring-runtime-integration/design.md",
+    "sha256": "f51f0a753de85c4153a51f9daec12e556fcae8531631cf7d7eac122aea107978"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-24-standardize-spring-runtime-integration/proposal.md",
+    "sha256": "ff2ea56b45d83b358b654b52010986e00e18f2aa97ee570b7480aca4696ff076"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-24-standardize-spring-runtime-integration/specs/spring-adapter-packaging/spec.md",
+    "sha256": "a41560133cb9961f18ba1bfc724dbeb0b98911b388c169821f10ace33392668f"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-24-standardize-spring-runtime-integration/specs/spring-engine-lifecycle/spec.md",
+    "sha256": "ba0c8ab7be5fe2722ee2335ad376e11758f8046f9abf0e60ff1b0eed018950cf"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-24-standardize-spring-runtime-integration/specs/spring-runtime-configuration/spec.md",
+    "sha256": "b81f7ee59a4d94f1f603324b91f3665bd0867f8b1533b13c912726a04eab4f9c"
+  },
+  {
+    "path": "openspec/changes/archive/2026-08-24-standardize-spring-runtime-integration/tasks.md",
+    "sha256": "243df20854236acad06156bdddcb197097aadc8b0c398221547c05c2a5a9c13e"
+  },
+  {
+    "path": "pom.xml",
+    "sha256": "cc2eabd770acc8654e48347c87df329b80a2b0d4a16d37e8e1a3c7240e02f41c"
+  },
+  {
+    "path": "scripts/release-maven-modules.sh",
+    "sha256": "42424ebcbbb3607aa1514de08b5842ee7b0239294b0ff3955ac4fe02cdd75a93"
+  },
+  {
+    "path": "scripts/run-ci-with-jvm-diagnostics.sh",
+    "sha256": "78ca2ab66cfbaae2792afa2a274f5950ca04aff69828679f2c031dced212abec"
+  },
+  {
+    "path": "scripts/verify-architecture-boundaries.sh",
+    "sha256": "b4b201fb8396fa413bb7caa07ea8026cfad97897b6f1dc9d8ac098eef43ee9fb"
+  },
+  {
+    "path": "scripts/verify-client-packages.sh",
+    "sha256": "17b5283664a4242c08fd89d30cf4d0ffba8035a9cc679995e9c32285e01a5498"
+  },
+  {
+    "path": "scripts/verify-distribution.sh",
+    "sha256": "33b734cd010ac7d23b1f90ebb5e7d3f627af059323bcf6632642fde0c8e48144"
+  },
+  {
+    "path": "scripts/verify-reproducible-release.sh",
+    "sha256": "8aea335758c57aa06d1117fbbad9c06b24e5deabc496b3607c1665ea45394461"
+  },
+  {
+    "path": "scripts/verify-short-timeout-diagnostics.sh",
+    "sha256": "be599de4d13baadb4e18ef6d6a996b9cb272120d864b38994c5e38372d29383b"
+  }
+]

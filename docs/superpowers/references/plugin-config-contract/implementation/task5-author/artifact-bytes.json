@@ -1,0 +1,137 @@
+{
+  "zip_sha256": "c3b75bad3eb15747fe95f3de0c8fbb3e684121d512f6a093ea85d16786f290e4",
+  "packages": [
+    {
+      "plugin": "fibra-fs",
+      "schema_sha256": "9c94315c2bd2962f2c8550de9590a742787cb09d7ebed99c2e9b0523d30a2cd3",
+      "final_staged_jar_sha256": "0d1828792f9c35dbdeb6720f9ad2af40f1c2eb619bc9f1c64429d25c629dfcea",
+      "bytes_equal": [
+        "author",
+        "final_JAR_entry",
+        "stage_root",
+        "ZIP_root"
+      ]
+    },
+    {
+      "plugin": "fibra-fs-local",
+      "schema_sha256": "071bd1e705dda3951adfbc244c49cb4da65eaa1a69cea303911782660756e028",
+      "final_staged_jar_sha256": "f56f69842d2f11942bb05cac8c6480d5100b2220d58d8f87bde97174c9573dbe",
+      "bytes_equal": [
+        "author",
+        "final_JAR_entry",
+        "stage_root",
+        "ZIP_root"
+      ]
+    },
+    {
+      "plugin": "fibra-shell",
+      "schema_sha256": "9c94315c2bd2962f2c8550de9590a742787cb09d7ebed99c2e9b0523d30a2cd3",
+      "final_staged_jar_sha256": "6d7fa5351d370adc8ccb0f3efab76723c6448d59806c0ce7554519a7798e277e",
+      "bytes_equal": [
+        "author",
+        "final_JAR_entry",
+        "stage_root",
+        "ZIP_root"
+      ]
+    },
+    {
+      "plugin": "fibra-shell-local",
+      "schema_sha256": "fd9034cb2c9c16fd7a498024ed1b093908033f738d525292a3d1d47d22f31033",
+      "final_staged_jar_sha256": "4533da2ed99d05f68a97737f9c085d2f66e56e19091581c52a40d9b2b2789bef",
+      "bytes_equal": [
+        "author",
+        "final_JAR_entry",
+        "stage_root",
+        "ZIP_root"
+      ]
+    },
+    {
+      "plugin": "fibra-storage",
+      "schema_sha256": "9c94315c2bd2962f2c8550de9590a742787cb09d7ebed99c2e9b0523d30a2cd3",
+      "final_staged_jar_sha256": "d6f49d890f68f70b0ebb3c9506eb911067606a73c4d7966cc456239bac4f73b5",
+      "bytes_equal": [
+        "author",
+        "final_JAR_entry",
+        "stage_root",
+        "ZIP_root"
+      ]
+    },
+    {
+      "plugin": "fibra-storage-json",
+      "schema_sha256": "2db836338ac6119eb1cf34ef7070cd383bde2567f7b190647cb76c0dd1c41ea8",
+      "final_staged_jar_sha256": "8c6adca7460bacc5c150d3f80b9ae4a8688d0d0693d966886b985ccccfe4bcd8",
+      "bytes_equal": [
+        "author",
+        "final_JAR_entry",
+        "stage_root",
+        "ZIP_root"
+      ]
+    },
+    {
+      "plugin": "fibra-subprocess",
+      "schema_sha256": "9c94315c2bd2962f2c8550de9590a742787cb09d7ebed99c2e9b0523d30a2cd3",
+      "final_staged_jar_sha256": "f5f00552b73915bff32650074d1a6347027ae627fe270960b73900817ffd2140",
+      "bytes_equal": [
+        "author",
+        "final_JAR_entry",
+        "stage_root",
+        "ZIP_root"
+      ]
+    },
+    {
+      "plugin": "fibra-subprocess-local",
+      "schema_sha256": "51032e1301cca6c0c7ee87529a542c73f1ef4da2970b9bee0299d2627f58932e",
+      "final_staged_jar_sha256": "8bd3a3b8ffc464b46a44251457a58b42a226383752baece0cf34f103063e7f51",
+      "bytes_equal": [
+        "author",
+        "final_JAR_entry",
+        "stage_root",
+        "ZIP_root"
+      ]
+    },
+    {
+      "plugin": "fibra-tool-fs",
+      "schema_sha256": "cc07274f9efd39011054381d641e46dd8542894ac03ae8bdd0b3377ac7af64c0",
+      "final_staged_jar_sha256": "f2ea89fda37b1aefad140f63f69ccb487dd01d0fb725d46aa811e09744a713b2",
+      "bytes_equal": [
+        "author",
+        "final_JAR_entry",
+        "stage_root",
+        "ZIP_root"
+      ]
+    },
+    {
+      "plugin": "fibra-tool-fs-search",
+      "schema_sha256": "89c00b1fdfdd19707431d00274404e208014e9513be91e4a24ff5d33ea95eb72",
+      "final_staged_jar_sha256": "2d787e763f3087fc42ee8d513108d0d89e77c18be98af831cfce9dbc116fe727",
+      "bytes_equal": [
+        "author",
+        "final_JAR_entry",
+        "stage_root",
+        "ZIP_root"
+      ]
+    },
+    {
+      "plugin": "fibra-tool-shell",
+      "schema_sha256": "4ca464d430ead11289d6ddd1b33b455e3fe983905f1b8efea4db2a04ccb9cbf5",
+      "final_staged_jar_sha256": "7290c8cd2d8fc7eb09a65c7c6d934e98c4b1fd851ed74310529be685ba407b1f",
+      "bytes_equal": [
+        "author",
+        "final_JAR_entry",
+        "stage_root",
+        "ZIP_root"
+      ]
+    },
+    {
+      "plugin": "fibra-tool-storage",
+      "schema_sha256": "7023608fa76beb0f70f1b61a4b4e86b9b4c4c746a0951b3f9301443c191557a6",
+      "final_staged_jar_sha256": "131ea0907f82e03e724a1566b685a60698f11804cf088588651fdc6344d238a9",
+      "bytes_equal": [
+        "author",
+        "final_JAR_entry",
+        "stage_root",
+        "ZIP_root"
+      ]
+    }
+  ]
+}

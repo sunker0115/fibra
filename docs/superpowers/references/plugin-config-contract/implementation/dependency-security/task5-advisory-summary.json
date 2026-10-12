@@ -1,0 +1,649 @@
+[
+  {
+    "id": "GHSA-7hhh-6rmp-j9qf",
+    "summary": "jackson-core: UTF8DataInputJsonParser._reportInvalidToken() missing maxErrorTokenLength limit -> unbounded StringBuilder growth (DoS)",
+    "published": "2026-10-01T15:20:27Z",
+    "modified": "2026-10-01T15:30:05.552671898Z",
+    "withdrawn": null,
+    "sourceSha256": "b8ce88ffdc4d4200b67036aab43b66ff9ec88f33efc0d3b4c3444cebaf065b13",
+    "sourceFile": "/private/tmp/fibra-config-contract-evidence/dependency-distribution/GHSA-7hhh-6rmp-j9qf.json",
+    "affected": [
+      {
+        "package": {
+          "name": "tools.jackson.core:jackson-core",
+          "ecosystem": "Maven",
+          "purl": "pkg:maven/tools.jackson.core/jackson-core"
+        },
+        "ranges": [
+          {
+            "type": "ECOSYSTEM",
+            "events": [
+              {
+                "introduced": "3.0.0"
+              },
+              {
+                "fixed": "3.1.7"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "package": {
+          "name": "tools.jackson.core:jackson-core",
+          "ecosystem": "Maven",
+          "purl": "pkg:maven/tools.jackson.core/jackson-core"
+        },
+        "ranges": [
+          {
+            "type": "ECOSYSTEM",
+            "events": [
+              {
+                "introduced": "3.2.0"
+              },
+              {
+                "fixed": "3.2.3"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "references": [
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-core/security/advisories/GHSA-7hhh-6rmp-j9qf"
+      },
+      {
+        "type": "ADVISORY",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-89425"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-core/pull/1698"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-core/commit/211cf2c5d91abbec38067f37efc1363cd4e88ee3"
+      },
+      {
+        "type": "PACKAGE",
+        "url": "https://github.com/FasterXML/jackson-core"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-core/releases/tag/jackson-core-2.18.11"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-core/releases/tag/jackson-core-3.2.3"
+      }
+    ]
+  },
+  {
+    "id": "GHSA-cxp5-3px4-pw24",
+    "summary": "jackson-databind quadratic forward-reference completion ",
+    "published": "2026-09-30T15:37:24Z",
+    "modified": "2026-09-30T15:46:18.051343022Z",
+    "withdrawn": null,
+    "sourceSha256": "fcf1ff53996b42d86bd93fd6686cd7ea39e7c2df67ad075e9a6c02d66b670738",
+    "sourceFile": "/private/tmp/fibra-config-contract-evidence/dependency-distribution/GHSA-cxp5-3px4-pw24.json",
+    "affected": [
+      {
+        "package": {
+          "name": "tools.jackson.core:jackson-databind",
+          "ecosystem": "Maven",
+          "purl": "pkg:maven/tools.jackson.core/jackson-databind"
+        },
+        "ranges": [
+          {
+            "type": "ECOSYSTEM",
+            "events": [
+              {
+                "introduced": "3.0.0"
+              },
+              {
+                "fixed": "3.1.7"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "package": {
+          "name": "tools.jackson.core:jackson-databind",
+          "ecosystem": "Maven",
+          "purl": "pkg:maven/tools.jackson.core/jackson-databind"
+        },
+        "ranges": [
+          {
+            "type": "ECOSYSTEM",
+            "events": [
+              {
+                "introduced": "3.2.0"
+              },
+              {
+                "fixed": "3.2.3"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "references": [
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/security/advisories/GHSA-cxp5-3px4-pw24"
+      },
+      {
+        "type": "ADVISORY",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-91777"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/issues/6204"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/pull/6204"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/commit/37ad9b81712cbb9fb62c2d2c1813593252a24b67"
+      },
+      {
+        "type": "PACKAGE",
+        "url": "https://github.com/FasterXML/jackson-databind"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-2.18.11"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-2.21.7"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-2.22.3"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-3.1.7"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-3.2.3"
+      }
+    ]
+  },
+  {
+    "id": "GHSA-gx83-3vf8-gh7j",
+    "summary": "jackson-databind: Comparable missing from DefaultBaseTypeLimitingValidator's unsafe base types (incomplete PolymorphicTypeValidator denylist)",
+    "published": "2026-09-28T20:44:25Z",
+    "modified": "2026-09-28T21:00:05.608227628Z",
+    "withdrawn": null,
+    "sourceSha256": "e3ef1a6435be8daf5bacb7ab6305a1ebc9642a7d4778b4030b7e9d93327bd97b",
+    "sourceFile": "/private/tmp/fibra-config-contract-evidence/dependency-distribution/GHSA-gx83-3vf8-gh7j.json",
+    "affected": [
+      {
+        "package": {
+          "name": "tools.jackson.core:jackson-databind",
+          "ecosystem": "Maven",
+          "purl": "pkg:maven/tools.jackson.core/jackson-databind"
+        },
+        "ranges": [
+          {
+            "type": "ECOSYSTEM",
+            "events": [
+              {
+                "introduced": "3.0.0"
+              },
+              {
+                "fixed": "3.1.6"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "package": {
+          "name": "tools.jackson.core:jackson-databind",
+          "ecosystem": "Maven",
+          "purl": "pkg:maven/tools.jackson.core/jackson-databind"
+        },
+        "ranges": [
+          {
+            "type": "ECOSYSTEM",
+            "events": [
+              {
+                "introduced": "3.2.0"
+              },
+              {
+                "fixed": "3.2.2"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "references": [
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/security/advisories/GHSA-gx83-3vf8-gh7j"
+      },
+      {
+        "type": "ADVISORY",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-83557"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/issues/6156"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/pull/6155"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/commit/eb3b7fc0f9c0d27f471550ac3316b17d1987388f"
+      },
+      {
+        "type": "PACKAGE",
+        "url": "https://github.com/FasterXML/jackson-databind"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-2.18.10"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-2.21.6"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-2.22.2"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-3.1.6"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-3.2.2"
+      }
+    ]
+  },
+  {
+    "id": "GHSA-p6pp-m3f8-5c89",
+    "summary": " jackson-core: ReDoS: quadratic backtracking in NumberInput.PATTERN_FLOAT via looksLikeValidNumber()",
+    "published": "2026-10-01T15:19:21Z",
+    "modified": "2026-10-01T15:30:13.452657713Z",
+    "withdrawn": null,
+    "sourceSha256": "781de115f0697bff9b928a70b7355bc307a69907c4cf96f1698713e1439a9aa7",
+    "sourceFile": "/private/tmp/fibra-config-contract-evidence/dependency-distribution/GHSA-p6pp-m3f8-5c89.json",
+    "affected": [
+      {
+        "package": {
+          "name": "tools.jackson.core:jackson-core",
+          "ecosystem": "Maven",
+          "purl": "pkg:maven/tools.jackson.core/jackson-core"
+        },
+        "ranges": [
+          {
+            "type": "ECOSYSTEM",
+            "events": [
+              {
+                "introduced": "3.0.0"
+              },
+              {
+                "fixed": "3.1.7"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "package": {
+          "name": "tools.jackson.core:jackson-core",
+          "ecosystem": "Maven",
+          "purl": "pkg:maven/tools.jackson.core/jackson-core"
+        },
+        "ranges": [
+          {
+            "type": "ECOSYSTEM",
+            "events": [
+              {
+                "introduced": "3.2.0"
+              },
+              {
+                "fixed": "3.2.2"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "references": [
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-core/security/advisories/GHSA-p6pp-m3f8-5c89"
+      },
+      {
+        "type": "ADVISORY",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-89407"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-core/issues/1649"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-core/pull/1650"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-core/pull/1701"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-core/commit/731e794f62623aa0d86ced52490166be903fbb1d"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-core/commit/e7acd64cc99bd346704423dc2bfea1ab0a08ddff"
+      },
+      {
+        "type": "PACKAGE",
+        "url": "https://github.com/FasterXML/jackson-core"
+      }
+    ]
+  },
+  {
+    "id": "GHSA-q4xh-88c3-wmh7",
+    "summary": "jackson-databind: Duration XMLGregorianCalendar Unbounded Number Parse DoS",
+    "published": "2026-09-28T20:19:46Z",
+    "modified": "2026-09-28T20:30:05.315085978Z",
+    "withdrawn": null,
+    "sourceSha256": "53a66614a6c4dbef38dc8503685e66421136135818b3836735bbb3cee637c7c1",
+    "sourceFile": "/private/tmp/fibra-config-contract-evidence/dependency-distribution/GHSA-q4xh-88c3-wmh7.json",
+    "affected": [
+      {
+        "package": {
+          "name": "tools.jackson.core:jackson-databind",
+          "ecosystem": "Maven",
+          "purl": "pkg:maven/tools.jackson.core/jackson-databind"
+        },
+        "ranges": [
+          {
+            "type": "ECOSYSTEM",
+            "events": [
+              {
+                "introduced": "3.2.0"
+              },
+              {
+                "fixed": "3.2.2"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "package": {
+          "name": "tools.jackson.core:jackson-databind",
+          "ecosystem": "Maven",
+          "purl": "pkg:maven/tools.jackson.core/jackson-databind"
+        },
+        "ranges": [
+          {
+            "type": "ECOSYSTEM",
+            "events": [
+              {
+                "introduced": "3.0.0"
+              },
+              {
+                "fixed": "3.1.6"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "references": [
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/security/advisories/GHSA-q4xh-88c3-wmh7"
+      },
+      {
+        "type": "ADVISORY",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-68497"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/pull/6127"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/commit/a99b7e74c8928f43f6975773a8c862c8316178bd"
+      },
+      {
+        "type": "PACKAGE",
+        "url": "https://github.com/FasterXML/jackson-databind"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-2.18.10"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-2.21.6"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-2.22.2"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-3.1.6"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-3.2.2"
+      }
+    ]
+  },
+  {
+    "id": "GHSA-wjgm-6hv5-3cvf",
+    "summary": "jackson-databind: Path Deserialization Missing Scheme Allowlist for FileSystemProvider Resolution",
+    "published": "2026-09-28T20:19:19Z",
+    "modified": "2026-09-28T20:30:05.331167692Z",
+    "withdrawn": null,
+    "sourceSha256": "675691970cca2ed4ddb1b0755affc55c78a7c8b637a61e1fd548d9ec706553b8",
+    "sourceFile": "/private/tmp/fibra-config-contract-evidence/dependency-distribution/GHSA-wjgm-6hv5-3cvf.json",
+    "affected": [
+      {
+        "package": {
+          "name": "tools.jackson.core:jackson-databind",
+          "ecosystem": "Maven",
+          "purl": "pkg:maven/tools.jackson.core/jackson-databind"
+        },
+        "ranges": [
+          {
+            "type": "ECOSYSTEM",
+            "events": [
+              {
+                "introduced": "3.0.0"
+              },
+              {
+                "fixed": "3.1.6"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "package": {
+          "name": "tools.jackson.core:jackson-databind",
+          "ecosystem": "Maven",
+          "purl": "pkg:maven/tools.jackson.core/jackson-databind"
+        },
+        "ranges": [
+          {
+            "type": "ECOSYSTEM",
+            "events": [
+              {
+                "introduced": "3.2.0"
+              },
+              {
+                "fixed": "3.2.2"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "references": [
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/security/advisories/GHSA-wjgm-6hv5-3cvf"
+      },
+      {
+        "type": "ADVISORY",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-19032"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/pull/6129"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/commit/cc6756b61ed90b6b9227f670e0408d5d9bd48551"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/commit/ce26eda3481cd796f76ba4c53ffe1da23b53f166"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/commit/d94bb632becfe0ba96926b9909ab06d1f87aad6d"
+      },
+      {
+        "type": "PACKAGE",
+        "url": "https://github.com/FasterXML/jackson-databind"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-2.18.10"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-2.21.6"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-2.22.2"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-3.1.6"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-3.2.2"
+      }
+    ]
+  },
+  {
+    "id": "GHSA-wv8q-qhhj-9h54",
+    "summary": "jackson-databind retains every unknown raw type ID ",
+    "published": "2026-09-30T15:36:55Z",
+    "modified": "2026-09-30T15:46:18.451708212Z",
+    "withdrawn": null,
+    "sourceSha256": "086b4e3e62c818b88302f5279e418cb62ced98394ad6612a040d482061ff6049",
+    "sourceFile": "/private/tmp/fibra-config-contract-evidence/dependency-distribution/GHSA-wv8q-qhhj-9h54.json",
+    "affected": [
+      {
+        "package": {
+          "name": "tools.jackson.core:jackson-databind",
+          "ecosystem": "Maven",
+          "purl": "pkg:maven/tools.jackson.core/jackson-databind"
+        },
+        "ranges": [
+          {
+            "type": "ECOSYSTEM",
+            "events": [
+              {
+                "introduced": "3.0.0"
+              },
+              {
+                "fixed": "3.1.7"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "package": {
+          "name": "tools.jackson.core:jackson-databind",
+          "ecosystem": "Maven",
+          "purl": "pkg:maven/tools.jackson.core/jackson-databind"
+        },
+        "ranges": [
+          {
+            "type": "ECOSYSTEM",
+            "events": [
+              {
+                "introduced": "3.2.0"
+              },
+              {
+                "fixed": "3.2.3"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "references": [
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/security/advisories/GHSA-wv8q-qhhj-9h54"
+      },
+      {
+        "type": "ADVISORY",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-91776"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/issues/6203"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/commit/2870d1d6dc1b7e1c07ee11dd5b04ab71cddbb577"
+      },
+      {
+        "type": "PACKAGE",
+        "url": "https://github.com/FasterXML/jackson-databind"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-2.18.11"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-2.21.7"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-2.22.3"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-3.1.7"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/FasterXML/jackson-databind/releases/tag/jackson-databind-3.2.3"
+      }
+    ]
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "artifact": "com.ethlo.time:itu:1.14.0:jar:sources",
+  "sha256": "646333576f1c39e00f638237be2fa29c2e0b67b97a413972d3959c74d8977ab9",
+  "size": 50353,
+  "noticeLicenseEntries": [],
+  "uniqueSourceHeaderLines": [
+    "Copyright (C) 2017 - 2024 Morten Haraldsen (ethlo)",
+    "Copyright (C) 2017 - 2025 Morten Haraldsen @ethlo",
+    "Copyright (C) 2017 Morten Haraldsen (ethlo)",
+    "Licensed under the Apache License, Version 2.0 (the \"License\");"
+  ],
+  "scope": "Exact published sources JAR inspection only; not a full repository or legal audit."
+}

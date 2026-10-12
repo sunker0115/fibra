@@ -1,0 +1,145 @@
+[
+  {
+    "suite": "verification.distribution.CliConsumerTest",
+    "group": "external",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "timestamp": null,
+    "sha256": "2357be6579fffe65e4f616b63fb0b879f34cce80e6958ffbd9c6b91402cfea82",
+    "archived": "/private/tmp/fibra-config-contract-evidence/consumers/final-reports/external/TEST-verification.distribution.CliConsumerTest.xml"
+  },
+  {
+    "suite": "verification.distribution.CoreConsumerTest",
+    "group": "external",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "timestamp": null,
+    "sha256": "22c39e0adef37664719e52e2ee75e042540932b307388b4aad171324c0b69eae",
+    "archived": "/private/tmp/fibra-config-contract-evidence/consumers/final-reports/external/TEST-verification.distribution.CoreConsumerTest.xml"
+  },
+  {
+    "suite": "verification.distribution.AuthorConfigurationConsumerTest",
+    "group": "external",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "timestamp": null,
+    "sha256": "1a2ab0c0fe447fb48f337b237861467bbea0f55bb0d8c26e52474146390468c6",
+    "archived": "/private/tmp/fibra-config-contract-evidence/consumers/final-reports/external/TEST-verification.distribution.AuthorConfigurationConsumerTest.xml"
+  },
+  {
+    "suite": "verification.distribution.EngineConsumerTest",
+    "group": "external",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "timestamp": null,
+    "sha256": "b85fe0b60eec22200650af1ab4845568c1ea8ea7098a239495b4579d9ddc2ace",
+    "archived": "/private/tmp/fibra-config-contract-evidence/consumers/final-reports/external/TEST-verification.distribution.EngineConsumerTest.xml"
+  },
+  {
+    "suite": "verification.distribution.LifecycleConsumerTest",
+    "group": "external",
+    "tests": 8,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "timestamp": null,
+    "sha256": "186dc453bee045cbba7b5abef5ec1c4328334261fcd506b519daa0d675810586",
+    "archived": "/private/tmp/fibra-config-contract-evidence/consumers/final-reports/external/TEST-verification.distribution.LifecycleConsumerTest.xml"
+  },
+  {
+    "suite": "verification.distribution.ClientProtocolConsumerTest",
+    "group": "external",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "timestamp": null,
+    "sha256": "335e89ef2aaa4efea5bc6db0810de5975a440ce7df08088cd8e72cc24fc299f1",
+    "archived": "/private/tmp/fibra-config-contract-evidence/consumers/final-reports/external/TEST-verification.distribution.ClientProtocolConsumerTest.xml"
+  },
+  {
+    "suite": "verification.distribution.RuntimeProviderConsumerTest",
+    "group": "external",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "timestamp": null,
+    "sha256": "ef112fd0efafe2fb480366e649d4605fe9d49276d737f653f6d1b64e419006ca",
+    "archived": "/private/tmp/fibra-config-contract-evidence/consumers/final-reports/external/TEST-verification.distribution.RuntimeProviderConsumerTest.xml"
+  },
+  {
+    "suite": "verification.distribution.SpringConsumerTest",
+    "group": "external",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "timestamp": null,
+    "sha256": "df9b91ca8ca01eebf8e2d53c1eb29589995988e5f0f070bf24c3bd19559d6f1d",
+    "archived": "/private/tmp/fibra-config-contract-evidence/consumers/final-reports/external/TEST-verification.distribution.SpringConsumerTest.xml"
+  },
+  {
+    "suite": "com.sstlfsj.tela.distribution.TelaJavaDefinitionConsumptionTest",
+    "group": "tela",
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "timestamp": null,
+    "sha256": "7dc0711b5da2eef9646cb65d34e73f003c6035e44d1af5d46d72e822d8ad47ab",
+    "archived": "/private/tmp/fibra-config-contract-evidence/consumers/final-reports/tela/TEST-com.sstlfsj.tela.distribution.TelaJavaDefinitionConsumptionTest.xml"
+  },
+  {
+    "suite": "com.sstlfsj.tela.host.client.TelaClientCatalogIntegrationTest",
+    "group": "tela",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "timestamp": null,
+    "sha256": "53fdd6a07e1bb59e315c065e9dc5243a6f4df9961eaa0f948593c3afb9c792b4",
+    "archived": "/private/tmp/fibra-config-contract-evidence/consumers/final-reports/tela/TEST-com.sstlfsj.tela.host.client.TelaClientCatalogIntegrationTest.xml"
+  },
+  {
+    "suite": "com.sstlfsj.tela.host.client.TelaClientRuntimeTest",
+    "group": "tela",
+    "tests": 13,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "timestamp": null,
+    "sha256": "2f88dbee6c2b56198f62b07fca8c4ba71b2e586d48db05a2fbaacacf2fe3e3f1",
+    "archived": "/private/tmp/fibra-config-contract-evidence/consumers/final-reports/tela/TEST-com.sstlfsj.tela.host.client.TelaClientRuntimeTest.xml"
+  },
+  {
+    "suite": "com.sstlfsj.tela.host.runtime.TelaHostClientShutdownIntegrationTest",
+    "group": "tela",
+    "tests": 5,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "timestamp": null,
+    "sha256": "27df29675aca5555130cb87087f330fe1df91879ca44b82ce51f55a867e4e696",
+    "archived": "/private/tmp/fibra-config-contract-evidence/consumers/final-reports/tela/TEST-com.sstlfsj.tela.host.runtime.TelaHostClientShutdownIntegrationTest.xml"
+  },
+  {
+    "suite": "com.sstlfsj.tela.host.runtime.TelaHostGatewayErrorTest",
+    "group": "tela",
+    "tests": 6,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "timestamp": null,
+    "sha256": "ef2bad61301eed325ce9bd7163747e1023f24f1a5d5ff078f48581ce7a6ed975",
+    "archived": "/private/tmp/fibra-config-contract-evidence/consumers/final-reports/tela/TEST-com.sstlfsj.tela.host.runtime.TelaHostGatewayErrorTest.xml"
+  }
+]

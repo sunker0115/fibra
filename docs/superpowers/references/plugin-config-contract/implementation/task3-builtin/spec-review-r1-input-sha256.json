@@ -1,0 +1,16 @@
+{
+  "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/BuiltInFacet.java": "11f5e8239d4a4371a8a407190a6ccc742dca023d170ddbaff14ddbcc5f4c18cb",
+  "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/BuiltInPluginPackage.java": "50127ce8a18b458df0320a72532d44975331edab555c1b03ea14794d1924d46f",
+  "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/deployment/BuiltInConfigurationBootstrapTest.java": "5ca5e8e2cb51297314685d420fdb0096ea1b0c4c46d7c8d9e3b8f1fb96b9cabc",
+  "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/deployment/BuiltInPluginPackageTest.java": "70d27e8f087327be16c2e4f6832c618e4968ed81e32b475892770c5198a7c8c0",
+  "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/RuntimeDriverEngineTest.java": "9bc2c720d66b67f2c83c553a14572b51c6be94c67680f8d634e5ee3640b61d80",
+  "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineAttemptStateModelTest.java": "c8f638f0fc5fe0bc2f90e25fb8e4b132de85e28a0eed6cb45f925625828521bc",
+  "fibra-runtime-java/src/test/java/com/sstlfsj/fibra/runtime/java/JavaRuntimeDriverTest.java": "a169afb34c37cacaeb6510ffccea8630ebaac942110e434f9f9900a6c210965d",
+  "fibra-runtime-java/src/test/java/com/sstlfsj/fibra/runtime/java/JavaBuiltInRecoveryTest.java": "12d9b28d5d74721fa3f8e6e0f15a1e5f9b077a10c10f52691f5779700f8a531d",
+  "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/host/HostRestartRecoveryProcess.java": "077dd087edc52010d94b46bf8b5cc90abe0c84a3d39968c393950f1872ad4192",
+  "fibra-benchmarks/src/main/java/com/sstlfsj/fibra/benchmarks/EngineTransactionBenchmark.java": "99c57a2248d3cad384c4aa6cd61277406119385daa6f8abce802e76a8854da13",
+  "docs/superpowers/specs/2026-10-11-plugin-config-contract-design.md": "9ff9803a2cb7fbe36cad380e8bb390e3c53f33f395670612402028f5585edc73",
+  "docs/superpowers/plans/2026-10-11-plugin-config-contract/implementation-plan.md": "f41306066a272def6d633d7de88a97ad96798aa34abc17341b77acae2bc9dea6",
+  "docs/superpowers/plans/2026-10-11-plugin-config-contract/findings.md": "790d3bfe107fe2711727a5e3dac63161dee7182873bd7b306020b1ced69b0faf",
+  "docs/superpowers/plans/2026-10-11-plugin-config-contract/engine-preparation.md": "4b2fe5214778e8f9a8c8b08fa6878f0e54930bb9aec7bf4a10524cd340130405"
+}

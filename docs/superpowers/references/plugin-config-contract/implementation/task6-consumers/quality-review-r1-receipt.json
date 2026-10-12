@@ -1,0 +1,169 @@
+{
+  "checks": {
+    "task6-fibra-file-sha256.json": {
+      "count": 3,
+      "manifestSha256": "5fe0438666658641630cc718a11f4425a688c025c34152434805f892a8377b4a",
+      "mismatches": []
+    },
+    "external-input-sha256.json": {
+      "count": 24,
+      "manifestSha256": "73072f0376af47c1d17d05ba938ed6e5d0f9f77e9387db33f6e29dffca51a426",
+      "mismatches": []
+    },
+    "tela-input-sha256.json": {
+      "count": 482,
+      "manifestSha256": "5963ae08a4590ef84a8ef6c58ae250ceca919307b85b3b0930bc0d562e2fb071",
+      "mismatches": []
+    },
+    "receipt-sha256.json": {
+      "count": 32,
+      "manifestSha256": "94abdedda388be9875bdae4b03d6e033a61c9cb15b25ad4bc1e48908c00e3038",
+      "mismatches": []
+    },
+    "external-source-tar": {
+      "files": 24,
+      "sha256": "a80c9065beae54522cb2ade31258fcc857b9e3aa6103bafb71770caa17cb1e98"
+    },
+    "tela-source-tar": {
+      "files": 482,
+      "sha256": "2063ce08ec1204c7bd7febff0dda459d3438a57dcd5288488f6ff8bb466e8208"
+    },
+    "formal-jars": {
+      "paths": 54,
+      "unique": 27
+    },
+    "formal-npm": "both tarballs and all installed regular entries match",
+    "archived-xml": {
+      "external": {
+        "tests": 19,
+        "xml": 8
+      },
+      "tela": {
+        "tests": 34,
+        "xml": 5
+      }
+    },
+    "author-chain": "4 source/JAR/package/baseZIP + client source/package/module/baseZIP + 5 Desktop ZIP schemas match; receipt files absent",
+    "native-exit": {
+      "external-frozen": "0",
+      "tela-package-r3": "0",
+      "tela-focused-final": "0",
+      "tela-renderer-final": "0"
+    },
+    "wire": {
+      "sha256": "cae3a06ce7b73867652ede6b03cb5c09c878c5e9b6d786eda523e9489dc6689f",
+      "config": {
+        "kind": "NUMBER",
+        "value": "9007199254740993"
+      }
+    },
+    "logs": "final 3 runtime logs contain no canaries"
+  },
+  "evidenceSha256": {
+    "tela-changed-inputs.json": "f2fecaea689893e55be21e529def563fa10927d9ff9d9d1b7807093272b90298",
+    "tela-renderer-wire-green.log": "b01012b3cb6be7c585945db3d6e3a6bb5698073db884f4d311b7c567604d8064",
+    "tela-focused-r1.log": "568dca3f631ede5e242b24e6976d4c46e016f42378de1ccb072567dc06c96d42",
+    "tela-package-r3.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "receipt-sha256.json": "94abdedda388be9875bdae4b03d6e033a61c9cb15b25ad4bc1e48908c00e3038",
+    "tela-pnpm-install.log": "6c10d08b3fea56896a5ce7fb429702d82f4b968af2b90c454dfae6d69a7075aa",
+    "npm-sha256.json": "e58b61d101ee286b08832d6d0055eb1df7bab3e1135a3581964b71f4ae731b9a",
+    "tela-renderer-final.log": "f1fac4a37a08f024211b92cd27f986d44248462835f568371104edcb1a2e2497",
+    "tela-package-r2.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "tela-distribution-sha256.json": "a6d54e85fe4b86d9bf67a9b15c575fe4717e711827ca5dcfb38f526804faf05e",
+    "tela-focused-final.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "tela-existing-fixture-red.log": "4f045f971c38659f774c4efd7405025be80dc4442387ba0eafecbf48dbc4da1b",
+    "tela-adaptation.patch": "3a44cf8254d8ffd505fabf1e43f3407e4aeafb672c9073a87600eed3c1743403",
+    "tela-pnpm-install-online.log": "28a3bf21454786be628b960008d5c2aac00bc126a9a07212702b5137be4bf37a",
+    "external-r2.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "REPORT.md": "351a1acc23ad7f443071c4fa62422f9f286fac30ac4a9af1d3a57b48fb11a653",
+    "COMMANDS.md": "8f08671bea5f714ab608058c6ac281c676209b29b9a2cd1bd914310f94c523fb",
+    "tela-author-artifacts.json": "6cade0245aa9f4a6f0da097cb8cc2602e821d8b1211cd26b3e8a89ac367a1406",
+    "spec-review-r1-receipt.json": "1b12477694a2c72d838477c9f15c5f1aa0863d5743c65ac08f12cb87977c488c",
+    "final-reports.json": "805db1ca5bd9cbe488637a62f71fe73e0498f26ce36ca1252ee68c0307aa35bc",
+    "tela-renderer-red.log": "938e0490879f3483d694e1f0b17db0fd05cb8eec6f11693e663842c478011d20",
+    "external-frozen.log": "6bacb6224c57d273efa054114ad847e79a5596ec46995316a3d9aca6deaca04c",
+    "tela-renderer-final.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "lifecycle-r1.log": "e0da98844e7d19bc08e0faf3ccdc02e3b2bc325212dc5205d2c1b8de75fcd101",
+    "resolved-fibra-jar-sha256.json": "b6fa4ff018692c520385bb1c055d1ed3f7e32b331411243f0bcd2a756dd8f69d",
+    "java-validator-red.log": "44463c746dee5f71f976b6b81c652e8ea232fa4df420d50314e1f7d21ac79075",
+    "tela-existing-fixture-red.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "tela-renderer-red.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "tela-input-sha256.json": "5963ae08a4590ef84a8ef6c58ae250ceca919307b85b3b0930bc0d562e2fb071",
+    "tela-focused-final.log": "54aa04d2a807827465c6ffae3ca7082155e2df0eb06b7e450fd815dcd15c2245",
+    "tela-renderer-wire-green.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "external-frozen.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "fibra-task6.patch": "e9d4e8d4a11aa5b0ca908e79f670998aa556fea817581aae5f5c7adf9d8dc5d4",
+    "tela-pnpm-install.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "external-r2.log": "72dbc1fd0855beb1e5fba88b50de3ff63d852ef830ec1834deb777e048acb240",
+    "tela-focused-r1.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "tela-renderer-green.log": "13624087c35292e4d6ebd42941f4e80a90ff81791b413e33c38f02a2266e058a",
+    "wire-sha256.json": "a438b0fa70e00bcae2f037a1b60b325483dd69a86da8da57412606de21a04f59",
+    "tela-client-snapshot.json": "cae3a06ce7b73867652ede6b03cb5c09c878c5e9b6d786eda523e9489dc6689f",
+    "tela-package-r1.log": "6585efcf001783aff385199e31a942883c4cfd1d6c3fe940e1b5ac390c07e4e6",
+    "tela-renderer-green.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "tela-package-r2.log": "d812df3fddbe07afd062dc3b770b3a06f57d5bffebaf465c55cb210e02528072",
+    "external-final.log": "bcfba441756a0df689858c009afcd2eaf4872b878fa85ae1ec46dac787424e38",
+    "tela-package-r3.log": "cf9c1facfc8e471701fd703b671fb140c51a2268f4c21f4b3392f0de75684aa6",
+    "task6-fibra-file-sha256.json": "5fe0438666658641630cc718a11f4425a688c025c34152434805f892a8377b4a",
+    "java-validator-red.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "tela-package-r1.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "lifecycle-r1.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "external-final.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "tela-pnpm-install-online.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "spec-review-r1.md": "2d4e975202385533274c4f9cfd34a42a2f0cc7c55cde2b16a39e9c4411963b70",
+    "external-input-sha256.json": "73072f0376af47c1d17d05ba938ed6e5d0f9f77e9387db33f6e29dffca51a426"
+  },
+  "narrowHostReproduction": {
+    "source": "/private/tmp/tela-task6-quality-clean-enjzcaj_",
+    "sourceInputsBeforeRun": 482,
+    "initialTargetDirectories": 0,
+    "jdk": "21.0.2",
+    "maven": "3.9.9",
+    "nativeExit": 1,
+    "tests": 1,
+    "errors": 1,
+    "failure": "NoSuchFileException: ../tela-desktop/target/client-plugin/agent-view.js",
+    "line": 54,
+    "logSha256": "f56b50aca9ff497366f2ca355916aac64b535d5b65d3392d4c586892154fd38f",
+    "xmlSha256": "c07e9806f4a0bf77da39e17adc83b03e44b7bcbf9cf86ac155730ad59fcd5c71",
+    "command": "JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home PATH=\"$JAVA_HOME/bin:/private/tmp/fibra-config-contract-node22.14/node-v22.14.0-darwin-arm64/bin:$PATH\" /Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn -o -B -ntp --settings /private/tmp/fibra-config-contract-evidence/consumers/tela-settings.xml -Dmaven.repo.local=/private/tmp/fibra-config-contract-evidence/consumers/tela-m2 -Dfibra.repository.url=file:///private/tmp/fibra-config-contract-evidence/author/distribution/run/remote -pl tela-host -Dtest=TelaHostGatewayErrorTest#actualClientContractFailureUsesSafeGatewayProjectionAndLogs test"
+  },
+  "nodePair": {
+    "cwd": "/private/tmp/tela-task6-quality-clean-enjzcaj_/tela-desktop",
+    "node": "22.14.0",
+    "command": "node --experimental-vm-modules --test --test-name-pattern=\"formal agent-view|Desktop runtime has\" test/module-boundaries.test.mjs test/renderer-load.test.mjs",
+    "nativeExit": 0,
+    "passed": 2,
+    "logSha256": "5f606d6fdf337069ef0a181928c7d4895b3cf80b75e26fae807d1140d2bc4467",
+    "limitation": "single green run; I2 is proven shared-writer race by source, no intermittent failure claimed"
+  },
+  "finalInputRecheck": {
+    "task6-fibra-file-sha256.json": {
+      "count": 3,
+      "currentWorkingCopyDifferences": []
+    },
+    "external-input-sha256.json": {
+      "count": 24,
+      "currentWorkingCopyDifferences": []
+    },
+    "tela-input-sha256.json": {
+      "count": 482,
+      "currentWorkingCopyDifferences": [
+        "tela-desktop/package.json",
+        "tela-desktop/test/module-boundaries.test.mjs",
+        "tela-desktop/test/renderer-load.test.mjs",
+        "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostGatewayErrorTest.java"
+      ]
+    },
+    "frozenCleanCopy": "482/482 input hashes still match; reviewer did not modify source"
+  },
+  "reviewResult": {
+    "blocker": 0,
+    "important": 2,
+    "minor": 0,
+    "ready": false,
+    "scope": "original Task6 frozen inputs"
+  },
+  "reviewerProcesses": "all commands terminal; Maven released after single failing narrow host method, no Maven launched afterward",
+  "reportSha256": "847b48749f14a899dc98cab573b888eef3021a9ca3b9f126ca82240381bd66d4"
+}

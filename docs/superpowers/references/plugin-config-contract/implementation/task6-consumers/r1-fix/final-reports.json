@@ -1,0 +1,68 @@
+[
+  {
+    "group": "clean-host",
+    "suite": "com.sstlfsj.tela.host.runtime.TelaHostGatewayErrorTest",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "timestamp": null,
+    "sha256": "2271e3ec4cbdc58ba93851fa8f3f6f39cdc8a5f5c71649a6fe7b2f485f0109ba",
+    "archived": "/private/tmp/fibra-config-contract-evidence/consumers/r1-fix/final-reports/clean-host/TEST-com.sstlfsj.tela.host.runtime.TelaHostGatewayErrorTest.xml"
+  },
+  {
+    "group": "tela",
+    "suite": "com.sstlfsj.tela.distribution.TelaJavaDefinitionConsumptionTest",
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "timestamp": null,
+    "sha256": "03b47af4ad4eb19e440d7ebb620c6e552b7a6149f88bb0441e7538d1ad31a08c",
+    "archived": "/private/tmp/fibra-config-contract-evidence/consumers/r1-fix/final-reports/tela/TEST-com.sstlfsj.tela.distribution.TelaJavaDefinitionConsumptionTest.xml"
+  },
+  {
+    "group": "tela",
+    "suite": "com.sstlfsj.tela.host.client.TelaClientCatalogIntegrationTest",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "timestamp": null,
+    "sha256": "2a10b58f5ce69c95c92d39693e476c1f3279863236df20d65cd5abb23d5ea71a",
+    "archived": "/private/tmp/fibra-config-contract-evidence/consumers/r1-fix/final-reports/tela/TEST-com.sstlfsj.tela.host.client.TelaClientCatalogIntegrationTest.xml"
+  },
+  {
+    "group": "tela",
+    "suite": "com.sstlfsj.tela.host.client.TelaClientRuntimeTest",
+    "tests": 13,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "timestamp": null,
+    "sha256": "840ea5fa6359767295fcae0fd37ab312a3c94730fdef39261b3185433d21c043",
+    "archived": "/private/tmp/fibra-config-contract-evidence/consumers/r1-fix/final-reports/tela/TEST-com.sstlfsj.tela.host.client.TelaClientRuntimeTest.xml"
+  },
+  {
+    "group": "tela",
+    "suite": "com.sstlfsj.tela.host.runtime.TelaHostClientShutdownIntegrationTest",
+    "tests": 5,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "timestamp": null,
+    "sha256": "cf1c4221f1ce33bff6cedb3a44dbf041aafc5e44139b0f7e29ee727de43b9733",
+    "archived": "/private/tmp/fibra-config-contract-evidence/consumers/r1-fix/final-reports/tela/TEST-com.sstlfsj.tela.host.runtime.TelaHostClientShutdownIntegrationTest.xml"
+  },
+  {
+    "group": "tela",
+    "suite": "com.sstlfsj.tela.host.runtime.TelaHostGatewayErrorTest",
+    "tests": 6,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "timestamp": null,
+    "sha256": "9c8d8533d30842824b6e94f5bf033f93a18641728a3b1f7ee9470f0604f024e2",
+    "archived": "/private/tmp/fibra-config-contract-evidence/consumers/r1-fix/final-reports/tela/TEST-com.sstlfsj.tela.host.runtime.TelaHostGatewayErrorTest.xml"
+  }
+]

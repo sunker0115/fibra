@@ -1,0 +1,10 @@
+{
+  "repository": "/private/tmp/fibra-config-contract-evidence/final/zip-repository",
+  "consumerCache": "/private/tmp/fibra-config-contract-evidence/final/zip-consumer-m2",
+  "coordinate": "com.sstlfsj:fibra-distribution:0.5.0-SNAPSHOT:zip:bin",
+  "zipSha256": "d1ddccfa380f38d70712228bcb454ee3fe3323fc41dff18fab1c219f4375c30b",
+  "pomSha256": "2e7755c1cae8a6e091a96a9df6418df7edea0fa19b4b0e921b6fafc0ae9b0466",
+  "remoteTracking": "#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.\n#Mon Oct 12 18:45:34 CST 2026\nfibra-distribution-0.5.0-20261012.104202-1-bin.zip>fibra-final=\nfibra-distribution-0.5.0-20261012.104202-1.pom>fibra-final=\n",
+  "nativeExit": 0,
+  "reusedJavaArtifacts": "28 main JARs and 30 POMs match Task5 publication byte-for-byte"
+}

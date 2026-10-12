@@ -1,0 +1,53 @@
+PASS 1 typed dictionary accepts precise boundary and large integer
+PASS 2 typed dictionary rejects adjacent small decimal
+PASS 3 raw library dictionary path retains input key: adapter must mask it
+PASS 4 typed dictionary rejects string coercion
+PASS 5 finite allOf rejects width=2 depth=2 fast=false
+MEASURE keyword=allOf width=2 depth=2 fast=false returnedErrors=4 elapsedMicros=8281 summedHeapPoolPeakUsed=23090384
+PASS 6 finite allOf rejects width=2 depth=2 fast=true
+MEASURE keyword=allOf width=2 depth=2 fast=true returnedErrors=1 elapsedMicros=784 summedHeapPoolPeakUsed=3462352
+PASS 7 finite allOf rejects width=2 depth=4 fast=false
+MEASURE keyword=allOf width=2 depth=4 fast=false returnedErrors=16 elapsedMicros=226 summedHeapPoolPeakUsed=3462352
+PASS 8 finite allOf rejects width=2 depth=4 fast=true
+MEASURE keyword=allOf width=2 depth=4 fast=true returnedErrors=1 elapsedMicros=99 summedHeapPoolPeakUsed=3462352
+PASS 9 finite allOf rejects width=8 depth=2 fast=false
+MEASURE keyword=allOf width=8 depth=2 fast=false returnedErrors=64 elapsedMicros=460 summedHeapPoolPeakUsed=3462352
+PASS 10 finite allOf rejects width=8 depth=2 fast=true
+MEASURE keyword=allOf width=8 depth=2 fast=true returnedErrors=1 elapsedMicros=108 summedHeapPoolPeakUsed=3462352
+PASS 11 finite allOf rejects width=8 depth=4 fast=false
+MEASURE keyword=allOf width=8 depth=4 fast=false returnedErrors=4096 elapsedMicros=8871 summedHeapPoolPeakUsed=5559504
+PASS 12 finite allOf rejects width=8 depth=4 fast=true
+MEASURE keyword=allOf width=8 depth=4 fast=true returnedErrors=1 elapsedMicros=166 summedHeapPoolPeakUsed=5559504
+PASS 13 finite anyOf rejects width=2 depth=2 fast=false
+MEASURE keyword=anyOf width=2 depth=2 fast=false returnedErrors=4 elapsedMicros=180 summedHeapPoolPeakUsed=5559504
+PASS 14 finite anyOf rejects width=2 depth=2 fast=true
+MEASURE keyword=anyOf width=2 depth=2 fast=true returnedErrors=4 elapsedMicros=89 summedHeapPoolPeakUsed=5559504
+PASS 15 finite anyOf rejects width=2 depth=4 fast=false
+MEASURE keyword=anyOf width=2 depth=4 fast=false returnedErrors=16 elapsedMicros=125 summedHeapPoolPeakUsed=5559504
+PASS 16 finite anyOf rejects width=2 depth=4 fast=true
+MEASURE keyword=anyOf width=2 depth=4 fast=true returnedErrors=16 elapsedMicros=119 summedHeapPoolPeakUsed=5559504
+PASS 17 finite anyOf rejects width=8 depth=2 fast=false
+MEASURE keyword=anyOf width=8 depth=2 fast=false returnedErrors=64 elapsedMicros=195 summedHeapPoolPeakUsed=5559504
+PASS 18 finite anyOf rejects width=8 depth=2 fast=true
+MEASURE keyword=anyOf width=8 depth=2 fast=true returnedErrors=64 elapsedMicros=157 summedHeapPoolPeakUsed=5559504
+PASS 19 finite anyOf rejects width=8 depth=4 fast=false
+MEASURE keyword=anyOf width=8 depth=4 fast=false returnedErrors=4096 elapsedMicros=3935 summedHeapPoolPeakUsed=8705232
+PASS 20 finite anyOf rejects width=8 depth=4 fast=true
+MEASURE keyword=anyOf width=8 depth=4 fast=true returnedErrors=4096 elapsedMicros=2879 summedHeapPoolPeakUsed=10802384
+PASS 21 finite oneOf rejects width=2 depth=2 fast=false
+MEASURE keyword=oneOf width=2 depth=2 fast=false returnedErrors=7 elapsedMicros=144 summedHeapPoolPeakUsed=10802384
+PASS 22 finite oneOf rejects width=2 depth=2 fast=true
+MEASURE keyword=oneOf width=2 depth=2 fast=true returnedErrors=1 elapsedMicros=75 summedHeapPoolPeakUsed=10802384
+PASS 23 finite oneOf rejects width=2 depth=4 fast=false
+MEASURE keyword=oneOf width=2 depth=4 fast=false returnedErrors=31 elapsedMicros=112 summedHeapPoolPeakUsed=10802384
+PASS 24 finite oneOf rejects width=2 depth=4 fast=true
+MEASURE keyword=oneOf width=2 depth=4 fast=true returnedErrors=1 elapsedMicros=108 summedHeapPoolPeakUsed=10802384
+PASS 25 finite oneOf rejects width=8 depth=2 fast=false
+MEASURE keyword=oneOf width=8 depth=2 fast=false returnedErrors=73 elapsedMicros=211 summedHeapPoolPeakUsed=11850960
+PASS 26 finite oneOf rejects width=8 depth=2 fast=true
+MEASURE keyword=oneOf width=8 depth=2 fast=true returnedErrors=1 elapsedMicros=153 summedHeapPoolPeakUsed=11850960
+PASS 27 finite oneOf rejects width=8 depth=4 fast=false
+MEASURE keyword=oneOf width=8 depth=4 fast=false returnedErrors=4681 elapsedMicros=4051 summedHeapPoolPeakUsed=13948112
+PASS 28 finite oneOf rejects width=8 depth=4 fast=true
+MEASURE keyword=oneOf width=8 depth=4 fast=true returnedErrors=1 elapsedMicros=2736 summedHeapPoolPeakUsed=16045264
+ASSERTIONS=28

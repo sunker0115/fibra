@@ -1,0 +1,3327 @@
+{
+  "directories": [
+    "fibra-spring/target/surefire-reports",
+    "fibra-cli-api/target/surefire-reports",
+    "fibra-engine/target/surefire-reports",
+    "fibra-spring-boot-starter/target/surefire-reports",
+    "fibra-runtime-java/target/surefire-reports",
+    "fibra-api/target/surefire-reports",
+    "fibra-client-protocol/target/surefire-reports",
+    "fibra-artifact/target/surefire-reports",
+    "fibra-registry/target/surefire-reports",
+    "fibra-parity-tests/target/surefire-reports",
+    "fibra-parity-tests/target/client-protocol-conformance",
+    "fibra-core/target/surefire-reports",
+    "fibra-bridge/target/surefire-reports",
+    "fibra-cli/target/surefire-reports",
+    "fibra-runtime-node/target/surefire-reports",
+    "fibra-plugin-archetype/target/failsafe-reports",
+    "fibra-config/target/surefire-reports",
+    "fibra-plugins/fibra-tool-api/target/surefire-reports",
+    "fibra-plugins/fibra-plugins-shell/fibra-shell-local/target/surefire-reports",
+    "fibra-plugins/fibra-plugins-shell/fibra-tool-shell/target/surefire-reports",
+    "fibra-plugins/fibra-plugins-shell/fibra-shell/target/surefire-reports",
+    "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/target/surefire-reports",
+    "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/target/failsafe-reports",
+    "fibra-plugins/fibra-plugins-fs/fibra-tool-fs/target/surefire-reports",
+    "fibra-plugins/fibra-plugins-fs/fibra-fs/target/surefire-reports",
+    "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/target/surefire-reports",
+    "fibra-plugins/fibra-plugins-fs/fibra-fs-local/target/surefire-reports",
+    "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/target/surefire-reports",
+    "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports",
+    "fibra-plugins/fibra-plugins-storage/fibra-storage/target/surefire-reports",
+    "fibra-plugins/fibra-plugins-storage/fibra-storage-json/target/surefire-reports",
+    "fibra-plugins/fibra-plugins-storage/fibra-tool-storage/target/surefire-reports",
+    "fibra-example/content-sanitizer/api/target/surefire-reports",
+    "fibra-example/content-sanitizer/spring-host/target/failsafe-reports"
+  ],
+  "xmlCount": 171,
+  "totals": {
+    "tests": 1228,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "reports": [
+    {
+      "path": "fibra-spring/target/surefire-reports/TEST-com.sstlfsj.fibra.spring.FibraServiceBridgeTest.xml",
+      "sha256": "1c28d9b8b130138495ec8dde409dd491e2eb814d27d3cee6a38d8b0efe5d3768",
+      "name": "com.sstlfsj.fibra.spring.FibraServiceBridgeTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.221",
+      "cases": [
+        "freezesExplicitSpringServicesWhenTheNewEngineBootstraps"
+      ]
+    },
+    {
+      "path": "fibra-spring/target/surefire-reports/TEST-com.sstlfsj.fibra.spring.FibraServiceExporterTest.xml",
+      "sha256": "5cc4c364138836db0f3e75a86c1add446eb072d4cc43531c3d6d409e6401bd84",
+      "name": "com.sstlfsj.fibra.spring.FibraServiceExporterTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.202",
+      "cases": [
+        "exportsTheOriginalSpringProxyAndPreservesAdvice(boolean)[1]",
+        "exportsTheOriginalSpringProxyAndPreservesAdvice(boolean)[2]"
+      ]
+    },
+    {
+      "path": "fibra-cli-api/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.api.CliApiContractTest.xml",
+      "sha256": "91d1b750f923cd5824408297d8983192e2e3dc661329e2b16bca3ea9f9874687",
+      "name": "com.sstlfsj.fibra.cli.api.CliApiContractTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.056",
+      "cases": [
+        "terminalRendererFactsAreImmutableAndValidated",
+        "commandFactsAreImmutableAndRejectInvalidNames",
+        "drainTimeoutHasAStableExitCodeDistinctFromCloseFailureAndCancellation",
+        "applicationBuilderKeepsBootstrapCommandsOutOfTheDynamicRegistry"
+      ]
+    },
+    {
+      "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.runtime.RuntimeTargetSliceTest.xml",
+      "sha256": "b62ccaa4d219b6fe63009eb285f71a773033564f3663f4a41247fa00ec03eed1",
+      "name": "com.sstlfsj.fibra.engine.runtime.RuntimeTargetSliceTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.003",
+      "cases": [
+        "acceptsEquivalentConfigContext",
+        "rejectsEvaluationFromAnotherConfigContext"
+      ]
+    },
+    {
+      "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.DeploymentTargetStoreTest.xml",
+      "sha256": "34012268f12a0b27515a99416ee835f9f8c7f6f1a261f9ce3e6ac1112d44d719",
+      "name": "com.sstlfsj.fibra.engine.deployment.DeploymentTargetStoreTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.069",
+      "cases": [
+        "fileStoreRestoresOnlyCompleteTargetAndUsesRevisionCas",
+        "replacementWithUnconfirmedDurabilityIsNotReportedAsExplicitFailure",
+        "targetCodecPreservesRevisionContextAndRejectsOldOrNoncanonicalFormats"
+      ]
+    },
+    {
+      "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackageTest.xml",
+      "sha256": "246cb90adf33738675be064cfe519116687a81023310c567dbab51daf0502529",
+      "name": "com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackageTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.008",
+      "cases": [
+        "multipleFacetsKeepIdentityCapabilitiesAndDependencyOrder",
+        "facetRenameChangesContentIdentityWithoutImplementationChange",
+        "builtInFacetCyclesAndCrossProviderFragmentsAreRejected",
+        "metadataAndNestedSourcesAreImmutableAndOrphanKeysAreRejected",
+        "originalMetadataShapeConstraintsStillApply",
+        "missingAndSemanticallyInvalidContractsRemainConstructible",
+        "schemaProfileAndFacetContentAssociationArePartOfIdentity",
+        "providerRevisionMustMatchEvenWhenItsPackageIsDisabled",
+        "finalIdentityMatchesFrozenCanonicalContract",
+        "collectionOrderAndEquivalentLiteralNumbersDoNotChangeIdentity"
+      ]
+    },
+    {
+      "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.DeploymentTargetContractTest.xml",
+      "sha256": "9c382f8490399c91d35df772817115e70e65487ed54a396aa6cd98c58a348eb8",
+      "name": "com.sstlfsj.fibra.engine.deployment.DeploymentTargetContractTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.003",
+      "cases": [
+        "selectionSnapshotIsDefensiveAndDesiredRootOrderRemainsMeaningful",
+        "targetRequiresPositiveGenerationAndOneSelectionPerPlugin",
+        "digestDependsOnlyOnCanonicalSelectionsAndDesiredContent",
+        "continuousSameContentIsNoOpButAtoBtoAAllocatesANewGeneration"
+      ]
+    },
+    {
+      "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.PackageDefinitionCatalogTest.xml",
+      "sha256": "8c3f694c68af3a49eecfc84581d0a9d5b274062ec74068e9d279f5e377054b8a",
+      "name": "com.sstlfsj.fibra.engine.deployment.PackageDefinitionCatalogTest",
+      "tests": "15",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.012",
+      "cases": [
+        "rejectsNullCatalogFieldsAndListElements",
+        "rejectsNullFacetFieldsAndDefinitionListElements",
+        "preservesEmptyContractOnlyFacetsAndAllowsAnEmptyCatalog",
+        "acceptsZeroAndRejectsNegativeTargetRevision",
+        "exceptionOnlyAddsTheApprovedConstructorAndCodeAccessor",
+        "rejectsDuplicateFacetIdsEvenWhenTheirRuntimeOrDefinitionsDiffer",
+        "valueRecordsContainOnlyTheApprovedCatalogFields",
+        "queryProtocolRequiresBothAbstractAsyncOperations",
+        "sortsFacetsAndOriginalDefinitionNamesWithoutRenaming",
+        "exposesExactlyTheApprovedErrorCodesWithoutAttachingACause",
+        "rejectsDuplicateDefinitionNamesWithinAFacet",
+        "rejectsBlankDefinitionNames",
+        "copiesBothInputListsAndRejectsMutationAtEveryDepth",
+        "requiresTheSameLowercaseSha256RevisionAsPluginSelection",
+        "acceptsTheSameDefinitionNameInDifferentFacets"
+      ]
+    },
+    {
+      "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.DeploymentPlannerTest.xml",
+      "sha256": "619687a31e6b6fc8823408556981a31c768d792ed9adecd83c6b411d430881a2",
+      "name": "com.sstlfsj.fibra.engine.DeploymentPlannerTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.01",
+      "cases": [
+        "activeUnitRequiresCapabilitiesFromItsStaticFacetClosure",
+        "dependencyOnlyRevisionChangeAffectsItsConsumerAndExecutionDependents",
+        "unusedFacetMissingCapabilitiesDoesNotBlockActiveDeployment",
+        "unrelatedDependencyOnlyRevisionChangeDoesNotAffectExistingUnits",
+        "staticDependencyEdgeChangeAffectsConsumerAndExecutionDependents"
+      ]
+    },
+    {
+      "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.BuiltInConfigurationBootstrapTest.xml",
+      "sha256": "4ffa1df5b029dd0253feb10bb0ad96f8fc50e7e87314bf4b6620a5be05688ae5",
+      "name": "com.sstlfsj.fibra.engine.deployment.BuiltInConfigurationBootstrapTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.001",
+      "cases": [
+        "exposesConfigurationMetadataAndImplementationIdentityWithoutLegacyBuilder"
+      ]
+    },
+    {
+      "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.RuntimeDriverEngineTest.xml",
+      "sha256": "7d22844236d5f846144618cec3cfe17eed2c53e878cd1b0ae59ed41424eb2155",
+      "name": "com.sstlfsj.fibra.engine.RuntimeDriverEngineTest",
+      "tests": "80",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "5.335",
+      "cases": [
+        "currentUnitDisablePersistsACompleteTargetAndDuplicateIsNoop",
+        "catalogCapturesExactSelectedRevisionAndNeverReadsHistoryOrOtherBadSelection",
+        "hostCloseFailurePublishesClosingFactFromRunningWithoutCurrent",
+        "selectedPackageGateFalsePreservesRawEntryWithoutPreparingRuntime",
+        "drainStopAndRetireFailureKeepNewTargetAndRetiringOwnership",
+        "catalogMissingCorruptAndConflictingRootArePackageUnavailable",
+        "prepareAndPlanFailureNeverReachSaveAndCloseEveryCandidate",
+        "contractFingerprintChangeRecompilesAllRuntimesWithoutSavingAnotherTarget",
+        "restartRebuildsOnlyDurableTargetAndMissingProviderLeavesPresentWithoutCurrent",
+        "closeWaitsForAcceptedObservationBeforeFreezingItsFinalView",
+        "configurationQueryApiExistsWithoutExecutingPluginCode",
+        "catalogOwnsAllHandlesBeforeSerialReadsAndReverseCloseAndWaitsForCleanup",
+        "capabilityChangesAreFrozenPerCommittedGeneration",
+        "canceledCatalogObserverCannotCancelReadsOrLetCloseOvertakeAcceptedCommand",
+        "builtInDeclarationDriftRequiresNewSelectionAndChangesFingerprintWithSameProviderContract",
+        "catalogCleanupFailureWinsRetainsOwnerAndStopsShutdownBeforeDependentContexts",
+        "catalogDoesNotResolveMissingDisabledOrCyclicDependenciesButApplyStillRejectsThem",
+        "retainedUnitKeepsObjectInstanceAndItsCreationRevision",
+        "healthyReconcilePreservesInstanceAndOperationIdentity",
+        "sameContentIsNoopButAToBToAKeepsMonotonicRevision",
+        "hostCloseKeepsFirstDriverFailureAndReleasesIndependentLaterResources",
+        "catalogRejectsNewEngineAndUsesRevisionPrecedenceForAbsentTarget",
+        "catalogCleansRegisteredHandlesAfterCreateFailureAndNormalReadFailureKeepsGateOpen",
+        "catalogBuiltInMetadataIsFreshAndDuplicateWrongRuntimeAndWrongDigestAreRejected",
+        "catalogLeavesRealTargetBytesAndPublishedRevisionUntouched",
+        "corruptStoredTargetFailsStartupClosesGatesAndNotifiesOnlyOnce",
+        "concurrentStartupSubscribersReceiveTheExactBootstrapViewBeforeQueuedReplacement",
+        "retirementSnapshotFailureDuringHostCloseKeepsExactUnitFence",
+        "drainTimeoutDoesNotStopOrRetireStillLeasedUnit",
+        "planAffectingCallbackRecompilesAllUnitsWithSameDurableToken",
+        "activeUnitRequiresItsFacetCapabilitiesBeforeAnyCandidateSideEffect",
+        "closeDuringApplyPrepareKeepsPriorCurrentUntilShutdown",
+        "catalogRejectsMalformedAndAbsentReadResultsAndCleansEachHandle",
+        "closeWaitsForAcceptedBootstrapAndDoesNotReopenAfterFirstClose",
+        "catalogValidatesOnlyArgumentsBeforeSubscription",
+        "hostClosePreservesResourceFailureWhenCommandLoopReleaseAlsoFails",
+        "closeDuringBootstrapPrepareKeepsFailedCandidateCleanupAndOriginalRefusal",
+        "failedCurrentUsesSameTokenButFreshUnitsAndCleansOldBeforeRetry",
+        "batchedReconcileReplacesFailedClosureOnceAndThenWakesIndependentPendingUnit",
+        "candidateAbortFailureDuringHostCloseRetainsItsOwnerAndSkipsSharedRelease",
+        "providerRegistryFailureClosesTransferredStores",
+        "partialSealAndExplicitSaveFailureAbortWithoutActivatingAnyUnit",
+        "hostCloseFailurePublishesClosingFactFromNew",
+        "failedExecutionWakeupReplacesTheUnitInsteadOfReconcilingItInPlace",
+        "staleObservationFenceIsIgnoredWithoutPublishing",
+        "disabledRawEntryStillRequiresASelectedPackageBeforeSaving",
+        "closeAdmissionFailureRetainsOnlyRetirementAndStillReleasesCommandLoop",
+        "closeBeforeReconcileDeploymentDoesNotReusePreviousOperationOrFailCurrent",
+        "catalogPreflightsAllRootRuntimesBeforeCreatingAnyQuery",
+        "catalogRepeatSubscriptionsCreateIndependentAttemptsAndAcceptEmptyFacet",
+        "storeReturningADifferentDurableTokenIsUncertainAndNeverPromotes",
+        "catalogQueuedBeforeQuiesceExecutesDespiteCloseFlagWhileFollowingQueriesAreRejected",
+        "closeDuringTargetLoadRejectsBootstrapBeforeCreatingItsOperation",
+        "availabilityWakeupStartsPendingDependencyBeforeItsDependent",
+        "hostCloseReleaseFailureNeverPublishesClosed",
+        "recoveredCandidateCleanupDoesNotReclassifyLaterStoreCloseFailure",
+        "providerMetadataFailurePreservesOriginalAndSuppressesStoreCloseFailure",
+        "changedExpandedEdgesRebuildDependentsOnAddingAndRemovingSiblingEntry",
+        "hostClosePublishesClosingBeforeWaitingAndSurvivesWaiterCancellation",
+        "packageGateSuppressesRawEnabledEntriesAndEnableRestoresThem",
+        "replacementCandidatePhaseDoesNotOverwriteSettledCurrent",
+        "catalogReadsDisabledBuiltInDeclarationsWithoutDynamicSpiOrMutation",
+        "providerConstructionFailureClosesAllAlreadyCreatedDriversInReverseOrder",
+        "staleReconcileFenceCannotReplaceTheCurrentFailedGeneration",
+        "saveUncertainDoesNotPromoteAndBlockingTerminationCannotBlockCommandLane",
+        "everyRuntimeSealsBeforeSaveAndGlobalDependencyOrderControlsReplacement",
+        "failedUnitDisableSaveKeepsCurrentAndAllowsTheSameFenceToRetry",
+        "catalogNullThrowingAndAsyncFailedClosersAreCachedAndBlockQueuedQueries",
+        "abortFailureRetainsCandidateAndClosesBothGates",
+        "hostCloseFailurePublishesClosingFactFromRunningWithCurrent",
+        "snapshotContractViolationStillPublishesFatalAndNotifiesHostOnce",
+        "configurationPreflightRejectsUnknownMissingAndInvalidBeforeCandidateCreation",
+        "hostServicesFreezeAtStartAndAreInheritedByRuntimeScopes",
+        "configurationBuiltInUnknownProfileAndMissingContractRemainManageableUntilUsed",
+        "staleOrMismatchedUnitDisableCannotAffectCurrentGeneration",
+        "contextAToBToAIsDurableWhileUnaffectedUnitRemainsOwnedByItsOriginalGeneration",
+        "throwingOrReentrantTerminationPortCannotReopenGateOrProduceAnotherRequest",
+        "currentFenceRefreshPublishesLiveStateWithoutSavingReconcilingOrReplacing",
+        "oneRefreshSamplesEachUnitOnceForSnapshotAndTargetSatisfaction",
+        "closeDuringReconcilePrepareKeepsPriorCurrentUntilShutdown"
+      ]
+    },
+    {
+      "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.RuntimeDriverContractTest.xml",
+      "sha256": "0be7fa21501fb8c09ce12fb2d390b483346789998b5f3cf1362a3cee8a68f95e",
+      "name": "com.sstlfsj.fibra.engine.RuntimeDriverContractTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.005",
+      "cases": [
+        "definitionQueryIsMandatorySingleFacetSpiWithoutDefaultFallback",
+        "duplicateRuntimeIdFailsBeforeAnyDriverIsCreated",
+        "providerIsAReusableFactoryForIndependentHostDrivers",
+        "runtimeUnitFenceRequiresOneCompleteExecutionIdentity",
+        "providerRegistryIsAnEngineInternalCompositionDetail",
+        "failedDriverBatchDoesNotConsumeReusableProviders",
+        "registryKeysProvidersByRuntimeIdRatherThanExecutionTarget",
+        "hostAndRuntimePlanKeepRuntimeIdentitySeparateFromPlacement"
+      ]
+    },
+    {
+      "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.publication.RemoteContributionInvokerTest.xml",
+      "sha256": "5785153f2c0617f752d61155d07a312907ad02d5243b37f3e57273fbf7cbc841",
+      "name": "com.sstlfsj.fibra.engine.publication.RemoteContributionInvokerTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.007",
+      "cases": [
+        "distinguishesInputAndOutputCodecFailuresWithoutChangingPublishedFailures",
+        "rejectsUnknownAndLocalOnlyKindsBeforeCallingPublishedRuntime",
+        "resolvesTheRegisteredKindAndDelegatesEveryPublishedFence"
+      ]
+    },
+    {
+      "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.DeploymentTargetCompilerTest.xml",
+      "sha256": "87f4be135a70cfd04339641f07d8576eacc6bc0c0310b9f062422933251bb103",
+      "name": "com.sstlfsj.fibra.engine.deployment.DeploymentTargetCompilerTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.011",
+      "cases": [
+        "resolvesSamePackageAndCrossPackageDependenciesExactly",
+        "rejectsMissingDisabledAndDuplicateDependencyTargets",
+        "exactRevisionSelectionExcludesDisabledAndOtherInstalledRevisions",
+        "rejectsCyclesBeforeTheTargetCanBeSaved"
+      ]
+    },
+    {
+      "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.DeploymentTargetContextContractTest.xml",
+      "sha256": "254d2fa33c5dc71c2011e334c0efb27b0f05a813563eedb8be653c147bd0a445",
+      "name": "com.sstlfsj.fibra.engine.deployment.DeploymentTargetContextContractTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.001",
+      "cases": [
+        "canonicalContextOrderDoesNotChangeTargetIdentity",
+        "configContextParticipatesInTargetIdentity"
+      ]
+    },
+    {
+      "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.HostCapabilitySnapshotTest.xml",
+      "sha256": "6e42b6e1231110a2d820ee598d14863f3a54f4a985c43ba4531ec36e33d097b8",
+      "name": "com.sstlfsj.fibra.engine.deployment.HostCapabilitySnapshotTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.001",
+      "cases": [
+        "keyPresenceDefinesAvailabilityWhileValuesRemainDescriptors"
+      ]
+    },
+    {
+      "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.EngineAttemptStateModelTest.xml",
+      "sha256": "92f2a6524d552add0fce2ad96a66766d5c8b1dd7ddd6c316573273a5dda90586",
+      "name": "com.sstlfsj.fibra.engine.EngineAttemptStateModelTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.856",
+      "cases": [
+        "retirementStoppingDoesNotOverwriteCurrentPhase",
+        "explicitSaveFailureRemovesCandidateAndPreservesCurrentAndGates",
+        "synchronousReconcileThrowBelongsToCurrentAndClosesBothGates",
+        "recoverableBootstrapFailureBelongsToTheDurableTarget",
+        "candidatePreparingAndSettledCurrentAreIndependentSnapshots",
+        "currentSnapshotFailureWhileCandidateExistsMarksOnlyCurrent",
+        "planningFailureBelongsToTheOperationWithoutInventingAnAttempt",
+        "saveUnconfirmedEntersFailStopWithoutPromotingCandidate",
+        "promotionPreservesCandidateIdentityAndNamesRetirementSource",
+        "retirementSnapshotFailureBelongsToRetirementBatch",
+        "retirementFailureBlocksCurrentWithoutRelabelingItFailed"
+      ]
+    },
+    {
+      "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.EngineReadAttemptTest.xml",
+      "sha256": "ba3653d95f78c494b30f4069c1682aab2aa72e6c77a750fdeda95ba5fdacdb94",
+      "name": "com.sstlfsj.fibra.engine.EngineReadAttemptTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.027",
+      "cases": [
+        "manySynchronousCloseFailuresStillVisitEverySiblingAndCacheTheTerminalFailure"
+      ]
+    },
+    {
+      "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.EngineCommandLoopTest.xml",
+      "sha256": "e7e8a8d7938376f9c7da87413bb73a1609949837e775266da46226233cd9f785",
+      "name": "com.sstlfsj.fibra.engine.EngineCommandLoopTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.011",
+      "cases": [
+        "resultCallbackCanWaitForCloseWithoutWaitingForItself",
+        "observationCanRunWhileAnAsyncCommandWaitsWithoutWritingInParallel",
+        "commandFailureDoesNotPreventTheNextCommand",
+        "acceptedCommandCompletesAndCachesItsResultWithoutAResultSubscriber",
+        "commandsExecuteSeriallyInSubmissionOrder",
+        "cancellingAResultSubscriptionDoesNotCancelItsAcceptedCommand",
+        "quiesceWaitsForAcceptedQueueAndRejectsLaterCommands"
+      ]
+    },
+    {
+      "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.EngineConfigurationContractTest.xml",
+      "sha256": "21676cbf250393f103b8d9b6edd1be5ee55449bda3a2d9fe04043dbb15dc63a8",
+      "name": "com.sstlfsj.fibra.engine.EngineConfigurationContractTest",
+      "tests": "20",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "5.462",
+      "cases": [
+        "siblingResourceCloseFailureStillClosesEveryOtherResourceAndNameHandle",
+        "asynchronousNameCloseMustCompleteAndFailureIsCachedWithResourceAlreadyReleased",
+        "inactiveEntriesDeferRulesButPackageGatePreservesEvaluation",
+        "queryDoubleFailureRetainsOnlyFailedOwnersAndDoesNotRewriteSuccessfulOperation",
+        "queryIsColdFencedDisabledAndPureAndUsesExactFacet",
+        "ifAndLiteralReachOnlyResolvedSchemaAndDoNotSupplyDefaults",
+        "unknownAndDynamicInputKeysNeverReachSafeFailureProjections",
+        "acceptedCancellationWaitsForActualReadAndCloseBeforeShutdown",
+        "productionResourceFactoryBindsBytesFromThisFindAndDistinguishesAbsentFromLaterMissing",
+        "candidateRevisionMustSupplyRulesAndRejectedRevisionRemainsPublished",
+        "unknownNamesWinOverBadDocumentAndDormantSemanticErrorsAreDeferred",
+        "engineAndPackageAndRuntimeAdmissionPrecedeNameAndSchemaInspection",
+        "allFiveInitiatorsKeepPlanningProvenanceForReadAndCleanupFailure",
+        "foreignErrorsIncludingForgedContractErrorsAreSanitizedAtSpiBoundary",
+        "nullResourceReadIsReadFailureAndOtherMalformedNameResultsAreNeverTrusted",
+        "schemaAndInstanceAndBatchBudgetsAreCheckedBeforeCandidateAndBatchBeforeMismatch",
+        "expressionsValidateResolvedValuesAndEveryRepeatedInstance",
+        "healthyAndPendingReconcileAndSameTargetNoopDoNotReadNewContracts",
+        "schemaOnlyUpgradePreflightsRetainedEntriesButPreparesOnlyAffectedUnits",
+        "missingSelectedSchemaAndGlobalEnvelopeBudgetRejectWhileDormantSchemaBudgetDefers"
+      ]
+    },
+    {
+      "path": "fibra-spring-boot-starter/target/surefire-reports/TEST-com.sstlfsj.fibra.spring.boot.FibraAutoConfigurationTest.xml",
+      "sha256": "d5c8bc6056341a07e40b4e79715835bbc148f0c95cd20d929380150724fc7e48",
+      "name": "com.sstlfsj.fibra.spring.boot.FibraAutoConfigurationTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.6",
+      "cases": [
+        "composesTheProviderBasedEngineWithJavaAndNodeOnly"
+      ]
+    },
+    {
+      "path": "fibra-runtime-java/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.java.JavaBuiltInRecoveryTest.xml",
+      "sha256": "3a9a925715f3b271997d9a1c57f380a9300f72c5ac4c116f88bf392b00cd81c1",
+      "name": "com.sstlfsj.fibra.runtime.java.JavaBuiltInRecoveryTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.604",
+      "cases": [
+        "legacyIdentityRecoveryPreservesBytesAndRequiresExplicitCasReplacement",
+        "persistedDefinitionMismatchRemainsManageableAndAcceptsReplacement",
+        "completeMetadataIsCheckedBeforeSavingEvenWhenRequestedDefinitionExists"
+      ]
+    },
+    {
+      "path": "fibra-runtime-java/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.java.PluginClassLoaderTest.xml",
+      "sha256": "d063c28bbded0b97b8f5639912db8d70210a1bb7a81d97c331c195e0472f2a57",
+      "name": "com.sstlfsj.fibra.runtime.java.PluginClassLoaderTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.208",
+      "cases": [
+        "resolvesClassesAndResourcesThroughTheDeclaredDependencyGraph(Path)",
+        "parentFirstPackagesPreferTheParentAndFallBackToDeclaredDependencies(Path)",
+        "nonSharedHostClassesRemainInvisible(Path)",
+        "privateVersionsRemainLocalAndDependenciesUseDeclaredOrder(Path)",
+        "localAndDependencyLinkageFailuresDoNotFallBack(Path)",
+        "validatesConstructorInputsBeforeCreatingTheClassLoader",
+        "hostLinkageFailureDoesNotFallBackToLocalCopy(Path)",
+        "parentMissAllowsLocalDynamicContract(Path)",
+        "platformTypesHavePlatformIdentityWithoutSharedPrefixes(Path)"
+      ]
+    },
+    {
+      "path": "fibra-runtime-java/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.java.JavaClassIndexTest.xml",
+      "sha256": "b62917da828bc303b690053cbdc52cc85d083c45ed38d48532de47e25cb6c0a6",
+      "name": "com.sstlfsj.fibra.runtime.java.JavaClassIndexTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.096",
+      "cases": [
+        "sharedPrefixMissStillRejectsLocalDuplicates(Path)",
+        "hostLinkageFailureIsReportedInsteadOfTreatedAsLocal(Path)",
+        "nonSharedHostHitStillRejectsLocalDuplicates(Path)",
+        "actualPlatformAndHostHitsAreExcludedFromLocalDuplicates(Path)"
+      ]
+    },
+    {
+      "path": "fibra-runtime-java/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.java.JavaRuntimeDriverTest.xml",
+      "sha256": "7f1262d57c805cbd8d46fd79449f8c759d4f4636d8ef46dfaae5ceb37f405738",
+      "name": "com.sstlfsj.fibra.runtime.java.JavaRuntimeDriverTest",
+      "tests": "52",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.749",
+      "cases": [
+        "failedDescriptorCleanupKeepsCandidateAndItsDependencyOwner",
+        "reusedWiringStillChecksItsMetadataAgainstTheCurrentDeclaration",
+        "staticLeaseRetriesOnlyDependenciesWhoseReleaseFailed",
+        "preparationBuildsAnEntryUnitWithoutStartingThePlugin",
+        "manifestClassPathIsRejectedRegardlessOfEntryCase",
+        "nonfatalMetadataErrorsAreNormalizedAndKeepTheirCleanupOwner",
+        "driverRejectsAnAcquisitionBeforeItsWiringEntersThePool",
+        "dynamicPlanFailureRetainsItsAcquiredLeaseWithoutRetryingCleanup",
+        "definitionQueryUsesStrictDescriptorParser",
+        "builtInMetadataMustExactlyMatchPrivateDefinitions",
+        "dynamicBindingFailureRetainsItsAcquiredLeaseWithoutRetryingCleanup",
+        "descriptorReadFailureStillCleansIndependentManifestStreamAndRetainsJar",
+        "fatalSynchronousDescriptorCloseCachesItsOriginalObjectWithoutRetry",
+        "queryReadCancellationDoesNotReleaseRealReadAndCloseWaitsForItsTerminal",
+        "failedDescriptorRetainsUnclosedDependencyAndCachesCleanupFailure",
+        "managedControlTargetsTheGeneratedRootInstanceAndRejectsAChild",
+        "synchronousInspectionRemainsUsableOnParallelSubscribers",
+        "runningJavaUnitPublishesItsOwnedRegistrarAndClosesRealRoutes",
+        "candidateRetainsOnlyPreparedUnitsWhoseCleanupFailed",
+        "preparedPlanUsesDesiredEntryIdsAndEngineDependencies",
+        "normalInspectProbeAndPrepareRetainTheirFailedDescriptorCleanupOwner",
+        "contractQueryAndCloseBeforeReadAcquireNoUnexpectedResources",
+        "fatalSynchronousDescriptorReadPropagatesItsOriginalObjectWithoutCleanup",
+        "diamondKeepsOneLeasePerEdgeAndTransfersWithoutExtraReferences",
+        "synchronousPreparationAndCleanupRemainUsableOnParallelSubscribers",
+        "failedPartialCleanupContinuesReleasingIndependentSiblings",
+        "reusedContractDependencyRejectsAnExecutableDeclarationBeforeParentMetadataOrBinding",
+        "realScopeCleanupFailureRetainsTheUnitClassSpaceLease",
+        "failedStartRetainsScopeAndClassSpaceUntilFailedCleanupCanBeRetried",
+        "queryDoesNotExecuteGeneratedStaticConstructorMetadataOrFactory",
+        "activePluginFailureClosesAdmissionAndRequestsOneReplacement",
+        "closeWaitsForAdmittedReadBeforeItsWorkerStarts",
+        "queryCleanupFailureRetainsItsSameOwnerWithoutRetry",
+        "synchronousProbeRemainsUsableOnParallelSubscribers",
+        "generationObservationFreezesTheCompiledCapabilitySnapshot",
+        "failedDescriptorCandidateCleanupOnParallelReplaysItsRealFailure",
+        "partialDependencyFailureStillClosesIndependentSiblingLeases",
+        "rejectsMetadataNameBeforeBindingAndClosesLoader",
+        "retainedConsumerReportsPendingWhenItsDynamicProviderIsRevoked",
+        "constructorVirtualMachineErrorEscapesWithoutCleanupAndRetainsItsOwner",
+        "builtInBindingErrorsAreNormalized",
+        "rejectsMissingOrIsolatedDefinitionName",
+        "failedMetadataRetainsUnclosedLoaderAndCachesCleanupFailure",
+        "stoppedUnitReleasesItsPrivateClassSpaceWhileItsGenerationKeepsARetainedPeer",
+        "failedParentCleanupDoesNotReleaseItsDependency",
+        "constructorThreadDeathEscapesWithoutCleanupAndRetainsItsOwner",
+        "desiredRealmAndInterceptPoliciesAreFrozenPerUnit",
+        "staticClassSpaceIsSharedAcrossAttemptsAndClosesAfterTheLastLease",
+        "failedPreparationCanBeClosedRepeatedly",
+        "reusedExecutableDependencyExplicitlyRejectsAContractDeclarationWithoutChangingItsLease",
+        "builtInPrepareRejectsActualDefinitionSetMismatchBeforeBindingOrPublishingPlan",
+        "definitionQueriesAreInertStaticAndReplayTheirReadAndClose"
+      ]
+    },
+    {
+      "path": "fibra-api/target/surefire-reports/TEST-com.sstlfsj.fibra.CancellationSourceTest.xml",
+      "sha256": "c189cb0361060d08c974612e24860358902907949a9a8ce8c2306926c8b3484c",
+      "name": "com.sstlfsj.fibra.CancellationSourceTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.077",
+      "cases": [
+        "neverTokenStaysOpen",
+        "sourceCancelsItsReadOnlyTokenExactlyOnce"
+      ]
+    },
+    {
+      "path": "fibra-client-protocol/target/surefire-reports/TEST-com.sstlfsj.fibra.client.protocol.ClientProtocolCodecTest.xml",
+      "sha256": "ed94a43b54cfbf86c101e26246e0b080a61d2d486d70225778a80fcdee591a56",
+      "name": "com.sstlfsj.fibra.client.protocol.ClientProtocolCodecTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.311",
+      "cases": [
+        "assignmentsPreservePerEntryDefinitionAndResolvedConfigForSharedFacets",
+        "keepsGlobalSnapshotRevisionAndHardCutsUnitRevisionFields",
+        "roundTripsTaggedArbitraryPrecisionNumbersAndRejectsNativeNumbers",
+        "roundTripsEverySharedV1FixtureAndCoversEveryType",
+        "enforcesLiteralDepthBeforeTreeConversion",
+        "roundTripsResourceDescriptorsAndRejectsControlDataPlaneLeakage",
+        "enforcesTaggedDecimalCharacterLimitBeforeParsing",
+        "encodesIdentityIntegersAsCanonicalLongStrings",
+        "enforcesExactUtf8EnvelopeByteLimit",
+        "rejectsMissingAndMixedIdentitiesAtEveryDepth",
+        "rejectsStrictlyMalformedAndUnsupportedWires",
+        "requiresEntryModuleToReferenceAResourceAndRejectsHostPaths"
+      ]
+    },
+    {
+      "path": "fibra-client-protocol/target/surefire-reports/TEST-com.sstlfsj.fibra.client.protocol.ClientProtocolFenceTest.xml",
+      "sha256": "50a6ef4a99e4d2ba9fcbd75a8955dce9f6e9daf2a43a153745da601b67ea4cdd",
+      "name": "com.sstlfsj.fibra.client.protocol.ClientProtocolFenceTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.035",
+      "cases": [
+        "codecOwnsNoMutableLifecyclePendingState"
+      ]
+    },
+    {
+      "path": "fibra-artifact/target/surefire-reports/TEST-com.sstlfsj.fibra.artifact.PluginConfigurationResourceTest.xml",
+      "sha256": "e19328d2584fcaaa1a7437afe0af763834be472f15970598f6221c05f03c9120",
+      "name": "com.sstlfsj.fibra.artifact.PluginConfigurationResourceTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "1.928",
+      "cases": [
+        "findRecordNeverReturnsChangedBytesAsTheOriginalRevision(String, Path)[1]",
+        "findRecordNeverReturnsChangedBytesAsTheOriginalRevision(String, Path)[2]",
+        "findRecordNeverReturnsChangedBytesAsTheOriginalRevision(String, Path)[3]",
+        "findRecordNeverReturnsChangedBytesAsTheOriginalRevision(String, Path)[4]",
+        "findRecordNeverReturnsChangedBytesAsTheOriginalRevision(String, Path)[5]",
+        "findRecordNeverReturnsChangedBytesAsTheOriginalRevision(String, Path)[6]",
+        "sameBytesWithChangedMtimeAreStillTheSameResource(Path)",
+        "closeBeforeReadDoesNotOpenAndRejectsLaterRead(Path)",
+        "originallyNonregularResourceCannotBecomeValidByReplacement(Path)",
+        "originallyAbsentResourceStaysMissingWithoutConsultingTheFileSystem(Path)",
+        "metadataBuilderHasNoAuthorityEvenWhenAllMetadataMatches(Path)",
+        "toBuilderChecksFinalNormalizedContentIdentityAndPreservesMetadataChanges(Path)",
+        "reopenedStoreReconstructsEvidenceFromVerifiedPackage(Path)",
+        "verifiedRecordReadsOriginalBytesAndReturnsDefensiveCopies(Path)",
+        "enforcesOneMiBReadBoundary(int, Path)[1]",
+        "enforcesOneMiBReadBoundary(int, Path)[2]"
+      ]
+    },
+    {
+      "path": "fibra-artifact/target/surefire-reports/TEST-com.sstlfsj.fibra.artifact.PluginConfigurationResourceBootstrapTest.xml",
+      "sha256": "3ff1e4ad042c5a3fac9c6e0f149f66c3f0c1ed80ff13f3fdd2cde34cd44d72d6",
+      "name": "com.sstlfsj.fibra.artifact.PluginConfigurationResourceBootstrapTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.03",
+      "cases": [
+        "exposesOnlyTheFixedLazyResourceContract"
+      ]
+    },
+    {
+      "path": "fibra-artifact/target/surefire-reports/TEST-com.sstlfsj.fibra.artifact.PluginPackageTest.xml",
+      "sha256": "b74369354d7a31c828eda50d710ef86af6f5f8373c5d9354662b59aaa9046412",
+      "name": "com.sstlfsj.fibra.artifact.PluginPackageTest",
+      "tests": "46",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.504",
+      "cases": [
+        "configurationChangeBetweenSnapshotsIsRejected(Path)",
+        "directoryDigestFramesFileContentFromFollowingEntries(Path)",
+        "contentChangesProduceNewComputedDigests(Path)",
+        "rejectsAbsentAndEscapingPayloads(String, Path)[1]",
+        "rejectsAbsentAndEscapingPayloads(String, Path)[2]",
+        "rejectsAbsentAndEscapingPayloads(String, Path)[3]",
+        "rejectsAbsentAndEscapingPayloads(String, Path)[4]",
+        "rejectsAbsentAndEscapingPayloads(String, Path)[5]",
+        "rejectsAbsentAndEscapingPayloads(String, Path)[6]",
+        "rejectsLegacySingleFacetPackage(Path)",
+        "rejectsDuplicateCapabilities(Path)",
+        "rejectsDuplicateFacetIds(Path)",
+        "rejectsMissingInvalidUnknownDuplicateAndSelfReportedPackageFields(String, Path)[1]",
+        "rejectsMissingInvalidUnknownDuplicateAndSelfReportedPackageFields(String, Path)[2]",
+        "rejectsMissingInvalidUnknownDuplicateAndSelfReportedPackageFields(String, Path)[3]",
+        "rejectsMissingInvalidUnknownDuplicateAndSelfReportedPackageFields(String, Path)[4]",
+        "rejectsMissingInvalidUnknownDuplicateAndSelfReportedPackageFields(String, Path)[5]",
+        "rejectsMissingInvalidUnknownDuplicateAndSelfReportedPackageFields(String, Path)[6]",
+        "rejectsMissingInvalidUnknownDuplicateAndSelfReportedPackageFields(String, Path)[7]",
+        "rejectsMissingInvalidUnknownDuplicateAndSelfReportedPackageFields(String, Path)[8]",
+        "rejectsMissingInvalidUnknownDuplicateAndSelfReportedPackageFields(String, Path)[9]",
+        "rejectsMissingInvalidUnknownDuplicateAndSelfReportedPackageFields(String, Path)[10]",
+        "readsCanonicalThreeFacetPackageAndComputesContentIdentities(Path)",
+        "rejectsPhysicalVersionedUnknownAndEmptyDependencyFields(String, Path)[1]",
+        "rejectsPhysicalVersionedUnknownAndEmptyDependencyFields(String, Path)[2]",
+        "rejectsPhysicalVersionedUnknownAndEmptyDependencyFields(String, Path)[3]",
+        "rejectsPhysicalVersionedUnknownAndEmptyDependencyFields(String, Path)[4]",
+        "rejectsPhysicalVersionedUnknownAndEmptyDependencyFields(String, Path)[5]",
+        "rejectsPhysicalVersionedUnknownAndEmptyDependencyFields(String, Path)[6]",
+        "rejectsPhysicalVersionedUnknownAndEmptyDependencyFields(String, Path)[7]",
+        "rejectsPhysicalVersionedUnknownAndEmptyDependencyFields(String, Path)[8]",
+        "rejectsRootManifestPayloadAndOtherTreeSymlinks(Path)",
+        "rejectsAbsolutePayloadEvenInsideRoot(Path)",
+        "rejectsContentChangedBetweenSnapshotPasses(Path)",
+        "fixedConfigurationUsesUnchangedV1DigestAndDoesNotChangeFacetDigests(Path)",
+        "digestUsesUtf8PathOrderAndIgnoresModificationTime(Path)",
+        "rejectsUnknownDuplicateEmptyAndSelfReportedFacetFields(String, Path)[1]",
+        "rejectsUnknownDuplicateEmptyAndSelfReportedFacetFields(String, Path)[2]",
+        "rejectsUnknownDuplicateEmptyAndSelfReportedFacetFields(String, Path)[3]",
+        "rejectsUnknownDuplicateEmptyAndSelfReportedFacetFields(String, Path)[4]",
+        "rejectsUnknownDuplicateEmptyAndSelfReportedFacetFields(String, Path)[5]",
+        "rejectsUnknownDuplicateEmptyAndSelfReportedFacetFields(String, Path)[6]",
+        "rejectsUnknownDuplicateEmptyAndSelfReportedFacetFields(String, Path)[7]",
+        "rejectsUnknownDuplicateEmptyAndSelfReportedFacetFields(String, Path)[8]",
+        "rejectsUnknownDuplicateEmptyAndSelfReportedFacetFields(String, Path)[9]",
+        "rejectsUnknownDuplicateEmptyAndSelfReportedFacetFields(String, Path)[10]"
+      ]
+    },
+    {
+      "path": "fibra-artifact/target/surefire-reports/TEST-com.sstlfsj.fibra.artifact.FixedPluginConfigurationResourceTest.xml",
+      "sha256": "e183a455fb24d3aa57c0574325a3e54701e58cd2a4dba4cc37e3cdf17613f395",
+      "name": "com.sstlfsj.fibra.artifact.FixedPluginConfigurationResourceTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.122",
+      "cases": [
+        "closeWaitsForBlockedReadAndConcurrentReadReplaysWithoutSecondOpen",
+        "absentAndNonregularFactsNeverInvokeIo",
+        "fatalErrorsPropagateButCannotLeaveFalseSuccessfulTerminalState(String)[1]",
+        "fatalErrorsPropagateButCannotLeaveFalseSuccessfulTerminalState(String)[2]",
+        "readAndCloseFailureAreSafeTerminalOutcomesAndRetainStream",
+        "errorsAlsoKeepSafeReadAndCloseTerminalOutcomes",
+        "closeBeforeReadDoesNotInvokeIo",
+        "successfulCloseClearsStreamButRetainsSafeReadFailure",
+        "openingFailureIsNotRetriedOrLeaked",
+        "creationIsLazyAndRepeatedReadOpensOnceWithoutClosingEarly"
+      ]
+    },
+    {
+      "path": "fibra-artifact/target/surefire-reports/TEST-com.sstlfsj.fibra.artifact.PluginPackageStoreTest.xml",
+      "sha256": "40470ad25ee2b226cdbb13ac8a81a70bc53ef9993c18b7f88c60c635264f00d9",
+      "name": "com.sstlfsj.fibra.artifact.PluginPackageStoreTest",
+      "tests": "15",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.929",
+      "cases": [
+        "atomicallySavesOneMultiFacetPackageRecord(Path)",
+        "invalidRecoveryJournalIsRetainedForInvestigation(Path)",
+        "recoversAnAbandonedPreparationWithoutPublishingIt(Path)",
+        "stagingMutationNeverPublishesARecord(Path)",
+        "contentMutationBeforeSaveNeverPublishesARecord(Path)",
+        "rollbackNeverPublishesARecordAndIsIdempotent(Path)",
+        "rejectsAnObjectDirectoryLinkOutsideTheStore(Path)",
+        "rejectsUnknownStoredFieldsAndTamperedObjects(Path)",
+        "forceFailureNeverPublishesARecord(Path)",
+        "partialCopyNeverPublishesARecord(Path)",
+        "rejectsLegacyPackageWithoutPublishing(Path)",
+        "enforcesExclusiveProcessOwnership(Path)",
+        "repeatedRevisionReusesStableObjectIdsAndRecord(Path)",
+        "rejectsInvalidStoredRecordFileNameAsRecoveryFailure(Path)",
+        "closeFailureRemainsVisibleAndReleasesOwnership(Path)"
+      ]
+    },
+    {
+      "path": "fibra-registry/target/surefire-reports/TEST-com.sstlfsj.fibra.registry.FilePluginAuditRepositoryTest.xml",
+      "sha256": "e29c80f519b2c558e6bd4606a1927fba636eb372ab6bc41f177457066554a2e1",
+      "name": "com.sstlfsj.fibra.registry.FilePluginAuditRepositoryTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.197",
+      "cases": [
+        "closeFailureIsRememberedAfterTheChannelReleasesTheFileOwner(Path)",
+        "forceFailurePreventsLaterAppendAndKeepsTheOwnerUntilClose(Path)",
+        "appendAfterCloseDoesNotInvokeIo(Path)",
+        "failedAuditMayRecordASavedTarget(Path)",
+        "partialWriteFailureLeavesTheEvidenceAndRejectsFurtherAppend(Path)",
+        "acceptedNoopAndReconcileCanBePersistedWithoutATargetSave(Path)",
+        "rejectsACompleteRecordWithoutItsTerminalLineFeed(Path)",
+        "rejectsAnInvalidSucceededBoolean(Path)",
+        "successfulAuditEntryRejectsFailedOrUnconfirmedTargetSaveInEveryConstructionPath(Path)",
+        "shortWritesAreRetriedUntilTheCompleteRecordIsStored(Path)"
+      ]
+    },
+    {
+      "path": "fibra-registry/target/surefire-reports/TEST-com.sstlfsj.fibra.registry.PluginRegistryTest.xml",
+      "sha256": "3de44a64bec3e52d9cce20ea2395200ac6308f45d92472e8ba8fedbad0689a77",
+      "name": "com.sstlfsj.fibra.registry.PluginRegistryTest",
+      "tests": "14",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "3.992",
+      "cases": [
+        "uncertainSaveIsAuditedWithoutGuessingOrRetrying",
+        "savedStartFailureIsAuditedAsFailedAndReconcileNeverSavesTarget",
+        "upgradePreservesGateRawDesiredAndContextAndSameRevisionIsNoop",
+        "fullDeploymentCarriesSelectionsGraphAndContextInOneTargetTransaction",
+        "groupOperationsPreserveLocalFlagsAndCompleteEntryData",
+        "installUsesPackageMetadataAndExplicitGateWhileEntryDisableStaysLocal",
+        "auditDeliveryFailureIsObservableAndDoesNotReplaceSuccessOrEngineFailure",
+        "disabledPackageKeepsDormantDefinitionsButEnableRejectsThemBeforeSave",
+        "installAndUpgradeRequireCorrectSelectionPresence",
+        "fixtureDefinitionQueryReturnsItsActualRunEntryWithoutCreatingUnits",
+        "includesUseCompleteDesiredEntryIdsForLookupAndMutation",
+        "watchProjectsEngineFactsWithoutOwningASecondStateMachine",
+        "uninstallRejectsEvenDisabledRawReferencesAndNeverDeletesPublishedContent",
+        "explicitSaveFailureKeepsThePublishedPackageButNotTheSelection"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.parity.ServiceSpecParityTest.xml",
+      "sha256": "705a97b00bb0070422b930a23b34b3b36bd453c3f10d8c10d3d429879506635b",
+      "name": "com.sstlfsj.fibra.parity.ServiceSpecParityTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.01",
+      "cases": [
+        "traceableEffectWithInject",
+        "multipleInjects",
+        "pendingInject",
+        "traceableEffectWithoutInject",
+        "compareSnapshot"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.migration.EffectParityTest.xml",
+      "sha256": "52e5df68e76552edbba210de123378461cf55c72f1c53bdb5f6b28b0d7d9726b",
+      "name": "com.sstlfsj.fibra.migration.EffectParityTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.009",
+      "cases": [
+        "disposeWaitsForTheAlreadyRequestedFirstAsyncValue",
+        "sourceFailureDisposesCollectedValuesBeforeReadyFails",
+        "disposesCollectedValuesInReverseOrder",
+        "disposeWaitsForTheAlreadyRequestedNextAsyncValue",
+        "manualDisposePropagatesAndStopsTheLocalChain"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.parity.DecoratorSpecParityTest.xml",
+      "sha256": "73d2704700f8903bf12caaf54463b05eb2fa1a1846458eb499d21680adc758a6",
+      "name": "com.sstlfsj.fibra.parity.DecoratorSpecParityTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.004",
+      "cases": [
+        "injectOnClassMethod"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.parity.EventsSpecParityTest.xml",
+      "sha256": "eb8df98644053fe20dec7074cef3391e6488fcb2d0b1eb77b9fe8a2344c82f4d",
+      "name": "com.sstlfsj.fibra.parity.EventsSpecParityTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.024",
+      "cases": [
+        "ctxSerial",
+        "ctxOn",
+        "ctxParallel",
+        "ctxBail",
+        "ctxEmit",
+        "ctxOnce",
+        "ctxWaterfall"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.migration.EventParityTest.xml",
+      "sha256": "f3e815d115ddc61c748a29678221a5b55f1e8755d97006a00cdf012ca12e28f6",
+      "name": "com.sstlfsj.fibra.migration.EventParityTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.009",
+      "cases": [
+        "serialAwaitsInOrderAndStopsOnTheFirstBailValue",
+        "bailTreatsNullAndFalseAsNonBailingValues",
+        "waterfallUsesTheSameHooksAndSupportsVeto",
+        "targetFilterCanRejectLocalHooksButNotGlobalHooks",
+        "onOnceAndPrependShareOneOrderedHookTable",
+        "parallelWaitsForEveryListenerAndAggregatesEveryFailure"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.migration.LoggerParityTest.xml",
+      "sha256": "d93e489b2809d1ced746ba5287d8699de20a0ff5b12a9839c697abffb4ceaae6",
+      "name": "com.sstlfsj.fibra.migration.LoggerParityTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.006",
+      "cases": [
+        "keepsTheBoundedBufferObjectInChronologicalOrder",
+        "exporterLevelFiltersDebugButKeepsErrors",
+        "exporterDisposalRemovesTheExporterThatOwnsTheHandle",
+        "resolvesExplicitInterceptFibraAndNestedServiceNames",
+        "exporterBelongsToTheCallingPluginFibra"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.migration.FibraInertiaParityTest.xml",
+      "sha256": "00ff4e69fa676fced80075ebd97d67092b78432928bd90844d115bd5d61aac07",
+      "name": "com.sstlfsj.fibra.migration.FibraInertiaParityTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.003",
+      "cases": [
+        "removingAPluginProviderWaitsUntilItsConsumerIsPending",
+        "dependencyCanDisappearDuringLoadAndReturnDuringUnload"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.scenario.JavaPublishedViewRetentionTest.xml",
+      "sha256": "1e789469ef431a4568614047a404736cc5271269a029aab7d5096447df59e37a",
+      "name": "com.sstlfsj.fibra.scenario.JavaPublishedViewRetentionTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "10.05",
+      "cases": [
+        "callerRetainingAnOldPublishedViewKeepsItsPluginDefinedDescriptorType(Path)",
+        "liveEngineDoesNotAccumulateDescriptorLoadersAcrossFiftyReplacements(Path)",
+        "partialReplacementReleasesStoppedUnitWhileItsOriginalGenerationStaysLive(Path)",
+        "correctedStartupReleasesTheFailedDescriptorLoaderWhileEngineStaysLive(Path)",
+        "liveEngineReleasesTheLastRemovedDescriptorLoader(Path)"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.parity.JavaPackageArchitectureTest.xml",
+      "sha256": "eb2b47fb8e736829d04080145aca29fdc9f63402ca0e2d6b20b6b4fcbf3702dc",
+      "name": "com.sstlfsj.fibra.parity.JavaPackageArchitectureTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "1.19",
+      "cases": [
+        "cliApiProductionPackagesFollowCapabilityDag",
+        "durableTokenIssuanceAndStoredTargetConfirmationRemainStorePrivate",
+        "compiledCycleIsRejected",
+        "engineProductionPackagesFollowCapabilityDag",
+        "compiledUnknownPackageWithoutInternalDependenciesIsRejected",
+        "compiledReverseDependencyIsRejected",
+        "engineAndCandidateKeepNonPublicConstructionAndMutationBoundaries",
+        "compiledAllowedDependenciesAreAccepted",
+        "engineImplementationClassesCannotBeImportedByConsumers"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.scenario.NodePublishedCancellationOwnershipTest.xml",
+      "sha256": "9db01919a159e9a22db62a797b64be636884711b6d07827104cbba85bc2d7dfe",
+      "name": "com.sstlfsj.fibra.scenario.NodePublishedCancellationOwnershipTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "1.22",
+      "cases": [
+        "cancellingOnePublishedToolCallDrainsItBeforeTheNodeInstanceCanStop(Path)"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.migration.ServiceFibraParityTest.xml",
+      "sha256": "2f80025ce946b23f2ee393d9c24d87262d7416b5fdbb255a246760abe36a1ce4",
+      "name": "com.sstlfsj.fibra.migration.ServiceFibraParityTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.011",
+      "cases": [
+        "replacingAProviderReloadsTheConsumerWithANewEpoch",
+        "dependencyActivatesAndRevokeWaitsForConsumerCleanup",
+        "descriptorRejectsTheSameDependencyDeclaredByNameAndType",
+        "boundServiceInvocationRunsOnTheCallingThread",
+        "pendingFibraCanAddANameOnlyDependencyDirectly",
+        "nameOnlyIsolationDoesNotDeclareAServiceType",
+        "configurationRequirementsOverrideTypedInterceptWithoutLosingItsType",
+        "readyCompletesWhenMissingDependencyIsStablyPending",
+        "isolateUsesIdentityLabelsAndSharedLabelsJoinTheSameScope",
+        "nameOnlyDependencyWaitsForTheTypedProviderWithoutDeclaringObjectType"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.parity.DisposeSpecParityTest.xml",
+      "sha256": "ceb156bf1248ef619919ac0f221ec886ee196bfce88d499e42687d5bea0b79b1",
+      "name": "com.sstlfsj.fibra.parity.DisposeSpecParityTest",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.021",
+      "cases": [
+        "yieldWithError",
+        "returnWithError",
+        "asyncReturn1",
+        "asyncReturn2",
+        "asyncYield3Aborted",
+        "asyncYield1",
+        "asyncYield4AwaitDispose",
+        "yieldDispose",
+        "disposeManually",
+        "asyncYieldWithError",
+        "disposeByPlugin",
+        "asyncReturnWithError",
+        "asyncYield2Aborted"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.parity.VNextScenarioTest.xml",
+      "sha256": "444033841ef61ee2a1fb46f1d4f1725f6a30678a58941f3cec412f870c41475a",
+      "name": "com.sstlfsj.fibra.parity.VNextScenarioTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.002",
+      "cases": [
+        "scopesPluginsServicesAndEffectsComposeWithoutAnEngine"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.migration.PluginAndInvocationParityTest.xml",
+      "sha256": "3c9c48e9bbce5623edb0d9546aa2fe2bb2176abbb71fae1ec1a19432a7db04dc",
+      "name": "com.sstlfsj.fibra.migration.PluginAndInvocationParityTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.009",
+      "cases": [
+        "configValidationRunsOnInitialLoadAndUpdate",
+        "constructorServiceIsInvisibleUntilItsStartPublisherCompletes",
+        "registryGroupsFactoryPluginsByFactoryIdentityAndAwaitsRemoval",
+        "nestedPluginIsDisposedWithItsParent",
+        "invocationEffectsBelongToTheCallerFibra"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.verification.host.RuntimeHostVerticalVerificationTest.xml",
+      "sha256": "eb8912365714f804bd160deaa77ec23b0ba7db48855217700e45b933b58f1490",
+      "name": "com.sstlfsj.fibra.verification.host.RuntimeHostVerticalVerificationTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.525",
+      "cases": [
+        "realHostPreservesSaveOrderingRemoteCallsOfflineReconcileAndLifecycleFences"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.parity.FibraSpecParityTest.xml",
+      "sha256": "d59a1366725cbf9e09c735f2a7856a47c7270de59cfd2dab7e2378f6126e9e67",
+      "name": "com.sstlfsj.fibra.parity.FibraSpecParityTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.025",
+      "cases": [
+        "restartWrappedFibra",
+        "updateConfigOnWrappedFibra",
+        "inertiaLock1",
+        "inertiaLock2",
+        "inertiaLock3",
+        "updateConfigWhileInjectedServiceReloads",
+        "disposeError",
+        "pluginError"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.parity.ApiSignatureBaselineTest.xml",
+      "sha256": "7caed726f3cc78b107df25b12fdc09e3e66b438bbdad3694abb46b535131de0e",
+      "name": "com.sstlfsj.fibra.parity.ApiSignatureBaselineTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.283",
+      "cases": [
+        "publicApiMatchesCommittedJavapBaselines"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.parity.LoggerSpecParityTest.xml",
+      "sha256": "d224fe3341b432af7e88ae049a7f4a459a363f7d0ec730b2f6f2c194fb51adcd",
+      "name": "com.sstlfsj.fibra.parity.LoggerSpecParityTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.015",
+      "cases": [
+        "usesFibraNameOutsideService",
+        "usesServiceNameInsideServiceInit",
+        "keepsBoundedBufferInPlaceAndChronological",
+        "usesServiceNameInsideServiceMethod",
+        "usesInnermostServiceNameAndRestoresOuter",
+        "disposesExporterThatRegisteredDisposer",
+        "honoursInterceptName",
+        "outerCallerInterceptOverridesServiceName",
+        "honoursExplicitNameArgument"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.verification.external.ExternalFixtureRuntimeDriverTest.xml",
+      "sha256": "05bc3c79e4ca31b7d78fd01d9da8f16c20f526252bb9d458595ee4e5ab9f178a",
+      "name": "com.sstlfsj.fibra.verification.external.ExternalFixtureRuntimeDriverTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.018",
+      "cases": [
+        "providerCreatesIndependentDriversForSequentialHosts",
+        "declaredDefinitionQueryIsInertCachedAndRejectsReadAfterClosingUnstartedHandle",
+        "abortingReplacementPreservesCurrentUnitControl",
+        "eachEntryHasIndependentIdentityAndOperationFenceWhileSharingOneResource",
+        "generationObservationFreezesTheCompiledCapabilitySnapshot",
+        "activeDisconnectFailsUnitsAndRequestsEngineReplacement",
+        "sealingReplacementDoesNotTakeControlOfCurrentUnits"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.scenario.CrossRuntimeSelfDisableTest.xml",
+      "sha256": "65888d3056aab2f77eb02c0547d2b819f9e9277938e1ee25f1397b090a90e696",
+      "name": "com.sstlfsj.fibra.scenario.CrossRuntimeSelfDisableTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "2.69",
+      "cases": [
+        "selfDisablePersistsCompleteTargetAndPreservesUnrelatedRuntimeAndInflightCall(Path)"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.parity.PluginSpecParityTest.xml",
+      "sha256": "e78a4161e8118f3aa4462aa6ac3dab61a20460bebebd71ce25864f73a6a9a62f",
+      "name": "com.sstlfsj.fibra.parity.PluginSpecParityTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.024",
+      "cases": [
+        "serviceInit",
+        "applyFunctionalPlugin",
+        "ctxRegistry",
+        "inactiveContext",
+        "applyInvalidPlugin",
+        "applyObjectPlugin",
+        "contextInspect",
+        "rootDispose",
+        "compareSnapshot",
+        "nestedPlugins"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.parity.AssociateSpecParityTest.xml",
+      "sha256": "703984293ab95c73a552104cace6e075aa063537a37c395628c4bdeac48e70c7",
+      "name": "com.sstlfsj.fibra.parity.AssociateSpecParityTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.007",
+      "cases": [
+        "associatedTypeServiceInjection",
+        "serviceInjection",
+        "associatedTypeAccessorInjection",
+        "inspect",
+        "propertyInjection"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.migration.CoreEventsParityTest.xml",
+      "sha256": "38086f99abb9b068905b0bae50156d0f9fb2d7d20b56c8887ce4dc68d494f280",
+      "name": "com.sstlfsj.fibra.migration.CoreEventsParityTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.007",
+      "cases": [
+        "updateEventCanReplaceTheDefaultUpdateFlow",
+        "getAndSetUseInternalWaterfalls",
+        "listenerAndDispatchEventsAreWiredWithoutRecursiveDispatch",
+        "pluginStatusAndServiceEventsExposeLifecycleChanges"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.parity.IsolateSpecParityTest.xml",
+      "sha256": "965a01d4fdab4cc2a17abcb5dc6980af115d29018955be464c81587f08bd05a8",
+      "name": "com.sstlfsj.fibra.parity.IsolateSpecParityTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.008",
+      "cases": [
+        "isolatedEvent",
+        "isolatedContext",
+        "sharedLabel"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.migration.ContextPropertyParityTest.xml",
+      "sha256": "0e3e45cefaad95c0d08d284f89fe5725a5d2be5462216d9506ee565d62e92910",
+      "name": "com.sstlfsj.fibra.migration.ContextPropertyParityTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.004",
+      "cases": [
+        "typedAccessorIsEffectOwnedAndSupportsReadWrite",
+        "associatedAccessorResolvesServicesFromTheCallerFibra"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.verification.host.ClientProtocolVerticalVerificationTest.xml",
+      "sha256": "fe6c8119b7ba3c4f73d59654f1b01a6964ce4bd986bf2a2825a542ef613856c0",
+      "name": "com.sstlfsj.fibra.verification.host.ClientProtocolVerticalVerificationTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.611",
+      "cases": [
+        "currentAssignmentsCrossTheJavaCodecWithIndependentConfigAndExactLifecycleFences"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.verification.host.HostRestartRecoveryTest.xml",
+      "sha256": "1b9aec47401ee427dbc34391bc7e67818fd32734e7d1c36c0f76b746f48ddacd",
+      "name": "com.sstlfsj.fibra.verification.host.HostRestartRecoveryTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "8.045",
+      "cases": [
+        "independentHostsRecoverOnlyTheDurableTargetAndFenceOldRuntimeFacts",
+        "independentHostCanReplaceTargetWithMismatchedBuiltInDefinitions"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.parity.ShadowSpecParityTest.xml",
+      "sha256": "615ae792bf046d3e065f91bec623ba1840cccce9a2ae1866d0923008d86a5eb1",
+      "name": "com.sstlfsj.fibra.parity.ShadowSpecParityTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.007",
+      "cases": [
+        "stripsServiceShadowBeforeCreatingPlugins",
+        "keepsCallerMetadataSeparateFromServiceShadow",
+        "exposesCallerToCallableServices",
+        "exposesCallerWithoutPreservingShadowForNoShadowServices"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.migration.ReadmeExampleTest.xml",
+      "sha256": "3828cfbbb8b96e4b1d524d91be4066017934fed9e6ad850d215e7a039d53b49e",
+      "name": "com.sstlfsj.fibra.migration.ReadmeExampleTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.002",
+      "cases": [
+        "minimalUsageCompilesAndRunsWithoutModification"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.parity.InvokeSpecParityTest.xml",
+      "sha256": "bd7f6cde1d1991857771f3bb0557869d150871a87bbf7f30c3a8212bfed2754a",
+      "name": "com.sstlfsj.fibra.parity.InvokeSpecParityTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.003",
+      "cases": [
+        "functionalService",
+        "usesServiceShadowForCallableExtensions"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.parity.ReflectSpecParityTest.xml",
+      "sha256": "ad28103fdbf9541368b17f5ed91bc90ccd929ecb761f000d78d397fd9fc8ed7b",
+      "name": "com.sstlfsj.fibra.parity.ReflectSpecParityTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.152",
+      "cases": [
+        "accessCheck",
+        "serviceInjectLeak",
+        "contextIs",
+        "serviceInjection"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.migration.AnnotationInjectionParityTest.xml",
+      "sha256": "c8d765800825c62e02a9e0ad61cebfaf8ff012eb6444b231ed40d4fba46e95f2",
+      "name": "com.sstlfsj.fibra.migration.AnnotationInjectionParityTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.003",
+      "cases": [
+        "fieldInjectionBecomesARealFibraDependency",
+        "methodInjectionUsesANestedFibraAndReactsToServiceReplacement"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.scenario.CrossRuntimeConditionalConfigTest.xml",
+      "sha256": "71398599703c81abaee584bff5d72e217be2264ee940c54a9738150e63f41b4d",
+      "name": "com.sstlfsj.fibra.scenario.CrossRuntimeConditionalConfigTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "2.652",
+      "cases": [
+        "replacingTheTargetContextUpdatesOnlyAffectedJavaAndNodeEntries(Path)"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.migration.FibraDisposalParityTest.xml",
+      "sha256": "9c450c0e701b82a7c0ad1d1d26247c2a4ac318faf7679df6c5b21ef6d90c6a3d",
+      "name": "com.sstlfsj.fibra.migration.FibraDisposalParityTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.004",
+      "cases": [
+        "unloadLogsAndIsolatesEachTopLevelFailure",
+        "startsTopLevelEffectsConcurrentlyAndWaitsForAll"
+      ]
+    },
+    {
+      "path": "fibra-parity-tests/target/surefire-reports/TEST-com.sstlfsj.fibra.parity.ArchitectureBaselineTest.xml",
+      "sha256": "eafd6bcfc59517fa2f5bc81fc584a526cfc1b0014a128758f23189ae3ce22f37",
+      "name": "com.sstlfsj.fibra.parity.ArchitectureBaselineTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.26",
+      "cases": [
+        "centralPublishingUsesTheSameModulePublicationBoundary",
+        "centralDistributionComparisonRejectsMissingDifferentOrSameFiles(Path)",
+        "reactorPomFilesRecursivelyDiscoversNestedModules(Path)",
+        "removedCompatibilityTypesAreNotLoadable",
+        "rootDeclaresOnlyTheVNextArchitecture",
+        "distributionPublishesTheVerifiedArchiveAsTheBinClassifier",
+        "centralPublishUsesTheVerifiedDistributionAndPinnedRuntimes",
+        "bomManagesExactlyThePublishedFibraArtifacts",
+        "javaToolingBoundaryRejectsJavaScriptBuildConfigurationWithoutRejectingReactor",
+        "moduleDependenciesFollowTheVNextDirection",
+        "clientFoundationUsesDedicatedJavaModulesWithoutJavaScriptTooling"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.EventDispatchContractTest.xml",
+      "sha256": "b3bd552d6b3f34731b3aa7a3abf9fc135552611b1bea18f233c7d7a8cfb8409a",
+      "name": "com.sstlfsj.fibra.runtime.EventDispatchContractTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.008",
+      "cases": [
+        "serialSkipsEmptyAndFalseButBailsOnZero",
+        "parallelSubscriptionsDoNotShareAccumulatedFailures",
+        "parallelWaitsForPublisherTerminationAndIncludesErrorsAfterValues",
+        "bailSkipsNullAndFalseButBailsOnEmptyString",
+        "globalAndPrependKeepScopeOwnership"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.NamedContextPolicyContractTest.xml",
+      "sha256": "812cd1cb3c017ac03c8629fccc893ce8d1204d7673e794aa66bb0dc7846ac2a6",
+      "name": "com.sstlfsj.fibra.runtime.NamedContextPolicyContractTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.016",
+      "cases": [
+        "namedPoliciesLeaveServiceTypesToTheActualRealmBindings",
+        "dynamicChildInheritsPoliciesForServicesNotDeclaredByItsParent(boolean)[1]",
+        "dynamicChildInheritsPoliciesForServicesNotDeclaredByItsParent(boolean)[2]",
+        "policyEntrypointsRejectInvalidNamesAndNullValues",
+        "derivingPoliciesDoesNotChangeTheParentContext(boolean)[1]",
+        "derivingPoliciesDoesNotChangeTheParentContext(boolean)[2]"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.ScopeRegistrationRaceTest.xml",
+      "sha256": "81cd8de5fd43480fccc03952681c664ad8fb948a75815fae3c95316a0b0bfd63",
+      "name": "com.sstlfsj.fibra.runtime.ScopeRegistrationRaceTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.026",
+      "cases": [
+        "registrationAndCloseNeverLeaveAnUnownedResource"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.PluginIdentityContractTest.xml",
+      "sha256": "806d089759c35c9424a4dba661d8c2d4d1f3162f2a6afc9bdfbeb65f46506d1b",
+      "name": "com.sstlfsj.fibra.runtime.PluginIdentityContractTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.005",
+      "cases": [
+        "sameLocalIdInDifferentScopesHasDifferentStableDiagnosticIdentity",
+        "dynamicChildReportsTheActualParentPluginIdentity"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.CleanupFailureDiagnosticsTest.xml",
+      "sha256": "738703c0d2af56c34be62b4920b1a89f98e092fc84abfccd9e187c05d03bfc05",
+      "name": "com.sstlfsj.fibra.runtime.CleanupFailureDiagnosticsTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.021",
+      "cases": [
+        "failedExplicitEffectCleanupIsRecordedAndNeverRetriedDuringScopeClose",
+        "scopedFailuresFollowRealDescendantsAndRemainReadableAfterClose",
+        "scopedFailuresRejectForeignScopesAndDoNotIncludeSiblingFailures",
+        "disposedPluginKeepsItsCleanupFailureAfterLeavingTheInstanceIndex"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.RuntimeDomainSettlementTest.xml",
+      "sha256": "63679f20feaaa951e20c1692be2ca51e95a582495442f11c535848173cbe8c9e",
+      "name": "com.sstlfsj.fibra.runtime.RuntimeDomainSettlementTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.166",
+      "cases": [
+        "waitsForDynamicChildrenThatAreStillTransitioning",
+        "updateBatchDistinguishesSettledPluginFailureFromRegistrationFailure",
+        "failedTransitionWakesAnExistingDomainSettlementWaiter",
+        "updateBatchRejectsDuplicateInstanceBeforeApplyingEitherTarget",
+        "pendingPluginsAreAlreadySettled",
+        "updateBatchRegistersEveryTargetBeforeLifecycleConvergence",
+        "updateBatchPrevalidatesEveryTargetBeforeApplyingAnyTarget",
+        "pendingTransitionWakesAnExistingDomainSettlementWaiter"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.PropertyCapabilityContractTest.xml",
+      "sha256": "021778542e49d1c79eff7dd4bcad73e2187d3ef947c117700ea982882cac382f",
+      "name": "com.sstlfsj.fibra.runtime.PropertyCapabilityContractTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.006",
+      "cases": [
+        "typedAccessorIsScopeOwnedAndSupportsReadWrite",
+        "associatedAccessorUsesTheCallerContext"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.ScopeOwnedCapabilitiesContractTest.xml",
+      "sha256": "d16fca2d7d2e9754c5b5a2449d054f8f75892b59a0d573100da164f9fbfc502c",
+      "name": "com.sstlfsj.fibra.runtime.ScopeOwnedCapabilitiesContractTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.005",
+      "cases": [
+        "serviceTypesAreIsolatedByRealm",
+        "equalRealmLabelsResolveTheSameBindingWithoutLeakingToTheDefaultRealm",
+        "eventAndEffectRegistrationsAreRevokedWithTheirScope",
+        "serviceInvocationResourcesBelongToTheCallerScope"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.PluginDisableRequestContractTest.xml",
+      "sha256": "09d270762b8f648208ab1b3c021b53475b1015da2f70e8ad9d30f1164a1b285d",
+      "name": "com.sstlfsj.fibra.runtime.PluginDisableRequestContractTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.008",
+      "cases": [
+        "startingAndActivePluginRequestDisableTargetsTheExactCurrentInstance",
+        "scopeDrainDoesNotForwardAnActivePluginDisableRequest",
+        "stoppingFailedAndDisposedPluginRequestsAreIgnored",
+        "requestDisableRejectsCallsWithoutCurrentPluginOrControlPlane"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.AnnotationInjectionContractTest.xml",
+      "sha256": "d76805b0fb990e34746431a785cd71e665065876b26d5a915cb1ce4e2e6e7376",
+      "name": "com.sstlfsj.fibra.runtime.AnnotationInjectionContractTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.005",
+      "cases": [
+        "injectedMethodUsesAChildPluginAndReactsToProviderReplacement",
+        "fieldInjectionBecomesARealPluginDependency"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.ScopeOwnershipBoundaryTest.xml",
+      "sha256": "3638fbb325b288a29bea7e5acdbd2ed3fa601ad265b4576c067572c9ab49e16a",
+      "name": "com.sstlfsj.fibra.runtime.ScopeOwnershipBoundaryTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.008",
+      "cases": [
+        "viewsFromDifferentDomainsDoNotShareOwnership",
+        "contextExposesAStableViewThatCannotBeClosedOrDowncastToAnOwnedScope",
+        "aViewOpensAnOwnedChildThatCanCloseWithoutClosingItsParentOrSibling",
+        "pluginStartReceivesOnlyTheNonOwningViewOfItsRootScope"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.internal.RuntimeCloseCompletionTest.xml",
+      "sha256": "49dd973d597eb3e4bcebb543015cea4748bee2d0561d4737979a4fa29438ba9a",
+      "name": "com.sstlfsj.fibra.internal.RuntimeCloseCompletionTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.005",
+      "cases": [
+        "successfulCloseDeliversCompletionAfterDispatcherShutdownRequest",
+        "dispatcherShutdownFailureIsSharedByRepeatedCloseReceipts"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.EffectCleanupContractTest.xml",
+      "sha256": "180288dfcd433f20ca125664fe8a232c764a942fa50d90b923b045da11a4e005",
+      "name": "com.sstlfsj.fibra.runtime.EffectCleanupContractTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.008",
+      "cases": [
+        "sameFailureInstanceDoesNotPreventEitherWaiterFromTerminating",
+        "sourceFailureWaitsForCleanupAndKeepsBothFailureCauses",
+        "abortedSetupWithCleanupFailureSettlesBothPublicWaiters",
+        "supervisionDisposedBeforeSubscriptionSettlesReadyAndCancelsLateSubscription"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.OnceEventContractTest.xml",
+      "sha256": "d7d24445a829539104d7924464a2681f3530aaef294ab52402c0ee625d73df66",
+      "name": "com.sstlfsj.fibra.runtime.OnceEventContractTest",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.026",
+      "cases": [
+        "resubscriptionDoesNotInvokeOnceListenerAgain(EventMode)[1]",
+        "resubscriptionDoesNotInvokeOnceListenerAgain(EventMode)[2]",
+        "failedOnceInvocationRemainsConsumed(EventMode)[1]",
+        "failedOnceInvocationRemainsConsumed(EventMode)[2]",
+        "repeatedContinuationSkipsConsumedOnceListenerButStillRunsInner",
+        "cancellingBeforeSerialOnceInvocationLeavesItAvailable",
+        "serialBailDoesNotConsumeUnreachedOnceListener",
+        "reentrantEarlierListenerCannotInvokeCapturedOnceListenerAgain(EventMode)[1]",
+        "reentrantEarlierListenerCannotInvokeCapturedOnceListenerAgain(EventMode)[2]",
+        "overlappingDispatchSnapshotsInvokeOnceListenerOnlyOnce(EventMode)[1]",
+        "overlappingDispatchSnapshotsInvokeOnceListenerOnlyOnce(EventMode)[2]",
+        "cancellingStartedOnceInvocationDoesNotMakeItInvocableAgain(EventMode)[1]",
+        "cancellingStartedOnceInvocationDoesNotMakeItInvocableAgain(EventMode)[2]"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.PluginInstanceLifecycleContractTest.xml",
+      "sha256": "5c971146148d0e3cfe0f8a9d6e6be9919ae716f1dcd82c3e3c200b280f3db8c9",
+      "name": "com.sstlfsj.fibra.runtime.PluginInstanceLifecycleContractTest",
+      "tests": "20",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.057",
+      "cases": [
+        "supervisedResourceFailureRevokesSiblingResourcesAndFailsTheInstance",
+        "preparedMountValidatesOnceWithoutCreatingThePluginUntilMount",
+        "activeStateObserverCanUpdateWithoutCorruptingEitherTransitionSignal",
+        "failedStateObserverCanRecoverWithoutSendingOldFailureToTheNewTransition",
+        "nullConfigUpdateKeepsStringVoidAndObjectConfigSemantics",
+        "startupAndCleanupErrorsHaveOneAggregateOwner(String)[1]",
+        "startupAndCleanupErrorsHaveOneAggregateOwner(String)[2]",
+        "startupAndCleanupErrorsHaveOneAggregateOwner(String)[3]",
+        "startupAndCleanupErrorsHaveOneAggregateOwner(String)[4]",
+        "disposedInstanceRejectsPreparedUpdateWithoutApplyingIt",
+        "pluginContextExposesItsCurrentInstanceIdentity",
+        "preparedUpdateDoesNotValidateAgainAndRejectsAnotherDefinitionIdentity",
+        "failedInstanceRecoversAfterPreparedUpdate",
+        "preparedUpdateDuringStartupConvergesToTheLatestConfigBeforeCompleting",
+        "disposedInstanceRejectsRawUpdateBeforeRunningItsValidator",
+        "callerInterceptOverridesTheDefinitionDefault",
+        "anExistingCleanupCauseCycleDoesNotBlockStartupFailureReporting",
+        "missingDependencyIsSettledPendingAndProviderActivatesConsumer",
+        "pluginCannotPublishAnUndeclaredService",
+        "replacementProviderDuringStartupCleansTheOldSnapshotBeforeReloading"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.RuntimeDomainDiagnosticsTest.xml",
+      "sha256": "8b8942b956d0d9522b59f0eeba3a4226d51a3f4cb6a12549aa6bee79a15f4a25",
+      "name": "com.sstlfsj.fibra.runtime.RuntimeDomainDiagnosticsTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.427",
+      "cases": [
+        "closingPublishesFinalFactsAndCompletesWithoutClosingSiblingDomains",
+        "snapshotCompletionAlwaysObservesAClosedDomain(boolean)[1]",
+        "snapshotCompletionAlwaysObservesAClosedDomain(boolean)[2]",
+        "missingDependencyFactsChangeEvenWhenThePluginRemainsPending"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.RuntimeDomainIsolationTest.xml",
+      "sha256": "c43700a6675beadebc66c96de0090cd08f6e058e930c1156c8edbe0a6dc58847",
+      "name": "com.sstlfsj.fibra.runtime.RuntimeDomainIsolationTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.006",
+      "cases": [
+        "rejectsAnExplicitTargetBoundToAnotherDomain",
+        "isolatesServicesEventsAndClosureWhileSharingOneRuntime",
+        "snapshotsTypedServiceOwnershipAndEffectiveEventOrder"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.RuntimeScopeContractTest.xml",
+      "sha256": "22df957a39bb26deeecd1525eaf784d1f4107741006ff51c02adb30f8b3c5137",
+      "name": "com.sstlfsj.fibra.runtime.RuntimeScopeContractTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.005",
+      "cases": [
+        "derivedContextsShareOwnershipWithoutBecomingCloseable",
+        "closingRootScopeClosesTheRuntime",
+        "runtimeCloseIsFinalAndRejectsNewOwnership",
+        "closeAndPluginSnapshotsRemainIdempotentAfterSchedulerShutdown",
+        "closingChildDisposesItsTreeWithoutAffectingSiblingOrRoot"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.LoggingCapabilityContractTest.xml",
+      "sha256": "a9f0bbf6022af07c27d0c180810462e593a2e7a28b712cff36cefad6f9107007",
+      "name": "com.sstlfsj.fibra.runtime.LoggingCapabilityContractTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.009",
+      "cases": [
+        "exporterIsScopeOwnedAndLoggerNamesFollowInvocationNesting",
+        "keepsBoundedBufferInPlaceAndChronological"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.EventModeContractTest.xml",
+      "sha256": "318db5e4142d970313cef8b6b7a7266cffafd62670c38f66d466123a823b9e47",
+      "name": "com.sstlfsj.fibra.runtime.EventModeContractTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.009",
+      "cases": [
+        "rejectsDispatchThroughAModeDifferentFromTheDeclaredContract",
+        "rejectsASecondContractWithTheSameNameAndDifferentMode"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.EventContractReloadTest.xml",
+      "sha256": "e99fbdebb4ab2138fc19c8e8a8fd2d8cc8728f15208997809269fee9e6f94dab",
+      "name": "com.sstlfsj.fibra.runtime.EventContractReloadTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.279",
+      "cases": [
+        "releasesRetiredListenerTypeWithoutMixingCapturedDispatchSnapshots(EventMode, Path)[1]",
+        "releasesRetiredListenerTypeWithoutMixingCapturedDispatchSnapshots(EventMode, Path)[2]"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.DrainLifecycleTest.xml",
+      "sha256": "02116fd51233666ff744cee146f645f2b0cea39b788118bfd23e3a1ef23e5139",
+      "name": "com.sstlfsj.fibra.runtime.DrainLifecycleTest",
+      "tests": "14",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.026",
+      "cases": [
+        "explicitDisposalDrainsCollectedValuesBeforeTheSourceCompletes",
+        "failedDrainRetainsTheResourceAndDoesNotRunOrdinaryCleanup",
+        "scopeWaitsForEveryDrainBeforeStartingOrdinaryEffects",
+        "failedDisposedConsumerStillPinsItsProviderOnALaterOperation",
+        "oldHealthFailureDuringDrainCannotReenterTheStopTransition",
+        "explicitGroupedEffectDisposalDrainsBeforeItsOrdinaryDisposers",
+        "drainCallbackCannotStartSiblingCleanupBeforeTheWholeOwnerIsFrozen(boolean)[1]",
+        "drainCallbackCannotStartSiblingCleanupBeforeTheWholeOwnerIsFrozen(boolean)[2]",
+        "providerWaitsForOldConsumerCleanupButNotItsNextActivation",
+        "parentDisposalCompletesWhenItsStartingChildFails",
+        "lateAsyncDisposerJoinsTheSameDrainBarrier",
+        "childProviderPrerequisiteFailureRetainsItsOwningParent",
+        "concurrentCloseWaitersShareTheDrainOutcome(boolean)[1]",
+        "concurrentCloseWaitersShareTheDrainOutcome(boolean)[2]"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.EffectCreationContractTest.xml",
+      "sha256": "c5b6bf35c8384ee19e0910e48ca2ab7723c6511951c6c2b93a9cdb08f2090460",
+      "name": "com.sstlfsj.fibra.runtime.EffectCreationContractTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.013",
+      "cases": [
+        "reentrantScopeCloseWaitsForSynchronousSetupAndDisposesItsResult",
+        "synchronousSetupFailureDoesNotAllowPluginActivation",
+        "closedScopeRejectsBeforeInvokingSupplier"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.value.LiteralValueTest.xml",
+      "sha256": "f11681f8a618a1ada27c44a50c83200175a789adba90df0ebc47898546036e9d",
+      "name": "com.sstlfsj.fibra.value.LiteralValueTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.082",
+      "cases": [
+        "recursivelyFreezesContainersAndPreservesNulls",
+        "rejectsMutableNumbersNonFiniteNumbersLiveObjectsAndCycles",
+        "canonicalEncodingNormalizesNumbersAndObjectOrderButPreservesListOrder",
+        "javaProjectionIsDeeplyImmutableAndContainsOnlyData",
+        "encodesStringsWithoutLosingEscapesOrUnicode"
+      ]
+    },
+    {
+      "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.InvocationContextCancellationTest.xml",
+      "sha256": "649999cab6e5de2f48eb5472b53568a8f6256c456fe885d553c657b49da47511",
+      "name": "com.sstlfsj.fibra.runtime.InvocationContextCancellationTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.002",
+      "cases": [
+        "derivedInvocationKeepsCallerAndCarriesTheExplicitToken",
+        "rejectsAResourceScopeFromAnotherRuntimeDomain"
+      ]
+    },
+    {
+      "path": "fibra-bridge/target/surefire-reports/TEST-com.sstlfsj.fibra.bridge.ContributionKindRegistryTest.xml",
+      "sha256": "322372039b0b892d177100a696ede53615a1aa4180bbdffda3e0a8237fa12b03",
+      "name": "com.sstlfsj.fibra.bridge.ContributionKindRegistryTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.003",
+      "cases": [
+        "resolutionReturnsTheRegisteredInstanceAndRejectsUnknownKinds",
+        "localKindsAreValidButCannotBeResolvedForRemoteUse",
+        "duplicateKindNamesAreRejectedEvenWhenTheirJavaTypesMatch"
+      ]
+    },
+    {
+      "path": "fibra-bridge/target/surefire-reports/TEST-com.sstlfsj.fibra.bridge.ContributionDrainLifecycleTest.xml",
+      "sha256": "5f0259dc5fb0957e68d598c6e726de7feabd95b0d5f1c3c0d6854143ef9c2147",
+      "name": "com.sstlfsj.fibra.bridge.ContributionDrainLifecycleTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.011",
+      "cases": [
+        "dynamicChildCallsPinAllParentResourcesUntilTheLeaseIsReleased"
+      ]
+    },
+    {
+      "path": "fibra-bridge/target/surefire-reports/TEST-com.sstlfsj.fibra.bridge.ContributionDirectoryTest.xml",
+      "sha256": "e86c7953cf9999913b7ba91e0154d636c5c36cd4525a69b2630bbca04cc1d248",
+      "name": "com.sstlfsj.fibra.bridge.ContributionDirectoryTest",
+      "tests": "14",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.082",
+      "cases": [
+        "subscribedObserversReceiveRegistrationAndRevocationFacts",
+        "synchronousHandlerFailureReleasesTheCall",
+        "eachSubscriptionAcquiresItsOwnCallAndAnUnsubscribedCallDoesNotPinTheOwner",
+        "leavesExternalNamesToScenarioAdapters",
+        "freezesRouteMembershipWithTheMatchingSnapshotRevision",
+        "runtimeCleanupIsNotEvenInvokedUntilContributionsHaveDrained",
+        "cancellationReleasesTheCallBeforeRevokedProviderFinishesClosing",
+        "slowObserverReceivesTheLatestFactWhenDemandResumes",
+        "liveDirectoryReleasesTheLastRevokedDescriptor",
+        "bindsRegistrationToScopeAndDrainsInflightCallsBeforeRevocation",
+        "revokedRouteRejectsNewSubscriptionsEvenWhenTheSnapshotIsRetained",
+        "neverSubscribedCallDoesNotDelayProviderDisposal",
+        "handlerUsesRegistrationContextWhileInvocationResourcesBelongToCallerScope",
+        "repeatedCloseWaitsForCallsAlreadyRevokedFromTheDirectory"
+      ]
+    },
+    {
+      "path": "fibra-bridge/target/surefire-reports/TEST-com.sstlfsj.fibra.bridge.ContributionAdmissionTest.xml",
+      "sha256": "4eee1b190fdaa16a5d75b9699a54dfbe03038ddacd9df26b4f89045758fb444f",
+      "name": "com.sstlfsj.fibra.bridge.ContributionAdmissionTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.055",
+      "cases": [
+        "directoryCloseClosesAdmissionsAndWaitsForTheirCalls",
+        "closeWinsAgainstLateAndConcurrentRegistrationWithoutTransientPublication",
+        "drainWaitsForAcceptedCallsWithoutRunningResourceCleanup",
+        "closingAnAdmissionSynchronouslyRevokesEveryRouteWhileAnAcceptedCallDrains"
+      ]
+    },
+    {
+      "path": "fibra-bridge/target/surefire-reports/TEST-com.sstlfsj.fibra.bridge.ContributionCallTest.xml",
+      "sha256": "83122484b326db951b2a4f7490d22c736ed58932d61a3ee56b255e33f2874ee1",
+      "name": "com.sstlfsj.fibra.bridge.ContributionCallTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.199",
+      "cases": [
+        "codecsKeepTheDefaultRemoteFailureAndCancellationBehavior",
+        "aCallMayBeSubscribedOnceAndNeverAfterItHasClosed",
+        "closeIsIdempotent",
+        "completedHandlerStillPinsRegistrationUntilTheCallIsClosed",
+        "cleanupFailureRevokesAdmissionThenWaitsForOtherLeasesBeforeFailingDrain",
+        "activeContributionCleanupFailureRevokesAdmissionAndRetainsOtherLeases",
+        "retainedRoutesDoNotResolveANewEntryWithTheSameId",
+        "cancellingAHandlerDoesNotReleaseAnExplicitCall",
+        "aReusedLogicalIdReceivesANewRegistrationIdentity",
+        "batchDrainWaitsForEveryLeaseBeforeReportingACleanupFailure"
+      ]
+    },
+    {
+      "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliTerminalSignalBridgeTest.xml",
+      "sha256": "a81adcc251c16fc05eb1c86bb11bb0a054960b09e6ed784fc250206cf17bf98e",
+      "name": "com.sstlfsj.fibra.cli.CliTerminalSignalBridgeTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.014",
+      "cases": [
+        "nativeWinchIsForwardedOnlyWhileTheSessionOwnsTheBridge",
+        "failedNativeRegistrationIsAStableNoOp"
+      ]
+    },
+    {
+      "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.ProfilePackageSourceTest.xml",
+      "sha256": "db265098d10db041597bfbc9c9aba7eb64ff88ce8b8302d354c54c1aebd24661",
+      "name": "com.sstlfsj.fibra.cli.ProfilePackageSourceTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.006",
+      "cases": [
+        "rejectsPathOutsideTheProfilePackageRoot",
+        "returnsOnlyDistinctPathsInsideTheProfilePackageRoot"
+      ]
+    },
+    {
+      "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliHostTest.xml",
+      "sha256": "692f6fc3204d188cbcd123a5c4893d6f0ce34d15de4d278420b60d544fe367a4",
+      "name": "com.sstlfsj.fibra.cli.CliHostTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.47",
+      "cases": [
+        "applyAtomicallyReplacesTheCompletePackageAndDesiredSelection",
+        "firstOpenBootstrapsBothInputsAndPersistsTheEvaluatedHostContext",
+        "duplicatePluginIdsAndFailedDeploymentDoNotChangeTheDurableTarget"
+      ]
+    },
+    {
+      "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliInvocationCoordinatorTest.xml",
+      "sha256": "39c77f132e96124adc6405c807bd313dd716213b3cea0b0efa8fc81dc1229c7d",
+      "name": "com.sstlfsj.fibra.cli.CliInvocationCoordinatorTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.003",
+      "cases": [
+        "processStopIsIdempotentAndCompletesOnlyAfterEveryInvocationEnds",
+        "callersCancelOnlyTheExactInvocationTheyOwnAndKeepAdmissionOpen"
+      ]
+    },
+    {
+      "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliSessionTest.xml",
+      "sha256": "94873f427f4d87adba0217eb53cbbed4dcdffe0059dde43d2273047f1173c26d",
+      "name": "com.sstlfsj.fibra.cli.CliSessionTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.706",
+      "cases": [
+        "distinctSessionsOwnIndependentTerminalLanesWhileSharingOneRuntime(Path)",
+        "lineEditingWaitsForAnAdmittedNonEditorMessage",
+        "rendererAndBackgroundProducerCanUseTheSameInvocationOutputWithoutDeadlock(Path)",
+        "lineEditorHandoffWaitsForAnAdmittedPrintAbove",
+        "closeWakesAnIdleReplAndWaitsForTerminalRestorationWithoutClosingBorrowedInput(Path)",
+        "inputHandlerReceivesEachRawLineAsItsOwnFiniteInvocation(Path)",
+        "closeCancelsAndWaitsForTheSessionsActiveInvocation(Path)",
+        "asynchronousHumanMessageUsesPrintAboveAndPreservesTheEditedLine(Path)",
+        "customApplicationContainsOnlyGenericAndExplicitCommands(Path)",
+        "repeatedSessionCloseWrapsTheSharedFailureForEachObserver(Path)",
+        "stopWakesTheLineReaderBeforeJLineInstallsItsOwnSignalHandler",
+        "dumbReplSuppressesInteractivePromptAndDoesNotCloseBorrowedStreams(Path)",
+        "invocationOutputRejectsWritesAfterTheInvocationEnds(Path)",
+        "inputHandlerCanRequestReplExitWithoutAReservedFrameworkCommand(Path)",
+        "systemTerminalIsAvailableToAOneShotCommandAndRestoredBeforeReturn(Path)",
+        "sessionUsesAndNeverClosesTheBorrowedPublishedRuntime(Path)"
+      ]
+    },
+    {
+      "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliHostOwnershipTest.xml",
+      "sha256": "54f7fdeb5358e63a0aeb78cc85c2e3eff288e19fad5b99407ae4e5b8ea418c0e",
+      "name": "com.sstlfsj.fibra.cli.CliHostOwnershipTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "2.845",
+      "cases": [
+        "failedDrainDuringOpenCleanupRetainsBothStoreOwners",
+        "ordinaryStartupFailureReleasesStoresAndAllowsTheProfileToReopen",
+        "successfulCloseAllowsTheProfileToReopen",
+        "failureBeforeEngineTransferReleasesTheAlreadyOpenedPackageStore"
+      ]
+    },
+    {
+      "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliProcessSignalHandlersTest.xml",
+      "sha256": "08e5aef3e23ebc243f22a3618a3343b8f8fcb229ed279af229737f2d158d8673",
+      "name": "com.sstlfsj.fibra.cli.CliProcessSignalHandlersTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.038",
+      "cases": [
+        "registeredSignalStartsTheDeadlineBeforeBlockingCancellation",
+        "intAndTermAreRegisteredSeparatelyAndPreviousHandlersAreRestored"
+      ]
+    },
+    {
+      "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.FibraCliTest.xml",
+      "sha256": "4ad36932e01c64a1e9b60a0452c1169ef55284bef56eac5891e48d478ae95a88",
+      "name": "com.sstlfsj.fibra.cli.FibraCliTest",
+      "tests": "30",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "2.492",
+      "cases": [
+        "versionReturnsSuccessWithoutStartingAHost",
+        "invalidToolInputIsRejectedBeforeStartingAHost",
+        "globalPathOptionsSelectTheConfiguredProfile(Path)",
+        "publishedJavaCommandRunsAndRendersHelpThroughThePublicCli(Path)",
+        "helpSubcommandUsesTheSameCommandTreeWithoutStartingAHost",
+        "sensitiveBootstrapFailuresDoNotEchoTheSuppliedValue(Path)",
+        "unknownCommandReturnsUsageExitCodeAfterCheckingPublishedCommands(Path)",
+        "replHistoryAndDiagnosticsRedactDynamicSensitiveOptions(Path)",
+        "replHistoryRedactsBootstrapShortSensitiveOptions(Path)",
+        "cancellationOnlyOverridesSuccessfulHandlerResults",
+        "helpReturnsSuccessWithoutStartingAHost",
+        "auditDeliveryFailureJsonPreservesSuccessfulMutationDiagnostics",
+        "toolFailureIsPrintedAsStableJsonCode(Path)",
+        "dynamicCommandPathConflictReturnsStableExecutionFailure(Path)",
+        "invalidProfileNameIsAUsageFailureBeforeStartingAHost",
+        "sensitiveBootstrapParseFailuresDoNotEchoTheSuppliedValue(Path)",
+        "sensitiveBootstrapDashPrefixedValuesDoNotEchoTheSuppliedValue(Path)",
+        "nonTtyBootstrapLeaseFailureDoesNotConsumeFollowingCommands(Path)",
+        "installAcceptsAnExplicitPackageOutsideTheCandidateDirectory(Path)",
+        "globalPathOptionsAreParsedBeforeOpeningAHost",
+        "replCapturesANewCommandGenerationForEveryLine(Path)",
+        "referenceEntryPointIsNotAPublicPicocliCommandContract",
+        "noArgumentsPrintUsageWithoutStartingAHost",
+        "pluginsListPrintsEmptyHostAsSingleJsonLine(Path)",
+        "mainExecutionPathRemovesShutdownHookAfterClosingHost(Path)",
+        "nonTtyReplNeverGrantsADynamicTerminalLease(Path)",
+        "trailingOrDuplicateToolInputIsRejectedBeforeStartingAHost",
+        "applyValidationFailureIsABusinessFailureAfterRestoringTheHost(Path)",
+        "nonTtyLeaseFailureDoesNotReplaceTheAdmittedDynamicGeneration(Path)",
+        "dynamicCommandDiscoveryMapsHostStartupFailureToStableExitCode"
+      ]
+    },
+    {
+      "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliProcessShutdownTest.xml",
+      "sha256": "83e8a153a7a950cdceead565e51e7d2897f376e93131226c69b8fa23c6425f44",
+      "name": "com.sstlfsj.fibra.cli.CliProcessShutdownTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.286",
+      "cases": [
+        "termClosesTheOwnedHostAndProjectsSuccess",
+        "signalClosesAdmissionBeforeDeferredShutdownWorkRuns",
+        "deadlineStartsBeforeSynchronousCancellationDelivery",
+        "normalCompletionAtomicallyClosesLaterSignalAdmission",
+        "drainTimeoutHasItsOwnExitProjectionAndDoesNotClaimHostClosure",
+        "hostCloseFailureStillReachesTheHardDeadlineWhenGracefulExitBlocks",
+        "repeatedSignalsShareCancellationDrainCloseAndExit",
+        "forcedResultIsPublishedOnlyAfterTheForcedExitCallbackReturns",
+        "deadlineAlsoCoversOwnedHostClose",
+        "hostCloseFailureIsDistinctFromCancellationAndDrainTimeout"
+      ]
+    },
+    {
+      "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliPathsTest.xml",
+      "sha256": "d8ae92b37418834e63918c053150fa5e5029a7c1283a1f988f946dff6cea5c68",
+      "name": "com.sstlfsj.fibra.cli.CliPathsTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.022",
+      "cases": [
+        "resolvesBundledNodeExecutable(Path)",
+        "resolvesTheDistributionLayoutAndProfileDataNamespace(Path)",
+        "keepsExplicitRootsIndependentFromTheDistributionHome(Path)",
+        "rejectsProfileNamesThatCouldEscapeTheirNamespace(Path)"
+      ]
+    },
+    {
+      "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliReplTest.xml",
+      "sha256": "4c0b7223890e883a65e54205c9ba4404a39298ac497c51c6e32157f538ef2e59",
+      "name": "com.sstlfsj.fibra.cli.CliReplTest",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "1.085",
+      "cases": [
+        "noColorEnvironmentDisablesOnlyAnsiColor",
+        "closesTheTerminalWhenPersistingHistoryFails(Path)",
+        "invocationScopeRestoresALeakedTerminalLeaseBeforeTheNextLine",
+        "commandTreeResetsArgumentsBetweenReplExecutions(Path)",
+        "writesHumanSessionSummaryOnlyToStderrForANonDumbTerminal",
+        "reusesOneHostForMultipleCommandsAndQuotedInput(Path)",
+        "rejectsGlobalOptionsWithoutReplacingTheActiveHost(Path)",
+        "persistsOnlyReplaySafeHistoryAndNeverLeaksToolInput(Path)",
+        "closesEveryOwnedTerminalAndReportsCloseFailure",
+        "doesNotExpandArgumentFilesInsideTheSharedCommandTree(Path)",
+        "ctrlCWhileEditingClearsTheLineAndKeepsTheSessionOpen",
+        "eofEndsTheSessionSuccessfully(Path)",
+        "reloadsPersistedHistoryWhenTheReplRestarts(Path)"
+      ]
+    },
+    {
+      "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliTerminalControllerTest.xml",
+      "sha256": "9fb7f33b5aef424e2716370da94f8f4de0a416551fb49ab22b77b977d4130741",
+      "name": "com.sstlfsj.fibra.cli.CliTerminalControllerTest",
+      "tests": "20",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.341",
+      "cases": [
+        "rawModeStartsAndRestoresInsideRunExactlyOnce",
+        "bracketedPasteIsOneNormalizedEventAndDoesNotTriggerEmbeddedControls",
+        "closedControllerRejectsLatePhysicalOutput",
+        "cancellationWakesTheManagedLoopWithoutClosingSharedInput",
+        "noColorCapabilityStripsRendererStyles",
+        "outputThatStartsAfterStopIsRejectedWithoutTouchingTheTerminal",
+        "restorationFailureIsSharedByRunCloseAndTheTerminalOwner",
+        "rendererInitializationFailureStillRestoresRawMode",
+        "rawCtrlCCancelsTheExactLeaseOwnerAndIsNeverDelivered",
+        "asynchronousRenderRequestsAreCoalescedAndFinishRestoresTheLease",
+        "reportsOnlyModifiersEncodedByDistinctTerminalSequences",
+        "dumbAndClosedTerminalsReturnStableReasons",
+        "displayCleanupFailureStillRestoresEveryRemainingTerminalMode",
+        "decodesUnicodeDirectionsAndStandaloneEscapeAndPublishesResize",
+        "oneInvocationOwnsTheManagedLoopAndReleaseAllowsTheNextInvocation",
+        "startFailureStillStopsRendererAndRestoresTheTerminal",
+        "concurrentOutputIsSerializedBeforeTheRendererRedraws",
+        "closingAnUnusedLeaseHasNoPhysicalSideEffectAndMakesTheLaneAvailable",
+        "frameMustFitTheObservedPhysicalRows",
+        "rendererLaneCannotSynchronouslyCloseItsOwnLease"
+      ]
+    },
+    {
+      "path": "fibra-runtime-node/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.node.NodeSidecarTest.xml",
+      "sha256": "69b6322c7c07ef2df1e393dc216f6d821d2e32fde4ac1c331b21c2b71049fe19",
+      "name": "com.sstlfsj.fibra.runtime.node.NodeSidecarTest",
+      "tests": "32",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "12.518",
+      "cases": [
+        "rejectsMalformedJsonRpcErrorObjects(Path)",
+        "terminationFailureDoesNotWaitForBlockedSessionStreams(Path)",
+        "sendFailureDisposesTheCancellationSubscription(Path)",
+        "exposesStructuredJsonRpcFailuresWithoutRawMutableData(Path)",
+        "rejectsFractionalErrorCodesWithoutJavascriptNumberRounding(Path)",
+        "rejectsDisableNotificationBeforeHandshakeCompletes(Path)",
+        "rejectsANullHandshakeResult(Path)",
+        "unexpectedExitDoesNotRequestDisable(Path)",
+        "acceptsAResponseOnlyAfterItsFragmentedFrameIsComplete(Path)",
+        "blockedWriteDoesNotBlockRequestAdmissionCancellationOrClose(Path)",
+        "managedRangeCleanupFailureFailsRequestDrainAndRetainsTheSession(Path)",
+        "readerAndTimerCallbacksCanRequestTheSameCloseBarrier(Path)",
+        "handshakesAndRoutesJsonRpcWithoutShell(Path)",
+        "timesOutCancelsAndTerminatesTheCompleteProcessTree(Path)",
+        "cancellingHandshakeClosesTheAcquiredSession(Path)",
+        "rangeProofFailureRetainsProtocolFailureFromDelayedHalfFrameEof(Path)",
+        "doesNotSendARequestWhoseDeadlineCannotBeOwned(Path)",
+        "rejectsMalformedDisableNotifications(Path)",
+        "rejectsANonPositiveRequestCancellationTimeout(Path)",
+        "timeoutDoesNotCompleteOtherRequestsBeforeTheManagedRangeStops(Path)",
+        "directSubscriberCancellationKeepsTheSharedSidecarAvailable(Path)",
+        "malformedResponseCannotConfirmCleanupWhenRangeProofIsMissing(Path)",
+        "rejectsAmbiguousAndDuplicateJsonRpcResponseMembers(Path)",
+        "exitedSupervisorStillDeliversTailResponseWhenRangeProofIsMissing(Path)",
+        "heartbeatDeadlineClosesASessionWhileItsWriterIsBlocked(Path)",
+        "disableCallbackFailureStillTerminatesTheSession(Path)",
+        "requestTimeoutWaitsForCooperativeSettlementWithoutKillingSiblings(Path)",
+        "rejectsOversizedFramesAndReportsUnexpectedExit(Path)",
+        "heartbeatFailureTerminatesTheSidecar(Path)",
+        "preservesALargeFinalResponseImmediatelyBeforeExit(Path)",
+        "naturalHalfFrameEofIsAProtocolFailure(Path)",
+        "eachDisableNotificationIsForwardedAndKeepsTheSidecarRunning(Path)"
+      ]
+    },
+    {
+      "path": "fibra-runtime-node/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.node.NodeProcessUnitTest.xml",
+      "sha256": "b9d447c81049e87fdde829d4f8153f4e3c01f650fd70304519f572402296b026",
+      "name": "com.sstlfsj.fibra.runtime.node.NodeProcessUnitTest",
+      "tests": "49",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "15.843",
+      "cases": [
+        "forwardsStdoutTailAndEofWhilePayloadAndSupervisorRemainAlive(Path)",
+        "closeRecoversWhenASingleRangeSignalIsPermissionBlocked(String, Path)[1]",
+        "closeRecoversWhenASingleRangeSignalIsPermissionBlocked(String, Path)[2]",
+        "closeWaitsForUnknownGroupProbeToBecomeNativelyAbsent(Path)",
+        "terminatesManagedPayloadWhenHostClosesStdout(Path)",
+        "rejectsMissingManagedRangeQuiescenceProofAndRetainsTheSession(Path)",
+        "normalizesUnexpectedCleanupFailuresAndRetainsTheSession(Path)",
+        "settlesActualPayloadSpawnFailureWithoutLeavingStdoutOpen(Path)",
+        "drainsALargeStdoutTailBeforePublishingEof(Path)",
+        "recoveredRangeDoesNotEraseAnIndependentSupervisorFailure(String, Path)[1]",
+        "recoveredRangeDoesNotEraseAnIndependentSupervisorFailure(String, Path)[2]",
+        "retainsSessionWhenSupervisorFailsDespiteQuiescenceProof(Path)",
+        "separatesPayloadExitFromSupervisorExit(Path)",
+        "rejectsInvalidOrFailedFinalStatesAndRetainsSession(String, Path)[1]",
+        "rejectsInvalidOrFailedFinalStatesAndRetainsSession(String, Path)[2]",
+        "rejectsInvalidOrFailedFinalStatesAndRetainsSession(String, Path)[3]",
+        "rejectsInvalidOrFailedFinalStatesAndRetainsSession(String, Path)[4]",
+        "rejectsInvalidOrFailedFinalStatesAndRetainsSession(String, Path)[5]",
+        "rejectsInvalidOrFailedFinalStatesAndRetainsSession(String, Path)[6]",
+        "rejectsInvalidOrFailedFinalStatesAndRetainsSession(String, Path)[7]",
+        "rejectsInvalidOrFailedFinalStatesAndRetainsSession(String, Path)[8]",
+        "rejectsInvalidOrFailedFinalStatesAndRetainsSession(String, Path)[9]",
+        "rejectsInvalidOrFailedFinalStatesAndRetainsSession(String, Path)[10]",
+        "rejectsInvalidOrFailedFinalStatesAndRetainsSession(String, Path)[11]",
+        "rejectsInvalidOrFailedFinalStatesAndRetainsSession(String, Path)[12]",
+        "rejectsInvalidOrFailedFinalStatesAndRetainsSession(String, Path)[13]",
+        "rejectsInvalidOrFailedFinalStatesAndRetainsSession(String, Path)[14]",
+        "rejectsInvalidOrFailedFinalStatesAndRetainsSession(String, Path)[15]",
+        "rejectsInvalidOrFailedFinalStatesAndRetainsSession(String, Path)[16]",
+        "rejectsInvalidOrFailedFinalStatesAndRetainsSession(String, Path)[17]",
+        "rejectsInvalidOrFailedFinalStatesAndRetainsSession(String, Path)[18]",
+        "rejectsInvalidOrFailedFinalStatesAndRetainsSession(String, Path)[19]",
+        "unresolvedRangeFailsAtTheOriginalBudgetAndCachesFailure(String, Path)[1]",
+        "unresolvedRangeFailsAtTheOriginalBudgetAndCachesFailure(String, Path)[2]",
+        "retainsUnknownPayloadOutcomeWhenRangeTerminationFails(Path)",
+        "nativeSignalEsrchIsAnAbsorbingRangeProof(String, Path)[1]",
+        "nativeSignalEsrchIsAnAbsorbingRangeProof(String, Path)[2]",
+        "otherRangeErrnoStillFailsWithoutBeingAbsorbedAsUnknown(Path)",
+        "interruptionDoesNotShortCircuitManagedRangeQuiescence(Path)",
+        "blockedPayloadInputStillProducesQuiescenceProofDuringClose(Path)",
+        "unknownBecomingPresentDoesNotReleaseTheRangeOwner(Path)",
+        "preservesSignalledPayloadOutcomeAfterSessionCleanup(Path)",
+        "acceptsKnownStartFailureWhenManagedRangeIsQuiescent(Path)",
+        "concurrentAndInterruptedCloseShareOnePhysicalRangeCleanup(Path)",
+        "supervisorProbeLauncherPreservesRealPayloadAndBundledResource(Path)",
+        "pendingRequestAndCancelledCloseObserverRetainSharedRangeCleanup(String, Path)[1]",
+        "pendingRequestAndCancelledCloseObserverRetainSharedRangeCleanup(String, Path)[2]",
+        "acceptedSignalStillNeedsAnAbsenceObservation(Path)",
+        "terminatesManagedPayloadWhenHostClosesBothOutputStreams(Path)"
+      ]
+    },
+    {
+      "path": "fibra-runtime-node/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.node.NodeRuntimeDriverTest.xml",
+      "sha256": "ab7277e3b9c31810df011100c6124d68235f524552c64adbf44ae8fd8663d3ef",
+      "name": "com.sstlfsj.fibra.runtime.node.NodeRuntimeDriverTest",
+      "tests": "27",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "6.647",
+      "cases": [
+        "stopCleanupFailurePreservesTheRequestFailureAsSuppressed(Path)",
+        "failedStartReleasesEachSuccessfulOwnerBeforeStopRetriesTheRemainder(Path)",
+        "unstartedDefinitionQueryClosesWithoutReadingMissingPayload(Path)",
+        "activeSidecarTerminationPublishesFailureAndRequestsReplacement(Path)",
+        "definitionReadFailureIsCachedWithoutOriginalExceptionGraph(Path)",
+        "repeatedUnitReplacementDoesNotAccumulatePayloadsSessionsOrProcesses(Path)",
+        "admittedDefinitionReadWaitsEvenBeforeWorkerStartsIo(Path)",
+        "independentFileCloseFailuresRemainReachableAndNeverRetry(Path)",
+        "twoEntriesSharePayloadUntilTheLastUnitStops(Path)",
+        "malformedDescriptorKeepsOriginalValidationAndClosesOnNonBlockingPaths(Path)",
+        "prepareBuildsAnEntryKeyedPlanWithoutStartingNode(Path)",
+        "definitionQueryReadsDescriptorWithoutStartingOrPreparingNode(Path)",
+        "payloadSymbolicLinkIsRejectedWithoutLosingWalkOwner(Path)",
+        "sidecarTerminationDuringRegistrationCannotPublishADeadActiveUnit(Path)",
+        "realLifecycleFencesLateOperationsAndCleansAStartFailure(Path)",
+        "synchronousFatalReadRetainsCandidateOwnerUntilExplicitCleanup(Path)",
+        "synchronousProbeInspectAndPrepareWorkOnNonBlockingScheduler(Path)",
+        "definitionQueryCancellationAndCloseWaitForActualRead(Path)",
+        "bothFileCloseFailuresRetainOnlySafeHostErrors(Path)",
+        "generationObservationFreezesTheCompiledCapabilitySnapshot(Path)",
+        "candidateIndependentFileCleanupPreservesFatalFailure(Path)",
+        "fatalFileCloseIsCachedAndRetainsUnclosedResources(Path)",
+        "failedWalkTraversalAndReadCleanupAreOwnedBeforeFailure(Path)",
+        "managedRangeCleanupFailureRetainsTheSidecarAndPayloadOwner(Path)",
+        "disableNotificationCarriesTheUnitFenceWithoutRequestingReconcile(Path)",
+        "candidateRetainsTheSameFailedFileOwnerAndReplaysCleanupFailure(Path)",
+        "dependencyStaticIdentityParticipatesInConsumerPayloadReuse(Path)"
+      ]
+    },
+    {
+      "path": "fibra-plugin-archetype/target/failsafe-reports/TEST-com.sstlfsj.fibra.archetype.FibraPluginArchetypeIT.xml",
+      "sha256": "f39d900efcbbfd80d08505971791d45e302e103f862de1cf66134e1f40d458c7",
+      "name": "com.sstlfsj.fibra.archetype.FibraPluginArchetypeIT",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.638",
+      "cases": [
+        "generatedPackageLoadsThroughTheJavaRuntime(Path)"
+      ]
+    },
+    {
+      "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.DesiredConfigCompilerTest.xml",
+      "sha256": "6b48b9698b6ab34f2fa976c8a599efcbf7ec222462ad550a04d86fb837d4427a",
+      "name": "com.sstlfsj.fibra.config.DesiredConfigCompilerTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.048",
+      "cases": [
+        "graphIdentityDoesNotDependOnSourcePaths(Path)",
+        "collectsLiteralInputWithoutResolvingOrBindingPluginTypes(Path)",
+        "requiresACompletePluginFacetAndDefinitionReference(Path)",
+        "rejectsReservedLocalMetadataAndMalformedRawExpressionAfterPatch(Path)",
+        "rejectsDuplicateLocalIdAcrossGroupsAndInvalidRealmType(Path)",
+        "keepsDisabledMissingIncludeUncollectedWithoutReadingIt(Path)",
+        "appliesPatchesBeforeValidatingRawExpressionsAndKeepsIncludeCollectionIndependentOfWhen(Path)",
+        "validatesDisabledIncludeDeclarationBeforeSkippingItsRead(Path)",
+        "compilesGroupsIncludesPatchesAndInheritedPolicyWithoutRuntime(Path)",
+        "rejectsIncludeCyclesWithStructuredDiagnostics(Path)"
+      ]
+    },
+    {
+      "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigSchemaTest.xml",
+      "sha256": "b40393f9c88287e0ff7dfb6b3ed1355f5dd47f1423d2def48635a1c894800c53",
+      "name": "com.sstlfsj.fibra.config.ConfigSchemaTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.051",
+      "cases": [
+        "supportsBooleanPropertySchemasAndNullableContainers",
+        "usesExactDecimalsForAllNumericAssertionsAndScalarEquality",
+        "neverUsesPluginContextLoaderOrExternalResources",
+        "projectsSafeStaticPathsWithoutSecretKeysValuesOrLibraryCauses",
+        "batchReportsStableIndicesAndRejectsProgrammingErrorsSynchronously",
+        "validatesEveryTypeWithoutCoercionOrDefaultMutation",
+        "supportsTypedMapsAndFiniteVariantsWithStandardSemantics",
+        "acceptsRootReferenceMetadataAndRejectsEveryUnsupportedForm",
+        "enforcesObjectArrayAndUnicodeLengths"
+      ]
+    },
+    {
+      "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigExpressionEvaluatorTest.xml",
+      "sha256": "3f4993dfd1324eb21493aeb13c6a2444b038b1db427a52e57286b87fb2de34d2",
+      "name": "com.sstlfsj.fibra.config.ConfigExpressionEvaluatorTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.012",
+      "cases": [
+        "rejectsNonCanonicalArrayIndexesFromJsonPointer",
+        "supportsLiteralShortCircuitAndLazyIf",
+        "definedAndEqualityHaveStrictSemantics",
+        "evaluatesReferencesPointerEscapesAndRecursiveTemplates",
+        "validatesOperatorShapeMissingReferencesConditionTypesAndDepth"
+      ]
+    },
+    {
+      "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigDocumentStoreTest.xml",
+      "sha256": "fbcbcf0508a51f2e0d0753a503253eaadba7fe76d27616c3d58134571efbc7c5",
+      "name": "com.sstlfsj.fibra.config.ConfigDocumentStoreTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.252",
+      "cases": [
+        "rejectsInvalidCandidateBeforeTouchingTheSource(Path)",
+        "commitsOrRollsBackValidatedContentWithExpectedRevision(Path)"
+      ]
+    },
+    {
+      "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.DesiredEvaluationTest.xml",
+      "sha256": "67550fec770cb6eeeda9e442a43d75118b0417f203105ff10661ea4921d8523c",
+      "name": "com.sstlfsj.fibra.config.DesiredEvaluationTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.005",
+      "cases": [
+        "disabledAncestorSkipsInvalidDescendantConditionAndConfig",
+        "programmaticNodesRejectMalformedExpressionsBeforeEvaluation",
+        "groupConditionConjoinsWithChildrenAndCanBeReevaluatedWithoutChangingRawGraph",
+        "treeUpdatesAndBuildersPreserveRawConditionAndContext",
+        "localContextMakesTheSameReferenceResolveDifferentlyAndInjectsEntryMetadata"
+      ]
+    },
+    {
+      "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigSchemaBatchOrderTest.xml",
+      "sha256": "6b21da2a84f6562b808a8db65bf6a5bf39c51a5913f7ed371c86eac2e6c3d43b",
+      "name": "com.sstlfsj.fibra.config.ConfigSchemaBatchOrderTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.141",
+      "cases": [
+        "budgetRejectionNeverEntersTheLibraryAndControlDoes",
+        "laterBudgetFailuresStillPrecedeEarlierValueAndSchemaFailures",
+        "earlierValueFailurePrecedesLaterSchemaFailure",
+        "reportsLaterSchemaFailureWhenEarlierValueIsValid",
+        "earlierValueFailurePrecedesLaterUnsupportedProfile"
+      ]
+    },
+    {
+      "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.PluginDefinitionRefTest.xml",
+      "sha256": "bc1cc360e97075cb593d143fad808f5b761b397a0ea29241b5a6a9d94d787608",
+      "name": "com.sstlfsj.fibra.config.PluginDefinitionRefTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.005",
+      "cases": [
+        "requiresTheCompletePluginFacetAndDefinitionIdentity",
+        "desiredEntryKeepsTheCompleteReferenceAcrossBuilderAndValueOperations"
+      ]
+    },
+    {
+      "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigContextSnapshotTest.xml",
+      "sha256": "4696844c85b2caa9ae14b49d97b9d3003edd5192ff32b9fd9bd286c42d872fbb",
+      "name": "com.sstlfsj.fibra.config.ConfigContextSnapshotTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.002",
+      "cases": [
+        "freezesContentCalculatesRevisionAndRejectsReservedMetadata",
+        "distinguishesMissingValuesFromExplicitNull",
+        "canonicalRevisionNormalizesKeyOrderNumbersAndUnicode"
+      ]
+    },
+    {
+      "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigSchemaBootstrapTest.xml",
+      "sha256": "01e26665c5b6f2cac0c73c5a7d2d01eacc1ad31d76baae3f50abe2786d87d67d",
+      "name": "com.sstlfsj.fibra.config.ConfigSchemaBootstrapTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.001",
+      "cases": [
+        "exposesTheApprovedPureConfigurationContract"
+      ]
+    },
+    {
+      "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.DesiredStateRepositoryTest.xml",
+      "sha256": "5b6c78b4bb89a1fcf0f5a6bc844e06f8bba45e77facdd72d082c1df756c2c7ed",
+      "name": "com.sstlfsj.fibra.config.DesiredStateRepositoryTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.013",
+      "cases": [
+        "fileRepositoryIsAnExplicitReadOnlySource(Path)",
+        "memoryRepositoryUsesOptimisticTransactionalReplacement",
+        "memoryRepositoryCompensatesACommittedParticipantBeforeGlobalCommit",
+        "compensationRejectsALaterWriteAndCloseKeepsCommittedState"
+      ]
+    },
+    {
+      "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.LiteralValuesTest.xml",
+      "sha256": "6d271c015c208608cd84a43b16351119ac25a514134d0cfd0c404aa13288b9c4",
+      "name": "com.sstlfsj.fibra.config.LiteralValuesTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.013",
+      "cases": [
+        "canonicalEncodingRoundTripsThroughTheRealJsonReaderWithoutLosingData",
+        "configurationUsesTheSharedCanonicalDataBoundary",
+        "configurationRejectsMutableAndNonFiniteNumericValues",
+        "sourceReadersPreserveExactDecimalDigits"
+      ]
+    },
+    {
+      "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigSchemaBudgetTest.xml",
+      "sha256": "756ddc14da3bb56546cae8bc11d05c491c67e187c8f7631a09de1f7aedf4a517",
+      "name": "com.sstlfsj.fibra.config.ConfigSchemaBudgetTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.214",
+      "cases": [
+        "sourceIsDeeplyImmutableAndNeutralUntilQualification",
+        "batchCountsUniqueSchemaBytesAndDoesNotDeduplicateInstanceWork",
+        "countAndTextQualificationLimitsHaveIndependentExactBoundaries",
+        "boundsRefsCombinationsAndDiamondExpansionIncludingDormantDefs",
+        "boundsEffectiveStringsNodesAndDepthBeforeLibraryNodes",
+        "boundsDecimalPrecisionScaleAndExponentBeforeEncoding",
+        "admitsWholeBatchBeforeCompilingAndCountsEveryInstance",
+        "rawSchemaAndNeutralSourceNodeDepthAndByteBoundsAreSeparate"
+      ]
+    },
+    {
+      "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.DesiredInputGraphTest.xml",
+      "sha256": "ff789e1fc28da88be7002c6088364a69e594ae2a619fa9c227a618d40f327056",
+      "name": "com.sstlfsj.fibra.config.DesiredInputGraphTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.007",
+      "cases": [
+        "movesWithPostRemovalPositionsAndRejectsInvalidDestinations",
+        "preservesTreeAndCalculatesInheritedPolicyWithoutChangingLocalEntry",
+        "movesAcrossIncludeNamespaceAndRejectsAnEnabledUncollectedInclude",
+        "rejectsBlankInterceptKeysForProgrammaticNodes",
+        "upsertAndRemoveKeepTheCompleteTree",
+        "rejectsNamespaceConflictsAndRetainsCollectedChildrenWhenAncestorStops"
+      ]
+    },
+    {
+      "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigSchemaBatchAllocationTest.xml",
+      "sha256": "f5dde56a2e436bcfb85b32e770939ba420157129b8626a5a3bd7efca63e9313f",
+      "name": "com.sstlfsj.fibra.config.ConfigSchemaBatchAllocationTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.021",
+      "cases": [
+        "stillScansAfterASemanticFailureForLaterBudgetRejection",
+        "rejectsRepeatedSchemaBudgetFailureBeforeAccumulatingFailuresOrCopies",
+        "rejectsNullApiParametersSynchronously",
+        "rejectsFirstOversizedValueBeforeMaterializingOrReadingTheRestOfALazyBatch",
+        "capturesInputsOnceAndCompilesDuplicateSourcesWithoutCopyingCallerLists"
+      ]
+    },
+    {
+      "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.DefinitionConfigDocumentTest.xml",
+      "sha256": "2406087a7b458bbe6dc703bd9192464a5704155eec77fd814b00d187bd98a5a5",
+      "name": "com.sstlfsj.fibra.config.DefinitionConfigDocumentTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.028",
+      "cases": [
+        "decodesStrictEnvelopeAndDefersDormantSchemaSemantics",
+        "rejectsGlobalBoundsButDefersSingleSchemaQualification",
+        "rejectsMalformedJsonEnvelopeUtf8AndUnsupportedProfileWithoutOriginalContent"
+      ]
+    },
+    {
+      "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.DesiredConfigPatchTest.xml",
+      "sha256": "44e81f8b13c92dc3575105105fb9dc6ec94f20db755acd394db958249e88f372",
+      "name": "com.sstlfsj.fibra.config.DesiredConfigPatchTest",
+      "tests": "22",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.115",
+      "cases": [
+        "rootAndGroupAppendsIndexInsertedDescendantsWithoutGroupNamespaces(Path)",
+        "ordinaryGroupReplacementDoesNotReindexItsNewChildren(Path)",
+        "insertMustBeAnEntryList(Path)",
+        "rejectsUnknownFieldsIncludingBothOldFormats(String, Path)[1]",
+        "rejectsUnknownFieldsIncludingBothOldFormats(String, Path)[2]",
+        "rejectsUnknownFieldsIncludingBothOldFormats(String, Path)[3]",
+        "rejectsUnknownFieldsIncludingBothOldFormats(String, Path)[4]",
+        "patchesStayWithinTheCurrentIncludeNamespace(Path)",
+        "skippedPatchesWarnAndAllowLaterPatches(String, String, Path)[1]",
+        "skippedPatchesWarnAndAllowLaterPatches(String, String, Path)[2]",
+        "skippedPatchesWarnAndAllowLaterPatches(String, String, Path)[3]",
+        "skippedPatchesWarnAndAllowLaterPatches(String, String, Path)[4]",
+        "skippedPatchesWarnAndAllowLaterPatches(String, String, Path)[5]",
+        "skippedPatchesWarnAndAllowLaterPatches(String, String, Path)[6]",
+        "skippedPatchesWarnAndAllowLaterPatches(String, String, Path)[7]",
+        "shallowOverridesReplaceWholeValuesAndKeepLiteralNull(Path)",
+        "nonObjectGroupChildrenHaveStructuredDiagnostics(String, Path)[1]",
+        "nonObjectGroupChildrenHaveStructuredDiagnostics(String, Path)[2]",
+        "insertedEntriesStillUndergoDuplicateAndNodeValidation(Path)",
+        "repeatedCompilationDoesNotBakePatchesIntoSharedInput(Path)",
+        "explicitNullIsNotAnInstructionToRemoveANodeField(Path)",
+        "matchedOverridesRejectAnIncompletePluginReference(Path)"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-tool-api/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.tool.ToolApiTest.xml",
+      "sha256": "0b4978ac2a0a0c0d957206c37b4b656279f7de40ba54e2478e39f6d0ead8acc2",
+      "name": "com.sstlfsj.fibra.plugins.tool.ToolApiTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.034",
+      "cases": [
+        "exposesStableContributionAndSpillServiceKeys",
+        "remoteCodecRejectsMissingAndUnknownFields",
+        "resultFactoriesSeparateTextAbsenceAndExplicitNull",
+        "remoteCodecRejectsMalformedOrUnknownContentBlocks",
+        "remoteCodecRoundTripsStructuredResult",
+        "remoteCodecPreservesEveryJsonValueAndDistinguishesMissingFromNull",
+        "resultDefensivelyCopiesOrderedContent",
+        "requestOfFreezesItsArguments",
+        "remoteCodecRoundTripsDescriptorInputAndNullableData",
+        "exceptionPreservesStableFailureCodeAndCause",
+        "remoteCodecMapsEveryStableToolFailureAndRejectsInvalidVersions",
+        "descriptorRequiresTextAndObjectSchemas"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-tool-api/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.tool.ToolOutcomesTest.xml",
+      "sha256": "afd3f1d3435165d05ab8e1fe4e07fc357cd54b2ce3f3f757ce22ee846a1db4cb",
+      "name": "com.sstlfsj.fibra.plugins.tool.ToolOutcomesTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.066",
+      "cases": [
+        "unknownFailuresPropagateUnchangedAndEmptyIsNotASuccess",
+        "outcomesRejectNullsAndFreezeFailureContent",
+        "synchronousAndAsynchronousToolFailuresUseOneErrorAndContentProjection",
+        "lazilyNormalizesSuccessWithoutChangingItsResult"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-shell/fibra-shell-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.shell.local.ShellLifecycleTest.xml",
+      "sha256": "d301234eafc900902affbe81a0e0941169cdb3f3c451b7d439cbd56533641b97",
+      "name": "com.sstlfsj.fibra.plugins.shell.local.ShellLifecycleTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.629",
+      "cases": [
+        "timeoutCancelsARealProviderDuringAcquisitionAndWaitsForQuiescence",
+        "oversizedTimeoutFailsBeforeStartingAProcess",
+        "timeoutRemainsFirstCauseAndResultWaitsForTreeQuiescence",
+        "alreadyCancelledRequestDoesNotStartAProcess",
+        "callerCancellationReachesARealProviderDuringAcquisitionAndWaitsForQuiescence"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-shell/fibra-shell-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.shell.local.LocalShellTest.xml",
+      "sha256": "e15dd438196d2201cf05a1c163227256221e706c2b982dc17c3329a96f1a8cd2",
+      "name": "com.sstlfsj.fibra.plugins.shell.local.LocalShellTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.833",
+      "cases": [
+        "freshShellSeparatesOutputAndPreservesNonzeroResult",
+        "timeoutReturnsOnlyAfterDescendantsStop",
+        "callerCancellationWinsBeforeTimeoutAndWaitsForTree"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-shell/fibra-shell-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.shell.local.ShellPluginTest.xml",
+      "sha256": "eb2584845ea03b77bfcda8b2cfbbc09ca315eef41d1364a350a58d9d7438eaf1",
+      "name": "com.sstlfsj.fibra.plugins.shell.local.ShellPluginTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.027",
+      "cases": [
+        "manifestAndDefinitionDeclareBothContractsAndSubprocessService"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-shell/fibra-tool-shell/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.shell.tool.ShellToolTest.xml",
+      "sha256": "ed4f66562c244abe98157bc8bcade6db44e0e807cfeaf38c72ab4db00771cc95",
+      "name": "com.sstlfsj.fibra.plugins.shell.tool.ShellToolTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.18",
+      "cases": [
+        "rendersStdoutAndStderrAsSeparateModelVisibleSections",
+        "publishesBashWithActualInstanceIdAndPropagatesCancellation",
+        "invalidArgumentsFailBeforeCallingShell",
+        "rejectsTimeoutBeyondTheSupportedTimerRangeBeforeCallingShell",
+        "rendersNonZeroExitAsAStatusMarker",
+        "declaresTheActualDefinitionName",
+        "rendersEachTruncatedStreamWithTheUnavailableSpillFallback",
+        "rendersEmptyOutputExactly",
+        "rendersSignalTerminationAsAStatusMarker",
+        "mapsTimeoutCancellationAndInfrastructureFailures"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-shell/fibra-shell/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.shell.ShellContractTest.xml",
+      "sha256": "b7afb79e20ba0b3df6903fbb28236a2782798e649d8dcdbf8487f2fb0f345a18",
+      "name": "com.sstlfsj.fibra.plugins.shell.ShellContractTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.033",
+      "cases": [
+        "runtimeDescriptorDoesNotDuplicateLogicalPackageMetadata",
+        "modelsExitSignalAndTimeoutWithoutTreatingNonZeroAsAnError",
+        "exposesStableServiceKeyAndStructuredException",
+        "validatesRequest"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.acceptance.AuthorConfigurationQualificationTest.xml",
+      "sha256": "15ceaef27b08b825d94e5aea50ddcbdcca65c6473cb6667b7a96a0def731b150",
+      "name": "com.sstlfsj.fibra.plugins.acceptance.AuthorConfigurationQualificationTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "1.301",
+      "cases": [
+        "resourceReadAndCloseOutcomesUseTheSameBoundedOwner(Path)",
+        "exactSetsRejectMissingOrphanMissingAndExtraEmptyFacetsAndInactiveBadSchemas"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/target/failsafe-reports/TEST-com.sstlfsj.fibra.plugins.acceptance.FormalCliIT.xml",
+      "sha256": "ea8b584eba419f0441ea7ee9578839aa82446d64c2f5a4e1428b81c5d4505254",
+      "name": "com.sstlfsj.fibra.plugins.acceptance.FormalCliIT",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "2.295",
+      "cases": [
+        "completeApplyReplacesPackagesAndInstancesWhilePublicPluginCommandsRemainWired(Path)",
+        "localInstallPersistsWithoutDesiredEntryAndCompleteApplyReplacesThatSelection(Path)",
+        "realStorageToolsShareReplChangesAndRecoverValuesWithoutReplayingChanges(Path)"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/target/failsafe-reports/TEST-com.sstlfsj.fibra.plugins.acceptance.FormalMultiPluginIT.xml",
+      "sha256": "0b892050b27636f6dabc38abe7e015b7909cd96cad713332b32d6096592733ec",
+      "name": "com.sstlfsj.fibra.plugins.acceptance.FormalMultiPluginIT",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "10.477",
+      "cases": [
+        "packageGateKeepsDependentExecutionsPendingUntilTheProviderRecovers(Path)",
+        "realSearchPluginTerminatesManagedProcessesOnTimeoutAndCancellation(Path)",
+        "invokesRealFileSearchAndShellProductsThroughPublishedRuntime(Path)",
+        "localPackageUpgradePreservesUnrelatedProcessStackAndInflightInvocation(Path)",
+        "disablingToolWaitsForInflightCallThenRevokesItsPublishedRoute(Path)",
+        "contractPackageUpgradeReplacesItsRealDependentsWithoutADesiredContractEntry(Path)",
+        "sharedStorageRealmPropagatesChangesWhileAnotherRealmIsolatedAndRestartRecovers(Path)"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/target/failsafe-reports/TEST-com.sstlfsj.fibra.plugins.acceptance.FormalPluginArtifactsIT.xml",
+      "sha256": "e7df3aa4d386473204c212c67e936382201b4147bc925969ebe0cea29a04d518",
+      "name": "com.sstlfsj.fibra.plugins.acceptance.FormalPluginArtifactsIT",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "2.622",
+      "cases": [
+        "allInactiveFormalPackagesPassCompleteStaticAuthorQualification(Path)",
+        "implementationJarsDoNotDuplicateHostOrDynamicContractClasses",
+        "searchJarRelocatesItsPrivateJacksonImplementationAndKeepsServicesResolvable",
+        "everyFinalJarCarriesTheExactAuthorConfiguration",
+        "packagesUseExactReleaseVersionsAndOnlyDeclaredFacetDependencyEdges(Path)",
+        "authoredSchemasCoverSuccessNearestInvalidNullDefaultsAndUnknownFields",
+        "localImplementationJarsKeepJniCompatiblePrivateJnaAndCarryItsNotice"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.tool.FileToolHandlersTest.xml",
+      "sha256": "0965d80a3e2ac7406ae5c0969da702cc24345dd62bd4a8f991f8b0d1af5bd2a7",
+      "name": "com.sstlfsj.fibra.plugins.fs.tool.FileToolHandlersTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.139",
+      "cases": [
+        "writesThroughFileSystemWithRequestCancellationAndMapsFsFailure",
+        "readReturnsOneBasedBoundedStructuredLines"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.tool.FileToolPluginTest.xml",
+      "sha256": "0f2aea406457021f43b99d4ef6e77d58ce27bcaedc99ef9fbe536e47f33de4a1",
+      "name": "com.sstlfsj.fibra.plugins.fs.tool.FileToolPluginTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.006",
+      "cases": [
+        "exposesConsumerRequirementsAndFormalManifest"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.FileSystemContractTest.xml",
+      "sha256": "e7f3afe536978f0f837a48b5ea484cc30dd320a361413ee75775e2391427b07d",
+      "name": "com.sstlfsj.fibra.plugins.fs.FileSystemContractTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.061",
+      "cases": [
+        "runtimeDescriptorDoesNotDuplicateLogicalPackageMetadata",
+        "exceptionRetainsStableCodeAndCause",
+        "writeIntentVariantsRejectNullVersion",
+        "serviceKeyHasTheStableNameAndType",
+        "targetVersionAndInfoRejectInvalidConstruction",
+        "valuesKeepOpaqueTargetAndNullableSize",
+        "writeAndEditValuesEnforceTheirConstructionRules",
+        "editIntentExplicitlyModelsGuardedAndUnguardedCalls",
+        "errorCodesExposeTheCompleteStableVocabulary"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.search.SearchOutputParserTest.xml",
+      "sha256": "52e81e1df0dc99dd1f64f3be8bd7b441e75ff5d3d6306c648a5d84c61462c2f5",
+      "name": "com.sstlfsj.fibra.plugins.fs.search.SearchOutputParserTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.141",
+      "cases": [
+        "malformedJsonFailsInsteadOfReturningPartialMatches",
+        "parsesGlobLinesWithoutInventingResultsForEmptyOutput",
+        "parsesOnlyMatchRecordsAndPreservesOneBasedLineNumbers"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.search.SearchRunnerTest.xml",
+      "sha256": "b7121b71694a638147756576ab4606d4e049174f60b9a5154822daba21df1bfd",
+      "name": "com.sstlfsj.fibra.plugins.fs.search.SearchRunnerTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.059",
+      "cases": [
+        "commandValidationUsesThePublicInvalidArgumentFailure",
+        "spillFailureDoesNotTurnASuccessfulSearchIntoFailure",
+        "synchronousSpillFailureDoesNotTurnASuccessfulSearchIntoFailure",
+        "synchronousSpawnFailureAfterCancellationIsAborted",
+        "timeoutCoversServiceAndSpawnAcquisition",
+        "grepParsesMatchesAndTreatsExitOneAsAnEmptySuccess",
+        "cancellationDuringSpillSupersedesTheSuccessfulSearch",
+        "cancellationTerminatesAndWaitsForTheManagedUnit",
+        "globUsesSubprocessAndBestEffortSpillsTheCompleteFormattedResult",
+        "outputOverflowAndInvalidPatternsHaveStableFailureCodes",
+        "cancellationWinsWhenSpawnCancelsThenReturnsASynchronouslyCompletedUnit",
+        "timeoutTerminatesAndWaitsForTheManagedUnit"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.search.SearchCommandsTest.xml",
+      "sha256": "96b4f8ff70cebf76b861300ba0ef7d65de59b082433a8450270f0ba70db8ff22",
+      "name": "com.sstlfsj.fibra.plugins.fs.search.SearchCommandsTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.003",
+      "cases": [
+        "grepKeepsPatternAndTargetAsSingleArgvElements",
+        "validationRejectsBlankOrMultipleFilters",
+        "globUsesFixedDirectArgvAndExcludesVcsMetadata"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.search.ToolFsSearchEntrypointTest.xml",
+      "sha256": "708125bead266b58bae326ff96ae7f5ab44191c2f4a6f9e0ac3dca559d6f2c66",
+      "name": "com.sstlfsj.fibra.plugins.fs.search.ToolFsSearchEntrypointTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.156",
+      "cases": [
+        "runtimeDescriptorDeclaresEntrypointAndDefinitionName",
+        "publishesBothToolsUnderTheActualPluginInstanceAndRevokesThemOnDispose",
+        "rejectsAMissingRipgrepExecutableAtPluginStart"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.search.SearchTimingTest.xml",
+      "sha256": "a784b37af6ad323b63d55192931776aedab00843941e8f7563e3319f93a0af1f",
+      "name": "com.sstlfsj.fibra.plugins.fs.search.SearchTimingTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.002",
+      "cases": [
+        "rejectsGraceMillisAboveSingleTimerMaximumAtConfigurationConstruction",
+        "rejectsTimeoutMillisAboveSingleTimerMaximumAtConfigurationConstruction"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-fs/fibra-fs-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.local.WindowsFilePublisherTest.xml",
+      "sha256": "19ca22444dcb830a5f5e497c8158f020dbdc3e28e443752ba45753b71f861cbd",
+      "name": "com.sstlfsj.fibra.plugins.fs.local.WindowsFilePublisherTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.007",
+      "cases": [
+        "createsExtendedLengthDriveAndUncPaths",
+        "exposesWindowsChangeTimeForVersionTokens",
+        "copiesProtectedDaclBeforeReplacingExistingTarget",
+        "mapsAccessDeniedWithoutAttemptingReplacement",
+        "exposesTargetMissingOnlyWhenReplaceLosesTheRace"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-fs/fibra-fs-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.local.LocalFileSystemPluginTest.xml",
+      "sha256": "f55b0187bb1f5ae6dc0d1f0c908d5d27a9316e5fa879dc693808decf01e8a3ac",
+      "name": "com.sstlfsj.fibra.plugins.fs.local.LocalFileSystemPluginTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.036",
+      "cases": [
+        "exposesFormalProviderDefinitionAndManifest"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-fs/fibra-fs-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.local.LocalFileSystemTest.xml",
+      "sha256": "d4f80b424cd595663422a2bfc5c564898fce3f1025460ed199f31d32c824d483",
+      "name": "com.sstlfsj.fibra.plugins.fs.local.LocalFileSystemTest",
+      "tests": "27",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.34",
+      "cases": [
+        "pathThroughRegularFileUsesAbsentAndStaleFailureSemantics",
+        "editsOnceOrAllAndReturnsStableFailures",
+        "optionalDiffReadTreatsPreOpenDisappearanceAsNoContext",
+        "windowsReplacementIsPreparedBeforeContentAndRecreatesALostTarget",
+        "cancelledSameTargetWaiterDoesNotWaitForTheActiveWrite",
+        "spillDirectoryCannotCreateThroughAnEscapingSymlink(Path)",
+        "unrelatedTargetsDoNotShareOneMutationLock",
+        "enforcesTextSizeTypeAndUtf8Boundaries",
+        "statUsesMetadataWithoutOpeningFileContent",
+        "postCommitProbeUsesASentinelWhenTheTargetHasAlreadyDisappeared",
+        "atomicWriteUsesPrivateStagingAndCleanupCannotReverseACommit",
+        "observesCancellationBeforePublication",
+        "deniedParentUsesPermissionFailureTaxonomy",
+        "resolvesOpaqueTargetsAndReportsFileMetadata",
+        "resolvesSymlinkAliasesToOneIdentityAndWritesTheRealTarget",
+        "replacementRetainsInitiallyObservedPosixModeWhenTargetDisappearsDuringDiffRead",
+        "skipsContextualDiffWhenNewUtf8ContentReachesTheByteLimit",
+        "writesAtomicallyWithCreateAndVersionGuards",
+        "rejectsNulTextAndKeepsOverwriteDiffReadsBounded",
+        "windowsReplacementDoesNotRecreateBeforeTheDaclWasCopied",
+        "basicVersionChangesWhenWindowsChangeTimeChanges",
+        "editRejectsNulBytesBeyondTheReadSamplingWindow",
+        "editNormalizesOperandsAndRestoresCrlfWithoutDoublingCarriageReturns",
+        "atomicReplacementPreservesExistingPosixPermissions",
+        "guardedWritesUseDshFailureCodesAndNeverOverwriteACompetingCreate",
+        "blockingFileOperationsRunOffTheSubscriberThread",
+        "guardedEditsCheckFreshnessBeforeReadingOrMatching"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.SubprocessContractTest.xml",
+      "sha256": "c95134fa5463125452bbb90459632b904ca439c98e2782d9476e00c6b16188b1",
+      "name": "com.sstlfsj.fibra.plugins.subprocess.SubprocessContractTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.043",
+      "cases": [
+        "runtimeDescriptorDoesNotDuplicateLogicalPackageMetadata",
+        "validatesSpawnSpecAndDefensivelyCopiesArgv",
+        "exposesStableServiceKeyAndStructuredException",
+        "validatesCapturedOutputAndTerminalOutcome"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.SystemdScopeOwnerTest.xml",
+      "sha256": "55e1e643f25f7144db830d82fcbbabc7c987a65ae4378ed1f9407bc7ce90dd1b",
+      "name": "com.sstlfsj.fibra.plugins.subprocess.local.SystemdScopeOwnerTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.013",
+      "cases": [
+        "stopMustProveTheEmptyScopeBecameQuiet",
+        "activeEmptyScopeStopsWhileManagerAndMalformedFailuresRemainLoud",
+        "pendingMissingIsNotQuietWhileTheDirectLauncherLives",
+        "establishedScopeTreatsRapidCollectMissingAsQuiet",
+        "strictStateParserAcceptsNotSetAndRejectsMalformedShapes",
+        "collectRacesMakeEstablishedKillAndStopIdempotent",
+        "stateValuesAreExactAndTasksCurrentSupportsLongCounts",
+        "activeDescendantsReceiveTermGraceKillBeforeQuiet",
+        "observationUsesDeadlineBoundedExponentialBackoff"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.WindowsJobProcessUnitTest.xml",
+      "sha256": "b0b70270b31f64d669843fcc38a039e62fc9c5ef5f77f737f1dce9d61d0a3684",
+      "name": "com.sstlfsj.fibra.plugins.subprocess.local.WindowsJobProcessUnitTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.151",
+      "cases": [
+        "probesEveryWindowsSpawnAndWarnsOnlyOnceBeforeSupervisorFallback",
+        "nativeLaunchFailureAfterSuccessfulProbeIsNotReplayedThroughSupervisor",
+        "jobObservationFailureIsTerminationFailureRatherThanQuietSuccess",
+        "cancellationBeforeStartDoesNotCreateANativeOwner",
+        "nativeStartAndTerminationFailuresRemainLoud",
+        "terminateAndDisposeControlTheSameOwnerOnlyOnce",
+        "nullNativeOwnerIsSpawnFailureAndReleasesTheRegisteredEffect",
+        "directExitBoundsInheritedPipeDrainWithoutClosingOrTerminatingTheJob",
+        "doneTracksTheDirectCommandWhileWaitForExitRequiresAnEmptyJob",
+        "localProviderSelectsTheNativeOwnerOnWindows"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.SystemdScopeLauncherTest.xml",
+      "sha256": "d02bfe01103355386c42ab082f022c4780a56ee806d1c235b2401ddf0d32c46a",
+      "name": "com.sstlfsj.fibra.plugins.subprocess.local.SystemdScopeLauncherTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.62",
+      "cases": [
+        "supervisorRestoresPresentAndAbsentInvocationIdBeforeSpawningTheTarget",
+        "invocationFrameWriteFailureTransfersTheStartedRangeForOwnedCleanup",
+        "probesTheExactScopeShapeAndLightweightManagerSeparately",
+        "immediateLeaseCloseCannotLoseTheSupervisorEndSignal",
+        "malformedInvocationFrameFailsBeforeSpawningTheTarget",
+        "invalidInvocationIdIsRejectedBeforeExecutingTheDeepProbe",
+        "launchesExactLiteralArgvInTargetCwdAndWritesBoundedInvocationFrame",
+        "systemdCommandOutputAndCollectorFailuresStayInsideTheFixedDeadline"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.LinuxScopeProcessUnitTest.xml",
+      "sha256": "2d1ee2b5fbd599c1c31de0012e97fd3f27d9303423f8d23a7d37919243b93d30",
+      "name": "com.sstlfsj.fibra.plugins.subprocess.local.LinuxScopeProcessUnitTest",
+      "tests": "17",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.15",
+      "cases": [
+        "forcedScopeObservationWaitsForTheDirectLauncherToExit",
+        "malformedEstablishedProtocolForcesTheScopeAndFailsTerminationLoudly",
+        "cleanupFailureOverridesTheOriginalSpawnFailureAndRetainsOwnership",
+        "unterminatedPartialControlRecordIsRejected",
+        "normalTerminateOnlyClosesTheSupervisorLeaseBeforeProtocolSettlement",
+        "cleanupFailureKeepsTheSupervisorFailureAsEvidence",
+        "outcomeMayBeFollowedOnlyByTerminationFailureWhileDoneStaysPublished",
+        "preEstablishmentExitUsesIsolatedSystemdStderrAndForcesResidualScopeCleanup",
+        "cancellationBeforeEstablishmentReleasesRealOwnershipOnlyAfterQuietCleanup(boolean)[1]",
+        "cancellationBeforeEstablishmentReleasesRealOwnershipOnlyAfterQuietCleanup(boolean)[2]",
+        "failureMayOnlyUpgradeToTerminationFailure",
+        "controlProtocolRejectsInvalidTransitionsAndRecordsAfterQuiet",
+        "controlProtocolRejectsMalformedOutcomeValuesAndOversizedRecords",
+        "initAcceptsOnlySpawnFailure",
+        "startupFailureCleanupHasAFixedBudgetIndependentOfTheRequestedGrace",
+        "qDoesNotCompleteOrReleaseUntilTheScopeIsQuiet",
+        "watchdogCleanupFailureKeepsTheOriginalBudgetFailureAsEvidence"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.SupervisorFailureTest.xml",
+      "sha256": "0e5b89f0d261107e5bccd665930fc77c9c9fb92e42deb688a11342bd51e96065",
+      "name": "com.sstlfsj.fibra.plugins.subprocess.local.SupervisorFailureTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "3.792",
+      "cases": [
+        "cancellationInterruptsSupervisorAcquisitionBeforeTheStartWatchdog",
+        "unresponsiveSupervisorFailsDrainWithinItsGraceBudget",
+        "malformedSupervisorPayloadPidIsSpawnFailure"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.LocalSubprocessTest.xml",
+      "sha256": "17fa9d17e58e2ec17448295de2528430ed30dc6df5a66f124cfa27cc332e303f",
+      "name": "com.sstlfsj.fibra.plugins.subprocess.local.LocalSubprocessTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "1.585",
+      "cases": [
+        "missingExecutableIsSpawnFailure",
+        "parentExitStillTerminatesItsBackgroundDescendant",
+        "keepsByteExactUtf8TailAcrossOutputChunks",
+        "supervisorThatExitsBeforePayloadStartIsSpawnFailure",
+        "confirmedQuiescenceReleasesTheCallerEffect",
+        "capturesSeparateBoundedOutputAndNonzeroExit",
+        "freezesOutputOnlyAfterInheritedPipesClose",
+        "rejectsGraceBeyondTheSupportedTimerRange",
+        "confirmedQuiescenceReleasesTheProviderCancellationListener",
+        "callerScopeCloseTerminatesLiveTree",
+        "grantsTheCompleteGraceBeforeEscalatingToKill"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.JnaWindowsJobOwnerTest.xml",
+      "sha256": "27bc8a2daf22b9f6a48ead4a488e45f474aa282bded8f187ef21584794a9030e",
+      "name": "com.sstlfsj.fibra.plugins.subprocess.local.JnaWindowsJobOwnerTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.395",
+      "cases": [
+        "jobObservationAndTerminationUseTheOwnedJobHandle",
+        "createsSuspendedAssignsTheJobAndOnlyThenResumes",
+        "capabilityProbeConfiguresAndClosesAnEmptyJob",
+        "twoOwnersCanCreateConcurrentlyWithOnlyTheirThreeTargetHandlesInherited",
+        "resumeFailureTerminatesTheSuspendedProcessAndClosesEveryOwnedHandle",
+        "childPipeCloseFailureTerminatesBeforeResumeAndPreservesContainment",
+        "extendedJobLimitInformationUsesTheNativePointerLayout",
+        "assignmentFailureTerminatesTheSuspendedProcessAndClosesEveryOwnedHandle"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.LocalSubprocessLinuxSelectionTest.xml",
+      "sha256": "4a2dd7a3ccf3150990baec720f5b2ad7557a690a3c2d833af927593398916726",
+      "name": "com.sstlfsj.fibra.plugins.subprocess.local.LocalSubprocessLinuxSelectionTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.344",
+      "cases": [
+        "cachesSuccessfulDeepProbeButRechecksManagerForEverySpawn",
+        "failedDeepProbeIsRetriedAndWarnsOnceBeforeFallback",
+        "managerFailureFallsBackButKeepsTheSuccessfulDeepProbeCache",
+        "nativeLaunchFailureAfterPositiveProbesDoesNotReplayTheTarget"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.SubprocessPluginTest.xml",
+      "sha256": "d226fb5b0bd4d834e0364d79e7980f3588c0a9d55396c79bb69b2434edb4a5e7",
+      "name": "com.sstlfsj.fibra.plugins.subprocess.local.SubprocessPluginTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.003",
+      "cases": [
+        "manifestAndDefinitionDeclareContractAndService"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.WindowsExecutableResolverTest.xml",
+      "sha256": "19718847f65d2a5669a890ad3c4728769c98a6d70765cdba93612c0b3ccab7b1",
+      "name": "com.sstlfsj.fibra.plugins.subprocess.local.WindowsExecutableResolverTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.003",
+      "cases": [
+        "explicitRelativeAndAbsolutePathsDoNotSearchPath",
+        "targetCwdShadowsPathAndComPrecedesExe",
+        "pathDirectoryOrderPrecedesExtensionPreferenceInLaterDirectories"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-storage/fibra-storage/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.storage.StorageContractTest.xml",
+      "sha256": "cb115a2a6b6d24e73fced62324e41e8e1640b6dcfc8a30229b50fda30992d562",
+      "name": "com.sstlfsj.fibra.plugins.storage.StorageContractTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.043",
+      "cases": [
+        "runtimeDescriptorDoesNotDuplicateLogicalPackageMetadata",
+        "changesHaveClosedPutAndRemoveShapes",
+        "documentIsAnImmutableRevisionedLiteralSnapshot",
+        "serviceAndErrorsExposeStableMachineContracts"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-storage/fibra-storage-json/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.storage.json.JsonConfigStoreTest.xml",
+      "sha256": "3daa597cb9f87dd7ce627c696da44d8d2b8adf82558bab9253f8dbf8c74f4d5d",
+      "name": "com.sstlfsj.fibra.plugins.storage.json.JsonConfigStoreTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.326",
+      "cases": [
+        "listenerFailureIsLoggedAndIsolatedWhileTheReturnedHandleIsIdempotent",
+        "callerScopeOwnsSubscriptions",
+        "missingDocumentIsEmptyAndMaterializesOnlyOnFirstSuccessfulWrite",
+        "entrypointPublishesTheStoreAndManifestDeclaresTheContractEdge",
+        "failedPublishDoesNotChangeMemoryOrEmitAndTheQueueRecovers",
+        "postPublishDirectorySyncFailureKeepsMemoryEventsAndRestartConsistent",
+        "malformedAndForeignVersionDocumentsFailWithStableCodes",
+        "concurrentWritesCommitAndNotifyInRevisionOrder",
+        "storeInstancesKeepStateAndListenersIsolated",
+        "drainRejectsNewOperationsAndWaitsForAcceptedWriteAndNotification"
+      ]
+    },
+    {
+      "path": "fibra-plugins/fibra-plugins-storage/fibra-tool-storage/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.storage.tool.StorageToolEntrypointTest.xml",
+      "sha256": "731838fb695bdd550cc2ae8f4317b06cc734cfe2be5d023e9aec385a63eaea39",
+      "name": "com.sstlfsj.fibra.plugins.storage.tool.StorageToolEntrypointTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.288",
+      "cases": [
+        "publishesFourFormalToolsWithClosedSchemasAndManifest",
+        "loadsPutsAndRemovesDocumentsWhileRejectingUnknownOrInvalidArguments",
+        "mapsStorageErrorsAndHonorsCancellationBeforeAndAfterCommit",
+        "reportsOnlyThisInstanceLiveBoundedChangeSnapshotAndDisposesSubscription"
+      ]
+    },
+    {
+      "path": "fibra-example/content-sanitizer/api/target/surefire-reports/TEST-com.sstlfsj.fibra.example.sanitizer.ContentSanitizerContributionTest.xml",
+      "sha256": "92d4419d16bb517268b44042e381cb5c4a8c577213a8e647a1ec8a8a323f07f2",
+      "name": "com.sstlfsj.fibra.example.sanitizer.ContentSanitizerContributionTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.039",
+      "cases": [
+        "mapsTheLanguageNeutralWireContractToTypedHostValues",
+        "rejectsAnInvalidRemoteResultInsteadOfGuessing"
+      ]
+    },
+    {
+      "path": "fibra-example/content-sanitizer/spring-host/target/failsafe-reports/TEST-com.sstlfsj.fibra.example.FibraSpringHostIT.xml",
+      "sha256": "613a610953f1d28d7fabfbf20c675efcfedae39ebfb551f008f1d03c446dacc1",
+      "name": "com.sstlfsj.fibra.example.FibraSpringHostIT",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "2.653",
+      "cases": [
+        "exposesTheNodePluginAsARegularSpringHttpCapability"
+      ]
+    },
+    {
+      "path": "fibra-example/content-sanitizer/spring-host/target/failsafe-reports/TEST-com.sstlfsj.fibra.example.SanitizerAuthorConfigurationIT.xml",
+      "sha256": "a7d96f971fbabd07e5b26389f2865224b935d9239cedc36e7bd78aff159bc64e",
+      "name": "com.sstlfsj.fibra.example.SanitizerAuthorConfigurationIT",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.573",
+      "cases": [
+        "copiedInactivePackagePassesWholePackageQualificationAndValueBoundaries(Path)"
+      ]
+    }
+  ]
+}

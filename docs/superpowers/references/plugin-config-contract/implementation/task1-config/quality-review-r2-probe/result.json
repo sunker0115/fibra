@@ -1,0 +1,77 @@
+[
+  {
+    "kind": "compile_actual_sources",
+    "command": [
+      "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home/bin/javac",
+      "-cp",
+      "/Users/sunke/dev/ai-project/fibra/fibra-config/target/test-classes:/Users/sunke/dev/ai-project/fibra/fibra-config/target/classes:/private/tmp/fibra-config-contract-m2/com/networknt/json-schema-validator/3.0.8/json-schema-validator-3.0.8.jar:/private/tmp/fibra-config-contract-m2/com/ethlo/time/itu/1.14.0/itu-1.14.0.jar:/private/tmp/fibra-config-contract-m2/org/slf4j/slf4j-api/2.0.18/slf4j-api-2.0.18.jar:/Users/sunke/dev/ai-project/fibra/fibra-api/target/classes:/private/tmp/fibra-config-contract-m2/io/projectreactor/reactor-core/3.8.6/reactor-core-3.8.6.jar:/private/tmp/fibra-config-contract-m2/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.jar:/private/tmp/fibra-config-contract-m2/org/jspecify/jspecify/1.0.0/jspecify-1.0.0.jar:/private/tmp/fibra-config-contract-m2/tools/jackson/core/jackson-databind/3.1.5/jackson-databind-3.1.5.jar:/private/tmp/fibra-config-contract-m2/com/fasterxml/jackson/core/jackson-annotations/2.21/jackson-annotations-2.21.jar:/private/tmp/fibra-config-contract-m2/tools/jackson/core/jackson-core/3.1.5/jackson-core-3.1.5.jar:/private/tmp/fibra-config-contract-m2/tools/jackson/dataformat/jackson-dataformat-yaml/3.1.5/jackson-dataformat-yaml-3.1.5.jar:/private/tmp/fibra-config-contract-m2/org/snakeyaml/snakeyaml-engine/3.0.1/snakeyaml-engine-3.0.1.jar:/private/tmp/fibra-config-contract-m2/org/junit/jupiter/junit-jupiter/6.1.3/junit-jupiter-6.1.3.jar:/private/tmp/fibra-config-contract-m2/org/junit/jupiter/junit-jupiter-api/6.1.3/junit-jupiter-api-6.1.3.jar:/private/tmp/fibra-config-contract-m2/org/opentest4j/opentest4j/1.3.0/opentest4j-1.3.0.jar:/private/tmp/fibra-config-contract-m2/org/junit/platform/junit-platform-commons/6.1.3/junit-platform-commons-6.1.3.jar:/private/tmp/fibra-config-contract-m2/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar:/private/tmp/fibra-config-contract-m2/org/junit/jupiter/junit-jupiter-params/6.1.3/junit-jupiter-params-6.1.3.jar:/private/tmp/fibra-config-contract-m2/org/junit/jupiter/junit-jupiter-engine/6.1.3/junit-jupiter-engine-6.1.3.jar:/private/tmp/fibra-config-contract-m2/org/junit/platform/junit-platform-engine/6.1.3/junit-platform-engine-6.1.3.jar:",
+      "-d",
+      "/private/tmp/fibra-config-contract-evidence/config/quality-review-r2-probe",
+      "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigBatchFailure.java",
+      "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigSchema.java",
+      "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigSchemaException.java",
+      "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigSchemaSource.java",
+      "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigValidationInput.java",
+      "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigViolation.java",
+      "fibra-config/src/main/java/com/sstlfsj/fibra/config/DefinitionConfigDocument.java",
+      "fibra-config/src/main/java/com/sstlfsj/fibra/config/SchemaBudget.java",
+      "fibra-config/src/main/java/com/sstlfsj/fibra/config/SchemaDiagnostics.java",
+      "fibra-config/src/main/java/com/sstlfsj/fibra/config/SchemaDocumentReader.java",
+      "fibra-config/src/main/java/com/sstlfsj/fibra/config/SchemaLibrary.java",
+      "fibra-config/src/main/java/com/sstlfsj/fibra/config/SchemaProfile.java",
+      "/private/tmp/fibra-config-contract-evidence/config/quality-review-r2-probe/BatchCopyProbe.java",
+      "/private/tmp/fibra-config-contract-evidence/config/quality-review-r2-probe/BatchBoundaryProbe.java"
+    ],
+    "exit": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "kind": "BatchCopyProbe",
+    "args": [
+      "1"
+    ],
+    "command": [
+      "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home/bin/java",
+      "-Xmx32m",
+      "-cp",
+      "/private/tmp/fibra-config-contract-evidence/config/quality-review-r2-probe:/Users/sunke/dev/ai-project/fibra/fibra-config/target/test-classes:/Users/sunke/dev/ai-project/fibra/fibra-config/target/classes:/private/tmp/fibra-config-contract-m2/com/networknt/json-schema-validator/3.0.8/json-schema-validator-3.0.8.jar:/private/tmp/fibra-config-contract-m2/com/ethlo/time/itu/1.14.0/itu-1.14.0.jar:/private/tmp/fibra-config-contract-m2/org/slf4j/slf4j-api/2.0.18/slf4j-api-2.0.18.jar:/Users/sunke/dev/ai-project/fibra/fibra-api/target/classes:/private/tmp/fibra-config-contract-m2/io/projectreactor/reactor-core/3.8.6/reactor-core-3.8.6.jar:/private/tmp/fibra-config-contract-m2/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.jar:/private/tmp/fibra-config-contract-m2/org/jspecify/jspecify/1.0.0/jspecify-1.0.0.jar:/private/tmp/fibra-config-contract-m2/tools/jackson/core/jackson-databind/3.1.5/jackson-databind-3.1.5.jar:/private/tmp/fibra-config-contract-m2/com/fasterxml/jackson/core/jackson-annotations/2.21/jackson-annotations-2.21.jar:/private/tmp/fibra-config-contract-m2/tools/jackson/core/jackson-core/3.1.5/jackson-core-3.1.5.jar:/private/tmp/fibra-config-contract-m2/tools/jackson/dataformat/jackson-dataformat-yaml/3.1.5/jackson-dataformat-yaml-3.1.5.jar:/private/tmp/fibra-config-contract-m2/org/snakeyaml/snakeyaml-engine/3.0.1/snakeyaml-engine-3.0.1.jar:/private/tmp/fibra-config-contract-m2/org/junit/jupiter/junit-jupiter/6.1.3/junit-jupiter-6.1.3.jar:/private/tmp/fibra-config-contract-m2/org/junit/jupiter/junit-jupiter-api/6.1.3/junit-jupiter-api-6.1.3.jar:/private/tmp/fibra-config-contract-m2/org/opentest4j/opentest4j/1.3.0/opentest4j-1.3.0.jar:/private/tmp/fibra-config-contract-m2/org/junit/platform/junit-platform-commons/6.1.3/junit-platform-commons-6.1.3.jar:/private/tmp/fibra-config-contract-m2/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar:/private/tmp/fibra-config-contract-m2/org/junit/jupiter/junit-jupiter-params/6.1.3/junit-jupiter-params-6.1.3.jar:/private/tmp/fibra-config-contract-m2/org/junit/jupiter/junit-jupiter-engine/6.1.3/junit-jupiter-engine-6.1.3.jar:/private/tmp/fibra-config-contract-m2/org/junit/platform/junit-platform-engine/6.1.3/junit-platform-engine-6.1.3.jar:",
+      "BatchCopyProbe",
+      "1"
+    ],
+    "exit": 0,
+    "stdout": "constant-space input constructed; count=1\nOptional[ConfigBatchFailure[inputIndex=0, violation=ConfigViolation[code=BUDGET_EXCEEDED, keyword=, instancePointer=]]]\n",
+    "stderr": ""
+  },
+  {
+    "kind": "BatchCopyProbe",
+    "args": [
+      "10000000"
+    ],
+    "command": [
+      "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home/bin/java",
+      "-Xmx32m",
+      "-cp",
+      "/private/tmp/fibra-config-contract-evidence/config/quality-review-r2-probe:/Users/sunke/dev/ai-project/fibra/fibra-config/target/test-classes:/Users/sunke/dev/ai-project/fibra/fibra-config/target/classes:/private/tmp/fibra-config-contract-m2/com/networknt/json-schema-validator/3.0.8/json-schema-validator-3.0.8.jar:/private/tmp/fibra-config-contract-m2/com/ethlo/time/itu/1.14.0/itu-1.14.0.jar:/private/tmp/fibra-config-contract-m2/org/slf4j/slf4j-api/2.0.18/slf4j-api-2.0.18.jar:/Users/sunke/dev/ai-project/fibra/fibra-api/target/classes:/private/tmp/fibra-config-contract-m2/io/projectreactor/reactor-core/3.8.6/reactor-core-3.8.6.jar:/private/tmp/fibra-config-contract-m2/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.jar:/private/tmp/fibra-config-contract-m2/org/jspecify/jspecify/1.0.0/jspecify-1.0.0.jar:/private/tmp/fibra-config-contract-m2/tools/jackson/core/jackson-databind/3.1.5/jackson-databind-3.1.5.jar:/private/tmp/fibra-config-contract-m2/com/fasterxml/jackson/core/jackson-annotations/2.21/jackson-annotations-2.21.jar:/private/tmp/fibra-config-contract-m2/tools/jackson/core/jackson-core/3.1.5/jackson-core-3.1.5.jar:/private/tmp/fibra-config-contract-m2/tools/jackson/dataformat/jackson-dataformat-yaml/3.1.5/jackson-dataformat-yaml-3.1.5.jar:/private/tmp/fibra-config-contract-m2/org/snakeyaml/snakeyaml-engine/3.0.1/snakeyaml-engine-3.0.1.jar:/private/tmp/fibra-config-contract-m2/org/junit/jupiter/junit-jupiter/6.1.3/junit-jupiter-6.1.3.jar:/private/tmp/fibra-config-contract-m2/org/junit/jupiter/junit-jupiter-api/6.1.3/junit-jupiter-api-6.1.3.jar:/private/tmp/fibra-config-contract-m2/org/opentest4j/opentest4j/1.3.0/opentest4j-1.3.0.jar:/private/tmp/fibra-config-contract-m2/org/junit/platform/junit-platform-commons/6.1.3/junit-platform-commons-6.1.3.jar:/private/tmp/fibra-config-contract-m2/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar:/private/tmp/fibra-config-contract-m2/org/junit/jupiter/junit-jupiter-params/6.1.3/junit-jupiter-params-6.1.3.jar:/private/tmp/fibra-config-contract-m2/org/junit/jupiter/junit-jupiter-engine/6.1.3/junit-jupiter-engine-6.1.3.jar:/private/tmp/fibra-config-contract-m2/org/junit/platform/junit-platform-engine/6.1.3/junit-platform-engine-6.1.3.jar:",
+      "BatchCopyProbe",
+      "10000000"
+    ],
+    "exit": 0,
+    "stdout": "constant-space input constructed; count=10000000\nOptional[ConfigBatchFailure[inputIndex=0, violation=ConfigViolation[code=BUDGET_EXCEEDED, keyword=, instancePointer=]]]\n",
+    "stderr": ""
+  },
+  {
+    "kind": "BatchBoundaryProbe",
+    "args": [],
+    "command": [
+      "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home/bin/java",
+      "-Xmx32m",
+      "-cp",
+      "/private/tmp/fibra-config-contract-evidence/config/quality-review-r2-probe:/Users/sunke/dev/ai-project/fibra/fibra-config/target/test-classes:/Users/sunke/dev/ai-project/fibra/fibra-config/target/classes:/private/tmp/fibra-config-contract-m2/com/networknt/json-schema-validator/3.0.8/json-schema-validator-3.0.8.jar:/private/tmp/fibra-config-contract-m2/com/ethlo/time/itu/1.14.0/itu-1.14.0.jar:/private/tmp/fibra-config-contract-m2/org/slf4j/slf4j-api/2.0.18/slf4j-api-2.0.18.jar:/Users/sunke/dev/ai-project/fibra/fibra-api/target/classes:/private/tmp/fibra-config-contract-m2/io/projectreactor/reactor-core/3.8.6/reactor-core-3.8.6.jar:/private/tmp/fibra-config-contract-m2/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.jar:/private/tmp/fibra-config-contract-m2/org/jspecify/jspecify/1.0.0/jspecify-1.0.0.jar:/private/tmp/fibra-config-contract-m2/tools/jackson/core/jackson-databind/3.1.5/jackson-databind-3.1.5.jar:/private/tmp/fibra-config-contract-m2/com/fasterxml/jackson/core/jackson-annotations/2.21/jackson-annotations-2.21.jar:/private/tmp/fibra-config-contract-m2/tools/jackson/core/jackson-core/3.1.5/jackson-core-3.1.5.jar:/private/tmp/fibra-config-contract-m2/tools/jackson/dataformat/jackson-dataformat-yaml/3.1.5/jackson-dataformat-yaml-3.1.5.jar:/private/tmp/fibra-config-contract-m2/org/snakeyaml/snakeyaml-engine/3.0.1/snakeyaml-engine-3.0.1.jar:/private/tmp/fibra-config-contract-m2/org/junit/jupiter/junit-jupiter/6.1.3/junit-jupiter-6.1.3.jar:/private/tmp/fibra-config-contract-m2/org/junit/jupiter/junit-jupiter-api/6.1.3/junit-jupiter-api-6.1.3.jar:/private/tmp/fibra-config-contract-m2/org/opentest4j/opentest4j/1.3.0/opentest4j-1.3.0.jar:/private/tmp/fibra-config-contract-m2/org/junit/platform/junit-platform-commons/6.1.3/junit-platform-commons-6.1.3.jar:/private/tmp/fibra-config-contract-m2/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar:/private/tmp/fibra-config-contract-m2/org/junit/jupiter/junit-jupiter-params/6.1.3/junit-jupiter-params-6.1.3.jar:/private/tmp/fibra-config-contract-m2/org/junit/jupiter/junit-jupiter-engine/6.1.3/junit-jupiter-engine-6.1.3.jar:/private/tmp/fibra-config-contract-m2/org/junit/platform/junit-platform-engine/6.1.3/junit-platform-engine-6.1.3.jar:",
+      "BatchBoundaryProbe"
+    ],
+    "exit": 0,
+    "stdout": "ConfigBatchFailure[inputIndex=0, violation=ConfigViolation[code=BUDGET_EXCEEDED, keyword=, instancePointer=]]\nConfigBatchFailure[inputIndex=-1, violation=ConfigViolation[code=BUDGET_EXCEEDED, keyword=, instancePointer=]]\nConfigBatchFailure[inputIndex=2, violation=ConfigViolation[code=INVALID_SCHEMA, keyword=, instancePointer=]]\nConfigBatchFailure[inputIndex=1, violation=ConfigViolation[code=VALUE_MISMATCH, keyword=type, instancePointer=]]\nConfigBatchFailure[inputIndex=0, violation=ConfigViolation[code=UNSUPPORTED_PROFILE, keyword=, instancePointer=]]\n",
+    "stderr": "SLF4J(W): No SLF4J providers were found.\nSLF4J(W): Defaulting to no-operation (NOP) logger implementation\nSLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.\n"
+  }
+]

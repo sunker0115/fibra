@@ -1,0 +1,774 @@
+{
+  "artifacts": [
+    {
+      "module": "fibra-api",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-api/.flattened-pom.xml",
+      "sha256": "5b250b7af9386468965893def4947ab989ddfa6d6a1bb7b5db174ad08b39df83",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/fibra-api-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-api",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-api/target/fibra-api-0.5.0-SNAPSHOT.jar",
+      "sha256": "f5a711f7045b78670c3b9f68b0530518daba3a0b7cba8fe15fd3f36d8f0188b8",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/fibra-api-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-artifact",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-artifact/.flattened-pom.xml",
+      "sha256": "77383e2e1a6f92c8d2736b05906e4e3997db83639a240df4c3fe035c353b516b",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/fibra-artifact-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-artifact",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-artifact/target/fibra-artifact-0.5.0-SNAPSHOT.jar",
+      "sha256": "705e7235f9acf2827b5b05b6943766c2dd713293d8843707f984487cff493b1e",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/fibra-artifact-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-bom",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-bom/.flattened-pom.xml",
+      "sha256": "be6d517fd7fde683afa6a345ece50799e1af0bf6998639eb34d0d0af9125aa10",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-bom/0.5.0-SNAPSHOT/fibra-bom-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-bridge",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-bridge/.flattened-pom.xml",
+      "sha256": "fe567b0191d0528ded683cfd23dd4f2ea0e8d535b55c2f75f35ab4b7db3c06bf",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/fibra-bridge-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-bridge",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-bridge/target/fibra-bridge-0.5.0-SNAPSHOT.jar",
+      "sha256": "33b7ccc639c3a547a36c169e95a4de37714495f2e740ed1aa3303e654de7cb82",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/fibra-bridge-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-cli-api",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-cli-api/.flattened-pom.xml",
+      "sha256": "0de219a7cb9a636961633421cc35cb56f5695e9860a707b308cc982fdb474b59",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-cli-api/0.5.0-SNAPSHOT/fibra-cli-api-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-cli-api",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-cli-api/target/fibra-cli-api-0.5.0-SNAPSHOT.jar",
+      "sha256": "c33a540fb62ea285f255d648eb1622e45f5d54b6054991f8d04330402b702af5",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-cli-api/0.5.0-SNAPSHOT/fibra-cli-api-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-cli",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-cli/.flattened-pom.xml",
+      "sha256": "06f42c7e1eb602ae688f238674db704039fee1a2b1c060d10c248cd8fb4651b9",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-cli/0.5.0-SNAPSHOT/fibra-cli-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-cli",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-cli/target/fibra-cli-0.5.0-SNAPSHOT.jar",
+      "sha256": "5fe296d3a1aae67098163a4d708edffcaaed14063d6707d4dc3f3bedc6f94827",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-cli/0.5.0-SNAPSHOT/fibra-cli-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-client-protocol",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-client-protocol/.flattened-pom.xml",
+      "sha256": "515d95a3810aac59d883e66ee1a4673183e3cc315bd766508e8a93641f4567d6",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/fibra-client-protocol-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-client-protocol",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-client-protocol/target/fibra-client-protocol-0.5.0-SNAPSHOT.jar",
+      "sha256": "dc0292ac593e181e57c490db5cf741f35cf44eed86c16431196e5e83560844cb",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/fibra-client-protocol-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-config",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-config/.flattened-pom.xml",
+      "sha256": "bc1deda5f6e281d3eead4c6fef668ac57bb2679540b91b17c17f1a04e10dd5ad",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/fibra-config-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-config",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-config/target/fibra-config-0.5.0-SNAPSHOT.jar",
+      "sha256": "0e617c9f148c124ca3fc63268d3688115728367b517778593838aecfd379aab0",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/fibra-config-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-core",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-core/.flattened-pom.xml",
+      "sha256": "4e19223f68bbbdd822a748aa33df69ef22b8d7553b164343de38c20b48a3c0a5",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/fibra-core-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-core",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-core/target/fibra-core-0.5.0-SNAPSHOT.jar",
+      "sha256": "030e9457ff674aa054244ffe47c43c53493a99777becf4d91a3be219e38155a0",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/fibra-core-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-distribution",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-distribution/.flattened-pom.xml",
+      "sha256": "2e7755c1cae8a6e091a96a9df6418df7edea0fa19b4b0e921b6fafc0ae9b0466",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-distribution/0.5.0-SNAPSHOT/fibra-distribution-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-engine",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-engine/.flattened-pom.xml",
+      "sha256": "0a4c0c1c8443b7beb61edb5b5ca60f5a549e38312d61c0f05f9202f57675f6a2",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/fibra-engine-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-engine",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-engine/target/fibra-engine-0.5.0-SNAPSHOT.jar",
+      "sha256": "eb45f515cbbb59852496278979c069197009eba0e29d60f277895b2293fdc219",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/fibra-engine-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-plugin-archetype",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugin-archetype/.flattened-pom.xml",
+      "sha256": "d74b168dd5b57646d0ffa68c1ded91a8bf2cc29540b8d3888d67bff412ecfd8b",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-plugin-archetype/0.5.0-SNAPSHOT/fibra-plugin-archetype-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-plugin-archetype",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugin-archetype/target/fibra-plugin-archetype-0.5.0-SNAPSHOT.jar",
+      "sha256": "a0e2fe696b519f87fc27a20de715a1df38bbe95aefa65720f408b469569a75ac",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-plugin-archetype/0.5.0-SNAPSHOT/fibra-plugin-archetype-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-fs/fibra-fs-local",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-fs/fibra-fs-local/.flattened-pom.xml",
+      "sha256": "22b361db1cf91dcd51801266649e9172943c7e3f388c419fd4f67d249ab3c444",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-fs-local/0.5.0-SNAPSHOT/fibra-fs-local-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-fs/fibra-fs-local",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-fs/fibra-fs-local/target/fibra-fs-local-0.5.0-SNAPSHOT.jar",
+      "sha256": "f56f69842d2f11942bb05cac8c6480d5100b2220d58d8f87bde97174c9573dbe",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-fs-local/0.5.0-SNAPSHOT/fibra-fs-local-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-fs/fibra-fs",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-fs/fibra-fs/.flattened-pom.xml",
+      "sha256": "456c176edba34c75c9374565ba384b5bf6ffecd938a4b7e007c893a6a77d4534",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-fs/0.5.0-SNAPSHOT/fibra-fs-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-fs/fibra-fs",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-fs/fibra-fs/target/fibra-fs-0.5.0-SNAPSHOT.jar",
+      "sha256": "0d1828792f9c35dbdeb6720f9ad2af40f1c2eb619bc9f1c64429d25c629dfcea",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-fs/0.5.0-SNAPSHOT/fibra-fs-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/.flattened-pom.xml",
+      "sha256": "d92586dff903b3ff86e2bcf3bc88aabbc98ee5e6db0c0b28efa8de0b7d9e4548",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-tool-fs-search/0.5.0-SNAPSHOT/fibra-tool-fs-search-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/target/fibra-tool-fs-search-0.5.0-SNAPSHOT.jar",
+      "sha256": "2d787e763f3087fc42ee8d513108d0d89e77c18be98af831cfce9dbc116fe727",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-tool-fs-search/0.5.0-SNAPSHOT/fibra-tool-fs-search-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-fs/fibra-tool-fs/.flattened-pom.xml",
+      "sha256": "4a905c22cc7312af3771cbc06cc71bd1843e02c9c59796ac68f48d0d90aaec0b",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-tool-fs/0.5.0-SNAPSHOT/fibra-tool-fs-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-fs/fibra-tool-fs/target/fibra-tool-fs-0.5.0-SNAPSHOT.jar",
+      "sha256": "f2ea89fda37b1aefad140f63f69ccb487dd01d0fb725d46aa811e09744a713b2",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-tool-fs/0.5.0-SNAPSHOT/fibra-tool-fs-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-shell/fibra-shell-local",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-shell/fibra-shell-local/.flattened-pom.xml",
+      "sha256": "7ce14233da36783977bdeaa4d548142ef052eda11ca611b9794aa5ed1f59f9f8",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-shell-local/0.5.0-SNAPSHOT/fibra-shell-local-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-shell/fibra-shell-local",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-shell/fibra-shell-local/target/fibra-shell-local-0.5.0-SNAPSHOT.jar",
+      "sha256": "4533da2ed99d05f68a97737f9c085d2f66e56e19091581c52a40d9b2b2789bef",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-shell-local/0.5.0-SNAPSHOT/fibra-shell-local-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-shell/fibra-shell",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-shell/fibra-shell/.flattened-pom.xml",
+      "sha256": "0612a647f41629d6b88939892044851db86901d943910494d3f27ede9ffefd43",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-shell/0.5.0-SNAPSHOT/fibra-shell-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-shell/fibra-shell",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-shell/fibra-shell/target/fibra-shell-0.5.0-SNAPSHOT.jar",
+      "sha256": "6d7fa5351d370adc8ccb0f3efab76723c6448d59806c0ce7554519a7798e277e",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-shell/0.5.0-SNAPSHOT/fibra-shell-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-shell/fibra-tool-shell",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-shell/fibra-tool-shell/.flattened-pom.xml",
+      "sha256": "393efd7a04cbc8a993e00d9cdaffa102b65b536c81e189fd1a5416699c35466b",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-tool-shell/0.5.0-SNAPSHOT/fibra-tool-shell-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-shell/fibra-tool-shell",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-shell/fibra-tool-shell/target/fibra-tool-shell-0.5.0-SNAPSHOT.jar",
+      "sha256": "7290c8cd2d8fc7eb09a65c7c6d934e98c4b1fd851ed74310529be685ba407b1f",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-tool-shell/0.5.0-SNAPSHOT/fibra-tool-shell-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-storage/fibra-storage-json",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-storage/fibra-storage-json/.flattened-pom.xml",
+      "sha256": "2b78114b84776cf1a45f5af01f6734bda5d930e349b31ce527daa315eda4153f",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-storage-json/0.5.0-SNAPSHOT/fibra-storage-json-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-storage/fibra-storage-json",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-storage/fibra-storage-json/target/fibra-storage-json-0.5.0-SNAPSHOT.jar",
+      "sha256": "8c6adca7460bacc5c150d3f80b9ae4a8688d0d0693d966886b985ccccfe4bcd8",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-storage-json/0.5.0-SNAPSHOT/fibra-storage-json-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-storage/fibra-storage",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-storage/fibra-storage/.flattened-pom.xml",
+      "sha256": "5c924dbbb800145091c28a8365a51e6f81ab152ea9ffd67c1692af63dfd0caa1",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-storage/0.5.0-SNAPSHOT/fibra-storage-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-storage/fibra-storage",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-storage/fibra-storage/target/fibra-storage-0.5.0-SNAPSHOT.jar",
+      "sha256": "d6f49d890f68f70b0ebb3c9506eb911067606a73c4d7966cc456239bac4f73b5",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-storage/0.5.0-SNAPSHOT/fibra-storage-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-storage/fibra-tool-storage",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-storage/fibra-tool-storage/.flattened-pom.xml",
+      "sha256": "df4ba8b2183d78b691f16e3ab5f17f5f4b8b28a579ad7412ede0f11770f60bf3",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-tool-storage/0.5.0-SNAPSHOT/fibra-tool-storage-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-storage/fibra-tool-storage",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-storage/fibra-tool-storage/target/fibra-tool-storage-0.5.0-SNAPSHOT.jar",
+      "sha256": "131ea0907f82e03e724a1566b685a60698f11804cf088588651fdc6344d238a9",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-tool-storage/0.5.0-SNAPSHOT/fibra-tool-storage-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/.flattened-pom.xml",
+      "sha256": "95c1f5af9906d29bb8b24aee82bca38f0af7ddd3a28f0e43bd19827141c10246",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-subprocess-local/0.5.0-SNAPSHOT/fibra-subprocess-local-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/fibra-subprocess-local-0.5.0-SNAPSHOT.jar",
+      "sha256": "8bd3a3b8ffc464b46a44251457a58b42a226383752baece0cf34f103063e7f51",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-subprocess-local/0.5.0-SNAPSHOT/fibra-subprocess-local-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/.flattened-pom.xml",
+      "sha256": "522d38c70f95327114ef6c105a19522e7baa520b314e0fcc37bd25c495b285e6",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-subprocess/0.5.0-SNAPSHOT/fibra-subprocess-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/target/fibra-subprocess-0.5.0-SNAPSHOT.jar",
+      "sha256": "f5f00552b73915bff32650074d1a6347027ae627fe270960b73900817ffd2140",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-subprocess/0.5.0-SNAPSHOT/fibra-subprocess-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-plugins/fibra-tool-api",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-tool-api/.flattened-pom.xml",
+      "sha256": "71ca475cb7522e287227f8d01af748dac2bb06b1f681f3b092154ab6f2343d87",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-tool-api/0.5.0-SNAPSHOT/fibra-tool-api-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-plugins/fibra-tool-api",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-plugins/fibra-tool-api/target/fibra-tool-api-0.5.0-SNAPSHOT.jar",
+      "sha256": "6ebc4072818b1fdd37ffc9e9e60864528194a851e8ed9a5c00d987e181151f7d",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-tool-api/0.5.0-SNAPSHOT/fibra-tool-api-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-registry",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-registry/.flattened-pom.xml",
+      "sha256": "6e3867b3c3f7395c83231e4452c616f071d434d90b8ab77fa4cdab6c013dc4ae",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-registry/0.5.0-SNAPSHOT/fibra-registry-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-registry",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-registry/target/fibra-registry-0.5.0-SNAPSHOT.jar",
+      "sha256": "ccc1fbacc0605f2ecc27ad2cd8afebc68afde40ab250d49445a183e46ab067ed",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-registry/0.5.0-SNAPSHOT/fibra-registry-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-runtime-java",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-runtime-java/.flattened-pom.xml",
+      "sha256": "459d7c6d44e3a8d8314f6aa4a8357881f9faf265c14c34358f528d10567ae482",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/fibra-runtime-java-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-runtime-java",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-runtime-java/target/fibra-runtime-java-0.5.0-SNAPSHOT.jar",
+      "sha256": "fc2cc52f6c8060ce8a254220987a4b8ab19187ef69f51cc21ea7c7f02b86f5f5",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/fibra-runtime-java-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-runtime-node",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-runtime-node/.flattened-pom.xml",
+      "sha256": "c699625d0fc02e56d126eac33339428d4d98c010e6bee32bdf96b67d1b0df041",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-runtime-node/0.5.0-SNAPSHOT/fibra-runtime-node-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-runtime-node",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-runtime-node/target/fibra-runtime-node-0.5.0-SNAPSHOT.jar",
+      "sha256": "09542dee60070e982a856cdb9d7a4cf73b6ca0de29faa08d4a20490d1bc92830",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-runtime-node/0.5.0-SNAPSHOT/fibra-runtime-node-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-spring-boot-starter",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-spring-boot-starter/.flattened-pom.xml",
+      "sha256": "c572bb3159a32fe317c817cc550124e3bd6dd9abb5a3a04be180d05c9698592d",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-spring-boot-starter/0.5.0-SNAPSHOT/fibra-spring-boot-starter-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-spring-boot-starter",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-spring-boot-starter/target/fibra-spring-boot-starter-0.5.0-SNAPSHOT.jar",
+      "sha256": "98f1e4ba2b4ca219b452c619abee69a030eabc8317580235a96e8901cf5da7b1",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-spring-boot-starter/0.5.0-SNAPSHOT/fibra-spring-boot-starter-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    },
+    {
+      "module": "fibra-spring",
+      "kind": "pom",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-spring/.flattened-pom.xml",
+      "sha256": "8ed8a46f0f7853214166fe992ad7559783034f4d0668b961de69be87d20ebcbb",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-spring/0.5.0-SNAPSHOT/fibra-spring-0.5.0-20261012.090531-1.pom",
+      "sameAsTask5": true
+    },
+    {
+      "module": "fibra-spring",
+      "kind": "mainJar",
+      "path": "/Users/sunke/dev/ai-project/fibra/fibra-spring/target/fibra-spring-0.5.0-SNAPSHOT.jar",
+      "sha256": "83064ebfcfb163dcdc54a418b4e00ade4830c4dd890b86b3b4f954bac4693f65",
+      "previousPath": "/private/tmp/fibra-config-contract-evidence/author/distribution/run/remote/com/sstlfsj/fibra-spring/0.5.0-SNAPSHOT/fibra-spring-0.5.0-20261012.090531-1.jar",
+      "sameAsTask5": true,
+      "LICENSEMatchesSource": true,
+      "THIRD_PARTY_NOTICES.mdMatchesSource": true
+    }
+  ],
+  "mainJarCount": 28,
+  "pomCount": 30,
+  "allSameAsTask5": true,
+  "finalZip": "/Users/sunke/dev/ai-project/fibra/fibra-distribution/target/fibra-0.5.0-SNAPSHOT-bin.zip",
+  "finalZipSha256": "d1ddccfa380f38d70712228bcb454ee3fe3323fc41dff18fab1c219f4375c30b",
+  "previousZipSha256": "c3b75bad3eb15747fe95f3de0c8fbb3e684121d512f6a093ea85d16786f290e4",
+  "zipChangedEntries": [
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/runtime/platform.properties",
+      "sha256": "616e0e46c3f4cc91887470e0aa55bcbd8f1c79e13aa054a23b99fa947058ab49",
+      "previousSha256": "7f9d64173ef854a6a1a38992f02442bd9b32c40d4edd2ec3622e3c1299fd282f"
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/runtime/bin/rg",
+      "sha256": "6ef40346bf31fcce79d9614c7745c198542925a0c7d4911e1ffe794c53392ac1",
+      "previousSha256": "e97d666f32c3e86b2bd0e047cb1398d4385ea1f05bfb791a8201d3fa98a91bb9"
+    }
+  ],
+  "zipJars": [
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/fibra-api-0.5.0-SNAPSHOT.jar",
+      "sha256": "f5a711f7045b78670c3b9f68b0530518daba3a0b7cba8fe15fd3f36d8f0188b8",
+      "bytes": 58414,
+      "compressedBytes": 50351
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/fibra-artifact-0.5.0-SNAPSHOT.jar",
+      "sha256": "705e7235f9acf2827b5b05b6943766c2dd713293d8843707f984487cff493b1e",
+      "bytes": 67436,
+      "compressedBytes": 62121
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/fibra-bridge-0.5.0-SNAPSHOT.jar",
+      "sha256": "33b7ccc639c3a547a36c169e95a4de37714495f2e740ed1aa3303e654de7cb82",
+      "bytes": 41494,
+      "compressedBytes": 36814
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/fibra-cli-0.5.0-SNAPSHOT.jar",
+      "sha256": "5fe296d3a1aae67098163a4d708edffcaaed14063d6707d4dc3f3bedc6f94827",
+      "bytes": 143735,
+      "compressedBytes": 133814
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/fibra-cli-api-0.5.0-SNAPSHOT.jar",
+      "sha256": "c33a540fb62ea285f255d648eb1622e45f5d54b6054991f8d04330402b702af5",
+      "bytes": 38512,
+      "compressedBytes": 32385
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/fibra-config-0.5.0-SNAPSHOT.jar",
+      "sha256": "0e617c9f148c124ca3fc63268d3688115728367b517778593838aecfd379aab0",
+      "bytes": 135742,
+      "compressedBytes": 125856
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/fibra-core-0.5.0-SNAPSHOT.jar",
+      "sha256": "030e9457ff674aa054244ffe47c43c53493a99777becf4d91a3be219e38155a0",
+      "bytes": 126392,
+      "compressedBytes": 118485
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/fibra-engine-0.5.0-SNAPSHOT.jar",
+      "sha256": "eb45f515cbbb59852496278979c069197009eba0e29d60f277895b2293fdc219",
+      "bytes": 262522,
+      "compressedBytes": 240900
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/fibra-registry-0.5.0-SNAPSHOT.jar",
+      "sha256": "ccc1fbacc0605f2ecc27ad2cd8afebc68afde40ab250d49445a183e46ab067ed",
+      "bytes": 36471,
+      "compressedBytes": 33119
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/fibra-runtime-java-0.5.0-SNAPSHOT.jar",
+      "sha256": "fc2cc52f6c8060ce8a254220987a4b8ab19187ef69f51cc21ea7c7f02b86f5f5",
+      "bytes": 77012,
+      "compressedBytes": 71605
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/fibra-runtime-node-0.5.0-SNAPSHOT.jar",
+      "sha256": "09542dee60070e982a856cdb9d7a4cf73b6ca0de29faa08d4a20490d1bc92830",
+      "bytes": 96131,
+      "compressedBytes": 90701
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/fibra-tool-api-0.5.0-SNAPSHOT.jar",
+      "sha256": "6ebc4072818b1fdd37ffc9e9e60864528194a851e8ed9a5c00d987e181151f7d",
+      "bytes": 27786,
+      "compressedBytes": 24213
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/itu-1.14.0.jar",
+      "sha256": "5cf40ab0cc77828ab2b875b1f3ecd71c8295d7721933476abc2e08fddcea164a",
+      "bytes": 57633,
+      "compressedBytes": 51666
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/jackson-annotations-2.21.jar",
+      "sha256": "53ca085f4a150f703f49e1aabd935bd03b43e1ea3d55d135438292af22cef56b",
+      "bytes": 82104,
+      "compressedBytes": 68559
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/jackson-core-3.1.5.jar",
+      "sha256": "9431b7fa2673bbb618c11d865fe15e13222fd182a214ff998cb7e56afd8f35d2",
+      "bytes": 598605,
+      "compressedBytes": 558454
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/jackson-databind-3.1.5.jar",
+      "sha256": "3a2338d996fd3056791df8d335fa9ba8a62a706ed4245ecf81b3e583df37d08a",
+      "bytes": 1944003,
+      "compressedBytes": 1795263
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/jackson-dataformat-yaml-3.1.5.jar",
+      "sha256": "afef22789b0a0915b544c6749c71770788d20821c30d574c1210e2b6cffc91ae",
+      "bytes": 62584,
+      "compressedBytes": 57141
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/jline-4.4.3-jdk11.jar",
+      "sha256": "073996b4322dc2ff6fb38de868bdc50d7103d12e79f1ca577a53d8d8f007a34d",
+      "bytes": 1654935,
+      "compressedBytes": 1568800
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/json-schema-validator-3.0.8.jar",
+      "sha256": "d3f4c61ba35c3543bdf1ab42462bf89721542f4adea5b092ee7b430dfd467181",
+      "bytes": 585170,
+      "compressedBytes": 526444
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/jspecify-1.0.0.jar",
+      "sha256": "1fad6e6be7557781e4d33729d49ae1cdc8fdda6fe477bb0cc68ce351eafdfbab",
+      "bytes": 3819,
+      "compressedBytes": 2235
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/picocli-4.7.7.jar",
+      "sha256": "f86e30fffd10d2b13b8caa8d4b237a7ee61f2ffccf5b1941de718b765d235bf8",
+      "bytes": 417640,
+      "compressedBytes": 387038
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/reactive-streams-1.0.4.jar",
+      "sha256": "f75ca597789b3dac58f61857b9ac2e1034a68fa672db35055a8fb4509e325f28",
+      "bytes": 11640,
+      "compressedBytes": 9332
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/reactor-core-3.8.6.jar",
+      "sha256": "ffc646b225465efce55d3ea350f1bcd1d27d4a56e912323e316dd8e6d04bff11",
+      "bytes": 1938752,
+      "compressedBytes": 1798017
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/slf4j-api-2.0.18.jar",
+      "sha256": "44508fd1576500688c790b190acdd16fec4f8c79a3e0b900afd70503cf055f55",
+      "bytes": 69982,
+      "compressedBytes": 61869
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/slf4j-simple-2.0.18.jar",
+      "sha256": "8268bd018a5709b07209e0d8ca6221a37584ba1bc12ba985b8335a82c648bdd0",
+      "bytes": 15721,
+      "compressedBytes": 13435
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/lib/snakeyaml-engine-3.0.1.jar",
+      "sha256": "0b638c8806112215e02e58e95cbd9e9a69d4bd540991f47553d053919994cc94",
+      "bytes": 299438,
+      "compressedBytes": 259536
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/plugins/fibra-fs/lib/main.jar",
+      "sha256": "0d1828792f9c35dbdeb6720f9ad2af40f1c2eb619bc9f1c64429d25c629dfcea",
+      "bytes": 25129,
+      "compressedBytes": 20869
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/plugins/fibra-fs-local/lib/main.jar",
+      "sha256": "f56f69842d2f11942bb05cac8c6480d5100b2220d58d8f87bde97174c9573dbe",
+      "bytes": 2033949,
+      "compressedBytes": 1990458
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/plugins/fibra-shell/lib/main.jar",
+      "sha256": "6d7fa5351d370adc8ccb0f3efab76723c6448d59806c0ce7554519a7798e277e",
+      "bytes": 17901,
+      "compressedBytes": 14826
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/plugins/fibra-shell-local/lib/main.jar",
+      "sha256": "4533da2ed99d05f68a97737f9c085d2f66e56e19091581c52a40d9b2b2789bef",
+      "bytes": 17546,
+      "compressedBytes": 15266
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/plugins/fibra-storage/lib/main.jar",
+      "sha256": "d6f49d890f68f70b0ebb3c9506eb911067606a73c4d7966cc456239bac4f73b5",
+      "bytes": 16404,
+      "compressedBytes": 13549
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/plugins/fibra-storage-json/lib/main.jar",
+      "sha256": "8c6adca7460bacc5c150d3f80b9ae4a8688d0d0693d966886b985ccccfe4bcd8",
+      "bytes": 30452,
+      "compressedBytes": 27139
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/plugins/fibra-subprocess/lib/main.jar",
+      "sha256": "f5f00552b73915bff32650074d1a6347027ae627fe270960b73900817ffd2140",
+      "bytes": 19140,
+      "compressedBytes": 15703
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/plugins/fibra-subprocess-local/lib/main.jar",
+      "sha256": "8bd3a3b8ffc464b46a44251457a58b42a226383752baece0cf34f103063e7f51",
+      "bytes": 2091410,
+      "compressedBytes": 2041728
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/plugins/fibra-tool-fs/lib/main.jar",
+      "sha256": "f2ea89fda37b1aefad140f63f69ccb487dd01d0fb725d46aa811e09744a713b2",
+      "bytes": 25502,
+      "compressedBytes": 23175
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/plugins/fibra-tool-fs-search/lib/main.jar",
+      "sha256": "2d787e763f3087fc42ee8d513108d0d89e77c18be98af831cfce9dbc116fe727",
+      "bytes": 2759127,
+      "compressedBytes": 2465724
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/plugins/fibra-tool-shell/lib/main.jar",
+      "sha256": "7290c8cd2d8fc7eb09a65c7c6d934e98c4b1fd851ed74310529be685ba407b1f",
+      "bytes": 16021,
+      "compressedBytes": 13886
+    },
+    {
+      "entry": "fibra-0.5.0-SNAPSHOT/plugins/fibra-tool-storage/lib/main.jar",
+      "sha256": "131ea0907f82e03e724a1566b685a60698f11804cf088588651fdc6344d238a9",
+      "bytes": 20231,
+      "compressedBytes": 17659
+    }
+  ],
+  "all38ZipJarsMatchPreviousInventory": true,
+  "finalZipRootNoticesMatchSource": true
+}

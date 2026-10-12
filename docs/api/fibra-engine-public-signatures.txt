@@ -61,6 +61,7 @@ public final class com.sstlfsj.fibra.engine.FibraEngine implements java.lang.Aut
   public reactor.core.publisher.Mono<java.lang.Void> closeAsync();
   public void close();
   public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.deployment.PackageDefinitionCatalog> describeDefinitions(com.sstlfsj.fibra.artifact.PluginId, long);
+  public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.deployment.DefinitionConfigContract> describeConfiguration(com.sstlfsj.fibra.config.PluginDefinitionRef, long);
 }
 ## com.sstlfsj.fibra.engine.FibraEngine$Builder
 Compiled from "FibraEngine.java"
@@ -126,6 +127,7 @@ public final class com.sstlfsj.fibra.engine.deployment.BuiltInFacet {
   public java.util.List<com.sstlfsj.fibra.artifact.FacetDependency> dependencies();
   public java.util.Set<java.lang.String> requiredCapabilities();
   public java.util.Set<java.lang.String> definitionIds();
+  public java.util.Map<java.lang.String, com.sstlfsj.fibra.config.ConfigSchemaSource> configSchemas();
 }
 ## com.sstlfsj.fibra.engine.deployment.BuiltInFacet$Builder
 Compiled from "BuiltInFacet.java"
@@ -133,6 +135,7 @@ public final class com.sstlfsj.fibra.engine.deployment.BuiltInFacet$Builder {
   public com.sstlfsj.fibra.engine.deployment.BuiltInFacet$Builder dependencies(java.util.List<com.sstlfsj.fibra.artifact.FacetDependency>);
   public com.sstlfsj.fibra.engine.deployment.BuiltInFacet$Builder requiredCapabilities(java.util.Set<java.lang.String>);
   public com.sstlfsj.fibra.engine.deployment.BuiltInFacet$Builder definitionIds(java.util.Set<java.lang.String>);
+  public com.sstlfsj.fibra.engine.deployment.BuiltInFacet$Builder configSchemas(java.util.Map<java.lang.String, com.sstlfsj.fibra.config.ConfigSchemaSource>);
   public com.sstlfsj.fibra.engine.deployment.BuiltInFacet build();
 }
 ## com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage
@@ -151,7 +154,7 @@ Compiled from "BuiltInPluginPackage.java"
 public final class com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage$Builder {
   public com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage$Builder pluginId(com.sstlfsj.fibra.artifact.PluginId);
   public com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage$Builder version(java.lang.String);
-  public com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage$Builder packageDigest(java.lang.String);
+  public com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage$Builder implementationDigest(java.lang.String);
   public com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage$Builder facets(java.util.List<com.sstlfsj.fibra.engine.deployment.BuiltInFacet>);
   public com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage build();
 }
@@ -180,6 +183,28 @@ public final class com.sstlfsj.fibra.engine.deployment.CompiledDeployment$Builde
   public com.sstlfsj.fibra.engine.deployment.CompiledDeployment$Builder retainedUnits(java.util.Set<com.sstlfsj.fibra.engine.execution.ExecutionUnitKey>);
   public com.sstlfsj.fibra.engine.deployment.CompiledDeployment build();
 }
+## com.sstlfsj.fibra.engine.deployment.ConfigContractException
+Compiled from "ConfigContractException.java"
+public final class com.sstlfsj.fibra.engine.deployment.ConfigContractException extends java.lang.RuntimeException {
+  public com.sstlfsj.fibra.engine.deployment.ConfigContractException(com.sstlfsj.fibra.engine.deployment.ConfigContractException$Code, java.lang.String);
+  public com.sstlfsj.fibra.engine.deployment.ConfigContractException$Code code();
+}
+## com.sstlfsj.fibra.engine.deployment.ConfigContractException$Code
+Compiled from "ConfigContractException.java"
+public final class com.sstlfsj.fibra.engine.deployment.ConfigContractException$Code extends java.lang.Enum<com.sstlfsj.fibra.engine.deployment.ConfigContractException$Code> {
+  public static final com.sstlfsj.fibra.engine.deployment.ConfigContractException$Code ENGINE_UNAVAILABLE;
+  public static final com.sstlfsj.fibra.engine.deployment.ConfigContractException$Code STALE_TARGET;
+  public static final com.sstlfsj.fibra.engine.deployment.ConfigContractException$Code NOT_SELECTED;
+  public static final com.sstlfsj.fibra.engine.deployment.ConfigContractException$Code PACKAGE_UNAVAILABLE;
+  public static final com.sstlfsj.fibra.engine.deployment.ConfigContractException$Code UNSUPPORTED_RUNTIME;
+  public static final com.sstlfsj.fibra.engine.deployment.ConfigContractException$Code UNKNOWN_DEFINITION;
+  public static final com.sstlfsj.fibra.engine.deployment.ConfigContractException$Code MISSING_CONTRACT;
+  public static final com.sstlfsj.fibra.engine.deployment.ConfigContractException$Code INVALID_CONTRACT;
+  public static final com.sstlfsj.fibra.engine.deployment.ConfigContractException$Code READ_FAILED;
+  public static final com.sstlfsj.fibra.engine.deployment.ConfigContractException$Code CLEANUP_FAILED;
+  public static com.sstlfsj.fibra.engine.deployment.ConfigContractException$Code[] values();
+  public static com.sstlfsj.fibra.engine.deployment.ConfigContractException$Code valueOf(java.lang.String);
+}
 ## com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException
 Compiled from "DefinitionCatalogException.java"
 public final class com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException extends java.lang.RuntimeException {
@@ -198,6 +223,18 @@ public final class com.sstlfsj.fibra.engine.deployment.DefinitionCatalogExceptio
   public static final com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException$Code CLEANUP_FAILED;
   public static com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException$Code[] values();
   public static com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException$Code valueOf(java.lang.String);
+}
+## com.sstlfsj.fibra.engine.deployment.DefinitionConfigContract
+Compiled from "DefinitionConfigContract.java"
+public final class com.sstlfsj.fibra.engine.deployment.DefinitionConfigContract extends java.lang.Record {
+  public com.sstlfsj.fibra.engine.deployment.DefinitionConfigContract(long, java.lang.String, com.sstlfsj.fibra.config.PluginDefinitionRef, com.sstlfsj.fibra.config.ConfigSchemaSource);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public long targetRevision();
+  public java.lang.String packageRevision();
+  public com.sstlfsj.fibra.config.PluginDefinitionRef definition();
+  public com.sstlfsj.fibra.config.ConfigSchemaSource source();
 }
 ## com.sstlfsj.fibra.engine.deployment.DeploymentTarget
 Compiled from "DeploymentTarget.java"

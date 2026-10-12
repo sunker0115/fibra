@@ -1,0 +1,17 @@
+{
+  "fibraInputs": {
+    "lock": "/private/tmp/fibra-config-contract-evidence/consumers/task6-fibra-file-sha256.json",
+    "lockSha256": "5fe0438666658641630cc718a11f4425a688c025c34152434805f892a8377b4a",
+    "matchedCount": 3
+  },
+  "reusedEvidence": {
+    "lock": "/private/tmp/fibra-config-contract-evidence/consumers/r1-fix/reused-evidence-sha256.json",
+    "lockSha256": "3341b38471c308cd2408ae2aed9acdb2c9a83811da8274ed41c4d6951f597846",
+    "matchedCount": 12
+  },
+  "telaInputLock": {
+    "path": "/private/tmp/fibra-config-contract-evidence/consumers/r1-fix/tela-input-sha256.json",
+    "sha256": "40b48ef63ab5a7942a48c7404abe1bea1bd7343505efdd7b61d1e343e7ec27da",
+    "matchedCurrentFiles": 482
+  }
+}

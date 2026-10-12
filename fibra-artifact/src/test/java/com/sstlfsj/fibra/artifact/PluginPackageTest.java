@@ -23,6 +23,37 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PluginPackageTest {
     @Test
+    void fixedConfigurationUsesUnchangedV1DigestAndDoesNotChangeFacetDigests(@TempDir Path work)
+        throws Exception {
+        var root = canonicalPackage(work);
+        var absent = PluginPackage.read(root);
+        Files.writeString(root.resolve("fibra-config.json"), "{\"format\":1}");
+        var first = PluginPackage.read(root);
+        assertEquals(digest(root), first.packageDigest());
+        assertNotEquals(absent.packageDigest(), first.packageDigest());
+        assertEquals(absent.facets(), first.facets());
+        Files.writeString(root.resolve("fibra-config.json"), "{\"format\":2}");
+        var second = PluginPackage.read(root);
+        assertEquals(digest(root), second.packageDigest());
+        assertNotEquals(first.packageDigest(), second.packageDigest());
+        assertEquals(first.facets(), second.facets());
+    }
+
+    @Test
+    void configurationChangeBetweenSnapshotsIsRejected(@TempDir Path work) throws Exception {
+        var root = canonicalPackage(work);
+        var file = Files.writeString(root.resolve("fibra-config.json"), "original");
+        var failure = assertThrows(ArtifactException.class, () -> PluginPackage.read(root, () -> {
+            try {
+                Files.writeString(file, "modified");
+            } catch (IOException exception) {
+                throw new java.io.UncheckedIOException(exception);
+            }
+        }));
+        assertEquals(ArtifactPhase.DIGEST, failure.phase());
+    }
+
+    @Test
     void readsCanonicalThreeFacetPackageAndComputesContentIdentities(@TempDir Path work)
         throws Exception {
         var root = canonicalPackage(work);

@@ -1,0 +1,506 @@
+[
+  {
+    "module": "fibra-api",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-api/fibra-api-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 387430,
+    "sha256": "74da7390b09e217a0a1169972d2ded4fb436e118648ae65f597b95c49f1fa482"
+  },
+  {
+    "module": "fibra-api",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-api/fibra-api-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 24318,
+    "sha256": "e3fe76f1053ea6a878ce328cc95e275698dcb58bcaa1bda8c1fd74c41bd25f2a"
+  },
+  {
+    "module": "fibra-api",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-api/fibra-api-0.5.0-SNAPSHOT.jar",
+    "bytes": 58414,
+    "sha256": "f5a711f7045b78670c3b9f68b0530518daba3a0b7cba8fe15fd3f36d8f0188b8"
+  },
+  {
+    "module": "fibra-artifact",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-artifact/fibra-artifact-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 205289,
+    "sha256": "cd665be4ad43712060cdfeb9a96996b667c22c542a7bcd6c18683217846e51aa"
+  },
+  {
+    "module": "fibra-artifact",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-artifact/fibra-artifact-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 24280,
+    "sha256": "905e3699b6149186b54b2b99e9494f44916384af93cb3944683b0160a7eaf53a"
+  },
+  {
+    "module": "fibra-artifact",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-artifact/fibra-artifact-0.5.0-SNAPSHOT.jar",
+    "bytes": 67436,
+    "sha256": "705e7235f9acf2827b5b05b6943766c2dd713293d8843707f984487cff493b1e"
+  },
+  {
+    "module": "fibra-bridge",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-bridge/fibra-bridge-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 193898,
+    "sha256": "4d755e4d7f4be55cb4059fae15b1182239e88dfa4d3c04fdb12236f73596d457"
+  },
+  {
+    "module": "fibra-bridge",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-bridge/fibra-bridge-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 15141,
+    "sha256": "b0052443e1f6ac9a690a21b2d0fdbdc32e2ca4ff87f245225d139e690d859bc3"
+  },
+  {
+    "module": "fibra-bridge",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-bridge/fibra-bridge-0.5.0-SNAPSHOT.jar",
+    "bytes": 41494,
+    "sha256": "33b7ccc639c3a547a36c169e95a4de37714495f2e740ed1aa3303e654de7cb82"
+  },
+  {
+    "module": "fibra-cli-api",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-cli-api/fibra-cli-api-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 272840,
+    "sha256": "17baaab0aba84e33326e5ac6179fc1135d21d65f12c7d06e8df3581d0c23761e"
+  },
+  {
+    "module": "fibra-cli-api",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-cli-api/fibra-cli-api-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 16989,
+    "sha256": "0105f365a3999af576c505a2e3f5ff7e560d45d5a95868aafc47ea7b6f0290f7"
+  },
+  {
+    "module": "fibra-cli-api",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-cli-api/fibra-cli-api-0.5.0-SNAPSHOT.jar",
+    "bytes": 38512,
+    "sha256": "c33a540fb62ea285f255d648eb1622e45f5d54b6054991f8d04330402b702af5"
+  },
+  {
+    "module": "fibra-cli",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-cli/fibra-cli-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 108047,
+    "sha256": "ae6d37dc5d172cd22ad23a6e54aef3b0b8d1bf4450a767df1663e4f6b1f83adc"
+  },
+  {
+    "module": "fibra-cli",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-cli/fibra-cli-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 44020,
+    "sha256": "d3935293c0c02dc4b8c666019ea66d3dbd3924e18cf456cb06d2aced4fa35f8d"
+  },
+  {
+    "module": "fibra-cli",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-cli/fibra-cli-0.5.0-SNAPSHOT.jar",
+    "bytes": 143735,
+    "sha256": "5fe296d3a1aae67098163a4d708edffcaaed14063d6707d4dc3f3bedc6f94827"
+  },
+  {
+    "module": "fibra-client-protocol",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-client-protocol/fibra-client-protocol-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 282534,
+    "sha256": "e96f941f217a106ac2f45a03f82a598b30dae0919adaa85f3452ec71474bce2c"
+  },
+  {
+    "module": "fibra-client-protocol",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-client-protocol/fibra-client-protocol-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 15461,
+    "sha256": "6d5baaa8bfdfcd6f1c3dd3e883e86f23af5941736fd552940a25c1bfab84949c"
+  },
+  {
+    "module": "fibra-client-protocol",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-client-protocol/fibra-client-protocol-0.5.0-SNAPSHOT.jar",
+    "bytes": 65970,
+    "sha256": "dc0292ac593e181e57c490db5cf741f35cf44eed86c16431196e5e83560844cb"
+  },
+  {
+    "module": "fibra-config",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-config/fibra-config-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 307425,
+    "sha256": "3943ca78c4d4787b653e75698bf566bb6fe0996dfd2f52b2301271499343aa07"
+  },
+  {
+    "module": "fibra-config",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-config/fibra-config-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 48058,
+    "sha256": "9a3a543da68b822bfd4e2fd4db9f14ca2af7837c28b19b05b666aa2c7b0f6f4b"
+  },
+  {
+    "module": "fibra-config",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-config/fibra-config-0.5.0-SNAPSHOT.jar",
+    "bytes": 135742,
+    "sha256": "0e617c9f148c124ca3fc63268d3688115728367b517778593838aecfd379aab0"
+  },
+  {
+    "module": "fibra-core",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-core/fibra-core-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 186296,
+    "sha256": "e62cdbaa9d24b55a46564d784eeca66204134d6c9661d04f6a27d3567f15a032"
+  },
+  {
+    "module": "fibra-core",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-core/fibra-core-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 39578,
+    "sha256": "b1092bfb9079505df12425e2d7ff3a311368be17566bc6629e857b4963811d0c"
+  },
+  {
+    "module": "fibra-core",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-core/fibra-core-0.5.0-SNAPSHOT.jar",
+    "bytes": 126392,
+    "sha256": "030e9457ff674aa054244ffe47c43c53493a99777becf4d91a3be219e38155a0"
+  },
+  {
+    "module": "fibra-engine",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-engine/fibra-engine-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 713595,
+    "sha256": "6d6f64a5110746237eea705094cb873e77e0460b7280a6b6a4af2c77c33a67f9"
+  },
+  {
+    "module": "fibra-engine",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-engine/fibra-engine-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 88206,
+    "sha256": "4510dcd168ea712a585ae108aed898ece943be9f7445e5e0c39c026fc5d517be"
+  },
+  {
+    "module": "fibra-engine",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-engine/fibra-engine-0.5.0-SNAPSHOT.jar",
+    "bytes": 262522,
+    "sha256": "eb45f515cbbb59852496278979c069197009eba0e29d60f277895b2293fdc219"
+  },
+  {
+    "module": "fibra-plugin-archetype",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-plugin-archetype/fibra-plugin-archetype-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 1894,
+    "sha256": "0c675c7ed6820c98b683fc4899cbbaa074b26b0a0758544b1080a8bf25f0623c"
+  },
+  {
+    "module": "fibra-plugin-archetype",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-plugin-archetype/fibra-plugin-archetype-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 9201,
+    "sha256": "ce1326ae452f7dc7877044d85a3f315a8f1647cb2a2e234666bfc29a5f05eb92"
+  },
+  {
+    "module": "fibra-plugin-archetype",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-plugin-archetype/fibra-plugin-archetype-0.5.0-SNAPSHOT.jar",
+    "bytes": 15441,
+    "sha256": "a0e2fe696b519f87fc27a20de715a1df38bbe95aefa65720f408b469569a75ac"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-fs/fibra-fs-local",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-fs-local/fibra-fs-local-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 108637,
+    "sha256": "9886d97dde90217d7b4b23a06410a03262905017b6009cc8bede2a986db8b19f"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-fs/fibra-fs-local",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-fs-local/fibra-fs-local-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 14214,
+    "sha256": "df5d950b0bb7a3ebff7cbc22354871b68eeea4afdc150b064cee123f80b57f2e"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-fs/fibra-fs-local",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-fs-local/fibra-fs-local-0.5.0-SNAPSHOT.jar",
+    "bytes": 2033949,
+    "sha256": "f56f69842d2f11942bb05cac8c6480d5100b2220d58d8f87bde97174c9573dbe"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-fs/fibra-fs",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-fs/fibra-fs-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 189590,
+    "sha256": "7a25bbb5ddc0dda3e76320f3e5b0623ac0f52fbfe6aa06f66b229d683ff0dc1e"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-fs/fibra-fs",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-fs/fibra-fs-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 7599,
+    "sha256": "2de22382d98a6d5c144cdd2720679d064125dbd9aed46d4ac62d5bdd2070e07f"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-fs/fibra-fs",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-fs/fibra-fs-0.5.0-SNAPSHOT.jar",
+    "bytes": 25129,
+    "sha256": "0d1828792f9c35dbdeb6720f9ad2af40f1c2eb619bc9f1c64429d25c629dfcea"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-tool-fs-search/fibra-tool-fs-search-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 115778,
+    "sha256": "b51c3b406874a3800a798406b817d866335e3c2b375d37993779426ad4a4da77"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-tool-fs-search/fibra-tool-fs-search-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 12542,
+    "sha256": "d4142145483a288de6e4a7ac3dc540ca7aba66342b3bff79dea36ae53261e309"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-tool-fs-search/fibra-tool-fs-search-0.5.0-SNAPSHOT.jar",
+    "bytes": 2759127,
+    "sha256": "2d787e763f3087fc42ee8d513108d0d89e77c18be98af831cfce9dbc116fe727"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-tool-fs/fibra-tool-fs-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 108163,
+    "sha256": "eb876732a09ee7c2df45c3e55c1b484539a89defef474518ae120afab68a517b"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-tool-fs/fibra-tool-fs-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 8633,
+    "sha256": "30a9f56647f07fe9f70d20da7e5b372a076e2aaa4da153be1167fadb0fb4a6ec"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-tool-fs/fibra-tool-fs-0.5.0-SNAPSHOT.jar",
+    "bytes": 25502,
+    "sha256": "f2ea89fda37b1aefad140f63f69ccb487dd01d0fb725d46aa811e09744a713b2"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-shell/fibra-shell-local",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-shell-local/fibra-shell-local-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 107507,
+    "sha256": "2d026e04ebfc01895996464a297416bcd96d8699c05e893d43e06a64bbf5c48d"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-shell/fibra-shell-local",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-shell-local/fibra-shell-local-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 5770,
+    "sha256": "224e4fb277aef89ac98470156c44dd1c2b89b594cbe3101619c9e4290d94fd00"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-shell/fibra-shell-local",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-shell-local/fibra-shell-local-0.5.0-SNAPSHOT.jar",
+    "bytes": 17546,
+    "sha256": "4533da2ed99d05f68a97737f9c085d2f66e56e19091581c52a40d9b2b2789bef"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-shell/fibra-shell",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-shell/fibra-shell-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 145226,
+    "sha256": "a35de66b7ebf5479b4502e0a301750ab44dcd100b87ee101a91e8e84e253095a"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-shell/fibra-shell",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-shell/fibra-shell-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 5829,
+    "sha256": "b8a0e4417658728a94eacb0bf05504c3ec7d1e9009e340cb5e65838a1fe8f875"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-shell/fibra-shell",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-shell/fibra-shell-0.5.0-SNAPSHOT.jar",
+    "bytes": 17901,
+    "sha256": "6d7fa5351d370adc8ccb0f3efab76723c6448d59806c0ce7554519a7798e277e"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-shell/fibra-tool-shell",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-tool-shell/fibra-tool-shell-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 96899,
+    "sha256": "589765b01bb115da2ea67d7febb5f14ed6aebe5e6bdbfa7ab83bbee9f32bdf2d"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-shell/fibra-tool-shell",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-tool-shell/fibra-tool-shell-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 5493,
+    "sha256": "1fcad49d93242b6209fefd5f86b8e2d1b5cc49e270a039714541a2193da8e786"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-shell/fibra-tool-shell",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-tool-shell/fibra-tool-shell-0.5.0-SNAPSHOT.jar",
+    "bytes": 16021,
+    "sha256": "7290c8cd2d8fc7eb09a65c7c6d934e98c4b1fd851ed74310529be685ba407b1f"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-storage/fibra-storage-json",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-storage-json/fibra-storage-json-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 102889,
+    "sha256": "a9938f8761742e189a24ec984f2091e2dbaefc894336902a1a46625bbe42c68c"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-storage/fibra-storage-json",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-storage-json/fibra-storage-json-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 9636,
+    "sha256": "c8f5dfe9a429c60a930bb1b187cdb6982be467bb8ffb182b2e6597ab65074048"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-storage/fibra-storage-json",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-storage-json/fibra-storage-json-0.5.0-SNAPSHOT.jar",
+    "bytes": 30452,
+    "sha256": "8c6adca7460bacc5c150d3f80b9ae4a8688d0d0693d966886b985ccccfe4bcd8"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-storage/fibra-storage",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-storage/fibra-storage-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 135556,
+    "sha256": "a577a617f317dc00b30c158a9352da1ac8e47196f84a712333c34bdf1b1d994e"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-storage/fibra-storage",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-storage/fibra-storage-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 6232,
+    "sha256": "02755398303b9bef6461b1cdaaaa0d0ac63f27e8c15aa0cae8e94a5dca383b8a"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-storage/fibra-storage",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-storage/fibra-storage-0.5.0-SNAPSHOT.jar",
+    "bytes": 16404,
+    "sha256": "d6f49d890f68f70b0ebb3c9506eb911067606a73c4d7966cc456239bac4f73b5"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-storage/fibra-tool-storage",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-tool-storage/fibra-tool-storage-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 97184,
+    "sha256": "8eea1f8bdccd7b4a0d6e5507c9f838b0f2d879f7fe5ba8dafc5a3fb4f6c65af4"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-storage/fibra-tool-storage",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-tool-storage/fibra-tool-storage-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 5725,
+    "sha256": "652ec3c037a37511fe215e2d543ea7bb4ff7447971360a1460e4f862ccd119b5"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-storage/fibra-tool-storage",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-tool-storage/fibra-tool-storage-0.5.0-SNAPSHOT.jar",
+    "bytes": 20231,
+    "sha256": "131ea0907f82e03e724a1566b685a60698f11804cf088588651fdc6344d238a9"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-subprocess-local/fibra-subprocess-local-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 107640,
+    "sha256": "f7343b078921b930eaef4e2ff6d939d5dad5a44ad0dcf8987ad59280d6ecfb7f"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-subprocess-local/fibra-subprocess-local-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 34532,
+    "sha256": "9893412b8cfd8e94345bcb539bd804a8f08c0b038517ab45115f9df45cc00679"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-subprocess-local/fibra-subprocess-local-0.5.0-SNAPSHOT.jar",
+    "bytes": 2091410,
+    "sha256": "8bd3a3b8ffc464b46a44251457a58b42a226383752baece0cf34f103063e7f51"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-subprocess/fibra-subprocess-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 150122,
+    "sha256": "ce315bb088ced864f15a2ed7839a0353a1dde1bd3859ef4165ba787b45343b5e"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-subprocess/fibra-subprocess-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 6518,
+    "sha256": "6281e1b5804838dc3fd3d8be0848528efbe86812de5cf1a6839d717a009042bf"
+  },
+  {
+    "module": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-subprocess/fibra-subprocess-0.5.0-SNAPSHOT.jar",
+    "bytes": 19140,
+    "sha256": "f5f00552b73915bff32650074d1a6347027ae627fe270960b73900817ffd2140"
+  },
+  {
+    "module": "fibra-plugins/fibra-tool-api",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-tool-api/fibra-tool-api-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 170119,
+    "sha256": "113664e5d536967bff97795fdbcc35d4c61e891872aa05c0ae5e8621b568d7f3"
+  },
+  {
+    "module": "fibra-plugins/fibra-tool-api",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-tool-api/fibra-tool-api-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 9837,
+    "sha256": "d14822eaf21a24eecb9cdd1293ed7f6fa94b35442dfd768328952ebcbca30508"
+  },
+  {
+    "module": "fibra-plugins/fibra-tool-api",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-tool-api/fibra-tool-api-0.5.0-SNAPSHOT.jar",
+    "bytes": 27786,
+    "sha256": "6ebc4072818b1fdd37ffc9e9e60864528194a851e8ed9a5c00d987e181151f7d"
+  },
+  {
+    "module": "fibra-registry",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-registry/fibra-registry-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 166849,
+    "sha256": "b62f8e838d06c6da3c437c420de3ac3711524b395d76dbf0cd55737a4c84229f"
+  },
+  {
+    "module": "fibra-registry",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-registry/fibra-registry-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 12853,
+    "sha256": "8d530637a8a5db326ce8424072b64c3f259d5306938a633e0bb40f61eaa44e08"
+  },
+  {
+    "module": "fibra-registry",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-registry/fibra-registry-0.5.0-SNAPSHOT.jar",
+    "bytes": 36471,
+    "sha256": "ccc1fbacc0605f2ecc27ad2cd8afebc68afde40ab250d49445a183e46ab067ed"
+  },
+  {
+    "module": "fibra-runtime-java",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-runtime-java/fibra-runtime-java-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 132467,
+    "sha256": "b0f7e11b7dfeae1c3df3901840a280f9cb726311f2ceb3916a81f6ddf74a999d"
+  },
+  {
+    "module": "fibra-runtime-java",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-runtime-java/fibra-runtime-java-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 22633,
+    "sha256": "54f2043568d3008e6f8064fec9d536c8b95ea415e4b8aa7d4f607e61d50eae81"
+  },
+  {
+    "module": "fibra-runtime-java",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-runtime-java/fibra-runtime-java-0.5.0-SNAPSHOT.jar",
+    "bytes": 77012,
+    "sha256": "fc2cc52f6c8060ce8a254220987a4b8ab19187ef69f51cc21ea7c7f02b86f5f5"
+  },
+  {
+    "module": "fibra-runtime-node",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-runtime-node/fibra-runtime-node-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 143221,
+    "sha256": "846b47edd5cbc43cb9963dcf71a36c491b147a6c124fb3c52ef46c7b9eab74bd"
+  },
+  {
+    "module": "fibra-runtime-node",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-runtime-node/fibra-runtime-node-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 30384,
+    "sha256": "cd20f8042e0509bc962dee95945d3d319a6c3ec1d7aa78675b2a3f76a5f0dde5"
+  },
+  {
+    "module": "fibra-runtime-node",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-runtime-node/fibra-runtime-node-0.5.0-SNAPSHOT.jar",
+    "bytes": 96131,
+    "sha256": "09542dee60070e982a856cdb9d7a4cf73b6ca0de29faa08d4a20490d1bc92830"
+  },
+  {
+    "module": "fibra-spring-boot-starter",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-spring-boot-starter/fibra-spring-boot-starter-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 101600,
+    "sha256": "306e5075d600652b331a1c815fc53860213ecc9a6f768ef34c66a8864c7c98f5"
+  },
+  {
+    "module": "fibra-spring-boot-starter",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-spring-boot-starter/fibra-spring-boot-starter-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 5462,
+    "sha256": "665eb2f478d43a303809f2910c0a7b33c6f9095fffc315be3b6049c1586c09c2"
+  },
+  {
+    "module": "fibra-spring-boot-starter",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-spring-boot-starter/fibra-spring-boot-starter-0.5.0-SNAPSHOT.jar",
+    "bytes": 15064,
+    "sha256": "98f1e4ba2b4ca219b452c619abee69a030eabc8317580235a96e8901cf5da7b1"
+  },
+  {
+    "module": "fibra-spring",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-spring/fibra-spring-0.5.0-SNAPSHOT-javadoc.jar",
+    "bytes": 106570,
+    "sha256": "19bb40d4af1018c847e965d5b3328090969f5acb3340ddd8161724e19bbd9f5f"
+  },
+  {
+    "module": "fibra-spring",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-spring/fibra-spring-0.5.0-SNAPSHOT-sources.jar",
+    "bytes": 4246,
+    "sha256": "3b408a181e9fdaefbf1da91b7ef28eebea1bb9a3b0e7d838a1b96b3d6c8d9563"
+  },
+  {
+    "module": "fibra-spring",
+    "path": "/private/tmp/fibra-config-contract-evidence/final/artifacts/fibra-spring/fibra-spring-0.5.0-SNAPSHOT.jar",
+    "bytes": 12287,
+    "sha256": "83064ebfcfb163dcdc54a418b4e00ade4830c4dd890b86b3b4f954bac4693f65"
+  }
+]

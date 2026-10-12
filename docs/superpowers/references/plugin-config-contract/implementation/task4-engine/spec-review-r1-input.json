@@ -1,0 +1,60 @@
+{
+  "head": "0a674176b8b762b4e77044bcba7f051bf06c41d9",
+  "branch": "codex/plugin-config-contract",
+  "checks": [
+    {
+      "manifest": "task4-source.sha256",
+      "manifestSha256": "3809171f9e4f86030cc080b30396f79462fd27cc9c84c988226e2158aabf33c8",
+      "exit": 0,
+      "output": "fibra-cli/src/test/java/com/sstlfsj/fibra/cli/CliHostOwnershipTest.java: OK\nfibra-cli/src/test/java/com/sstlfsj/fibra/cli/CliHostTest.java: OK\nfibra-cli/src/test/java/com/sstlfsj/fibra/cli/FibraCliTest.java: OK\nfibra-engine/src/main/java/com/sstlfsj/fibra/engine/EngineConfigurationContracts.java: OK\nfibra-engine/src/main/java/com/sstlfsj/fibra/engine/EngineReadAttempt.java: OK\nfibra-engine/src/main/java/com/sstlfsj/fibra/engine/FibraEngine.java: OK\nfibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/ConfigContractException.java: OK\nfibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/DefinitionConfigContract.java: OK\nfibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineAttemptStateModelTest.java: OK\nfibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineConfigurationContractTest.java: OK\nfibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineReadAttemptTest.java: OK\nfibra-engine/src/test/java/com/sstlfsj/fibra/engine/RuntimeDriverEngineTest.java: OK\nfibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/host/HostRestartRecoveryProcess.java: OK\nfibra-registry/src/test/java/com/sstlfsj/fibra/registry/PluginRegistryTest.java: OK\nfibra-runtime-java/src/test/java/com/sstlfsj/fibra/runtime/java/JavaBuiltInRecoveryTest.java: OK\n"
+    },
+    {
+      "manifest": "spec.sha256",
+      "manifestSha256": "fde4bd6be2b3b12e1d7ee822083a906a4001ad089e4bc3c8fbbaec0091c13202",
+      "exit": 0,
+      "output": "docs/superpowers/specs/2026-10-11-plugin-config-contract-design.md: OK\n"
+    }
+  ],
+  "archivedXmlTotals": [
+    {
+      "run": "15",
+      "suites": 4,
+      "counts": [
+        72,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "run": "16",
+      "suites": 1,
+      "counts": [
+        49,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "run": "17",
+      "suites": 8,
+      "counts": [
+        109,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "run": "20",
+      "suites": 69,
+      "counts": [
+        516,
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

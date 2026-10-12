@@ -58,7 +58,7 @@ Java 插件 package，以及目标平台使用的 Node.js、ripgrep 和 Bash 启
 ```
 
 一次 `ApplyDeployment` 原子提交完整 package selections、raw desired graph 和 `ConfigContextSnapshot`。
-Engine 先编译并按 runtime slice prepare/validate/seal 完整 candidate，再以 CAS 保存新的 `DeploymentTarget`，
+Engine 先编译并校验全部 active 实例的 effective 配置，再按 runtime slice prepare/validate/seal 完整 candidate，以 CAS 保存新的 `DeploymentTarget`，
 随后原子 promote、关闭旧准入、drain/stop 旧 units、activate 新 units，最后 retire 旧资源并发布实际观察结果。
 保存前不会启动执行；运行时故障不会伪装成目标未保存；重启只从已确认的完整目标和精确 package revision
 恢复。
@@ -67,8 +67,8 @@ Engine 先编译并按 runtime slice prepare/validate/seal 完整 candidate，�
 
 - `fibra-bom`：全部正式 Fibra Maven 制品的兼容版本目录，不引入运行时依赖；
 - `fibra-api`、`fibra-core`：Scope、插件、服务、事件、effect 和唯一生命周期所有权实现；
-- `fibra-config`：期望状态采集、校验、条件求值和配置绑定；
-- `fibra-artifact`：`PluginPackage`、`PluginPackageStore`、内容摘要和 package revision；
+- `fibra-config`：期望状态采集、条件求值、纯结构校验和配置绑定支持；
+- `fibra-artifact`：`PluginPackage`、`PluginPackageStore`、内容摘要、package revision 和固定配置合同资源读取；
 - `fibra-engine`：完整目标、runtime SPI、串行变更、观察事实和 `PublishedRuntime`；
 - `fibra-runtime-java`、`fibra-runtime-node`：Java 与 Node 的 `RuntimeProvider` 实现；
 - `fibra-bridge`：贡献目录、调用适配、注册身份和排空；
@@ -82,6 +82,10 @@ Engine 先编译并按 runtime slice prepare/validate/seal 完整 candidate，�
 - `fibra-distribution`：以 `bin` 分类 ZIP 发布的 Fibra 参考发行。
 
 ## 插件 package
+
+插件作者通过根 `fibra-config.json` 声明各 definition 的配置规则。实例值与表达式继续使用原 profile 和
+`DeploymentTarget`；Engine 在创建候选运行资源前校验求值结果，runtime 保留类型绑定、默认值、业务校验与
+资源生命周期。查询 API、完整配置示例和直接迁移边界见[插件实例配置合同](docs/api/plugin-configuration.md)。
 
 安装、升级、持久化和恢复的原子单位是逻辑目录 package。根目录必须包含唯一 `fibra-package.yaml`：
 

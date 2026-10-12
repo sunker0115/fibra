@@ -1,0 +1,50 @@
+{
+  "format": 1,
+  "profile": "fibra-config-1",
+  "facets": {
+    "main": {
+      "tool-fs": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "readLimit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "readMaxLineLength": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "readMaxBytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 9223372036854775807
+          },
+          "readSourceMaxBytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 9223372036854775807
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "https://json-schema.org/draft/2020-12/schema"
+      }
+    }
+  }
+}

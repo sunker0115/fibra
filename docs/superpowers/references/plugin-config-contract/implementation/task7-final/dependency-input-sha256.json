@@ -1,0 +1,14 @@
+[
+  {
+    "path": "pom.xml",
+    "sha256": "cc2eabd770acc8654e48347c87df329b80a2b0d4a16d37e8e1a3c7240e02f41c"
+  },
+  {
+    "path": "fibra-config/pom.xml",
+    "sha256": "b0d47941ac8e795b6ae1a635c735034548fa24f47d5b84e6e6e483799a2a9161"
+  },
+  {
+    "path": "fibra-distribution/pom.xml",
+    "sha256": "3fdf13fb50434ea74f89937e9977627518ed20370b1daa8b413bcfa60d7f0d41"
+  }
+]

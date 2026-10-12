@@ -94,6 +94,7 @@
     <spring-framework.version>7.0.8</spring-framework.version>
     <spring-boot.version>4.1.0</spring-boot.version>
     <jackson.version>3.1.5</jackson.version>
+    <json-schema-validator.version>3.0.8</json-schema-validator.version>
     <jna.version>5.17.0</jna.version>
     <flatten-maven-plugin.version>1.7.0</flatten-maven-plugin.version>
     <central-publishing-maven-plugin.version>0.9.0</central-publishing-maven-plugin.version>
@@ -119,6 +120,17 @@
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>com.networknt</groupId>
+        <artifactId>json-schema-validator</artifactId>
+        <version>${json-schema-validator.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>tools.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
       <dependency>
         <groupId>info.picocli</groupId>
         <artifactId>picocli</artifactId>
@@ -343,6 +355,29 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-assembly-plugin</artifactId>
           <version>${maven-assembly-plugin.version}</version>
+          <executions>
+            <execution>
+              <id>stage-plugin-configuration</id>
+              <configuration>
+              <attach>false</attach>
+              <appendAssemblyId>false</appendAssemblyId>
+              <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+              <finalName>.</finalName>
+              <archiverConfig><forced>true</forced></archiverConfig>
+              <inlineDescriptors><inlineDescriptor>
+                <id>plugin-configuration</id>
+                <formats><format>dir</format></formats>
+                <includeBaseDirectory>false</includeBaseDirectory>
+                <files><file>
+                  <source>${project.basedir}/src/plugin/fibra-config.json</source>
+                  <outputDirectory>META-INF/fibra</outputDirectory>
+                  <destName>config.json</destName>
+                  <filtered>false</filtered>
+                </file></files>
+              </inlineDescriptor></inlineDescriptors>
+            </configuration>
+            </execution>
+          </executions>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>

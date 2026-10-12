@@ -1,0 +1,11 @@
+PASS 1 minimum exact adjacent decimals
+PASS 2 maximum exact adjacent large integers
+PASS 3 exclusiveMinimum equal number rejects
+PASS 4 exclusiveMaximum equal number rejects
+PASS 5 enum exact adjacent decimals
+PASS 6 LiteralValue DecimalNode integral accepted
+PASS 7 fractional DecimalNode rejected as integer
+PASS 8 branchless profile failFast returns one failure
+PASS 9 boolean output avoids returning Error
+PASS 10 ordinary compile ignores malformed required value
+ASSERTIONS=10

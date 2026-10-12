@@ -1,0 +1,26 @@
+[
+  {
+    "path": "/private/tmp/fibra-config-contract-evidence/final/clean-verify-reports/fibra-parity-tests/target/client-protocol-conformance/candidate.json",
+    "sha256": "65f681ab580ddf64bf8f8585071bd1a0f1312c0cb59f48a2f15000fe5c34896b"
+  },
+  {
+    "path": "/private/tmp/fibra-config-contract-evidence/final/clean-verify-reports/fibra-parity-tests/target/client-protocol-conformance/initial.json",
+    "sha256": "268b34ec0d8a02150af0176d65e4bc9a287e92992716af39cea27b2b8094f0ab"
+  },
+  {
+    "path": "/private/tmp/fibra-config-contract-evidence/final/clean-verify-reports/fibra-parity-tests/target/client-protocol-conformance/reconnected.json",
+    "sha256": "a04ab05d230fda69d8cf2ddd0275c6c5534a44d74c151f350a80a5aff6f353e7"
+  },
+  {
+    "path": "/private/tmp/fibra-config-contract-evidence/final/clean-verify-reports/fibra-parity-tests/target/client-protocol-conformance/removed.json",
+    "sha256": "1c6db8be2251a796418800d5868c1b02dc7d1c91b1fc148d516f74d67b359ce3"
+  },
+  {
+    "path": "/private/tmp/fibra-config-contract-evidence/final/clean-verify-reports/fibra-parity-tests/target/client-protocol-conformance/replaced.json",
+    "sha256": "a722d22f3d5682b198d44152d8e1a22b068b2d5d2e7f361e80576602de93819a"
+  },
+  {
+    "path": "/private/tmp/fibra-config-contract-evidence/final/clean-verify-reports/fibra-parity-tests/target/client-protocol-conformance/retiring.json",
+    "sha256": "099e5063f8f348c1f45d85428d2b980b242353df04a3509d4408d59671593dae"
+  }
+]

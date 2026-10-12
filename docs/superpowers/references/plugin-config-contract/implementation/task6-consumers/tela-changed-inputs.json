@@ -1,0 +1,97 @@
+[
+  {
+    "path": "tela-agent-plugin/pom.xml",
+    "before": "6b7c4d602ff8d6279c0552a32e5675f01481a82c9451eecb52c1d233ddaee18a",
+    "after": "ceaa52365180e0fb00db0a3055594d709318a6b6e2574ab0c302e0db1a15a50d"
+  },
+  {
+    "path": "tela-agent-plugin/src/plugin/fibra-config.json",
+    "before": null,
+    "after": "cb1ba24d98200f35c400b950c2fc319b992adbd3e406a924002073d7807d84bd"
+  },
+  {
+    "path": "tela-desktop/plugins/agent-view/fibra-config.json",
+    "before": null,
+    "after": "c2a8fdf716dc6cdfc1b8bc23c6c68bc5cd2dbb608f024162e9b4c89130d43a79"
+  },
+  {
+    "path": "tela-desktop/scripts/build.mjs",
+    "before": "4db57d50cc7433c373b744839a744182b641db2b0479170b1707f6f35f188084",
+    "after": "5c0a4a163ead7a1c51415650d34c5eb72ee343f983c62587929106f95ea0da0b"
+  },
+  {
+    "path": "tela-desktop/test/renderer-load.test.mjs",
+    "before": "e62d5f11cadb66dfec517d991b72ddbcf7c2173ca36db53e3dfbb03154bb262e",
+    "after": "f8625a46d4f0e762e4d080e2ac4c70e54fc5f05e898fc1acbe543bfab9ffbf28"
+  },
+  {
+    "path": "tela-distribution/pom.xml",
+    "before": "1bd0021c00fa9cea63ede14a40b49b6f1c8e991870bd2dd6a90fb2142755b43c",
+    "after": "335f1bc754e9188a13e7c9348c811563c6d7929382b85c30f5cbea1ffafdfe7f"
+  },
+  {
+    "path": "tela-distribution/scripts/stage-plugin-configurations.sh",
+    "before": null,
+    "after": "d637912542788ba6df72036e43dc6bb15a5d2afe5307e4aad28e54783e85d44f"
+  },
+  {
+    "path": "tela-distribution/src/main/assembly/bin.xml",
+    "before": "b4681fc3094ee20dc5ecbe553d86a3d91f6ab38d30d3bad8782f5d837eb6e000",
+    "after": "742db5d29a5b70be0106f3c61d5757a6fe52b8ce38e55250d90bac014e6c9601"
+  },
+  {
+    "path": "tela-distribution/src/test/java/com/sstlfsj/tela/distribution/TelaJavaDefinitionConsumptionTest.java",
+    "before": "0464ba156bb8e88b1ea6edcf1be76d0b087f94d75a2a98353bce03e38bc59216",
+    "after": "1530fb7585add2491e3b856a9f9f7f0c6367766804a1c9ff98278a16cc3406bb"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/client/TelaClientCatalogIntegrationTest.java",
+    "before": "25f5ea8bd12862d87728c1cf14ca8e5110007c0649b30f8016001c08df38e4ac",
+    "after": "49f26ea448b3a03ab6ca64754eaffcc994c6fb9f50a806949300cf25b01172a9"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/client/TelaClientRuntimeTest.java",
+    "before": "63765395c63079315fcc0a8d82340fb12d5131d5b8ab85cd9ec61151ff0cc47e",
+    "after": "a3a68099f0fadf0fc5a90c70066bf685b427a5dee1701f4ba7cf10e986d38e03"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostClientShutdownIntegrationTest.java",
+    "before": "0b273ace410c4371cc5477974cd5f76e864b758a6295aa4444cda503c19e9b20",
+    "after": "b3d0820d869aeadf04beb04ea9dcd031c3d5a387648284fb8483fed74102d025"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostGatewayErrorTest.java",
+    "before": "03f789ba36513a729bb0e1143219a6d45fc2e615923ef049227c6f15e20846bd",
+    "after": "c84cd8dd19f6a91406b85d15581a066189096e9d03f6627bb86ea1dc9cae8747"
+  },
+  {
+    "path": "tela-model-api/pom.xml",
+    "before": "d787cb29f574ff8d3c430862c9320d67c5cebf042417864e832e9ab3e98dea38",
+    "after": "2ac9c641ab11c369bc58599f700aae1034b6bc715004121f6bf9c3500f31930f"
+  },
+  {
+    "path": "tela-model-api/src/plugin/fibra-config.json",
+    "before": null,
+    "after": "99605a048253ce922eb70ffa0790d4775124e1f66975e9aa343ae3e325abc0ec"
+  },
+  {
+    "path": "tela-model-deterministic-plugin/pom.xml",
+    "before": "30d4950bba298aac6f4ec31f1b7cfee2c1cf9e0c62ed33bf301aa119f9332ab6",
+    "after": "78f9d18bf40b93d711556afd51d80626701c4c970a748edd78d4f2a6e659b4df"
+  },
+  {
+    "path": "tela-model-deterministic-plugin/src/plugin/fibra-config.json",
+    "before": null,
+    "after": "9e872a7f57dfc23e365e077273ba8c5dfed873815aa4c8641a743d758b8a155a"
+  },
+  {
+    "path": "tela-model-openai-plugin/pom.xml",
+    "before": "40d5f23565b124354f4814c78db433ee0c89511310d3b8943b21a010b3cf9d56",
+    "after": "941f69d67c15a7e0752e191dd7cf4975e7c18e74c08912ede05b8ac57e29806d"
+  },
+  {
+    "path": "tela-model-openai-plugin/src/plugin/fibra-config.json",
+    "before": null,
+    "after": "fe798a7cb46efe75b3c0e9a8a9145f22d9d33c82466b67a2446e64e87cc0add7"
+  }
+]

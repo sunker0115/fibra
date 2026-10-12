@@ -390,10 +390,11 @@ class NodeProcessUnitTest {
                 const group = spawnSync('/bin/ps', ['-o', 'pgid=', '-p', String(process.pid)],
                   { encoding: 'utf8' });
                 if (group.status !== 0) throw new Error(`PGID lookup failed: ${group.stderr}`);
-                fs.writeFileSync(`${root}/identity.json`, JSON.stringify({
+                fs.writeFileSync(`${root}/identity.tmp`, JSON.stringify({
                   pid: process.pid, pgid: Number(group.stdout.trim()),
                   execArgv: process.execArgv, entrypoint: process.argv[1]
                 }));
+                fs.renameSync(`${root}/identity.tmp`, `${root}/identity.json`);
                 if (mode !== 'accepted-term') process.on('SIGTERM', () => {
                   if (mode === 'kill-absent') process.exit(0);
                 });

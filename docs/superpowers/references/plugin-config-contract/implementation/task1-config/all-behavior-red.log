@@ -1,0 +1,231 @@
+[INFO] Scanning for projects...
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Build Order:
+[INFO] 
+[INFO] Fibra                                                              [pom]
+[INFO] Fibra API                                                          [jar]
+[INFO] Fibra Config                                                       [jar]
+[INFO] 
+[INFO] -------------------------< com.sstlfsj:fibra >--------------------------
+[INFO] Building Fibra 0.5.0-SNAPSHOT                                      [1/3]
+[INFO]   from pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- enforcer:3.6.3:enforce (enforce-build-baseline) @ fibra ---
+[INFO] Rule 0: org.apache.maven.enforcer.rules.version.RequireJavaVersion passed
+[INFO] Rule 1: org.apache.maven.enforcer.rules.version.RequireMavenVersion passed
+[INFO] Rule 2: org.apache.maven.enforcer.rules.dependency.DependencyConvergence passed
+[INFO] Rule 3: org.apache.maven.enforcer.rules.RequirePluginVersions passed
+[INFO] 
+[INFO] --- flatten:1.7.0:flatten (flatten) @ fibra ---
+[INFO] Generating flattened POM of project com.sstlfsj:fibra:pom:0.5.0-SNAPSHOT...
+[INFO] 
+[INFO] --- resources:3.5.0:copy-resources (include-license-notices) @ fibra ---
+[INFO] Skipping the execution.
+[INFO] 
+[INFO] -----------------------< com.sstlfsj:fibra-api >------------------------
+[INFO] Building Fibra API 0.5.0-SNAPSHOT                                  [2/3]
+[INFO]   from fibra-api/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- enforcer:3.6.3:enforce (enforce-build-baseline) @ fibra-api ---
+[INFO] Rule 2: org.apache.maven.enforcer.rules.dependency.DependencyConvergence passed
+[INFO] Rule 3: org.apache.maven.enforcer.rules.RequirePluginVersions passed
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ fibra-api ---
+[INFO] skip non existing resourceDirectory /Users/sunke/dev/ai-project/fibra/fibra-api/src/main/resources
+[INFO] 
+[INFO] --- flatten:1.7.0:flatten (flatten) @ fibra-api ---
+[INFO] Generating flattened POM of project com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT...
+[INFO] 
+[INFO] --- resources:3.5.0:copy-resources (include-license-notices) @ fibra-api ---
+[INFO] Copying 3 resources from .. to target/classes/META-INF
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ fibra-api ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ fibra-api ---
+[INFO] skip non existing resourceDirectory /Users/sunke/dev/ai-project/fibra/fibra-api/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ fibra-api ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.5.4:test (default-test) @ fibra-api ---
+[INFO] 
+[INFO] ----------------------< com.sstlfsj:fibra-config >----------------------
+[INFO] Building Fibra Config 0.5.0-SNAPSHOT                               [3/3]
+[INFO]   from fibra-config/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- enforcer:3.6.3:enforce (enforce-build-baseline) @ fibra-config ---
+[INFO] Rule 2: org.apache.maven.enforcer.rules.dependency.DependencyConvergence passed
+[INFO] Rule 3: org.apache.maven.enforcer.rules.RequirePluginVersions passed
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ fibra-config ---
+[INFO] skip non existing resourceDirectory /Users/sunke/dev/ai-project/fibra/fibra-config/src/main/resources
+[INFO] 
+[INFO] --- flatten:1.7.0:flatten (flatten) @ fibra-config ---
+[INFO] Generating flattened POM of project com.sstlfsj:fibra-config:jar:0.5.0-SNAPSHOT...
+[INFO] 
+[INFO] --- resources:3.5.0:copy-resources (include-license-notices) @ fibra-config ---
+[INFO] Copying 3 resources from .. to target/classes/META-INF
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ fibra-config ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ fibra-config ---
+[INFO] skip non existing resourceDirectory /Users/sunke/dev/ai-project/fibra/fibra-config/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ fibra-config ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 14 source files with javac [debug release 21] to target/test-classes
+[INFO] 
+[INFO] --- surefire:3.5.4:test (default-test) @ fibra-config ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.sstlfsj.fibra.config.ConfigSchemaBudgetTest
+[ERROR] Tests run: 5, Failures: 3, Errors: 2, Skipped: 0, Time elapsed: 0.053 s <<< FAILURE! -- in com.sstlfsj.fibra.config.ConfigSchemaBudgetTest
+[ERROR] com.sstlfsj.fibra.config.ConfigSchemaBudgetTest.sourceIsDeeplyImmutableAndNeutralUntilQualification -- Time elapsed: 0.015 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: Expected com.sstlfsj.fibra.config.ConfigSchemaException to be thrown, but nothing was thrown.
+	at org.junit.jupiter.api.Assertions.assertThrows(Assertions.java:3234)
+	at com.sstlfsj.fibra.config.ConfigSchemaBudgetTest.sourceIsDeeplyImmutableAndNeutralUntilQualification(ConfigSchemaBudgetTest.java:25)
+
+[ERROR] com.sstlfsj.fibra.config.ConfigSchemaBudgetTest.boundsRefsCombinationsAndDiamondExpansionIncludingDormantDefs -- Time elapsed: 0.007 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: Expected com.sstlfsj.fibra.config.ConfigSchemaException to be thrown, but nothing was thrown.
+	at org.junit.jupiter.api.Assertions.assertThrows(Assertions.java:3234)
+	at com.sstlfsj.fibra.config.ConfigSchemaBudgetTest.assertBudget(ConfigSchemaBudgetTest.java:92)
+	at com.sstlfsj.fibra.config.ConfigSchemaBudgetTest.boundsRefsCombinationsAndDiamondExpansionIncludingDormantDefs(ConfigSchemaBudgetTest.java:62)
+
+[ERROR] com.sstlfsj.fibra.config.ConfigSchemaBudgetTest.boundsEffectiveStringsNodesAndDepthBeforeLibraryNodes -- Time elapsed: 0.009 s <<< ERROR!
+java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at com.sstlfsj.fibra.config.ConfigSchemaBudgetTest.boundsEffectiveStringsNodesAndDepthBeforeLibraryNodes(ConfigSchemaBudgetTest.java:47)
+
+[ERROR] com.sstlfsj.fibra.config.ConfigSchemaBudgetTest.boundsDecimalPrecisionScaleAndExponentBeforeEncoding -- Time elapsed: 0.002 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: Expected com.sstlfsj.fibra.config.ConfigSchemaException to be thrown, but nothing was thrown.
+	at org.junit.jupiter.api.Assertions.assertThrows(Assertions.java:3234)
+	at com.sstlfsj.fibra.config.ConfigSchemaBudgetTest.boundsDecimalPrecisionScaleAndExponentBeforeEncoding(ConfigSchemaBudgetTest.java:35)
+
+[ERROR] com.sstlfsj.fibra.config.ConfigSchemaBudgetTest.admitsWholeBatchBeforeCompilingAndCountsEveryInstance -- Time elapsed: 0.003 s <<< ERROR!
+java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at com.sstlfsj.fibra.config.ConfigSchemaBudgetTest.admitsWholeBatchBeforeCompilingAndCountsEveryInstance(ConfigSchemaBudgetTest.java:77)
+
+[INFO] Running com.sstlfsj.fibra.config.ConfigSchemaTest
+[ERROR] Tests run: 7, Failures: 5, Errors: 2, Skipped: 0, Time elapsed: 0.012 s <<< FAILURE! -- in com.sstlfsj.fibra.config.ConfigSchemaTest
+[ERROR] com.sstlfsj.fibra.config.ConfigSchemaTest.usesExactDecimalsForAllNumericAssertionsAndScalarEquality -- Time elapsed: 0.003 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: expected: <true> but was: <false>
+	at org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:190)
+	at com.sstlfsj.fibra.config.ConfigSchemaTest.rejects(ConfigSchemaTest.java:33)
+	at com.sstlfsj.fibra.config.ConfigSchemaTest.usesExactDecimalsForAllNumericAssertionsAndScalarEquality(ConfigSchemaTest.java:64)
+
+[ERROR] com.sstlfsj.fibra.config.ConfigSchemaTest.projectsSafeStaticPathsWithoutSecretKeysValuesOrLibraryCauses -- Time elapsed: 0.001 s <<< ERROR!
+java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at com.sstlfsj.fibra.config.ConfigSchemaTest.projectsSafeStaticPathsWithoutSecretKeysValuesOrLibraryCauses(ConfigSchemaTest.java:171)
+
+[ERROR] com.sstlfsj.fibra.config.ConfigSchemaTest.batchReportsStableIndicesAndRejectsProgrammingErrorsSynchronously -- Time elapsed: 0.001 s <<< ERROR!
+java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at com.sstlfsj.fibra.config.ConfigSchemaTest.batchReportsStableIndicesAndRejectsProgrammingErrorsSynchronously(ConfigSchemaTest.java:189)
+
+[ERROR] com.sstlfsj.fibra.config.ConfigSchemaTest.validatesEveryTypeWithoutCoercionOrDefaultMutation -- Time elapsed: 0.001 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: expected: <true> but was: <false>
+	at org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:190)
+	at com.sstlfsj.fibra.config.ConfigSchemaTest.rejects(ConfigSchemaTest.java:33)
+	at com.sstlfsj.fibra.config.ConfigSchemaTest.validatesEveryTypeWithoutCoercionOrDefaultMutation(ConfigSchemaTest.java:43)
+
+[ERROR] com.sstlfsj.fibra.config.ConfigSchemaTest.supportsTypedMapsAndFiniteVariantsWithStandardSemantics -- Time elapsed: 0.001 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: expected: <true> but was: <false>
+	at org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:190)
+	at com.sstlfsj.fibra.config.ConfigSchemaTest.rejects(ConfigSchemaTest.java:33)
+	at com.sstlfsj.fibra.config.ConfigSchemaTest.supportsTypedMapsAndFiniteVariantsWithStandardSemantics(ConfigSchemaTest.java:118)
+
+[ERROR] com.sstlfsj.fibra.config.ConfigSchemaTest.acceptsRootReferenceMetadataAndRejectsEveryUnsupportedForm -- Time elapsed: 0.001 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: expected: <true> but was: <false>
+	at org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:190)
+	at com.sstlfsj.fibra.config.ConfigSchemaTest.rejects(ConfigSchemaTest.java:33)
+	at com.sstlfsj.fibra.config.ConfigSchemaTest.acceptsRootReferenceMetadataAndRejectsEveryUnsupportedForm(ConfigSchemaTest.java:135)
+
+[ERROR] com.sstlfsj.fibra.config.ConfigSchemaTest.enforcesObjectArrayAndUnicodeLengths -- Time elapsed: 0.001 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: expected: <true> but was: <false>
+	at org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:190)
+	at com.sstlfsj.fibra.config.ConfigSchemaTest.rejects(ConfigSchemaTest.java:33)
+	at com.sstlfsj.fibra.config.ConfigSchemaTest.enforcesObjectArrayAndUnicodeLengths(ConfigSchemaTest.java:89)
+
+[INFO] Running com.sstlfsj.fibra.config.ConfigSchemaBootstrapTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in com.sstlfsj.fibra.config.ConfigSchemaBootstrapTest
+[INFO] Running com.sstlfsj.fibra.config.DefinitionConfigDocumentTest
+[ERROR] Tests run: 3, Failures: 3, Errors: 0, Skipped: 0, Time elapsed: 0.006 s <<< FAILURE! -- in com.sstlfsj.fibra.config.DefinitionConfigDocumentTest
+[ERROR] com.sstlfsj.fibra.config.DefinitionConfigDocumentTest.decodesStrictEnvelopeAndDefersDormantSchemaSemantics -- Time elapsed: 0.001 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: expected: <fibra-config-1> but was: <>
+	at org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1199)
+	at com.sstlfsj.fibra.config.DefinitionConfigDocumentTest.decodesStrictEnvelopeAndDefersDormantSchemaSemantics(DefinitionConfigDocumentTest.java:23)
+
+[ERROR] com.sstlfsj.fibra.config.DefinitionConfigDocumentTest.rejectsGlobalBoundsButDefersSingleSchemaQualification -- Time elapsed: 0.002 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: Unexpected exception type thrown, expected: <com.sstlfsj.fibra.config.ConfigSchemaException> but was: <java.lang.NullPointerException>
+	at org.junit.jupiter.api.Assertions.assertThrows(Assertions.java:3234)
+	at com.sstlfsj.fibra.config.DefinitionConfigDocumentTest.rejectsGlobalBoundsButDefersSingleSchemaQualification(DefinitionConfigDocumentTest.java:52)
+Caused by: java.lang.NullPointerException: Cannot invoke "java.util.Map.get(Object)" because the return value of "java.util.Map.get(Object)" is null
+	at com.sstlfsj.fibra.config.DefinitionConfigDocumentTest.lambda$rejectsGlobalBoundsButDefersSingleSchemaQualification$6(DefinitionConfigDocumentTest.java:52)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:54)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:35)
+	... 2 more
+
+[ERROR] com.sstlfsj.fibra.config.DefinitionConfigDocumentTest.rejectsMalformedJsonEnvelopeUtf8AndUnsupportedProfileWithoutOriginalContent -- Time elapsed: 0.001 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: Expected com.sstlfsj.fibra.config.ConfigSchemaException to be thrown, but nothing was thrown.
+	at org.junit.jupiter.api.Assertions.assertThrows(Assertions.java:3234)
+	at com.sstlfsj.fibra.config.DefinitionConfigDocumentTest.rejectsMalformedJsonEnvelopeUtf8AndUnsupportedProfileWithoutOriginalContent(DefinitionConfigDocumentTest.java:40)
+
+[INFO] 
+[INFO] Results:
+[INFO] 
+[ERROR] Failures: 
+[ERROR]   ConfigSchemaBudgetTest.boundsDecimalPrecisionScaleAndExponentBeforeEncoding:35 Expected com.sstlfsj.fibra.config.ConfigSchemaException to be thrown, but nothing was thrown.
+[ERROR]   ConfigSchemaBudgetTest.boundsRefsCombinationsAndDiamondExpansionIncludingDormantDefs:62->assertBudget:92 Expected com.sstlfsj.fibra.config.ConfigSchemaException to be thrown, but nothing was thrown.
+[ERROR]   ConfigSchemaBudgetTest.sourceIsDeeplyImmutableAndNeutralUntilQualification:25 Expected com.sstlfsj.fibra.config.ConfigSchemaException to be thrown, but nothing was thrown.
+[ERROR]   ConfigSchemaTest.acceptsRootReferenceMetadataAndRejectsEveryUnsupportedForm:135->rejects:33 expected: <true> but was: <false>
+[ERROR]   ConfigSchemaTest.enforcesObjectArrayAndUnicodeLengths:89->rejects:33 expected: <true> but was: <false>
+[ERROR]   ConfigSchemaTest.supportsTypedMapsAndFiniteVariantsWithStandardSemantics:118->rejects:33 expected: <true> but was: <false>
+[ERROR]   ConfigSchemaTest.usesExactDecimalsForAllNumericAssertionsAndScalarEquality:64->rejects:33 expected: <true> but was: <false>
+[ERROR]   ConfigSchemaTest.validatesEveryTypeWithoutCoercionOrDefaultMutation:43->rejects:33 expected: <true> but was: <false>
+[ERROR]   DefinitionConfigDocumentTest.decodesStrictEnvelopeAndDefersDormantSchemaSemantics:23 expected: <fibra-config-1> but was: <>
+[ERROR]   DefinitionConfigDocumentTest.rejectsGlobalBoundsButDefersSingleSchemaQualification:52 Unexpected exception type thrown, expected: <com.sstlfsj.fibra.config.ConfigSchemaException> but was: <java.lang.NullPointerException>
+[ERROR]   DefinitionConfigDocumentTest.rejectsMalformedJsonEnvelopeUtf8AndUnsupportedProfileWithoutOriginalContent:40 Expected com.sstlfsj.fibra.config.ConfigSchemaException to be thrown, but nothing was thrown.
+[ERROR] Errors: 
+[ERROR]   ConfigSchemaBudgetTest.admitsWholeBatchBeforeCompilingAndCountsEveryInstance:77 » NoSuchElement No value present
+[ERROR]   ConfigSchemaBudgetTest.boundsEffectiveStringsNodesAndDepthBeforeLibraryNodes:47 » NoSuchElement No value present
+[ERROR]   ConfigSchemaTest.batchReportsStableIndicesAndRejectsProgrammingErrorsSynchronously:189 » NoSuchElement No value present
+[ERROR]   ConfigSchemaTest.projectsSafeStaticPathsWithoutSecretKeysValuesOrLibraryCauses:171 » NoSuchElement No value present
+[INFO] 
+[ERROR] Tests run: 16, Failures: 11, Errors: 4, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary for Fibra 0.5.0-SNAPSHOT:
+[INFO] 
+[INFO] Fibra .............................................. SUCCESS [  0.302 s]
+[INFO] Fibra API .......................................... SUCCESS [  0.274 s]
+[INFO] Fibra Config ....................................... FAILURE [  1.550 s]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  2.423 s
+[INFO] Finished at: 2026-10-12T14:25:33+08:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.4:test (default-test) on project fibra-config: There are test failures.
+[ERROR] 
+[ERROR] See /Users/sunke/dev/ai-project/fibra/fibra-config/target/surefire-reports for the individual test results.
+[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :fibra-config

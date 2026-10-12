@@ -1,0 +1,16 @@
+fibra-cli/src/test/java/com/sstlfsj/fibra/cli/CliHostOwnershipTest.java: OK
+fibra-cli/src/test/java/com/sstlfsj/fibra/cli/CliHostTest.java: OK
+fibra-cli/src/test/java/com/sstlfsj/fibra/cli/FibraCliTest.java: OK
+fibra-engine/src/main/java/com/sstlfsj/fibra/engine/EngineConfigurationContracts.java: OK
+fibra-engine/src/main/java/com/sstlfsj/fibra/engine/EngineReadAttempt.java: OK
+fibra-engine/src/main/java/com/sstlfsj/fibra/engine/FibraEngine.java: OK
+fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/ConfigContractException.java: OK
+fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/DefinitionConfigContract.java: OK
+fibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineAttemptStateModelTest.java: OK
+fibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineConfigurationContractTest.java: OK
+fibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineReadAttemptTest.java: OK
+fibra-engine/src/test/java/com/sstlfsj/fibra/engine/RuntimeDriverEngineTest.java: OK
+fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/host/HostRestartRecoveryProcess.java: OK
+fibra-registry/src/test/java/com/sstlfsj/fibra/registry/PluginRegistryTest.java: OK
+fibra-runtime-java/src/test/java/com/sstlfsj/fibra/runtime/java/JavaBuiltInRecoveryTest.java: OK
+docs/superpowers/specs/2026-10-11-plugin-config-contract-design.md: OK

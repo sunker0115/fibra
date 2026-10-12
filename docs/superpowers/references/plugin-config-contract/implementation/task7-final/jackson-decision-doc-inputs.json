@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-12",
+  "decision": "本次保留 3.1.5 并明确记录告警，升级另行处理",
+  "scope": "仅更新用户决定及当前状态；依赖、生产代码、测试与发行物未变；原独审与收口锁保留。",
+  "files": [
+    {
+      "path": "docs/api/plugin-configuration.md",
+      "sha256": "da716cf0fbe2d15af4b0d492b03e0c779ac33208a26aefd826586bc3f5c967ca"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-10-11-plugin-config-contract/task_plan.md",
+      "sha256": "24df11502829a15105f6e532bc3cd03f3646e314e6b3ef890686b591777e563b"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-10-11-plugin-config-contract/implementation-plan.md",
+      "sha256": "79c3d99d5bff90f6f9316020a9724226dc2f880c904e7dbf35aa18ab96dab485"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-10-11-plugin-config-contract/closeout.md",
+      "sha256": "73bcec70d5ff76b65210337185772f717fa2040f73be39e307a5984bfc0b72de"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-10-11-plugin-config-contract/verification-ledger.md",
+      "sha256": "0b870b05fb0f056124cc0cbd93c91a180955867d5444715899e719568e938d81"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-10-11-plugin-config-contract/dependency-qualification.md",
+      "sha256": "40a3d6ba4fdefcef44d123b504da047e0a64870121afc6545ed36bfb0b0d4d13"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-10-11-plugin-config-contract/progress.md",
+      "sha256": "acf511a9cf5e2c9f509e7d96aab00933f34b7374f6c7888888fb759d5401039f"
+    }
+  ]
+}

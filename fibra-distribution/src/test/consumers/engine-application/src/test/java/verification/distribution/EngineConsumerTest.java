@@ -43,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class EngineConsumerTest {
     private static final Duration TIMEOUT = Duration.ofSeconds(20);
-    private static final List<String> FORMAL_ARTIFACTS = List.of(
+    static final List<String> FORMAL_ARTIFACTS = List.of(
         "fibra-fs", "fibra-fs-local", "fibra-tool-fs",
         "fibra-subprocess", "fibra-subprocess-local", "fibra-tool-fs-search",
         "fibra-shell", "fibra-shell-local", "fibra-tool-shell",
@@ -219,13 +219,22 @@ class EngineConsumerTest {
         return builder.build();
     }
 
-    private static PluginInstallRequest installRequest(Path packages, String pluginId, Path source) throws IOException {
+    static PluginInstallRequest installRequest(Path packages, String pluginId, Path source) throws IOException {
         var root = Files.createTempDirectory(Files.createDirectories(packages), "plugin-");
         var lib = Files.createDirectory(root.resolve("lib"));
         var payload = lib.resolve(source.getFileName());
         if ("external".equals(pluginId)) rewriteJavaDescriptor(source, payload,
             "verification.distribution.plugin.Entrypoint", "external");
         else Files.copy(source, payload);
+        try (var archive = new java.util.jar.JarFile(payload.toFile())) {
+            var entries = archive.stream().filter(entry ->
+                entry.getName().equals("META-INF/fibra/config.json")).toList();
+            assertEquals(1, entries.size());
+            assertFalse(entries.getFirst().isDirectory());
+            try (var input = archive.getInputStream(entries.getFirst())) {
+                Files.write(root.resolve("fibra-config.json"), input.readAllBytes());
+            }
+        }
         Files.writeString(root.resolve("fibra-package.yaml"), packageManifest(pluginId,
             "lib/" + source.getFileName(), dependencies(pluginId)));
         return new PluginInstallRequest(root, true);

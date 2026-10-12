@@ -1,0 +1,738 @@
+[INFO] Scanning for projects...
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Build Order:
+[INFO] 
+[INFO] Fibra                                                              [pom]
+[INFO] Fibra BOM                                                          [pom]
+[INFO] Fibra API                                                          [jar]
+[INFO] Fibra Core                                                         [jar]
+[INFO] Fibra Config                                                       [jar]
+[INFO] Fibra Artifact                                                     [jar]
+[INFO] Fibra Contribution Bridge                                          [jar]
+[INFO] Fibra Engine                                                       [jar]
+[INFO] Fibra Java Runtime                                                 [jar]
+[INFO] Fibra Tool API                                                     [jar]
+[INFO] Fibra Node Runtime                                                 [jar]
+[INFO] Fibra Plugin Registry                                              [jar]
+[INFO] Fibra CLI API                                                      [jar]
+[INFO] Fibra CLI                                                          [jar]
+[INFO] Fibra Spring                                                       [jar]
+[INFO] Fibra Spring Boot Starter                                          [jar]
+[INFO] Fibra Plugin Archetype                                 [maven-archetype]
+[INFO] Fibra File System Contract                                         [jar]
+[INFO] Fibra Local File System Plugin                                     [jar]
+[INFO] Fibra File Tools Plugin                                            [jar]
+[INFO] Fibra Subprocess Contract                                          [jar]
+[INFO] Fibra File Search Tools Plugin                                     [jar]
+[INFO] Fibra Local Subprocess Plugin                                      [jar]
+[INFO] Fibra Shell Contract                                               [jar]
+[INFO] Fibra Local Shell Plugin                                           [jar]
+[INFO] Fibra Shell Tool Plugin                                            [jar]
+[INFO] Fibra Storage Contract                                             [jar]
+[INFO] Fibra JSON Storage Plugin                                          [jar]
+[INFO] Fibra Storage Tools Plugin                                         [jar]
+[INFO] Fibra Distribution                                                 [pom]
+[INFO] Fibra Client Protocol                                              [jar]
+[INFO] 
+[INFO] -------------------------< com.sstlfsj:fibra >--------------------------
+[INFO] Building Fibra 0.5.0-SNAPSHOT                                     [1/31]
+[INFO]   from pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra ---
+[INFO] com.sstlfsj:fibra:pom:0.5.0-SNAPSHOT
+[INFO] 
+[INFO] -----------------------< com.sstlfsj:fibra-bom >------------------------
+[INFO] Building Fibra BOM 0.5.0-SNAPSHOT                                 [2/31]
+[INFO]   from fibra-bom/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-bom ---
+[INFO] com.sstlfsj:fibra-bom:pom:0.5.0-SNAPSHOT
+[INFO] 
+[INFO] -----------------------< com.sstlfsj:fibra-api >------------------------
+[INFO] Building Fibra API 0.5.0-SNAPSHOT                                 [3/31]
+[INFO]   from fibra-api/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-api ---
+[INFO] com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT
+[INFO] \- io.projectreactor:reactor-core:jar:3.8.6:compile
+[INFO]    +- org.reactivestreams:reactive-streams:jar:1.0.4:compile
+[INFO]    \- org.jspecify:jspecify:jar:1.0.0:compile (scope not updated to compile)
+[INFO] 
+[INFO] -----------------------< com.sstlfsj:fibra-core >-----------------------
+[INFO] Building Fibra Core 0.5.0-SNAPSHOT                                [4/31]
+[INFO]   from fibra-core/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-core ---
+[INFO] com.sstlfsj:fibra-core:jar:0.5.0-SNAPSHOT
+[INFO] +- com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  \- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] +- io.projectreactor:reactor-core:jar:3.8.6:compile
+[INFO] |  +- org.reactivestreams:reactive-streams:jar:1.0.4:compile
+[INFO] |  \- org.jspecify:jspecify:jar:1.0.0:compile (scope not updated to compile)
+[INFO] \- org.slf4j:slf4j-api:jar:2.0.18:compile
+[INFO] 
+[INFO] ----------------------< com.sstlfsj:fibra-config >----------------------
+[INFO] Building Fibra Config 0.5.0-SNAPSHOT                              [5/31]
+[INFO]   from fibra-config/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-config ---
+[INFO] com.sstlfsj:fibra-config:jar:0.5.0-SNAPSHOT
+[INFO] +- com.networknt:json-schema-validator:jar:3.0.8:compile
+[INFO] |  +- com.ethlo.time:itu:jar:1.14.0:compile
+[INFO] |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.2.1; omitted for duplicate)
+[INFO] |  \- org.slf4j:slf4j-api:jar:2.0.18:compile (version managed from 2.0.19)
+[INFO] +- com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  \- io.projectreactor:reactor-core:jar:3.8.6:compile (version managed from 3.8.6)
+[INFO] |     +- org.reactivestreams:reactive-streams:jar:1.0.4:compile
+[INFO] |     \- org.jspecify:jspecify:jar:1.0.0:compile (scope not updated to compile)
+[INFO] +- tools.jackson.core:jackson-databind:jar:3.1.5:compile
+[INFO] |  +- com.fasterxml.jackson.core:jackson-annotations:jar:2.21:compile
+[INFO] |  \- tools.jackson.core:jackson-core:jar:3.1.5:compile
+[INFO] \- tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile
+[INFO]    +- (tools.jackson.core:jackson-core:jar:3.1.5:compile - omitted for duplicate)
+[INFO]    +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO]    \- org.snakeyaml:snakeyaml-engine:jar:3.0.1:compile
+[INFO] 
+[INFO] ---------------------< com.sstlfsj:fibra-artifact >---------------------
+[INFO] Building Fibra Artifact 0.5.0-SNAPSHOT                            [6/31]
+[INFO]   from fibra-artifact/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-artifact ---
+[INFO] com.sstlfsj:fibra-artifact:jar:0.5.0-SNAPSHOT
+[INFO] \- tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile
+[INFO]    +- tools.jackson.core:jackson-core:jar:3.1.5:compile
+[INFO]    +- tools.jackson.core:jackson-databind:jar:3.1.5:compile (version managed from 3.1.5)
+[INFO]    |  +- com.fasterxml.jackson.core:jackson-annotations:jar:2.21:compile
+[INFO]    |  \- (tools.jackson.core:jackson-core:jar:3.1.5:compile - omitted for duplicate)
+[INFO]    \- org.snakeyaml:snakeyaml-engine:jar:3.0.1:compile
+[INFO] 
+[INFO] ----------------------< com.sstlfsj:fibra-bridge >----------------------
+[INFO] Building Fibra Contribution Bridge 0.5.0-SNAPSHOT                 [7/31]
+[INFO]   from fibra-bridge/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-bridge ---
+[INFO] com.sstlfsj:fibra-bridge:jar:0.5.0-SNAPSHOT
+[INFO] +- com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  \- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] \- io.projectreactor:reactor-core:jar:3.8.6:compile
+[INFO]    +- org.reactivestreams:reactive-streams:jar:1.0.4:compile
+[INFO]    \- org.jspecify:jspecify:jar:1.0.0:compile (scope not updated to compile)
+[INFO] 
+[INFO] ----------------------< com.sstlfsj:fibra-engine >----------------------
+[INFO] Building Fibra Engine 0.5.0-SNAPSHOT                              [8/31]
+[INFO]   from fibra-engine/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-engine ---
+[INFO] com.sstlfsj:fibra-engine:jar:0.5.0-SNAPSHOT
+[INFO] +- com.sstlfsj:fibra-core:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  +- com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  \- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] |  +- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] |  \- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.18; omitted for duplicate)
+[INFO] +- com.sstlfsj:fibra-config:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  +- com.networknt:json-schema-validator:jar:3.0.8:compile (version managed from 3.0.8)
+[INFO] |  |  +- com.ethlo.time:itu:jar:1.14.0:compile
+[INFO] |  |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.2.1; omitted for duplicate)
+[INFO] |  |  \- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.19; omitted for duplicate)
+[INFO] |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  \- tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile (version managed from 3.1.5)
+[INFO] |     +- (tools.jackson.core:jackson-core:jar:3.1.5:compile - omitted for duplicate)
+[INFO] |     +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |     \- org.snakeyaml:snakeyaml-engine:jar:3.0.1:compile
+[INFO] +- com.sstlfsj:fibra-artifact:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  \- (tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] +- com.sstlfsj:fibra-bridge:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  \- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] +- org.slf4j:slf4j-api:jar:2.0.18:compile
+[INFO] +- tools.jackson.core:jackson-databind:jar:3.1.5:compile
+[INFO] |  +- com.fasterxml.jackson.core:jackson-annotations:jar:2.21:compile
+[INFO] |  \- tools.jackson.core:jackson-core:jar:3.1.5:compile
+[INFO] \- io.projectreactor:reactor-core:jar:3.8.6:compile
+[INFO]    +- org.reactivestreams:reactive-streams:jar:1.0.4:compile
+[INFO]    \- org.jspecify:jspecify:jar:1.0.0:compile (scope not updated to compile)
+[INFO] 
+[INFO] -------------------< com.sstlfsj:fibra-runtime-java >-------------------
+[INFO] Building Fibra Java Runtime 0.5.0-SNAPSHOT                        [9/31]
+[INFO]   from fibra-runtime-java/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-runtime-java ---
+[INFO] com.sstlfsj:fibra-runtime-java:jar:0.5.0-SNAPSHOT
+[INFO] +- com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  \- io.projectreactor:reactor-core:jar:3.8.6:compile (version managed from 3.8.6)
+[INFO] |     +- org.reactivestreams:reactive-streams:jar:1.0.4:compile
+[INFO] |     \- org.jspecify:jspecify:jar:1.0.0:compile (scope not updated to compile)
+[INFO] +- com.sstlfsj:fibra-artifact:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  \- (tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] +- com.sstlfsj:fibra-engine:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  +- com.sstlfsj:fibra-core:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  +- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] |  |  \- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.18; omitted for duplicate)
+[INFO] |  +- com.sstlfsj:fibra-config:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  +- com.networknt:json-schema-validator:jar:3.0.8:compile (version managed from 3.0.8)
+[INFO] |  |  |  +- com.ethlo.time:itu:jar:1.14.0:compile
+[INFO] |  |  |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.2.1; omitted for duplicate)
+[INFO] |  |  |  \- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.19; omitted for duplicate)
+[INFO] |  |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  |  \- (tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  +- (com.sstlfsj:fibra-artifact:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  +- com.sstlfsj:fibra-bridge:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  \- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] |  +- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.18; omitted for duplicate)
+[INFO] |  +- tools.jackson.core:jackson-databind:jar:3.1.5:compile (version managed from 3.1.5)
+[INFO] |  |  +- com.fasterxml.jackson.core:jackson-annotations:jar:2.21:compile
+[INFO] |  |  \- (tools.jackson.core:jackson-core:jar:3.1.5:compile - omitted for duplicate)
+[INFO] |  \- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] +- tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile
+[INFO] |  +- tools.jackson.core:jackson-core:jar:3.1.5:compile
+[INFO] |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  \- org.snakeyaml:snakeyaml-engine:jar:3.0.1:compile
+[INFO] \- org.slf4j:slf4j-api:jar:2.0.18:compile
+[INFO] 
+[INFO] ---------------------< com.sstlfsj:fibra-tool-api >---------------------
+[INFO] Building Fibra Tool API 0.5.0-SNAPSHOT                           [10/31]
+[INFO]   from fibra-plugins/fibra-tool-api/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-tool-api ---
+[INFO] com.sstlfsj:fibra-tool-api:jar:0.5.0-SNAPSHOT
+[INFO] +- com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  \- io.projectreactor:reactor-core:jar:3.8.6:compile (version managed from 3.8.6)
+[INFO] |     +- org.reactivestreams:reactive-streams:jar:1.0.4:compile
+[INFO] |     \- org.jspecify:jspecify:jar:1.0.0:compile (scope not updated to compile)
+[INFO] \- com.sstlfsj:fibra-bridge:jar:0.5.0-SNAPSHOT:compile
+[INFO]    +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO]    \- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] 
+[INFO] -------------------< com.sstlfsj:fibra-runtime-node >-------------------
+[INFO] Building Fibra Node Runtime 0.5.0-SNAPSHOT                       [11/31]
+[INFO]   from fibra-runtime-node/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-runtime-node ---
+[INFO] com.sstlfsj:fibra-runtime-node:jar:0.5.0-SNAPSHOT
+[INFO] +- com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  \- io.projectreactor:reactor-core:jar:3.8.6:compile (version managed from 3.8.6)
+[INFO] |     +- org.reactivestreams:reactive-streams:jar:1.0.4:compile
+[INFO] |     \- org.jspecify:jspecify:jar:1.0.0:compile (scope not updated to compile)
+[INFO] +- com.sstlfsj:fibra-artifact:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  \- (tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] +- com.sstlfsj:fibra-engine:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  +- com.sstlfsj:fibra-core:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  +- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] |  |  \- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.18; omitted for duplicate)
+[INFO] |  +- com.sstlfsj:fibra-config:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  +- com.networknt:json-schema-validator:jar:3.0.8:compile (version managed from 3.0.8)
+[INFO] |  |  |  +- com.ethlo.time:itu:jar:1.14.0:compile
+[INFO] |  |  |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.2.1; omitted for duplicate)
+[INFO] |  |  |  \- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.19; omitted for duplicate)
+[INFO] |  |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  |  \- (tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  +- (com.sstlfsj:fibra-artifact:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  +- (com.sstlfsj:fibra-bridge:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  +- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.18; omitted for duplicate)
+[INFO] |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  \- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] +- com.sstlfsj:fibra-bridge:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  \- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] +- tools.jackson.core:jackson-databind:jar:3.1.5:compile
+[INFO] |  +- com.fasterxml.jackson.core:jackson-annotations:jar:2.21:compile
+[INFO] |  \- tools.jackson.core:jackson-core:jar:3.1.5:compile
+[INFO] +- tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile
+[INFO] |  +- (tools.jackson.core:jackson-core:jar:3.1.5:compile - omitted for duplicate)
+[INFO] |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  \- org.snakeyaml:snakeyaml-engine:jar:3.0.1:compile
+[INFO] \- org.slf4j:slf4j-api:jar:2.0.18:compile
+[INFO] 
+[INFO] ---------------------< com.sstlfsj:fibra-registry >---------------------
+[INFO] Building Fibra Plugin Registry 0.5.0-SNAPSHOT                    [12/31]
+[INFO]   from fibra-registry/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-registry ---
+[INFO] com.sstlfsj:fibra-registry:jar:0.5.0-SNAPSHOT
+[INFO] \- com.sstlfsj:fibra-engine:jar:0.5.0-SNAPSHOT:compile
+[INFO]    +- com.sstlfsj:fibra-core:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO]    |  +- com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO]    |  |  \- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO]    |  +- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO]    |  \- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.18; omitted for duplicate)
+[INFO]    +- com.sstlfsj:fibra-config:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO]    |  +- com.networknt:json-schema-validator:jar:3.0.8:compile (version managed from 3.0.8)
+[INFO]    |  |  +- com.ethlo.time:itu:jar:1.14.0:compile
+[INFO]    |  |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.2.1; omitted for duplicate)
+[INFO]    |  |  \- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.19; omitted for duplicate)
+[INFO]    |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO]    |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO]    |  \- tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile (version managed from 3.1.5)
+[INFO]    |     +- (tools.jackson.core:jackson-core:jar:3.1.5:compile - omitted for duplicate)
+[INFO]    |     +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO]    |     \- org.snakeyaml:snakeyaml-engine:jar:3.0.1:compile
+[INFO]    +- com.sstlfsj:fibra-artifact:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO]    |  \- (tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO]    +- com.sstlfsj:fibra-bridge:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO]    |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO]    |  \- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO]    +- org.slf4j:slf4j-api:jar:2.0.18:compile (version managed from 2.0.18)
+[INFO]    +- tools.jackson.core:jackson-databind:jar:3.1.5:compile (version managed from 3.1.5)
+[INFO]    |  +- com.fasterxml.jackson.core:jackson-annotations:jar:2.21:compile
+[INFO]    |  \- tools.jackson.core:jackson-core:jar:3.1.5:compile
+[INFO]    \- io.projectreactor:reactor-core:jar:3.8.6:compile (version managed from 3.8.6)
+[INFO]       +- org.reactivestreams:reactive-streams:jar:1.0.4:compile
+[INFO]       \- org.jspecify:jspecify:jar:1.0.0:compile (scope not updated to compile)
+[INFO] 
+[INFO] ---------------------< com.sstlfsj:fibra-cli-api >----------------------
+[INFO] Building Fibra CLI API 0.5.0-SNAPSHOT                            [13/31]
+[INFO]   from fibra-cli-api/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-cli-api ---
+[INFO] com.sstlfsj:fibra-cli-api:jar:0.5.0-SNAPSHOT
+[INFO] +- com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  \- io.projectreactor:reactor-core:jar:3.8.6:compile (version managed from 3.8.6)
+[INFO] |     +- org.reactivestreams:reactive-streams:jar:1.0.4:compile
+[INFO] |     \- org.jspecify:jspecify:jar:1.0.0:compile (scope not updated to compile)
+[INFO] \- com.sstlfsj:fibra-bridge:jar:0.5.0-SNAPSHOT:compile
+[INFO]    +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO]    \- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] 
+[INFO] -----------------------< com.sstlfsj:fibra-cli >------------------------
+[INFO] Building Fibra CLI 0.5.0-SNAPSHOT                                [14/31]
+[INFO]   from fibra-cli/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-cli ---
+[INFO] com.sstlfsj:fibra-cli:jar:0.5.0-SNAPSHOT
+[INFO] +- com.sstlfsj:fibra-cli-api:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  +- com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  \- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] |  \- com.sstlfsj:fibra-bridge:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |     +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |     \- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] +- com.sstlfsj:fibra-engine:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  +- com.sstlfsj:fibra-core:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  +- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] |  |  \- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.18; omitted for duplicate)
+[INFO] |  +- com.sstlfsj:fibra-config:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  +- com.networknt:json-schema-validator:jar:3.0.8:compile (version managed from 3.0.8)
+[INFO] |  |  |  +- com.ethlo.time:itu:jar:1.14.0:compile
+[INFO] |  |  |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.2.1; omitted for duplicate)
+[INFO] |  |  |  \- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.19; omitted for duplicate)
+[INFO] |  |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  |  \- (tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  +- com.sstlfsj:fibra-artifact:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  \- (tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  +- (com.sstlfsj:fibra-bridge:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  +- org.slf4j:slf4j-api:jar:2.0.18:compile (version managed from 2.0.18)
+[INFO] |  +- tools.jackson.core:jackson-databind:jar:3.1.5:compile (version managed from 3.1.5)
+[INFO] |  |  +- com.fasterxml.jackson.core:jackson-annotations:jar:2.21:compile
+[INFO] |  |  \- (tools.jackson.core:jackson-core:jar:3.1.5:compile - omitted for duplicate)
+[INFO] |  \- io.projectreactor:reactor-core:jar:3.8.6:compile (version managed from 3.8.6)
+[INFO] |     +- org.reactivestreams:reactive-streams:jar:1.0.4:compile
+[INFO] |     \- org.jspecify:jspecify:jar:1.0.0:compile (scope not updated to compile)
+[INFO] +- com.sstlfsj:fibra-registry:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  \- (com.sstlfsj:fibra-engine:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] +- com.sstlfsj:fibra-runtime-java:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  +- (com.sstlfsj:fibra-artifact:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  +- (com.sstlfsj:fibra-engine:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  +- (tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  \- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.18; omitted for duplicate)
+[INFO] +- com.sstlfsj:fibra-runtime-node:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  +- (com.sstlfsj:fibra-artifact:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  +- (com.sstlfsj:fibra-engine:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  +- (com.sstlfsj:fibra-bridge:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  +- (tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  \- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.18; omitted for duplicate)
+[INFO] +- com.sstlfsj:fibra-tool-api:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  \- (com.sstlfsj:fibra-bridge:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] +- info.picocli:picocli:jar:4.7.7:compile
+[INFO] +- org.jline:jline:jar:jdk11:4.4.3:compile
+[INFO] +- tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile
+[INFO] |  +- tools.jackson.core:jackson-core:jar:3.1.5:compile
+[INFO] |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  \- org.snakeyaml:snakeyaml-engine:jar:3.0.1:compile
+[INFO] \- org.slf4j:slf4j-simple:jar:2.0.18:runtime
+[INFO]    \- (org.slf4j:slf4j-api:jar:2.0.18:runtime - version managed from 2.0.18; omitted for duplicate)
+[INFO] 
+[INFO] ----------------------< com.sstlfsj:fibra-spring >----------------------
+[INFO] Building Fibra Spring 0.5.0-SNAPSHOT                             [15/31]
+[INFO]   from fibra-spring/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-spring ---
+[INFO] com.sstlfsj:fibra-spring:jar:0.5.0-SNAPSHOT
+[INFO] +- com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  \- io.projectreactor:reactor-core:jar:3.8.6:compile (version managed from 3.8.6)
+[INFO] |     +- org.reactivestreams:reactive-streams:jar:1.0.4:compile
+[INFO] |     \- org.jspecify:jspecify:jar:1.0.0:compile (scope not updated to compile)
+[INFO] +- com.sstlfsj:fibra-engine:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  +- (com.sstlfsj:fibra-core:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  +- com.sstlfsj:fibra-config:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  +- com.networknt:json-schema-validator:jar:3.0.8:compile (version managed from 3.0.8)
+[INFO] |  |  |  +- com.ethlo.time:itu:jar:1.14.0:compile
+[INFO] |  |  |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.2.1; omitted for duplicate)
+[INFO] |  |  |  \- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.19; omitted for duplicate)
+[INFO] |  |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  |  \- (tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  +- com.sstlfsj:fibra-artifact:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  \- (tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  +- com.sstlfsj:fibra-bridge:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  \- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] |  +- org.slf4j:slf4j-api:jar:2.0.18:compile (version managed from 2.0.18)
+[INFO] |  +- tools.jackson.core:jackson-databind:jar:3.1.5:compile (version managed from 3.1.5)
+[INFO] |  |  +- com.fasterxml.jackson.core:jackson-annotations:jar:2.21:compile
+[INFO] |  |  \- tools.jackson.core:jackson-core:jar:3.1.5:compile
+[INFO] |  \- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] \- org.springframework:spring-context:jar:7.0.8:compile
+[INFO]    +- org.springframework:spring-aop:jar:7.0.8:compile
+[INFO]    |  +- (org.springframework:spring-beans:jar:7.0.8:compile - omitted for duplicate)
+[INFO]    |  \- (org.springframework:spring-core:jar:7.0.8:compile - omitted for duplicate)
+[INFO]    +- org.springframework:spring-beans:jar:7.0.8:compile
+[INFO]    |  \- (org.springframework:spring-core:jar:7.0.8:compile - omitted for duplicate)
+[INFO]    +- org.springframework:spring-core:jar:7.0.8:compile
+[INFO]    |  +- commons-logging:commons-logging:jar:1.3.5:compile
+[INFO]    |  \- (org.jspecify:jspecify:jar:1.0.0:compile - omitted for duplicate)
+[INFO]    +- org.springframework:spring-expression:jar:7.0.8:compile
+[INFO]    |  \- (org.springframework:spring-core:jar:7.0.8:compile - omitted for duplicate)
+[INFO]    \- io.micrometer:micrometer-observation:jar:1.16.6:compile
+[INFO]       +- (org.jspecify:jspecify:jar:1.0.0:compile - omitted for duplicate)
+[INFO]       \- io.micrometer:micrometer-commons:jar:1.16.6:compile
+[INFO]          \- (org.jspecify:jspecify:jar:1.0.0:compile - omitted for duplicate)
+[INFO] 
+[INFO] ---------------< com.sstlfsj:fibra-spring-boot-starter >----------------
+[INFO] Building Fibra Spring Boot Starter 0.5.0-SNAPSHOT                [16/31]
+[INFO]   from fibra-spring-boot-starter/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-spring-boot-starter ---
+[INFO] com.sstlfsj:fibra-spring-boot-starter:jar:0.5.0-SNAPSHOT
+[INFO] +- com.sstlfsj:fibra-spring:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  +- com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  \- io.projectreactor:reactor-core:jar:3.8.6:compile (version managed from 3.8.6)
+[INFO] |  |     +- org.reactivestreams:reactive-streams:jar:1.0.4:compile (version managed from 1.0.4)
+[INFO] |  |     \- (org.jspecify:jspecify:jar:1.0.0:compile - version managed from 1.0.0; omitted for duplicate)
+[INFO] |  +- com.sstlfsj:fibra-engine:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  +- com.sstlfsj:fibra-core:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  |  +- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] |  |  |  \- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.18; omitted for duplicate)
+[INFO] |  |  +- com.sstlfsj:fibra-config:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  |  +- com.networknt:json-schema-validator:jar:3.0.8:compile (version managed from 3.0.8)
+[INFO] |  |  |  |  +- com.ethlo.time:itu:jar:1.14.0:compile
+[INFO] |  |  |  |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.2.1; omitted for duplicate)
+[INFO] |  |  |  |  \- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.19; omitted for duplicate)
+[INFO] |  |  |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  |  |  \- (tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  |  +- (com.sstlfsj:fibra-artifact:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  +- (com.sstlfsj:fibra-bridge:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  +- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.18; omitted for duplicate)
+[INFO] |  |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  |  \- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] |  \- org.springframework:spring-context:jar:7.0.8:compile (version managed from 7.0.8)
+[INFO] |     +- org.springframework:spring-aop:jar:7.0.8:compile (version managed from 7.0.8)
+[INFO] |     |  +- (org.springframework:spring-beans:jar:7.0.8:compile - version managed from 7.0.8; omitted for duplicate)
+[INFO] |     |  \- (org.springframework:spring-core:jar:7.0.8:compile - version managed from 7.0.8; omitted for duplicate)
+[INFO] |     +- org.springframework:spring-beans:jar:7.0.8:compile (version managed from 7.0.8)
+[INFO] |     |  \- (org.springframework:spring-core:jar:7.0.8:compile - version managed from 7.0.8; omitted for duplicate)
+[INFO] |     +- (org.springframework:spring-core:jar:7.0.8:compile - version managed from 7.0.8; omitted for duplicate)
+[INFO] |     +- org.springframework:spring-expression:jar:7.0.8:compile (version managed from 7.0.8)
+[INFO] |     |  \- (org.springframework:spring-core:jar:7.0.8:compile - version managed from 7.0.8; omitted for duplicate)
+[INFO] |     \- io.micrometer:micrometer-observation:jar:1.17.0:compile (version managed from 1.16.6)
+[INFO] |        +- (org.jspecify:jspecify:jar:1.0.0:compile - version managed from 1.0.0; omitted for duplicate)
+[INFO] |        \- io.micrometer:micrometer-commons:jar:1.17.0:compile (version managed from 1.17.0)
+[INFO] |           \- (org.jspecify:jspecify:jar:1.0.0:compile - version managed from 1.0.0; omitted for duplicate)
+[INFO] +- com.sstlfsj:fibra-registry:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  \- (com.sstlfsj:fibra-engine:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] +- com.sstlfsj:fibra-runtime-java:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  +- com.sstlfsj:fibra-artifact:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  \- (tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  +- (com.sstlfsj:fibra-engine:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  +- tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile (version managed from 3.1.5)
+[INFO] |  |  +- tools.jackson.core:jackson-core:jar:3.1.4:compile (version managed from 3.1.5)
+[INFO] |  |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  |  \- org.snakeyaml:snakeyaml-engine:jar:3.0.1:compile
+[INFO] |  \- org.slf4j:slf4j-api:jar:2.0.18:compile (version managed from 2.0.18)
+[INFO] +- com.sstlfsj:fibra-runtime-node:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  +- (com.sstlfsj:fibra-artifact:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  +- (com.sstlfsj:fibra-engine:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  +- com.sstlfsj:fibra-bridge:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  \- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] |  +- tools.jackson.core:jackson-databind:jar:3.1.5:compile (version managed from 3.1.5)
+[INFO] |  |  +- com.fasterxml.jackson.core:jackson-annotations:jar:2.21:compile (version managed from 2.21)
+[INFO] |  |  \- (tools.jackson.core:jackson-core:jar:3.1.4:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  +- (tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  \- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.18; omitted for duplicate)
+[INFO] +- org.springframework.boot:spring-boot-autoconfigure:jar:4.1.0:compile
+[INFO] |  \- org.springframework.boot:spring-boot:jar:4.1.0:compile (version managed from 4.1.0; scope not updated to compile)
+[INFO] |     +- (org.springframework:spring-core:jar:7.0.8:compile - version managed from 7.0.8; omitted for duplicate)
+[INFO] |     \- (org.springframework:spring-context:jar:7.0.8:compile - version managed from 7.0.8; omitted for duplicate)
+[INFO] \- org.springframework.boot:spring-boot-configuration-processor:jar:4.1.0:compile
+[INFO] 
+[INFO] -----------------< com.sstlfsj:fibra-plugin-archetype >-----------------
+[INFO] Building Fibra Plugin Archetype 0.5.0-SNAPSHOT                   [17/31]
+[INFO]   from fibra-plugin-archetype/pom.xml
+[INFO] --------------------------[ maven-archetype ]---------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-plugin-archetype ---
+[INFO] com.sstlfsj:fibra-plugin-archetype:maven-archetype:0.5.0-SNAPSHOT
+[INFO] 
+[INFO] ------------------------< com.sstlfsj:fibra-fs >------------------------
+[INFO] Building Fibra File System Contract 0.5.0-SNAPSHOT               [18/31]
+[INFO]   from fibra-plugins/fibra-plugins-fs/fibra-fs/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-fs ---
+[INFO] com.sstlfsj:fibra-fs:jar:0.5.0-SNAPSHOT
+[INFO] 
+[INFO] ---------------------< com.sstlfsj:fibra-fs-local >---------------------
+[INFO] Building Fibra Local File System Plugin 0.5.0-SNAPSHOT           [19/31]
+[INFO]   from fibra-plugins/fibra-plugins-fs/fibra-fs-local/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-fs-local ---
+[INFO] com.sstlfsj:fibra-fs-local:jar:0.5.0-SNAPSHOT
+[INFO] \- net.java.dev.jna:jna:jar:5.17.0:compile
+[INFO] 
+[INFO] ---------------------< com.sstlfsj:fibra-tool-fs >----------------------
+[INFO] Building Fibra File Tools Plugin 0.5.0-SNAPSHOT                  [20/31]
+[INFO]   from fibra-plugins/fibra-plugins-fs/fibra-tool-fs/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-tool-fs ---
+[INFO] com.sstlfsj:fibra-tool-fs:jar:0.5.0-SNAPSHOT
+[INFO] 
+[INFO] --------------------< com.sstlfsj:fibra-subprocess >--------------------
+[INFO] Building Fibra Subprocess Contract 0.5.0-SNAPSHOT                [21/31]
+[INFO]   from fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-subprocess ---
+[INFO] com.sstlfsj:fibra-subprocess:jar:0.5.0-SNAPSHOT
+[INFO] 
+[INFO] ------------------< com.sstlfsj:fibra-tool-fs-search >------------------
+[INFO] Building Fibra File Search Tools Plugin 0.5.0-SNAPSHOT           [22/31]
+[INFO]   from fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-tool-fs-search ---
+[INFO] com.sstlfsj:fibra-tool-fs-search:jar:0.5.0-SNAPSHOT
+[INFO] \- tools.jackson.core:jackson-databind:jar:3.1.5:compile
+[INFO]    +- com.fasterxml.jackson.core:jackson-annotations:jar:2.21:compile
+[INFO]    \- tools.jackson.core:jackson-core:jar:3.1.5:compile
+[INFO] 
+[INFO] -----------------< com.sstlfsj:fibra-subprocess-local >-----------------
+[INFO] Building Fibra Local Subprocess Plugin 0.5.0-SNAPSHOT            [23/31]
+[INFO]   from fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-subprocess-local ---
+[INFO] com.sstlfsj:fibra-subprocess-local:jar:0.5.0-SNAPSHOT
+[INFO] \- net.java.dev.jna:jna:jar:5.17.0:compile
+[INFO] 
+[INFO] ----------------------< com.sstlfsj:fibra-shell >-----------------------
+[INFO] Building Fibra Shell Contract 0.5.0-SNAPSHOT                     [24/31]
+[INFO]   from fibra-plugins/fibra-plugins-shell/fibra-shell/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-shell ---
+[INFO] com.sstlfsj:fibra-shell:jar:0.5.0-SNAPSHOT
+[INFO] 
+[INFO] -------------------< com.sstlfsj:fibra-shell-local >--------------------
+[INFO] Building Fibra Local Shell Plugin 0.5.0-SNAPSHOT                 [25/31]
+[INFO]   from fibra-plugins/fibra-plugins-shell/fibra-shell-local/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-shell-local ---
+[INFO] com.sstlfsj:fibra-shell-local:jar:0.5.0-SNAPSHOT
+[INFO] 
+[INFO] --------------------< com.sstlfsj:fibra-tool-shell >--------------------
+[INFO] Building Fibra Shell Tool Plugin 0.5.0-SNAPSHOT                  [26/31]
+[INFO]   from fibra-plugins/fibra-plugins-shell/fibra-tool-shell/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-tool-shell ---
+[INFO] com.sstlfsj:fibra-tool-shell:jar:0.5.0-SNAPSHOT
+[INFO] 
+[INFO] ---------------------< com.sstlfsj:fibra-storage >----------------------
+[INFO] Building Fibra Storage Contract 0.5.0-SNAPSHOT                   [27/31]
+[INFO]   from fibra-plugins/fibra-plugins-storage/fibra-storage/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-storage ---
+[INFO] com.sstlfsj:fibra-storage:jar:0.5.0-SNAPSHOT
+[INFO] 
+[INFO] -------------------< com.sstlfsj:fibra-storage-json >-------------------
+[INFO] Building Fibra JSON Storage Plugin 0.5.0-SNAPSHOT                [28/31]
+[INFO]   from fibra-plugins/fibra-plugins-storage/fibra-storage-json/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-storage-json ---
+[INFO] com.sstlfsj:fibra-storage-json:jar:0.5.0-SNAPSHOT
+[INFO] 
+[INFO] -------------------< com.sstlfsj:fibra-tool-storage >-------------------
+[INFO] Building Fibra Storage Tools Plugin 0.5.0-SNAPSHOT               [29/31]
+[INFO]   from fibra-plugins/fibra-plugins-storage/fibra-tool-storage/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-tool-storage ---
+[INFO] com.sstlfsj:fibra-tool-storage:jar:0.5.0-SNAPSHOT
+[INFO] 
+[INFO] -------------------< com.sstlfsj:fibra-distribution >-------------------
+[INFO] Building Fibra Distribution 0.5.0-SNAPSHOT                       [30/31]
+[INFO]   from fibra-distribution/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-distribution ---
+[INFO] com.sstlfsj:fibra-distribution:pom:0.5.0-SNAPSHOT
+[INFO] +- com.sstlfsj:fibra-cli:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  +- com.sstlfsj:fibra-cli-api:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  +- com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  |  \- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] |  |  \- com.sstlfsj:fibra-bridge:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |     +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |     \- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] |  +- com.sstlfsj:fibra-engine:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  +- com.sstlfsj:fibra-core:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  |  +- (io.projectreactor:reactor-core:jar:3.8.6:compile - version managed from 3.8.6; omitted for duplicate)
+[INFO] |  |  |  \- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.18; omitted for duplicate)
+[INFO] |  |  +- com.sstlfsj:fibra-config:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  |  +- com.networknt:json-schema-validator:jar:3.0.8:compile (version managed from 3.0.8)
+[INFO] |  |  |  |  +- com.ethlo.time:itu:jar:1.14.0:compile
+[INFO] |  |  |  |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.2.1; omitted for duplicate)
+[INFO] |  |  |  |  \- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.19; omitted for duplicate)
+[INFO] |  |  |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  |  |  \- (tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  |  +- com.sstlfsj:fibra-artifact:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  |  \- (tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  |  +- (com.sstlfsj:fibra-bridge:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  +- org.slf4j:slf4j-api:jar:2.0.18:compile (version managed from 2.0.18)
+[INFO] |  |  +- tools.jackson.core:jackson-databind:jar:3.1.5:compile (version managed from 3.1.5)
+[INFO] |  |  |  +- com.fasterxml.jackson.core:jackson-annotations:jar:2.21:compile
+[INFO] |  |  |  \- (tools.jackson.core:jackson-core:jar:3.1.5:compile - omitted for duplicate)
+[INFO] |  |  \- io.projectreactor:reactor-core:jar:3.8.6:compile (version managed from 3.8.6)
+[INFO] |  |     +- org.reactivestreams:reactive-streams:jar:1.0.4:compile
+[INFO] |  |     \- org.jspecify:jspecify:jar:1.0.0:compile
+[INFO] |  +- com.sstlfsj:fibra-registry:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  \- (com.sstlfsj:fibra-engine:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  +- com.sstlfsj:fibra-runtime-java:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  +- (com.sstlfsj:fibra-artifact:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  +- (com.sstlfsj:fibra-engine:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  +- (tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  |  \- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.18; omitted for duplicate)
+[INFO] |  +- com.sstlfsj:fibra-runtime-node:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  +- (com.sstlfsj:fibra-artifact:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  +- (com.sstlfsj:fibra-engine:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  +- (com.sstlfsj:fibra-bridge:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  |  +- (tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  |  \- (org.slf4j:slf4j-api:jar:2.0.18:compile - version managed from 2.0.18; omitted for duplicate)
+[INFO] |  +- com.sstlfsj:fibra-tool-api:jar:0.5.0-SNAPSHOT:compile (version managed from 0.5.0-SNAPSHOT)
+[INFO] |  |  +- (com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  |  \- (com.sstlfsj:fibra-bridge:jar:0.5.0-SNAPSHOT:compile - version managed from 0.5.0-SNAPSHOT; omitted for duplicate)
+[INFO] |  +- info.picocli:picocli:jar:4.7.7:compile (version managed from 4.7.7)
+[INFO] |  +- org.jline:jline:jar:jdk11:4.4.3:compile (version managed from 4.4.3)
+[INFO] |  +- tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.1.5:compile (version managed from 3.1.5)
+[INFO] |  |  +- tools.jackson.core:jackson-core:jar:3.1.5:compile
+[INFO] |  |  +- (tools.jackson.core:jackson-databind:jar:3.1.5:compile - version managed from 3.1.5; omitted for duplicate)
+[INFO] |  |  \- org.snakeyaml:snakeyaml-engine:jar:3.0.1:compile
+[INFO] |  \- org.slf4j:slf4j-simple:jar:2.0.18:runtime (version managed from 2.0.18)
+[INFO] |     \- (org.slf4j:slf4j-api:jar:2.0.18:runtime - version managed from 2.0.18; omitted for duplicate)
+[INFO] +- com.sstlfsj:fibra-fs:jar:0.5.0-SNAPSHOT:runtime
+[INFO] +- com.sstlfsj:fibra-fs-local:jar:0.5.0-SNAPSHOT:runtime
+[INFO] +- com.sstlfsj:fibra-tool-fs:jar:0.5.0-SNAPSHOT:runtime
+[INFO] +- com.sstlfsj:fibra-tool-fs-search:jar:0.5.0-SNAPSHOT:runtime
+[INFO] +- com.sstlfsj:fibra-subprocess:jar:0.5.0-SNAPSHOT:runtime
+[INFO] +- com.sstlfsj:fibra-subprocess-local:jar:0.5.0-SNAPSHOT:runtime
+[INFO] +- com.sstlfsj:fibra-shell:jar:0.5.0-SNAPSHOT:runtime
+[INFO] +- com.sstlfsj:fibra-shell-local:jar:0.5.0-SNAPSHOT:runtime
+[INFO] +- com.sstlfsj:fibra-tool-shell:jar:0.5.0-SNAPSHOT:runtime
+[INFO] +- com.sstlfsj:fibra-storage:jar:0.5.0-SNAPSHOT:runtime
+[INFO] +- com.sstlfsj:fibra-storage-json:jar:0.5.0-SNAPSHOT:runtime
+[INFO] \- com.sstlfsj:fibra-tool-storage:jar:0.5.0-SNAPSHOT:runtime
+[INFO] 
+[INFO] -----------------< com.sstlfsj:fibra-client-protocol >------------------
+[INFO] Building Fibra Client Protocol 0.5.0-SNAPSHOT                    [31/31]
+[INFO]   from fibra-client-protocol/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.11.0:tree (default-cli) @ fibra-client-protocol ---
+[INFO] com.sstlfsj:fibra-client-protocol:jar:0.5.0-SNAPSHOT
+[INFO] +- com.sstlfsj:fibra-api:jar:0.5.0-SNAPSHOT:compile
+[INFO] |  \- io.projectreactor:reactor-core:jar:3.8.6:compile (version managed from 3.8.6)
+[INFO] |     +- org.reactivestreams:reactive-streams:jar:1.0.4:compile
+[INFO] |     \- org.jspecify:jspecify:jar:1.0.0:compile (scope not updated to compile)
+[INFO] \- tools.jackson.core:jackson-databind:jar:3.1.5:compile
+[INFO]    +- com.fasterxml.jackson.core:jackson-annotations:jar:2.21:compile
+[INFO]    \- tools.jackson.core:jackson-core:jar:3.1.5:compile
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary for Fibra 0.5.0-SNAPSHOT:
+[INFO] 
+[INFO] Fibra .............................................. SUCCESS [  0.520 s]
+[INFO] Fibra BOM .......................................... SUCCESS [  0.002 s]
+[INFO] Fibra API .......................................... SUCCESS [  0.018 s]
+[INFO] Fibra Core ......................................... SUCCESS [  1.149 s]
+[INFO] Fibra Config ....................................... SUCCESS [  0.021 s]
+[INFO] Fibra Artifact ..................................... SUCCESS [  0.003 s]
+[INFO] Fibra Contribution Bridge .......................... SUCCESS [  0.243 s]
+[INFO] Fibra Engine ....................................... SUCCESS [  0.615 s]
+[INFO] Fibra Java Runtime ................................. SUCCESS [  0.198 s]
+[INFO] Fibra Tool API ..................................... SUCCESS [  0.003 s]
+[INFO] Fibra Node Runtime ................................. SUCCESS [  0.198 s]
+[INFO] Fibra Plugin Registry .............................. SUCCESS [  0.004 s]
+[INFO] Fibra CLI API ...................................... SUCCESS [  0.003 s]
+[INFO] Fibra CLI .......................................... SUCCESS [  1.034 s]
+[INFO] Fibra Spring ....................................... SUCCESS [  0.013 s]
+[INFO] Fibra Spring Boot Starter .......................... SUCCESS [  0.288 s]
+[INFO] Fibra Plugin Archetype ............................. SUCCESS [  0.133 s]
+[INFO] Fibra File System Contract ......................... SUCCESS [  0.003 s]
+[INFO] Fibra Local File System Plugin ..................... SUCCESS [  0.236 s]
+[INFO] Fibra File Tools Plugin ............................ SUCCESS [  0.002 s]
+[INFO] Fibra Subprocess Contract .......................... SUCCESS [  0.002 s]
+[INFO] Fibra File Search Tools Plugin ..................... SUCCESS [  0.198 s]
+[INFO] Fibra Local Subprocess Plugin ...................... SUCCESS [  0.002 s]
+[INFO] Fibra Shell Contract ............................... SUCCESS [  0.001 s]
+[INFO] Fibra Local Shell Plugin ........................... SUCCESS [  0.378 s]
+[INFO] Fibra Shell Tool Plugin ............................ SUCCESS [  0.001 s]
+[INFO] Fibra Storage Contract ............................. SUCCESS [  0.001 s]
+[INFO] Fibra JSON Storage Plugin .......................... SUCCESS [  0.221 s]
+[INFO] Fibra Storage Tools Plugin ......................... SUCCESS [  0.001 s]
+[INFO] Fibra Distribution ................................. SUCCESS [  1.727 s]
+[INFO] Fibra Client Protocol .............................. SUCCESS [  0.004 s]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  7.547 s
+[INFO] Finished at: 2026-10-12T18:41:59+08:00
+[INFO] ------------------------------------------------------------------------

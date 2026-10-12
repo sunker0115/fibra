@@ -1,0 +1,9 @@
+{
+  "downloadUrl": "https://github.com/microsoft/ripgrep-prebuilt/releases/download/v15.0.1/ripgrep-v15.0.1-aarch64-apple-darwin.tar.gz",
+  "archiveSha256": "2fa16464fd8638588a67c7fc172d3c4b57fbdc65dff366e10b0b0e90734628a6",
+  "verifiedAgainst": "GitHub official release asset digest",
+  "binarySha256": "6ef40346bf31fcce79d9614c7745c198542925a0c7d4911e1ffe794c53392ac1",
+  "path": "/private/tmp/fibra-config-contract-ripgrep15.0.1/bin/rg",
+  "version": "ripgrep 15.0.0 (rev 3a612f88b8)\n\nfeatures:+pcre2\nsimd(compile):+NEON\nsimd(runtime):+NEON\n\nPCRE2 10.45 is available (JIT is available)\n",
+  "checkedAt": "2026-10-12T10:23:18.286747+00:00"
+}

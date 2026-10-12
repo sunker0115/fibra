@@ -1,0 +1,24 @@
+openjdk version "21.0.2" 2024-01-16 LTS
+OpenJDK Runtime Environment Zulu21.32+17-CA (build 21.0.2+13-LTS)
+OpenJDK 64-Bit Server VM Zulu21.32+17-CA (build 21.0.2+13-LTS, mixed mode, sharing)
+Apache Maven 3.9.9 (8e8579a9e76f7d015ee5ec7bfcdc97d260186937)
+Maven home: /Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9
+Java version: 21.0.2, vendor: Azul Systems, Inc., runtime: /Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home
+Default locale: zh_CN_#Hans, platform encoding: UTF-8
+OS name: "mac os x", version: "26.6.2", arch: "aarch64", family: "mac"
+v22.14.0
+11.19.0
+ripgrep 15.0.0 (rev 3a612f88b8)
+
+features:+pcre2
+simd(compile):+NEON
+simd(runtime):+NEON
+
+PCRE2 10.45 is available (JIT is available)
+Python 3.14.7
+GNU bash, version 5.3.12(1)-release (aarch64-apple-darwin25.4.0)
+/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home/bin/java
+/private/tmp/fibra-config-contract-node22.14/node-v22.14.0-darwin-arm64/bin/node
+/Users/sunke/.nvm/versions/node/v22.22.2/bin/pnpm
+/private/tmp/fibra-config-contract-ripgrep15.0.1/bin/rg
+/opt/homebrew/bin/python3

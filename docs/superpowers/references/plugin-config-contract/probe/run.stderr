@@ -1,0 +1,6 @@
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+Exception in thread "main" java.lang.AssertionError: multipleOf 1 falsely rejects large exact integer via double conversion
+	at QualificationProbe.check(QualificationProbe.java:10)
+	at QualificationProbe.main(QualificationProbe.java:15)

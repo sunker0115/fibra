@@ -1,0 +1,24 @@
+[
+  {
+    "command": [
+      "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home/bin/javac",
+      "-cp",
+      "/Users/sunke/dev/ai-project/fibra/fibra-artifact/target/classes",
+      "-d",
+      "/private/tmp/fibra-config-contract-evidence/artifact/spec-review-r1-probe-classes",
+      "/private/tmp/fibra-config-contract-evidence/artifact/SpecReviewProbe.java"
+    ],
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "command": [
+      "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home/bin/java",
+      "-cp",
+      "/private/tmp/fibra-config-contract-evidence/artifact/spec-review-r1-probe-classes:/Users/sunke/dev/ai-project/fibra/fibra-artifact/target/classes",
+      "com.sstlfsj.fibra.artifact.SpecReviewProbe"
+    ],
+    "exit": 0,
+    "output": "PASS dynamic growth bounded to 1MiB plus one probe byte\nPASS foreign exception never inspected and replay cannot inherit suppressed poison\nPASS successful read remains replayable after close failure\nPASS symlink exact root rejected\nclass source=file:/Users/sunke/dev/ai-project/fibra/fibra-artifact/target/classes/\n"
+  }
+]

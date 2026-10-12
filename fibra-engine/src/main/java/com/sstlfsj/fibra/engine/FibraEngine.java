@@ -2,6 +2,8 @@ package com.sstlfsj.fibra.engine;
 
 import com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage;
 import com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException;
+import com.sstlfsj.fibra.engine.deployment.ConfigContractException;
+import com.sstlfsj.fibra.engine.deployment.DefinitionConfigContract;
 import com.sstlfsj.fibra.engine.deployment.FacetDefinitionNames;
 import com.sstlfsj.fibra.engine.deployment.PackageDefinitionCatalog;
 import com.sstlfsj.fibra.engine.deployment.PluginSelection;
@@ -81,6 +83,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import java.util.function.Function;
 
 /** 唯一 RuntimeDriver owner、持久目标和全局 unit 生命周期协调器。 */
 public final class FibraEngine implements AutoCloseable {
@@ -124,7 +127,8 @@ public final class FibraEngine implements AutoCloseable {
     private final List<String> cleanupFailures = new ArrayList<>();
     private final Map<RuntimeUnitGeneration, ExecutionObservation> lastObservations = new IdentityHashMap<>();
     private FailureFact failure;
-    private transient CatalogAttempt catalogAttempt;
+    private transient EngineReadAttempt readAttempt;
+    private final EngineConfigurationContracts configurationContracts;
 
     private final PublishedRuntime published = new PublishedRuntime() {
         public PublishedView current() { return publication.get().view(); }
@@ -140,6 +144,11 @@ public final class FibraEngine implements AutoCloseable {
     };
 
     private FibraEngine(Builder builder) {
+        this(builder, PluginPackageRecord::configurationResource);
+    }
+
+    FibraEngine(Builder builder, Function<PluginPackageRecord, PluginConfigurationResource> resources) {
+        Objects.requireNonNull(resources, "configuration resources");
         packageStore = builder.packageStore;
         targetStore = builder.targetStore;
         FibraRuntime acquiredRuntime = null;
@@ -169,6 +178,7 @@ public final class FibraEngine implements AutoCloseable {
             notifications = acquiredNotifications = Executors.newSingleThreadExecutor(
                 Thread.ofPlatform().daemon().name("fibra-termination-", 0).factory());
             drivers = acquiredDrivers = providers.createDrivers(new HostServices());
+            configurationContracts = new EngineConfigurationContracts(loop, drivers, resources);
             publish();
             directoryObservation = acquiredDirectoryObservation = directory.views().subscribe(
                 ignored -> loop.observe(this::publish),
@@ -364,7 +374,6 @@ public final class FibraEngine implements AutoCloseable {
                     facet.runtimeId(), facet.executionTarget(), List.copyOf(facet.definitionIds()))).toList()));
         }
         var attempt = new CatalogAttempt(revision, selection, managed.facets());
-        catalogAttempt = attempt;
         return attempt.readAndClose();
     }
 
@@ -378,6 +387,130 @@ public final class FibraEngine implements AutoCloseable {
             case READ_FAILED -> "definition catalog declaration read failed";
             case CLEANUP_FAILED -> "definition catalog resource cleanup failed";
         });
+    }
+
+    /** 读取当前精确 selection 的配置规则；即便停用也按需核验规则。 */
+    public Mono<DefinitionConfigContract> describeConfiguration(PluginDefinitionRef definition,
+                                                               long expectedTargetRevision) {
+        Objects.requireNonNull(definition, "definition");
+        if (expectedTargetRevision < 0) {
+            throw new IllegalArgumentException("expected target revision must not be negative");
+        }
+        return Mono.defer(() -> loop.submit(() -> describeSelectedConfiguration(definition, expectedTargetRevision)))
+            .onErrorMap(error -> {
+                rethrowCatalogFatal(error);
+                return error instanceof ConfigContractException ? error
+                    : EngineConfigurationContracts.error(ConfigContractException.Code.ENGINE_UNAVAILABLE);
+            });
+    }
+
+    private Mono<DefinitionConfigContract> describeSelectedConfiguration(PluginDefinitionRef definition, long expected) {
+        if (!mutationGate || state != EngineState.RUNNING) {
+            return Mono.error(EngineConfigurationContracts.error(ConfigContractException.Code.ENGINE_UNAVAILABLE));
+        }
+        long revision = durableTarget == null ? 0 : durableTarget.targetRevision();
+        if (revision != expected) return Mono.error(EngineConfigurationContracts.error(ConfigContractException.Code.STALE_TARGET));
+        var selection = durableTarget == null ? null : durableTarget.selections().get(new PluginId(definition.pluginId()));
+        if (selection == null) return Mono.error(EngineConfigurationContracts.error(ConfigContractException.Code.NOT_SELECTED));
+        final List<BuiltInPluginPackage> builtIns;
+        final List<PluginPackageRecord> records;
+        try {
+            builtIns = captureBuiltIns().stream().filter(b -> b.pluginId().equals(selection.pluginId())).toList();
+            var record = packageStore.find(selection.pluginId(), selection.packageRevision()).orElse(null);
+            if (!builtIns.isEmpty()) {
+                if (record != null || !builtIns.getFirst().packageDigest().equals(selection.packageRevision())) {
+                    throw EngineConfigurationContracts.error(ConfigContractException.Code.PACKAGE_UNAVAILABLE);
+                }
+                records = List.of();
+            } else {
+                if (record == null || !record.pluginId().equals(selection.pluginId())
+                    || !record.packageRevision().equals(selection.packageRevision())
+                    || !record.managedPackage().pluginId().equals(selection.pluginId())
+                    || !record.managedPackage().packageRevision().equals(selection.packageRevision())) {
+                    throw EngineConfigurationContracts.error(ConfigContractException.Code.PACKAGE_UNAVAILABLE);
+                }
+                records = List.of(record);
+            }
+        } catch (RuntimeException | Error foreign) {
+            rethrowCatalogFatal(foreign);
+            return Mono.error(EngineConfigurationContracts.error(ConfigContractException.Code.PACKAGE_UNAVAILABLE));
+        }
+        var runtimes = builtIns.isEmpty()
+            ? records.getFirst().managedPackage().facets().stream().map(f -> f.facet().runtimeId()).toList()
+            : builtIns.getFirst().facets().stream().map(f -> f.runtimeId()).toList();
+        if (runtimes.stream().anyMatch(id -> !drivers.containsKey(id))) {
+            return Mono.error(EngineConfigurationContracts.error(ConfigContractException.Code.UNSUPPORTED_RUNTIME));
+        }
+        var attempt = new ConfigurationAttempt(revision, false);
+        var reading = configurationContracts.read(attempt.owner, records, builtIns);
+        return attempt.finish(reading.requireName(definition).then(loop.call(() -> Mono.just(reading.source(definition)))))
+            .flatMap(source -> loop.call(() -> {
+                if (ConfigSchema.checkSources(List.of(source)).isPresent()) {
+                    return Mono.error(EngineConfigurationContracts.error(ConfigContractException.Code.INVALID_CONTRACT));
+                }
+                return Mono.just(new DefinitionConfigContract(revision, selection.packageRevision(), definition, source));
+            }));
+    }
+
+    private Mono<Void> preflightConfiguration(DeploymentPlanner.Input input, List<PluginPackageRecord> records,
+                                             List<BuiltInPluginPackage> builtIns) {
+        if (input.entries().isEmpty()) return Mono.empty();
+        var attempt = new ConfigurationAttempt(operation.targetRevision, true);
+        var reading = configurationContracts.read(attempt.owner, records, builtIns);
+        var inputs = new ArrayList<ConfigValidationInput>();
+        return attempt.finish(Flux.fromIterable(input.entries().values())
+            .concatMap(entry -> loop.call(() -> reading.requireName(entry.definitionRef())))
+            .then(loop.call(() -> {
+                input.entries().forEach((id, entry) -> inputs.add(new ConfigValidationInput(
+                    reading.source(entry.definitionRef()), input.desired().require(id).resolvedConfig().orElseThrow())));
+                return Mono.just(inputs);
+            }))).then(loop.call(() -> {
+                var failure = ConfigSchema.validateAll(inputs);
+                if (failure.isPresent()) {
+                    var safe = failure.orElseThrow();
+                    return Mono.error(new ConfigContractException(ConfigContractException.Code.INVALID_CONTRACT,
+                        "configuration validation failed: " + safe.violation().code() + "; inputIndex=" + safe.inputIndex()
+                            + "; keyword=" + safe.violation().keyword() + "; instancePointer=" + safe.violation().instancePointer()));
+                }
+                return Mono.empty();
+            }));
+    }
+
+    private final class ConfigurationAttempt {
+        private final EngineReadAttempt owner;
+        private ConfigContractException readFailure;
+
+        ConfigurationAttempt(long revision, boolean deployment) {
+            owner = new EngineReadAttempt(loop, () -> {
+                var error = new ConfigContractException(ConfigContractException.Code.CLEANUP_FAILED,
+                    "configuration contract failed: CLEANUP_FAILED" + (readFailure == null ? ""
+                        : "; prior=" + readFailure.code().name()));
+                if (deployment) {
+                    if (operation.kind == EngineOperationKind.BOOTSTRAP) targetConvergence = TargetConvergence.BLOCKED;
+                    failStop(operation.kind == EngineOperationKind.BOOTSTRAP
+                        ? durableTargetFailure("CONFIGURATION_CLEANUP_FAILED", error, FailureStage.RELEASING)
+                        : operationFailure("CONFIGURATION_CLEANUP_FAILED", error, FailureStage.RELEASING));
+                } else {
+                    var fact = new FailureFact("CONFIGURATION_CLEANUP_FAILED", new FailureSubject.Engine(hostInstanceId),
+                        FailureStage.RELEASING, Optional.empty(), revision < 1 ? OptionalLong.empty() : OptionalLong.of(revision),
+                        error.getMessage());
+                    queryReadFailStop(fact, "configuration fail-stop could not close unit admission");
+                }
+                return error;
+            });
+            readAttempt = owner;
+        }
+
+        <T> Mono<T> finish(Mono<T> reading) {
+            return reading.onErrorResume(foreign -> loop.call(() -> {
+                readFailure = EngineConfigurationContracts.safeReadFailure(foreign);
+                return Mono.empty();
+            })).materialize().flatMap(signal -> owner.closed.then(loop.call(() -> {
+                readAttempt = null;
+                if (readFailure != null) return Mono.error(readFailure);
+                return signal.hasValue() ? Mono.just(signal.get()) : Mono.empty();
+            })));
+        }
     }
 
     @SuppressWarnings("removal")
@@ -394,35 +527,35 @@ public final class FibraEngine implements AutoCloseable {
         private final List<RuntimeDefinitionQuery> queries = new ArrayList<>();
         private final List<FacetDefinitionNames> names = new ArrayList<>();
         private DefinitionCatalogException readFailure;
-        private boolean cleanupFailed;
-        private final Mono<Void> closed;
+        private final EngineReadAttempt owner;
 
         private CatalogAttempt(long revision, PluginSelection selection, List<ManagedFacet> facets) {
             this.revision = revision;
             this.selection = selection;
             this.facets = facets;
-            closed = Mono.defer(() -> closeQuery(queries.size() - 1))
-                .then(loop.<Void>call(() -> {
-                    if (!cleanupFailed) return Mono.empty();
-                    var error = catalogError(DefinitionCatalogException.Code.CLEANUP_FAILED);
-                    catalogFailStop(revision);
-                    return Mono.error(error);
-                })).cache();
+            owner = new EngineReadAttempt(loop, () -> {
+                catalogFailStop(revision);
+                return catalogError(DefinitionCatalogException.Code.CLEANUP_FAILED);
+            });
+            readAttempt = owner;
         }
 
         private Mono<PackageDefinitionCatalog> readAndClose() {
             try {
                 for (var facet : facets) {
-                    queries.add(Objects.requireNonNull(drivers.get(facet.facet().runtimeId())
-                        .createDefinitionQuery(facet), "definition query"));
+                    queries.add(owner.register(drivers.get(facet.facet().runtimeId())
+                        .createDefinitionQuery(facet)));
                 }
             } catch (RuntimeException | Error foreign) {
                 rethrowCatalogFatal(foreign);
                 readFailure = catalogError(DefinitionCatalogException.Code.READ_FAILED);
             }
             var reading = readFailure == null ? readQuery(0) : Mono.<Void>empty();
-            return reading.then(closed).then(loop.call(() -> {
-                catalogAttempt = null;
+            return reading.then(loop.call(() -> {
+                queries.clear();
+                return owner.closed;
+            })).then(loop.call(() -> {
+                readAttempt = null;
                 if (readFailure != null) return Mono.error(readFailure);
                 return Mono.just(new PackageDefinitionCatalog(revision, selection.pluginId(),
                     selection.packageRevision(), names));
@@ -459,29 +592,6 @@ public final class FibraEngine implements AutoCloseable {
                     });
                 }).then();
         }
-
-        private Mono<Void> closeQuery(int index) {
-            if (index < 0) return Mono.empty();
-            final Mono<Void> closingQuery;
-            try {
-                closingQuery = Objects.requireNonNull(queries.get(index).closeAsync(), "definition close");
-            } catch (RuntimeException | Error foreign) {
-                rethrowCatalogFatal(foreign);
-                cleanupFailed = true;
-                return closeQuery(index - 1);
-            }
-            return closingQuery.then(loop.call(() -> {
-                    queries.remove(index);
-                    return Mono.<Void>empty();
-                }))
-                .onErrorResume(foreign -> {
-                    rethrowCatalogFatal(foreign);
-                    return loop.call(() -> {
-                        cleanupFailed = true;
-                        return Mono.empty();
-                    });
-                }).then(loop.call(() -> closeQuery(index - 1)));
-        }
     }
 
     private void catalogFailStop(long revision) {
@@ -489,14 +599,12 @@ public final class FibraEngine implements AutoCloseable {
             FailureStage.RELEASING, Optional.empty(),
             revision < 1 ? OptionalLong.empty() : OptionalLong.of(revision),
             "definition catalog resource cleanup failed; ownership retained for host termination");
+        queryReadFailStop(fact, "definition catalog fail-stop could not close unit admission");
+    }
+
+    private void queryReadFailStop(FailureFact fact, String admissionFailure) {
         enterFailStop(fact);
-        for (var unit : ownedUnits()) {
-            try { unit.closeAdmission(); }
-            catch (RuntimeException | Error foreign) {
-                rethrowCatalogFatal(foreign);
-                cleanupFailures.add("definition catalog fail-stop could not close unit admission");
-            }
-        }
+        closeOwnedAdmission(admissionFailure);
         notifyFailStop(fact);
     }
 
@@ -606,90 +714,92 @@ public final class FibraEngine implements AutoCloseable {
                     return Mono.just(published.current());
                 }
                 failure = null;
-                var packages = target.selections().values().stream()
+                var records = target.selections().values().stream()
                     .filter(selection -> builtIns.stream().noneMatch(value -> value.pluginId().equals(selection.pluginId())))
                     .map(selection -> packageStore.find(selection.pluginId(), selection.packageRevision())
                         .orElseThrow(() -> new IllegalArgumentException("selected package revision is missing: " + selection)))
-                    .map(PluginPackageRecord::managedPackage).toList();
-                var input = planner.inputs(target, packages, builtIns,
+                    .toList();
+                var input = planner.inputs(target, records.stream().map(PluginPackageRecord::managedPackage).toList(), builtIns,
                     nextCapabilities);
                 input.facets().facets().values().forEach(facet -> requireDriver(facet.facet().facet().runtimeId()));
                 input.facets().builtInFacets().values().forEach(value -> requireDriver(value.facet().runtimeId()));
-                boolean all = forceAll || current == null || !current.inputsIdentity.equals(inputsIdentity)
-                    || (!save && forced.isEmpty());
-                var affected = planner.affected(input, current == null ? null : current.compiled, forced, all);
-                var retained = new LinkedHashMap<ExecutionUnitKey, RuntimeUnitGeneration>();
-                if (current != null) current.units.forEach((key, unit) -> {
-                    if (!affected.contains(key) && input.units().containsKey(key)) retained.put(key, unit);
-                });
-                candidate = new CandidateAttempt(identity("attempt"),
-                    new DeploymentCandidate(target));
-                operation.attemptId = candidate.id;
-                var staged = candidate.deployment;
-                // inert create 与登记发生在同一 command-lane 调用栈；其后才允许订阅 prepare。
-                for (var entry : drivers.entrySet()) {
-                    var id = entry.getKey();
-                    var keys = input.units().values().stream()
-                        .filter(unit -> unit.runtimeId().equals(id) && !retained.containsKey(unit.key()))
-                        .map(ExecutionUnitPlan::key).collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
-                    if (keys.isEmpty()) continue;
-                    var dependencies = new LinkedHashMap<ExecutionUnitKey, List<ExecutionUnitKey>>();
-                    keys.forEach(key -> dependencies.put(key, input.units().get(key).dependencies()));
-                    var slice = RuntimeTargetSlice.builder(id, target).desired(input.desired())
-                        .capabilities(nextCapabilities)
-                        .affectedEntryIds(keys.stream().map(ExecutionUnitKey::value).collect(java.util.stream.Collectors.toSet()))
-                        .unitDependencies(dependencies)
-                        .facets(input.facets().facets().values().stream()
-                            .filter(facet -> facet.facet().facet().runtimeId().equals(id))
-                            .map(facet -> new PluginFacetSource(facet.facet(), facet.dependencies())).toList())
-                        .builtInPackages(input.facets().builtInFacets().values().stream()
-                            .filter(value -> value.facet().runtimeId().equals(id))
-                            .map(DeploymentTargetCompiler.CompiledBuiltInFacet::pluginPackage).distinct().toList()).build();
-                    staged.register(id, entry.getValue().createCandidate(slice));
-                }
-                transitionCandidate(CandidatePhase.PREPARING,
-                    EngineOperationStage.PREPARING);
-                publish();
-                return Flux.fromIterable(staged.candidates().values())
-                    .concatMap(value -> loop.call(() -> runtimeVoid(
-                        value::prepareAsync)))
-                    .then(loop.call(() -> {
-                        ensureMutable();
-                        transitionCandidate(CandidatePhase.VALIDATING,
-                            EngineOperationStage.VALIDATING);
-                        var plans = mergePlans(staged, retained.keySet());
-                        var compiled = planner.validate(input, fingerprint, plans, retained.keySet());
-                        for (var entry : staged.candidates().entrySet()) {
-                            var runtimePlan = entry.getValue().preparedPlan();
-                            var order = compiled.dependencyFirst().stream().filter(runtimePlan.units()::containsKey).toList();
-                            staged.registerSealed(entry.getKey(), entry.getValue().seal(CompiledRuntimeSlice.of(runtimePlan, order)));
-                        }
-                        staged.seal(compiled, retained);
-                        transitionCandidate(CandidatePhase.READY_TO_SAVE,
-                            EngineOperationStage.VALIDATING);
-                        publish();
-                        DurableTargetToken token = durableToken;
-                        if (save) {
-                            transitionCandidate(CandidatePhase.SAVING,
-                                EngineOperationStage.SAVING);
-                            publish();
-                            token = targetStore.save(durableTarget == null ? 0 : durableTarget.targetRevision(), target);
-                            try { verifyToken(target, token); }
-                            catch (RuntimeException invalidConfirmation) {
-                                operation.targetSaveState = TargetSaveState.UNCONFIRMED;
-                                throw invalidConfirmation;
+                return preflightConfiguration(input, records, builtIns).then(loop.call(() -> {
+                    boolean all = forceAll || current == null || !current.inputsIdentity.equals(inputsIdentity)
+                        || (!save && forced.isEmpty());
+                    var affected = planner.affected(input, current == null ? null : current.compiled, forced, all);
+                    var retained = new LinkedHashMap<ExecutionUnitKey, RuntimeUnitGeneration>();
+                    if (current != null) current.units.forEach((key, unit) -> {
+                        if (!affected.contains(key) && input.units().containsKey(key)) retained.put(key, unit);
+                    });
+                    candidate = new CandidateAttempt(identity("attempt"),
+                        new DeploymentCandidate(target));
+                    operation.attemptId = candidate.id;
+                    var staged = candidate.deployment;
+                    // inert create 与登记发生在同一 command-lane 调用栈；其后才允许订阅 prepare。
+                    for (var entry : drivers.entrySet()) {
+                        var id = entry.getKey();
+                        var keys = input.units().values().stream()
+                            .filter(unit -> unit.runtimeId().equals(id) && !retained.containsKey(unit.key()))
+                            .map(ExecutionUnitPlan::key).collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+                        if (keys.isEmpty()) continue;
+                        var dependencies = new LinkedHashMap<ExecutionUnitKey, List<ExecutionUnitKey>>();
+                        keys.forEach(key -> dependencies.put(key, input.units().get(key).dependencies()));
+                        var slice = RuntimeTargetSlice.builder(id, target).desired(input.desired())
+                            .capabilities(nextCapabilities)
+                            .affectedEntryIds(keys.stream().map(ExecutionUnitKey::value).collect(java.util.stream.Collectors.toSet()))
+                            .unitDependencies(dependencies)
+                            .facets(input.facets().facets().values().stream()
+                                .filter(facet -> facet.facet().facet().runtimeId().equals(id))
+                                .map(facet -> new PluginFacetSource(facet.facet(), facet.dependencies())).toList())
+                            .builtInPackages(input.facets().builtInFacets().values().stream()
+                                .filter(value -> value.facet().runtimeId().equals(id))
+                                .map(DeploymentTargetCompiler.CompiledBuiltInFacet::pluginPackage).distinct().toList()).build();
+                        staged.register(id, entry.getValue().createCandidate(slice));
+                    }
+                    transitionCandidate(CandidatePhase.PREPARING,
+                        EngineOperationStage.PREPARING);
+                    publish();
+                    return Flux.fromIterable(staged.candidates().values())
+                        .concatMap(value -> loop.call(() -> runtimeVoid(
+                            value::prepareAsync)))
+                        .then(loop.call(() -> {
+                            ensureMutable();
+                            transitionCandidate(CandidatePhase.VALIDATING,
+                                EngineOperationStage.VALIDATING);
+                            var plans = mergePlans(staged, retained.keySet());
+                            var compiled = planner.validate(input, fingerprint, plans, retained.keySet());
+                            for (var entry : staged.candidates().entrySet()) {
+                                var runtimePlan = entry.getValue().preparedPlan();
+                                var order = compiled.dependencyFirst().stream().filter(runtimePlan.units()::containsKey).toList();
+                                staged.registerSealed(entry.getKey(), entry.getValue().seal(CompiledRuntimeSlice.of(runtimePlan, order)));
                             }
-                            durableTarget = target;
-                            durableToken = token;
-                            durableState = DurableTargetState.PRESENT;
-                            targetConvergence = TargetConvergence.CONVERGING;
-                            operation.targetSaveState = TargetSaveState.SAVED;
-                        } else {
-                            targetConvergence = TargetConvergence.CONVERGING;
-                        }
-                        promote(staged, Objects.requireNonNull(token, "durable token"), inputsIdentity);
-                        return settleReplacement().then(Mono.fromSupplier(published::current));
-                    }));
+                            staged.seal(compiled, retained);
+                            transitionCandidate(CandidatePhase.READY_TO_SAVE,
+                                EngineOperationStage.VALIDATING);
+                            publish();
+                            DurableTargetToken token = durableToken;
+                            if (save) {
+                                transitionCandidate(CandidatePhase.SAVING,
+                                    EngineOperationStage.SAVING);
+                                publish();
+                                token = targetStore.save(durableTarget == null ? 0 : durableTarget.targetRevision(), target);
+                                try { verifyToken(target, token); }
+                                catch (RuntimeException invalidConfirmation) {
+                                    operation.targetSaveState = TargetSaveState.UNCONFIRMED;
+                                    throw invalidConfirmation;
+                                }
+                                durableTarget = target;
+                                durableToken = token;
+                                durableState = DurableTargetState.PRESENT;
+                                targetConvergence = TargetConvergence.CONVERGING;
+                                operation.targetSaveState = TargetSaveState.SAVED;
+                            } else {
+                                targetConvergence = TargetConvergence.CONVERGING;
+                            }
+                            promote(staged, Objects.requireNonNull(token, "durable token"), inputsIdentity);
+                            return settleReplacement().then(Mono.fromSupplier(published::current));
+                        }));
+                }));
             }).onErrorResume(this::deploymentFailed).flatMap(view -> {
                 if (operation.outcome != EngineOperationOutcome.RUNNING) return Mono.just(view);
                 return loop.call(this::finishCurrentOperation).onErrorMap(error ->
@@ -1011,14 +1121,18 @@ public final class FibraEngine implements AutoCloseable {
             case FailureSubject.DurableTarget ignored -> { }
             case FailureSubject.Operation ignored -> { }
         }
+        closeOwnedAdmission("fail-stop could not close unit admission");
+        notifyFailStop(fact);
+    }
+
+    private void closeOwnedAdmission(String safeFailure) {
         for (var unit : ownedUnits()) {
-            try {
-                unit.closeAdmission();
-            } catch (RuntimeException | Error violation) {
-                cleanupFailures.add(violation.toString());
+            try { unit.closeAdmission(); }
+            catch (RuntimeException | Error foreign) {
+                rethrowCatalogFatal(foreign);
+                cleanupFailures.add(safeFailure);
             }
         }
-        notifyFailStop(fact);
     }
 
     private void enterFailStop(FailureFact fact) {
@@ -1054,8 +1168,8 @@ public final class FibraEngine implements AutoCloseable {
     }
 
     private Mono<Void> shutdown() {
-        if (catalogAttempt != null) {
-            return catalogAttempt.closed.then(loop.call(this::shutdown));
+        if (readAttempt != null) {
+            return readAttempt.closed.then(loop.call(this::shutdown));
         }
         var retainedFailure = failure;
         mutationGate = false;
@@ -1515,7 +1629,8 @@ public final class FibraEngine implements AutoCloseable {
                 "requiredCapabilities", facet.requiredCapabilities().stream().sorted().toList(),
                 "definitionIds", facet.definitionIds().stream().sorted().toList())).toList())).toList();
         return digest(LiteralValue.of(Map.of("capabilities", snapshot.values(), "contracts", contracts,
-            "builtInPackages", metadata)).canonicalJson());
+            "builtInPackages", metadata, "configurationInterpreter",
+            EngineConfigurationContracts.INTERPRETER_IDENTITY)).canonicalJson());
     }
     private static String digest(String value) {
         try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))); }

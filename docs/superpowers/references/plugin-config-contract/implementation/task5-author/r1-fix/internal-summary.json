@@ -1,0 +1,22 @@
+{
+  "current_run": {
+    "native_exit": 0,
+    "report_count": 4,
+    "tests": 11,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "execution_log": "internal.log",
+    "execution_log_sha256": "b75d3aaba64b4b7c5aaa5d1848ff517995f1cc3e1096151ca2dcf9e067cf7085",
+    "finished_at": "2026-10-12T17:23:56+08:00",
+    "reports_index": "internal-reports.json"
+  },
+  "excluded_history": {
+    "index": "historical-red-reports.json",
+    "report_count": 1,
+    "tests": 1,
+    "failures": 1,
+    "raw_xml_unchanged": true,
+    "original_bad_receipt_retained": "receipt-before-correction/"
+  }
+}

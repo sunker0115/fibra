@@ -244,8 +244,10 @@ runtimeInstanceId、准入和生命周期。facet/artifact 依赖只负责静态
 被依赖 facet 的全部 active units，contract-only facet 没有 unit。
 
 内建 definitions 也必须属于显式 package 级 `BuiltInPluginPackage`。Engine 中的该类型只包含
-plugin/version/digest 与非空 `BuiltInFacet[]`；每个 facet 只含 facetId、runtimeId、executionTarget、精确 facet
-dependencies、requiredCapabilities 和 definitionIds 纯 metadata。`RuntimeProvider` 暴露完整 package metadata，
+plugin/version、派生 packageDigest 与非空 `BuiltInFacet[]`，构建时接收 implementationDigest；每个 facet 只含 facetId、runtimeId、executionTarget、精确 facet
+dependencies、requiredCapabilities、definitionIds 和 configSchemas 纯 metadata。configSchemas 的键只能来自声明名称，
+值不可变；缺失规则和语义非法规则在实际查询或启用时拒绝，发布资格则全量检查。最终 packageDigest 覆盖实现摘要与
+全部 facet 声明和规则，不保留旧 packageDigest 输入别名。`RuntimeProvider` 暴露完整 package metadata，
 并私有保存实际 `PluginDefinition`/factory。P0 一个 built-in package 的全部 facets 必须属于声明它的同一个
 provider/runtime；不实现跨 provider package fragment 合并。内建 facet 参与与动态 facet 相同的 capability、
 全局 DAG、definition/unit 校验和 runtime slice，不能由 Engine 匿名 catalog 或旁路挂载。每个 facet 的稳定
@@ -256,6 +258,14 @@ provider 私有 definitions 与 metadata 的集合一致性在引用该 package 
 不得在 Host 创建前因这类不匹配而阻断管理入口。metadata 的结构合法性、runtime 身份及重复声明仍严格校验。
 可信持久 target 遭 definitions 不匹配时按第 8 节进入可修正的 `PRESENT + BLOCKED`；未引用该 package 的
 完整 replacement 不执行其 definition prepare。不能把缺失 definition 静默忽略或合成为占位插件。
+
+动态包根 `fibra-config.json` 与 builtin configSchemas 提供同一配置合同；名称仍由原 runtime 静态目录负责。
+Engine 在原求值之后、任何 candidate 创建之前，用候选精确 package revision 校验全部 active 实例的 effective
+值。Java、Node 和外部 client provider 沿同一门，不为 client 增加第二份配置或 wire schema；Assignment 仍携带原
+resolved config。类型绑定、默认值、业务规则和资源可用性仍属于 runtime/插件，产品拥有表单和组合策略。
+`describeConfiguration` 与名称查询共用 Engine 命令 lane 和读取资源 owner，真实 close 成功后才返回；普通查询
+失败不改历史 operation，清理失败保留句柄、driver/store 和首个失败事实。详细预算、错误及停用/升级语义见
+[插件配置合同](2026-10-11-plugin-config-contract-design.md)。
 
 ## 5. 单一 RuntimeDriver 模型
 
@@ -783,7 +793,9 @@ Java 插件 `Context.scope()` 返回实际不实现 `Scope/AutoCloseable` 的 `S
 关闭顺序固定为：
 
 ```text
-关闭新准入，排空已接纳的 command，并发布 SHUTDOWN / CLOSING
+关闭新准入，排空已接纳的 command
+→ 观察 Engine 读取 attempt 的缓存 close 终态
+→ 读取屏障成功后发布 SHUTDOWN / CLOSING
 → generations 封准入、drain、stop、retire
 → runtime drivers 逆序关闭
 → contribution directory
@@ -797,6 +809,9 @@ Java 插件 `Context.scope()` 返回实际不实现 `Scope/AutoCloseable` 的 `S
 
 关闭订阅先封准入；quiesce 前已接纳的 bootstrap 按原队列完成或失败，尚未执行的普通管理命令仍受
 closing gate 约束。相同 close 的并发订阅、取消等待者及后续重订阅不重复执行清理。
+当前读取失败隔离策略下，读取屏障失败保留原 operation、首个 failure 及 Engine 持有的资源，返回同一失败，
+不建立新的 SHUTDOWN operation。该整体保留是保守失败策略，不表示每个固定文件流都物理依赖全部 runtime；
+详细边界见[配置合同 §7](2026-10-11-plugin-config-contract-design.md#7-生效范围时序升级和恢复)。
 只有必要资源清理与内部关闭请求全部成功后，才发布 `CLOSED` / `SHUTDOWN SUCCEEDED`、完成 views，
 随后发成功回执。该结果不承诺所有线程已终止、任意外部 callback 已返回或 Host 进程已退出。
 

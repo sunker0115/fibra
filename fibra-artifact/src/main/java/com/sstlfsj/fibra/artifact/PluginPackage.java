@@ -52,14 +52,17 @@ public final class PluginPackage {
     private final String version;
     private final String packageDigest;
     private final List<PluginFacet> facets;
+    private final ConfigurationResourceEvidence configurationEvidence;
 
     private PluginPackage(Path root, PluginId pluginId, String version,
-                          String packageDigest, List<PluginFacet> facets) {
+                          String packageDigest, List<PluginFacet> facets,
+                          ConfigurationResourceEvidence configurationEvidence) {
         this.root = root;
         this.pluginId = pluginId;
         this.version = version;
         this.packageDigest = packageDigest;
         this.facets = List.copyOf(facets);
+        this.configurationEvidence = configurationEvidence;
     }
 
     public Path root() { return root; }
@@ -67,6 +70,7 @@ public final class PluginPackage {
     public String version() { return version; }
     public String packageDigest() { return packageDigest; }
     public List<PluginFacet> facets() { return facets; }
+    ConfigurationResourceEvidence configurationEvidence() { return configurationEvidence; }
 
     /** 只读取当前根清单格式。 */
     public static PluginPackage read(Path source) {
@@ -126,8 +130,9 @@ public final class PluginPackage {
         var pluginId = new PluginId(text(values.get("id"), "id"));
         var version = text(values.get("version"), "version");
         var facets = facets(values.get("facets"), root);
-        return new Snapshot(new PluginPackage(root, pluginId, version, digest(root), facets),
-            manifestBytes);
+        var content = digest(root, true);
+        return new Snapshot(new PluginPackage(root, pluginId, version, content.digest(), facets,
+            content.configuration()), manifestBytes);
     }
 
     private static List<PluginFacet> facets(Object raw, Path root) throws IOException {
@@ -268,12 +273,17 @@ public final class PluginPackage {
     }
 
     private static String digest(Path source) {
+        return digest(source, false).digest();
+    }
+
+    private static ContentDigest digest(Path source, boolean captureConfiguration) {
         try {
             var digest = MessageDigest.getInstance("SHA-256");
+            var configuration = ConfigurationResourceEvidence.absent();
             digest.update(DIGEST_PREFIX);
             if (Files.isRegularFile(source, LinkOption.NOFOLLOW_LINKS)) {
                 digest.update((byte) 'F');
-                updateFile(digest, source);
+                updateFile(digest, source, false);
             } else if (Files.isDirectory(source, LinkOption.NOFOLLOW_LINKS)) {
                 digest.update((byte) 'T');
                 try (var paths = Files.walk(source)) {
@@ -282,10 +292,15 @@ public final class PluginPackage {
                             PluginPackage::compareUtf8))
                         .toList();
                     for (var path : entries) {
+                        var fixedResource = captureConfiguration
+                            && path.equals(source.resolve(ConfigurationResourceEvidence.FILE_NAME));
                         var relative = normalizedRelative(source, path)
                             .getBytes(StandardCharsets.UTF_8);
                         if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
                             digest.update((byte) 'D');
+                            if (fixedResource) {
+                                configuration = ConfigurationResourceEvidence.nonregular();
+                            }
                         } else if (Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
                             digest.update((byte) 'F');
                         } else {
@@ -295,14 +310,17 @@ public final class PluginPackage {
                         updateLength(digest, relative.length);
                         digest.update(relative);
                         if (Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
-                            updateFile(digest, path);
+                            var fileEvidence = updateFile(digest, path, fixedResource);
+                            if (fixedResource) {
+                                configuration = fileEvidence;
+                            }
                         }
                     }
                 }
             } else {
                 throw new IOException("content must be a regular file or directory");
             }
-            return HexFormat.of().formatHex(digest.digest());
+            return new ContentDigest(HexFormat.of().formatHex(digest.digest()), configuration);
         } catch (NoSuchAlgorithmException impossible) {
             throw new IllegalStateException("SHA-256 is unavailable", impossible);
         } catch (IOException failure) {
@@ -310,7 +328,10 @@ public final class PluginPackage {
         }
     }
 
-    private static void updateFile(MessageDigest digest, Path path) throws IOException {
+    private static ConfigurationResourceEvidence updateFile(MessageDigest digest, Path path,
+                                                            boolean captureConfiguration)
+        throws IOException, NoSuchAlgorithmException {
+        var rawDigest = captureConfiguration ? MessageDigest.getInstance("SHA-256") : null;
         var expected = Files.size(path);
         updateLength(digest, expected);
         long actual = 0;
@@ -319,12 +340,17 @@ public final class PluginPackage {
             int read;
             while ((read = input.read(buffer)) >= 0) {
                 digest.update(buffer, 0, read);
+                if (rawDigest != null) {
+                    rawDigest.update(buffer, 0, read);
+                }
                 actual += read;
             }
         }
         if (actual != expected) {
             throw new IOException("content changed while computing its digest: " + path);
         }
+        return rawDigest == null ? null
+            : ConfigurationResourceEvidence.regular(HexFormat.of().formatHex(rawDigest.digest()), actual);
     }
 
     private static void updateLength(MessageDigest digest, long length) {
@@ -351,7 +377,10 @@ public final class PluginPackage {
                 && pluginPackage.pluginId.equals(other.pluginPackage.pluginId)
                 && pluginPackage.version.equals(other.pluginPackage.version)
                 && pluginPackage.packageDigest.equals(other.pluginPackage.packageDigest)
-                && pluginPackage.facets.equals(other.pluginPackage.facets);
+                && pluginPackage.facets.equals(other.pluginPackage.facets)
+                && pluginPackage.configurationEvidence.equals(other.pluginPackage.configurationEvidence);
         }
     }
+
+    private record ContentDigest(String digest, ConfigurationResourceEvidence configuration) { }
 }

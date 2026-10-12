@@ -142,6 +142,15 @@ for artifact in fibra-fs fibra-fs-local fibra-tool-fs fibra-tool-fs-search \
   [[ ! -e "$install_root/plugins/$artifact/plugin.properties" ]] ||
     fail "$artifact 仍包含旧 plugin.properties"
   [[ -f "$install_root/plugins/$artifact/lib/main.jar" ]] || fail "缺少 $artifact 主 JAR"
+  configuration="$install_root/plugins/$artifact/fibra-config.json"
+  [[ -f "$configuration" ]] || fail "缺少 $artifact 配置合同"
+  entry_count=$(jar tf "$install_root/plugins/$artifact/lib/main.jar" |
+    awk '$0 == "META-INF/fibra/config.json" {n++} END {print n+0}')
+  [[ "$entry_count" == 1 ]] || fail "$artifact 固定合同不是唯一 entry"
+  unzip -p "$install_root/plugins/$artifact/lib/main.jar" META-INF/fibra/config.json > "$temporary_root/config.json"
+  cmp -s "$configuration" "$temporary_root/config.json" || fail "$artifact JAR/root 合同字节不一致"
+  unzip -p "$archive_copy" "fibra-$version/plugins/$artifact/fibra-config.json" > "$temporary_root/zip-config.json"
+  cmp -s "$configuration" "$temporary_root/zip-config.json" || fail "$artifact root/ZIP 合同字节不一致"
 done
 [[ -f "$install_root/config/profiles/default.packages.yaml" ]] ||
   fail "缺少 default package 选择清单"

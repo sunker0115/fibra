@@ -1,0 +1,1930 @@
+[
+  {
+    "path": ".gitignore",
+    "sha256": "15ceec17f976c0e544588f2cac8eaac77f61f2893e5d8ea8076788f2a4d45bdd"
+  },
+  {
+    "path": ".nvmrc",
+    "sha256": "4c42fb8d6334c5cdcac68b93f96c581fb83b1f58cda898cff115e5e941ef717d"
+  },
+  {
+    "path": "AGENTS.md",
+    "sha256": "38a54c5564480982f041d5b5b6f541076b44a7cf4c9928fdb241bc4ed3917bd3"
+  },
+  {
+    "path": "README.md",
+    "sha256": "8945fb07ee9ac29c7153bab76497c5e07ab7c862432562541cce6440b8ee2c88"
+  },
+  {
+    "path": "docs/README.md",
+    "sha256": "3b1ee98ee93a10be0d702c7f20699922e362cd44995bc1388ea45a55cd6d3223"
+  },
+  {
+    "path": "docs/architecture/README.md",
+    "sha256": "6b491d6ecfe9bb0cfedd82a802e5b0d16c34c776feafb9032219678a61eac786"
+  },
+  {
+    "path": "docs/architecture/code-quality.md",
+    "sha256": "dc785a89c19ee5c69d5c79e285b400f01f99e183f31bf772d714fc122ae6cc0a"
+  },
+  {
+    "path": "docs/architecture/desktop-client.md",
+    "sha256": "60d1ecfd3ed4ebdcd6d0aae166d97ee870baabef154d924409e5ac139c6208f0"
+  },
+  {
+    "path": "docs/architecture/event-store.md",
+    "sha256": "65c3906028e8b0288413e5e886b9bbd7dc90e39889be4776aaa68d21faba928d"
+  },
+  {
+    "path": "docs/architecture/fibra-definition-catalog-consumer.md",
+    "sha256": "6364d14ce55b429f11106704157181fd2bd79214749119f547645d1087d7ad20"
+  },
+  {
+    "path": "docs/architecture/overview.md",
+    "sha256": "85fde01e515c8eb54634e450f5a9e60bf93da206eb111a7b102d680b45fcfce6"
+  },
+  {
+    "path": "docs/architecture/persistence-contracts.md",
+    "sha256": "17e959962ab93842300a44f38cf96de51fe9c436a1dfb992a3dca9c622de8361"
+  },
+  {
+    "path": "docs/architecture/product-target.md",
+    "sha256": "82ca98bceb050ae1e7f37de1398493462b45848cfcf9fce41296d17458bb394f"
+  },
+  {
+    "path": "docs/architecture/session-history.md",
+    "sha256": "3e242e7d3987799861bce3f9980d99d00e8fa1786aee4021fe02290279d94881"
+  },
+  {
+    "path": "docs/architecture/work-execution.md",
+    "sha256": "63d3ae6a788def59ecf8ccbdf6381d6f863c2affe973478f4fdf44a69cc70dfe"
+  },
+  {
+    "path": "docs/history/2026-09-24-p1-closeout.md",
+    "sha256": "33ab71786e43f9019ba0b8df6c4a2f6cac72b143c391f9aa0fdf88787b691a6b"
+  },
+  {
+    "path": "docs/history/2026-10-07-p2-closeout.md",
+    "sha256": "89b08331387a2be21ac84ce7d14cbb9b3950d57728e8ef637496ce5acf2db5ae"
+  },
+  {
+    "path": "docs/history/2026-10-08-code-quality-closeout.md",
+    "sha256": "7518d5e4832fa0ab63941fa48984af9c4ee9fa1a92953ceacfd6d6d2a650c176"
+  },
+  {
+    "path": "docs/history/2026-10-10-01-persistence-isolation-closeout.md",
+    "sha256": "bcbbe58084a404680ed2ed93ac8e3c7e43c44d2cd5db7f689426c60e979bad98"
+  },
+  {
+    "path": "docs/history/2026-10-10-02-package-structure-closeout.md",
+    "sha256": "6c204163e0a9b823c0a8d0a1a25cf5aa8bda3da3dad492f22fa881326ba9041e"
+  },
+  {
+    "path": "docs/history/2026-10-10-03-desktop-module-structure-closeout.md",
+    "sha256": "716e256a986246b1a773e07f661d10951867ba5691ee189bfb759a3217c610d5"
+  },
+  {
+    "path": "docs/history/README.md",
+    "sha256": "c8ff4f7ba439937ac654ff7194506fd3503686fb4e5e024684100b1908e7e1f7"
+  },
+  {
+    "path": "docs/plans/2026-10-11-fibra-definition-catalog-proposal.md",
+    "sha256": "f98f242d69148685cad054a292742f4326c3deab89c9279f134536df7f0fccea"
+  },
+  {
+    "path": "docs/plans/README.md",
+    "sha256": "0a95ada0498d60d77bfee22c0404eae6415a4cf9a8e298405b9ffc8ea5c8313c"
+  },
+  {
+    "path": "docs/plans/current-stage.md",
+    "sha256": "1c16a43104c55e57c6714b3e9110b8058bfa488cbcc25d2a4e0b5a7794850452"
+  },
+  {
+    "path": "docs/references/2026-09-14-deepseek-harness-java-analysis.md",
+    "sha256": "f76081690f1de3c3fbd296e7bf65b505cbfe190b06cbfa1c5b9c2c55fcf42f00"
+  },
+  {
+    "path": "docs/references/2026-09-22-deepseek-harness-video-transcript.md",
+    "sha256": "921784dbc85c1e0db281082d80c708f3479a56bf9f693e9f8969ce3fce8fabdf"
+  },
+  {
+    "path": "docs/references/2026-09-22-opencode-v2-event-and-work-evidence.md",
+    "sha256": "a6bc2c055a8418f725acdf892b658eb1163db9db6a957b4b6a5819f92b71c3e6"
+  },
+  {
+    "path": "docs/references/2026-09-22-spring-ai-2-source-analysis.md",
+    "sha256": "d950b952231b117b184a75d891ec19fbb1e9314cd948db8e9d75c1cd27ce4407"
+  },
+  {
+    "path": "docs/references/2026-09-23-fibra-package-disable-probe.md",
+    "sha256": "eebe661fc6903c3d9f985d9f9bc03058c4d38eb63340205720e0c22109760997"
+  },
+  {
+    "path": "docs/references/2026-09-23-fibra-product-plugin-integration-probe.md",
+    "sha256": "eec2c0878d751d0dc4c96a72a0be690c2d6a6cd96fd5ea84224b91f6c92bd1d0"
+  },
+  {
+    "path": "docs/references/2026-09-23-openai-responses-java-4.67-evidence.md",
+    "sha256": "e90ce0a18b6f6dcb559873a177278e351644188a700a5b1362f34d6dcba18b71"
+  },
+  {
+    "path": "docs/references/2026-09-24-agent-engine-and-memory-evidence.md",
+    "sha256": "657343c4d8cc1ea72f3edca17734c3e52faa13a1f540c4918c2d2665fc1e3292"
+  },
+  {
+    "path": "docs/references/2026-09-24-deepseek-responses-real-probe.md",
+    "sha256": "9a14f3ebef0130657eefc7e1e1ca3a87beec564ae60ba2aea1f015079746fe61"
+  },
+  {
+    "path": "docs/references/2026-09-24-desktop-bootstrap-open-source-evidence.md",
+    "sha256": "fdbe989251db93bb492f96243117b07993627319f9f7ef4b1a936b3095bd2e59"
+  },
+  {
+    "path": "docs/references/2026-09-24-fibra-client-runtime-public-seam.md",
+    "sha256": "07e006536e35988ed4236b375e5b6b9f3be62feaf22d7392b8b5645c977a0695"
+  },
+  {
+    "path": "docs/references/2026-09-24-multi-workspace-host-evidence.md",
+    "sha256": "492ab13912f3e429d63b13444ac165c5885b20a9960b1187231c821f316c1571"
+  },
+  {
+    "path": "docs/references/2026-09-25-evox-desktop-swarm-a2a-evidence.md",
+    "sha256": "6d8c6268fb60dab4f070a0dd0a07363239205b26c8d16f1730033373e11f32e2"
+  },
+  {
+    "path": "docs/references/2026-09-25-p2-recovery-design-audit.md",
+    "sha256": "7b9de57de71e8f98c1a9b49523c1770c7f1e371f176ea2ab942d56a2115802e5"
+  },
+  {
+    "path": "docs/references/2026-09-25-sqlite-access-library-evidence.md",
+    "sha256": "7b59a8c3d2659be78e07c749bfea5a411c8a436da0ca654c5c2f029c1ab51a4a"
+  },
+  {
+    "path": "docs/references/2026-09-26-aws-ai-dlc-lifecycle-evidence.md",
+    "sha256": "a8dff821c0e5cf100ad9296b13d37ae583629f9dc26a951e21309d6cc9dbbac9"
+  },
+  {
+    "path": "docs/references/2026-09-26-java-dag-workflow-evidence.md",
+    "sha256": "eec703026e84b24051d37f1517d22493e498fe14ef7767802c170f60f6d19568"
+  },
+  {
+    "path": "docs/references/2026-09-26-p2-schema-rebaseline-evidence.md",
+    "sha256": "e88b96dd0d6e653a60e3d4b0e7f52cc2f0827fdd1d54b43aa6ec43de75449e43"
+  },
+  {
+    "path": "docs/references/2026-09-27-p2-maintenance-design-audit.md",
+    "sha256": "64a239b06a79bc581de84e1a6cc896d8943da15bcfb5d3ae6be33dd1d114d2db"
+  },
+  {
+    "path": "docs/references/2026-09-29-xerial-readonly-nofollow-immutable-probe.md",
+    "sha256": "ffb9723dc0178db89d4a736b7fc7984415147a70c7214b011c164c56f9ad73ea"
+  },
+  {
+    "path": "docs/references/2026-10-01-p2-shutdown-failure-source-evidence.md",
+    "sha256": "a999f29832057dc2317bcf452c0bfcaf0fce3643ecf37313c61001dded145a2c"
+  },
+  {
+    "path": "docs/references/2026-10-07-code-quality-source-evidence.md",
+    "sha256": "fc0921ab7e9ae07a47e1a6d79f8825c3a597058ac357505dee1e9dc697cf1fea"
+  },
+  {
+    "path": "docs/references/2026-10-07-fibra-tela-final-architecture-reaudit.md",
+    "sha256": "484c5707e8205e60e52a81ad706b0edee0a331be62956f73f092c4d7d5565e83"
+  },
+  {
+    "path": "docs/references/2026-10-08-db-access-boundary-followup.md",
+    "sha256": "d6f6051a78fb7a13daf9bb3b87582c50ee71dfc354f07ff68ed8d5a5ef875dd0"
+  },
+  {
+    "path": "docs/references/2026-10-08-sql-access-probe.md",
+    "sha256": "5c375fcab968a64cc9acceeacfdb07f7159e0af762299f9c69e42044bfa6c101"
+  },
+  {
+    "path": "docs/references/2026-10-09-db-boundary-design-evidence.md",
+    "sha256": "47528926e94be96e7f595b743b7a93f374a3943e1808daa0b7cc62d0c1964431"
+  },
+  {
+    "path": "docs/references/2026-10-10-desktop-module-structure-evidence.md",
+    "sha256": "1b11d00c2fcb0c57c0a9ddd44d2e82684e91694c2a30b945532c083b11625d4c"
+  },
+  {
+    "path": "docs/references/2026-10-10-mybatis-plus-qualification.md",
+    "sha256": "94e2395e0ca97095b4cbefda30f68840c5e81f3266d4d0450f2d65f1dbad073a"
+  },
+  {
+    "path": "docs/references/2026-10-10-p3-client-evidence.md",
+    "sha256": "20a29b1d1ad2aa571d4f7462a444c57113d0d3380ca2db46117493cbef5097f4"
+  },
+  {
+    "path": "docs/references/2026-10-10-p3-history-read-evidence.md",
+    "sha256": "621fcd9ed592e0e08430675d8cf95326713306b2ff10f9773818d01aa1567f21"
+  },
+  {
+    "path": "docs/references/2026-10-10-p3-product-target-evidence.md",
+    "sha256": "6a409e5f5db394fc2387d9099d221090cc36364bac43f8e395cc53fbd5f1411f"
+  },
+  {
+    "path": "docs/references/2026-10-10-package-structure-evidence.md",
+    "sha256": "6e3ae117538441d7a16f5506c135a93c836c333e4526cd9917900bb7ffad6455"
+  },
+  {
+    "path": "docs/references/README.md",
+    "sha256": "c762a842116fa8bc47f9126a09f5f7da9393232064e992fa14c9e5d926282e10"
+  },
+  {
+    "path": "docs/references/probe-archive.md",
+    "sha256": "fae927bcf64d60c06003a63616166af09b8b381a81c26b88b53c380c523f59cc"
+  },
+  {
+    "path": "pom.xml",
+    "sha256": "51db446e9ea175dbb3dd0db2dbbc6fe16bf7ee0148d02b27af8e7fe4e20666c5"
+  },
+  {
+    "path": "tela-agent-plugin/pom.xml",
+    "sha256": "ceaa52365180e0fb00db0a3055594d709318a6b6e2574ab0c302e0db1a15a50d"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/AgentCommandApplication.java",
+    "sha256": "23ccc19a013ca68172b37a31e188e0852b3d2f95068d84938ee82b5169603ab3"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/AgentCommandContributions.java",
+    "sha256": "258297a9bd840ddf9e65cd3c04374f84aa0e46d6b936e4eae89c1d021468cb40"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/TelaAgentEntrypoint.java",
+    "sha256": "5e64ec476181ff37e9fa79fc2653afacbed360147ffd4a73bcd421c3eee8f04b"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/command/AgentWorkResult.java",
+    "sha256": "4b830b83f1e4c1bbe50f7cc9c56080b660dcd26e97fe618023d7a7d2dfd28b41"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/command/ApprovalResolution.java",
+    "sha256": "0c4aa8e5f81e43a0b50fe6988af9ed97a9f1e4cb78c32a35530a0292d458b445"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/command/ApprovalResolutionResult.java",
+    "sha256": "efef3cc5a5713720beb0319cc46f9e85ce3ded08acd092bebe4fd0302cdcc707"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/command/AttemptCancellationTarget.java",
+    "sha256": "3219677773149b42a8b5ee51af2572220f5e5ec346690edefa98f21196ac6159"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/command/CancelWorkCommand.java",
+    "sha256": "73047a87510f187949ca982b2bacf6e342cf829c78c351db5b1e586b70e4a01a"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/command/CancellationReason.java",
+    "sha256": "0fa5e33f0e6f09015ba0a21ce76148542bc4a13769e4715a822cb946c921cf73"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/command/CommandDisposition.java",
+    "sha256": "1014b4ffe1ee497c351581a2726e2c73a69e783bad82efed9460d39a0fa56067"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/command/PromptAdmission.java",
+    "sha256": "c802d2ed945b06b7024c278296898cf72959abc32c0d66ec5d53868ea70fec27"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/command/ResolveApprovalCommand.java",
+    "sha256": "cc96902acf380bd9dd04adcaa2a1d5f147ef6168c1af23d68fee03e5d4340571"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/command/ResumeInterruptedWorkCommand.java",
+    "sha256": "d594640429c5db111b0fb1f12be1e32d4b71b404e9f1c93d7706c613d86b7078"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/command/SubmitPromptCommand.java",
+    "sha256": "958c3db2170d0ea5ce0c0838bd6e23ddd74f216085e3a8cc636589ffeaffd0db"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/command/WorkCancellationResult.java",
+    "sha256": "b76b2f6e43bd579338c8c1f2e9ad7c6a61ea327537ca7921cabfcc46bff0bb00"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/command/WorkResumeResult.java",
+    "sha256": "0107edb46e63fb1a818cc20a85cc10fa30fb045ba8aac18612932b8ec43db0b8"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/effect/ApprovalRequested.java",
+    "sha256": "d80c3d430dbeab613e99c8361b8ca394a32fc36dde9e523719dafc0f4e854b0e"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/effect/DurableEffectState.java",
+    "sha256": "50964d6bd32ab793ba18bc260c4d84c1245d088027a1d5ee9ded86040a167196"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/effect/EffectAttemptFence.java",
+    "sha256": "72bd90b817abba2cd9e1ef38b90ece2321a2794b5490c5d3b8ba7e2560b5a09a"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/effect/EffectAttemptStarted.java",
+    "sha256": "b1ca8c6a58b03a35de1886aeef6da58a2f98c6e2bfda38394cd030c1520de251"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/effect/EffectIntentFence.java",
+    "sha256": "40766e25f21f5f30530b994d7d2f83ccba9b79772464e06ad76e8f2cb321202f"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/effect/EffectInvocation.java",
+    "sha256": "16d03ea3cb9dd8afec39d715a679a9d7bc9791514f4b8e08ace5365d37ef0e48"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/effect/EffectReceiptOutcome.java",
+    "sha256": "bc691d6f8e00f0c2f62da65679b5700b2a15583f5990de2afcff4533fb8e5e96"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/effect/EffectRecoveryPolicy.java",
+    "sha256": "596d17b9810de742d2ac023f76cc1181dca24bf521544c0135123ce70abeebee"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/effect/ToolIntentRecorded.java",
+    "sha256": "afb21c849733fabb9e74b65e4f4173f4044a0953be2274d1cab838aa60a31516"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/effect/ToolInvocationOutcome.java",
+    "sha256": "fd6166d12b93289d544595ee85f6c37b69e7bc49d427c9e0d04f6f1ac4575b02"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/event/NewProductEvent.java",
+    "sha256": "1416a7e85f41d7e5971d7535ef684c2bf9fb63b89e29ee3e1a2bfaa4b52533d3"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/model/DurableResultEncodingException.java",
+    "sha256": "fcea483ad6fc63f219c94eb71e5102f05728c64af7329a0ed8d7446c2bebad01"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/model/FrozenModelBinding.java",
+    "sha256": "649e1ca9c4220199a86c0a19b7e27c93cb37c5ffdebee3659980758f1d99e283"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/model/FrozenToolBinding.java",
+    "sha256": "a7d3a60e7d73f0f02a5c2566db40e98b9b515108fc4128de9b10f2a5b8956e9d"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/model/ModelTurnCompleted.java",
+    "sha256": "dfeace06e677c300551ab8fa364c182db0dce3d26dd8caa88eeaff9d5f69ee25"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/model/ModelTurnCompletion.java",
+    "sha256": "45beac35934adf0f5095e9d8f71f40d1500e68cc58e008b4a19d7e46f19ee4e5"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/recovery/AgentRecoveryBlocked.java",
+    "sha256": "c08754a500f97bb21983fdcb9b056b9bac5902386cffe433b0836e0496973ecc"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/recovery/AgentRecoveryFailStop.java",
+    "sha256": "300d6a6fa9601f7792b695434ee765401fc216619152dfbfe6943479369b4339"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/recovery/AgentRecoveryOutcome.java",
+    "sha256": "28b1395e82882101f96973c10d24ffd4cc61cbbb5413a00a3c6a2b22e90cc484"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/recovery/AgentRecoveryResult.java",
+    "sha256": "6d14c6f06c2bea98bf6e557f31e0d2735fa28ee387e6ee84c3b6915b9df3ed79"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/recovery/AgentStoreDiagnostic.java",
+    "sha256": "754e0696f930fd7d619be3b9019a8d756d6806729b0eaa67631e89d5afd5ab1b"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/recovery/AgentStoreStatus.java",
+    "sha256": "7400775f24ecf0f5e175665348c686c9080903306ea33cee310fd382be0ed8bf"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/recovery/ProjectionRebuildResult.java",
+    "sha256": "2800692ea29f23d0d58ea5d29557097f1d248c510e96493f92dae570b37d77e5"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/recovery/RecoveryEpochStatus.java",
+    "sha256": "cbb792a22b3aedad4ea397be33a7471da563a8762bf4fe38c5adf3261803798c"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/recovery/RecoveryFence.java",
+    "sha256": "274d5b4e6d75f2fe23d2ef58628ea4dbe1b158ef35aab00d38813a798ffab360"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/recovery/RecoveryModelBinding.java",
+    "sha256": "d2ffc38c2bc581d6c0a1ce74ab796491dfee60ada47dcc4a50f0edf613aebb85"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/recovery/RecoveryModelView.java",
+    "sha256": "27a79df08fcd54d3075e39d9737f7f194d2bf85098ce277b3ef55c2824e0686d"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/recovery/RecoveryStoreEpoch.java",
+    "sha256": "ad9ca253bd2a95b0c199506ff4eca67cd44a7402aa7b96d62cb7607ba136fd29"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/recovery/RecoveryToolBinding.java",
+    "sha256": "e1edc4ff2449f7eb89433833225c6d0191fc3a9b053880467dba160c14aea8bf"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/recovery/RecoveryToolView.java",
+    "sha256": "6ac176585b89375cbafe6a1f50f8ca07453ef18651bd8a63ca89ba2e68868aa5"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/recovery/RecoveryWorkTarget.java",
+    "sha256": "1747ef6c7caeb031d50aeaeab1233da9af78cd30a1f856a8a52d649f4a80ee06"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/recovery/WorkRecoveryClassified.java",
+    "sha256": "33c48638508add732680176cef7fd8ea21de2fdc0cab664125a1023514b50815"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/recovery/WorkRecoveryCommit.java",
+    "sha256": "c585dd9396af8a8cc246dfc19e0d0b62c61d74b11c4363e3d76b61004f30a4ef"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/recovery/WorkRecoveryDisposition.java",
+    "sha256": "720d486fb1244b8a35def4e0aab655aaf4cef3c907d6dd233fda94f15a24fdaf"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/recovery/WorkRecoveryReason.java",
+    "sha256": "926a39163329de74f201dc2e022a41a6c3e5b8495fb5d1da2777dfd09348a8af"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/work/AgentRunLimitException.java",
+    "sha256": "a887afd5e6bf639f98bcc91670ad4f44871eacf1dd7438846994e6fe90f87acc"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/work/DrainFence.java",
+    "sha256": "eb14da47d654a3b181e2c0260e360f1f6a4d6e57da00bbb830cd0a822975ed95"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/work/DurableToolBatchState.java",
+    "sha256": "3ddb54f455e923aec1877cf33b7350077a8f145f7b47977c7fead556d3f46eb0"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/work/EffectOutcomeCommit.java",
+    "sha256": "67dbba782eb4b6a30e08074145325338cafe8aa5c3d2cfee4acc307c82ad67b6"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/work/ExpiredLineageDeadlineCandidate.java",
+    "sha256": "af20d8af0d08fcc90c4346beb916a44d3e1ad51bb370c30ff44a4e73f217f064"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/work/InheritedCompletedToolBatch.java",
+    "sha256": "56f137220d90cc764666bcaa2be305861091145e68f34b689313806c47d29f22"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/work/ModelTurnCommit.java",
+    "sha256": "e7bbf257dfd86da8e2adde082a25b81a66bc68e6c826d181e19d850ff2a8af68"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/work/ProductStoreConflict.java",
+    "sha256": "f4e2fa5b7aa373dd84da22641af9670d9d8162ab51b827492f8d5462d44049f6"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/work/ToolBatchPreparation.java",
+    "sha256": "15c481a6daae5cf38b25311e6366a78f2da2c27870ff117f0aa4ff59910d7309"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/work/TurnOutcome.java",
+    "sha256": "67ca0ac1ce482a81c9a1e48c5abd686a70e22c7f14838320e3132823c1450c37"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/work/TurnWorkAttempt.java",
+    "sha256": "2b7a00b9c17f6dc4ce31d3c2be390c9e39224307c725ca04beb40e09fb29a241"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/work/WorkDeadlineExceeded.java",
+    "sha256": "c23a73bbcdb95ab2a8e7fb72d929de3cdfd3677e6fe0a258782319949ac508d0"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/work/WorkDeadlineReason.java",
+    "sha256": "23e6c01052822badaa9856ffff0b4c7ce994b07db688abfef0d04d59f2351f59"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/work/WorkExecutionSnapshot.java",
+    "sha256": "0e48215e5f778969b141a44d64863e9c48dfbb63d863795498622e1b26f7964f"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/contract/work/WorkerOutcomeDisposition.java",
+    "sha256": "31d4d39d9131a3a623bb73b4b2d81d044a45f786fa4de7c836b8f31fa6465d87"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/execution/AgentLoop.java",
+    "sha256": "b673409525f1538ce280ca7246df038baca642d47de5948af25b75ad2f449c32"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/execution/AgentLoopLimits.java",
+    "sha256": "74553a3607605d2b55f409aca92a393a4beb43f38e160589c101474fa80df48b"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/execution/AgentRecoveryCoordinator.java",
+    "sha256": "8f9c9292129cf79249aea662b03582632bfeb82b3422c238f62cedaecb848d42"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/execution/AgentSnapshot.java",
+    "sha256": "f8b6314c2ab35de1b89ddebb1e632b09f69421961adcf8ebb694c8c98e176327"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/execution/DurableAgentRunOutcome.java",
+    "sha256": "1ba7ecc441083e10d2000137c5f45920b7040082362ac7eac309790db76b6af0"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/execution/DurableBoundaryCommitException.java",
+    "sha256": "a262645926e0cf0370f08c59211851bf0b01db1fc51423989ad96288a73918e1"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/execution/DurableIncompleteTurnException.java",
+    "sha256": "d8527deeddd79d9c7e4bc9816ea3c72b09bf063a0130111f56d74346416b5a52"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/execution/DurableModelBindingException.java",
+    "sha256": "6d7d04e7e06b48f74580fc2697c21a071c410e8f50bd4c1b9079de9b8dba28d4"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/execution/DurableToolBatchExecutor.java",
+    "sha256": "7cbe1ce49d1dc97481718256f7e8553c4f02862f1da72c91c9e8c51a4124eb4f"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/execution/DurableToolBatchOutcome.java",
+    "sha256": "76e16774cae37e8abddb72fed6cf36c1df37e4353d6154486aca652cf8407742"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/execution/DurableToolBoundaryException.java",
+    "sha256": "4e93497055c1261304203779043159400ed4fd6ab385515e6e0590618b09cffd"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/execution/DurableToolResultCodec.java",
+    "sha256": "abf979e09e63b6d0d567c9a1fe9af545adb3af2bf8bfa2daf12120447059075c"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/execution/DurableTranscript.java",
+    "sha256": "86a4a5c2c7fbf7a85ab0633125c61c6da1d5aa6cd12ddb2e1306e82cffd80a42"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/execution/ModelTurnCommitter.java",
+    "sha256": "7a10e3acfb249c002cd2a54e355ad45ab8c1cae9e0398c940ea9a3a5b42d4141"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/execution/PreparedToolFactsFactory.java",
+    "sha256": "ea8cf962f44d8e0e6032e08297ab7b4f532efd0fd9abd63fc42e1af6d11b1a6e"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/execution/PublishedAgentModel.java",
+    "sha256": "37385d6744088e8e17c9512ed7522509880f44cc50174db2c349c75a87a2b758"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/execution/ToolIntent.java",
+    "sha256": "0075006799a0a372645995db8337e6c32d63cb55b4ab2e1fdc3ddd4f7e0a2697"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/execution/ToolInvocationPipeline.java",
+    "sha256": "f0562d14d62e926439786c91d4dea219493ed77fc62f99139f56fc827ba4fc1b"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/execution/WorkCoordinator.java",
+    "sha256": "e8daf91326c062c24d5fb8886d3451bb89c7523b645b3557c44d03cdb4beb96b"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/execution/WorkspaceToolBinding.java",
+    "sha256": "4c98b8fda9a686125a7f6be3445a4640b6bb996ac3bf8f2c0b4059912797908f"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/AppliedMigration.java",
+    "sha256": "1c7f7191596d81634b2db84530865b49943e564ad644f4d9151105b8e3205851"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/ApprovalView.java",
+    "sha256": "260958693eafe3022de2c4b31d35f4263e7efa47962dd5a3c2ebf06bf7a2b048"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/CheckpointAccess.java",
+    "sha256": "6c19862a265542854998df63f71139f861aff9489ef08bd490d9cfa621b31d15"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/CommandReceiptAccess.java",
+    "sha256": "58839cb408da8ad9b7f82fac1c7deddd4c10a99259fde6968a962e9e45ccfd68"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/ControlFacts.java",
+    "sha256": "6c3032383f2b7acb196c2ed318fe8cbaabe7477800724925cb1ec791d4a81a08"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/DatabaseCapabilities.java",
+    "sha256": "82d6a6e9a78be256b28d1b19b9058ab9de3d0ad6b73e674bff5dd2f480b28b06"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/DatabaseFailure.java",
+    "sha256": "7f04abb10564e95c76fc6312032f67e43aea0433cf7ba1308e5055c70328fcf8"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/DatabaseOpener.java",
+    "sha256": "211e7ce1a8dc465e7997eaecc8406035ac52e54196db48d5f67c4c336961cefd"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/DatabaseResources.java",
+    "sha256": "4c34ada4bbcfa859e36c1f458c752d232104a325fbea5138cdcadcf6c50c4515"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/EffectApprovalProjectionWrites.java",
+    "sha256": "1693729de98f724a328d44ddbb60169040592391945a6b8bb291c740f1134b16"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/EffectIntentView.java",
+    "sha256": "5eebbc1fbd23213eef8a58cc7f10f860f8f37dfb207048b6da84c8551dfe7d5d"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/EncodedEventRow.java",
+    "sha256": "e2c15919e4d85d865d8bef00c2fd1ce79d7a20897445afac8e12cea10699c6f2"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/EventJournal.java",
+    "sha256": "6f8133faed1d97b4db7c3d1fb5d6199d03cf173548693e2ca642367c449011fc"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/ExecutionFacts.java",
+    "sha256": "534be8a8ee1010a5116c7eeb854d550242646dc2ba7354de794f61d3b19adb3f"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/InboxView.java",
+    "sha256": "66c9390c1fa6cceaada0603b6926aaca8a2665ef694900eb3103878b9821fee5"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/IntegrityAccess.java",
+    "sha256": "4a8c18643f8f16d9249e1143a28d71fc1b71fb6e75a1685a6cd55f9772d0ed0d"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/ProductStoreFactsUntrusted.java",
+    "sha256": "21fd980c0e66e9c0db57a55915f3387a60c5f4144a4237f224a27c0fdfcab3b3"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/ProductStoreInitializationFailure.java",
+    "sha256": "8867349249a7f5b363cc87dcbc28ba58140833d2be9977f9780dd9a5faa8f36b"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/ProjectionCheckpoint.java",
+    "sha256": "aa629ddfed9ad1448ceac380c6912d2c9b8e97b2ed055a0842f782a2724bc343"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/ProjectionMaintenanceAccess.java",
+    "sha256": "f30b24d1c423985a63c1538e9e5b33879682ebcc98c3f70f765c98c160985c17"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/ProjectionReads.java",
+    "sha256": "f1f870cab63250c8ae936b691138fb2f4b9e51eaf8d22641f4088cc6fa8da94d"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/SchemaAccess.java",
+    "sha256": "6bcfab1e095c071131e26bf2bd4b7f63a8be4fca80c0a78de467de5d0e18d667"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/SessionInboxProjectionWrites.java",
+    "sha256": "a5e72279cbf66ab65a2bf9c34ce50224f76482ac7dc12736a32c2f6ec300ecdd"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/SessionView.java",
+    "sha256": "02450ab4654e943a6ce5b1e88059fc8dfa4926c888bfc83b2b10d2b13af9405d"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/StoreIdentity.java",
+    "sha256": "922d7aea98f3b94590406d1d1993629bd2bf6761ac2031cf07fbdd86b738478f"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/TransactionControlAccess.java",
+    "sha256": "ee7c3150801d0d6ee402aa5645fd3b048383ee568b667811806a580cd79e1b4a"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/WorkAttemptProjectionWrites.java",
+    "sha256": "302fe4f1016c436b826fd7b18c57f43d82d8dfc561a8c42e0d0ff99b18971d9d"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/WorkView.java",
+    "sha256": "1614ed59bd75b51519dca17c3d9df8a84ddf76ed8745e65fa9f45b0475f6679a"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteCheckpointAccess.java",
+    "sha256": "0075b887a3aa2f48ee8ce9aa9fcedad33a4be0549f4f474d861c841a47126f0f"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteCommandReceiptAccess.java",
+    "sha256": "9452a91049369d96b3cfb0bd64dc7d5a4dc80dfc472f25d0c995fa6c99f33794"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteControlFacts.java",
+    "sha256": "8ea63f79025799a1ba77b197297b63393e16d1e8460d3d78f6c85f9a6f3d447f"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteDatabaseFactory.java",
+    "sha256": "c258bb753b86d4fa6d55a427c9bc9c96601eff4a31962cedc44c5eceeb95e328"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteDatabaseOpener.java",
+    "sha256": "f919cbe8238852959402de002ff01e87d0ad17376602132b7bd2ac048ba50e38"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteDatabaseResources.java",
+    "sha256": "d20fc46a3b6068e9b12da6a914f0d1f5cc54a9a8affb1e70d7e190ea102853af"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteEffectApprovalProjectionWrites.java",
+    "sha256": "d7f50ca42ec6c99d45e7e89ca87bd5cc8d6b5dbffacf310d2ba90b0ce5356077"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteEventJournal.java",
+    "sha256": "08918b0b82d8a30cdfc6ef6e5165f7f9314ebeeb8b1f47cb633e2e0014cac90e"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteExecutionFacts.java",
+    "sha256": "e8c213d404466064db8e22c103f96cbe01850ff68169d29d94defcb3a5aa72ed"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteIntegrityAccess.java",
+    "sha256": "2d71ff62d7aee4175af2e7acd61f2461839a6c89d828d0baef8cfec39696df88"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteMigrationArtifact.java",
+    "sha256": "775d26d278fd70cf9e29ddf683fed21475f76cc4207e4e3ccf103c3124214eb5"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteProjectionMaintenanceAccess.java",
+    "sha256": "68e6243db57344f6bb50f1235be2bbf421a807804e3fc0d51b332bf9a37145be"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteProjectionReads.java",
+    "sha256": "412ea44281b9e97fe1c0b2d2ba3873bb63fe985790f4400b36c83875df7e14a6"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteSchemaAccess.java",
+    "sha256": "ddb0d9b6be1c92d5c539f0855d5d39c82cd3146867265a46ed74fe86b05353cd"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteSessionInboxProjectionWrites.java",
+    "sha256": "4ca1ae530a76f58882712d7f8a5aeefba4db5ea1136a770e993065430652ebd7"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteTransactionControlAccess.java",
+    "sha256": "88f51d9cd9e55723e03c1037091070a552998c8fc3a722f70417801647016101"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteWorkAttemptProjectionWrites.java",
+    "sha256": "d018172ba3534150d9c87ce78aabb5d57c4910aef9023a4ae7e5963a656c8165"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/AgentCommandStore.java",
+    "sha256": "30b563f2737ca2a5f7c2c9a4e26e2fc7bb73dc413b68cef8e6718b09ed0f2449"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/AgentRecoveryStore.java",
+    "sha256": "f2e6c1f862202076db0ab72d852e5b4a1a1a4f9d933aefdf404e10bf50ae06ce"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/AuthorizedEffectAttempt.java",
+    "sha256": "28e0bbd3f11bc415729c24afc754b6c31e2876711374829baddde7a10d449620"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/EffectAttemptStart.java",
+    "sha256": "016afd8110e1b6d4343faa4f8f67627d0fbb9b7e7982b961eed160c9c2a9db6f"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductBindingRecoveryPlans.java",
+    "sha256": "b661cc39c2930ebfe89f0e6a2ed9023cfc78ba209c75d17fe0b167e32f9122c8"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductCommandReceipts.java",
+    "sha256": "c875b9689a0c4eea69562b430683cebb64230c081c2f11a72e2b55c9a3df13e3"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductControlRecoveryPlans.java",
+    "sha256": "e76c47c8985ecd23d69dd28206b8eec126efdd3e2c5691592c759d84e14e1ee0"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductCoreProjector.java",
+    "sha256": "15aaf2d4d81d26dcf92bb62a7665c0b3a7f837a5d91deef45f8f1d1e4276d36f"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductEffectFacts.java",
+    "sha256": "9c6b963447f3ac9af30bc863723809d317c833c0d1bcbcfffe5e8c528eaa8589"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductEffectHistory.java",
+    "sha256": "8fb8be8a9266059aa771a67ae3abce8e7ee5654c172a1408d7ba62298a768969"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductEventBatchValidator.java",
+    "sha256": "91af483c50c7b0c64b4c484aa6d0950835f741a016d780f6739cade5bef7c2f3"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductEventCodec.java",
+    "sha256": "99ec5052384c4730dcdaf6013a673c73a0702eb770e8cd5518c61c0ce9b070dc"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductEventStorageSizer.java",
+    "sha256": "a29ee6d431f02addc9e76e351ba6158ec2c037b47e741884ceaa27af795ee578"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductEventStore.java",
+    "sha256": "41928abb35a1fdc97ac346776786f82f5b291e5e9bd753a3b9bb2df2fe73e5d3"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductHistoryFacts.java",
+    "sha256": "0b8e5adc525c108c0392db9a7dcc71106c90117c081985d18025343382108338"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductProjectionMaintenance.java",
+    "sha256": "42afa0443409bbf39c22339fb644cc97fd8366dcc33cb41d94682c4926f355de"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductProjectionRebuilder.java",
+    "sha256": "867e9a3fb642623194fb0de27b89183c0c120f5e5f0015aa8e3fb4c86bbc80d4"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductRecoveryBindingHistory.java",
+    "sha256": "e7aa17b490942ea7632d872775564f586fff958759fc2225a901b384883fd58a"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductRecoveryHistory.java",
+    "sha256": "a36c4e0a487d248297303f0623c718c22ee62aaa03d8fccfe6b16d2ffa895ea1"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductRecoverySourceHistory.java",
+    "sha256": "6cb0e2f6331f469e8fa37eb37a00c91e7c3ecb0ad3ade4c877ffbcdd967da402"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductStoreContracts.java",
+    "sha256": "86dfb5b7c156a0e9e9fc9f285551fdd55d8b014127b0a67cbbe9549afc4ff6eb"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductStoreEventRows.java",
+    "sha256": "61e122e37e023f303d8eab06cd4c25e65fa7ec56cdb3750ab99c79beea4dc313"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductStoreFactory.java",
+    "sha256": "6d8cc2762dc4e79ca498d49448d625504c23ca8eba99481dda4f0fe6d2d1691e"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductStorePath.java",
+    "sha256": "1c6358344409f173d7c7d247eca5c49ce86403f01b0b812c286545ab21b39233"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductWorkHistory.java",
+    "sha256": "6c928eedc4e05f0d94db71bb1d3612c226ba0372663fc51d4c7c796e8497916d"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProductWorkRecoveryPlans.java",
+    "sha256": "3c6e489764fb992fb7be4b7eeff9b1a431e9ad558c9f289880d4b6f7738d3871"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/ProjectionMaintenanceStore.java",
+    "sha256": "f04a5891b2541d8f0f83aad7b12c0653d5a1203e63c1f73bb6571b1737801136"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/PromptPromotion.java",
+    "sha256": "41eaaba17fa15f21ca9f13da3b9d07d2697fc5197cf05dda3f0d73ebb74751d3"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/store/WorkExecutionStore.java",
+    "sha256": "340b1407ca7ee614d20965bf0becaeed5d316b7643c341a385a6622f544bccd6"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/tool/ToolPolicyRejectedException.java",
+    "sha256": "365c647109420aa20800ee571417d8f70509449b05ed3c957e65f44c20484836"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/tool/WorkspaceToolCatalog.java",
+    "sha256": "026d1faf43a65d85400b49892843f6cd782724eeac11e6f9f669a691fe115469"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/java/com/sstlfsj/tela/agent/plugin/tool/WorkspaceToolContract.java",
+    "sha256": "8660808ed367734ebd43f78fed0185f897bfa00d88f802fd6be7b6643ce762dd"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/resources/META-INF/fibra/plugin.yaml",
+    "sha256": "deb581df23a44b8b732511c630a14ce20fa84ea0c1aba3d2031be42bf7aa3bd7"
+  },
+  {
+    "path": "tela-agent-plugin/src/main/resources/com/sstlfsj/tela/agent/plugin/store/V001__product_store.sql",
+    "sha256": "5d16ed4e7def1f93d4ef80d69d1d375bfce96f68ddee18ffc0f453f4dba4ae8b"
+  },
+  {
+    "path": "tela-agent-plugin/src/plugin/fibra-config.json",
+    "sha256": "cb1ba24d98200f35c400b950c2fc319b992adbd3e406a924002073d7807d84bd"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/AgentCommandTestAccess.java",
+    "sha256": "fe6aef39db2d0cdfcd5cb966b0ac20baae420b2fcbe0dd8f782bf94b12cbafc5"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/AgentPackageArchitectureTest.java",
+    "sha256": "fcbc406296b27e46174e30b9ed0d5c70dc38fbdb6796e8eec2312e2eff4343f4"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/TelaAgentEntrypointTest.java",
+    "sha256": "115f29ea3c6d3235108249e0fc12d371d3cec2acb52538e0099357332ec5077f"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/contract/effect/EffectContractTestAccess.java",
+    "sha256": "1ab71d1eefe54dbd6488c55ff39296921660165d77b714176531022bcc451a8c"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/execution/AgentExecutionTestAccess.java",
+    "sha256": "1b3f794dc54e70d4edba451c5118f51d5e3975c025b4bcd86cdd22eff2c93e9c"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/execution/AgentLoopTest.java",
+    "sha256": "66807427f66c7812b689936be773df86633d31428d74dd2fe6e834b6462515db"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/execution/DurableToolInvocationPipelineTest.java",
+    "sha256": "f67b9a32e8266e5afce454da8dfc43df9042bcf30ea70e04f37d82846286644b"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/execution/DurableToolResultCodecTest.java",
+    "sha256": "fd0a272c57f878f9ea4d0bc09f1ea912921e71878d944f7ed356b839ddfb1a94"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/execution/ToolInvocationPipelineApprovalTest.java",
+    "sha256": "54a088187cbee27ef55ebc59fc645f4ebc28d0bf71bbf53553e2532afdea8877"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/execution/WorkCoordinatorTest.java",
+    "sha256": "2111016aa508c042e344940c4be5c124474f77557d868b8fc3baa169575d5457"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/execution/WorkspaceToolInvocationTest.java",
+    "sha256": "ab39f05e43273aecb7a44bc052224805cd69afeb69cd7d1241c05e1ef478dc96"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/execution/WorkspaceToolPolicyBoundaryTest.java",
+    "sha256": "7987a781008f4cc0fb61022d785ff7b89cda5130c2c16aa9145869b9eb54d627"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/BusinessPersistenceBoundaryTest.java",
+    "sha256": "c653bdc4ab858569fe5a9c9b10a53db375b589743f811d00de80f005048b879a"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/SharedPersistenceBoundaryTest.java",
+    "sha256": "9a7c06e6641633af7d88e87d0186202ac6e45925a054f94b5e50c70141f13870"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/InitializationJdbcTrace.java",
+    "sha256": "7216025c5367f545ecc33dad712c8c4613dda895fcd46f8dc91a53bd00dd1245"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/JdbcFaults.java",
+    "sha256": "af3683b7629924712f04f960f6964e6fde3f79b45bd4b1c82ef6ad957e6e70ba"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/ResourceDriverBridge.java",
+    "sha256": "e0658fd663697b1f17419743aa0f537cb91b225962c0c1095e7f1d826f9b4477"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteAccessResourceTest.java",
+    "sha256": "a393117c75505be3490fc6720602f7581c3ffe716d36333387a4323db2b04f6a"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteCheckpointAccessTest.java",
+    "sha256": "d91a75122e01b9db8f047682b91e7a89ecd6f7dcb198f721dfd687d3f7449ccd"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteCommandReceiptAccessTest.java",
+    "sha256": "d120610f50d88b30cbd3422ffb45b793eb1006ef579a07f0855ff8e4facb2c6b"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteControlBoundaryTest.java",
+    "sha256": "75de9202c98dc912e4981374b86e3cf7162261da7081abffd5604e8d636d3cd0"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteControlFactsTest.java",
+    "sha256": "2d5161dd996dce18261df3721efbc08b3e0ddfdd1d70b27c84ed51dc72b153d9"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteDatabaseFactoryTest.java",
+    "sha256": "a9f5fca756a67aaee2d6ba74fac43a806ce54c07aeb2aae70eb7d36bc50a57a5"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteDatabaseOpenFailureTest.java",
+    "sha256": "7f242aaacb0320c89c4329aa27e265cc05de20c8658268d44a74bb4da8edefd0"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteDatabaseOpenerClassificationTest.java",
+    "sha256": "c1c843c6a9ae22dd417dbc91eac7bae7791ed4343d683bbf432309ee2ac5b1b0"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteDatabaseOpenerTest.java",
+    "sha256": "d50f265c3204af1270e2b3cf8a1278d3f79261ea9ed3a9df00c23ef046d1a07f"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteDatabasePreconditionTest.java",
+    "sha256": "62f576fe894d03e654eb8dce9bf9c9a49a73abe004cf1dae810511c182df0271"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteDatabaseResourcesTest.java",
+    "sha256": "46859b475406af84a462b1ec50cd1a27f7f9a11b7a2eebb860aa016678ceab9e"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteDatabaseTestSupport.java",
+    "sha256": "55b97306a4b307f804f51bb676081f6d913b2a31d5d9c9d6f70a5c9791379c48"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteDatabaseTestSupportTest.java",
+    "sha256": "63892f1a1a36f4caf2e9ac9ca3528295e3960e8840e0048c080b2d46ae06faf5"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteEventJournalMappingTest.java",
+    "sha256": "23daf96fd70adab2873c7206510bbca4b697c680f0d42de3f0febadeeb74c8f1"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteEventJournalResourceTest.java",
+    "sha256": "c7e449418b83778c18178afd857c35afc4e78fd0b7f1a01380626e034fe88611"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteEventJournalTest.java",
+    "sha256": "c57f08d0c3e041abec0771818f94b116c44367accbe979532e867101bbbbc9c7"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteExecutionFactsApprovalOrderTest.java",
+    "sha256": "e32e766827aac95b10aacc1fe5cd3b034a7066c594ddbcd2c9f6ea72cb9daa43"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteExecutionFactsBindingTest.java",
+    "sha256": "fdce463d2883c3804a667d11bdf0538f43f87eae34fc50fc2ab9c325267befa6"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteExecutionFactsDurableOrderTest.java",
+    "sha256": "fd9f2f95c4729510efdd31231b737c72cda1cd94c4f44d4ecd4feb828f0b189b"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteExecutionFactsMappingTest.java",
+    "sha256": "06a32f169591f34905bbbd1f3695af70d8c7eae850d95d27bdff472022b4e444"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteExecutionFactsOwnerOrderTest.java",
+    "sha256": "36621c237072f013cff24c6e8a756794b22e7a67d1e96ae54633164d03640ee9"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteExecutionFactsPredicatesTest.java",
+    "sha256": "79e738a126272eb58df1f53d175dd4a1535220d26f6ca00f9d460a73bccfe707"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteExecutionFactsResourceTest.java",
+    "sha256": "142756e661ffa475f5a43a5e4f2d59b9811754b83690912b74d6b823c6c311f3"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteExecutionFactsSqlTest.java",
+    "sha256": "fc087a25f49ed390774c8f11e9c0230283a79bde41f4d13222fe98ebaf39bd36"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteExecutionFactsTest.java",
+    "sha256": "b051d4205f1bcfc700d78ecbc05c8d936debf3b9d5b82e14200b361273709dbd"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteInitializationMaintenanceTransactionTest.java",
+    "sha256": "04368746283965b7c4fdaff047bf493b546ba1dedc7b920f08ac4268cc72519e"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteInitializationOwnerOrderTest.java",
+    "sha256": "286900c76d6c288e9007ddffca5934d809f6617d00aa59e7105e417d1ca0fcff"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteInitializationResourceTest.java",
+    "sha256": "3e08a70e713ca487e79ee9fa3bb7d079c6be11c3edd95d0228d102dff7d36070"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteIntegrityAccessTest.java",
+    "sha256": "5ef992833801b0a94a9e3323cfc4a858464364ad485df7dc597532bfdc11d48d"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteIntegritySqlTest.java",
+    "sha256": "740aa89a6f8efbdb2f587e133294d4736acd21612f14c7cb1490f37a22969265"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteMaintenanceDigestTest.java",
+    "sha256": "16ff16091f9b36d672ffbd75b095068360b51fc0c85c7e2f06bcd012d8179590"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteProjectionMaintenanceAccessTest.java",
+    "sha256": "aa1c2b9f0b6c2720a336e36b70d65389756cd3163a1dce44b3d651a730ff75bd"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteProjectionReadsApprovalOrderTest.java",
+    "sha256": "99009fb6ccb37046a194979978ff69dd87ce23a8bdae185342ab509157dcbc12"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteProjectionReadsBindingTest.java",
+    "sha256": "084640f37b2758fd2e16d739700bf4061977bdb59ca1b49b60ea93212856bc2f"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteProjectionReadsOwnerOrderTest.java",
+    "sha256": "9a953ed17b8f8ff00c97ca731557c7fb397aaf903c9ceaff445b8a064fc7527c"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteProjectionReadsProtocolTest.java",
+    "sha256": "9dea4b68112fc44b8898205079d2a95884c25992c892fe8150a9bc513c82c5f5"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteProjectionReadsResourceTest.java",
+    "sha256": "8fd9a1665235f01fab87f0d2bcb93c7fcd2c7cd6389d1d92b873c7d71abc57ff"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteProjectionReadsSqlTest.java",
+    "sha256": "cdcb1cf8386259a25b379e50702951199b332b9515081dbae8d643702e0c6b91"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteProjectionReadsTest.java",
+    "sha256": "34da20470075f6e0e1d082ddad4b04e4b70ba676494ec7ba2e4c6fb0e02226dd"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteProjectionReadsTransactionTest.java",
+    "sha256": "adfe96627b0801a8741f91ff317ddb5d63f9688edca7a2f6f875adbbafb3093b"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteProjectionResourceTest.java",
+    "sha256": "5199cfa0ea1361c820dbcf146e3f87a2b42a9998399edf55eee963a9446e9b9a"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteProjectionWritesTest.java",
+    "sha256": "20a4da131f8128fe940bccf486ff9d06aada4f418cd4aca9dcdf18565e1f8837"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteSchemaAccessTest.java",
+    "sha256": "fed62ad36f8ffc29df7755e6050e6f577b5c27bf0ba41afa58f9c1df2ba07026"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteSchemaSqlTest.java",
+    "sha256": "6f04b8334a0a619c8dde7ffce10c17e19c38b079a73581b299b7287a87a96f1c"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/persistence/sqlite/SqliteTransactionControlAccessTest.java",
+    "sha256": "d34300fa2879fad79542706026a070cb9b91c7679aaa27b953a3387024d01721"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/AgentRecoveryCoordinatorTest.java",
+    "sha256": "04c97da7b479cbb0b793e17411e3c0715c8d5986d483cfb1e3b7fcd59155e01b"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/ApprovalEffectStoreTest.java",
+    "sha256": "e5dc54ba69234df59caa48cdf5da50d79e4c0833a94bc4e5a49e55d850af9b71"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/CommandReceiptCodecBridge.java",
+    "sha256": "eec390bc08d5699ba36c343de59793c8225d01c6ec0ddd22b05e355f6709c4b3"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/ProductBindingComparisonDigestTest.java",
+    "sha256": "803d46b8a5a739e3e76cf505392c56a58b490ceb909c749cf2e531f683997fbf"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/ProductCommandReceiptsTest.java",
+    "sha256": "5827d7eaa52aba9e38ad7d917cf0a91bcd51d21f52e800c0a64171c74f86d703"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/ProductEventCodecTest.java",
+    "sha256": "59cb36f47b398d5877cd6ea0a2e0ef98d513a25e8e99702512d1baf3b6ba6311"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/ProductEventEnvelopeContractTest.java",
+    "sha256": "f7977f98f9c9e56fad69e6db5cf5fa256a97996a4d0a5d31935be2541442fe1e"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/ProductEventStoreNamespaceFenceTest.java",
+    "sha256": "f342f7bc984dd07ec90823bfd4cb964251e4a7535ac42cc514c297245df80010"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/ProductEventStoreTest.java",
+    "sha256": "4ffd6d73344b4baa3424ea4e544ef42ffa9f6c62709038bb2cad87aef92b459d"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/ProductProjectionMaintenanceTest.java",
+    "sha256": "f4358fe10e3ad1b4bc8daef3cd5e32a1ce21cd9bddb0d478ecf3ed744104e963"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/ProductProjectionQueriesTest.java",
+    "sha256": "39d8de6d515c0916d7f227738b7b9dc0eb011a7020c9aa240f7174fc372595bd"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/ProductProjectionRebuildTest.java",
+    "sha256": "538572e13e028c5e56adaac491073b61abab9c44a6c3107a994e57774ac10858"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/ProductStoreExecutionTestAccess.java",
+    "sha256": "fbfd5bdfc3772ebd73a3a97ba6554d5ca8eb7aaffbdc9d7c735339c6cbbd1e95"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/ProductStorePathTest.java",
+    "sha256": "2b2d9eee2c14d2832618b688a2a2b5a7b2e19663e3964b333a50650e659ee21c"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/ProductStorePerformanceTest.java",
+    "sha256": "2606d6fa7a3c9b50bc0754a0e808ccba9d44a2397f59f56191456133acfef74d"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/ProductStoreTestAccess.java",
+    "sha256": "d73f021ee350f2f1cab44e8b45ce9666871c20bb1b6211d6cb80fc6f65e3f797"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/ProductStoreTestEvents.java",
+    "sha256": "459e13cb1def5deda6722bc932eca144c04730de2d8200dbb76b6c64028e8a2d"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/ProductStoreTestFailureAssertions.java",
+    "sha256": "9d1e2ba3be851f02eb1a2a6ba890bebb1fd569ef1ad1a0c37de4e29cae2e92d3"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/ProductStoreTestFailureAssertionsTest.java",
+    "sha256": "16c856036b4a4c2b8378ec112a823a2582482b02a12e55c7dca60390e83b42ac"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/ProductStoreTestLifecycle.java",
+    "sha256": "18f87058bb60b4d4aec81fec866d5e1914f9f23ee78d3f29898254a8b589797c"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/PromptAdmissionTest.java",
+    "sha256": "509f1327259011e792e67862f0bae9799e643990b58a60950335e1338b07bbe5"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/SessionDrainStoreTest.java",
+    "sha256": "12b0f4541cc1fc3788d5cb7134eac506e0edee20fb68d934c44613f8432be691"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/StoreSettings.java",
+    "sha256": "5ee522c615517bcc7ffcb9c345167ebb673f235758f673f2f517f612f60c3d66"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/StoredEventEnvelope.java",
+    "sha256": "92498362be7aa310a8a3e3210a79712e0cb9681ffb0cff6a5f9d7ae31c346432"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/WorkAttemptStoreTest.java",
+    "sha256": "ea31a7210ab00e9067c224cfdb5f63b51625bd510a940c8bb53567a4d1625725"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/WorkCancellationRecoveryStoreTest.java",
+    "sha256": "d77cf7121748530485c475501b9414f8acea335312e56cd4f9e926959fdc6a5d"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/WorkCancellationStoreTest.java",
+    "sha256": "f4b608804841dd6395b4b2a2714ad7bcfbfea88deba6e623b6762048d270ed08"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/WorkLineageStoreTest.java",
+    "sha256": "d6bd7ba0d20a59bfd47d90ffb811be445178353d1dd9a6d03378a180e2c9ef05"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/WorkQuiescenceStoreTest.java",
+    "sha256": "4d986e5af9ed2e9337cf324b6d8fe68ae3293337bc0a76a0f0fcb76feb6cb284"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/WorkRecoveryStoreTest.java",
+    "sha256": "d797be7ff83dcae1f15bff87a69fcb3cb7ac7da357527caeba72bb8f86aa3202"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/store/WorkResumeStoreTest.java",
+    "sha256": "50ab680f14e4105eb34de6f04602de2f010749d4c15744eedc32a3f87edecd12"
+  },
+  {
+    "path": "tela-agent-plugin/src/test/java/com/sstlfsj/tela/agent/plugin/tool/WorkspaceToolTestAccess.java",
+    "sha256": "34508f6274f7a32065808afc1988c7ed43f63f1c5d1ae17c14fc7e21d05c40c6"
+  },
+  {
+    "path": "tela-desktop/.npmrc",
+    "sha256": "7151cf397def0c2cb0ab65643701d27d335a72c90f775675b5f826bc7005818a"
+  },
+  {
+    "path": "tela-desktop/package.json",
+    "sha256": "30e191e2009de1cf12920451ac37165832275ed16c6c2385ace9dda144f70a83"
+  },
+  {
+    "path": "tela-desktop/plugins/agent-view/fibra-config.json",
+    "sha256": "c2a8fdf716dc6cdfc1b8bc23c6c68bc5cd2dbb608f024162e9b4c89130d43a79"
+  },
+  {
+    "path": "tela-desktop/plugins/agent-view/src/index.tsx",
+    "sha256": "69a4359cf9db6b7443750b2703fdd3a4cf17eb8205328bbd564a8897b662d084"
+  },
+  {
+    "path": "tela-desktop/pnpm-lock.yaml",
+    "sha256": "34439a2addfc2fa85478fb39cff9b5f2130c039d1400dd8ea6219850b3dd96e7"
+  },
+  {
+    "path": "tela-desktop/pnpm-workspace.yaml",
+    "sha256": "be8eb095f1b75b94d3cf284d28f1efb787ce83534986556c9627a0562a599a47"
+  },
+  {
+    "path": "tela-desktop/pom.xml",
+    "sha256": "680380f757717fbfad20993384ccfd1ec07314e150a94796c550effdd9e94e15"
+  },
+  {
+    "path": "tela-desktop/scripts/build.mjs",
+    "sha256": "5c0a4a163ead7a1c51415650d34c5eb72ee343f983c62587929106f95ea0da0b"
+  },
+  {
+    "path": "tela-desktop/src/contract/agent-run-request.ts",
+    "sha256": "ecbfbd0bed6d894da762590604498ba0c78dc42eb82d0ea02a10db96c7a19889"
+  },
+  {
+    "path": "tela-desktop/src/contract/desktop-bridge.ts",
+    "sha256": "fb37a46cccf3927c2f9a6608db71550aaf3ea61d7aaefd4b243a1e58176c6dc2"
+  },
+  {
+    "path": "tela-desktop/src/contract/ui-runtime.ts",
+    "sha256": "702ffd15503449a2b0a3902b0db2c86aa3db9ee003d0cdd1053b169116c393a7"
+  },
+  {
+    "path": "tela-desktop/src/main/agent-work.ts",
+    "sha256": "6d5701505fd07b3b8d65862171d598d9496c8c118d3ed9a66ad59a4dbeb84bdc"
+  },
+  {
+    "path": "tela-desktop/src/main/host-connection.ts",
+    "sha256": "d6feb4ce1b048f8d10ccf3cc4fb19ebbaa6ef6194b5beabb50b749a811e77d75"
+  },
+  {
+    "path": "tela-desktop/src/main/host-session.ts",
+    "sha256": "778f435e345661208027185076e7bdf981be774db8f95237b74dba772673b6e7"
+  },
+  {
+    "path": "tela-desktop/src/main/index.ts",
+    "sha256": "b64872e2a06eb693cc0b761fdd746c5bf7ade46ad6fc5f534b5e15970ea867ed"
+  },
+  {
+    "path": "tela-desktop/src/main/ipc.ts",
+    "sha256": "a2352c67eb0388c34bbd70efcc0bc25b2b7b4d70c30d8c507c47967967875c40"
+  },
+  {
+    "path": "tela-desktop/src/main/startup.ts",
+    "sha256": "ad60f9ca510a0be5c25bc578edffa4eb70fa9626afe584ddf7cd59e57bd85ad6"
+  },
+  {
+    "path": "tela-desktop/src/main/window-lifecycle.ts",
+    "sha256": "fb390c785b332c17acb60b06c56afc96bcedf78fca6fff3684391ac16bccfa38"
+  },
+  {
+    "path": "tela-desktop/src/preload/index.ts",
+    "sha256": "0ac0cde02f1229ad35430a091cd846e7f339bba1226169b9eb51cb0b3a097a73"
+  },
+  {
+    "path": "tela-desktop/src/renderer/index.html",
+    "sha256": "3e23e702b100228f7cbad187dc2d0eb770a611c84a827477e548da9e93726d51"
+  },
+  {
+    "path": "tela-desktop/src/renderer/index.ts",
+    "sha256": "d90682752185865e59e6c73f4cefdf6e2f804ce8ddc69408c6b2155d1f6edb2a"
+  },
+  {
+    "path": "tela-desktop/src/renderer/platform/desktop.ts",
+    "sha256": "a8fae7efa2299ab3fe688363468df434964bb7f8499d1ae2b6536e48105fb6b5"
+  },
+  {
+    "path": "tela-desktop/src/renderer/runtime/client-lifecycle.ts",
+    "sha256": "3fa83bb1c0b6096c1f514c4cb305d41bf1a949af2fd5644b96ba797ddba69d67"
+  },
+  {
+    "path": "tela-desktop/src/renderer/runtime/client-runtime.ts",
+    "sha256": "c872c3c55f7c2255c5c4b206c129154d50ce77e757a07efa8ab56f093eba0fa6"
+  },
+  {
+    "path": "tela-desktop/src/renderer/runtime/module-loader.ts",
+    "sha256": "c324362400392c7bc87d99f854c0d864309f7a4247d80ead520a7048598ead99"
+  },
+  {
+    "path": "tela-desktop/src/renderer/runtime/scope.ts",
+    "sha256": "a99b1cf384fbc78d0f4ab1b32d066a4cc1573bf92fae0fe5ed1a8a33da2c2db5"
+  },
+  {
+    "path": "tela-desktop/src/renderer/styles.css",
+    "sha256": "eb26c94e5e0b687894fe8af0d94d215f4a4035c457e60c6bce32e86b2f2fb213"
+  },
+  {
+    "path": "tela-desktop/src/renderer/ui/bootstrap.ts",
+    "sha256": "0a4a9d717cc2e29876b836e915bfbb0da9ee7cc2c22e5d295c526ea328cf03f1"
+  },
+  {
+    "path": "tela-desktop/test/agent-work.test.mjs",
+    "sha256": "b2f2510d021993c2c0fa41199c93d1cabe0df502c74be93f8942fe5d7a7fc727"
+  },
+  {
+    "path": "tela-desktop/test/host-connection.test.mjs",
+    "sha256": "2664b0a78d7117d1adffb10fd834a61972dfcfbb744648dfff807689266a91f4"
+  },
+  {
+    "path": "tela-desktop/test/lifecycle.test.mjs",
+    "sha256": "d50c0109da1a9aebe28d9a086540cda62f876721960371b168913018d69ad893"
+  },
+  {
+    "path": "tela-desktop/test/module-boundaries.test.mjs",
+    "sha256": "bd3ddf4505922373d9f3ee7239f765916037fd14b6cfbc7d21a2085e88d4543c"
+  },
+  {
+    "path": "tela-desktop/test/renderer-load.test.mjs",
+    "sha256": "f8625a46d4f0e762e4d080e2ac4c70e54fc5f05e898fc1acbe543bfab9ffbf28"
+  },
+  {
+    "path": "tela-desktop/test/scope.test.mjs",
+    "sha256": "139c38cdb8e6a59a85d04a5c1f6c7319713a5962f92908bed05a73e0d5d2f58b"
+  },
+  {
+    "path": "tela-desktop/test/smoke-desktop-load-failure.mjs",
+    "sha256": "2d8ecfb39d058d5f8d9ab05aae2c7f1f9c2cbe91a5916f7a1f82893ab28bba64"
+  },
+  {
+    "path": "tela-desktop/test/smoke-desktop.mjs",
+    "sha256": "f10d0a556bb80e0091f5f08b62db88912e03c480b90ff7db1e06fffe7b6b745f"
+  },
+  {
+    "path": "tela-desktop/test/startup.test.mjs",
+    "sha256": "552d5e06ab87d7f6cb5b15c7f9857288f3d17c5f0b516a985251547aa39ecf07"
+  },
+  {
+    "path": "tela-desktop/tsconfig.json",
+    "sha256": "5585ab0b760665f7d7163d0edca09285cf61501b5d550bba2933c7475fbc21e7"
+  },
+  {
+    "path": "tela-desktop/vendor/sstlfsj-fibra-client-api-0.5.0-SNAPSHOT.tgz",
+    "sha256": "de07c38c5413c1648389554144049f6d4dc0f89ceeb7ea0f9156b280997f27ac"
+  },
+  {
+    "path": "tela-desktop/vendor/sstlfsj-fibra-client-protocol-0.5.0-SNAPSHOT.tgz",
+    "sha256": "b41a942ef9c8990532dbc8dd7b313052572f8d5bf97f9334b19299570aad51a5"
+  },
+  {
+    "path": "tela-distribution/pom.xml",
+    "sha256": "335f1bc754e9188a13e7c9348c811563c6d7929382b85c30f5cbea1ffafdfe7f"
+  },
+  {
+    "path": "tela-distribution/scripts/package-desktop.mjs",
+    "sha256": "5c2c045c4603addcbb307ccddc5377334a57cdeb56db15e66cd6729177c388a3"
+  },
+  {
+    "path": "tela-distribution/scripts/stage-plugin-configurations.sh",
+    "sha256": "d637912542788ba6df72036e43dc6bb15a5d2afe5307e4aad28e54783e85d44f"
+  },
+  {
+    "path": "tela-distribution/src/main/assembly/THIRD_PARTY_NOTICES.md",
+    "sha256": "78218d42e8a220b8653c6372ad6255b5b4fa0a99438a1402c2eb7d4b13cef5ea"
+  },
+  {
+    "path": "tela-distribution/src/main/assembly/VERSION",
+    "sha256": "b936bb89cfbe9224968a2fec8a73a973931f40f3f06efc98e3e4641dc0b37af3"
+  },
+  {
+    "path": "tela-distribution/src/main/assembly/bin.xml",
+    "sha256": "742db5d29a5b70be0106f3c61d5757a6fe52b8ce38e55250d90bac014e6c9601"
+  },
+  {
+    "path": "tela-distribution/src/main/bin/tela",
+    "sha256": "e9ad79e4cbe67c7823dfb30a60ab57e6689da0580d0fa09d61a400af99730c71"
+  },
+  {
+    "path": "tela-distribution/src/main/tela-plugins/tela-agent/fibra-package.yaml",
+    "sha256": "554ca139fb874355aea8d76af907407189e0ecba84d29110c36706d1b91e5fcc"
+  },
+  {
+    "path": "tela-distribution/src/main/tela-plugins/tela-agent-view/fibra-package.yaml",
+    "sha256": "6fca2f42d9bde8e2a079054468848fd5855f70864ebf84e0b93488393747830f"
+  },
+  {
+    "path": "tela-distribution/src/main/tela-plugins/tela-model-api/fibra-package.yaml",
+    "sha256": "2a2db082acb1aa06c8ce807b929e78f0d1e18c8df1d320a94a7b8ea67b9633b9"
+  },
+  {
+    "path": "tela-distribution/src/main/tela-plugins/tela-model-deterministic/fibra-package.yaml",
+    "sha256": "7121121761a2f9c3d678845c907c1b18919f7aa255f37c2ebd1bb80aa08d4761"
+  },
+  {
+    "path": "tela-distribution/src/main/tela-plugins/tela-model-openai/fibra-package.yaml",
+    "sha256": "d7191fb5fa28eb8f3f5991312f1ef7c490aab526a7feeabb0cbc68fac38e5938"
+  },
+  {
+    "path": "tela-distribution/src/test/java/com/sstlfsj/tela/distribution/PackagedAdmitGate.java",
+    "sha256": "db65acd7a77ba48fa8ccee0d040d59ca4ecfb03446c4ba4b1887f59158a142f5"
+  },
+  {
+    "path": "tela-distribution/src/test/java/com/sstlfsj/tela/distribution/PackagedAdmitGateTest.java",
+    "sha256": "22c319fdd9ad29c9e65386c92cdea9b26b26fc93f38957d1b9c99951c009f634"
+  },
+  {
+    "path": "tela-distribution/src/test/java/com/sstlfsj/tela/distribution/PackagedBootstrapOwner.java",
+    "sha256": "2055e6d60a8e095b1c8c781c823319a12af2ca0f0ca0fc0d9a18e2984da0155d"
+  },
+  {
+    "path": "tela-distribution/src/test/java/com/sstlfsj/tela/distribution/PackagedEngineCloseProbe.java",
+    "sha256": "bccd84f626de1244206dad4486bb4124c3af145d26c2cc5cabce6f66561d0a93"
+  },
+  {
+    "path": "tela-distribution/src/test/java/com/sstlfsj/tela/distribution/PackagedFinalOwnerGate.java",
+    "sha256": "a1ddf68cb4d549e7f976bf99b34a256c3778edadde9a13621684bf5c94352f45"
+  },
+  {
+    "path": "tela-distribution/src/test/java/com/sstlfsj/tela/distribution/PackagedQuiesceFailure.java",
+    "sha256": "5e9690d79224b1ff4570b12891a19e04a055bb51ca703e6b19a2373d735c0c7c"
+  },
+  {
+    "path": "tela-distribution/src/test/java/com/sstlfsj/tela/distribution/PackagedQuiesceFailureTest.java",
+    "sha256": "7e1b85ae0355be3c1e8395e2521769ca62651434059c1a7adadd2fcd4dc2f852"
+  },
+  {
+    "path": "tela-distribution/src/test/java/com/sstlfsj/tela/distribution/PackagedSpringHandoff.java",
+    "sha256": "8b0183ce554da02ad9cbc4b9fc7232f3dae614e89042b27de37ccb01590993c2"
+  },
+  {
+    "path": "tela-distribution/src/test/java/com/sstlfsj/tela/distribution/PackagedStopGate.java",
+    "sha256": "2041e553acee72aa0b68562e43278afa5da3b4bc7941e7ff3573beba37d75070"
+  },
+  {
+    "path": "tela-distribution/src/test/java/com/sstlfsj/tela/distribution/PackagedWakeDropper.java",
+    "sha256": "e7c1e822d4a8911690e3adbc636746855afe5c07fd1d5ff848f05db085ba7583"
+  },
+  {
+    "path": "tela-distribution/src/test/java/com/sstlfsj/tela/distribution/TelaDistributionIT.java",
+    "sha256": "989d6e79d4ed07320d048acd029e9039f2dbcd519b6490e275fd4ff5b812fe8d"
+  },
+  {
+    "path": "tela-distribution/src/test/java/com/sstlfsj/tela/distribution/TelaJavaDefinitionConsumptionTest.java",
+    "sha256": "1530fb7585add2491e3b856a9f9f7f0c6367766804a1c9ff98278a16cc3406bb"
+  },
+  {
+    "path": "tela-host/pom.xml",
+    "sha256": "4cbbc2133305e9822fe3d13eb12abde768d59dd9263550311116fe50d72d6a70"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/TelaApplication.java",
+    "sha256": "d4306ad5b8499f5b35e4e4311ba1a564db3fefdac4c019ad0be3a59014f90da3"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/bootstrap/FibraPackageBootstrap.java",
+    "sha256": "521fd9f05ecf5de51af987ba7d6c9c713ed0b9448986f59c90c0c26aaf487964"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/bootstrap/ManagedEntryOverlay.java",
+    "sha256": "c52f1b45a22c5b9da5e1724821ffa7db42838164ed806b1ab647fe4262d4948d"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/bootstrap/TelaDataRoot.java",
+    "sha256": "2b05951e8f8c1a495392a00f82e7ec38ff8a0cd52fdc360148560348d9abccd4"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/bootstrap/WorkspaceContext.java",
+    "sha256": "8444c9e68b97f3f9fe243563e53d55097e894dabbe47460d139573c2928e382c"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/client/TelaClientArtifact.java",
+    "sha256": "b87ec459f9bd1af9393d85da4cbcef6ec322ed790a5ffd3feff3d1fb5b4e72e3"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/client/TelaClientRuntimeDriver.java",
+    "sha256": "8853ed31aae561fdaa7cee914a728c31593798099b26ad39f25f2dad942adf11"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/client/TelaClientRuntimeProvider.java",
+    "sha256": "8d1b6cf9a9075a5aea569f6f8e83af48b855bd1286b4b8538f661e480e11315e"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/client/TelaClientTransportHub.java",
+    "sha256": "35798579a8d53791fc4e1cbe32e2d42533bb8251286b061fd988152b45a4b16f"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/contract/TelaAgentRunResult.java",
+    "sha256": "7a6f4d1a5f9ae86dd6b582da6196c88aaaf4c43bae10ba414373e8da8cf7c10d"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/contract/TelaHostStatus.java",
+    "sha256": "c3cf64295dc4e7a4f0017403b04e4e14e9799639417f25dda07e3ed386381b8a"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/contract/TelaPendingApprovals.java",
+    "sha256": "648028e8b32bff0577742c14c2a0d1e665caab567f98b1f64505abd7281bab25"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/contract/TelaProductState.java",
+    "sha256": "e5a1eeb6c59575d736f7e986c3c7f4cd22d76425f7961c902970d539c5a17f05"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/contract/TelaStoreRebuildResult.java",
+    "sha256": "867803489fc428ce8ee1e2b3267f4017fab9ef2c3e0aa15912077195f8d83655"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/contract/TelaWorkCancellationResult.java",
+    "sha256": "1888b57d20db74c821455d99b1aba5119fdeeb85c58589d999666070eec99bd6"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/contract/TelaWorkResumeResult.java",
+    "sha256": "2cca7ff56c90087f1ae2cf149af4ecca23b33a2a6640d8eb060c139f573e3a9e"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/runtime/AgentCommandClient.java",
+    "sha256": "eefba2b3c6c91fc58e338a09ac63d0ff236a6853ea1e3672be43d468aad241c2"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/runtime/PublishedRuntimeGateway.java",
+    "sha256": "654ab64833b7ddedd0bdd35b9c0451c34f0986d5495583eeb6e0381e9bfcc435"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/runtime/PublishedRuntimeGatewayHolder.java",
+    "sha256": "03c2cd28ff3587c6e3d26912e61ed7a5bc1c88a7868ea093d7baea3878db0ed8"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/runtime/TelaEndpointRecord.java",
+    "sha256": "a8765ff05a6b658bdf96843002917b9c15db2d824c35f8c11dabe41629aad5d0"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/runtime/TelaFibraConfiguration.java",
+    "sha256": "a1f2269590ec5c8e3f354a6869c69fb14e4ce82815856c74de65c01279bfcc57"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/runtime/TelaGatewayAgentResponses.java",
+    "sha256": "d5c9c018926092fa599942bbc24d47c6ade03fd6c77561129d5b70d258859c6b"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/runtime/TelaGatewayControl.java",
+    "sha256": "41b296d905a835b474ab073379f0a03b2a75f8c049bd045b7c939edff6f1a621"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/runtime/TelaGatewayRequestFields.java",
+    "sha256": "82a4ae7fd58d58e8f37c60572d1aeea374ac280a0cbeb1c66830de7ae4ac2adb"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/runtime/TelaHost.java",
+    "sha256": "aa76aec8b8ac940f48bc36b5a5ed74dfb300fd0ffbc7a3d8448870fc534cf8be"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/runtime/TelaHostCloser.java",
+    "sha256": "a4f5a90d563664141598becb0ed3ee5ac47f3c1b3c9933093f997b1a5e6a2b30"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/runtime/TelaHostGateway.java",
+    "sha256": "c25f13944d8f28118867cdf51cb836185dea8ee564dec6f62988d5d13972beb3"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/runtime/TelaHostProcess.java",
+    "sha256": "0238ba4269b304bbd8b8f833f3c412f2abe2a297f2c2d3fe63b9c61f9bf98aec"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/runtime/TelaHostTerminationPort.java",
+    "sha256": "4a49368fb2011cf48a1361d9a9a731b11b3dc79d833c391049e2dc2e7f33f7d0"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/runtime/TelaLauncher.java",
+    "sha256": "91ffb93a7daa6efdc07bafd1e7460cbd98e8120a4c66ecd19d709a20e0bab40b"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/runtime/TelaNamespace.java",
+    "sha256": "db087d917b7c6b18bfd90d998889994e38e6a5ed07a26633ee180847f6bd4750"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/runtime/TelaRunCoordinator.java",
+    "sha256": "5b1813c721998881588c6cc84f1de9f0e300b927c2dbbfd771757f70d78671ff"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/runtime/TelaShutdownCoordinator.java",
+    "sha256": "7d0a9e1bf73b20f1e3a317c1b5502a695b3fa7c3f658d8069affc1fbe54ccbeb"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/runtime/TelaShutdownDeadline.java",
+    "sha256": "fa644774c3405d34bac89a8ab579b88eff5ec273ad4f493a58e72b6a79700c0d"
+  },
+  {
+    "path": "tela-host/src/main/java/com/sstlfsj/tela/host/runtime/TelaStoreRebuildCoordinator.java",
+    "sha256": "456ebcfb87e1cda44c336b1a84fd5d87e7bd6e03f4e0a57dcbe93431501660d9"
+  },
+  {
+    "path": "tela-host/src/main/resources/application.properties",
+    "sha256": "a38cb429c0ebb4fee38348a1d958908f41c0c4ba6257c5b147c3969106b35905"
+  },
+  {
+    "path": "tela-host/src/main/resources/tela-managed-entries.json",
+    "sha256": "1a3015a4c69719b6e1f7dc4c01114cc799f64d5528ff150618fbd65b4c1dca1f"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/HostPackageArchitectureTest.java",
+    "sha256": "a3868737d72926d221e92b893a3081eec963925ffe508178c1a53df3f7cef7cd"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/bootstrap/FibraPackageBootstrapTest.java",
+    "sha256": "12d4d4d23b0e8b5404f27c231c59769f8df749829681acc617fc932b03326c9f"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/bootstrap/ManagedEntryDeclarationTest.java",
+    "sha256": "2458593868fb7090147f620b5b3737c75ce07e5d37c8ed106bccb6240cbb3e5b"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/bootstrap/ManagedEntryOverlayTest.java",
+    "sha256": "0205ce259f2db14739cf469f6295978ebcd1a1107c67c6ab08e41c98daa409e5"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/bootstrap/WorkspaceContextTest.java",
+    "sha256": "a541df2243769e33bf1451f62ecdfc1f5ac7a339bd8bda2956ae4080c20688c1"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/client/TelaClientCatalogIntegrationTest.java",
+    "sha256": "49f26ea448b3a03ab6ca64754eaffcc994c6fb9f50a806949300cf25b01172a9"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/client/TelaClientDefinitionCatalogTest.java",
+    "sha256": "0d6fba693ade016102c17ea1b8d2c615e2a0cd6a465af02c77cb3d9991cce7b2"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/client/TelaClientFileLifecycleTest.java",
+    "sha256": "16c45c02b2adc6dd79ceb8582a194438cc0ea01ddade71d88e8339f0b3f67df1"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/client/TelaClientRuntimeTest.java",
+    "sha256": "a3a68099f0fadf0fc5a90c70066bf685b427a5dee1701f4ba7cf10e986d38e03"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/PublishedRuntimeGatewayTest.java",
+    "sha256": "92ccec47fb9978ee2a2ca4f5572b4271302323ba5828f92106afee088ecc6524"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaEndpointRecordTest.java",
+    "sha256": "8c830a512b09b634b8d85a5ac32f9df8150f9495d8d795cc1f554a45550ab91e"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostBootstrapOwnerTest.java",
+    "sha256": "60eb93678a325b60a02c400f975d439cd14f4fdcd6d6117c4dcdaae383d754a9"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostClientShutdownIntegrationTest.java",
+    "sha256": "b3d0820d869aeadf04beb04ea9dcd031c3d5a387648284fb8483fed74102d025"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostCloserTest.java",
+    "sha256": "0838770adc50df80f5be62157e3f007610dbfb2164bb6655f36cdbc6c62051d9"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostCompositionTest.java",
+    "sha256": "30c12aa72c1e2a2c15d9328a26efebaa40a2a8dec62728f8b60a6236315b76ec"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostGatewayCancellationTest.java",
+    "sha256": "37533312bd334e41017f7ebe305f5e81ef7645f6fc7467c99abe912b0aa4574c"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostGatewayErrorTest.java",
+    "sha256": "c84cd8dd19f6a91406b85d15581a066189096e9d03f6627bb86ea1dc9cae8747"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostGatewayResponseTest.java",
+    "sha256": "aec5fe4787d757b373a0409f14b8fe37cf2282e486e01110e0209097d537250b"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostGatewayResumeTest.java",
+    "sha256": "8c1852fa1bd7673ecd5d71b61b57359ee85063e3a06441a35c17c989d58415c2"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostProcessTest.java",
+    "sha256": "d1afd00b5ddd05b6baae271444c2cf5bdd8e42ee8a5eb9cd89bdc7cec43dcc5e"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostPublishedEntryTest.java",
+    "sha256": "9b77f7aafee8fa52cc3cf039572f365d1be82fb749a2b812377978ca438bbdcd"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostReadinessTest.java",
+    "sha256": "326fa8b98cd3a1ac672240fd20fff36f6b87c22b9e484fbd08730f9f50463f16"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostTerminationBridgeTest.java",
+    "sha256": "f81e19c34bec88c495482704acb55651ba096965ffd9009f3f553141e6bd14e6"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostTerminationPortTest.java",
+    "sha256": "93bb921d24e01f612d6a7312d669177ec43dac94cb10f9a289338898a150bec4"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaLauncherTest.java",
+    "sha256": "cbfd38364d97f4be66099246e90ef99b5e2f23442b4eda14b9ff9f0df0844520"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaRunCoordinatorTest.java",
+    "sha256": "c970b2dcecd4f5d8eb9c8d0c64cec94a3edb450d93f9bce2c0beb757e30de349"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaShutdownCoordinatorTest.java",
+    "sha256": "aabf435c9d9aec987008559d71a489c102a0af918f855308f1bbfa24c4087190"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaShutdownEscalationIntegrationTest.java",
+    "sha256": "45648b83ade2421879a3572330de898f5c0d1a9e4c4f463cca799b14caafa5a9"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaStoreRebuildCoordinatorTest.java",
+    "sha256": "3c1d8ccb09dc19dc2e599ce0f999e68f15069a01cfb72d9ee2ea3d525384ea0d"
+  },
+  {
+    "path": "tela-model-api/pom.xml",
+    "sha256": "2ac9c641ab11c369bc58599f700aae1034b6bc715004121f6bf9c3500f31930f"
+  },
+  {
+    "path": "tela-model-api/src/main/java/com/sstlfsj/tela/model/api/ModelContinuation.java",
+    "sha256": "d9ddfc8ed975c26fe2a61ac6f456cde51bb5cbe2589e598e98f8e45afdc3e804"
+  },
+  {
+    "path": "tela-model-api/src/main/java/com/sstlfsj/tela/model/api/ModelContributions.java",
+    "sha256": "d083f5b507000fea30648606070b48b384d064e8c392c1bfbee8a72d16938a2b"
+  },
+  {
+    "path": "tela-model-api/src/main/java/com/sstlfsj/tela/model/api/ModelDescriptor.java",
+    "sha256": "52956da5841645d63db69d81157c4c404733f99bb7eadfab3758c013c79c0d1f"
+  },
+  {
+    "path": "tela-model-api/src/main/java/com/sstlfsj/tela/model/api/ModelFailure.java",
+    "sha256": "bb626112f4bd8827931c75bb578bb3b7f13ff70385d2330b9c422419f742a452"
+  },
+  {
+    "path": "tela-model-api/src/main/java/com/sstlfsj/tela/model/api/ModelProviderException.java",
+    "sha256": "8d5365586bf6e109768114e25ae04bffe0835097f48324b0a9b4f4cd513ced97"
+  },
+  {
+    "path": "tela-model-api/src/main/java/com/sstlfsj/tela/model/api/ModelRequest.java",
+    "sha256": "d1c38d9b50af231518c606a8636c99ec9316b054687519f0e9ac5210ee25d9ec"
+  },
+  {
+    "path": "tela-model-api/src/main/java/com/sstlfsj/tela/model/api/ModelResponse.java",
+    "sha256": "3a5dd578708e9bd575114892945b93742011b11e36b32842cd5edffaa0a6282a"
+  },
+  {
+    "path": "tela-model-api/src/main/java/com/sstlfsj/tela/model/api/TelaModelApiEntrypoint.java",
+    "sha256": "58dcac6790cf1a3bd8f99f8bd058e3b24618d7c987a866350b68837aaf0351bc"
+  },
+  {
+    "path": "tela-model-api/src/main/java/com/sstlfsj/tela/model/api/ToolDefinition.java",
+    "sha256": "dec1592a73fdf5e70d80532deccbcf8679f5a17ea7c516bf93ed04096efeb972"
+  },
+  {
+    "path": "tela-model-api/src/main/java/com/sstlfsj/tela/model/api/ToolExecutionResult.java",
+    "sha256": "4d9380fd93a099ea7cef00c0cd4e44a5cddb4bdca1b0c4f1ce7e707388c29ac5"
+  },
+  {
+    "path": "tela-model-api/src/main/resources/META-INF/fibra/plugin.yaml",
+    "sha256": "2440915f690874866029603da45143ab07ba64a517eeef514194d7cf8e41bc14"
+  },
+  {
+    "path": "tela-model-api/src/plugin/fibra-config.json",
+    "sha256": "99605a048253ce922eb70ffa0790d4775124e1f66975e9aa343ae3e325abc0ec"
+  },
+  {
+    "path": "tela-model-api/src/test/java/com/sstlfsj/tela/model/api/ModelContractTest.java",
+    "sha256": "ea58abd941dceeca070ade33b4f3d15200ded7daf0b42125aed3cd3e3a08b405"
+  },
+  {
+    "path": "tela-model-deterministic-plugin/pom.xml",
+    "sha256": "78f9d18bf40b93d711556afd51d80626701c4c970a748edd78d4f2a6e659b4df"
+  },
+  {
+    "path": "tela-model-deterministic-plugin/src/main/java/com/sstlfsj/tela/model/deterministic/DeterministicModelEntrypoint.java",
+    "sha256": "0540fa71667c2101a46ff8a2f7495404e6f1a3100fc3a4ce71fe905fb293dd66"
+  },
+  {
+    "path": "tela-model-deterministic-plugin/src/main/java/com/sstlfsj/tela/model/deterministic/DeterministicModelHandler.java",
+    "sha256": "d083f840eccbf32ac19204d97da7cdbc89fa083b00e87d3ad83205ebf2c6dc7c"
+  },
+  {
+    "path": "tela-model-deterministic-plugin/src/main/resources/META-INF/fibra/plugin.yaml",
+    "sha256": "0375e4d686966f489b991751692fd165e54ca73f5d62c20a04201e12eea56981"
+  },
+  {
+    "path": "tela-model-deterministic-plugin/src/plugin/fibra-config.json",
+    "sha256": "9e872a7f57dfc23e365e077273ba8c5dfed873815aa4c8641a743d758b8a155a"
+  },
+  {
+    "path": "tela-model-deterministic-plugin/src/test/java/com/sstlfsj/tela/model/deterministic/DeterministicModelHandlerTest.java",
+    "sha256": "65c151e242c50851bad13f865be58ea70289db1300bec3c488ee2717c9641cbc"
+  },
+  {
+    "path": "tela-model-openai-plugin/pom.xml",
+    "sha256": "941f69d67c15a7e0752e191dd7cf4975e7c18e74c08912ede05b8ac57e29806d"
+  },
+  {
+    "path": "tela-model-openai-plugin/src/main/java/com/sstlfsj/tela/model/openai/OpenAIModelEntrypoint.java",
+    "sha256": "62bd8dc54af72433337ec85051c6270f1037f3c9d185879736a059ab6f00af5d"
+  },
+  {
+    "path": "tela-model-openai-plugin/src/main/java/com/sstlfsj/tela/model/openai/OpenAIModelProvider.java",
+    "sha256": "19586da6aae1c278978c60c8d48e0256afc8510a2da32cde1c51863249dbfb89"
+  },
+  {
+    "path": "tela-model-openai-plugin/src/main/java/com/sstlfsj/tela/model/openai/OpenAIResponsesMapping.java",
+    "sha256": "a511c88063a4710fdce3048af9df502de40ab7be1ad7c472e25803791aeb00fa"
+  },
+  {
+    "path": "tela-model-openai-plugin/src/main/java/com/sstlfsj/tela/model/openai/ScopedHttpClient.java",
+    "sha256": "d8210a283d03d4414c77603416088ae921410a16043234e1104d14c2eca9ab64"
+  },
+  {
+    "path": "tela-model-openai-plugin/src/main/resources/META-INF/fibra/plugin.yaml",
+    "sha256": "78236c1585317c52c393d9686f56df340e7537206fdea78792c309adf6fbf3ec"
+  },
+  {
+    "path": "tela-model-openai-plugin/src/plugin/fibra-config.json",
+    "sha256": "fe798a7cb46efe75b3c0e9a8a9145f22d9d33c82466b67a2446e64e87cc0add7"
+  },
+  {
+    "path": "tela-model-openai-plugin/src/test/java/com/sstlfsj/tela/model/openai/OpenAIModelProviderTest.java",
+    "sha256": "af695631b7235339f4457b7e799b9fbac95c3cb43dc85d74eac9d1e02dacc5ec"
+  },
+  {
+    "path": "tela-model-openai-plugin/src/test/java/com/sstlfsj/tela/model/openai/OpenAIResponsesMappingTest.java",
+    "sha256": "c9e2613fa9ad622d5e90cd9f2dfebdabe317453e8645ee38b411db229148f4fd"
+  },
+  {
+    "path": "tela-model-openai-plugin/src/test/java/com/sstlfsj/tela/model/openai/ScopedHttpClientTest.java",
+    "sha256": "9e6570e63445f02555c1260dc6f9d95e820def3fb0619e29da974eba7e932127"
+  }
+]

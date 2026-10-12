@@ -1,0 +1,137 @@
+{
+  "source_input": {
+    "files": 54,
+    "manifest_sha256": "e6e69ce37485a43268255a91f785e112538236f73ef6a355310bd27d30d21df5",
+    "HEAD": "0a674176b8b762b4e77044bcba7f051bf06c41d9"
+  },
+  "reports": {
+    "internal": {
+      "xml_count": 4,
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml": [
+        {
+          "file": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/internal-reports/fibra-plugin-archetype/target/failsafe-reports/TEST-com.sstlfsj.fibra.archetype.FibraPluginArchetypeIT.xml",
+          "sha256": "abdf4adf240403c0710a7257c9fd77d90126c6c54effd3799dc49f4c978b7d8b",
+          "name": "com.sstlfsj.fibra.archetype.FibraPluginArchetypeIT",
+          "tests": "1"
+        },
+        {
+          "file": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/internal-reports/fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/target/failsafe-reports/TEST-com.sstlfsj.fibra.plugins.acceptance.FormalPluginArtifactsIT.xml",
+          "sha256": "91cb091da54c3c8c3715bbe0541f6aba8a72d0da70b02037f123179370631b74",
+          "name": "com.sstlfsj.fibra.plugins.acceptance.FormalPluginArtifactsIT",
+          "tests": "7"
+        },
+        {
+          "file": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/internal-reports/fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.acceptance.AuthorConfigurationQualificationTest.xml",
+          "sha256": "e85df549b0ff3bfff1aba0728d55e2cadaa12b7c83ccbd3e651335cea66145c5",
+          "name": "com.sstlfsj.fibra.plugins.acceptance.AuthorConfigurationQualificationTest",
+          "tests": "2"
+        },
+        {
+          "file": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/internal-reports/fibra-example/content-sanitizer/spring-host/target/failsafe-reports/TEST-com.sstlfsj.fibra.example.SanitizerAuthorConfigurationIT.xml",
+          "sha256": "8b2f8ca1754516278a35c5b966d9b3ac28bdeced152c86737e42ac34ff7b46d5",
+          "name": "com.sstlfsj.fibra.example.SanitizerAuthorConfigurationIT",
+          "tests": "1"
+        }
+      ],
+      "log_sha256": "b75d3aaba64b4b7c5aaa5d1848ff517995f1cc3e1096151ca2dcf9e067cf7085"
+    },
+    "external": {
+      "xml_count": 8,
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml": [
+        {
+          "file": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/consumer/spring-boot-application/target/surefire-reports/TEST-verification.distribution.SpringConsumerTest.xml",
+          "sha256": "a567b6336981a1cea28008357970b9fb5ca841d41b84a4c65545f11bdcd427ef",
+          "name": "verification.distribution.SpringConsumerTest",
+          "tests": "1"
+        },
+        {
+          "file": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/consumer/core-application/target/surefire-reports/TEST-verification.distribution.CoreConsumerTest.xml",
+          "sha256": "c4b32bc5e971bf56b47ed02f9da8269ff97d4bebf5c1bec805cdcfd652faa9a1",
+          "name": "verification.distribution.CoreConsumerTest",
+          "tests": "1"
+        },
+        {
+          "file": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/consumer/engine-application/target/surefire-reports/TEST-verification.distribution.EngineConsumerTest.xml",
+          "sha256": "356918b557809b0965185ab23192ea524527badb19b36981313267ec9d3da162",
+          "name": "verification.distribution.EngineConsumerTest",
+          "tests": "2"
+        },
+        {
+          "file": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/consumer/engine-application/target/surefire-reports/TEST-verification.distribution.AuthorConfigurationConsumerTest.xml",
+          "sha256": "e370e7f52f3ae1b0241d0485c2667d8e25f11cf8de1b77af7bfea36081131a2b",
+          "name": "verification.distribution.AuthorConfigurationConsumerTest",
+          "tests": "3"
+        },
+        {
+          "file": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/consumer/engine-application/target/surefire-reports/TEST-verification.distribution.LifecycleConsumerTest.xml",
+          "sha256": "d61876cb6470e50fb663811fad7c2f718ada2a5b4702c70a7e2ab6c33eadd06b",
+          "name": "verification.distribution.LifecycleConsumerTest",
+          "tests": "3"
+        },
+        {
+          "file": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/consumer/cli-application/target/surefire-reports/TEST-verification.distribution.CliConsumerTest.xml",
+          "sha256": "17db2555b04071f37aa0ef2da3978f9962e782968c2ccddd5b7e67885626ba21",
+          "name": "verification.distribution.CliConsumerTest",
+          "tests": "1"
+        },
+        {
+          "file": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/consumer/runtime-provider-application/target/surefire-reports/TEST-verification.distribution.ClientProtocolConsumerTest.xml",
+          "sha256": "ee52600667d694f237ffb44e2154882f871afa83ecab79777fd9a17888300b75",
+          "name": "verification.distribution.ClientProtocolConsumerTest",
+          "tests": "1"
+        },
+        {
+          "file": "/private/tmp/fibra-config-contract-evidence/author/r1-fix/consumer/runtime-provider-application/target/surefire-reports/TEST-verification.distribution.RuntimeProviderConsumerTest.xml",
+          "sha256": "ee93150e1d173ea7f12d27ea84d0ea2e908cd1f2666d37e2e320e3f17c72282a",
+          "name": "verification.distribution.RuntimeProviderConsumerTest",
+          "tests": "2"
+        }
+      ],
+      "log_sha256": "c7500fdd6a53d153df7b98e07747702d81030ca7d0a3a7c4a55b8c9fb02d519f"
+    },
+    "full_original": {
+      "xml_count": 134,
+      "tests": 1059,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "log_sha256": "67531e379afa8bd656ece40e2ea97107bf5dc32a29b5bf3c4fb9de7064abbbed"
+    }
+  },
+  "external_inputs": 24,
+  "external_jars": 27,
+  "external_fibra_classpath_jars": 15,
+  "formal_bytes": {
+    "packages": 12,
+    "zip_sha256": "c3b75bad3eb15747fe95f3de0c8fbb3e684121d512f6a093ea85d16786f290e4"
+  },
+  "published_helper_exclusion_jars": 84,
+  "external_generated_template": {
+    "schema_sha256": "cec1dfb2d8663569610e2943ec0149b9281ed123cd078666c9cc29ca33e9fe64",
+    "source_JAR_root_equal": true
+  },
+  "publication_reuse": {
+    "archetype_published_pom_unchanged": true,
+    "archetype_main_jar_unchanged": true,
+    "pom_sha256": "d74b168dd5b57646d0ffa68c1ded91a8bf2cc29540b8d3888d67bff412ecfd8b",
+    "jar_sha256": "a0e2fe696b519f87fc27a20de715a1df38bbe95aefa65720f408b469569a75ac"
+  },
+  "evidence_manifest_hashes": {
+    "r1-fix/source-sha256.json": "e6e69ce37485a43268255a91f785e112538236f73ef6a355310bd27d30d21df5",
+    "r1-fix/internal-reports.json": "590bd1aa49d1f9080435628543e2cf69eaeb8b7356f6056a1779e7d948025d5c",
+    "r1-fix/external-reports.json": "d1a5be4d94e68681f6731c7b4984e5c8d1d8d7f1c7928671edad7425b2ed31aa",
+    "r1-fix/external-input-sha256.json": "3a2347c4bb5bb2673e93e97f432d938835b1961a0fcdf9c0a82677aad3aee86d",
+    "r1-fix/resolved-fibra-jar-sha256.json": "45fa0fa9ae7279072010a7cee89453fafb0afffa05c8264883a295c24cd79192",
+    "artifact-bytes.json": "a3862bb791fa0452d44b3098b58792c66a284e615fd46df90895028b5f7d9b50",
+    "external-template-bytes.json": "4a2ab082181e1c0932fdbbfbc9691dbe8fd7878086c261f5f3c39cb89f6abf40",
+    "r1-fix/publication-reuse.json": "f9836e32850aed26313b1c2ea84f8e86fd7f4b80216e9def2677ea3ca1fc2120"
+  }
+}

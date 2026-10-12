@@ -1,0 +1,106 @@
+[INFO] Scanning for projects...
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Build Order:
+[INFO] 
+[INFO] Fibra                                                              [pom]
+[INFO] Fibra Artifact                                                     [jar]
+[INFO] 
+[INFO] -------------------------< com.sstlfsj:fibra >--------------------------
+[INFO] Building Fibra 0.5.0-SNAPSHOT                                      [1/2]
+[INFO]   from pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- enforcer:3.6.3:enforce (enforce-build-baseline) @ fibra ---
+[INFO] Rule 0: org.apache.maven.enforcer.rules.version.RequireJavaVersion passed
+[INFO] Rule 1: org.apache.maven.enforcer.rules.version.RequireMavenVersion passed
+[INFO] Rule 2: org.apache.maven.enforcer.rules.dependency.DependencyConvergence passed
+[INFO] Rule 3: org.apache.maven.enforcer.rules.RequirePluginVersions passed
+[INFO] 
+[INFO] --- flatten:1.7.0:flatten (flatten) @ fibra ---
+[INFO] Generating flattened POM of project com.sstlfsj:fibra:pom:0.5.0-SNAPSHOT...
+[INFO] 
+[INFO] --- resources:3.5.0:copy-resources (include-license-notices) @ fibra ---
+[INFO] Skipping the execution.
+[INFO] 
+[INFO] ---------------------< com.sstlfsj:fibra-artifact >---------------------
+[INFO] Building Fibra Artifact 0.5.0-SNAPSHOT                             [2/2]
+[INFO]   from fibra-artifact/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- enforcer:3.6.3:enforce (enforce-build-baseline) @ fibra-artifact ---
+[INFO] Rule 2: org.apache.maven.enforcer.rules.dependency.DependencyConvergence passed
+[INFO] Rule 3: org.apache.maven.enforcer.rules.RequirePluginVersions passed
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ fibra-artifact ---
+[INFO] skip non existing resourceDirectory /Users/sunke/dev/ai-project/fibra/fibra-artifact/src/main/resources
+[INFO] 
+[INFO] --- flatten:1.7.0:flatten (flatten) @ fibra-artifact ---
+[INFO] Generating flattened POM of project com.sstlfsj:fibra-artifact:jar:0.5.0-SNAPSHOT...
+[INFO] 
+[INFO] --- resources:3.5.0:copy-resources (include-license-notices) @ fibra-artifact ---
+[INFO] Copying 3 resources from .. to target/classes/META-INF
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ fibra-artifact ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ fibra-artifact ---
+[INFO] skip non existing resourceDirectory /Users/sunke/dev/ai-project/fibra/fibra-artifact/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ fibra-artifact ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 5 source files with javac [debug release 21] to target/test-classes
+[INFO] 
+[INFO] --- surefire:3.5.4:test (default-test) @ fibra-artifact ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.sstlfsj.fibra.artifact.FixedPluginConfigurationResourceTest
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.046 s <<< FAILURE! -- in com.sstlfsj.fibra.artifact.FixedPluginConfigurationResourceTest
+[ERROR] com.sstlfsj.fibra.artifact.FixedPluginConfigurationResourceTest.errorsAlsoKeepSafeReadAndCloseTerminalOutcomes -- Time elapsed: 0.033 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: Unexpected exception type thrown, expected: <com.sstlfsj.fibra.artifact.ArtifactException> but was: <java.lang.AssertionError>
+	at org.junit.jupiter.api.Assertions.assertThrows(Assertions.java:3234)
+	at com.sstlfsj.fibra.artifact.FixedPluginConfigurationResourceTest.errorsAlsoKeepSafeReadAndCloseTerminalOutcomes(FixedPluginConfigurationResourceTest.java:35)
+Caused by: java.lang.AssertionError: secret raw exception and path
+	at com.sstlfsj.fibra.artifact.FixedPluginConfigurationResourceTest$1.read(FixedPluginConfigurationResourceTest.java:27)
+	at java.base/java.io.InputStream.read(InputStream.java:287)
+	at com.sstlfsj.fibra.artifact.FixedPluginConfigurationResource.readBytes(FixedPluginConfigurationResource.java:76)
+	at com.sstlfsj.fibra.artifact.FixedPluginConfigurationResource.read(FixedPluginConfigurationResource.java:58)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:54)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:35)
+	... 2 more
+
+[INFO] 
+[INFO] Results:
+[INFO] 
+[ERROR] Failures: 
+[ERROR]   FixedPluginConfigurationResourceTest.errorsAlsoKeepSafeReadAndCloseTerminalOutcomes:35 Unexpected exception type thrown, expected: <com.sstlfsj.fibra.artifact.ArtifactException> but was: <java.lang.AssertionError>
+[INFO] 
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary for Fibra 0.5.0-SNAPSHOT:
+[INFO] 
+[INFO] Fibra .............................................. SUCCESS [  0.315 s]
+[INFO] Fibra Artifact ..................................... FAILURE [  1.523 s]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  2.149 s
+[INFO] Finished at: 2026-10-12T15:13:37+08:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.4:test (default-test) on project fibra-artifact: There are test failures.
+[ERROR] 
+[ERROR] See /Users/sunke/dev/ai-project/fibra/fibra-artifact/target/surefire-reports for the individual test results.
+[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :fibra-artifact

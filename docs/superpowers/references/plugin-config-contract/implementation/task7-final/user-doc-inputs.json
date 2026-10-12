@@ -1,0 +1,42 @@
+[
+  {
+    "path": "README.md",
+    "sha256": "abb312316ec37c0d0503ed222fbf8f31c5d68bec71b4faa1dbecddbfd05f3052"
+  },
+  {
+    "path": "docs/api/README.md",
+    "sha256": "ffa408b7e1664e0156596a0f2ba2398572eff1560e87042fd24c86e8284ff092"
+  },
+  {
+    "path": "docs/api/plugin-configuration.md",
+    "sha256": "50a943cc6a48c447a70670b4dc987883536e0c419bb438cac747e25613c1d7ee"
+  },
+  {
+    "path": "docs/release.md",
+    "sha256": "25f627fc3280a6367accee6d20a495bb6c2a1c3caa2b70f2ed3c9bafc6e4da5f"
+  },
+  {
+    "path": "THIRD_PARTY_NOTICES.md",
+    "sha256": "dfb19c43d27a796a6d3721e3ac86a3210763177f6824cf92a82105b121c6172a"
+  },
+  {
+    "path": "docs/superpowers/specs/2026-09-07-fibra-vnext-architecture.md",
+    "sha256": "cc6915e269d8d565d29e6c9328db63d33352282a9dc9c4d8bf56deff88492989"
+  },
+  {
+    "path": "docs/superpowers/specs/2026-09-15-fibra-client-foundation-architecture.md",
+    "sha256": "e7c7c6fab9c8927292c35c2755daa2feaae9b5b32f4c8352106d6572e4aba5e6"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/README.md",
+    "sha256": "a334daffa4bd7d58c63d51a58c5cdf1b6cdc071071db32c3fcd361dece0e3213"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/main/resources/archetype-resources/README.md",
+    "sha256": "344f3239ef218c79e81aeaad212a413d6739ae75173258838b54ed6ba1b4be58"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/README.md",
+    "sha256": "7344c7d3046733dd6774be61ffcb7dea2a657f3859324135ce8d65c96e57f356"
+  }
+]

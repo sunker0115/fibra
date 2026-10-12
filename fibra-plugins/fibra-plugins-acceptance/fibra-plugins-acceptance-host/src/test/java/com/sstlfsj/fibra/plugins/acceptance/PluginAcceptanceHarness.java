@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.jar.JarFile;
 
 final class PluginAcceptanceHarness implements AutoCloseable {
+    private static final List<AuthorConfigurationQualification> FAILED_AUTHOR_OWNERS = new ArrayList<>();
     static final Duration TIMEOUT = Duration.ofSeconds(20);
     static final String[] ALL_PACKAGES = {
         "fibra-fs", "fibra-fs-local", "fibra-tool-fs",
@@ -101,6 +102,14 @@ final class PluginAcceptanceHarness implements AutoCloseable {
         return registry;
     }
 
+    AuthorConfigurationQualification qualification() {
+        return new AuthorConfigurationQualification(engine, packageStore, targetStore,
+            owner -> {
+                FAILED_AUTHOR_OWNERS.add(owner);
+                throw new IllegalStateException("author QA requires host termination");
+            });
+    }
+
     static PluginInstallRequest installRequest(Path packages, Path source) {
         try {
             var pluginId = pluginId(source);
@@ -109,6 +118,7 @@ final class PluginAcceptanceHarness implements AutoCloseable {
             var root = Files.createTempDirectory(Files.createDirectories(packages), "plugin-");
             var lib = Files.createDirectory(root.resolve("lib"));
             Files.copy(source, lib.resolve(source.getFileName()));
+            Files.write(root.resolve("fibra-config.json"), configuration(source));
             Files.writeString(root.resolve("fibra-package.yaml"), packageManifest(pluginId,
                 version, "lib/" + source.getFileName(), DEPENDENCIES.get(pluginId)));
             return new PluginInstallRequest(root, true);
@@ -142,6 +152,19 @@ final class PluginAcceptanceHarness implements AutoCloseable {
             }
         } catch (IOException failure) {
             throw new IllegalStateException("cannot read plugin manifest " + jar, failure);
+        }
+    }
+
+    static byte[] configuration(Path jar) throws IOException {
+        try (var archive = new JarFile(jar.toFile(), true)) {
+            var entries = archive.stream().filter(entry ->
+                entry.getName().equals("META-INF/fibra/config.json")).toList();
+            if (entries.size() != 1 || entries.getFirst().isDirectory()) {
+                throw new IllegalStateException("expected one regular configuration entry: " + jar);
+            }
+            try (var input = archive.getInputStream(entries.getFirst())) {
+                return input.readAllBytes();
+            }
         }
     }
 

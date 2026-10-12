@@ -1,0 +1,79 @@
+{
+  "source_copy": "/private/tmp/tela-definition-consumer.f6x_d0l_/tela",
+  "source_head_recorded": "3b5c3579df43b3a47d5a1069e095a6d126a2c604",
+  "note": "Recorded source head is provenance, not proof that the adapted copy is a clean Git checkout.",
+  "original_manifest_files": 471,
+  "modified_against_original": [
+    "docs/plans/current-stage.md",
+    "tela-agent-plugin/src/main/resources/META-INF/fibra/plugin.yaml",
+    "tela-host/src/main/java/com/sstlfsj/tela/host/client/TelaClientArtifact.java",
+    "tela-host/src/main/java/com/sstlfsj/tela/host/client/TelaClientRuntimeDriver.java",
+    "tela-host/src/main/java/com/sstlfsj/tela/host/client/TelaClientTransportHub.java",
+    "tela-model-api/src/main/resources/META-INF/fibra/plugin.yaml",
+    "tela-model-deterministic-plugin/src/main/resources/META-INF/fibra/plugin.yaml",
+    "tela-model-openai-plugin/src/main/resources/META-INF/fibra/plugin.yaml"
+  ],
+  "missing_against_original": [],
+  "current_selected_inputs": [
+    {
+      "path": "pom.xml",
+      "sha256": "51db446e9ea175dbb3dd0db2dbbc6fe16bf7ee0148d02b27af8e7fe4e20666c5"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "38a54c5564480982f041d5b5b6f541076b44a7cf4c9928fdb241bc4ed3917bd3"
+    },
+    {
+      "path": "tela-model-api/pom.xml",
+      "sha256": "d787cb29f574ff8d3c430862c9320d67c5cebf042417864e832e9ab3e98dea38"
+    },
+    {
+      "path": "tela-agent-plugin/pom.xml",
+      "sha256": "6b7c4d602ff8d6279c0552a32e5675f01481a82c9451eecb52c1d233ddaee18a"
+    },
+    {
+      "path": "tela-model-deterministic-plugin/pom.xml",
+      "sha256": "30d4950bba298aac6f4ec31f1b7cfee2c1cf9e0c62ed33bf301aa119f9332ab6"
+    },
+    {
+      "path": "tela-model-openai-plugin/pom.xml",
+      "sha256": "40d5f23565b124354f4814c78db433ee0c89511310d3b8943b21a010b3cf9d56"
+    },
+    {
+      "path": "tela-distribution/pom.xml",
+      "sha256": "1bd0021c00fa9cea63ede14a40b49b6f1c8e991870bd2dd6a90fb2142755b43c"
+    },
+    {
+      "path": "tela-distribution/src/main/assembly/bin.xml",
+      "sha256": "b4681fc3094ee20dc5ecbe553d86a3d91f6ab38d30d3bad8782f5d837eb6e000"
+    },
+    {
+      "path": "tela-desktop/package.json",
+      "sha256": "30e191e2009de1cf12920451ac37165832275ed16c6c2385ace9dda144f70a83"
+    },
+    {
+      "path": "tela-desktop/scripts/build.mjs",
+      "sha256": "4db57d50cc7433c373b744839a744182b641db2b0479170b1707f6f35f188084"
+    },
+    {
+      "path": "tela-desktop/src/renderer/runtime/module-loader.ts",
+      "sha256": "c324362400392c7bc87d99f854c0d864309f7a4247d80ead520a7048598ead99"
+    },
+    {
+      "path": "tela-desktop/src/renderer/runtime/client-runtime.ts",
+      "sha256": "c872c3c55f7c2255c5c4b206c129154d50ce77e757a07efa8ab56f093eba0fa6"
+    },
+    {
+      "path": "tela-desktop/plugins/agent-view/src/index.tsx",
+      "sha256": "69a4359cf9db6b7443750b2703fdd3a4cf17eb8205328bbd564a8897b662d084"
+    },
+    {
+      "path": "tela-host/src/main/java/com/sstlfsj/tela/host/client/TelaClientRuntimeProvider.java",
+      "sha256": "8d1b6cf9a9075a5aea569f6f8e83af48b855bd1286b4b8538f661e480e11315e"
+    },
+    {
+      "path": "tela-host/src/main/java/com/sstlfsj/tela/host/runtime/TelaHost.java",
+      "sha256": "aa76aec8b8ac940f48bc36b5a5ed74dfb300fd0ffbc7a3d8448870fc534cf8be"
+    }
+  ]
+}

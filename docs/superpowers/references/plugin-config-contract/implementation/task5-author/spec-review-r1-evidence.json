@@ -1,0 +1,99 @@
+{
+  "artifact_bytes": [
+    {
+      "plugin": "fibra-fs",
+      "sha256": "9c94315c2bd2962f2c8550de9590a742787cb09d7ebed99c2e9b0523d30a2cd3",
+      "definitions": []
+    },
+    {
+      "plugin": "fibra-fs-local",
+      "sha256": "071bd1e705dda3951adfbc244c49cb4da65eaa1a69cea303911782660756e028",
+      "definitions": [
+        "fs-local"
+      ]
+    },
+    {
+      "plugin": "fibra-tool-fs",
+      "sha256": "cc07274f9efd39011054381d641e46dd8542894ac03ae8bdd0b3377ac7af64c0",
+      "definitions": [
+        "tool-fs"
+      ]
+    },
+    {
+      "plugin": "fibra-tool-fs-search",
+      "sha256": "89c00b1fdfdd19707431d00274404e208014e9513be91e4a24ff5d33ea95eb72",
+      "definitions": [
+        "tool-fs-search"
+      ]
+    },
+    {
+      "plugin": "fibra-shell",
+      "sha256": "9c94315c2bd2962f2c8550de9590a742787cb09d7ebed99c2e9b0523d30a2cd3",
+      "definitions": []
+    },
+    {
+      "plugin": "fibra-shell-local",
+      "sha256": "fd9034cb2c9c16fd7a498024ed1b093908033f738d525292a3d1d47d22f31033",
+      "definitions": [
+        "fibra-shell-local"
+      ]
+    },
+    {
+      "plugin": "fibra-tool-shell",
+      "sha256": "4ca464d430ead11289d6ddd1b33b455e3fe983905f1b8efea4db2a04ccb9cbf5",
+      "definitions": [
+        "fibra-tool-shell"
+      ]
+    },
+    {
+      "plugin": "fibra-storage",
+      "sha256": "9c94315c2bd2962f2c8550de9590a742787cb09d7ebed99c2e9b0523d30a2cd3",
+      "definitions": []
+    },
+    {
+      "plugin": "fibra-storage-json",
+      "sha256": "2db836338ac6119eb1cf34ef7070cd383bde2567f7b190647cb76c0dd1c41ea8",
+      "definitions": [
+        "storage-json"
+      ]
+    },
+    {
+      "plugin": "fibra-tool-storage",
+      "sha256": "7023608fa76beb0f70f1b61a4b4e86b9b4c4c746a0951b3f9301443c191557a6",
+      "definitions": [
+        "tool-storage"
+      ]
+    },
+    {
+      "plugin": "fibra-subprocess",
+      "sha256": "9c94315c2bd2962f2c8550de9590a742787cb09d7ebed99c2e9b0523d30a2cd3",
+      "definitions": []
+    },
+    {
+      "plugin": "fibra-subprocess-local",
+      "sha256": "51032e1301cca6c0c7ee87529a542c73f1ef4da2970b9bee0299d2627f58932e",
+      "definitions": [
+        "fibra-subprocess-local"
+      ]
+    }
+  ],
+  "author": {
+    "xml_count": 134,
+    "tests": 1059,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "consumer": {
+    "xml_count": 7,
+    "tests": 11,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "publication_jars": 84,
+  "generated_template_sha256": "cec1dfb2d8663569610e2943ec0149b9281ed123cd078666c9cc29ca33e9fe64",
+  "remote_12_jars_and_zip_match": true,
+  "final_input_hash_recheck": "51/51",
+  "spec_sha256": "127f4eaf277e13d8899989794281874f7d8c01afc1487261d93c6890e4d3145a"
+}

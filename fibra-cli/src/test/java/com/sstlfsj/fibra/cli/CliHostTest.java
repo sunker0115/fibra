@@ -165,6 +165,7 @@ class CliHostTest {
             }
             output.closeEntry();
         }
+        Files.writeString(root.resolve("fibra-config.json"), "{\"format\":1,\"profile\":\"fibra-config-1\",\"facets\":{\"main\":{\"context\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"string\"}}}}");
         Files.writeString(root.resolve("fibra-package.yaml"),
             "format: 1\n"
                 + "id: " + pluginId + "\n"

@@ -1,0 +1,45 @@
+{
+  "reviewKind": "independent read-only code quality; no test rerun",
+  "head": "0a674176b8b762b4e77044bcba7f051bf06c41d9",
+  "branch": "codex/plugin-config-contract",
+  "task3SourceChangesSinceSpecReview": [],
+  "compiledClassHashesMatchPriorTestReceipt": true,
+  "testLogHashMatchesPriorReceipt": true,
+  "priorTestXmlVerified": [
+    {
+      "name": "com.sstlfsj.fibra.engine.RuntimeDriverEngineTest",
+      "tests": "4",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.sstlfsj.fibra.engine.deployment.BuiltInConfigurationBootstrapTest",
+      "tests": "1",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackageTest",
+      "tests": "10",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.sstlfsj.fibra.runtime.java.JavaBuiltInRecoveryTest",
+      "tests": "3",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.sstlfsj.fibra.verification.host.HostRestartRecoveryTest",
+      "tests": "2",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0"
+    }
+  ]
+}

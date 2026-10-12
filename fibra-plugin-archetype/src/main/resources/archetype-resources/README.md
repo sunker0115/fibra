@@ -10,6 +10,7 @@ mvn verify
 
 ```text
 target/${artifactId}-${version}-plugin/
+├── fibra-config.json
 ├── fibra-package.yaml
 └── lib/
     └── plugin.jar
@@ -33,3 +34,16 @@ consumer 等多个制品组成时，可以像 Fibra 正式插件一样使用聚�
 声明运行时依赖；不要把 `fibra-api`、工具 API 或动态 contract class 打进插件 JAR。
 provider 用 `PluginDefinition.provide(...)` 发布服务，consumer 用 `PluginDefinition.require(...)`
 声明服务依赖，运行时再通过 package facet 依赖图与 realm 将两者装配起来。
+
+配置合同的唯一作者源是 `src/plugin/fibra-config.json`。构建将它原字节复制到主 JAR 的
+`META-INF/fibra/config.json` 和安装目录根；不能维护三份规则。`format:1`、`profile:fibra-config-1`
+下按 facet/definition 声明 schema。本模板允许整项 null（由运行时生成默认配置），或者带必填、非空
+`message` 的封闭 object；schema 不填默认值，未知字段被结构门拒绝，业务验证继续归 entrypoint。
+
+发布前运行 `mvn verify` 并比较生成源、最终 JAR 固定 entry、安装根三份原始字节。宿主资格还应安装完整包，
+选择停用 revision，以实际提交后的 target revision 调用 `engine.describeDefinitions(pluginId, revision)`，
+精确比较全部 facet 和 definition 集合，再对完整 source 集合（包括空集）执行 `ConfigSchema.checkSources`。
+缺失、孤儿、额外空 facet 及停用 definition 的坏 schema 都必须失败；运行时按需查询不能替代发布资格。
+通过 store 已核 record 的 `configurationResource()` 读取后必须真实关闭，再解析文档；关闭失败须保留句柄、
+Engine 和 store 依赖，转宿主终止流程，不得在 finally 中继续关 Engine。Fibra 仓内 archetype 集成门以同一作者 QA
+helper 验证此生命周期，并保留实际 Java runtime 启动测试。

@@ -1,0 +1,26 @@
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+Exception in thread "main" com.networknt.schema.SchemaException: tools.jackson.databind.exc.JsonNodeException: 'DecimalNode' method `doubleValue()` cannot convert value 1E+400 to `double`: value not in 64-bit `double` range
+	at com.networknt.schema.dialect.Dialect.newValidator(Dialect.java:483)
+	at com.networknt.schema.SchemaContext.newValidator(SchemaContext.java:126)
+	at com.networknt.schema.Schema.read(Schema.java:547)
+	at com.networknt.schema.Schema.getValidators(Schema.java:1603)
+	at com.networknt.schema.Schema.<init>(Schema.java:256)
+	at com.networknt.schema.Schema.from(Schema.java:167)
+	at com.networknt.schema.SchemaRegistry.doCreate(SchemaRegistry.java:523)
+	at com.networknt.schema.SchemaRegistry.doCreate(SchemaRegistry.java:512)
+	at com.networknt.schema.SchemaRegistry.newSchema(SchemaRegistry.java:476)
+	at com.networknt.schema.SchemaRegistry.getSchema(SchemaRegistry.java:663)
+	at com.networknt.schema.SchemaRegistry.getSchema(SchemaRegistry.java:648)
+	at QualificationProbe.main(QualificationProbe.java:17)
+Caused by: tools.jackson.databind.exc.JsonNodeException: 'DecimalNode' method `doubleValue()` cannot convert value 1E+400 to `double`: value not in 64-bit `double` range
+	at tools.jackson.databind.exc.JsonNodeException.from(JsonNodeException.java:25)
+	at tools.jackson.databind.node.BaseJsonNode._reportConversionFail(BaseJsonNode.java:706)
+	at tools.jackson.databind.node.BaseJsonNode._reportDoubleConversionRangeFail(BaseJsonNode.java:737)
+	at tools.jackson.databind.node.DecimalNode.doubleValue(DecimalNode.java:134)
+	at com.networknt.schema.keyword.MultipleOfValidator.getDivisor(MultipleOfValidator.java:65)
+	at com.networknt.schema.keyword.MultipleOfValidator.<init>(MultipleOfValidator.java:38)
+	at com.networknt.schema.keyword.KeywordType.newValidator(KeywordType.java:138)
+	at com.networknt.schema.dialect.Dialect.newValidator(Dialect.java:471)
+	... 11 more

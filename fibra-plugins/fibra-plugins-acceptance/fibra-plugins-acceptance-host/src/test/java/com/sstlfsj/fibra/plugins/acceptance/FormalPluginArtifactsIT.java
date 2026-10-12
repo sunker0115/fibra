@@ -21,6 +21,91 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FormalPluginArtifactsIT {
+    @Test
+    void authoredSchemasCoverSuccessNearestInvalidNullDefaultsAndUnknownFields() throws Exception {
+        var valid = java.util.Map.<String, Object>of(
+            "fibra-fs-local", java.util.Map.of("root", "/tmp", "spillDirectory", "spill"),
+            "fibra-tool-fs", java.util.Map.of(),
+            "fibra-tool-fs-search", java.util.Map.of("rgExecutable", "/bin/rg", "workdir", "/tmp"),
+            "fibra-subprocess-local", java.util.Map.of("nodeExecutable", "/bin/node"),
+            "fibra-shell-local", java.util.Map.of("bashExecutable", "/bin/bash", "outputMaxBytes", 1, "graceMillis", 1),
+            "fibra-storage-json", java.util.Map.of("root", "/tmp"));
+        for (var pluginId : PluginAcceptanceHarness.ALL_PACKAGES) {
+            var document = com.sstlfsj.fibra.config.DefinitionConfigDocument.parse(
+                PluginAcceptanceHarness.configuration(PluginAcceptanceHarness.stagedJar(pluginId)));
+            for (var source : document.facets().get("main").values()) {
+                var schema = com.sstlfsj.fibra.config.ConfigSchema.compile(source);
+                var nullable = pluginId.equals("fibra-tool-fs") || pluginId.equals("fibra-tool-shell")
+                    || pluginId.equals("fibra-tool-storage");
+                assertEquals(nullable, schema.validate(com.sstlfsj.fibra.value.LiteralValue.of(null)).isEmpty(), pluginId);
+                assertTrue(schema.validate(com.sstlfsj.fibra.value.LiteralValue.of(valid.get(pluginId))).isEmpty(), pluginId);
+                var unknown = new java.util.LinkedHashMap<String, Object>();
+                if (valid.get(pluginId) instanceof java.util.Map<?, ?> object) {
+                    object.forEach((key, value) -> unknown.put((String) key, value));
+                }
+                unknown.put("unknown", true);
+                assertTrue(schema.validate(com.sstlfsj.fibra.value.LiteralValue.of(unknown)).isPresent(), pluginId);
+                if (!pluginId.equals("fibra-tool-fs")) {
+                    assertTrue(schema.validate(com.sstlfsj.fibra.value.LiteralValue.of(java.util.Map.of())).isPresent(), pluginId);
+                } else {
+                    for (var field : java.util.List.of("readLimit", "readMaxLineLength", "readMaxBytes", "readSourceMaxBytes")) {
+                        var values = new java.util.LinkedHashMap<String, Object>();
+                        values.put(field, null);
+                        assertTrue(schema.validate(com.sstlfsj.fibra.value.LiteralValue.of(values)).isEmpty());
+                        values.put(field, 0);
+                        assertTrue(schema.validate(com.sstlfsj.fibra.value.LiteralValue.of(values)).isPresent());
+                    }
+                }
+                assertFalse(source.schema().canonicalJson().contains("\"default\""));
+            }
+        }
+    }
+
+    @Test
+    void allInactiveFormalPackagesPassCompleteStaticAuthorQualification(@TempDir Path work) {
+        var harness = PluginAcceptanceHarness.start(work.resolve("store"),
+            com.sstlfsj.fibra.engine.deployment.DeploymentTargetStore.inMemory());
+        try (var qualification = harness.qualification()) {
+            for (var plugin : PluginAcceptanceHarness.ALL_PACKAGES) {
+                var request = PluginAcceptanceHarness.installRequest(work.resolve("sources"),
+                    PluginAcceptanceHarness.stagedJar(plugin));
+                harness.registry().install(new com.sstlfsj.fibra.registry.PluginInstallRequest(
+                    request.source(), false)).block(PluginAcceptanceHarness.TIMEOUT);
+            }
+            var snapshot = harness.registry().snapshot();
+            var revision = snapshot.target().orElseThrow().targetRevision();
+            for (var selection : snapshot.selections().values()) {
+                assertFalse(selection.enabled());
+                var document = qualification.qualify(selection, revision);
+                if (CONTRACT_PACKAGES.contains(selection.pluginId().value())) {
+                    assertEquals(java.util.Map.of("main", java.util.Map.of()), document.facets());
+                }
+            }
+        }
+    }
+
+    @Test
+    void everyFinalJarCarriesTheExactAuthorConfiguration() throws Exception {
+        var repository = Path.of("../../..").toAbsolutePath().normalize();
+        for (var pluginId : PluginAcceptanceHarness.ALL_PACKAGES) {
+            try (var archive = new JarFile(PluginAcceptanceHarness.stagedJar(pluginId).toFile())) {
+                var entries = archive.stream().filter(entry ->
+                    entry.getName().equals("META-INF/fibra/config.json")).toList();
+                assertEquals(1, entries.size(), pluginId + " fixed configuration entry");
+                assertFalse(entries.getFirst().isDirectory());
+                var family = pluginId.contains("subprocess") ? "subprocess"
+                    : pluginId.contains("shell") ? "shell"
+                    : pluginId.contains("storage") ? "storage" : "fs";
+                var source = repository.resolve("fibra-plugins/fibra-plugins-" + family)
+                    .resolve(pluginId).resolve("src/plugin/fibra-config.json");
+                try (var input = archive.getInputStream(entries.getFirst())) {
+                    org.junit.jupiter.api.Assertions.assertArrayEquals(Files.readAllBytes(source),
+                        input.readAllBytes(), pluginId + " author source differs from final JAR");
+                }
+            }
+        }
+    }
+
     private static final Set<String> CONTRACT_PACKAGES = Set.of(
         "fibra-fs", "fibra-subprocess", "fibra-shell", "fibra-storage");
 

@@ -106,6 +106,12 @@ public final class com.sstlfsj.fibra.artifact.ManagedPluginPackage$Builder {
   public com.sstlfsj.fibra.artifact.ManagedPluginPackage$Builder facets(java.util.Collection<com.sstlfsj.fibra.artifact.ManagedFacet>);
   public com.sstlfsj.fibra.artifact.ManagedPluginPackage build();
 }
+## com.sstlfsj.fibra.artifact.PluginConfigurationResource
+Compiled from "PluginConfigurationResource.java"
+public interface com.sstlfsj.fibra.artifact.PluginConfigurationResource extends java.lang.AutoCloseable {
+  public abstract byte[] read();
+  public abstract void close();
+}
 ## com.sstlfsj.fibra.artifact.PluginFacet
 Compiled from "PluginFacet.java"
 public final class com.sstlfsj.fibra.artifact.PluginFacet extends java.lang.Record {
@@ -162,6 +168,7 @@ public final class com.sstlfsj.fibra.artifact.PluginPackageRecord {
   public com.sstlfsj.fibra.artifact.ManagedPluginPackage managedPackage();
   public com.sstlfsj.fibra.artifact.ArtifactState state();
   public java.time.Instant updatedAt();
+  public com.sstlfsj.fibra.artifact.PluginConfigurationResource configurationResource();
   public boolean equals(java.lang.Object);
   public int hashCode();
 }

@@ -1,0 +1,21 @@
+[
+  {
+    "path": "internal-reports/fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.acceptance.FormalPluginArtifactsIT.xml",
+    "tests": "1",
+    "failures": "1",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "d3048897a30f21ee3fdfad458bd2bbf8dd9a3530da6519c4ec98d206b91fba37",
+    "classification": "historical_expected_RED_not_current_run",
+    "report_mtime": "2026-10-12T16:52:02.636015+08:00",
+    "source_log": "../red-jar.log",
+    "source_log_lines": [
+      1012,
+      1020,
+      1054,
+      1057
+    ],
+    "source_native_exit": "../red-jar.exit",
+    "reason": "This Surefire XML belongs to the 16:52:02 missing-JAR-entry RED run. Current 17:23 run selected FormalPluginArtifactsIT through Failsafe only."
+  }
+]

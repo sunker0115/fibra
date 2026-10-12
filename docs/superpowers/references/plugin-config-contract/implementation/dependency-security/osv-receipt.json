@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-12T06:48:00.934077+00:00",
+  "url": "https://api.osv.dev/v1/querybatch",
+  "status": 200,
+  "results": {
+    "results": [
+      {},
+      {}
+    ]
+  }
+}

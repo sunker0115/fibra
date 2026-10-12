@@ -1,0 +1,1060 @@
+{
+  "zip": "/Users/sunke/dev/ai-project/fibra/fibra-distribution/target/fibra-0.5.0-SNAPSHOT-bin.zip",
+  "zipSha256": "c3b75bad3eb15747fe95f3de0c8fbb3e684121d512f6a093ea85d16786f290e4",
+  "jars": [
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/fibra-api-0.5.0-SNAPSHOT.jar",
+      "sha256": "f5a711f7045b78670c3b9f68b0530518daba3a0b7cba8fe15fd3f36d8f0188b8",
+      "bytes": 58414,
+      "zipBytes": 50351,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-api",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/fibra-api-0.5.0-SNAPSHOT.jar"
+      ],
+      "coordinate": [
+        "com.sstlfsj",
+        "fibra-api",
+        "0.5.0-SNAPSHOT"
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/fibra-artifact-0.5.0-SNAPSHOT.jar",
+      "sha256": "705e7235f9acf2827b5b05b6943766c2dd713293d8843707f984487cff493b1e",
+      "bytes": 67436,
+      "zipBytes": 62121,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-artifact",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/fibra-artifact-0.5.0-SNAPSHOT.jar"
+      ],
+      "coordinate": [
+        "com.sstlfsj",
+        "fibra-artifact",
+        "0.5.0-SNAPSHOT"
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/fibra-bridge-0.5.0-SNAPSHOT.jar",
+      "sha256": "33b7ccc639c3a547a36c169e95a4de37714495f2e740ed1aa3303e654de7cb82",
+      "bytes": 41494,
+      "zipBytes": 36814,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-bridge",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/fibra-bridge-0.5.0-SNAPSHOT.jar"
+      ],
+      "coordinate": [
+        "com.sstlfsj",
+        "fibra-bridge",
+        "0.5.0-SNAPSHOT"
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/fibra-cli-0.5.0-SNAPSHOT.jar",
+      "sha256": "5fe296d3a1aae67098163a4d708edffcaaed14063d6707d4dc3f3bedc6f94827",
+      "bytes": 143735,
+      "zipBytes": 133814,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-cli",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/com/sstlfsj/fibra-cli/0.5.0-SNAPSHOT/fibra-cli-0.5.0-SNAPSHOT.jar"
+      ],
+      "coordinate": [
+        "com.sstlfsj",
+        "fibra-cli",
+        "0.5.0-SNAPSHOT"
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/fibra-cli-api-0.5.0-SNAPSHOT.jar",
+      "sha256": "c33a540fb62ea285f255d648eb1622e45f5d54b6054991f8d04330402b702af5",
+      "bytes": 38512,
+      "zipBytes": 32385,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-cli-api",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/com/sstlfsj/fibra-cli-api/0.5.0-SNAPSHOT/fibra-cli-api-0.5.0-SNAPSHOT.jar"
+      ],
+      "coordinate": [
+        "com.sstlfsj",
+        "fibra-cli-api",
+        "0.5.0-SNAPSHOT"
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/fibra-config-0.5.0-SNAPSHOT.jar",
+      "sha256": "0e617c9f148c124ca3fc63268d3688115728367b517778593838aecfd379aab0",
+      "bytes": 135742,
+      "zipBytes": 125856,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-config",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/fibra-config-0.5.0-SNAPSHOT.jar"
+      ],
+      "coordinate": [
+        "com.sstlfsj",
+        "fibra-config",
+        "0.5.0-SNAPSHOT"
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/fibra-core-0.5.0-SNAPSHOT.jar",
+      "sha256": "030e9457ff674aa054244ffe47c43c53493a99777becf4d91a3be219e38155a0",
+      "bytes": 126392,
+      "zipBytes": 118485,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-core",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/fibra-core-0.5.0-SNAPSHOT.jar"
+      ],
+      "coordinate": [
+        "com.sstlfsj",
+        "fibra-core",
+        "0.5.0-SNAPSHOT"
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/fibra-engine-0.5.0-SNAPSHOT.jar",
+      "sha256": "eb45f515cbbb59852496278979c069197009eba0e29d60f277895b2293fdc219",
+      "bytes": 262522,
+      "zipBytes": 240900,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-engine",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/fibra-engine-0.5.0-SNAPSHOT.jar"
+      ],
+      "coordinate": [
+        "com.sstlfsj",
+        "fibra-engine",
+        "0.5.0-SNAPSHOT"
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/fibra-registry-0.5.0-SNAPSHOT.jar",
+      "sha256": "ccc1fbacc0605f2ecc27ad2cd8afebc68afde40ab250d49445a183e46ab067ed",
+      "bytes": 36471,
+      "zipBytes": 33119,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-registry",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/com/sstlfsj/fibra-registry/0.5.0-SNAPSHOT/fibra-registry-0.5.0-SNAPSHOT.jar"
+      ],
+      "coordinate": [
+        "com.sstlfsj",
+        "fibra-registry",
+        "0.5.0-SNAPSHOT"
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/fibra-runtime-java-0.5.0-SNAPSHOT.jar",
+      "sha256": "fc2cc52f6c8060ce8a254220987a4b8ab19187ef69f51cc21ea7c7f02b86f5f5",
+      "bytes": 77012,
+      "zipBytes": 71605,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-runtime-java",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/fibra-runtime-java-0.5.0-SNAPSHOT.jar"
+      ],
+      "coordinate": [
+        "com.sstlfsj",
+        "fibra-runtime-java",
+        "0.5.0-SNAPSHOT"
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/fibra-runtime-node-0.5.0-SNAPSHOT.jar",
+      "sha256": "09542dee60070e982a856cdb9d7a4cf73b6ca0de29faa08d4a20490d1bc92830",
+      "bytes": 96131,
+      "zipBytes": 90701,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-runtime-node",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/com/sstlfsj/fibra-runtime-node/0.5.0-SNAPSHOT/fibra-runtime-node-0.5.0-SNAPSHOT.jar"
+      ],
+      "coordinate": [
+        "com.sstlfsj",
+        "fibra-runtime-node",
+        "0.5.0-SNAPSHOT"
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/fibra-tool-api-0.5.0-SNAPSHOT.jar",
+      "sha256": "6ebc4072818b1fdd37ffc9e9e60864528194a851e8ed9a5c00d987e181151f7d",
+      "bytes": 27786,
+      "zipBytes": 24213,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-tool-api",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/com/sstlfsj/fibra-tool-api/0.5.0-SNAPSHOT/fibra-tool-api-0.5.0-SNAPSHOT.jar"
+      ],
+      "coordinate": [
+        "com.sstlfsj",
+        "fibra-tool-api",
+        "0.5.0-SNAPSHOT"
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/itu-1.14.0.jar",
+      "sha256": "5cf40ab0cc77828ab2b875b1f3ecd71c8295d7721933476abc2e08fddcea164a",
+      "bytes": 57633,
+      "zipBytes": 51666,
+      "embeddedCoordinates": [
+        [
+          "com.ethlo.time",
+          "itu",
+          "1.14.0"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/com/ethlo/time/itu/1.14.0/itu-1.14.0.jar"
+      ],
+      "coordinate": [
+        "com.ethlo.time",
+        "itu",
+        "1.14.0"
+      ],
+      "noticeEntries": []
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/jackson-annotations-2.21.jar",
+      "sha256": "53ca085f4a150f703f49e1aabd935bd03b43e1ea3d55d135438292af22cef56b",
+      "bytes": 82104,
+      "zipBytes": 68559,
+      "embeddedCoordinates": [
+        [
+          "com.fasterxml.jackson.core",
+          "jackson-annotations",
+          "2.21"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/com/fasterxml/jackson/core/jackson-annotations/2.21/jackson-annotations-2.21.jar"
+      ],
+      "coordinate": [
+        "com.fasterxml.jackson.core",
+        "jackson-annotations",
+        "2.21"
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSE",
+        "META-INF/NOTICE"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/jackson-core-3.1.5.jar",
+      "sha256": "9431b7fa2673bbb618c11d865fe15e13222fd182a214ff998cb7e56afd8f35d2",
+      "bytes": 598605,
+      "zipBytes": 558454,
+      "embeddedCoordinates": [
+        [
+          "tools.jackson.core",
+          "jackson-core",
+          "3.1.5"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/tools/jackson/core/jackson-core/3.1.5/jackson-core-3.1.5.jar"
+      ],
+      "coordinate": [
+        "tools.jackson.core",
+        "jackson-core",
+        "3.1.5"
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSE",
+        "META-INF/NOTICE"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/jackson-databind-3.1.5.jar",
+      "sha256": "3a2338d996fd3056791df8d335fa9ba8a62a706ed4245ecf81b3e583df37d08a",
+      "bytes": 1944003,
+      "zipBytes": 1795263,
+      "embeddedCoordinates": [
+        [
+          "tools.jackson.core",
+          "jackson-databind",
+          "3.1.5"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/tools/jackson/core/jackson-databind/3.1.5/jackson-databind-3.1.5.jar"
+      ],
+      "coordinate": [
+        "tools.jackson.core",
+        "jackson-databind",
+        "3.1.5"
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSE",
+        "META-INF/NOTICE"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/jackson-dataformat-yaml-3.1.5.jar",
+      "sha256": "afef22789b0a0915b544c6749c71770788d20821c30d574c1210e2b6cffc91ae",
+      "bytes": 62584,
+      "zipBytes": 57141,
+      "embeddedCoordinates": [
+        [
+          "tools.jackson.dataformat",
+          "jackson-dataformat-yaml",
+          "3.1.5"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/tools/jackson/dataformat/jackson-dataformat-yaml/3.1.5/jackson-dataformat-yaml-3.1.5.jar"
+      ],
+      "coordinate": [
+        "tools.jackson.dataformat",
+        "jackson-dataformat-yaml",
+        "3.1.5"
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSE",
+        "META-INF/NOTICE"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/jline-4.4.3-jdk11.jar",
+      "sha256": "073996b4322dc2ff6fb38de868bdc50d7103d12e79f1ca577a53d8d8f007a34d",
+      "bytes": 1654935,
+      "zipBytes": 1568800,
+      "embeddedCoordinates": [
+        [
+          "org.jline",
+          "jansi-core",
+          "4.4.3"
+        ],
+        [
+          "org.jline",
+          "jline-builtins",
+          "4.4.3"
+        ],
+        [
+          "org.jline",
+          "jline-native",
+          "4.4.3"
+        ],
+        [
+          "org.jline",
+          "jline-reader",
+          "4.4.3"
+        ],
+        [
+          "org.jline",
+          "jline-remote-ssh",
+          "4.4.3"
+        ],
+        [
+          "org.jline",
+          "jline-remote-telnet",
+          "4.4.3"
+        ],
+        [
+          "org.jline",
+          "jline-shell",
+          "4.4.3"
+        ],
+        [
+          "org.jline",
+          "jline-style",
+          "4.4.3"
+        ],
+        [
+          "org.jline",
+          "jline-terminal",
+          "4.4.3"
+        ],
+        [
+          "org.jline",
+          "jline-terminal-ffm",
+          "4.4.3"
+        ],
+        [
+          "org.jline",
+          "jline-terminal-jni",
+          "4.4.3"
+        ],
+        [
+          "org.jline",
+          "jline",
+          "4.4.3"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/org/jline/jline/4.4.3/jline-4.4.3-jdk11.jar"
+      ],
+      "coordinate": [
+        "org.jline",
+        "jline",
+        "4.4.3"
+      ],
+      "noticeEntries": []
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/json-schema-validator-3.0.8.jar",
+      "sha256": "d3f4c61ba35c3543bdf1ab42462bf89721542f4adea5b092ee7b430dfd467181",
+      "bytes": 585170,
+      "zipBytes": 526444,
+      "embeddedCoordinates": [
+        [
+          "com.networknt",
+          "json-schema-validator",
+          "3.0.8"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/com/networknt/json-schema-validator/3.0.8/json-schema-validator-3.0.8.jar"
+      ],
+      "coordinate": [
+        "com.networknt",
+        "json-schema-validator",
+        "3.0.8"
+      ],
+      "noticeEntries": []
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/jspecify-1.0.0.jar",
+      "sha256": "1fad6e6be7557781e4d33729d49ae1cdc8fdda6fe477bb0cc68ce351eafdfbab",
+      "bytes": 3819,
+      "zipBytes": 2235,
+      "embeddedCoordinates": [],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/org/jspecify/jspecify/1.0.0/jspecify-1.0.0.jar"
+      ],
+      "coordinate": [
+        "org.jspecify",
+        "jspecify",
+        "1.0.0"
+      ],
+      "noticeEntries": []
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/picocli-4.7.7.jar",
+      "sha256": "f86e30fffd10d2b13b8caa8d4b237a7ee61f2ffccf5b1941de718b765d235bf8",
+      "bytes": 417640,
+      "zipBytes": 387038,
+      "embeddedCoordinates": [],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/info/picocli/picocli/4.7.7/picocli-4.7.7.jar"
+      ],
+      "coordinate": [
+        "info.picocli",
+        "picocli",
+        "4.7.7"
+      ],
+      "noticeEntries": []
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/reactive-streams-1.0.4.jar",
+      "sha256": "f75ca597789b3dac58f61857b9ac2e1034a68fa672db35055a8fb4509e325f28",
+      "bytes": 11640,
+      "zipBytes": 9332,
+      "embeddedCoordinates": [],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.jar"
+      ],
+      "coordinate": [
+        "org.reactivestreams",
+        "reactive-streams",
+        "1.0.4"
+      ],
+      "noticeEntries": []
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/reactor-core-3.8.6.jar",
+      "sha256": "ffc646b225465efce55d3ea350f1bcd1d27d4a56e912323e316dd8e6d04bff11",
+      "bytes": 1938752,
+      "zipBytes": 1798017,
+      "embeddedCoordinates": [],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/io/projectreactor/reactor-core/3.8.6/reactor-core-3.8.6.jar"
+      ],
+      "coordinate": [
+        "io.projectreactor",
+        "reactor-core",
+        "3.8.6"
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSE"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/slf4j-api-2.0.18.jar",
+      "sha256": "44508fd1576500688c790b190acdd16fec4f8c79a3e0b900afd70503cf055f55",
+      "bytes": 69982,
+      "zipBytes": 61869,
+      "embeddedCoordinates": [
+        [
+          "org.slf4j",
+          "slf4j-api",
+          "2.0.18"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/org/slf4j/slf4j-api/2.0.18/slf4j-api-2.0.18.jar"
+      ],
+      "coordinate": [
+        "org.slf4j",
+        "slf4j-api",
+        "2.0.18"
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSE.txt"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/slf4j-simple-2.0.18.jar",
+      "sha256": "8268bd018a5709b07209e0d8ca6221a37584ba1bc12ba985b8335a82c648bdd0",
+      "bytes": 15721,
+      "zipBytes": 13435,
+      "embeddedCoordinates": [
+        [
+          "org.slf4j",
+          "slf4j-simple",
+          "2.0.18"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/org/slf4j/slf4j-simple/2.0.18/slf4j-simple-2.0.18.jar"
+      ],
+      "coordinate": [
+        "org.slf4j",
+        "slf4j-simple",
+        "2.0.18"
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSE.txt"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/snakeyaml-engine-3.0.1.jar",
+      "sha256": "0b638c8806112215e02e58e95cbd9e9a69d4bd540991f47553d053919994cc94",
+      "bytes": 299438,
+      "zipBytes": 259536,
+      "embeddedCoordinates": [
+        [
+          "org.snakeyaml",
+          "snakeyaml-engine",
+          "3.0.1"
+        ]
+      ],
+      "cacheMatches": [
+        "/private/tmp/fibra-config-contract-m2/org/snakeyaml/snakeyaml-engine/3.0.1/snakeyaml-engine-3.0.1.jar"
+      ],
+      "coordinate": [
+        "org.snakeyaml",
+        "snakeyaml-engine",
+        "3.0.1"
+      ],
+      "noticeEntries": []
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/plugins/fibra-fs/lib/main.jar",
+      "sha256": "0d1828792f9c35dbdeb6720f9ad2af40f1c2eb619bc9f1c64429d25c629dfcea",
+      "bytes": 25129,
+      "zipBytes": 20869,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-fs",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/plugins/fibra-fs-local/lib/main.jar",
+      "sha256": "f56f69842d2f11942bb05cac8c6480d5100b2220d58d8f87bde97174c9573dbe",
+      "bytes": 2033949,
+      "zipBytes": 1990458,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-fs-local",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSE",
+        "META-INF/LICENSES/",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/plugins/fibra-shell/lib/main.jar",
+      "sha256": "6d7fa5351d370adc8ccb0f3efab76723c6448d59806c0ce7554519a7798e277e",
+      "bytes": 17901,
+      "zipBytes": 14826,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-shell",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/plugins/fibra-shell-local/lib/main.jar",
+      "sha256": "4533da2ed99d05f68a97737f9c085d2f66e56e19091581c52a40d9b2b2789bef",
+      "bytes": 17546,
+      "zipBytes": 15266,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-shell-local",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/plugins/fibra-storage/lib/main.jar",
+      "sha256": "d6f49d890f68f70b0ebb3c9506eb911067606a73c4d7966cc456239bac4f73b5",
+      "bytes": 16404,
+      "zipBytes": 13549,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-storage",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/plugins/fibra-storage-json/lib/main.jar",
+      "sha256": "8c6adca7460bacc5c150d3f80b9ae4a8688d0d0693d966886b985ccccfe4bcd8",
+      "bytes": 30452,
+      "zipBytes": 27139,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-storage-json",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/plugins/fibra-subprocess/lib/main.jar",
+      "sha256": "f5f00552b73915bff32650074d1a6347027ae627fe270960b73900817ffd2140",
+      "bytes": 19140,
+      "zipBytes": 15703,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-subprocess",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/plugins/fibra-subprocess-local/lib/main.jar",
+      "sha256": "8bd3a3b8ffc464b46a44251457a58b42a226383752baece0cf34f103063e7f51",
+      "bytes": 2091410,
+      "zipBytes": 2041728,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-subprocess-local",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSE",
+        "META-INF/LICENSES/",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/plugins/fibra-tool-fs/lib/main.jar",
+      "sha256": "f2ea89fda37b1aefad140f63f69ccb487dd01d0fb725d46aa811e09744a713b2",
+      "bytes": 25502,
+      "zipBytes": 23175,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-tool-fs",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/plugins/fibra-tool-fs-search/lib/main.jar",
+      "sha256": "2d787e763f3087fc42ee8d513108d0d89e77c18be98af831cfce9dbc116fe727",
+      "bytes": 2759127,
+      "zipBytes": 2465724,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-tool-fs-search",
+          "0.5.0-SNAPSHOT"
+        ],
+        [
+          "tools.jackson.core",
+          "jackson-databind",
+          "3.1.5"
+        ],
+        [
+          "com.fasterxml.jackson.core",
+          "jackson-annotations",
+          "2.21"
+        ],
+        [
+          "tools.jackson.core",
+          "jackson-core",
+          "3.1.5"
+        ]
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSE",
+        "META-INF/LICENSES/",
+        "META-INF/THIRD_PARTY_NOTICES.md",
+        "META-INF/NOTICE"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/plugins/fibra-tool-shell/lib/main.jar",
+      "sha256": "7290c8cd2d8fc7eb09a65c7c6d934e98c4b1fd851ed74310529be685ba407b1f",
+      "bytes": 16021,
+      "zipBytes": 13886,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-tool-shell",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/plugins/fibra-tool-storage/lib/main.jar",
+      "sha256": "131ea0907f82e03e724a1566b685a60698f11804cf088588651fdc6344d238a9",
+      "bytes": 20231,
+      "zipBytes": 17659,
+      "embeddedCoordinates": [
+        [
+          "com.sstlfsj",
+          "fibra-tool-storage",
+          "0.5.0-SNAPSHOT"
+        ]
+      ],
+      "noticeEntries": [
+        "META-INF/LICENSES/",
+        "META-INF/LICENSE",
+        "META-INF/THIRD_PARTY_NOTICES.md"
+      ]
+    }
+  ],
+  "thirdPartyCoordinates": [
+    [
+      "com.ethlo.time",
+      "itu",
+      "1.14.0"
+    ],
+    [
+      "com.fasterxml.jackson.core",
+      "jackson-annotations",
+      "2.21"
+    ],
+    [
+      "com.networknt",
+      "json-schema-validator",
+      "3.0.8"
+    ],
+    [
+      "info.picocli",
+      "picocli",
+      "4.7.7"
+    ],
+    [
+      "io.projectreactor",
+      "reactor-core",
+      "3.8.6"
+    ],
+    [
+      "net.java.dev.jna",
+      "jna",
+      "5.17.0"
+    ],
+    [
+      "org.jline",
+      "jansi-core",
+      "4.4.3"
+    ],
+    [
+      "org.jline",
+      "jline",
+      "4.4.3"
+    ],
+    [
+      "org.jline",
+      "jline-builtins",
+      "4.4.3"
+    ],
+    [
+      "org.jline",
+      "jline-native",
+      "4.4.3"
+    ],
+    [
+      "org.jline",
+      "jline-reader",
+      "4.4.3"
+    ],
+    [
+      "org.jline",
+      "jline-remote-ssh",
+      "4.4.3"
+    ],
+    [
+      "org.jline",
+      "jline-remote-telnet",
+      "4.4.3"
+    ],
+    [
+      "org.jline",
+      "jline-shell",
+      "4.4.3"
+    ],
+    [
+      "org.jline",
+      "jline-style",
+      "4.4.3"
+    ],
+    [
+      "org.jline",
+      "jline-terminal",
+      "4.4.3"
+    ],
+    [
+      "org.jline",
+      "jline-terminal-ffm",
+      "4.4.3"
+    ],
+    [
+      "org.jline",
+      "jline-terminal-jni",
+      "4.4.3"
+    ],
+    [
+      "org.jspecify",
+      "jspecify",
+      "1.0.0"
+    ],
+    [
+      "org.reactivestreams",
+      "reactive-streams",
+      "1.0.4"
+    ],
+    [
+      "org.slf4j",
+      "slf4j-api",
+      "2.0.18"
+    ],
+    [
+      "org.slf4j",
+      "slf4j-simple",
+      "2.0.18"
+    ],
+    [
+      "org.snakeyaml",
+      "snakeyaml-engine",
+      "3.0.1"
+    ],
+    [
+      "tools.jackson.core",
+      "jackson-core",
+      "3.1.5"
+    ],
+    [
+      "tools.jackson.core",
+      "jackson-databind",
+      "3.1.5"
+    ],
+    [
+      "tools.jackson.dataformat",
+      "jackson-dataformat-yaml",
+      "3.1.5"
+    ]
+  ],
+  "scope": "Actual Task5 ZIP host JAR bytes matched build cache; shaded coordinates from embedded Maven metadata. Metadata discovery alone does not prove absence of unlisted embedded code.",
+  "shadedJna": {
+    "coordinate": [
+      "net.java.dev.jna",
+      "jna",
+      "5.17.0"
+    ],
+    "sourceJarSha256": "b3a9408e7c51e08ef0e3bfcc08f443f6ec0f6191ba8cd7c18d53d2b22e5bdbc0",
+    "proof": [
+      {
+        "plugin": "fibra-fs-local",
+        "entryCount": 152,
+        "allBytesEqual": true
+      },
+      {
+        "plugin": "fibra-subprocess-local",
+        "entryCount": 152,
+        "allBytesEqual": true
+      }
+    ]
+  }
+}

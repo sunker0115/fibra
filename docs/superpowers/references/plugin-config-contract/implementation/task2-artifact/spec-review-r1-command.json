@@ -1,0 +1,17 @@
+{
+  "command": [
+    "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+    "-o",
+    "-Dmaven.repo.local=/private/tmp/fibra-config-contract-m2",
+    "-pl",
+    "fibra-artifact",
+    "-am",
+    "test",
+    "-Dtest=PluginPackageTest,PluginPackageStoreTest,PluginConfigurationResourceTest,FixedPluginConfigurationResourceTest,PluginConfigurationResourceBootstrapTest",
+    "-Dsurefire.failIfNoSpecifiedTests=false"
+  ],
+  "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+  "startedEpoch": 1791789525.659689,
+  "finishedEpoch": 1791789532.775451,
+  "exit": 0
+}

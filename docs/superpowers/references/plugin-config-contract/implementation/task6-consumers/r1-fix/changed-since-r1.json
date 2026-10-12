@@ -1,0 +1,22 @@
+[
+  {
+    "path": "tela-desktop/package.json",
+    "before": "30e191e2009de1cf12920451ac37165832275ed16c6c2385ace9dda144f70a83",
+    "after": "8a9e6065ada700486ebdcb9f614a95ca2b93d26330cfc0efc6605c3c65c61aa6"
+  },
+  {
+    "path": "tela-desktop/test/module-boundaries.test.mjs",
+    "before": "bd3ddf4505922373d9f3ee7239f765916037fd14b6cfbc7d21a2085e88d4543c",
+    "after": "696452a96c280716d14e6110b0e2d8fafab2b007481657706638c386c2cb03c7"
+  },
+  {
+    "path": "tela-desktop/test/renderer-load.test.mjs",
+    "before": "f8625a46d4f0e762e4d080e2ac4c70e54fc5f05e898fc1acbe543bfab9ffbf28",
+    "after": "888c275269f08f667f09795751f17495475d94255dff429cb49c16e6314ed2fe"
+  },
+  {
+    "path": "tela-host/src/test/java/com/sstlfsj/tela/host/runtime/TelaHostGatewayErrorTest.java",
+    "before": "c84cd8dd19f6a91406b85d15581a066189096e9d03f6627bb86ea1dc9cae8747",
+    "after": "cf34e4e390c3587a991fdb18e6b43fac4d0eee434a2fbac448df22d8117a4a74"
+  }
+]

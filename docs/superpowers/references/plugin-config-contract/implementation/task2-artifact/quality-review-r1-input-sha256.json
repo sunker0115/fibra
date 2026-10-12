@@ -1,0 +1,17 @@
+{
+  "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginPackage.java": "2b03e7c6e730875f1d2416ec38e350b55e82bc9d01136238042f87a2678c9a89",
+  "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginPackageRecord.java": "ba003081af0a7ad0b71522b09cd48b47d55f91a6d400eacaecb20cec02d7c178",
+  "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginPackageStore.java": "df4733bde43a363768a2933c520410490a8fe14f6ca8eb2707b56de82b9cf349",
+  "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginConfigurationResource.java": "37ef1e7ff3ea0fe6ade5e87aee84f0a9672a9ce888fa2ea1576ecac94164b2ed",
+  "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/ConfigurationResourceEvidence.java": "5395805af8fe6d43d1d283a1b0f2c37869e6bb7273d673e3bd8b1ef83e02b903",
+  "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/FixedPluginConfigurationResource.java": "4d58a7c4aa0d2e77ad2a49b1f05fb8a50d3abb1749c7a66498e80d439b41abde",
+  "fibra-artifact/src/test/java/com/sstlfsj/fibra/artifact/PluginPackageTest.java": "ec65d04b1fb6efd7c4d1e6dddf02342e020aa0c0142fa28bb4de13510b511793",
+  "fibra-artifact/src/test/java/com/sstlfsj/fibra/artifact/PluginConfigurationResourceBootstrapTest.java": "c11bda71b569baf104b016e63a26cfeda3450606c251236718d21d19df77689e",
+  "fibra-artifact/src/test/java/com/sstlfsj/fibra/artifact/PluginConfigurationResourceTest.java": "72dc7571eedd98466070a3bbb7de3746380543ce7165d38526fa305bd0ded186",
+  "fibra-artifact/src/test/java/com/sstlfsj/fibra/artifact/FixedPluginConfigurationResourceTest.java": "39e31499815a2ddd9b6d5b8c6366a5b1cd0ef92dbd0963d43a1d318e1b9b2881",
+  "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/ManagedPluginPackage.java": "272bc7a290567a640c6db9df981e8a360cd0db51a0aa25885798f90dfa0fffd0",
+  "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/ManagedFacet.java": "ff2c1d2c6759573cf678d27724e83b4e8cd4b9d34b5739b18b5a5fae925daf0d",
+  "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginFacet.java": "0f7f1d028862529c19c38bfafe491f18977a72d54450faab3c672d515ec36b4a",
+  "docs/superpowers/specs/2026-10-11-plugin-config-contract-design.md": "9ff9803a2cb7fbe36cad380e8bb390e3c53f33f395670612402028f5585edc73",
+  "docs/superpowers/plans/2026-10-11-plugin-config-contract/resource-protocol-review.md": "18b160ec57f37aa1537119ee1c3d056d67ea2c9272b00dae002e330c5251473f"
+}

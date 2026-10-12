@@ -1,0 +1,108 @@
+{
+  "build-source-inputs.json": {
+    "count": 846,
+    "mismatches": []
+  },
+  "user-doc-inputs.json": {
+    "count": 10,
+    "mismatches": []
+  },
+  "all-release-jars-sha256.json": {
+    "count": 84,
+    "mismatches": []
+  },
+  "evidence-index.json": {
+    "count": 119,
+    "mismatches": [
+      "/private/tmp/fibra-config-contract-evidence/final/spec-review-receipt.json"
+    ]
+  },
+  "artifactQualification": {
+    "count": 58,
+    "mismatches": []
+  },
+  "cleanVerifyXml": {
+    "tests": 1228,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "xmlFilesTotal": 174,
+    "testSuiteXmlFiles": 171,
+    "failsafeSummaryFiles": 3
+  },
+  "nativeExits": {
+    "dependency-tree-release": "0",
+    "clean-verify-node-flake": "1",
+    "final-zip-coordinate-first": "2",
+    "final-archive": "0",
+    "signatures": "0",
+    "consume-snapshots": "0",
+    "parity-fixture-green": "0",
+    "clean-verify": "0",
+    "node-identity-green": "0",
+    "dependency-tree": "0",
+    "architecture": "0",
+    "final-zip-coordinate": "0",
+    "clean-verify-red": "1",
+    "reproducible-release": "0",
+    "diff-check": "0",
+    "effective-config-pom": "0"
+  },
+  "zipSha256": "d1ddccfa380f38d70712228bcb454ee3fe3323fc41dff18fab1c219f4375c30b",
+  "zipJars": 38,
+  "zipConfigurationSameBytes": {
+    "count": 12,
+    "mismatches": []
+  },
+  "cacheZipMatches": true,
+  "cachePomMatches": true,
+  "remoteTracking": "#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.\n#Mon Oct 12 18:45:34 CST 2026\nfibra-distribution-0.5.0-20261012.104202-1-bin.zip>fibra-final=\nfibra-distribution-0.5.0-20261012.104202-1.pom>fibra-final=\n",
+  "reviewKind": "Read-only source, archived XML/log and artifact audit; no Maven/npm/tests/build executed",
+  "indexQualification": "Original evidence-index includes intermediate spec review receipt; only mismatch is spec-review-receipt.json, not any gate log/input/artifact. Root will preserve pre-review index and create closeout index after both reviews.",
+  "base": "0a674176b8b762b4e77044bcba7f051bf06c41d9",
+  "branch": "codex/plugin-config-contract",
+  "trackedDiffSha256": "9a85d3bf4a4fabc167b341090220361ce2569b2f3dc37cdfe8b3122e4050f129",
+  "reviewedSources": {
+    "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigSchema.java": "9900b68b9c8a68752e074d21af9dc1247599dea1a594fe6c96a66022715ec645",
+    "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigSchemaSource.java": "2b456a3ceb753f239ea646aca91c90fcee81ed3134f0b3c1d253b8d8a228e4c8",
+    "fibra-config/src/main/java/com/sstlfsj/fibra/config/SchemaLibrary.java": "27d945e7f33ec1bb39a9a9ce804beacea6f1ebd59171419fe63449cc13aa7fde",
+    "fibra-config/src/main/java/com/sstlfsj/fibra/config/SchemaBudget.java": "09d52b0605318276e1bd19123ce3c8f43d080aca62feecd3a1d3eaa494b3f164",
+    "fibra-config/src/main/java/com/sstlfsj/fibra/config/SchemaProfile.java": "de62f669c7dfbc22ecfc861ec1868f76c39be7c992fcb26167ee6ecfc89d9cd9",
+    "fibra-config/src/main/java/com/sstlfsj/fibra/config/SchemaDocumentReader.java": "b1eeebc6d1530e7ec5d89def2be1e581e175433e09b213152b832d3ca4bf6f44",
+    "fibra-config/src/main/java/com/sstlfsj/fibra/config/SchemaDiagnostics.java": "4102d48ac94aa4db181d2109bac21a7f7558a6410d3a7abfc8d2ec0162be7efd",
+    "fibra-config/src/main/java/com/sstlfsj/fibra/config/DefinitionConfigDocument.java": "eeba432867504019507e81c8b27e6b16e9f739eaf98b9f3fbec393821a8a3393",
+    "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginPackage.java": "2b03e7c6e730875f1d2416ec38e350b55e82bc9d01136238042f87a2678c9a89",
+    "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginPackageRecord.java": "ba003081af0a7ad0b71522b09cd48b47d55f91a6d400eacaecb20cec02d7c178",
+    "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginPackageStore.java": "df4733bde43a363768a2933c520410490a8fe14f6ca8eb2707b56de82b9cf349",
+    "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/FixedPluginConfigurationResource.java": "4d58a7c4aa0d2e77ad2a49b1f05fb8a50d3abb1749c7a66498e80d439b41abde",
+    "fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/ConfigurationResourceEvidence.java": "5395805af8fe6d43d1d283a1b0f2c37869e6bb7273d673e3bd8b1ef83e02b903",
+    "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/FibraEngine.java": "2a9084a3ed69e19ae12ff60b9af29a21227175abb0b48913959a9be503ead4a8",
+    "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/EngineConfigurationContracts.java": "e0cac26bc9824ec0d6fc3bfc1ab05fb0b36ced6b388f242a122b8154496ee6eb",
+    "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/EngineReadAttempt.java": "5b65e77eb0ac4d8549d234dafd85758dda8beba05a0f09321a41bfdb21c279cb",
+    "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/EngineCommandLoop.java": "663b1b81bc17ff4aed320bf5ea8363b01d773ecaa9e0816467461c27d3bfe2d0",
+    "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/BuiltInFacet.java": "11f5e8239d4a4371a8a407190a6ccc742dca023d170ddbaff14ddbcc5f4c18cb",
+    "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/BuiltInPluginPackage.java": "50127ce8a18b458df0320a72532d44975331edab555c1b03ea14794d1924d46f",
+    "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/DefinitionConfigContract.java": "eef9ea0332d75039c43316c92633279c11927b531106b7a1618b670ca9154f6e",
+    "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineConfigurationContractTest.java": "7ddc9a016937fe4a7f524d7fa8b044e746a7acd2e5ee84cde7617fa9178712a6",
+    "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineReadAttemptTest.java": "794220feb0f4f9ce92c30b8ce5eb44da9e9b340a3b0a73c4b36f5e8c82996989",
+    "fibra-artifact/src/test/java/com/sstlfsj/fibra/artifact/FixedPluginConfigurationResourceTest.java": "39e31499815a2ddd9b6d5b8c6366a5b1cd0ef92dbd0963d43a1d318e1b9b2881",
+    "fibra-config/src/test/java/com/sstlfsj/fibra/config/ConfigSchemaBatchOrderTest.java": "c5115396194bef36b11e6d70da0df699401594567a37559ce43bc0faef127988",
+    "fibra-config/src/test/java/com/sstlfsj/fibra/config/ConfigSchemaBatchAllocationTest.java": "cd09f3ae8a81458e45a95c794845d04b4cb3f9bf680e47e215de21f33372593a",
+    "fibra-runtime-node/src/test/java/com/sstlfsj/fibra/runtime/node/NodeProcessUnitTest.java": "f399b7d18c3433c65feae00784e48a39bc2138037ee76a72334949334b17772c",
+    "fibra-distribution/src/main/scripts/stage-plugin-configurations.sh": "47ef4573783732cc884fbe4b568cc62e29e9b7b446570f4731204ceb01af7b99",
+    "fibra-distribution/src/test/scripts/verify-stage-plugin-configurations.sh": "958ff31b5388bc49ffbeaf19534cb4120ae224686024edd702d5054ae79ffdc6",
+    "scripts/verify-reproducible-release.sh": "8aea335758c57aa06d1117fbbad9c06b24e5deabc496b3607c1665ea45394461",
+    "pom.xml": "cc2eabd770acc8654e48347c87df329b80a2b0d4a16d37e8e1a3c7240e02f41c",
+    "fibra-config/pom.xml": "b0d47941ac8e795b6ae1a635c735034548fa24f47d5b84e6e6e483799a2a9161",
+    "fibra-distribution/pom.xml": "3fdf13fb50434ea74f89937e9977627518ed20370b1daa8b413bcfa60d7f0d41",
+    "scripts/verify-distribution.sh": "33b734cd010ac7d23b1f90ebb5e7d3f627af059323bcf6632642fde0c8e48144",
+    "docs/api/plugin-configuration.md": "50a943cc6a48c447a70670b4dc987883536e0c419bb438cac747e25613c1d7ee"
+  },
+  "verdict": {
+    "critical": 0,
+    "important": 0,
+    "minor": 0,
+    "authorizedConfigurationScopeReady": true,
+    "releaseRiskAccepted": false
+  }
+}

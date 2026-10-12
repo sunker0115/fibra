@@ -1,0 +1,330 @@
+--- a/fibra-distribution/src/test/consumers/engine-application/pom.xml
++++ b/fibra-distribution/src/test/consumers/engine-application/pom.xml
+@@ -8,6 +8,10 @@
+   </parent>
+   <artifactId>engine-application</artifactId>
+   <dependencies>
++    <dependency>
++      <groupId>com.sstlfsj</groupId><artifactId>fibra-cli</artifactId>
++      <version>${fibra.version}</version><scope>test</scope>
++    </dependency>
+     <dependency>
+       <groupId>com.sstlfsj</groupId><artifactId>fibra-runtime-java</artifactId>
+       <version>${fibra.version}</version>
+--- a/fibra-distribution/src/test/consumers/engine-application/src/test/java/verification/distribution/LifecycleConsumerTest.java
++++ b/fibra-distribution/src/test/consumers/engine-application/src/test/java/verification/distribution/LifecycleConsumerTest.java
+@@ -56,7 +56,7 @@
+     void discoversAnUnknownDisabledJavaPackageAndCreatesFromItsCatalog(@TempDir Path work)
+         throws Exception {
+         var loadMarker = work.resolve("entrypoint-loaded");
+-        var fixture = new JavaFixture(work, loadMarker);
++        var fixture = new JavaFixture(work, loadMarker, "executable-slot");
+         var source = fixture.packageSource("discovered", "1.0.0");
+         var manifest = Files.readString(source.resolve("fibra-package.yaml"))
+             .replace("id: lifecycle", "id: unknown-author-package")
+@@ -101,8 +101,25 @@
+ 
+             var ref = new PluginDefinitionRef(catalog.pluginId().value(),
+                 facet.facetId().value(), facet.definitionIds().getFirst());
++            var contract = engine.describeConfiguration(ref, revision).block(TIMEOUT);
++            assertEquals(revision, contract.targetRevision());
++            assertEquals(selection.packageRevision(), contract.packageRevision());
++            assertEquals(ref, contract.definition());
++            assertEquals("fibra-config-1", contract.source().profile());
++            assertFalse(Files.exists(loadMarker));
++            assertFalse(Files.exists(work.resolve("entrypoint-loaded.validator")));
++            assertArrayEquals(bytes, Files.readAllBytes(work.resolve("target-store/target.json")));
++            assertEquals(history, registry.history().size());
++            var invalid = new DesiredInputGraph(List.of(DesiredInputEntry.builder(INSTANCE, ref)
++                .config(LiteralValue.of(Map.of("variant", 42))).build()));
++            assertThrows(com.sstlfsj.fibra.engine.EngineChangeException.class, () -> engine.submit(
++                ApplyDeployment.builder(invalid).expectedRevision(revision)
++                    .selections(List.of(new PluginSelection(pluginId, catalog.packageRevision(), true)))
++                    .configContext(ConfigContextSnapshot.empty()).build()).block(TIMEOUT));
++            assertFalse(Files.exists(loadMarker));
++            assertFalse(Files.exists(work.resolve("entrypoint-loaded.validator")));
+             var graph = new DesiredInputGraph(List.of(DesiredInputEntry.builder(INSTANCE, ref)
+-                .config(LiteralValue.of(Map.of())).build()));
++                .config(LiteralValue.of(Map.of("variant", "  normalized  "))).build()));
+             var applied = engine.submit(ApplyDeployment.builder(graph).expectedRevision(revision)
+                 .selections(List.of(new PluginSelection(pluginId, catalog.packageRevision(), true)))
+                 .configContext(ConfigContextSnapshot.empty()).build()).block(TIMEOUT).view();
+@@ -114,8 +131,9 @@
+             var facts = map(invoke(engine, ToolRequest.of(Map.of("operation", "facts")))
+                 .structuredContent().orElseThrow().toJava());
+             assertEquals("discovered", facts.get("variant"));
+-            assertEquals(Map.of(), facts.get("config"));
++            assertEquals(Map.of("variant", "normalized"), facts.get("config"));
+             assertEquals("loaded", Files.readString(loadMarker));
++            assertEquals("validated\n", Files.readString(work.resolve("entrypoint-loaded.validator")));
+             var appliedBytes = Files.readAllBytes(work.resolve("target-store/target.json"));
+             assertThrows(IllegalStateException.class, () ->
+                 engine.submit(ApplyDeployment.builder(graph).expectedRevision(revision)
+@@ -133,14 +151,226 @@
+     private static final class CountingTargets implements DeploymentTargetStore {
+         private final FileDeploymentTargetStore delegate;
+         private int saves;
++        private volatile java.util.concurrent.CountDownLatch entered, release;
+         private CountingTargets(Path root) { delegate = new FileDeploymentTargetStore(root); }
+         @Override public java.util.Optional<StoredTarget> load() { return delegate.load(); }
+         @Override public DurableTargetToken save(long expectedRevision, DeploymentTarget target) {
++            if (entered != null) {
++                entered.countDown();
++                try { assertTrue(release.await(20, TimeUnit.SECONDS)); }
++                catch (InterruptedException failure) { Thread.currentThread().interrupt(); throw new AssertionError(failure); }
++            }
+             var token = delegate.save(expectedRevision, target);
+             saves++;
+             return token;
+         }
+         @Override public void close() { delegate.close(); }
++    }
++
++    @Test
++    void identicalEffectiveValuesReachEngineRegistryAndTheRealCli(@TempDir Path work) throws Exception {
++        var fixture = new JavaFixture(work);
++        var source = fixture.packageSource("entrypoints", "1.0.0");
++        var valid = LiteralValue.of(Map.of("variant", "accepted"));
++        var invalid = LiteralValue.of(Map.of("UNKNOWN_KEY_CANARY", "SECRET_VALUE_CANARY"));
++        try (var packages = new PluginPackageStore(work.resolve("packages"));
++             var engine = FibraEngine.builder(packages, DeploymentTargetStore.inMemory())
++                 .runtimeProvider(new JavaRuntimeProvider(List.of()))
++                 .contributionKinds(ContributionKindRegistry.of(ToolContributions.KIND))
++                 .hostTerminationPort(ignored -> { }).build()) {
++            engine.startAsync().block(TIMEOUT);
++            var registry = new PluginRegistry(engine, packages, new InMemoryPluginAuditRepository());
++            registry.install(new PluginInstallRequest(source, true)).block(TIMEOUT);
++            var ref = desired(valid).definitionRef();
++            var contract = engine.describeConfiguration(ref, engine.snapshot().target().orElseThrow().targetRevision()).block(TIMEOUT);
++            assertFalse(contract.source().schema().canonicalJson().contains("CANARY"));
++            for (var value : List.of(valid, invalid)) {
++                var command = ApplyDeployment.builder(new DesiredInputGraph(List.of(desired(value))))
++                    .expectedRevision(engine.snapshot().target().orElseThrow().targetRevision())
++                    .selections(List.of(selection(registry))).configContext(ConfigContextSnapshot.empty()).build();
++                if (value == valid) {
++                    engine.submit(command).block(TIMEOUT);
++                    registry.upsert(null, desired(value)).block(TIMEOUT);
++                } else {
++                    var failure = assertThrows(com.sstlfsj.fibra.engine.EngineChangeException.class,
++                        () -> engine.submit(command).block(TIMEOUT));
++                    var registryFailure = assertThrows(com.sstlfsj.fibra.engine.EngineChangeException.class,
++                        () -> registry.upsert(null, desired(value)).block(TIMEOUT));
++                    assertSafe(failure); assertSafe(registryFailure);
++                    assertFalse(registry.history().getLast().detail().contains("CANARY"));
++                    assertEquals(com.sstlfsj.fibra.engine.observation.TargetSaveState.NOT_SAVED,
++                        registry.history().getLast().targetSaveState());
++                }
++            }
++        }
++        for (var value : List.of(valid, invalid)) {
++            var home = Files.createDirectories(work.resolve(value == valid ? "cli-valid" : "cli-invalid"));
++            var plugin = Files.createDirectories(home.resolve("plugins/lifecycle"));
++            try (var paths = Files.walk(source)) {
++                for (var file : paths.filter(Files::isRegularFile).toList())
++                    Files.copy(file, plugin.resolve(source.relativize(file)));
++            }
++            var profiles = Files.createDirectories(home.resolve("config/profiles"));
++            Files.writeString(profiles.resolve("default.packages.yaml"), "- lifecycle\n");
++            Files.writeString(profiles.resolve("default.yaml"),
++                "- id: lifecycle-instance\n  plugin: {id: lifecycle, facet: main, definition: lifecycle}\n  config: " + value.canonicalJson() + "\n");
++            var out = new java.io.ByteArrayOutputStream(); var err = new java.io.ByteArrayOutputStream();
++            var exit = com.sstlfsj.fibra.cli.FibraCli.run(new String[]{"--home", home.toString(), "plugins", "list"},
++                new java.io.ByteArrayInputStream(new byte[0]), new java.io.PrintWriter(out, true), new java.io.PrintWriter(err, true));
++            if (System.getProperty("consumer.evidence") != null) {
++                var evidence = Files.createDirectories(Path.of(System.getProperty("consumer.evidence")));
++                var name = value == valid ? "cli-valid" : "cli-invalid";
++                Files.writeString(evidence.resolve(name + ".stdout"), out.toString());
++                Files.writeString(evidence.resolve(name + ".stderr"), err.toString());
++                Files.writeString(evidence.resolve(name + ".exit"), Integer.toString(exit));
++            }
++            if (value == valid) { assertEquals(0, exit, err.toString()); assertTrue(out.toString().contains(INSTANCE)); }
++            else { assertNotEquals(0, exit); assertFalse((out.toString() + err).contains("CANARY")); assertFalse(err.toString().isBlank()); }
++        }
++    }
++
++    private static void assertSafe(Throwable failure) {
++        assertFalse(String.valueOf(failure.getMessage()).contains("CANARY"));
++        if (failure.getCause() != null) assertSafe(failure.getCause());
++        for (var suppressed : failure.getSuppressed()) assertSafe(suppressed);
++    }
++
++    @ParameterizedTest
++    @EnumSource(RuntimeFlavor.class)
++    void rejectsSchemaOnlyUpgradeAndEnableWithoutReplacingTheCurrentRuntime(RuntimeFlavor runtime,
++                                                                           @TempDir Path work) throws Exception {
++        var fixture = runtime.fixture(work);
++        var source = fixture.packageSource("rules", "1.0.0");
++        try (var packages = new PluginPackageStore(work.resolve("packages"));
++             var targets = new CountingTargets(work.resolve("targets"));
++             var engine = FibraEngine.builder(packages, targets)
++                 .runtimeProvider(new JavaRuntimeProvider(List.of())).runtimeProvider(fixture.nodeProvider())
++                 .contributionKinds(ContributionKindRegistry.of(ToolContributions.KIND))
++                 .hostTerminationPort(ignored -> { }).build()) {
++            engine.startAsync().block(TIMEOUT);
++            var registry = new PluginRegistry(engine, packages, new InMemoryPluginAuditRepository());
++            registry.install(new PluginInstallRequest(source, true)).block(TIMEOUT);
++            var revision = engine.published().current().engine().target().orElseThrow().targetRevision();
++            var bytes = Files.readAllBytes(work.resolve("targets/target.json"));
++            var ref = new PluginDefinitionRef("lifecycle", "main", "lifecycle");
++            var contract = engine.describeConfiguration(ref, revision).block(TIMEOUT);
++            assertEquals(selection(registry).packageRevision(), contract.packageRevision());
++            assertEquals(revision, contract.targetRevision());
++            assertArrayEquals(bytes, Files.readAllBytes(work.resolve("targets/target.json")));
++            assertTrue(fixture.allPids().isEmpty(), "static configuration query must not spawn Node");
++            var canary = "INSTANCE_SECRET_CANARY";
++            registry.upsert(null, desired(config(fixture, canary))).block(TIMEOUT);
++            var activeContract = engine.describeConfiguration(ref,
++                engine.snapshot().target().orElseThrow().targetRevision()).block(TIMEOUT);
++            assertEquals(contract.source(), activeContract.source());
++            assertFalse(activeContract.source().schema().canonicalJson().contains(canary));
++            assertTrue(registry.snapshot().desiredGraph().plugins().get(INSTANCE).config().canonicalJson().contains(canary),
++                "authorized management snapshot retains instance values");
++            var stable = registry.snapshot();
++            var oldInstance = runtimeInstance(stable);
++            var pids = fixture.activePids();
++            bytes = Files.readAllBytes(work.resolve("targets/target.json"));
++            var saves = targets.saves;
++            Files.writeString(source.resolve("fibra-config.json"), lifecycleConfiguration()
++                .replace("\"variant\":{\"type\":\"string\"}", "\"variant\":{\"type\":\"string\",\"maxLength\":2}"));
++            var failure = assertThrows(com.sstlfsj.fibra.engine.EngineChangeException.class,
++                () -> registry.upgrade(source).block(TIMEOUT));
++            assertEquals(com.sstlfsj.fibra.engine.observation.TargetSaveState.NOT_SAVED, failure.targetSaveState());
++            assertEquals(selection(stable), selection(registry));
++            assertEquals(oldInstance, runtimeInstance(registry.snapshot()));
++            fixture.assertSamePids(pids);
++            assertArrayEquals(bytes, Files.readAllBytes(work.resolve("targets/target.json")));
++            assertEquals(saves, targets.saves);
++            assertEquals(2, packages.history(PLUGIN).size(), "rejected candidate package is still published");
++            assertFalse(registry.history().getLast().detail().contains(canary));
++            assertFalse(failure.toString().contains(canary));
++            registry.disable(INSTANCE).block(TIMEOUT);
++            fixture.assertStopped(pids);
++            registry.upgrade(source).block(TIMEOUT);
++            var disabled = registry.snapshot();
++            bytes = Files.readAllBytes(work.resolve("targets/target.json"));
++            saves = targets.saves;
++            assertThrows(com.sstlfsj.fibra.engine.EngineChangeException.class, () -> registry.enable(INSTANCE).block(TIMEOUT));
++            assertEquals(selection(disabled), selection(registry));
++            assertFalse(registry.snapshot().desiredGraph().plugins().get(INSTANCE).enabled());
++            assertArrayEquals(bytes, Files.readAllBytes(work.resolve("targets/target.json")));
++            assertEquals(saves, targets.saves);
++        }
++        fixture.assertStopped(fixture.allPids());
++    }
++
++    @Test
++    void overlappingApplyCommandsUseTheOriginalCasAndOnlyOneValidator(@TempDir Path work) throws Exception {
++        var marker = work.resolve("entrypoint-loaded");
++        var fixture = new JavaFixture(work, marker);
++        var source = fixture.packageSource("cas", "1.0.0");
++        try (var packages = new PluginPackageStore(work.resolve("packages"));
++             var targets = new CountingTargets(work.resolve("targets"));
++             var engine = FibraEngine.builder(packages, targets).runtimeProvider(new JavaRuntimeProvider(List.of()))
++                 .contributionKinds(ContributionKindRegistry.of(ToolContributions.KIND))
++                 .hostTerminationPort(ignored -> { }).build()) {
++            engine.startAsync().block(TIMEOUT);
++            var registry = new PluginRegistry(engine, packages, new InMemoryPluginAuditRepository());
++            registry.install(new PluginInstallRequest(source, true)).block(TIMEOUT);
++            var revision = engine.published().current().engine().target().orElseThrow().targetRevision();
++            var saves = targets.saves;
++            targets.entered = new java.util.concurrent.CountDownLatch(1);
++            targets.release = new java.util.concurrent.CountDownLatch(1);
++            var first = ApplyDeployment.builder(new DesiredInputGraph(List.of(desired(config(fixture, "first")))))
++                .expectedRevision(revision).selections(List.of(selection(registry))).configContext(ConfigContextSnapshot.empty()).build();
++            var second = ApplyDeployment.builder(new DesiredInputGraph(List.of(desired(config(fixture, "second")))))
++                .expectedRevision(revision).selections(List.of(selection(registry))).configContext(ConfigContextSnapshot.empty()).build();
++            var winner = engine.submit(first).subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic()).toFuture();
++            try {
++                assertTrue(targets.entered.await(20, TimeUnit.SECONDS));
++                var subscribed = new java.util.concurrent.CountDownLatch(1);
++                var loser = engine.submit(second).doOnSubscribe(ignored -> subscribed.countDown())
++                    .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic()).toFuture();
++                assertTrue(subscribed.await(20, TimeUnit.SECONDS));
++                assertFalse(winner.isDone(), "first is held at the real durable save");
++                assertFalse(loser.isDone(), "second is subscribed while first is still in flight");
++                targets.release.countDown();
++                winner.get(20, TimeUnit.SECONDS);
++                var rejected = assertThrows(java.util.concurrent.ExecutionException.class, () -> loser.get(20, TimeUnit.SECONDS));
++                assertInstanceOf(IllegalStateException.class, rejected.getCause());
++                assertTrue(rejected.getCause().getMessage().contains("deployment target revision conflict"));
++                assertEquals(saves + 1, targets.saves);
++                assertEquals(revision + 1, targets.load().orElseThrow().target().targetRevision());
++                assertEquals("validated\n", Files.readString(work.resolve("entrypoint-loaded.validator")));
++            } finally { targets.release.countDown(); }
++        }
++    }
++
++    @Test
++    void nodeReceivesJsonNumbersAfterExactSchemaValidation(@TempDir Path work) throws Exception {
++        var fixture = new NodeFixture(work);
++        var source = fixture.packageSource("numbers", "1.0.0");
++        Files.writeString(source.resolve("fibra-config.json"), lifecycleConfiguration().replace(
++            "\"properties\":{", "\"properties\":{\"number\":{\"type\":\"integer\",\"maximum\":9007199254740993},"));
++        try (var packages = new PluginPackageStore(work.resolve("packages"));
++             var engine = FibraEngine.builder(packages, DeploymentTargetStore.inMemory())
++                 .runtimeProvider(fixture.nodeProvider()).contributionKinds(ContributionKindRegistry.of(ToolContributions.KIND))
++                 .hostTerminationPort(ignored -> { }).build()) {
++            engine.startAsync().block(TIMEOUT);
++            var registry = new PluginRegistry(engine, packages, new InMemoryPluginAuditRepository());
++            registry.install(new PluginInstallRequest(source, true)).block(TIMEOUT);
++            for (var decimal : List.of("9007199254740991", "9007199254740992", "9007199254740993")) {
++                var values = map(config(fixture, "numeric").toJava());
++                values.put("number", new java.math.BigDecimal(decimal));
++                registry.upsert(null, desired(LiteralValue.of(values))).block(TIMEOUT);
++                var facts = map(invoke(engine, ToolRequest.of(Map.of("operation", "facts"))).structuredContent().orElseThrow().toJava());
++                var actual = new java.math.BigDecimal(map(facts.get("config")).get("number").toString());
++                assertEquals(0, actual.compareTo(new java.math.BigDecimal(decimal.equals("9007199254740993") ? "9007199254740992" : decimal)));
++                assertTrue(registry.snapshot().desiredGraph().plugins().get(INSTANCE).config().canonicalJson().contains(decimal));
++            }
++            var invalid = map(config(fixture, "numeric").toJava());
++            invalid.put("number", new java.math.BigDecimal("9007199254740994"));
++            var pids = fixture.activePids();
++            assertThrows(com.sstlfsj.fibra.engine.EngineChangeException.class, () -> registry.upsert(null, desired(LiteralValue.of(invalid))).block(TIMEOUT));
++            fixture.assertSamePids(pids);
++        }
++        fixture.assertStopped(fixture.allPids());
++        fixture.assertSessionsEmpty();
+     }
+ 
+     @ParameterizedTest(name = "{0} 仓外生命周期")
+@@ -284,12 +514,15 @@
+     }
+     private static final class JavaFixture extends Fixture {
+         private final Path loadMarker;
++        private final String facetId;
+         private JavaFixture(Path work) { this(work, null); }
+-        private JavaFixture(Path work, Path loadMarker) { super(work); this.loadMarker = loadMarker; }
++        private JavaFixture(Path work, Path loadMarker) { this(work, loadMarker, "main"); }
++        private JavaFixture(Path work, Path loadMarker, String facetId) {
++            super(work); this.loadMarker = loadMarker; this.facetId = facetId;
++        }
+         @Override Path packageSource(String variant, String version) throws Exception {
+             var root = Files.createDirectories(work().resolve("java-" + variant)); var source = Path.of(System.getProperty("plugin.jar")); var payload = root.resolve("plugin.jar");
+-            var configuration = lifecycleConfiguration();
+-            if (loadMarker != null) configuration = configuration.replace("\"main\"", "\"executable-slot\"");
++            var configuration = lifecycleConfiguration().replace("\"main\"", "\"" + facetId + "\"");
+             try (var input = new JarFile(source.toFile()); var output = new JarOutputStream(Files.newOutputStream(payload))) {
+                 var entries = input.entries(); while (entries.hasMoreElements()) { var entry = entries.nextElement(); if (entry.getName().equals("META-INF/fibra/plugin.yaml") || entry.getName().equals("META-INF/fibra/config.json")) continue; output.putNextEntry(new JarEntry(entry.getName())); if (!entry.isDirectory()) input.getInputStream(entry).transferTo(output); output.closeEntry(); }
+                 output.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml")); output.write("entrypoint: verification.distribution.plugin.LifecycleEntrypoint\ndefinitionId: lifecycle\n".getBytes(StandardCharsets.UTF_8)); output.closeEntry();
+--- a/fibra-distribution/src/test/consumers/java-plugin/src/main/java/verification/distribution/plugin/LifecycleEntrypoint.java
++++ b/fibra-distribution/src/test/consumers/java-plugin/src/main/java/verification/distribution/plugin/LifecycleEntrypoint.java
+@@ -44,6 +44,19 @@
+                 .then(registrar.register(context, LIFECYCLE, "descriptor",
+                     new LifecycleDescriptor(facts.variant()), (invocation, ignored) -> Mono.empty()))
+                 .then();
++        }).validator(config -> {
++            try (var input = LifecycleEntrypoint.class.getResourceAsStream("/lifecycle-load-marker.txt")) {
++                if (input != null) {
++                    var marker = new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
++                    Files.writeString(Path.of(marker + ".validator"), "validated\n",
++                        java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
++                }
++            } catch (IOException failure) {
++                throw new IllegalStateException("cannot write lifecycle validator marker", failure);
++            }
++            var normalized = new LinkedHashMap<>(config);
++            if (normalized.get("variant") instanceof String variant) normalized.put("variant", variant.trim());
++            return normalized;
+         }).require(ContributionServices.REGISTRAR).build();
+     }
+ 

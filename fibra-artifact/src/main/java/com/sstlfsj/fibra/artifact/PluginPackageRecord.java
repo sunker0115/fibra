@@ -13,8 +13,9 @@ public final class PluginPackageRecord {
     private final ManagedPluginPackage managedPackage;
     private final ArtifactState state;
     private final Instant updatedAt;
+    private final VerifiedConfiguration configuration;
 
-    private PluginPackageRecord(Builder builder) {
+    private PluginPackageRecord(Builder builder, ConfigurationResourceEvidence evidence) {
         pluginId = Objects.requireNonNull(builder.pluginId, "pluginId");
         version = required(builder.version, "version");
         packageRevision = digest(builder.packageRevision, "packageRevision");
@@ -29,6 +30,10 @@ public final class PluginPackageRecord {
             throw new IllegalArgumentException(
                 "managed package identity does not match package record");
         }
+        configuration = evidence != null
+            ? new VerifiedConfiguration(location, pluginId, version, packageRevision, managedPackage, evidence)
+            : builder.configuration != null && builder.configuration.matches(this)
+                ? builder.configuration : null;
     }
 
     public static Builder builder() {
@@ -36,9 +41,11 @@ public final class PluginPackageRecord {
     }
 
     public Builder toBuilder() {
-        return builder().pluginId(pluginId).version(version)
+        var result = builder().pluginId(pluginId).version(version)
             .packageRevision(packageRevision).location(location)
             .managedPackage(managedPackage).state(state).updatedAt(updatedAt);
+        result.configuration = configuration;
+        return result;
     }
 
     public PluginId pluginId() { return pluginId; }
@@ -48,6 +55,33 @@ public final class PluginPackageRecord {
     public ManagedPluginPackage managedPackage() { return managedPackage; }
     public ArtifactState state() { return state; }
     public Instant updatedAt() { return updatedAt; }
+
+    /**
+     * 创建无 I/O 的固定配置文档句柄。记录须来自 store 的已核包，通常通过 find 获取。
+     * public builder 构造的纯 metadata 记录不能读取资源。
+     *
+     * @throws IllegalStateException 本记录没有与当前内容身份绑定的核验事实
+     */
+    public PluginConfigurationResource configurationResource() {
+        if (configuration == null) {
+            throw new IllegalStateException("package record has no verified configuration resource");
+        }
+        return new FixedPluginConfigurationResource(location, configuration.evidence());
+    }
+
+    static PluginPackageRecord verified(Builder builder, ConfigurationResourceEvidence evidence) {
+        return new PluginPackageRecord(builder, Objects.requireNonNull(evidence, "evidence"));
+    }
+
+    private record VerifiedConfiguration(Path root, PluginId pluginId, String version,
+                                         String revision, ManagedPluginPackage managed,
+                                         ConfigurationResourceEvidence evidence) {
+        private boolean matches(PluginPackageRecord record) {
+            return root.equals(record.location) && pluginId.equals(record.pluginId)
+                && version.equals(record.version) && revision.equals(record.packageRevision)
+                && managed.equals(record.managedPackage);
+        }
+    }
 
     @Override
     public boolean equals(Object other) {
@@ -93,6 +127,7 @@ public final class PluginPackageRecord {
         private ManagedPluginPackage managedPackage;
         private ArtifactState state;
         private Instant updatedAt;
+        private VerifiedConfiguration configuration;
 
         private Builder() { }
         public Builder pluginId(PluginId value) { pluginId = value; return this; }
@@ -106,6 +141,6 @@ public final class PluginPackageRecord {
         }
         public Builder state(ArtifactState value) { state = value; return this; }
         public Builder updatedAt(Instant value) { updatedAt = value; return this; }
-        public PluginPackageRecord build() { return new PluginPackageRecord(this); }
+        public PluginPackageRecord build() { return new PluginPackageRecord(this, null); }
     }
 }

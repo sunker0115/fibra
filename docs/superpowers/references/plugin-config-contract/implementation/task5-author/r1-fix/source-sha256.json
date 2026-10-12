@@ -1,0 +1,218 @@
+[
+  {
+    "path": "fibra-distribution/pom.xml",
+    "sha256": "3fdf13fb50434ea74f89937e9977627518ed20370b1daa8b413bcfa60d7f0d41"
+  },
+  {
+    "path": "fibra-distribution/src/main/scripts/stage-plugin-configurations.sh",
+    "sha256": "47ef4573783732cc884fbe4b568cc62e29e9b7b446570f4731204ceb01af7b99"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/README.md",
+    "sha256": "7344c7d3046733dd6774be61ffcb7dea2a657f3859324135ce8d65c96e57f356"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/engine-application/pom.xml",
+    "sha256": "e94de2ba3fd7986cc6db436219d8632c6033013aa33e740fe90dd9e051258cb3"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/engine-application/src/author-qa/java/com/sstlfsj/fibra/plugins/acceptance/AuthorConfigurationQualification.java",
+    "sha256": "821330dbb517140798e51e0e8153a9920481f94e558ab8235beb69ee1a49e56e"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/engine-application/src/test/java/verification/distribution/AuthorConfigurationConsumerTest.java",
+    "sha256": "7ae0eac89898aef9a77ade46eb3eed20be2c1da184e19846c9ca231df62be6f7"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/engine-application/src/test/java/verification/distribution/EngineConsumerTest.java",
+    "sha256": "8596095e2ca7af70555c068755f8dd9beff9945af4c20f61719dfa90edf4fd95"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/engine-application/src/test/java/verification/distribution/LifecycleConsumerTest.java",
+    "sha256": "6452d730f6607acc7d4a388f84d9e8b25123ff6a5849b85e330390861bc06aae"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/java-plugin/pom.xml",
+    "sha256": "f0ff1a5e1b8aadb1cc2538dc390958e39abfce30997e3e4f0fa62634f5153004"
+  },
+  {
+    "path": "fibra-distribution/src/test/consumers/java-plugin/src/plugin/fibra-config.json",
+    "sha256": "4450aa8e4ad8d913638d693b52f8b251fef5a5e7ad098f7a36deedb938ea56ff"
+  },
+  {
+    "path": "fibra-distribution/src/test/scripts/verify-archive.sh",
+    "sha256": "f4afca253e19e6761e93fa7826abb58040adb1a208d3822983bf64f0b0362ade"
+  },
+  {
+    "path": "fibra-distribution/src/test/scripts/verify-stage-plugin-configurations.sh",
+    "sha256": "958ff31b5388bc49ffbeaf19534cb4120ae224686024edd702d5054ae79ffdc6"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/README.md",
+    "sha256": "a334daffa4bd7d58c63d51a58c5cdf1b6cdc071071db32c3fcd361dece0e3213"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/node-plugin/fibra-config.json",
+    "sha256": "f696d14ffec9273dd5f67de6994d290946e4779b23ed73aea9f7e92d6c6c0f86"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/spring-host/pom.xml",
+    "sha256": "4acfe99ac5cd776bfbd342f23c292dfa6f9e0e43388f2fb1c29b8d1b7c9c23e4"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/spring-host/src/test/java/com/sstlfsj/fibra/example/SanitizerAuthorConfigurationIT.java",
+    "sha256": "638fbfe08d5e65ccdd68e6263aad80d300c3c78b08db2f116869faf7888b0042"
+  },
+  {
+    "path": "fibra-plugin-archetype/pom.xml",
+    "sha256": "fc477ad0e96af2359ce7ffbd641ff7cfaf88001f8520aca680a24b393669e4f9"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/main/resources/META-INF/maven/archetype-metadata.xml",
+    "sha256": "fbf38f6baf580003977bc8f8ec0325d733192ec3d65bd1f46a890362d6b31579"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/main/resources/archetype-resources/README.md",
+    "sha256": "344f3239ef218c79e81aeaad212a413d6739ae75173258838b54ed6ba1b4be58"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/main/resources/archetype-resources/pom.xml",
+    "sha256": "5cb8cbc5717f15d290217564250a46182482e5dd92a201969bbcd38fba104675"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/main/resources/archetype-resources/src/assembly/plugin.xml",
+    "sha256": "e21f94f0451242bcfc40fcd98776d0be0fdfd5b44810fde7d6df8496bc8b0d26"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/main/resources/archetype-resources/src/plugin/fibra-config.json",
+    "sha256": "996ec7495d53636b85441e353d5801e683d71d420e647642008d8ed020577ef5"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/test/java/com/sstlfsj/fibra/archetype/FibraPluginArchetypeIT.java",
+    "sha256": "00a88db05ca07d73b46986ebd1a528920b48f61aa294f475259e1e776b1de086"
+  },
+  {
+    "path": "fibra-plugin-archetype/src/test/resources/projects/basic/verify.groovy",
+    "sha256": "9bdd33c862fa06b318cf009dcbfa63f6eb5cbdc51ed4ad0c6cd85e512533e4bf"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/pom.xml",
+    "sha256": "e7d9fe9abe8cc800a795a1fbdfe7b24c10433c844d285c8172763e54f927ac96"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/src/test/java/com/sstlfsj/fibra/plugins/acceptance/AuthorConfigurationQualificationTest.java",
+    "sha256": "ad1e8f2c1a1a98bea211312b3c4db9b867470afa83d21e52dfed6c30312fd1dd"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/src/test/java/com/sstlfsj/fibra/plugins/acceptance/FormalPluginArtifactsIT.java",
+    "sha256": "be90efca46944254acd7666ff32aa7e7f5ca64979fbec07b39f370c65712ba57"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/src/test/java/com/sstlfsj/fibra/plugins/acceptance/PluginAcceptanceHarness.java",
+    "sha256": "7dcd18137761bc6dee4317832aabf0f7ecab5a178cfc9ef00530f380b4f29f37"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs-local/pom.xml",
+    "sha256": "4fab2172fcf2d10c8c79630b8e201bd8a9f2113c7295e0fd86edaed5c54dae6e"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs-local/src/plugin/fibra-config.json",
+    "sha256": "071bd1e705dda3951adfbc244c49cb4da65eaa1a69cea303911782660756e028"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/pom.xml",
+    "sha256": "e69f9651f330daa3eb03cc92b511f8bc0e3bc97b7de3297fc72e2d5d0699da6e"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/src/plugin/fibra-config.json",
+    "sha256": "9c94315c2bd2962f2c8550de9590a742787cb09d7ebed99c2e9b0523d30a2cd3"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/pom.xml",
+    "sha256": "1db4d8d5927f8c1447148c24a0f056ceb6513aa3068d22c4970f32498f0e3a8d"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/src/plugin/fibra-config.json",
+    "sha256": "89c00b1fdfdd19707431d00274404e208014e9513be91e4a24ff5d33ea95eb72"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs/pom.xml",
+    "sha256": "eed5ca7cbd8bd7bf9d7322723c0a854cdf7220682c7f930b3d8ea6d144d02b40"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs/src/plugin/fibra-config.json",
+    "sha256": "cc07274f9efd39011054381d641e46dd8542894ac03ae8bdd0b3377ac7af64c0"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell-local/pom.xml",
+    "sha256": "8b8ed22ea57143c7a03e644bab6b0c7a22e7f728928cf52820d8a450ddd02385"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell-local/src/plugin/fibra-config.json",
+    "sha256": "fd9034cb2c9c16fd7a498024ed1b093908033f738d525292a3d1d47d22f31033"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell/pom.xml",
+    "sha256": "e78cfa0438d4e967423b26f7cd4d74a7128675a9a19012dfa3dda91d74d6c7a0"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell/src/plugin/fibra-config.json",
+    "sha256": "9c94315c2bd2962f2c8550de9590a742787cb09d7ebed99c2e9b0523d30a2cd3"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-tool-shell/pom.xml",
+    "sha256": "1989796dab313a424abe5d68cbfa0a4fd9ddbd3e4ddc9a2d37cdd7e2a9d17ee5"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-tool-shell/src/plugin/fibra-config.json",
+    "sha256": "4ca464d430ead11289d6ddd1b33b455e3fe983905f1b8efea4db2a04ccb9cbf5"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage-json/pom.xml",
+    "sha256": "71c1139eebe040e5c1a6b4b9f0cb3fd4c3a1ddb52a9c387c20dcf64721731fd5"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage-json/src/plugin/fibra-config.json",
+    "sha256": "2db836338ac6119eb1cf34ef7070cd383bde2567f7b190647cb76c0dd1c41ea8"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage/pom.xml",
+    "sha256": "0aa3c75e3f15c1442e3162d3bcdd3c238de0a690a669f89f850260fce250e9fc"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage/src/plugin/fibra-config.json",
+    "sha256": "9c94315c2bd2962f2c8550de9590a742787cb09d7ebed99c2e9b0523d30a2cd3"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-tool-storage/pom.xml",
+    "sha256": "a17d8fca5c58388cf463f1b23764b5734e2f93f8f09a755353c61dbee845a70a"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-tool-storage/src/plugin/fibra-config.json",
+    "sha256": "7023608fa76beb0f70f1b61a4b4e86b9b4c4c746a0951b3f9301443c191557a6"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/pom.xml",
+    "sha256": "1e236687252a9709204e4af280a78eeac472d08b394dd1b37cf18a9075b3026a"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/src/plugin/fibra-config.json",
+    "sha256": "51032e1301cca6c0c7ee87529a542c73f1ef4da2970b9bee0299d2627f58932e"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/pom.xml",
+    "sha256": "45f515f462919a8f7cb8635d91c2007a960170346ba427eaf792dc9015417904"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/src/plugin/fibra-config.json",
+    "sha256": "9c94315c2bd2962f2c8550de9590a742787cb09d7ebed99c2e9b0523d30a2cd3"
+  },
+  {
+    "path": "pom.xml",
+    "sha256": "cc2eabd770acc8654e48347c87df329b80a2b0d4a16d37e8e1a3c7240e02f41c"
+  },
+  {
+    "path": "scripts/verify-distribution.sh",
+    "sha256": "33b734cd010ac7d23b1f90ebb5e7d3f627af059323bcf6632642fde0c8e48144"
+  }
+]

@@ -104,6 +104,11 @@ engine.submit(ApplyDeployment.builder(fullDesiredGraph)
 创建需要原 `ApplyDeployment` 完整 replacement/CAS，相关包仍须 enabled。查询不会自动创建任何实例、选择
 默认 definition 或启用所有 facet；target 在选择和提交之间改变时，消费者重读目录及完整 target 后重新决定。
 
+选定完整引用后，可用 `engine.describeConfiguration(ref, expectedTargetRevision)` 查询该精确包 revision 的
+配置合同。名称目录继续只返回名称，规则查询单独返回 `DefinitionConfigContract`；实例仍沿完整
+`ApplyDeployment` 提交，Engine 对求值结果执行统一结构门。作者规则、查询错误分类、默认值及升级语义见
+[插件实例配置合同](plugin-configuration.md)。
+
 `PackageDefinitionCatalog` 返回 `targetRevision`、`pluginId`、`packageRevision` 和 `facets`；每个
 `FacetDefinitionNames` 返回 `facetId`、`runtimeId`、`executionTarget`、`definitionIds`。值深度不可变，facet
 按原始 facetId 排序，名称按原始字符串排序；facet 内唯一且非空白，允许跨 facet 同名。合法零入口 facet

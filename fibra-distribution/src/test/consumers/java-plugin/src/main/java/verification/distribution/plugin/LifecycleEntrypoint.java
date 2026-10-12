@@ -44,6 +44,19 @@ public final class LifecycleEntrypoint implements PluginEntrypoint<Map> {
                 .then(registrar.register(context, LIFECYCLE, "descriptor",
                     new LifecycleDescriptor(facts.variant()), (invocation, ignored) -> Mono.empty()))
                 .then();
+        }).validator(config -> {
+            try (var input = LifecycleEntrypoint.class.getResourceAsStream("/lifecycle-load-marker.txt")) {
+                if (input != null) {
+                    var marker = new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                    Files.writeString(Path.of(marker + ".validator"), "validated\n",
+                        java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+                }
+            } catch (IOException failure) {
+                throw new IllegalStateException("cannot write lifecycle validator marker", failure);
+            }
+            var normalized = new LinkedHashMap<>(config);
+            if (normalized.get("variant") instanceof String variant) normalized.put("variant", variant.trim());
+            return normalized;
         }).require(ContributionServices.REGISTRAR).build();
     }
 

@@ -1,0 +1,1074 @@
+[
+  {
+    "path": "fibra-spring/target/surefire-reports/TEST-com.sstlfsj.fibra.spring.FibraServiceBridgeTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "854e5383736ea3b64c10f25d5a9677808d9d79314e9a0961b993f0137103b17d"
+  },
+  {
+    "path": "fibra-spring/target/surefire-reports/TEST-com.sstlfsj.fibra.spring.FibraServiceExporterTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "f75fe153febecf764349d08f227318acadab12ee093e280575a506aa66bdeb1a"
+  },
+  {
+    "path": "fibra-cli-api/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.api.CliApiContractTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "95af3630d8703a1c32de6d73c2fa0b801b7e7d050d6c91f2c21870fe23f8e883"
+  },
+  {
+    "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.runtime.RuntimeTargetSliceTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "f8a035eba0359aec8285240d4a478a00994a18c27916f9eb30d6b96d4d7eb554"
+  },
+  {
+    "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.DeploymentTargetStoreTest.xml",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "97dc778252c95509291fa6dcc665014a380c4afc46fd996754c1cb1435756eae"
+  },
+  {
+    "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackageTest.xml",
+    "tests": "10",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "a3ee03f5ffa77fa459e4ed07a538a2e5c0674442b2b71e2294d634ab5070f8f9"
+  },
+  {
+    "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.DeploymentTargetContractTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "6a8776f9e7b78095466e0d2cf08e1c71a0cc889e79ac2911a833a7bbc39b1d75"
+  },
+  {
+    "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.PackageDefinitionCatalogTest.xml",
+    "tests": "15",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "19d1d9e33048089314e795ee6e68a0fd5c3a161daf814a8d8285e69114db2d99"
+  },
+  {
+    "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.DeploymentPlannerTest.xml",
+    "tests": "5",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "7dd4f713b8210b1c514eea0d54e3878f2bc74e5dbb75d0554a73be25ee47e8d2"
+  },
+  {
+    "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.BuiltInConfigurationBootstrapTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "2fd92317b8c8b5e6c5f43eda6601d300bcdb8ba68caf8be843ddb16a7922e9a1"
+  },
+  {
+    "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.RuntimeDriverEngineTest.xml",
+    "tests": "80",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "e3de0eb0961d3e3ba947e6185e0a322fed0c7be905091175d9589e2962e0ff60"
+  },
+  {
+    "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.RuntimeDriverContractTest.xml",
+    "tests": "8",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "69c3a81d07b5dc9d4f9a869ba142dd5d8a3d264ba54d562cfa58be1799a124f0"
+  },
+  {
+    "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.publication.RemoteContributionInvokerTest.xml",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "6fa25d87b54e244888c804fcedcb044de077295eabb13dce8a2fb41f3e77b046"
+  },
+  {
+    "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.DeploymentTargetCompilerTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "347b3fa04eae99f0947bf568e0e9d0ea9774aeca4ce48359ec7c480ba7a97223"
+  },
+  {
+    "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.DeploymentTargetContextContractTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "83132e1fdcebb94cfd09cec55196905c8cb9975c4fe52a587031d5f3cbcfa1d5"
+  },
+  {
+    "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.HostCapabilitySnapshotTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "e9929b6435e35b99d18627b294f5a2e67a18c80b9bcf59d2f465afdc928bc696"
+  },
+  {
+    "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.EngineAttemptStateModelTest.xml",
+    "tests": "11",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "90d7f2f9d5bae04aff3c0e185ef650ce8708ce2058ea24712bafd9a3b6083c3f"
+  },
+  {
+    "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.EngineReadAttemptTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "58a27212bfd047552c1d7ff528ffc2b9f68a5775a84dc32d1fad80d4f3e87c01"
+  },
+  {
+    "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.EngineCommandLoopTest.xml",
+    "tests": "7",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "4a99827417b428ee7aa9aae8c715cc2f0b5e6adac053851889fca7ed47631ed4"
+  },
+  {
+    "path": "fibra-engine/target/surefire-reports/TEST-com.sstlfsj.fibra.engine.EngineConfigurationContractTest.xml",
+    "tests": "20",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "f0466a7ed405fd5153c3eb5803d5ffebf62a87caab0e44718366d919dc0ca6e4"
+  },
+  {
+    "path": "fibra-spring-boot-starter/target/surefire-reports/TEST-com.sstlfsj.fibra.spring.boot.FibraAutoConfigurationTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "c469221249877a954dcc6889703586bfa922885645741d2a21cea51b26f34f8c"
+  },
+  {
+    "path": "fibra-runtime-java/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.java.JavaBuiltInRecoveryTest.xml",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "7f6f0e6869e6db5a25c2e42fb21691dab098a1fa050b8de9536749cc0547b782"
+  },
+  {
+    "path": "fibra-runtime-java/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.java.PluginClassLoaderTest.xml",
+    "tests": "9",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "bc61474164e4744baaa78f52a48b324f4e1dbe843b02e1d0655e4f105762cfee"
+  },
+  {
+    "path": "fibra-runtime-java/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.java.JavaClassIndexTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "7978d679e0f36a687e25ef2be6c54530df35f79168dae621d5efa786688d4346"
+  },
+  {
+    "path": "fibra-runtime-java/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.java.JavaRuntimeDriverTest.xml",
+    "tests": "52",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "66b3534595e92842e2416bebdf285c0eec614a86574ae39df2e6d0023b9b2812"
+  },
+  {
+    "path": "fibra-api/target/surefire-reports/TEST-com.sstlfsj.fibra.CancellationSourceTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "a7075ec6e6e81fc7e59dd5acb76803de96b0823184ab2e47825bea1185fdb8d9"
+  },
+  {
+    "path": "fibra-artifact/target/surefire-reports/TEST-com.sstlfsj.fibra.artifact.PluginConfigurationResourceTest.xml",
+    "tests": "16",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "275e0d3d507d3ba8c6688982709fbd7f52a7f478bebe6c12fda7b939c15d63ec"
+  },
+  {
+    "path": "fibra-artifact/target/surefire-reports/TEST-com.sstlfsj.fibra.artifact.PluginConfigurationResourceBootstrapTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "7d033ea47b5a208d45d5292539250eeb17438f179534d5c48befb3bbb8fec47c"
+  },
+  {
+    "path": "fibra-artifact/target/surefire-reports/TEST-com.sstlfsj.fibra.artifact.PluginPackageTest.xml",
+    "tests": "46",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "0ed2ea8f25590b2008548faa1aec005a91bfd28f7f8758856950783906df0a9a"
+  },
+  {
+    "path": "fibra-artifact/target/surefire-reports/TEST-com.sstlfsj.fibra.artifact.FixedPluginConfigurationResourceTest.xml",
+    "tests": "10",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "291fd1d0c2135111b9ce7ba5f89519811ba3469f8a50480c9f802f6c66be50c2"
+  },
+  {
+    "path": "fibra-artifact/target/surefire-reports/TEST-com.sstlfsj.fibra.artifact.PluginPackageStoreTest.xml",
+    "tests": "15",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "169a0768885edf2f5d7a23438a10bd7884d03fd2e34ec2b5b102dc2b1d2c18ac"
+  },
+  {
+    "path": "fibra-registry/target/surefire-reports/TEST-com.sstlfsj.fibra.registry.FilePluginAuditRepositoryTest.xml",
+    "tests": "10",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "e4c684331a73356a1de968fec8f7541973f72987e21198622acc8d5557be7252"
+  },
+  {
+    "path": "fibra-registry/target/surefire-reports/TEST-com.sstlfsj.fibra.registry.PluginRegistryTest.xml",
+    "tests": "14",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "841817f95d2d2ea376c8eea47533370ae20da44f86758df11040b7b7bd202236"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.EventDispatchContractTest.xml",
+    "tests": "5",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "8ccdcd7ddc24463e73971e0739c86f258569980781926fcc55caa7b4b1ecc13a"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.NamedContextPolicyContractTest.xml",
+    "tests": "6",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "4306375e9f53ca44a674936cc4b6e0371f9d6a7a6ca001eeb60a2516f1b2c89f"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.ScopeRegistrationRaceTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "8133a7c6a9e3cb12d90f99efe2947fe2f70451d034f4880e75dee44c30d7210a"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.PluginIdentityContractTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "4cb025887aa5ff16f7b9b56e6f81579c3e700eb2f0a53596e887d5e86aa89275"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.CleanupFailureDiagnosticsTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "8241adb56dd7bf18421bef9efa603b937a54327014719827f1ef5c48ad923af3"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.RuntimeDomainSettlementTest.xml",
+    "tests": "8",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "19e675d453bdbbf84e8c8ddd20093e6c4d01172da6267003e5886f64b34a2f7f"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.PropertyCapabilityContractTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "2a8e059af21ba55103f42631277ad85973b0fb1d21615fc814ba3303b8e2b1d6"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.ScopeOwnedCapabilitiesContractTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "f8c27d397c3720c4de27ec0ac8e741013216d0a4a11b8e7960501d04ad6160ea"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.PluginDisableRequestContractTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "6e6905b77fd5e1b0496fabe8bc06cddae64194a7af6935878d524e2d7a2274ea"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.AnnotationInjectionContractTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "7fad7229b0f1bb968841efd6d408975947b89899cdd528fbfcaeb62330a8a97d"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.ScopeOwnershipBoundaryTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "6fd4db406ef2f87ab027484701bd018273ed9757c4815b0adc77c8e59a4b6a07"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.internal.RuntimeCloseCompletionTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "303d46e989b9e83db9f2146f1602076b47bf983cdf5a9ef36cea77fb8a52c3bd"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.EffectCleanupContractTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "9ea2552708d77277c364f99baa64d6e104448c76df0b135171134f7e401bf8db"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.OnceEventContractTest.xml",
+    "tests": "13",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "3f25d6dc3dc1c461c31e6e1db885564bfb4195789c5b7b9058a74483acf18347"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.PluginInstanceLifecycleContractTest.xml",
+    "tests": "20",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "35cc748945f5220b2cc3bc23808de6d692669230ba8eb2216b31a0772d6cd7cd"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.RuntimeDomainDiagnosticsTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "7572009aba53d9bff8290e782993b342ad4e42541b069fd89c9c91b9e69d2503"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.RuntimeDomainIsolationTest.xml",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "ecca304409f900c414f30fb779b0b3ad1157d2b9d992488dca12b7f92548418e"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.RuntimeScopeContractTest.xml",
+    "tests": "5",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "3dbe775f7d057784ffed736fe9eb455a3cc6151ea56dd1b0783c6d5c93d95242"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.LoggingCapabilityContractTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "a3209c88e2b62ae51c5bbb0919f22b781427f1a4f10f066e7f6a6a4764a11118"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.EventModeContractTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "b1f2bb23fc737d5e9cbce288fb04b0266b696a317db481ad7462bed5ee34f4dd"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.EventContractReloadTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "6dc891a741dd4224e46cddc04819d4ca9f6d48240d87d747486dafe304e86920"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.DrainLifecycleTest.xml",
+    "tests": "14",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "68941e17c0f1766ec22bfa0e7418bc1d17fe875af28107a9dae7ec5c385e5262"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.EffectCreationContractTest.xml",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "832888f9871977041c6fa3408303bd8268be4be94724f9dd0903a7883013f7c8"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.value.LiteralValueTest.xml",
+    "tests": "5",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "f63a9836497a107ecfe2045dac2f7d30103ab721bc848bc89c9b95b9e46c2901"
+  },
+  {
+    "path": "fibra-core/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.InvocationContextCancellationTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "247ad56b49568a11bf183e1df5cd73bd32cfc8212a3cdd3a06ec7edc30e34528"
+  },
+  {
+    "path": "fibra-bridge/target/surefire-reports/TEST-com.sstlfsj.fibra.bridge.ContributionKindRegistryTest.xml",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "54fe0aaa42acdeeef95a047ba1164206b5e583a9ff6c615d95655302ccbd1c5a"
+  },
+  {
+    "path": "fibra-bridge/target/surefire-reports/TEST-com.sstlfsj.fibra.bridge.ContributionDrainLifecycleTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "be7090827221b7ad07c10e767854f601d211da9d18d50bb603a288f4e5293088"
+  },
+  {
+    "path": "fibra-bridge/target/surefire-reports/TEST-com.sstlfsj.fibra.bridge.ContributionDirectoryTest.xml",
+    "tests": "14",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "5cf7e4de002f43b096ede4b114abcd7b9b74f794723aae94260b82d794817c65"
+  },
+  {
+    "path": "fibra-bridge/target/surefire-reports/TEST-com.sstlfsj.fibra.bridge.ContributionAdmissionTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "3cec3dbc8578116c515b99e21a24fa83b9b2e6e8019607099e3fb3d3b1897864"
+  },
+  {
+    "path": "fibra-bridge/target/surefire-reports/TEST-com.sstlfsj.fibra.bridge.ContributionCallTest.xml",
+    "tests": "10",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "3012d1430040b86a6974e00a59db04abba8e4af40c70e55ea9c474fd26a24550"
+  },
+  {
+    "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliTerminalSignalBridgeTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "3e6a9b257d76a97344916c55a843cea4c7e82b68228c33217651222f9a9b5c99"
+  },
+  {
+    "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.ProfilePackageSourceTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "b3c61ae28cb291fab7d035706c0aa97ece015f9c0d4fb9d5fb674bfc7b44fb42"
+  },
+  {
+    "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliHostTest.xml",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "6f2d6c7109788a41fa67c0d7f06619f665f3df227e06359a0f19626d9e8e36bf"
+  },
+  {
+    "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliInvocationCoordinatorTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "d560ad4797bdfa657bacdd984ffea221eb6daf517e05743dbc7d8e7e8caeb29f"
+  },
+  {
+    "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliSessionTest.xml",
+    "tests": "16",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "700d1048eb6abf8c3e41bc9bb24b746228f9a473c81a81ea6c2b2a558050eb23"
+  },
+  {
+    "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliHostOwnershipTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "40250da09dcf9946b9ae143ee7470b6a9223424972840edfb7422f07bb38ceb9"
+  },
+  {
+    "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliProcessSignalHandlersTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "48666a253355ef6d6634b703ce56932d51ceaa6c33ff11ad4aa2991c17f5aa9e"
+  },
+  {
+    "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.FibraCliTest.xml",
+    "tests": "30",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "4034823108cc18e3d550c83b9dbbdfc3174555d74a460823673abb926b1a55ce"
+  },
+  {
+    "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliProcessShutdownTest.xml",
+    "tests": "10",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "9d27e1d63845abfa792ac88a6aca3eef292b34d0e9f48f502ace96936cb33983"
+  },
+  {
+    "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliPathsTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "7a68b05e5e57cd226a043c3cf03dee5fa8c2faca2ecbcefb4e3804803f17052a"
+  },
+  {
+    "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliReplTest.xml",
+    "tests": "13",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "3cd92d366b85b2f17eee8c92c0de16a7d969e938c0e9b379d8ae88dd41edec00"
+  },
+  {
+    "path": "fibra-cli/target/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliTerminalControllerTest.xml",
+    "tests": "20",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "b4efa2764d9acb60fda432cd5cb4b8da262c1a30cf33e38f78de84fe88df4d09"
+  },
+  {
+    "path": "fibra-runtime-node/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.node.NodeSidecarTest.xml",
+    "tests": "32",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "bde25938a6e550d77bf97af086058d0a2a6d54aba370cd30262d70bd308017eb"
+  },
+  {
+    "path": "fibra-runtime-node/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.node.NodeProcessUnitTest.xml",
+    "tests": "49",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "6e6b17f740d8ce7fbce0a3e63719eccf55d4df1b22399b8c40d74841bf0cd7b0"
+  },
+  {
+    "path": "fibra-runtime-node/target/surefire-reports/TEST-com.sstlfsj.fibra.runtime.node.NodeRuntimeDriverTest.xml",
+    "tests": "27",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "c9679ac58454b0b1f4503c1da668cb40407d6f33b0d81d67cd9a0c398a8460a8"
+  },
+  {
+    "path": "fibra-plugin-archetype/target/failsafe-reports/TEST-com.sstlfsj.fibra.archetype.FibraPluginArchetypeIT.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "0b9002a5419229eef20fe3b82cd782c4ee39640c226e300f8eec6b107043149c"
+  },
+  {
+    "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.DesiredConfigCompilerTest.xml",
+    "tests": "10",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "ec3903cd3ac09ce524cd5009e4bcfbb5754a1287d3fde903930180263ba94f5a"
+  },
+  {
+    "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigSchemaTest.xml",
+    "tests": "9",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "d352daac5c5df1a83d40b9d2f1fd7b5eb9f1ba162ab0b5c2391dd930e87b5af7"
+  },
+  {
+    "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigExpressionEvaluatorTest.xml",
+    "tests": "5",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "2030006ba9d5c3488dc45c4cac8f98bedcfd3be383a3a033aba74331bafadec1"
+  },
+  {
+    "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigDocumentStoreTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "ec1e4ec272a556bf28249f4f07387f7915b2164c9cd102e0af9f1e81cdd44761"
+  },
+  {
+    "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.DesiredEvaluationTest.xml",
+    "tests": "5",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "6b58792d9596acd35dea7823846cffe57e41251dff3d0cca78552ee6ef275bb0"
+  },
+  {
+    "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigSchemaBatchOrderTest.xml",
+    "tests": "5",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "c2e71284cb871203bc693a53cbe5aeda1add497e42848db836575d353e906937"
+  },
+  {
+    "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.PluginDefinitionRefTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "19dc47126e8d63b9310aa0b4d633f212bb426a23238a680e52562b57074824d9"
+  },
+  {
+    "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigContextSnapshotTest.xml",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "84ea9663b0a1d4448f7f5e592284f1c8bd01158e6ab9acd51071fdfc17b944d5"
+  },
+  {
+    "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigSchemaBootstrapTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "76ed9c1eb9110099f821d4ca2020153627fe0ed36e52cb3f67ece6b8a91fa2f7"
+  },
+  {
+    "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.DesiredStateRepositoryTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "58839fbbbc492c1aac3c9a90d081bae97307bb4cc5328493c78f4ee5bd839179"
+  },
+  {
+    "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.LiteralValuesTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "506cfcb8688e8907e85ddcd0a4230469ee5aba520f782450ae69ae56163e6f1a"
+  },
+  {
+    "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigSchemaBudgetTest.xml",
+    "tests": "8",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "0682d0d344b3bcd33c2d904e93187230cafd8189b111e70c5a3ea0d40ebfe494"
+  },
+  {
+    "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.DesiredInputGraphTest.xml",
+    "tests": "6",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "80ce817f8f6f7a59b7306dccf9f5a7fc0f0feb41f1e66ac65d2100d859ea574e"
+  },
+  {
+    "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigSchemaBatchAllocationTest.xml",
+    "tests": "5",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "c8b43628a240e3c2b2c796d9f35a12abcd1af7983f1399cd68f6f5d4c0c05b3e"
+  },
+  {
+    "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.DefinitionConfigDocumentTest.xml",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "187c65c866a63922636d0187335cb88352c9fb1510c1f87b102319e0eb8bdfa5"
+  },
+  {
+    "path": "fibra-config/target/surefire-reports/TEST-com.sstlfsj.fibra.config.DesiredConfigPatchTest.xml",
+    "tests": "22",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "1514194573736eb29e4cf168749d9f8c6b34d603968b9e7a082cd637cbcc1215"
+  },
+  {
+    "path": "fibra-plugins/fibra-tool-api/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.tool.ToolApiTest.xml",
+    "tests": "12",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "7265932217e2bab64c30c264862dff3e7e922706fb98ee35163aecbe1935c71b"
+  },
+  {
+    "path": "fibra-plugins/fibra-tool-api/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.tool.ToolOutcomesTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "6c952c5a2f0fb76eace3b3b83397980650cc9d6f0816c905b6e1258a8db3436d"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.shell.local.ShellLifecycleTest.xml",
+    "tests": "5",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "44edeb91df0b3d83cb96d5f72c9bc39ec50571ea3ed9302dcdec6ce3bd9e224a"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.shell.local.LocalShellTest.xml",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "be5c20e8a858f70ff42f2c9e5157fe6551d975504053a0ff8608998e48b9fbb1"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.shell.local.ShellPluginTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "816e82087baf95f209cf9252ed966b5b120f97120a61ea162740426cfbb5654e"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-tool-shell/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.shell.tool.ShellToolTest.xml",
+    "tests": "10",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "452eecedfc52c70337edcbef88b8aa2b50d591372ab44ef7996000d950cdf92d"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-shell/fibra-shell/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.shell.ShellContractTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "22af35294b20eb60e9c59f60d1b05e154fa6e39785f836e7f3058edf741d4727"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/target/failsafe-reports/TEST-com.sstlfsj.fibra.plugins.acceptance.FormalCliIT.xml",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "eea90b2a8d9bbcc7406ac2dead9ae49fdedbbd6c1ffd9579ef7fc5e40d01390e"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/target/failsafe-reports/TEST-com.sstlfsj.fibra.plugins.acceptance.FormalMultiPluginIT.xml",
+    "tests": "7",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "8fd30a3e5d3c1deab1dd944aa0f67af7a4ef6b268b12fea08721937ffe26495e"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/target/failsafe-reports/TEST-com.sstlfsj.fibra.plugins.acceptance.FormalPluginArtifactsIT.xml",
+    "tests": "7",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "d29ec1d0eb0fb04b6fc3b0cbea390da027598774ab47107e861f3f07ebaa71dd"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.acceptance.AuthorConfigurationQualificationTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "133e23942b7b4c57468b61e53d0a209f75afb0b1660bafe2bc71ab89b25acdf9"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.tool.FileToolHandlersTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "f1afdf2d0b020df12b1a596ea6137f43c22e685eb4172c835571bea29576334a"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.tool.FileToolPluginTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "c2d6642231713256c05b2aab41e0c2794aaceadb98f48797b37917bb703f352f"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.FileSystemContractTest.xml",
+    "tests": "9",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "5a4eed12360835cda5349241bac0b15bd3743f1e9df10fb6f8848bec00182e8f"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.search.SearchOutputParserTest.xml",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "1745c3d899b5130cf0df5121216c10fa1ce370d5f6526e8019312de0505397a6"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.search.SearchRunnerTest.xml",
+    "tests": "12",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "f6913323f701ec5e045b16979f06ce37dc2beee325b254fb3d2b2c75d9cbe77e"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.search.SearchCommandsTest.xml",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "ec6c3b132547a18c9c7e4365d0a830f7c4cddd7af6dd3005ff8424fe81fe99ec"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.search.ToolFsSearchEntrypointTest.xml",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "189d451f3d7152d0c57c3295d21d8ac5749a89b29c8d24e2498e221410934428"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.search.SearchTimingTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "78088f95277365fa571dd5f838f0c114b8bb005a590c84a0260b405a197306f0"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.local.WindowsFilePublisherTest.xml",
+    "tests": "5",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "1ccb165070b6b42f8df401a481cef2463e738de9ac247f97543604ac07d4f184"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.local.LocalFileSystemPluginTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "7dd3dad7989787997752bb182086a0be4422e7658ec85d1f18069319473e4834"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-fs/fibra-fs-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.local.LocalFileSystemTest.xml",
+    "tests": "27",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "194a3bdb116239ab07a53a329d91774958269734ba023ebdc8796d448f8c1fa8"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.SubprocessContractTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "5f76a046c01546fbb40db2e73272028f01a37f5b0c4060088b525fb83ea8be13"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.SystemdScopeOwnerTest.xml",
+    "tests": "9",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "da7ce90e88465f17f15b7c33402e813f4d2a571b290d061db9667611353ed9cd"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.WindowsJobProcessUnitTest.xml",
+    "tests": "10",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "c0ca8f7cc01c68f8a7c3f420d2bcb27cecf6197affe88ee717b1e4dcba50e460"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.SystemdScopeLauncherTest.xml",
+    "tests": "8",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "b9e48849964761137129a3462b5ef2fd27bee643a289e7aa65913a72016773e5"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.LinuxScopeProcessUnitTest.xml",
+    "tests": "17",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "d12c5b9a3db14db621688ad8db819986e628e10c1a12ae63ccac0f54852d49b5"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.SupervisorFailureTest.xml",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "b424b3038aa93610c1e4681c90bc247876f1977a6eecb4dadde7fbb325f6a7e1"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.LocalSubprocessTest.xml",
+    "tests": "11",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "4e70d847930fca28f6482b866c415124ca14b172cd77a0119dc7e1571fd9dd0b"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.JnaWindowsJobOwnerTest.xml",
+    "tests": "8",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "eb1556e5521efb044d795f655e22e52637475772d90d03f2189fc56709d8cb59"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.LocalSubprocessLinuxSelectionTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "a162eae8dab872aac6836bd032247a2b196061c787b951830b0236051d095f9e"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.SubprocessPluginTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "c7fac784f46571c9c037e28eca8571acce2fadd13d455f242d606e06bf055a76"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.WindowsExecutableResolverTest.xml",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "2332eb93432a17ecca971a17e1b1251cd24e36c2c5405ca92a44b1a91016d5e9"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.storage.StorageContractTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "70c779cbaaadc6537c87152333734546fb4b0b7ed9ed2c9dccc79bd25ff4e2ec"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-storage-json/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.storage.json.JsonConfigStoreTest.xml",
+    "tests": "10",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "002efa6c58636c815be28a6bb90452866b7595b50982d4280570b53e9303e114"
+  },
+  {
+    "path": "fibra-plugins/fibra-plugins-storage/fibra-tool-storage/target/surefire-reports/TEST-com.sstlfsj.fibra.plugins.storage.tool.StorageToolEntrypointTest.xml",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "79b134896c826a96e8be96e0381b237780537a5286ca031a5d091699b7d09819"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/api/target/surefire-reports/TEST-com.sstlfsj.fibra.example.sanitizer.ContentSanitizerContributionTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "e4944913f55ce5bc748bdfdf2048063d22f26f1b34e23e7f4b8f3ae9ba0c2046"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/spring-host/target/failsafe-reports/TEST-com.sstlfsj.fibra.example.FibraSpringHostIT.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "adf8308f9bb050cdfff143dcba0760dc3594a776dfa3d316b243507195eb51be"
+  },
+  {
+    "path": "fibra-example/content-sanitizer/spring-host/target/failsafe-reports/TEST-com.sstlfsj.fibra.example.SanitizerAuthorConfigurationIT.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "557b265ede115ad8c05d1a8a8a1f04f0be95f436bec6966b732b95db1ccac745"
+  }
+]

@@ -15,6 +15,7 @@
         <include>README.md</include>
         <include>src/main/resources/**</include>
         <include>src/plugin/fibra-package.yaml</include>
+        <include>src/plugin/fibra-config.json</include>
       </includes>
     </fileSet>
     <fileSet filtered="true" packaged="true">

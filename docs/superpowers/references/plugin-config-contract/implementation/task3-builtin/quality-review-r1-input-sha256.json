@@ -1,0 +1,20 @@
+{
+  "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/BuiltInFacet.java": "11f5e8239d4a4371a8a407190a6ccc742dca023d170ddbaff14ddbcc5f4c18cb",
+  "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/BuiltInPluginPackage.java": "50127ce8a18b458df0320a72532d44975331edab555c1b03ea14794d1924d46f",
+  "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/deployment/BuiltInConfigurationBootstrapTest.java": "5ca5e8e2cb51297314685d420fdb0096ea1b0c4c46d7c8d9e3b8f1fb96b9cabc",
+  "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/deployment/BuiltInPluginPackageTest.java": "70d27e8f087327be16c2e4f6832c618e4968ed81e32b475892770c5198a7c8c0",
+  "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/RuntimeDriverEngineTest.java": "9bc2c720d66b67f2c83c553a14572b51c6be94c67680f8d634e5ee3640b61d80",
+  "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineAttemptStateModelTest.java": "c8f638f0fc5fe0bc2f90e25fb8e4b132de85e28a0eed6cb45f925625828521bc",
+  "fibra-runtime-java/src/test/java/com/sstlfsj/fibra/runtime/java/JavaRuntimeDriverTest.java": "a169afb34c37cacaeb6510ffccea8630ebaac942110e434f9f9900a6c210965d",
+  "fibra-runtime-java/src/test/java/com/sstlfsj/fibra/runtime/java/JavaBuiltInRecoveryTest.java": "12d9b28d5d74721fa3f8e6e0f15a1e5f9b077a10c10f52691f5779700f8a531d",
+  "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/host/HostRestartRecoveryProcess.java": "077dd087edc52010d94b46bf8b5cc90abe0c84a3d39968c393950f1872ad4192",
+  "fibra-benchmarks/src/main/java/com/sstlfsj/fibra/benchmarks/EngineTransactionBenchmark.java": "99c57a2248d3cad384c4aa6cd61277406119385daa6f8abce802e76a8854da13",
+  "docs/superpowers/specs/2026-10-11-plugin-config-contract-design.md": "127f4eaf277e13d8899989794281874f7d8c01afc1487261d93c6890e4d3145a",
+  "fibra-api/src/main/java/com/sstlfsj/fibra/value/LiteralValue.java": "b99815bdfae4fa6627ab30082004e613215f97ef5ddac64996d7a451301f86f4",
+  "fibra-config/src/main/java/com/sstlfsj/fibra/config/ConfigSchemaSource.java": "2b456a3ceb753f239ea646aca91c90fcee81ed3134f0b3c1d253b8d8a228e4c8",
+  "fibra-config/src/main/java/com/sstlfsj/fibra/config/SchemaBudget.java": "09d52b0605318276e1bd19123ce3c8f43d080aca62feecd3a1d3eaa494b3f164",
+  "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/DeploymentTargetCompiler.java": "47ddb4763121a989d2fa2c1aaa7b79b77accb0d7a5b5b10ea4eec1f8882b03f2",
+  "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/FibraEngine.java": "5ac2269b348bae8e651c86b2950e9ba7d0da56ad6520a6c13297adfe7743eb50",
+  "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaBuiltInPackage.java": "7fa94b0efeeb67384f821341e85640c6130305f3fea61a3f9262e4988fee17c4",
+  "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaRuntimeDriver.java": "f6bb7558a501be5b0c55fc2c19e4afec8ebd6b3b36d323c4ac2f82a6bf795177"
+}

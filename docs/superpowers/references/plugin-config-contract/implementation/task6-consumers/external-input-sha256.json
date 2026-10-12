@@ -1,0 +1,98 @@
+[
+  {
+    "path": "README.md",
+    "sha256": "7344c7d3046733dd6774be61ffcb7dea2a657f3859324135ce8d65c96e57f356"
+  },
+  {
+    "path": "cli-application/pom.xml",
+    "sha256": "2186e12f5668dd0d12eb1bf5b255ef8cf1f8bdc22b457ccf69f664b2d8933214"
+  },
+  {
+    "path": "cli-application/src/main/java/verification/distribution/InteractiveCliFixture.java",
+    "sha256": "e3cadb3526d52747612e95694a3fd53c73b042f6e1340b85949e9e828a8a621c"
+  },
+  {
+    "path": "cli-application/src/test/java/verification/distribution/CliConsumerTest.java",
+    "sha256": "9a5c9531c2f0aa91dddaf9c5abfbbfc1fd7217c0490476556f5a1e5befbcaccf"
+  },
+  {
+    "path": "core-application/pom.xml",
+    "sha256": "9a3dd0673732844a483aa5b2153c63e7115eba62fffa8802fb12c24ee9b01f78"
+  },
+  {
+    "path": "core-application/src/test/java/verification/distribution/CoreConsumerTest.java",
+    "sha256": "bc33c4d55995f269780cf3689892b580c2fb77dcc9b3652bb704bc1c5d730862"
+  },
+  {
+    "path": "engine-application/pom.xml",
+    "sha256": "48d3002c7a52a4ac7a79096312d4b0d42d2fbc637138c285ce016f25f29e405e"
+  },
+  {
+    "path": "engine-application/src/author-qa/java/com/sstlfsj/fibra/plugins/acceptance/AuthorConfigurationQualification.java",
+    "sha256": "821330dbb517140798e51e0e8153a9920481f94e558ab8235beb69ee1a49e56e"
+  },
+  {
+    "path": "engine-application/src/test/java/verification/distribution/AuthorConfigurationConsumerTest.java",
+    "sha256": "7ae0eac89898aef9a77ade46eb3eed20be2c1da184e19846c9ca231df62be6f7"
+  },
+  {
+    "path": "engine-application/src/test/java/verification/distribution/EngineConsumerTest.java",
+    "sha256": "8596095e2ca7af70555c068755f8dd9beff9945af4c20f61719dfa90edf4fd95"
+  },
+  {
+    "path": "engine-application/src/test/java/verification/distribution/LifecycleConsumerTest.java",
+    "sha256": "189f5e71080d97d4a69c772c30041e3041bf8672f88dad9a4a7aaa6e2bd5a682"
+  },
+  {
+    "path": "java-plugin/pom.xml",
+    "sha256": "f0ff1a5e1b8aadb1cc2538dc390958e39abfce30997e3e4f0fa62634f5153004"
+  },
+  {
+    "path": "java-plugin/src/main/java/verification/distribution/plugin/Entrypoint.java",
+    "sha256": "a281d86d2c3b0bbc0223f5f3e77810968058168c9646095c5ff2eedde365a914"
+  },
+  {
+    "path": "java-plugin/src/main/java/verification/distribution/plugin/LifecycleEntrypoint.java",
+    "sha256": "873d5cf94959f6309011536736290c602a85562e1c9cbb56eb3d0ab48740534a"
+  },
+  {
+    "path": "java-plugin/src/main/resources/META-INF/fibra/plugin.yaml",
+    "sha256": "93e5b41be6aa1f95d2a3e2adffb12ffb6da34be18148a72c29cac04041776b45"
+  },
+  {
+    "path": "java-plugin/src/plugin/fibra-config.json",
+    "sha256": "4450aa8e4ad8d913638d693b52f8b251fef5a5e7ad098f7a36deedb938ea56ff"
+  },
+  {
+    "path": "pom.xml",
+    "sha256": "21868ce9414be1b4601813317cf4705745fe13de8e2209cb72751130446d5818"
+  },
+  {
+    "path": "runtime-provider-application/pom.xml",
+    "sha256": "581373c0c427fc8c3124eb5a93e1ca5b34c58917af57611085971e78959e9dca"
+  },
+  {
+    "path": "runtime-provider-application/src/test/java/verification/distribution/ClientProtocolConsumerTest.java",
+    "sha256": "625bbcf2b894913ce8bfee918b75f7edc985a60611a4a5bb0824d4cab7f5eeab"
+  },
+  {
+    "path": "runtime-provider-application/src/test/java/verification/distribution/RuntimeProviderConsumerTest.java",
+    "sha256": "427dfd61718e42f118326d9936b1a1ed0244982a499ca5c6fc498e24f9762980"
+  },
+  {
+    "path": "settings.xml",
+    "sha256": "bfae61723291dc95bac9826332ead9351dd8591161b992b874f09abc188f8f6d"
+  },
+  {
+    "path": "spring-boot-application/pom.xml",
+    "sha256": "c18afb96dbcd9976234674ca18f6bf2ca3bc4eecd8bfc9476272cfcfa83d07c7"
+  },
+  {
+    "path": "spring-boot-application/src/test/java/verification/distribution/SpringConsumerTest.java",
+    "sha256": "35d92301dba0ae5301dcd153d0dd6bd788333ce4461e33e6a0b33f7239e0841d"
+  },
+  {
+    "path": "verify-cli-tty.py",
+    "sha256": "9407dc13eed23bb61f7900bfea5daa6c90498c1826c3a240c999c4d0d24b4f8d"
+  }
+]

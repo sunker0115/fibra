@@ -1,0 +1,50 @@
+[
+  {
+    "path": "/private/tmp/fibra-config-contract-evidence/consumers/external-frozen.exit",
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  {
+    "path": "/private/tmp/fibra-config-contract-evidence/consumers/external-frozen.log",
+    "sha256": "6bacb6224c57d273efa054114ad847e79a5596ec46995316a3d9aca6deaca04c"
+  },
+  {
+    "path": "/private/tmp/fibra-config-contract-evidence/consumers/external-input-sha256.json",
+    "sha256": "73072f0376af47c1d17d05ba938ed6e5d0f9f77e9387db33f6e29dffca51a426"
+  },
+  {
+    "path": "/private/tmp/fibra-config-contract-evidence/consumers/task6-fibra-file-sha256.json",
+    "sha256": "5fe0438666658641630cc718a11f4425a688c025c34152434805f892a8377b4a"
+  },
+  {
+    "path": "/private/tmp/fibra-config-contract-evidence/consumers/resolved-fibra-jar-sha256.json",
+    "sha256": "b6fa4ff018692c520385bb1c055d1ed3f7e32b331411243f0bcd2a756dd8f69d"
+  },
+  {
+    "path": "/private/tmp/fibra-config-contract-evidence/consumers/tela-author-artifacts.json",
+    "sha256": "6cade0245aa9f4a6f0da097cb8cc2602e821d8b1211cd26b3e8a89ac367a1406"
+  },
+  {
+    "path": "/private/tmp/fibra-config-contract-evidence/consumers/tela-distribution-sha256.json",
+    "sha256": "a6d54e85fe4b86d9bf67a9b15c575fe4717e711827ca5dcfb38f526804faf05e"
+  },
+  {
+    "path": "/private/tmp/fibra-config-contract-evidence/consumers/npm-sha256.json",
+    "sha256": "e58b61d101ee286b08832d6d0055eb1df7bab3e1135a3581964b71f4ae731b9a"
+  },
+  {
+    "path": "/private/tmp/fibra-config-contract-evidence/consumers/wire-sha256.json",
+    "sha256": "a438b0fa70e00bcae2f037a1b60b325483dd69a86da8da57412606de21a04f59"
+  },
+  {
+    "path": "/private/tmp/fibra-config-contract-evidence/consumers/tela-client-snapshot.json",
+    "sha256": "cae3a06ce7b73867652ede6b03cb5c09c878c5e9b6d786eda523e9489dc6689f"
+  },
+  {
+    "path": "/private/tmp/fibra-config-contract-evidence/consumers/quality-clean-host.log",
+    "sha256": "f56b50aca9ff497366f2ca355916aac64b535d5b65d3392d4c586892154fd38f"
+  },
+  {
+    "path": "/private/tmp/fibra-config-contract-evidence/consumers/quality-clean-host.exit",
+    "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+  }
+]

@@ -1,0 +1,12 @@
+[
+  {
+    "path": "/private/tmp/fibra-config-contract-node22.14/node-v22.14.0-darwin-arm64/bin/node",
+    "sha256": "e2d4915d03eda6a2f00a09920e7eeb7a04ad123f9aaad61b1481179fe1bf50e0",
+    "size": 108619024
+  },
+  {
+    "path": "/private/tmp/fibra-config-contract-ripgrep15.0.1/bin/rg",
+    "sha256": "6ef40346bf31fcce79d9614c7745c198542925a0c7d4911e1ffe794c53392ac1",
+    "size": 4528512
+  }
+]

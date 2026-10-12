@@ -103,6 +103,15 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
+        <executions><execution>
+          <id>default-testCompile</id>
+            <configuration>
+              <compileSourceRoots>
+                <compileSourceRoot>${project.basedir}/src/test/java</compileSourceRoot>
+                <compileSourceRoot>${maven.multiModuleProjectDirectory}/fibra-distribution/src/test/consumers/engine-application/src/author-qa/java</compileSourceRoot>
+              </compileSourceRoots>
+            </configuration>
+        </execution></executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

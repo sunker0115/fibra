@@ -2,6 +2,10 @@
 
 本 fixture 不属于 Fibra reactor，也不进入正式 Fibra 产品包。`scripts/verify-distribution.sh` 先把正式发布制品部署到本次运行专属的临时文件仓库，再构建这里的 core、真实 Java 插件 JAR、通过公开 API 的真实多插件协作、Engine、外部 `RuntimeProvider` 与 Java client protocol、`CliSession` 嵌入和 Spring Boot 消费场景，最后调用已部署 archetype 生成并构建独立插件项目；外层脚本还会从 ZIP 公开启动器执行该 Java 插件贡献的动态 CLI 命令及 help，停用插件后再次调用并验证命令已经消失。
 
+作者发布资格的实际入口是在 Fibra 仓库根执行 `bash scripts/verify-distribution.sh`（要求 JDK 21、Maven、锁定的 Node、Python 3 与 rg；Maven 不在 PATH 时设置 `MVN`）。该脚本会把本目录完整复制到仓外，再运行 `AuthorConfigurationConsumerTest`：从 12 个正式 JAR 提取合同组包，停用选择后以实际 target revision 查询整包目录，比较全部 facet/definition 集合，并全量执行 `ConfigSchema.checkSources`，包括四个 API 包的空集合。已安装但停用的坏 schema、缺失和孤儿名称也必须失败。
+
+唯一 QA helper 位于 `engine-application/src/author-qa/java`；仓外消费者与三个仓内作者测试共编译它，不从 reactor classpath 借用实现。它由 verified record 打开固定资源，真实关闭成功后才解析。关闭失败沿已批准的保守隔离政策，由测试宿主保留同一个失败 owner 并请求终止，不继续关闭 Engine；代表性仓外失败注入与正常 12 包资格使用同一 helper。该 helper 和消费者只用于验证，不发布到产品 JAR。
+
 `engine-application` 的数据驱动生命周期消费者分别以 Java 和 Node 插件运行时验证公开 Registry 生命周期：探测、安装（不得自动启用）、启用并调用、完整配置更新、停用后重新启用、升级、相同字节的重复升级、相同版本但内容改变的升级、存在进行中调用时的空完整 deploy、重新安装，以及停用后卸载。验证也检查运行时及既有插件制品在仓外 Maven 临时仓库中的主 JAR/POM 与临时发布仓库按字节一致，并核对 Maven 的远程来源记录。
 
 `LifecycleEntrypoint` 仅是 `fibra-distribution/src/test/consumers/java-plugin` 中供该消费者构造和验证 Java 插件的测试夹具入口；它不属于正式 Fibra 包或对外产品 API。Node fixture 要求本机已配置可执行的 `node`，脚本仅使用 `node:fs` 和 `node:readline` 等 Node 内建模块，不执行 `npm install`，也不访问网络。

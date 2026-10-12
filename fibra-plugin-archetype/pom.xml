@@ -80,6 +80,12 @@
         <executions>
           <execution>
             <id>compile-archetype-integration-tests</id>
+            <configuration>
+              <compileSourceRoots>
+                <compileSourceRoot>${project.basedir}/src/test/java</compileSourceRoot>
+                <compileSourceRoot>${maven.multiModuleProjectDirectory}/fibra-distribution/src/test/consumers/engine-application/src/author-qa/java</compileSourceRoot>
+              </compileSourceRoots>
+            </configuration>
             <phase>pre-integration-test</phase>
             <goals>
               <goal>testCompile</goal>

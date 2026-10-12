@@ -1,0 +1,101 @@
+{
+  "format": 1,
+  "profile": "fibra-config-1",
+  "facets": {
+    "main": {
+      "tool-fs-search": {
+        "type": "object",
+        "properties": {
+          "rgExecutable": {
+            "type": "string",
+            "minLength": 1
+          },
+          "workdir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limits": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "globMaxResults": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "grepMaxMatches": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "grepMaxLineBytes": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "rawOutputMaxBytes": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "stderrMaxBytes": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1,
+                "maximum": 2147483647
+              }
+            },
+            "additionalProperties": false
+          },
+          "timing": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "timeoutMillis": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "graceMillis": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1,
+                "maximum": 2147483647
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "rgExecutable",
+          "workdir"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema"
+      }
+    }
+  }
+}

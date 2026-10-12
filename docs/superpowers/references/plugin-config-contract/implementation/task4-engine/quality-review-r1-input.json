@@ -1,0 +1,795 @@
+{
+  "read_only_review": true,
+  "maven_launched": false,
+  "processes_launched": false,
+  "head": "0a674176b8b762b4e77044bcba7f051bf06c41d9",
+  "branch": "codex/plugin-config-contract",
+  "manifestSha256": "3809171f9e4f86030cc080b30396f79462fd27cc9c84c988226e2158aabf33c8",
+  "specSha256": "127f4eaf277e13d8899989794281874f7d8c01afc1487261d93c6890e4d3145a",
+  "files": [
+    {
+      "path": "fibra-cli/src/test/java/com/sstlfsj/fibra/cli/CliHostOwnershipTest.java",
+      "expected": "e0f222016e6ab4b4f818d937a8ab151c423b500beaf3cea10f20c7049f00c15a",
+      "actual": "e0f222016e6ab4b4f818d937a8ab151c423b500beaf3cea10f20c7049f00c15a",
+      "matches": true
+    },
+    {
+      "path": "fibra-cli/src/test/java/com/sstlfsj/fibra/cli/CliHostTest.java",
+      "expected": "39ea0d9c7352668923cf6501a9ee1ea75d785dc7d02adb3d266d4214270a71c1",
+      "actual": "39ea0d9c7352668923cf6501a9ee1ea75d785dc7d02adb3d266d4214270a71c1",
+      "matches": true
+    },
+    {
+      "path": "fibra-cli/src/test/java/com/sstlfsj/fibra/cli/FibraCliTest.java",
+      "expected": "2d1af8965eb14f7a171ec5f219cf3963f7fba49fcaa4ad75a701c59224537e15",
+      "actual": "2d1af8965eb14f7a171ec5f219cf3963f7fba49fcaa4ad75a701c59224537e15",
+      "matches": true
+    },
+    {
+      "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/EngineConfigurationContracts.java",
+      "expected": "e0cac26bc9824ec0d6fc3bfc1ab05fb0b36ced6b388f242a122b8154496ee6eb",
+      "actual": "e0cac26bc9824ec0d6fc3bfc1ab05fb0b36ced6b388f242a122b8154496ee6eb",
+      "matches": true
+    },
+    {
+      "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/EngineReadAttempt.java",
+      "expected": "5b65e77eb0ac4d8549d234dafd85758dda8beba05a0f09321a41bfdb21c279cb",
+      "actual": "5b65e77eb0ac4d8549d234dafd85758dda8beba05a0f09321a41bfdb21c279cb",
+      "matches": true
+    },
+    {
+      "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/FibraEngine.java",
+      "expected": "2a9084a3ed69e19ae12ff60b9af29a21227175abb0b48913959a9be503ead4a8",
+      "actual": "2a9084a3ed69e19ae12ff60b9af29a21227175abb0b48913959a9be503ead4a8",
+      "matches": true
+    },
+    {
+      "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/ConfigContractException.java",
+      "expected": "67f96de3e2f926ddc872687d48d13f989f4953e01465b98bb467c4b759377729",
+      "actual": "67f96de3e2f926ddc872687d48d13f989f4953e01465b98bb467c4b759377729",
+      "matches": true
+    },
+    {
+      "path": "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/DefinitionConfigContract.java",
+      "expected": "eef9ea0332d75039c43316c92633279c11927b531106b7a1618b670ca9154f6e",
+      "actual": "eef9ea0332d75039c43316c92633279c11927b531106b7a1618b670ca9154f6e",
+      "matches": true
+    },
+    {
+      "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineAttemptStateModelTest.java",
+      "expected": "b127b575ed35aa5c0bd18267bdd8e469561158ffcafbd968b48c1261b9268d65",
+      "actual": "b127b575ed35aa5c0bd18267bdd8e469561158ffcafbd968b48c1261b9268d65",
+      "matches": true
+    },
+    {
+      "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineConfigurationContractTest.java",
+      "expected": "7ddc9a016937fe4a7f524d7fa8b044e746a7acd2e5ee84cde7617fa9178712a6",
+      "actual": "7ddc9a016937fe4a7f524d7fa8b044e746a7acd2e5ee84cde7617fa9178712a6",
+      "matches": true
+    },
+    {
+      "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineReadAttemptTest.java",
+      "expected": "794220feb0f4f9ce92c30b8ce5eb44da9e9b340a3b0a73c4b36f5e8c82996989",
+      "actual": "794220feb0f4f9ce92c30b8ce5eb44da9e9b340a3b0a73c4b36f5e8c82996989",
+      "matches": true
+    },
+    {
+      "path": "fibra-engine/src/test/java/com/sstlfsj/fibra/engine/RuntimeDriverEngineTest.java",
+      "expected": "b33987e113b9a77f5c9aea7d370a1bd96f2730f1fdeccf8e8ea1ff05d01d4589",
+      "actual": "b33987e113b9a77f5c9aea7d370a1bd96f2730f1fdeccf8e8ea1ff05d01d4589",
+      "matches": true
+    },
+    {
+      "path": "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/host/HostRestartRecoveryProcess.java",
+      "expected": "3053c2d9286c28e8c304300ce9604f35f1347ae52642b7b19585f0075f899253",
+      "actual": "3053c2d9286c28e8c304300ce9604f35f1347ae52642b7b19585f0075f899253",
+      "matches": true
+    },
+    {
+      "path": "fibra-registry/src/test/java/com/sstlfsj/fibra/registry/PluginRegistryTest.java",
+      "expected": "cccc47dad9f9e40fdb3468fc7cdeed978a6968d02572c053b4ab2be828913491",
+      "actual": "cccc47dad9f9e40fdb3468fc7cdeed978a6968d02572c053b4ab2be828913491",
+      "matches": true
+    },
+    {
+      "path": "fibra-runtime-java/src/test/java/com/sstlfsj/fibra/runtime/java/JavaBuiltInRecoveryTest.java",
+      "expected": "85253001ecd51e7bb03587e1347ea4ff458e9435e2fa99f25576bd76680edae8",
+      "actual": "85253001ecd51e7bb03587e1347ea4ff458e9435e2fa99f25576bd76680edae8",
+      "matches": true
+    }
+  ],
+  "xml": [
+    {
+      "folder": "/private/tmp/fibra-config-contract-evidence/engine/xml/20",
+      "suites": [
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-api/TEST-com.sstlfsj.fibra.CancellationSourceTest.xml",
+          "sha256": "637ebe6fd03f57e8b2951a907b0d74c1c7e4062f2c94340172a5893ffa4e293b",
+          "name": "com.sstlfsj.fibra.CancellationSourceTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-artifact/TEST-com.sstlfsj.fibra.artifact.FixedPluginConfigurationResourceTest.xml",
+          "sha256": "c1fb7677d1bd5588350b612a69bcedaa5710f610ec8236da2231e0cb901c4fbe",
+          "name": "com.sstlfsj.fibra.artifact.FixedPluginConfigurationResourceTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-artifact/TEST-com.sstlfsj.fibra.artifact.PluginConfigurationResourceBootstrapTest.xml",
+          "sha256": "aba50d2197102dc3177787d74384f3911905c99659010803e8b743768662b34a",
+          "name": "com.sstlfsj.fibra.artifact.PluginConfigurationResourceBootstrapTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-artifact/TEST-com.sstlfsj.fibra.artifact.PluginConfigurationResourceTest.xml",
+          "sha256": "e0e44bd557e76c356c95fd6c32383382ded347b52b5580a81ac5da4361dda62c",
+          "name": "com.sstlfsj.fibra.artifact.PluginConfigurationResourceTest",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-artifact/TEST-com.sstlfsj.fibra.artifact.PluginPackageStoreTest.xml",
+          "sha256": "d068306cc80b74123a2cac540b9501a346e464372f6ee0516f6c1d7e1750b4cc",
+          "name": "com.sstlfsj.fibra.artifact.PluginPackageStoreTest",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-artifact/TEST-com.sstlfsj.fibra.artifact.PluginPackageTest.xml",
+          "sha256": "dce2c85f3d6ef128f343ea27d9599cef31b601f30ff8f8d8dd6c4314c733fac4",
+          "name": "com.sstlfsj.fibra.artifact.PluginPackageTest",
+          "tests": 46,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-bridge/TEST-com.sstlfsj.fibra.bridge.ContributionAdmissionTest.xml",
+          "sha256": "b9d25fffdfdd32fa2b607d6685791eb16350490b196dbe2ef89b4f145cf27898",
+          "name": "com.sstlfsj.fibra.bridge.ContributionAdmissionTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-bridge/TEST-com.sstlfsj.fibra.bridge.ContributionCallTest.xml",
+          "sha256": "67284376a694fc68ef02bd546b68dc3797c8bc13a61b03053770826b029d6e51",
+          "name": "com.sstlfsj.fibra.bridge.ContributionCallTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-bridge/TEST-com.sstlfsj.fibra.bridge.ContributionDirectoryTest.xml",
+          "sha256": "ce1eb60a20a563fc57a8e45a8b413dd14e8883b0d55ede1059ff6fb2c3787068",
+          "name": "com.sstlfsj.fibra.bridge.ContributionDirectoryTest",
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-bridge/TEST-com.sstlfsj.fibra.bridge.ContributionDrainLifecycleTest.xml",
+          "sha256": "8860f4898a2879f772dc86ae0ca422f04cdbbbad3e515c47568a6367338965e0",
+          "name": "com.sstlfsj.fibra.bridge.ContributionDrainLifecycleTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-bridge/TEST-com.sstlfsj.fibra.bridge.ContributionKindRegistryTest.xml",
+          "sha256": "de09f038c0e136ee333cdd55cf91f0d07dfdc74a5506498cb327426798163e94",
+          "name": "com.sstlfsj.fibra.bridge.ContributionKindRegistryTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-config/TEST-com.sstlfsj.fibra.config.ConfigContextSnapshotTest.xml",
+          "sha256": "2013137840f2d02e7519909d79e34e58fd811cd7a0dfd973308531e995509deb",
+          "name": "com.sstlfsj.fibra.config.ConfigContextSnapshotTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-config/TEST-com.sstlfsj.fibra.config.ConfigDocumentStoreTest.xml",
+          "sha256": "6050448dc74253546ef32415c19d7a5481eeeb9e01153a4ca390913e958f87c9",
+          "name": "com.sstlfsj.fibra.config.ConfigDocumentStoreTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-config/TEST-com.sstlfsj.fibra.config.ConfigExpressionEvaluatorTest.xml",
+          "sha256": "20f5d025479cd7f281e8f06cf7c2894557e7517cddaf81bd782a676ebfb3499c",
+          "name": "com.sstlfsj.fibra.config.ConfigExpressionEvaluatorTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-config/TEST-com.sstlfsj.fibra.config.ConfigSchemaBatchAllocationTest.xml",
+          "sha256": "64bb53b02bfbd92af55059aa718e25b0ce60dee6f460d25080ba8f352df9b179",
+          "name": "com.sstlfsj.fibra.config.ConfigSchemaBatchAllocationTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-config/TEST-com.sstlfsj.fibra.config.ConfigSchemaBatchOrderTest.xml",
+          "sha256": "25b3f2300b4e5e7fddf2761747a4bfefb384c7537fe41519c14507368daaddc0",
+          "name": "com.sstlfsj.fibra.config.ConfigSchemaBatchOrderTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-config/TEST-com.sstlfsj.fibra.config.ConfigSchemaBootstrapTest.xml",
+          "sha256": "203ed4d5123f8766d2f4261d66173992387aee71c322124096e8b9b02fb28007",
+          "name": "com.sstlfsj.fibra.config.ConfigSchemaBootstrapTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-config/TEST-com.sstlfsj.fibra.config.ConfigSchemaBudgetTest.xml",
+          "sha256": "7130d82a6d643878478a831ff43965c8430a5da349ff0dd282212cd6c41e0d6a",
+          "name": "com.sstlfsj.fibra.config.ConfigSchemaBudgetTest",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-config/TEST-com.sstlfsj.fibra.config.ConfigSchemaTest.xml",
+          "sha256": "f181777f221ff7ede3ec561c3bcb9b3dbe006cedb0094486250db23eb89001f9",
+          "name": "com.sstlfsj.fibra.config.ConfigSchemaTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-config/TEST-com.sstlfsj.fibra.config.DefinitionConfigDocumentTest.xml",
+          "sha256": "8881030c264f7331b62042f1955101ea333acf5776263805dc2d9daec25d26ef",
+          "name": "com.sstlfsj.fibra.config.DefinitionConfigDocumentTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-config/TEST-com.sstlfsj.fibra.config.DesiredConfigCompilerTest.xml",
+          "sha256": "0971427ee91b3a1fd7730b529d730876ff095f9efa66ba827a031fa955110f27",
+          "name": "com.sstlfsj.fibra.config.DesiredConfigCompilerTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-config/TEST-com.sstlfsj.fibra.config.DesiredConfigPatchTest.xml",
+          "sha256": "61e5382dc1f8688713bab73165f03f423c69b31f122dc5719b05246d11d67f25",
+          "name": "com.sstlfsj.fibra.config.DesiredConfigPatchTest",
+          "tests": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-config/TEST-com.sstlfsj.fibra.config.DesiredEvaluationTest.xml",
+          "sha256": "2c22ad3737a39d13ce6f7cd6eab1c6d254462bac8b4af9d6d4936170e3ef7d76",
+          "name": "com.sstlfsj.fibra.config.DesiredEvaluationTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-config/TEST-com.sstlfsj.fibra.config.DesiredInputGraphTest.xml",
+          "sha256": "ae06aeb38b9f581966d5ad4bf5f93498c848997bd2546ef5c96b91361b393888",
+          "name": "com.sstlfsj.fibra.config.DesiredInputGraphTest",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-config/TEST-com.sstlfsj.fibra.config.DesiredStateRepositoryTest.xml",
+          "sha256": "455772b01220aee922d73f7070ea746dd45e9df44e3161a612ccf36b63b74fbe",
+          "name": "com.sstlfsj.fibra.config.DesiredStateRepositoryTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-config/TEST-com.sstlfsj.fibra.config.LiteralValuesTest.xml",
+          "sha256": "57fe32899727b2c5323e6eaef0af1614f8eaf9f7c32ea90cc0f5f111505cf6fd",
+          "name": "com.sstlfsj.fibra.config.LiteralValuesTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-config/TEST-com.sstlfsj.fibra.config.PluginDefinitionRefTest.xml",
+          "sha256": "1772c3e28870093001389bf231c80cb7662518604937d5442d18434b02111f8b",
+          "name": "com.sstlfsj.fibra.config.PluginDefinitionRefTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.internal.RuntimeCloseCompletionTest.xml",
+          "sha256": "a4447c6f7ee1ed985ff1b89b70dfe8248be927e6e9a100ce0ccd134867baada3",
+          "name": "com.sstlfsj.fibra.internal.RuntimeCloseCompletionTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.AnnotationInjectionContractTest.xml",
+          "sha256": "60e5787e93f4be61f3b3a8e5c0e37fb5a4519c139780a26d85c31e985bac9f34",
+          "name": "com.sstlfsj.fibra.runtime.AnnotationInjectionContractTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.CleanupFailureDiagnosticsTest.xml",
+          "sha256": "18b6828f96620b99a311dd698e866ad34c1665a70c787cb40ef0138977d2305f",
+          "name": "com.sstlfsj.fibra.runtime.CleanupFailureDiagnosticsTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.DrainLifecycleTest.xml",
+          "sha256": "8faf1bc164e38176cccbf44c5ff0d432663ba1103752adf15ba455611e7a232e",
+          "name": "com.sstlfsj.fibra.runtime.DrainLifecycleTest",
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.EffectCleanupContractTest.xml",
+          "sha256": "703d0452825ce91a9bc4d874e2b4f62a2dc977b4dd6e4ac7960dc58f6b095528",
+          "name": "com.sstlfsj.fibra.runtime.EffectCleanupContractTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.EffectCreationContractTest.xml",
+          "sha256": "35dc4390d0f9cbc1bbad95d92b88be08c7750078fbade5c336e391e2d67af760",
+          "name": "com.sstlfsj.fibra.runtime.EffectCreationContractTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.EventContractReloadTest.xml",
+          "sha256": "2d19a8511e1ab87d82e9768e2ea03ad8b3da16a53671d22f98c94e5ecc9c0a92",
+          "name": "com.sstlfsj.fibra.runtime.EventContractReloadTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.EventDispatchContractTest.xml",
+          "sha256": "1b0e5b4e66b148beb21b99ba8ee4bb83ae33575fd96a19be79ace88e31bcc166",
+          "name": "com.sstlfsj.fibra.runtime.EventDispatchContractTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.EventModeContractTest.xml",
+          "sha256": "5cdca998ed89aa51fe37ac8b1363aef167673f99f80a654e9335bb6b2e7ae00b",
+          "name": "com.sstlfsj.fibra.runtime.EventModeContractTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.InvocationContextCancellationTest.xml",
+          "sha256": "652e0e9c25a4679795aacb18887c6819ddc1d1be585918a03822b0123da8209f",
+          "name": "com.sstlfsj.fibra.runtime.InvocationContextCancellationTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.LoggingCapabilityContractTest.xml",
+          "sha256": "74642ee5a04385c8dc941821b2dbb3658bee69d16bc19b1b4da693bd0d82c2ab",
+          "name": "com.sstlfsj.fibra.runtime.LoggingCapabilityContractTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.NamedContextPolicyContractTest.xml",
+          "sha256": "96028bbb7f67d842e60a510bf40c02011fd56c55f725673b597df5b447f1b8ac",
+          "name": "com.sstlfsj.fibra.runtime.NamedContextPolicyContractTest",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.OnceEventContractTest.xml",
+          "sha256": "41b3cd4ca63ce3988a0aab7d81bb58c81337c77c85037d8524d6cd2badc6bf44",
+          "name": "com.sstlfsj.fibra.runtime.OnceEventContractTest",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.PluginDisableRequestContractTest.xml",
+          "sha256": "afd1470e316fe3e69a97b4504d12ef0a8ed52ef994820baed445772c3082bf24",
+          "name": "com.sstlfsj.fibra.runtime.PluginDisableRequestContractTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.PluginIdentityContractTest.xml",
+          "sha256": "b7ee92cafc4aa5bbca64033acde2091828b6d820c93d9582998e5cf3fb371733",
+          "name": "com.sstlfsj.fibra.runtime.PluginIdentityContractTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.PluginInstanceLifecycleContractTest.xml",
+          "sha256": "fae027753ddd264f138034a9479c62a9da1f644988ee4379363eede27d25654b",
+          "name": "com.sstlfsj.fibra.runtime.PluginInstanceLifecycleContractTest",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.PropertyCapabilityContractTest.xml",
+          "sha256": "3404f63dd6accc1f65417518b7bd2c1aec5c0ee020e3c529f0cde43d9b5ed0d0",
+          "name": "com.sstlfsj.fibra.runtime.PropertyCapabilityContractTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.RuntimeDomainDiagnosticsTest.xml",
+          "sha256": "2a1af31c89828a80fa7936850f102348be516caf4d3f635c1c18aae066c84f62",
+          "name": "com.sstlfsj.fibra.runtime.RuntimeDomainDiagnosticsTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.RuntimeDomainIsolationTest.xml",
+          "sha256": "b423da19d886cce45398c50034c87913e1aa65e7337b05f31eea8143404703a6",
+          "name": "com.sstlfsj.fibra.runtime.RuntimeDomainIsolationTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.RuntimeDomainSettlementTest.xml",
+          "sha256": "204df1fed4e0ac3299d9c53691a570c5a5a6a82541b21332d4c3ea9da52fb4ef",
+          "name": "com.sstlfsj.fibra.runtime.RuntimeDomainSettlementTest",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.RuntimeScopeContractTest.xml",
+          "sha256": "0ee74f5acbbb815a6b28f8df9b91ad72e6c0ad0f486155de314c97280fc7e9a8",
+          "name": "com.sstlfsj.fibra.runtime.RuntimeScopeContractTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.ScopeOwnedCapabilitiesContractTest.xml",
+          "sha256": "38def4e400a27d5207c3602cd8c1804112db407a192bc9edbee4af50d745bb24",
+          "name": "com.sstlfsj.fibra.runtime.ScopeOwnedCapabilitiesContractTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.ScopeOwnershipBoundaryTest.xml",
+          "sha256": "5c8e5c1674ed548bd158e626a0e2b9904b8e59841df29530aac4fbe168c6ec30",
+          "name": "com.sstlfsj.fibra.runtime.ScopeOwnershipBoundaryTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.runtime.ScopeRegistrationRaceTest.xml",
+          "sha256": "d8e6c24cd3ff50f63d2d4e207b7d0e393ec05cefda1dd9cd2e4d02449db8b4c7",
+          "name": "com.sstlfsj.fibra.runtime.ScopeRegistrationRaceTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-core/TEST-com.sstlfsj.fibra.value.LiteralValueTest.xml",
+          "sha256": "01bbddd7ff26d4a848561a56ffe484caeb5ffa361ed0ee6a1d0a942d9b342ecb",
+          "name": "com.sstlfsj.fibra.value.LiteralValueTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-engine/TEST-com.sstlfsj.fibra.engine.DeploymentPlannerTest.xml",
+          "sha256": "cb3180e2d5d68593fb0e527f107afeec1441827493eae442dbca646f3536105a",
+          "name": "com.sstlfsj.fibra.engine.DeploymentPlannerTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-engine/TEST-com.sstlfsj.fibra.engine.EngineAttemptStateModelTest.xml",
+          "sha256": "eba884415cc93a28210f520e68da7094dc1c0b20e5aa41ad1da771a8822c42fc",
+          "name": "com.sstlfsj.fibra.engine.EngineAttemptStateModelTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-engine/TEST-com.sstlfsj.fibra.engine.EngineCommandLoopTest.xml",
+          "sha256": "1f41db9d2cd83897232d22815c43a61e4e466d80f117c416ba652b9c1433641c",
+          "name": "com.sstlfsj.fibra.engine.EngineCommandLoopTest",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-engine/TEST-com.sstlfsj.fibra.engine.EngineConfigurationContractTest.xml",
+          "sha256": "3d78650bda1beffdf8a886b7f5f126b7cd32558a8bc7b3f01cfc78f68925b86d",
+          "name": "com.sstlfsj.fibra.engine.EngineConfigurationContractTest",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-engine/TEST-com.sstlfsj.fibra.engine.EngineReadAttemptTest.xml",
+          "sha256": "1128bd7a274200f78def4188cd3164aa7f9f38b56264e902d286bec2d378ba0c",
+          "name": "com.sstlfsj.fibra.engine.EngineReadAttemptTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-engine/TEST-com.sstlfsj.fibra.engine.RuntimeDriverContractTest.xml",
+          "sha256": "6447181cf1bdee5f1a9769faa4adc605e7b1a050f0a1872f55a162b93d55c1fa",
+          "name": "com.sstlfsj.fibra.engine.RuntimeDriverContractTest",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-engine/TEST-com.sstlfsj.fibra.engine.RuntimeDriverEngineTest.xml",
+          "sha256": "3d7ff4b0fa6e4700b849795602b75b9886ddc2f77de132329a1b5b325cef7dab",
+          "name": "com.sstlfsj.fibra.engine.RuntimeDriverEngineTest",
+          "tests": 80,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-engine/TEST-com.sstlfsj.fibra.engine.deployment.BuiltInConfigurationBootstrapTest.xml",
+          "sha256": "595ea00b5445330c8cbb9be1339d83be6590bbcd97b3221b13bd9321e17a29c1",
+          "name": "com.sstlfsj.fibra.engine.deployment.BuiltInConfigurationBootstrapTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-engine/TEST-com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackageTest.xml",
+          "sha256": "1eff991027889a9397b1bd177cacb098917491e1f30de767ec53028ea82e3e56",
+          "name": "com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackageTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-engine/TEST-com.sstlfsj.fibra.engine.deployment.DeploymentTargetCompilerTest.xml",
+          "sha256": "73e1d129926403d083293532ca97a9961a2ae5343fd9c1f1f5b9c4789f95c3ce",
+          "name": "com.sstlfsj.fibra.engine.deployment.DeploymentTargetCompilerTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-engine/TEST-com.sstlfsj.fibra.engine.deployment.DeploymentTargetContextContractTest.xml",
+          "sha256": "a09ca5257d10f705b6a2bbca191ea6530056f614c82126d69c59d89dfb4e8e9a",
+          "name": "com.sstlfsj.fibra.engine.deployment.DeploymentTargetContextContractTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-engine/TEST-com.sstlfsj.fibra.engine.deployment.DeploymentTargetContractTest.xml",
+          "sha256": "974d2f71899ff70cd8d959897fe775879a1e933d3c169b1e838091f66db45f8c",
+          "name": "com.sstlfsj.fibra.engine.deployment.DeploymentTargetContractTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-engine/TEST-com.sstlfsj.fibra.engine.deployment.DeploymentTargetStoreTest.xml",
+          "sha256": "f69460d873c713f4560397a4f536d7e5fdf4d0523d8f2bee613acc78741791d2",
+          "name": "com.sstlfsj.fibra.engine.deployment.DeploymentTargetStoreTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-engine/TEST-com.sstlfsj.fibra.engine.deployment.HostCapabilitySnapshotTest.xml",
+          "sha256": "b5afbb43c88af6b7aad97394240ffa9caadaa3e79712682ffa1d2d6231c73415",
+          "name": "com.sstlfsj.fibra.engine.deployment.HostCapabilitySnapshotTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-engine/TEST-com.sstlfsj.fibra.engine.deployment.PackageDefinitionCatalogTest.xml",
+          "sha256": "f4dfbcad90a73669e7da690e4d8ffb6cc0e3de799224974ed03d492866c9a93a",
+          "name": "com.sstlfsj.fibra.engine.deployment.PackageDefinitionCatalogTest",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-engine/TEST-com.sstlfsj.fibra.engine.publication.RemoteContributionInvokerTest.xml",
+          "sha256": "937c89cee47b2ebcc9d8828cf63f919347f29af75ff8f3912e1cc6b2148ca78c",
+          "name": "com.sstlfsj.fibra.engine.publication.RemoteContributionInvokerTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/xml/20/fibra-engine/TEST-com.sstlfsj.fibra.engine.runtime.RuntimeTargetSliceTest.xml",
+          "sha256": "bc4894b16c33bf55e6b2a2f1e7bc142ef16a3c55b8f79c39f74a89e1a71bdfbb",
+          "name": "com.sstlfsj.fibra.engine.runtime.RuntimeTargetSliceTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "totals": {
+        "tests": 516,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "folder": "/private/tmp/fibra-config-contract-evidence/engine/spec-review-r1-xml",
+      "suites": [
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/spec-review-r1-xml/TEST-com.sstlfsj.fibra.engine.EngineAttemptStateModelTest.xml",
+          "sha256": "f4883b726128ce389a73b695f9ae3741c1ea0b8a928986a52041ea134646e995",
+          "name": "com.sstlfsj.fibra.engine.EngineAttemptStateModelTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/spec-review-r1-xml/TEST-com.sstlfsj.fibra.engine.EngineConfigurationContractTest.xml",
+          "sha256": "a39e458130e991cc54ea91aab919d5adfc20f21fcdd686075cbff760aa100736",
+          "name": "com.sstlfsj.fibra.engine.EngineConfigurationContractTest",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/spec-review-r1-xml/TEST-com.sstlfsj.fibra.engine.EngineReadAttemptTest.xml",
+          "sha256": "9be19554d18d87ad283c41606655446f1f98cfa4a3be2748afa0d7b70ca2bcdc",
+          "name": "com.sstlfsj.fibra.engine.EngineReadAttemptTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/private/tmp/fibra-config-contract-evidence/engine/spec-review-r1-xml/TEST-com.sstlfsj.fibra.engine.RuntimeDriverEngineTest.xml",
+          "sha256": "c8d6dd613e809b07cfacb7e4d6424d9a431c69bbd91354b8c3777cf32ad29064",
+          "name": "com.sstlfsj.fibra.engine.RuntimeDriverEngineTest",
+          "tests": 80,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "totals": {
+        "tests": 112,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    }
+  ],
+  "nativeExitFiles": {
+    "15-final-regression.exit": "1",
+    "16-node-process-permission.exit": "0",
+    "17-final-targeted.exit": "0",
+    "18-owner-stack-red.exit": "0",
+    "19-owner-bounded-stack-red.exit": "1",
+    "20-owner-final-reactor.exit": "0",
+    "spec-review-r1-probe-0.exit": "0",
+    "spec-review-r1-probe-1.exit": "143",
+    "spec-review-r1-tests.exit": "0"
+  },
+  "finalLogCanariesAbsent": true,
+  "diffCheckExit": 0
+}

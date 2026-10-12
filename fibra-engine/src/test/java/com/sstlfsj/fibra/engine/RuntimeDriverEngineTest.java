@@ -77,6 +77,79 @@ class RuntimeDriverEngineTest {
     private final ProbeProvider beta = new ProbeProvider("beta", "b");
 
     @Test
+    void configurationQueryApiExistsWithoutExecutingPluginCode() {
+        try (var engine = engine(request -> fail("unexpected termination"))) {
+            engine.submit(ApplyDeployment.builder(graph(1)).expectedRevision(0)
+                .selections(List.of(alpha.metadata().selection(false)))
+                .configContext(ConfigContextSnapshot.empty()).build()).block();
+            var before = engine.published().current();
+            events.clear();
+            var result = engine.describeConfiguration(new PluginDefinitionRef("a", "main", "definition"), 1).block();
+            assertNotNull(result);
+            assertEquals("fibra-config-1", result.source().profile());
+            assertEquals(before, engine.published().current());
+            assertTrue(events.isEmpty());
+        }
+    }
+
+    @Test
+    void configurationBuiltInUnknownProfileAndMissingContractRemainManageableUntilUsed() {
+        for (var mode : List.of("profile", "missing")) {
+            store.reset();
+            alpha.metadataOverride = List.of(BuiltInPluginPackage.builder().pluginId(new PluginId("a")).version("1")
+                .implementationDigest("a".repeat(64)).facets(List.of(BuiltInFacet.builder(new FacetId("main"), alpha.id(), new ExecutionTarget("host"))
+                    .definitionIds(Set.of("definition"))
+                    .configSchemas(mode.equals("missing") ? Map.of() : Map.of("definition",
+                        new ConfigSchemaSource("future-profile", (LiteralValue.ObjectValue) LiteralValue.of(
+                            Map.of("$schema", "https://json-schema.org/draft/2020-12/schema", "type", "integer")))))
+                    .build())).build());
+            try (var engine = engine(request -> fail("unexpected termination"))) {
+                var selection = alpha.metadataOverride.getFirst().selection(true);
+                engine.submit(ApplyDeployment.builder(graph(1)).expectedRevision(0).selections(List.of(selection))
+                    .configContext(ConfigContextSnapshot.empty()).build()).block();
+                var before = engine.published().current();
+                EngineConfigurationContractTest.assertCode(mode.equals("missing")
+                    ? com.sstlfsj.fibra.engine.deployment.ConfigContractException.Code.MISSING_CONTRACT
+                    : com.sstlfsj.fibra.engine.deployment.ConfigContractException.Code.INVALID_CONTRACT,
+                    engine.describeConfiguration(new PluginDefinitionRef("a", "main", "definition"), 1));
+                assertEquals(before, engine.published().current());
+                var failure = assertThrows(EngineChangeException.class, () -> engine.submit(ApplyDeployment.builder(graph(1, "a1"))
+                    .expectedRevision(1).selections(List.of(selection)).configContext(ConfigContextSnapshot.empty()).build()).block());
+                assertEquals(TargetSaveState.NOT_SAVED, failure.targetSaveState());
+                assertEquals(0, alpha.candidateCreates);
+            }
+        }
+    }
+
+    @Test
+    void configurationPreflightRejectsUnknownMissingAndInvalidBeforeCandidateCreation() throws Exception {
+        for (var mode : List.of("unknown", "missing", "invalid")) {
+            store.reset();
+            try (var packages = new PluginPackageStore(root.resolve(mode))) {
+                var record = catalogPackage(packages, "sample", "1", "main:alpha");
+                alpha.queryFactory = facet -> new CatalogProbe("main", List.of("definition"));
+                try (var engine = catalogEngine(packages, List.of(selection(record, true)))) {
+                    events.clear();
+                    var graph = new DesiredInputGraph(List.of(DesiredInputEntry.builder("entry",
+                        new PluginDefinitionRef(mode.equals("invalid") ? "a" : "sample", "main",
+                            mode.equals("unknown") ? "absent" : "definition"))
+                        .config(LiteralValue.of("secret-invalid-value")).build()));
+                    var failure = assertThrows(EngineChangeException.class, () -> engine.submit(
+                        ApplyDeployment.builder(graph).expectedRevision(1)
+                            .selections(List.of(selection(record, true), alpha.metadata().selection(true)))
+                            .configContext(ConfigContextSnapshot.empty()).build()).block());
+                    assertEquals(TargetSaveState.NOT_SAVED, failure.targetSaveState());
+                    assertEquals(EngineOperationStage.PLANNING,
+                        engine.published().current().engineDiagnostics().operation().orElseThrow().stage());
+                    assertEquals(0, store.saves);
+                    assertEquals(0, alpha.candidateCreates);
+                    assertFalse(events.stream().anyMatch(e -> e.startsWith("prepare:")));
+                }
+            }
+        }
+    }
+
+    @Test
     void catalogReadsDisabledBuiltInDeclarationsWithoutDynamicSpiOrMutation() {
         try (var engine = engine(request -> fail("unexpected termination"))) {
             engine.submit(ApplyDeployment.builder(graph(1)).expectedRevision(0)
@@ -330,7 +403,7 @@ class RuntimeDriverEngineTest {
             assertEquals(0, store.closes);
             assertFalse(events.stream().anyMatch(value -> value.startsWith("driver-close:")));
             assertTrue(packages.find(record.pluginId(), record.packageRevision()).isPresent());
-            var field = FibraEngine.class.getDeclaredField("catalogAttempt");
+            var field = FibraEngine.class.getDeclaredField("readAttempt");
             field.setAccessible(true);
             var attempt = field.get(engine);
             assertNotNull(attempt);
@@ -505,7 +578,7 @@ class RuntimeDriverEngineTest {
                 assertCatalogCode(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE, catalog(engine, "missing", 1));
                 assertCatalogCode(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE, catalog(engine, "a", 1));
                 alpha.metadataOverride = List.of(BuiltInPluginPackage.builder().pluginId(new PluginId("a"))
-                    .version("1").packageDigest(conflicting.packageRevision()).facets(alpha.metadata().facets()).build());
+                    .version("1").implementationDigest(conflicting.packageRevision()).facets(alpha.metadata().facets()).build());
                 assertCatalogCode(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE, catalog(engine, "a", 1));
                 alpha.metadataOverride = null;
                 var recordPath = packagesPath.resolve("records").resolve(java.util.HexFormat.of()
@@ -554,17 +627,21 @@ class RuntimeDriverEngineTest {
                 .selections(List.of(alpha.metadata().selection(false)))
                 .configContext(ConfigContextSnapshot.empty()).build()).block();
             var fresh = BuiltInPluginPackage.builder().pluginId(new PluginId("a")).version("1")
-                .packageDigest("a".repeat(64)).facets(List.of(BuiltInFacet.builder(new FacetId("main"), alpha.id(),
+                .implementationDigest("a".repeat(64)).facets(List.of(BuiltInFacet.builder(new FacetId("main"), alpha.id(),
                     new ExecutionTarget("host")).definitionIds(Set.of("new", "entry")).build())).build();
             alpha.metadataOverride = List.of(fresh);
-            assertEquals(List.of("entry", "new"), catalog(engine, "a", 1).block().facets().getFirst().definitionIds());
+            assertCatalogCode(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE, catalog(engine, "a", 1));
+            engine.submit(ApplyDeployment.builder(graph(1)).expectedRevision(1)
+                .selections(List.of(fresh.selection(false)))
+                .configContext(ConfigContextSnapshot.empty()).build()).block();
+            assertEquals(List.of("entry", "new"), catalog(engine, "a", 2).block().facets().getFirst().definitionIds());
             alpha.metadataOverride = List.of(fresh, fresh);
-            assertCatalogCode(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE, catalog(engine, "a", 1));
+            assertCatalogCode(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE, catalog(engine, "a", 2));
             alpha.metadataOverride = List.of(beta.metadata());
-            assertCatalogCode(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE, catalog(engine, "a", 1));
+            assertCatalogCode(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE, catalog(engine, "a", 2));
             alpha.metadataOverride = List.of(BuiltInPluginPackage.builder().pluginId(new PluginId("a")).version("1")
-                .packageDigest("c".repeat(64)).facets(fresh.facets()).build());
-            assertCatalogCode(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE, catalog(engine, "a", 1));
+                .implementationDigest("c".repeat(64)).facets(fresh.facets()).build());
+            assertCatalogCode(DefinitionCatalogException.Code.PACKAGE_UNAVAILABLE, catalog(engine, "a", 2));
         } finally { alpha.metadataOverride = null; }
     }
 
@@ -1531,17 +1608,24 @@ class RuntimeDriverEngineTest {
     }
 
     @Test
-    void builtInDeclarationDriftChangesFingerprintEvenWhenContractAndDigestStayTheSame() {
+    void builtInDeclarationDriftRequiresNewSelectionAndChangesFingerprintWithSameProviderContract() {
         try (var engine = engine(request -> { }, () ->
             HostCapabilitySnapshot.of(Map.of("added-capability", true)))) {
             apply(engine, 0, graph(1, "a1", "b1"));
             var original = engine.snapshot().current().orElseThrow().compiledFingerprint();
             var betaInstance = detail(engine, "b1").runtimeInstanceId();
+            var oldSelection = alpha.metadata().selection(true);
             alpha.requiredCapabilities = Set.of("added-capability");
+            assertNotEquals(oldSelection.packageRevision(), alpha.metadata().packageDigest());
+            assertThrows(EngineChangeException.class, () -> engine.submit(ApplyDeployment.builder(graph(1, "a1", "b1"))
+                .expectedRevision(1).selections(List.of(oldSelection, beta.metadata().selection(true)))
+                .configContext(ConfigContextSnapshot.empty()).build()).block());
+            assertEquals(original, engine.snapshot().current().orElseThrow().compiledFingerprint());
             apply(engine, 1, graph(1, "a1", "b1"));
             assertNotEquals(original, engine.snapshot().current().orElseThrow().compiledFingerprint());
             assertNotEquals(betaInstance, detail(engine, "b1").runtimeInstanceId());
-            assertEquals(1, store.saves);
+            assertEquals(2, store.saves);
+            assertEquals(2, engine.snapshot().target().orElseThrow().targetRevision());
         }
     }
 
@@ -2809,6 +2893,7 @@ class RuntimeDriverEngineTest {
         final Map<String, ProbeUnit> units = new ConcurrentHashMap<>();
         final AtomicInteger retired = new AtomicInteger();
         String contract = "v1";
+        int candidateCreates;
         boolean sealFailure;
         boolean abortFailure;
         boolean activationFailure;
@@ -2835,9 +2920,11 @@ class RuntimeDriverEngineTest {
         }
         BuiltInPluginPackage metadata() {
             return BuiltInPluginPackage.builder().pluginId(new PluginId(plugin)).version("1")
-                .packageDigest(plugin.equals("a") ? "a".repeat(64) : "b".repeat(64))
+                .implementationDigest(plugin.equals("a") ? "a".repeat(64) : "b".repeat(64))
                 .facets(List.of(BuiltInFacet.builder(new FacetId("main"), runtimeId, new ExecutionTarget("host"))
                     .definitionIds(Set.of("definition")).dependencies(dependencies)
+                    .configSchemas(Map.of("definition", new com.sstlfsj.fibra.config.ConfigSchemaSource("fibra-config-1",
+                        (LiteralValue.ObjectValue) LiteralValue.of(Map.of("$schema", "https://json-schema.org/draft/2020-12/schema", "type", "integer")))))
                     .requiredCapabilities(requiredCapabilities).build())).build();
         }
         public RuntimeDriver create(RuntimeHostServices services) {
@@ -2863,6 +2950,7 @@ class RuntimeDriverEngineTest {
                     return release.asMono().then(close);
                 }
                 public RuntimeCandidate createCandidate(RuntimeTargetSlice slice) {
+                    candidateCreates++;
                     return new RuntimeCandidate() {
                         RuntimePlan plan;
                         Mono<Void> failedClose;

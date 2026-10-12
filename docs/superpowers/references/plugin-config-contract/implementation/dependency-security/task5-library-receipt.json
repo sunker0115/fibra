@@ -1,0 +1,19 @@
+{
+  "zip": "/Users/sunke/dev/ai-project/fibra/fibra-distribution/target/fibra-0.5.0-SNAPSHOT-bin.zip",
+  "zipSha256": "c3b75bad3eb15747fe95f3de0c8fbb3e684121d512f6a093ea85d16786f290e4",
+  "libraries": [
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/itu-1.14.0.jar",
+      "bytes": 57633,
+      "zipBytes": 51666,
+      "sha256": "5cf40ab0cc77828ab2b875b1f3ecd71c8295d7721933476abc2e08fddcea164a"
+    },
+    {
+      "path": "fibra-0.5.0-SNAPSHOT/lib/json-schema-validator-3.0.8.jar",
+      "bytes": 585170,
+      "zipBytes": 526444,
+      "sha256": "d3f4c61ba35c3543bdf1ab42462bf89721542f4adea5b092ee7b430dfd467181"
+    }
+  ],
+  "scope": "Only these two library entries measured; not total release delta, full SCA or startup benchmark"
+}

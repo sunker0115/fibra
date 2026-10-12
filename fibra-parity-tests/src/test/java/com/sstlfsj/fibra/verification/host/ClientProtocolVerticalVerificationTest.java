@@ -193,6 +193,12 @@ class ClientProtocolVerticalVerificationTest {
     private Path packageSource() throws Exception {
         var root = Files.createDirectories(work.resolve("source"));
         var payload = Files.createDirectories(root.resolve("client"));
+        Files.writeString(root.resolve("fibra-config.json"), """
+            {"format":1,"profile":"fibra-config-1","facets":{"main":{"fixture":{
+              "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
+              "properties":{"mode":{"type":"string"}},"required":["mode"],"additionalProperties":false
+            }}}}
+            """);
         Files.writeString(payload.resolve("index.mjs"), "export const definitions = [];\n");
         Files.writeString(root.resolve("fibra-package.yaml"), """
             format: 1

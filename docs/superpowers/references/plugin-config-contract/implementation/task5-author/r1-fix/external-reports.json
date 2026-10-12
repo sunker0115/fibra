@@ -1,0 +1,66 @@
+[
+  {
+    "path": "consumer/spring-boot-application/target/surefire-reports/TEST-verification.distribution.SpringConsumerTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "a567b6336981a1cea28008357970b9fb5ca841d41b84a4c65545f11bdcd427ef"
+  },
+  {
+    "path": "consumer/core-application/target/surefire-reports/TEST-verification.distribution.CoreConsumerTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "c4b32bc5e971bf56b47ed02f9da8269ff97d4bebf5c1bec805cdcfd652faa9a1"
+  },
+  {
+    "path": "consumer/engine-application/target/surefire-reports/TEST-verification.distribution.EngineConsumerTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "356918b557809b0965185ab23192ea524527badb19b36981313267ec9d3da162"
+  },
+  {
+    "path": "consumer/engine-application/target/surefire-reports/TEST-verification.distribution.AuthorConfigurationConsumerTest.xml",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "e370e7f52f3ae1b0241d0485c2667d8e25f11cf8de1b77af7bfea36081131a2b"
+  },
+  {
+    "path": "consumer/engine-application/target/surefire-reports/TEST-verification.distribution.LifecycleConsumerTest.xml",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "d61876cb6470e50fb663811fad7c2f718ada2a5b4702c70a7e2ab6c33eadd06b"
+  },
+  {
+    "path": "consumer/cli-application/target/surefire-reports/TEST-verification.distribution.CliConsumerTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "17db2555b04071f37aa0ef2da3978f9962e782968c2ccddd5b7e67885626ba21"
+  },
+  {
+    "path": "consumer/runtime-provider-application/target/surefire-reports/TEST-verification.distribution.ClientProtocolConsumerTest.xml",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "ee52600667d694f237ffb44e2154882f871afa83ecab79777fd9a17888300b75"
+  },
+  {
+    "path": "consumer/runtime-provider-application/target/surefire-reports/TEST-verification.distribution.RuntimeProviderConsumerTest.xml",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "sha256": "ee93150e1d173ea7f12d27ea84d0ea2e908cd1f2666d37e2e320e3f17c72282a"
+  }
+]

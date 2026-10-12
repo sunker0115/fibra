@@ -1,0 +1,38 @@
+[
+  {
+    "command": "zsh /private/tmp/fibra-config-contract-evidence/artifact/run.sh -Dtest=PluginConfigurationResourceBootstrapTest -Dsurefire.failIfNoSpecifiedTests=false",
+    "nativeExit": 1,
+    "log": "red-bootstrap.log",
+    "reason": "new public configurationResource method absent"
+  },
+  {
+    "command": "zsh /private/tmp/fibra-config-contract-evidence/artifact/run.sh -Dtest=PluginConfigurationResourceTest#verifiedRecordReadsOriginalBytesAndReturnsDefensiveCopies -Dsurefire.failIfNoSpecifiedTests=false",
+    "nativeExit": 1,
+    "log": "red-behavior.log",
+    "reason": "verified record has no evidence before implementation"
+  },
+  {
+    "command": "zsh /private/tmp/fibra-config-contract-evidence/artifact/run.sh",
+    "nativeExit": 0,
+    "log": "green-1.log",
+    "tests": 85
+  },
+  {
+    "command": "zsh /private/tmp/fibra-config-contract-evidence/artifact/run.sh -Dtest=FixedPluginConfigurationResourceTest#errorsAlsoKeepSafeReadAndCloseTerminalOutcomes -Dsurefire.failIfNoSpecifiedTests=false",
+    "nativeExit": 1,
+    "log": "red-error-terminal.log",
+    "reason": "AssertionError escaped instead of safe ArtifactException"
+  },
+  {
+    "command": "zsh /private/tmp/fibra-config-contract-evidence/artifact/run.sh -Dtest=FixedPluginConfigurationResourceTest#fatalErrorsPropagateButCannotLeaveFalseSuccessfulTerminalState -Dsurefire.failIfNoSpecifiedTests=false",
+    "nativeExit": 1,
+    "log": "red-fatal-state.log",
+    "reason": "after fatal read repeated read produced NPE rather than safe failure"
+  },
+  {
+    "command": "zsh /private/tmp/fibra-config-contract-evidence/artifact/run.sh",
+    "nativeExit": 0,
+    "log": "green-final.log",
+    "tests": 88
+  }
+]

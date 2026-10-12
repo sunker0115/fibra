@@ -407,6 +407,11 @@ class CrossRuntimeSelfDisableTest {
         };
         Files.writeString(root.resolve("fibra-package.yaml"),
             packageManifest(id, "java", "main.jar"));
+        Files.writeString(root.resolve("fibra-config.json"), """
+            {"format":1,"profile":"fibra-config-1","facets":{"main":{"%s":{
+              "$schema":"https://json-schema.org/draft/2020-12/schema","type":"null"
+            }}}}
+            """.formatted(definitionId));
         try (var output = new JarOutputStream(Files.newOutputStream(jar))) {
             output.putNextEntry(new JarEntry("META-INF/fibra/plugin.yaml"));
             output.write(("entrypoint: " + entrypoint + "\ndefinitionId: " + definitionId + '\n')
@@ -432,6 +437,13 @@ class CrossRuntimeSelfDisableTest {
         var payload = Files.createDirectory(root.resolve("payload"));
         Files.writeString(root.resolve("fibra-package.yaml"),
             packageManifest(id, "node", "payload"));
+        Files.writeString(root.resolve("fibra-config.json"), """
+            {"format":1,"profile":"fibra-config-1","facets":{"main":{"%s":{
+              "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
+              "properties":{"probe":{"type":"string"},"holdEntered":{"type":"string"}},
+              "required":["probe","holdEntered"],"additionalProperties":false
+            }}}}
+            """.formatted(id));
         Files.writeString(payload.resolve("fibra-plugin.yaml"), """
             protocol: 1
             definitionId: %s

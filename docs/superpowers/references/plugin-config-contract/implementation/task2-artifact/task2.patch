@@ -1,0 +1,986 @@
+--- a/fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginPackage.java
++++ b/fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginPackage.java
+@@ -52,14 +52,17 @@
+     private final String version;
+     private final String packageDigest;
+     private final List<PluginFacet> facets;
++    private final ConfigurationResourceEvidence configurationEvidence;
+ 
+     private PluginPackage(Path root, PluginId pluginId, String version,
+-                          String packageDigest, List<PluginFacet> facets) {
++                          String packageDigest, List<PluginFacet> facets,
++                          ConfigurationResourceEvidence configurationEvidence) {
+         this.root = root;
+         this.pluginId = pluginId;
+         this.version = version;
+         this.packageDigest = packageDigest;
+         this.facets = List.copyOf(facets);
++        this.configurationEvidence = configurationEvidence;
+     }
+ 
+     public Path root() { return root; }
+@@ -67,6 +70,7 @@
+     public String version() { return version; }
+     public String packageDigest() { return packageDigest; }
+     public List<PluginFacet> facets() { return facets; }
++    ConfigurationResourceEvidence configurationEvidence() { return configurationEvidence; }
+ 
+     /** 只读取当前根清单格式。 */
+     public static PluginPackage read(Path source) {
+@@ -126,8 +130,9 @@
+         var pluginId = new PluginId(text(values.get("id"), "id"));
+         var version = text(values.get("version"), "version");
+         var facets = facets(values.get("facets"), root);
+-        return new Snapshot(new PluginPackage(root, pluginId, version, digest(root), facets),
+-            manifestBytes);
++        var content = digest(root, true);
++        return new Snapshot(new PluginPackage(root, pluginId, version, content.digest(), facets,
++            content.configuration()), manifestBytes);
+     }
+ 
+     private static List<PluginFacet> facets(Object raw, Path root) throws IOException {
+@@ -268,12 +273,17 @@
+     }
+ 
+     private static String digest(Path source) {
++        return digest(source, false).digest();
++    }
++
++    private static ContentDigest digest(Path source, boolean captureConfiguration) {
+         try {
+             var digest = MessageDigest.getInstance("SHA-256");
++            var configuration = ConfigurationResourceEvidence.absent();
+             digest.update(DIGEST_PREFIX);
+             if (Files.isRegularFile(source, LinkOption.NOFOLLOW_LINKS)) {
+                 digest.update((byte) 'F');
+-                updateFile(digest, source);
++                updateFile(digest, source, false);
+             } else if (Files.isDirectory(source, LinkOption.NOFOLLOW_LINKS)) {
+                 digest.update((byte) 'T');
+                 try (var paths = Files.walk(source)) {
+@@ -282,10 +292,15 @@
+                             PluginPackage::compareUtf8))
+                         .toList();
+                     for (var path : entries) {
++                        var fixedResource = captureConfiguration
++                            && path.equals(source.resolve(ConfigurationResourceEvidence.FILE_NAME));
+                         var relative = normalizedRelative(source, path)
+                             .getBytes(StandardCharsets.UTF_8);
+                         if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+                             digest.update((byte) 'D');
++                            if (fixedResource) {
++                                configuration = ConfigurationResourceEvidence.nonregular();
++                            }
+                         } else if (Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
+                             digest.update((byte) 'F');
+                         } else {
+@@ -295,14 +310,17 @@
+                         updateLength(digest, relative.length);
+                         digest.update(relative);
+                         if (Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
+-                            updateFile(digest, path);
++                            var fileEvidence = updateFile(digest, path, fixedResource);
++                            if (fixedResource) {
++                                configuration = fileEvidence;
++                            }
+                         }
+                     }
+                 }
+             } else {
+                 throw new IOException("content must be a regular file or directory");
+             }
+-            return HexFormat.of().formatHex(digest.digest());
++            return new ContentDigest(HexFormat.of().formatHex(digest.digest()), configuration);
+         } catch (NoSuchAlgorithmException impossible) {
+             throw new IllegalStateException("SHA-256 is unavailable", impossible);
+         } catch (IOException failure) {
+@@ -310,7 +328,10 @@
+         }
+     }
+ 
+-    private static void updateFile(MessageDigest digest, Path path) throws IOException {
++    private static ConfigurationResourceEvidence updateFile(MessageDigest digest, Path path,
++                                                            boolean captureConfiguration)
++        throws IOException, NoSuchAlgorithmException {
++        var rawDigest = captureConfiguration ? MessageDigest.getInstance("SHA-256") : null;
+         var expected = Files.size(path);
+         updateLength(digest, expected);
+         long actual = 0;
+@@ -319,12 +340,17 @@
+             int read;
+             while ((read = input.read(buffer)) >= 0) {
+                 digest.update(buffer, 0, read);
++                if (rawDigest != null) {
++                    rawDigest.update(buffer, 0, read);
++                }
+                 actual += read;
+             }
+         }
+         if (actual != expected) {
+             throw new IOException("content changed while computing its digest: " + path);
+         }
++        return rawDigest == null ? null
++            : ConfigurationResourceEvidence.regular(HexFormat.of().formatHex(rawDigest.digest()), actual);
+     }
+ 
+     private static void updateLength(MessageDigest digest, long length) {
+@@ -351,7 +377,10 @@
+                 && pluginPackage.pluginId.equals(other.pluginPackage.pluginId)
+                 && pluginPackage.version.equals(other.pluginPackage.version)
+                 && pluginPackage.packageDigest.equals(other.pluginPackage.packageDigest)
+-                && pluginPackage.facets.equals(other.pluginPackage.facets);
+-        }
+-    }
++                && pluginPackage.facets.equals(other.pluginPackage.facets)
++                && pluginPackage.configurationEvidence.equals(other.pluginPackage.configurationEvidence);
++        }
++    }
++
++    private record ContentDigest(String digest, ConfigurationResourceEvidence configuration) { }
+ }
+--- a/fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginPackageRecord.java
++++ b/fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginPackageRecord.java
+@@ -13,8 +13,9 @@
+     private final ManagedPluginPackage managedPackage;
+     private final ArtifactState state;
+     private final Instant updatedAt;
++    private final VerifiedConfiguration configuration;
+ 
+-    private PluginPackageRecord(Builder builder) {
++    private PluginPackageRecord(Builder builder, ConfigurationResourceEvidence evidence) {
+         pluginId = Objects.requireNonNull(builder.pluginId, "pluginId");
+         version = required(builder.version, "version");
+         packageRevision = digest(builder.packageRevision, "packageRevision");
+@@ -29,6 +30,10 @@
+             throw new IllegalArgumentException(
+                 "managed package identity does not match package record");
+         }
++        configuration = evidence != null
++            ? new VerifiedConfiguration(location, pluginId, version, packageRevision, managedPackage, evidence)
++            : builder.configuration != null && builder.configuration.matches(this)
++                ? builder.configuration : null;
+     }
+ 
+     public static Builder builder() {
+@@ -36,9 +41,11 @@
+     }
+ 
+     public Builder toBuilder() {
+-        return builder().pluginId(pluginId).version(version)
++        var result = builder().pluginId(pluginId).version(version)
+             .packageRevision(packageRevision).location(location)
+             .managedPackage(managedPackage).state(state).updatedAt(updatedAt);
++        result.configuration = configuration;
++        return result;
+     }
+ 
+     public PluginId pluginId() { return pluginId; }
+@@ -48,6 +55,33 @@
+     public ManagedPluginPackage managedPackage() { return managedPackage; }
+     public ArtifactState state() { return state; }
+     public Instant updatedAt() { return updatedAt; }
++
++    /**
++     * 创建无 I/O 的固定配置文档句柄。记录须来自 store 的已核包，通常通过 find 获取。
++     * public builder 构造的纯 metadata 记录不能读取资源。
++     *
++     * @throws IllegalStateException 本记录没有与当前内容身份绑定的核验事实
++     */
++    public PluginConfigurationResource configurationResource() {
++        if (configuration == null) {
++            throw new IllegalStateException("package record has no verified configuration resource");
++        }
++        return new FixedPluginConfigurationResource(location, configuration.evidence());
++    }
++
++    static PluginPackageRecord verified(Builder builder, ConfigurationResourceEvidence evidence) {
++        return new PluginPackageRecord(builder, Objects.requireNonNull(evidence, "evidence"));
++    }
++
++    private record VerifiedConfiguration(Path root, PluginId pluginId, String version,
++                                         String revision, ManagedPluginPackage managed,
++                                         ConfigurationResourceEvidence evidence) {
++        private boolean matches(PluginPackageRecord record) {
++            return root.equals(record.location) && pluginId.equals(record.pluginId)
++                && version.equals(record.version) && revision.equals(record.packageRevision)
++                && managed.equals(record.managedPackage);
++        }
++    }
+ 
+     @Override
+     public boolean equals(Object other) {
+@@ -93,6 +127,7 @@
+         private ManagedPluginPackage managedPackage;
+         private ArtifactState state;
+         private Instant updatedAt;
++        private VerifiedConfiguration configuration;
+ 
+         private Builder() { }
+         public Builder pluginId(PluginId value) { pluginId = value; return this; }
+@@ -106,6 +141,6 @@
+         }
+         public Builder state(ArtifactState value) { state = value; return this; }
+         public Builder updatedAt(Instant value) { updatedAt = value; return this; }
+-        public PluginPackageRecord build() { return new PluginPackageRecord(this); }
++        public PluginPackageRecord build() { return new PluginPackageRecord(this, null); }
+     }
+ }
+--- a/fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginPackageStore.java
++++ b/fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginPackageStore.java
+@@ -432,10 +432,11 @@
+                 pluginPackage.packageDigest() + ":" + facet.facetId().value()));
+         }
+         var managed = ManagedPluginPackage.from(pluginPackage, artifactIds);
+-        return PluginPackageRecord.builder().pluginId(pluginPackage.pluginId())
++        return PluginPackageRecord.verified(PluginPackageRecord.builder().pluginId(pluginPackage.pluginId())
+             .version(pluginPackage.version())
+             .packageRevision(pluginPackage.packageDigest()).location(location)
+-            .managedPackage(managed).state(state).updatedAt(updatedAt).build();
++            .managedPackage(managed).state(state).updatedAt(updatedAt),
++            pluginPackage.configurationEvidence());
+     }
+ 
+     private static PluginPackage readPackage(Path path, ArtifactPhase phase,
+--- /dev/null
++++ b/fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/PluginConfigurationResource.java
+@@ -0,0 +1,18 @@
++package com.sstlfsj.fibra.artifact;
++
++/** 一个已核 package revision 的固定配置文档惰性读取句柄；调用方负责关闭。 */
++public interface PluginConfigurationResource extends AutoCloseable {
++    /**
++     * 读取至多 1 MiB 的文档并核验原 revision 的字节身份，返回防御副本。
++     * 重复调用（包括成功关闭之后）观察同一读终态；尚未开始读取就已关闭的句柄拒绝读取。
++     *
++     * @throws java.util.NoSuchElementException 仅当绑定 revision 原本没有配置文档
++     * @throws ArtifactException 原资源非普通文件、实际读取失败或字节身份不符
++     * @throws IllegalStateException 未开始读取就已关闭
++     */
++    byte[] read();
++
++    /** 等待实际读取结束并关闭资源；关闭失败保留资源，重复调用不重试物理关闭。 */
++    @Override
++    void close();
++}
+--- /dev/null
++++ b/fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/ConfigurationResourceEvidence.java
+@@ -0,0 +1,20 @@
++package com.sstlfsj.fibra.artifact;
++
++/** 原根摘要遍历的派生事实，不是新的持久身份。 */
++record ConfigurationResourceEvidence(Kind kind, String rawDigest, long length) {
++    static final String FILE_NAME = "fibra-config.json";
++
++    enum Kind { ABSENT, NONREGULAR, REGULAR }
++
++    static ConfigurationResourceEvidence absent() {
++        return new ConfigurationResourceEvidence(Kind.ABSENT, null, 0);
++    }
++
++    static ConfigurationResourceEvidence nonregular() {
++        return new ConfigurationResourceEvidence(Kind.NONREGULAR, null, 0);
++    }
++
++    static ConfigurationResourceEvidence regular(String rawDigest, long length) {
++        return new ConfigurationResourceEvidence(Kind.REGULAR, rawDigest, length);
++    }
++}
+--- /dev/null
++++ b/fibra-artifact/src/main/java/com/sstlfsj/fibra/artifact/FixedPluginConfigurationResource.java
+@@ -0,0 +1,145 @@
++package com.sstlfsj.fibra.artifact;
++
++import java.io.ByteArrayOutputStream;
++import java.io.IOException;
++import java.io.InputStream;
++import java.nio.file.Files;
++import java.nio.file.LinkOption;
++import java.nio.file.Path;
++import java.security.MessageDigest;
++import java.security.NoSuchAlgorithmException;
++import java.util.HexFormat;
++import java.util.NoSuchElementException;
++
++/** 同步资源 owner：原始 I/O 异常只在调用栈中存在，终态仅保存安全分类。 */
++final class FixedPluginConfigurationResource implements PluginConfigurationResource {
++    private static final int MAX_BYTES = 1024 * 1024;
++
++    private final Path path;
++    private final ConfigurationResourceEvidence evidence;
++    private final ResourceIo io;
++    private InputStream input;
++    private boolean readAttempted;
++    private boolean closeAttempted;
++    private boolean closeFailed;
++    private ReadFailure readFailure;
++    private byte[] bytes;
++
++    FixedPluginConfigurationResource(Path root, ConfigurationResourceEvidence evidence) {
++        this(root, evidence, path -> {
++            if (!Files.isDirectory(path.getParent(), LinkOption.NOFOLLOW_LINKS)
++                || !Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
++                throw new IOException("configuration resource is not a regular file");
++            }
++            return Files.newInputStream(path, LinkOption.NOFOLLOW_LINKS);
++        });
++    }
++
++    FixedPluginConfigurationResource(Path root, ConfigurationResourceEvidence evidence,
++                                     ResourceIo io) {
++        path = root.resolve(ConfigurationResourceEvidence.FILE_NAME);
++        this.evidence = evidence;
++        this.io = io;
++    }
++
++    @Override
++    public synchronized byte[] read() {
++        if (!readAttempted) {
++            if (closeAttempted) {
++                throw new IllegalStateException("package configuration resource is closed");
++            }
++            readAttempted = true;
++            if (evidence.kind() == ConfigurationResourceEvidence.Kind.ABSENT) {
++                readFailure = ReadFailure.ABSENT;
++            } else if (evidence.kind() != ConfigurationResourceEvidence.Kind.REGULAR
++                || evidence.length() > MAX_BYTES) {
++                readFailure = ReadFailure.READ;
++            } else {
++                readBytes();
++            }
++        }
++        if (readFailure != null) {
++            throw readFailure.exception();
++        }
++        return bytes.clone();
++    }
++
++    private void readBytes() {
++        try {
++            // Ownership is recorded immediately, before allocation, hashing or reading can fail.
++            input = io.open(path);
++            var output = new ByteArrayOutputStream();
++            var digest = MessageDigest.getInstance("SHA-256");
++            var buffer = new byte[8192];
++            int total = 0;
++            int count;
++            while ((count = input.read(buffer, 0, Math.min(buffer.length, MAX_BYTES + 1 - total))) >= 0) {
++                total += count;
++                if (total > MAX_BYTES) {
++                    readFailure = ReadFailure.READ;
++                    return;
++                }
++                output.write(buffer, 0, count);
++                digest.update(buffer, 0, count);
++            }
++            if (total != evidence.length()
++                || !HexFormat.of().formatHex(digest.digest()).equals(evidence.rawDigest())) {
++                readFailure = ReadFailure.IDENTITY;
++                return;
++            }
++            bytes = output.toByteArray();
++        } catch (IOException | RuntimeException | Error | NoSuchAlgorithmException failure) {
++            readFailure = ReadFailure.READ;
++            rethrowFatal(failure);
++        }
++    }
++
++    @Override
++    public synchronized void close() {
++        if (!closeAttempted) {
++            closeAttempted = true;
++            if (input != null) {
++                try {
++                    input.close();
++                    input = null;
++                } catch (IOException | RuntimeException | Error failure) {
++                    closeFailed = true;
++                    rethrowFatal(failure);
++                }
++            }
++        }
++        if (closeFailed) {
++            throw new ArtifactException(ArtifactPhase.VALIDATE,
++                "cannot close package configuration resource", null, null);
++        }
++    }
++
++    @SuppressWarnings("removal")
++    private static void rethrowFatal(Throwable failure) {
++        if (failure instanceof VirtualMachineError fatal) {
++            throw fatal;
++        }
++        if (failure instanceof ThreadDeath fatal) {
++            throw fatal;
++        }
++    }
++
++    @FunctionalInterface
++    interface ResourceIo {
++        InputStream open(Path path) throws IOException;
++    }
++
++    private enum ReadFailure {
++        ABSENT, READ, IDENTITY;
++
++        RuntimeException exception() {
++            return switch (this) {
++                case ABSENT -> new NoSuchElementException("package configuration resource is absent");
++                case READ -> new ArtifactException(ArtifactPhase.VALIDATE,
++                    "cannot read package configuration resource", null, null);
++                case IDENTITY -> new ArtifactException(ArtifactPhase.DIGEST,
++                    "package configuration resource content identity mismatch", null, null);
++            };
++        }
++    }
++}
+--- a/fibra-artifact/src/test/java/com/sstlfsj/fibra/artifact/PluginPackageTest.java
++++ b/fibra-artifact/src/test/java/com/sstlfsj/fibra/artifact/PluginPackageTest.java
+@@ -22,6 +22,37 @@
+ import static org.junit.jupiter.api.Assertions.assertTrue;
+ 
+ class PluginPackageTest {
++    @Test
++    void fixedConfigurationUsesUnchangedV1DigestAndDoesNotChangeFacetDigests(@TempDir Path work)
++        throws Exception {
++        var root = canonicalPackage(work);
++        var absent = PluginPackage.read(root);
++        Files.writeString(root.resolve("fibra-config.json"), "{\"format\":1}");
++        var first = PluginPackage.read(root);
++        assertEquals(digest(root), first.packageDigest());
++        assertNotEquals(absent.packageDigest(), first.packageDigest());
++        assertEquals(absent.facets(), first.facets());
++        Files.writeString(root.resolve("fibra-config.json"), "{\"format\":2}");
++        var second = PluginPackage.read(root);
++        assertEquals(digest(root), second.packageDigest());
++        assertNotEquals(first.packageDigest(), second.packageDigest());
++        assertEquals(first.facets(), second.facets());
++    }
++
++    @Test
++    void configurationChangeBetweenSnapshotsIsRejected(@TempDir Path work) throws Exception {
++        var root = canonicalPackage(work);
++        var file = Files.writeString(root.resolve("fibra-config.json"), "original");
++        var failure = assertThrows(ArtifactException.class, () -> PluginPackage.read(root, () -> {
++            try {
++                Files.writeString(file, "modified");
++            } catch (IOException exception) {
++                throw new java.io.UncheckedIOException(exception);
++            }
++        }));
++        assertEquals(ArtifactPhase.DIGEST, failure.phase());
++    }
++
+     @Test
+     void readsCanonicalThreeFacetPackageAndComputesContentIdentities(@TempDir Path work)
+         throws Exception {
+--- /dev/null
++++ b/fibra-artifact/src/test/java/com/sstlfsj/fibra/artifact/PluginConfigurationResourceBootstrapTest.java
+@@ -0,0 +1,20 @@
++package com.sstlfsj.fibra.artifact;
++
++import org.junit.jupiter.api.Test;
++
++import static org.junit.jupiter.api.Assertions.assertEquals;
++import static org.junit.jupiter.api.Assertions.assertTrue;
++
++class PluginConfigurationResourceBootstrapTest {
++    @Test
++    void exposesOnlyTheFixedLazyResourceContract() throws Exception {
++        var method = PluginPackageRecord.class.getMethod("configurationResource");
++        var resource = method.getReturnType();
++        assertEquals("com.sstlfsj.fibra.artifact.PluginConfigurationResource", resource.getName());
++        assertTrue(resource.isInterface());
++        assertTrue(AutoCloseable.class.isAssignableFrom(resource));
++        assertEquals(byte[].class, resource.getMethod("read").getReturnType());
++        assertEquals(void.class, resource.getMethod("close").getReturnType());
++        assertEquals(2, resource.getDeclaredMethods().length);
++    }
++}
+--- /dev/null
++++ b/fibra-artifact/src/test/java/com/sstlfsj/fibra/artifact/PluginConfigurationResourceTest.java
+@@ -0,0 +1,242 @@
++package com.sstlfsj.fibra.artifact;
++
++import org.junit.jupiter.api.Test;
++import org.junit.jupiter.api.io.TempDir;
++import org.junit.jupiter.params.ParameterizedTest;
++import org.junit.jupiter.params.provider.ValueSource;
++
++import java.nio.file.Files;
++import java.nio.file.Path;
++import java.nio.file.attribute.FileTime;
++import java.time.Instant;
++import java.util.List;
++import java.util.NoSuchElementException;
++
++import static org.junit.jupiter.api.Assertions.*;
++
++class PluginConfigurationResourceTest {
++    private static final String FILE = "fibra-config.json";
++    private static final byte[] BYTES = "{\"format\":1}".getBytes(java.nio.charset.StandardCharsets.UTF_8);
++
++    @Test
++    void verifiedRecordReadsOriginalBytesAndReturnsDefensiveCopies(@TempDir Path work)
++        throws Exception {
++        var record = install(work, BYTES);
++        try (var resource = record.configurationResource()) {
++            var first = resource.read();
++            assertArrayEquals(BYTES, first);
++            first[0] = 0;
++            Files.writeString(record.location().resolve(FILE), "changed after successful read");
++            assertArrayEquals(BYTES, resource.read());
++            resource.close();
++            assertArrayEquals(BYTES, resource.read());
++        }
++    }
++
++    @ParameterizedTest
++    @ValueSource(strings = {"missing", "truncate", "same-length", "replacement", "directory", "symlink"})
++    void findRecordNeverReturnsChangedBytesAsTheOriginalRevision(String change,
++                                                                 @TempDir Path work)
++        throws Exception {
++        var record = install(work, BYTES);
++        var file = record.location().resolve(FILE);
++        switch (change) {
++            case "missing" -> Files.delete(file);
++            case "truncate" -> Files.write(file, new byte[0]);
++            case "same-length" -> Files.write(file, new byte[BYTES.length]);
++            case "replacement" -> {
++                var replacement = Files.writeString(work.resolve("replacement"), "new config");
++                Files.move(replacement, file, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
++            }
++            case "directory" -> {
++                Files.delete(file);
++                Files.createDirectory(file);
++            }
++            case "symlink" -> {
++                Files.delete(file);
++                Files.createSymbolicLink(file, Files.write(work.resolve("secret-target"), BYTES));
++            }
++            default -> throw new AssertionError(change);
++        }
++        try (var resource = record.configurationResource()) {
++            var failure = assertThrows(ArtifactException.class, resource::read);
++            assertSafe(failure);
++            resource.close();
++            assertSafe(assertThrows(ArtifactException.class, resource::read));
++        }
++    }
++
++    @Test
++    void originallyAbsentResourceStaysMissingWithoutConsultingTheFileSystem(@TempDir Path work)
++        throws Exception {
++        var record = install(work, null);
++        Files.write(record.location().resolve(FILE), BYTES);
++        try (var resource = record.configurationResource()) {
++            var failure = assertThrows(NoSuchElementException.class, resource::read);
++            assertEquals("package configuration resource is absent", failure.getMessage());
++            assertNull(failure.getCause());
++            assertEquals(0, failure.getSuppressed().length);
++        }
++    }
++
++    @Test
++    void originallyNonregularResourceCannotBecomeValidByReplacement(@TempDir Path work)
++        throws Exception {
++        var source = source(work);
++        Files.createDirectory(source.resolve(FILE));
++        var record = installSource(work, source);
++        Files.delete(record.location().resolve(FILE));
++        Files.write(record.location().resolve(FILE), BYTES);
++        try (var resource = record.configurationResource()) {
++            assertSafe(assertThrows(ArtifactException.class, resource::read));
++        }
++    }
++
++    @Test
++    void sameBytesWithChangedMtimeAreStillTheSameResource(@TempDir Path work) throws Exception {
++        var record = install(work, BYTES);
++        Files.setLastModifiedTime(record.location().resolve(FILE), FileTime.fromMillis(123_000));
++        try (var resource = record.configurationResource()) {
++            assertArrayEquals(BYTES, resource.read());
++        }
++    }
++
++    @ParameterizedTest
++    @ValueSource(ints = {1_048_576, 1_048_577})
++    void enforcesOneMiBReadBoundary(int length, @TempDir Path work) throws Exception {
++        var bytes = new byte[length];
++        var record = install(work, bytes);
++        try (var resource = record.configurationResource()) {
++            if (length == 1_048_576) {
++                assertArrayEquals(bytes, resource.read());
++            } else {
++                assertSafe(assertThrows(ArtifactException.class, resource::read));
++            }
++        }
++    }
++
++    @Test
++    void metadataBuilderHasNoAuthorityEvenWhenAllMetadataMatches(@TempDir Path work)
++        throws Exception {
++        var record = install(work, BYTES);
++        var manual = PluginPackageRecord.builder().pluginId(record.pluginId())
++            .version(record.version()).packageRevision(record.packageRevision())
++            .location(record.location()).managedPackage(record.managedPackage())
++            .state(record.state()).updatedAt(record.updatedAt()).build();
++        assertEquals(record, manual);
++        assertEquals(record.hashCode(), manual.hashCode());
++        assertThrows(IllegalStateException.class, manual::configurationResource);
++        Files.delete(record.location().resolve(FILE));
++        assertThrows(IllegalStateException.class, manual::configurationResource);
++        assertThrows(IllegalStateException.class, () -> manual.toBuilder()
++            .location(work.resolve("does-not-exist")).build().configurationResource());
++        // Creation is lazy even after a verified file has disappeared.
++        try (var resource = record.configurationResource()) {
++            assertSafe(assertThrows(ArtifactException.class, resource::read));
++        }
++    }
++
++    @Test
++    void toBuilderChecksFinalNormalizedContentIdentityAndPreservesMetadataChanges(
++        @TempDir Path work) throws Exception {
++        var record = install(work, BYTES);
++        var restored = record.toBuilder().location(work.resolve("unused"))
++            .location(record.location().resolve("unvisited/.."))
++            .state(ArtifactState.STAGED).updatedAt(Instant.EPOCH).build();
++        try (var resource = restored.configurationResource()) {
++            assertArrayEquals(BYTES, resource.read());
++        }
++        assertThrows(IllegalStateException.class, () -> record.toBuilder()
++            .location(work.resolve("another-root")).build().configurationResource());
++        var changed = changedManaged(record);
++        assertThrows(IllegalStateException.class, () -> record.toBuilder()
++            .managedPackage(changed).build().configurationResource());
++        try (var resource = record.toBuilder().managedPackage(changed)
++            .managedPackage(record.managedPackage()).build().configurationResource()) {
++            assertArrayEquals(BYTES, resource.read());
++        }
++        var revision = "0".repeat(64);
++        var altered = ManagedPluginPackage.builder().pluginId(record.pluginId())
++            .version(record.version()).packageRevision(revision)
++            .facets(record.managedPackage().facets().stream().map(facet -> new ManagedFacet(
++                facet.artifactId(), record.pluginId(), revision, facet.facet())).toList()).build();
++        assertThrows(IllegalStateException.class, () -> record.toBuilder()
++            .packageRevision(revision).managedPackage(altered).build().configurationResource());
++    }
++
++    @Test
++    void reopenedStoreReconstructsEvidenceFromVerifiedPackage(@TempDir Path work) throws Exception {
++        var record = install(work, BYTES);
++        try (var reopened = new PluginPackageStore(work.resolve("store"));
++             var resource = reopened.find(record.pluginId(), record.packageRevision())
++                 .orElseThrow().configurationResource()) {
++            assertArrayEquals(BYTES, resource.read());
++        }
++    }
++
++    @Test
++    void closeBeforeReadDoesNotOpenAndRejectsLaterRead(@TempDir Path work) throws Exception {
++        var record = install(work, BYTES);
++        var resource = record.configurationResource();
++        resource.close();
++        Files.delete(record.location().resolve(FILE));
++        assertThrows(IllegalStateException.class, resource::read);
++        resource.close();
++    }
++
++    private static ManagedPluginPackage changedManaged(PluginPackageRecord record) {
++        var current = record.managedPackage().facets().getFirst();
++        var facet = current.facet();
++        var changedFacet = new PluginFacet(facet.facetId(), facet.role(), facet.runtimeId(),
++            facet.executionTarget(), facet.payload(), facet.payloadDigest(), facet.dependencies(),
++            List.of("changed-capability"));
++        return ManagedPluginPackage.builder().pluginId(record.pluginId()).version(record.version())
++            .packageRevision(record.packageRevision()).facets(List.of(new ManagedFacet(
++                current.artifactId(), record.pluginId(), record.packageRevision(), changedFacet)))
++            .build();
++    }
++
++    static void assertSafe(ArtifactException failure) {
++        assertNull(failure.path());
++        assertNull(failure.getCause());
++        assertEquals(0, failure.getSuppressed().length);
++        assertTrue(List.of("cannot read package configuration resource",
++            "package configuration resource content identity mismatch",
++            "cannot close package configuration resource").contains(failure.getMessage()));
++    }
++
++    private static PluginPackageRecord install(Path work, byte[] bytes) throws Exception {
++        var source = source(work);
++        if (bytes != null) {
++            Files.write(source.resolve(FILE), bytes);
++        }
++        return installSource(work, source);
++    }
++
++    private static PluginPackageRecord installSource(Path work, Path source) {
++        try (var store = new PluginPackageStore(work.resolve("store"));
++             var transaction = store.prepareInstall(source)) {
++            var saved = transaction.save();
++            return store.find(saved.pluginId(), saved.packageRevision()).orElseThrow();
++        }
++    }
++
++    private static Path source(Path work) throws Exception {
++        var source = Files.createDirectory(work.resolve("source"));
++        Files.writeString(source.resolve("payload.bin"), "payload");
++        Files.writeString(source.resolve(PluginPackage.MANIFEST), """
++            format: 1
++            id: example.config
++            version: 1.0.0
++            facets:
++              - id: main
++                role: host
++                runtime: java
++                target: host
++                payload: payload.bin
++                dependencies: []
++                capabilities: []
++            """);
++        return source;
++    }
++}
+--- /dev/null
++++ b/fibra-artifact/src/test/java/com/sstlfsj/fibra/artifact/FixedPluginConfigurationResourceTest.java
+@@ -0,0 +1,240 @@
++package com.sstlfsj.fibra.artifact;
++
++import org.junit.jupiter.api.Test;
++import org.junit.jupiter.params.ParameterizedTest;
++import org.junit.jupiter.params.provider.ValueSource;
++
++import java.io.ByteArrayInputStream;
++import java.io.IOException;
++import java.io.InputStream;
++import java.nio.file.Path;
++import java.security.MessageDigest;
++import java.util.HexFormat;
++import java.util.concurrent.CountDownLatch;
++import java.util.concurrent.Executors;
++import java.util.concurrent.TimeUnit;
++import java.util.concurrent.atomic.AtomicInteger;
++
++import static org.junit.jupiter.api.Assertions.*;
++
++class FixedPluginConfigurationResourceTest {
++    private static final byte[] BYTES = {1, 2, 3};
++    private static final String SECRET = "secret raw exception and path";
++
++    @ParameterizedTest
++    @ValueSource(strings = {"vm", "thread"})
++    @SuppressWarnings("removal")
++    void fatalErrorsPropagateButCannotLeaveFalseSuccessfulTerminalState(String kind) throws Exception {
++        Error fatal = kind.equals("vm") ? new InternalError(SECRET) : new ThreadDeath();
++        var closes = new AtomicInteger();
++        var stream = new InputStream() {
++            @Override
++            public int read() { throw fatal; }
++            @Override
++            public void close() {
++                closes.incrementAndGet();
++                throw fatal;
++            }
++        };
++        var resource = resource(() -> stream);
++        assertSame(fatal, assertThrows(Error.class, resource::read));
++        PluginConfigurationResourceTest.assertSafe(assertThrows(ArtifactException.class, resource::read));
++        assertSame(fatal, assertThrows(Error.class, resource::close));
++        PluginConfigurationResourceTest.assertSafe(assertThrows(ArtifactException.class, resource::close));
++        assertSame(stream, retainedInput(resource));
++        assertEquals(1, closes.get());
++    }
++
++    @Test
++    void errorsAlsoKeepSafeReadAndCloseTerminalOutcomes() throws Exception {
++        var closes = new AtomicInteger();
++        var stream = new InputStream() {
++            @Override
++            public int read() { throw new AssertionError(SECRET); }
++            @Override
++            public void close() {
++                closes.incrementAndGet();
++                throw new AssertionError(SECRET);
++            }
++        };
++        var resource = resource(() -> stream);
++        PluginConfigurationResourceTest.assertSafe(assertThrows(ArtifactException.class, resource::read));
++        PluginConfigurationResourceTest.assertSafe(assertThrows(ArtifactException.class, resource::read));
++        PluginConfigurationResourceTest.assertSafe(assertThrows(ArtifactException.class, resource::close));
++        PluginConfigurationResourceTest.assertSafe(assertThrows(ArtifactException.class, resource::close));
++        assertSame(stream, retainedInput(resource));
++        assertEquals(1, closes.get());
++    }
++
++    @Test
++    void creationIsLazyAndRepeatedReadOpensOnceWithoutClosingEarly() throws Exception {
++        var opens = new AtomicInteger();
++        var closes = new AtomicInteger();
++        var stream = new ByteArrayInputStream(BYTES) {
++            @Override
++            public void close() { closes.incrementAndGet(); }
++        };
++        var resource = resource(() -> {
++            opens.incrementAndGet();
++            return stream;
++        });
++        assertEquals(0, opens.get());
++        var first = resource.read();
++        first[0] = 4;
++        assertArrayEquals(BYTES, resource.read());
++        assertEquals(1, opens.get());
++        assertEquals(0, closes.get());
++        resource.close();
++        resource.close();
++        assertEquals(1, closes.get());
++        assertArrayEquals(BYTES, resource.read());
++        assertNull(retainedInput(resource));
++    }
++
++    @Test
++    void readAndCloseFailureAreSafeTerminalOutcomesAndRetainStream() throws Exception {
++        var closes = new AtomicInteger();
++        var stream = new InputStream() {
++            @Override
++            public int read() throws IOException { throw new IOException(SECRET); }
++            @Override
++            public void close() throws IOException {
++                closes.incrementAndGet();
++                throw new IOException(SECRET);
++            }
++        };
++        var resource = resource(() -> stream);
++        PluginConfigurationResourceTest.assertSafe(assertThrows(ArtifactException.class, resource::read));
++        assertSame(stream, retainedInput(resource));
++        assertEquals(0, closes.get());
++        PluginConfigurationResourceTest.assertSafe(assertThrows(ArtifactException.class, resource::close));
++        assertSame(stream, retainedInput(resource));
++        PluginConfigurationResourceTest.assertSafe(assertThrows(ArtifactException.class, resource::read));
++        PluginConfigurationResourceTest.assertSafe(assertThrows(ArtifactException.class, resource::close));
++        assertEquals(1, closes.get());
++    }
++
++    @Test
++    void successfulCloseClearsStreamButRetainsSafeReadFailure() throws Exception {
++        var closes = new AtomicInteger();
++        var stream = new InputStream() {
++            @Override
++            public int read() { throw new IllegalStateException(SECRET); }
++            @Override
++            public void close() { closes.incrementAndGet(); }
++        };
++        var resource = resource(() -> stream);
++        PluginConfigurationResourceTest.assertSafe(assertThrows(ArtifactException.class, resource::read));
++        assertSame(stream, retainedInput(resource));
++        resource.close();
++        assertNull(retainedInput(resource));
++        PluginConfigurationResourceTest.assertSafe(assertThrows(ArtifactException.class, resource::read));
++        resource.close();
++        assertEquals(1, closes.get());
++    }
++
++    @Test
++    void closeWaitsForBlockedReadAndConcurrentReadReplaysWithoutSecondOpen() throws Exception {
++        var entered = new CountDownLatch(1);
++        var release = new CountDownLatch(1);
++        var closeStarted = new CountDownLatch(1);
++        var opens = new AtomicInteger();
++        var closes = new AtomicInteger();
++        var stream = new ByteArrayInputStream(BYTES) {
++            @Override
++            public synchronized int read(byte[] buffer, int offset, int length) {
++                entered.countDown();
++                try {
++                    if (!release.await(5, TimeUnit.SECONDS)) {
++                        throw new AssertionError("read was not released");
++                    }
++                } catch (InterruptedException failure) {
++                    Thread.currentThread().interrupt();
++                    throw new AssertionError(failure);
++                }
++                return super.read(buffer, offset, length);
++            }
++            @Override
++            public void close() { closes.incrementAndGet(); }
++        };
++        var resource = resource(() -> {
++            opens.incrementAndGet();
++            return stream;
++        });
++        try (var executor = Executors.newFixedThreadPool(3)) {
++            var read = executor.submit(resource::read);
++            assertTrue(entered.await(5, TimeUnit.SECONDS));
++            var close = executor.submit(() -> {
++                closeStarted.countDown();
++                resource.close();
++            });
++            var secondRead = executor.submit(resource::read);
++            assertTrue(closeStarted.await(5, TimeUnit.SECONDS));
++            try {
++                assertThrows(java.util.concurrent.TimeoutException.class,
++                    () -> close.get(100, TimeUnit.MILLISECONDS));
++                assertEquals(0, closes.get());
++            } finally {
++                release.countDown();
++            }
++            assertArrayEquals(BYTES, read.get(5, TimeUnit.SECONDS));
++            close.get(5, TimeUnit.SECONDS);
++            assertArrayEquals(BYTES, secondRead.get(5, TimeUnit.SECONDS));
++        } finally {
++            release.countDown();
++            resource.close();
++        }
++        assertEquals(1, opens.get());
++        assertEquals(1, closes.get());
++    }
++
++    @Test
++    void closeBeforeReadDoesNotInvokeIo() throws Exception {
++        var resource = resource(() -> { throw new AssertionError("must not open"); });
++        resource.close();
++        resource.close();
++        assertThrows(IllegalStateException.class, resource::read);
++    }
++
++    @Test
++    void absentAndNonregularFactsNeverInvokeIo() {
++        var absent = new FixedPluginConfigurationResource(Path.of("unused"),
++            ConfigurationResourceEvidence.absent(), path -> { throw new AssertionError("must not open"); });
++        assertThrows(java.util.NoSuchElementException.class, absent::read);
++        absent.close();
++        var nonregular = new FixedPluginConfigurationResource(Path.of("unused"),
++            ConfigurationResourceEvidence.nonregular(), path -> { throw new AssertionError("must not open"); });
++        PluginConfigurationResourceTest.assertSafe(assertThrows(ArtifactException.class, nonregular::read));
++        nonregular.close();
++    }
++
++    @Test
++    void openingFailureIsNotRetriedOrLeaked() throws Exception {
++        var opens = new AtomicInteger();
++        var resource = resource(() -> {
++            opens.incrementAndGet();
++            throw new IOException(SECRET);
++        });
++        PluginConfigurationResourceTest.assertSafe(assertThrows(ArtifactException.class, resource::read));
++        resource.close();
++        PluginConfigurationResourceTest.assertSafe(assertThrows(ArtifactException.class, resource::read));
++        assertEquals(1, opens.get());
++    }
++
++    private static FixedPluginConfigurationResource resource(Open open) throws Exception {
++        var hash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(BYTES));
++        return new FixedPluginConfigurationResource(Path.of("unused"),
++            ConfigurationResourceEvidence.regular(hash, BYTES.length), path -> open.open());
++    }
++
++    private static InputStream retainedInput(FixedPluginConfigurationResource resource) throws Exception {
++        var field = FixedPluginConfigurationResource.class.getDeclaredField("input");
++        field.setAccessible(true);
++        return (InputStream) field.get(resource);
++    }
++
++    @FunctionalInterface
++    private interface Open {
++        InputStream open() throws IOException;
++    }
++}

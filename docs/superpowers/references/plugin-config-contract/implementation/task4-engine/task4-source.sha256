@@ -1,0 +1,15 @@
+e0f222016e6ab4b4f818d937a8ab151c423b500beaf3cea10f20c7049f00c15a  fibra-cli/src/test/java/com/sstlfsj/fibra/cli/CliHostOwnershipTest.java
+39ea0d9c7352668923cf6501a9ee1ea75d785dc7d02adb3d266d4214270a71c1  fibra-cli/src/test/java/com/sstlfsj/fibra/cli/CliHostTest.java
+2d1af8965eb14f7a171ec5f219cf3963f7fba49fcaa4ad75a701c59224537e15  fibra-cli/src/test/java/com/sstlfsj/fibra/cli/FibraCliTest.java
+e0cac26bc9824ec0d6fc3bfc1ab05fb0b36ced6b388f242a122b8154496ee6eb  fibra-engine/src/main/java/com/sstlfsj/fibra/engine/EngineConfigurationContracts.java
+5b65e77eb0ac4d8549d234dafd85758dda8beba05a0f09321a41bfdb21c279cb  fibra-engine/src/main/java/com/sstlfsj/fibra/engine/EngineReadAttempt.java
+2a9084a3ed69e19ae12ff60b9af29a21227175abb0b48913959a9be503ead4a8  fibra-engine/src/main/java/com/sstlfsj/fibra/engine/FibraEngine.java
+67f96de3e2f926ddc872687d48d13f989f4953e01465b98bb467c4b759377729  fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/ConfigContractException.java
+eef9ea0332d75039c43316c92633279c11927b531106b7a1618b670ca9154f6e  fibra-engine/src/main/java/com/sstlfsj/fibra/engine/deployment/DefinitionConfigContract.java
+b127b575ed35aa5c0bd18267bdd8e469561158ffcafbd968b48c1261b9268d65  fibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineAttemptStateModelTest.java
+7ddc9a016937fe4a7f524d7fa8b044e746a7acd2e5ee84cde7617fa9178712a6  fibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineConfigurationContractTest.java
+794220feb0f4f9ce92c30b8ce5eb44da9e9b340a3b0a73c4b36f5e8c82996989  fibra-engine/src/test/java/com/sstlfsj/fibra/engine/EngineReadAttemptTest.java
+b33987e113b9a77f5c9aea7d370a1bd96f2730f1fdeccf8e8ea1ff05d01d4589  fibra-engine/src/test/java/com/sstlfsj/fibra/engine/RuntimeDriverEngineTest.java
+3053c2d9286c28e8c304300ce9604f35f1347ae52642b7b19585f0075f899253  fibra-parity-tests/src/test/java/com/sstlfsj/fibra/verification/host/HostRestartRecoveryProcess.java
+cccc47dad9f9e40fdb3468fc7cdeed978a6968d02572c053b4ab2be828913491  fibra-registry/src/test/java/com/sstlfsj/fibra/registry/PluginRegistryTest.java
+85253001ecd51e7bb03587e1347ea4ff458e9435e2fa99f25576bd76680edae8  fibra-runtime-java/src/test/java/com/sstlfsj/fibra/runtime/java/JavaBuiltInRecoveryTest.java

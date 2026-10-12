@@ -432,10 +432,11 @@ public final class PluginPackageStore implements AutoCloseable {
                 pluginPackage.packageDigest() + ":" + facet.facetId().value()));
         }
         var managed = ManagedPluginPackage.from(pluginPackage, artifactIds);
-        return PluginPackageRecord.builder().pluginId(pluginPackage.pluginId())
+        return PluginPackageRecord.verified(PluginPackageRecord.builder().pluginId(pluginPackage.pluginId())
             .version(pluginPackage.version())
             .packageRevision(pluginPackage.packageDigest()).location(location)
-            .managedPackage(managed).state(state).updatedAt(updatedAt).build();
+            .managedPackage(managed).state(state).updatedAt(updatedAt),
+            pluginPackage.configurationEvidence());
     }
 
     private static PluginPackage readPackage(Path path, ArtifactPhase phase,

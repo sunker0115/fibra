@@ -1,0 +1,14 @@
+{
+  "result": "PASS",
+  "checks": [
+    "active source equals exact output",
+    "space-containing custom output directory",
+    "existing output preserved",
+    "ordinary resources preserved",
+    "idle Assembly consumer not activated",
+    "no .dir suffix"
+  ],
+  "firstSourceSha256": "d5783014728ea63c4a6f50b98ee50b34d6b9c8c77e1a9e465a106c20058b5c38",
+  "sourceMtimeNs": 1791794431329374460,
+  "incrementalSourceSha256": "e4ff20fc0a4f45e6d361d434d8f652adf48795c0bcaad9f8d0f8e31fbeb9339d"
+}
