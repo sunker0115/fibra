@@ -12,8 +12,11 @@ import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.PluginDefinitionRef;
 import com.sstlfsj.fibra.engine.ApplyDeployment;
-import com.sstlfsj.fibra.engine.observation.CandidatePhase;
 import com.sstlfsj.fibra.engine.observation.CurrentPhase;
+import com.sstlfsj.fibra.engine.observation.EngineOperationOutcome;
+import com.sstlfsj.fibra.engine.observation.EngineOperationStage;
+import com.sstlfsj.fibra.engine.observation.FailureStage;
+import com.sstlfsj.fibra.engine.observation.TargetSaveState;
 import com.sstlfsj.fibra.engine.deployment.DeploymentTarget;
 import com.sstlfsj.fibra.engine.deployment.DeploymentTargetStore;
 import com.sstlfsj.fibra.engine.deployment.DurableTargetToken;
@@ -30,9 +33,11 @@ import com.sstlfsj.fibra.runtime.node.NodeRuntimeOptions;
 import com.sstlfsj.fibra.runtime.node.NodeRuntimeProvider;
 import com.sstlfsj.fibra.value.LiteralValue;
 import fixture.DisableJavaEntrypoint;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
@@ -45,9 +50,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.jar.JarEntry;
@@ -66,9 +73,10 @@ class CrossRuntimeSelfDisableTest {
         ContributionKind.remote("control", String.class, String.class,
             String.class, new ControlCodec());
 
-    @Test
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
     void selfDisablePersistsCompleteTargetAndPreservesUnrelatedRuntimeAndInflightCall(
-        @TempDir Path work) throws Exception {
+        boolean deferFailureDemand, @TempDir Path work) throws Exception {
         var starts = new CopyOnWriteArrayList<JavaLifecycle>();
         var cleanups = new CopyOnWriteArrayList<JavaLifecycle>();
         var services = hostServices(starts, cleanups);
@@ -144,18 +152,46 @@ class CrossRuntimeSelfDisableTest {
                     assertFalse(held.isDone());
 
                     store.failNextSave();
-                    var nodeDisableFailure = engine.published().views().filter(view ->
-                        view.engine().candidate().map(candidate ->
-                            candidate.phase() == CandidatePhase.FAILED).orElse(false)
+                    var failedTargetRevision = target(store).targetRevision() + 1;
+                    var failureSettled = new CompletableFuture<Void>();
+                    var nodeDisableFailure = engine.published().views()
+                        .takeUntil(view -> view.engine().candidate().isEmpty()
+                            && view.engineDiagnostics().failure().isPresent())
+                        .doOnComplete(() -> failureSettled.complete(null))
+                        .onBackpressureLatest()
+                        .filter(view -> view.engine().candidate().isEmpty()
+                            && view.engineDiagnostics().operation().map(operation ->
+                                operation.outcome() == EngineOperationOutcome.FAILED
+                                    && operation.stage() == EngineOperationStage.SAVING
+                                    && operation.targetSaveState() == TargetSaveState.NOT_SAVED
+                                    && operation.targetRevision() == failedTargetRevision)
+                                .orElse(false)
                             && view.engineDiagnostics().failure().isPresent()
                             && view.engine().target().orElseThrow().desiredGraph()
                                 .plugins().get("self-node").enabled()
                             && currentUnits(view).containsKey(
-                                new ExecutionUnitKey("self-node")))
-                        .next().toFuture();
-                    invokeControl(engine, "self-node", "disable");
-                    var failedNodeDisable = Mono.fromFuture(nodeDisableFailure)
-                        .block(TIMEOUT);
+                                new ExecutionUnitKey("self-node")));
+                    var failedView = new AtomicReference<PublishedView>();
+                    try {
+                        // 零需求一直保持到清理结束，确定性地合并 FAILED 中间视图。
+                        StepVerifier.create(nodeDisableFailure, deferFailureDemand ? 0 : 1)
+                            .then(() -> {
+                                invokeControl(engine, "self-node", "disable");
+                                if (deferFailureDemand) {
+                                    Mono.fromFuture(failureSettled).block(TIMEOUT);
+                                }
+                            })
+                            .thenRequest(1)
+                            .assertNext(failedView::set)
+                            .thenCancel().verify(TIMEOUT);
+                    } finally {
+                        failureSettled.cancel(true);
+                    }
+                    var failedNodeDisable = failedView.get();
+                    assertEquals("CANDIDATE_FAILED",
+                        failedNodeDisable.engineDiagnostics().failure().orElseThrow().reason());
+                    assertEquals(FailureStage.SAVING,
+                        failedNodeDisable.engineDiagnostics().failure().orElseThrow().stage());
                     assertEquals(1, observations.size());
                     assertEquals(raw.withEnabled("self-java", false),
                         target(store).desiredGraph());

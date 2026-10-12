@@ -31,6 +31,7 @@ class NodeSidecarTest {
         var readerEntered = new java.util.concurrent.CountDownLatch(1);
         var requestWritten = new java.util.concurrent.CountDownLatch(1);
         var alive = new AtomicBoolean(true);
+        var closeThread = new java.util.concurrent.CompletableFuture<Thread>();
         var exit = new java.util.concurrent.CompletableFuture<Process>();
         var tail = new java.util.concurrent.atomic.AtomicReference<java.io.InputStream>();
         var input = new java.io.ByteArrayOutputStream() {
@@ -47,7 +48,12 @@ class NodeSidecarTest {
             @Override public java.io.OutputStream getOutputStream() { return input; }
             @Override public java.io.InputStream getInputStream() { return output; }
             @Override public java.io.InputStream getErrorStream() { return java.io.InputStream.nullInputStream(); }
-            @Override public boolean isAlive() { return alive.get(); }
+            @Override public boolean isAlive() {
+                if (Thread.currentThread().getName().equals("fibra-node-close")) {
+                    closeThread.complete(Thread.currentThread());
+                }
+                return alive.get();
+            }
             @Override public java.util.concurrent.CompletableFuture<Process> onExit() { return exit; }
             @Override public int waitFor() { exit.join(); return 0; }
             @Override public int exitValue() { return 0; }
@@ -77,6 +83,7 @@ class NodeSidecarTest {
             var closing = session.closeAsync().toFuture();
             var proofFailure = assertThrows(NodeRpcException.class, unit::close);
             assertEquals(NodeRpcPhase.TERMINATE, proofFailure.phase());
+            awaitTailDrain(closeThread.get(1, TimeUnit.SECONDS));
             assertThrows(java.util.concurrent.TimeoutException.class,
                 () -> closing.get(100, TimeUnit.MILLISECONDS), "必须等到尾部 EOF 才能汇总协议失败");
 
@@ -113,6 +120,7 @@ class NodeSidecarTest {
         var readerEntered = new java.util.concurrent.CountDownLatch(1);
         var requestWritten = new java.util.concurrent.CountDownLatch(1);
         var alive = new AtomicBoolean(true);
+        var closeThread = new java.util.concurrent.CompletableFuture<Thread>();
         var exit = new java.util.concurrent.CompletableFuture<Process>();
         var tail = new java.util.concurrent.atomic.AtomicReference<java.io.InputStream>();
         var input = new java.io.ByteArrayOutputStream() {
@@ -129,7 +137,12 @@ class NodeSidecarTest {
             @Override public java.io.OutputStream getOutputStream() { return input; }
             @Override public java.io.InputStream getInputStream() { return output; }
             @Override public java.io.InputStream getErrorStream() { return java.io.InputStream.nullInputStream(); }
-            @Override public boolean isAlive() { return alive.get(); }
+            @Override public boolean isAlive() {
+                if (Thread.currentThread().getName().equals("fibra-node-close")) {
+                    closeThread.complete(Thread.currentThread());
+                }
+                return alive.get();
+            }
             @Override public java.util.concurrent.CompletableFuture<Process> onExit() { return exit; }
             @Override public int waitFor() { exit.join(); return 0; }
             @Override public int exitValue() { return 0; }
@@ -160,6 +173,7 @@ class NodeSidecarTest {
             var closing = session.closeAsync().toFuture();
             var proofFailure = assertThrows(NodeRpcException.class, unit::close);
             assertEquals(NodeRpcPhase.TERMINATE, proofFailure.phase());
+            awaitTailDrain(closeThread.get(1, TimeUnit.SECONDS));
             assertThrows(java.util.concurrent.TimeoutException.class,
                 () -> closing.get(100, TimeUnit.MILLISECONDS), "范围证明失败不能抢先丢弃完整尾响应");
 
@@ -174,6 +188,24 @@ class NodeSidecarTest {
             tailReleased.complete(null);
             scheduler.shutdownNow();
         }
+    }
+
+    private static void awaitTailDrain(Thread closer) throws InterruptedException {
+        var deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
+        while (System.nanoTime() < deadline) {
+            var frames = closer.getStackTrace();
+            if (closer.getState() == Thread.State.WAITING) {
+                for (var index = 0; index + 1 < frames.length; index++) {
+                    if (frames[index].getClassName().equals(java.util.concurrent.CompletableFuture.class.getName())
+                        && frames[index].getMethodName().equals("join")
+                        && frames[index + 1].getClassName().equals(NodeSidecar.class.getName())
+                        && frames[index + 1].getMethodName().equals("finishClose")) return;
+                }
+            }
+            Thread.sleep(1);
+        }
+        throw new AssertionError("本会话的 close 线程未进入尾部排空等待: "
+            + java.util.Arrays.toString(closer.getStackTrace()));
     }
 
     @Test

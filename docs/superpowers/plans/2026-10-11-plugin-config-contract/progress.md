@@ -1,5 +1,28 @@
 # 通用插件配置合同进度
 
+## 2026-10-12 预期超时验证补强完成
+
+- 用户“那设置个目标开始吧”授权补强审查中的 5 处用例，运行时 goal 已建立。已有未提交 CI 修复完整保留，开发分支不变。
+- 有界模式分析：CLI 已有目标线程 WAITING 观测；Node sidecar 已通过指定 writer 的 FileOutputStream.writeBytes 栈帧确认真实管道写。新观测限定测试内精确线程和阻塞位置，不扫描同名线程冒充本会话证据、不新增生产 hook。
+- 文件分工：主线程负责 NodeProcessUnitTest/NodeSidecarTest、全部 Maven 验证和集成；独立实施者仅负责 FixedPluginConfigurationResourceTest/CliSessionTest，不并行运行 Maven。
+- 旧 Node writer 临时延后到 close 后才放行，`old-delayed-writer.log` 1 项仍通过，证实原测试存在假阳性。正式补强后定向 `phase-green.log` 5 项通过；随后 Node close 栈检查收紧为 finishClose 的直接 join，排除嵌套 unit.close 等待。
+- 四轮反例均原生退出 1：延后 writer 1/1 failure，去掉 resource close 锁 1/1 failure，跳过 CLI 交接等待 1/1 failure，跳过 Node 尾部 join 2/2 failure，均 0 error/skip。不是编译错误或随机超时冒充 RED；日志与输入 SHA 清单位于 `/private/tmp/fibra-timeout-proof`。
+- 临时反例代码已按 SHA 逐字节恢复，生产源码 diff 为空；完整 clean verify 对恢复后的源码重建，避免复用反例 class。
+- 独立质量审查 5 个用例均无剩余问题，核对临时输入 SHA 恢复与实际反例日志。JDK 21 固定源码确认 Linux/macOS 共用本轮观测的 ProcessPipeOutputStream/FileOutputStream 写路径；本轮 Linux 未实机运行，不能把源码适用性当 CI 已通过。
+- 最终 `full-clean-verify.log` 原生退出 0：44 模块、171 个实际测试类、1229 项全部通过，零 failure/error/skip；对应 XML 与日志计数一致，摘要和恢复 SHA 在 `full-clean-verify-summary.json`。本轮仅补强 4 个测试文件中的 5 处用例及阶段记录，运行时目标闭合；本节记录开发分支提交前的本地验收。
+
+## 2026-10-12 合并后 CI 修复本地完成
+
+- 用户授权彻底解决 CI 问题并明确在开发分支修复；已从干净 main 切回同 SHA 的 `codex/plugin-config-contract`。
+- 本轮先补真实场景受控背压 RED，再修复等待条件，最后跑相关回归及独立审查。生产通知合同保持不变，原始 CI 日志在 `/private/tmp/fibra-ci-38246646807`。
+- 第一次计划 patch 因进度文件标题不符原子失败，没有部分修改；核对实际标题后重做。
+- 初次受控测试把抛 checked exception 的断言放入 Consumer，编译失败（`controlled-red.log`），不计行为 RED；改为保存收到的视图后按原方式断言。首版屏障在普通需求下额外阻塞通知，改为仅慢需求等待清理屏障；原记录 `controlled-red-r2.log` 保留，不用它证明最终夹具资格。
+- 最终夹具临时换回旧谓词，`old-predicate-red.log` 原生退出 1：普通模式通过、慢模式稳定 assertion failure（收到完成而没有匹配视图），共 2 项、1 failure、0 error。随后恢复修复，字节比较与保留的 GREEN 源码一致。
+- 三类定向 `focused-green.log` 原生退出 0：Registry 14 项、Node 取消 1 项、跨运行时 self-disable 2 项全部通过。
+- `full-clean-verify.log` 原生退出 0，44 模块全部成功，171 个实际日志类与对应 XML 合计 1229 项、零失败/错误/跳过。汇总排除了仓外 consumer 源目录里不属于本次执行的 3 份旧报告，记录在 `full-clean-verify-summary.json`。使用 JDK 21、锁定 Node 22.14.0、现有离线 Maven 缓存。
+- 独立审查发现 1 项 P2：Node 测试在改用真实生命周期事件后仍应保留 Engine 阶段约束。已在 release 前增加 current retirement phase 为 DRAINING 的断言，原屏障使该读数稳定；`final-node-green.log` 对应 1 项通过、原生退出 0。复审确认 P2 关闭，无剩余审查问题。
+- 本轮只改 3 个测试和本目录的阶段记录，生产代码、公开合同、依赖和超时不变；开发分支 `codex/plugin-config-contract`；该阶段为提交前的本地验收，未把本地绿色冒充修复后的 GitHub CI 结果。日志均位于 `/private/tmp/fibra-ci-38246646807`。
+
 ## 2026-10-11 启动
 
 - 已用 create_goal 设置完整 active 目标；未设置 token 预算。

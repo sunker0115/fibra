@@ -1,5 +1,21 @@
 # 通用插件配置合同调查
 
+## 2026-10-12 预期超时的阶段证据
+
+- `NodeProcessUnitTest` 原测试允许“写任务尚未执行实际 I/O，关闭已结束，随后写入失败被吞掉”的时序。测试内临时 gate 强制该时序，原测试仍通过（`old-delayed-writer.log`）；补强后相同时序在进入证据处明确失败（`new-delayed-writer-red.log`）。
+- 本轮 owner 不变：测试直接观察自己的线程，artifact 验证目标 resource monitor、首次 read owner 及 close/read 栈；CLI 验证具体 session monitor 的 readLine 交接等待；Node 验证指定 writer 的真实管道 writeBytes，以及由本 fixture Process 捕获的 close 线程在 finishClose 直接调用 join。后者排除在 NodeProcessUnit 内等待另一关闭者的假匹配。
+- 保留 Node 用例的 100ms 负向观察，但先取得真实阶段证据；artifact/CLI 的负向超时改为具体锁等待证据。所有新正向等待有上限，不把一次 isDone 或仅启动 latch 当进入证明。使用既有 JDK 21/平台线程观测范式，不增加生产 hook 或依赖。
+- 反例临时取消 resource close 同步、CLI 消息等待、Node 输出尾部 join，4 个用例全部 assertion failure；加上延后 writer 共 5 个预期失败、0 error。所有临时修改按保存 SHA 恢复，完整 clean verify 对恢复后的源码重建，避免残留 mutant class。原始日志位于 `/private/tmp/fibra-timeout-proof`。
+
+## 2026-10-12 合并后 CI 观察竞态
+
+- main CI `38246646807` 的 npm 通过，Maven 唯一错误为 `CrossRuntimeSelfDisableTest` 等待 `candidate=FAILED` 10 秒超时；同 SHA 开发分支 CI `38243119872` 已通过。
+- `PublishedRuntime.views()` 的合同允许合并中间事实；实际链使用 `onBackpressureLatest` 与异步交付。`deploymentFailed` 发布 FAILED 后清空 candidate，失败诊断及操作结果仍保留，测试不应把通知流当事件日志。
+- 同版 Reactor 3.8.6 临时实验稳定重现 FAILED 被最终视图替代；本轮将受控零需求观察纳入真实 Java/Node 场景。CI 日志无逐帧视图，不把推断说成 CI 现场完整重放。原日志与诊断位于 `/private/tmp/fibra-ci-38246646807`。
+- 有界同类审查发现 `NodePublishedCancellationOwnershipTest` 的 DRAINING 有远端 release 文件屏障，但 STOPPING 后立即 ACK，也可能被合并；应断言停用回执、真实生命周期文件顺序及进程退出。
+- `PluginRegistryTest.watchProjectsEngineFactsWithoutOwningASecondStateMachine` 还有同源异步交付竞态：安装回执与 watch 通知独立完成。现改为在统一 10 秒期限内消费通知直到回执对应的精确 viewRevision，并核对 Engine 投影；不引入生产缓存或新状态机。
+- 真实 self-disable 场景同时覆盖普通需求与延后需求；测试只在候选清理结束后释放慢订阅者请求，使中间失败视图必然被合并。原谓词反例 `old-predicate-red.log` 为 2 项、1 failure、0 error，只有慢模式失败；定向修复回归 `focused-green.log` 为 17 项全部通过。完整回归及最终独审另记。
+
 ## 已核事实
 
 - `main` 初始干净，HEAD `0a674176b8b762b4e77044bcba7f051bf06c41d9`；`fc57549` 为名称目录交付，后者仅 Node 测试等待修订。已创建独立 `codex/plugin-config-contract`。

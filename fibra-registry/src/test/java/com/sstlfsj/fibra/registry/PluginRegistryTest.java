@@ -42,6 +42,8 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -335,12 +337,18 @@ class PluginRegistryTest {
     @Test
     void watchProjectsEngineFactsWithoutOwningASecondStateMachine() throws Exception {
         try (var fixture = fixture()) {
-            var seen = new java.util.concurrent.CopyOnWriteArrayList<RegistrySnapshot>();
+            var seen = new LinkedBlockingQueue<RegistrySnapshot>();
             var subscription = fixture.registry.watch().subscribe(seen::add);
             try {
                 var installed = fixture.registry.install(new PluginInstallRequest(source("one", "1"), false)).block();
-                assertFalse(seen.isEmpty());
-                assertEquals(installed.viewRevision(), seen.getLast().viewRevision());
+                var deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos();
+                RegistrySnapshot observed;
+                do {
+                    observed = seen.poll(Math.max(0, deadline - System.nanoTime()),
+                        TimeUnit.NANOSECONDS);
+                    assertNotNull(observed, "watch 未送达已完成安装的视图");
+                } while (!installed.viewRevision().equals(observed.viewRevision()));
+                assertEquals(installed.engine(), observed.engine());
                 assertEquals(fixture.engine.snapshot(), fixture.registry.snapshot().engine());
             } finally { subscription.dispose(); }
         }

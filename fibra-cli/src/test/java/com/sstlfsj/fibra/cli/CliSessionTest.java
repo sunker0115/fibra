@@ -37,6 +37,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -401,6 +403,7 @@ class CliSessionTest {
     @Test
     void lineEditorHandoffWaitsForAnAdmittedPrintAbove() throws Exception {
         var readEntered = new CountDownLatch(1);
+        var readThread = new AtomicReference<Thread>();
         var releaseRead = new CountDownLatch(1);
         var printEntered = new CountDownLatch(1);
         var releasePrint = new CountDownLatch(1);
@@ -426,15 +429,16 @@ class CliSessionTest {
             terminal);
         var workers = Executors.newFixedThreadPool(2);
         try {
-            var reading = workers.submit(() -> session.readLine(reader, "agent> "));
+            var reading = workers.submit(() -> {
+                readThread.set(Thread.currentThread());
+                return session.readLine(reader, "agent> ");
+            });
             assertTrue(readEntered.await(5, TimeUnit.SECONDS));
             var message = workers.submit(() -> session.printAbove("ready"));
             assertTrue(printEntered.await(5, TimeUnit.SECONDS));
 
             releaseRead.countDown();
-            assertThrows(java.util.concurrent.TimeoutException.class,
-                () -> reading.get(100, TimeUnit.MILLISECONDS),
-                "编辑器已准入的消息完成前不得把物理终端交给 renderer");
+            awaitLineEditorHandoff(readThread.get(), session);
             releasePrint.countDown();
 
             assertTrue(message.get(5, TimeUnit.SECONDS));
@@ -679,6 +683,28 @@ class CliSessionTest {
             Thread.sleep(1);
         }
         return false;
+    }
+
+    private static void awaitLineEditorHandoff(Thread thread, CliTerminalSession session)
+        throws InterruptedException {
+        var threads = ManagementFactory.getThreadMXBean();
+        var deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        ThreadInfo last = null;
+        while (System.nanoTime() < deadline) {
+            last = threads.getThreadInfo(thread.threadId(), 16);
+            if (last != null && last.getThreadState() == Thread.State.WAITING
+                && last.getLockInfo() != null
+                && last.getLockInfo().getClassName().equals(CliTerminalSession.class.getName())
+                && last.getLockInfo().getIdentityHashCode() == System.identityHashCode(session)
+                && java.util.Arrays.stream(last.getStackTrace()).anyMatch(frame ->
+                    frame.getClassName().equals(CliTerminalSession.class.getName())
+                        && frame.getMethodName().equals("readLine"))) {
+                return;
+            }
+            Thread.sleep(1);
+        }
+        org.junit.jupiter.api.Assertions.fail(
+            "编辑器必须在 readLine 交接阶段等待已准入的消息完成: " + last);
     }
 
     private static CliCommandDescriptor command(String name) {

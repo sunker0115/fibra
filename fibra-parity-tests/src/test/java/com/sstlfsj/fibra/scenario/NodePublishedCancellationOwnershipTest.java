@@ -88,9 +88,6 @@ class NodePublishedCancellationOwnershipTest {
                 var draining = engine.published().views().filter(view ->
                     view.engine().retirementBatch().map(batch ->
                         batch.phase() == RetirementPhase.DRAINING).orElse(false)).next().toFuture();
-                var stopping = engine.published().views().filter(view ->
-                    view.engine().retirementBatch().map(batch ->
-                        batch.phase() == RetirementPhase.STOPPING).orElse(false)).next().toFuture();
                 var disabling = engine.submit(ApplyDeployment.builder(
                         initial.withEnabled(INSTANCE, false))
                     .expectedRevision(1).selections(List.of(selection))
@@ -103,11 +100,14 @@ class NodePublishedCancellationOwnershipTest {
                 assertEquals(List.of(pid), recordedPids(pidFile));
                 assertTrue(alive(pid), "取消排空期间不得终止 Node sidecar");
                 assertThrows(TimeoutException.class,
-                    () -> stopping.get(1, TimeUnit.SECONDS),
-                    "远端请求终态前不得进入停止阶段");
+                    () -> disabling.get(1, TimeUnit.SECONDS),
+                    "远端请求终态前不得完成停用");
+                assertEquals(RetirementPhase.DRAINING, engine.published().current()
+                    .engine().retirementBatch().orElseThrow().phase());
+                assertFalse(Files.exists(lifecycleEvents),
+                    "远端请求终态前不得发送 stop");
 
                 Files.writeString(release, "release");
-                stopping.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
                 var disabled = disabling.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS).view();
                 assertFalse(currentUnits(disabled).containsKey(new ExecutionUnitKey(INSTANCE)));
                 assertFalse(alive(pid), "远端终态后停用必须完成并关闭 Node sidecar");

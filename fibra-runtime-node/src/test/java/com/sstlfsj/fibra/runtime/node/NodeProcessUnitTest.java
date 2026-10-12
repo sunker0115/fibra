@@ -669,22 +669,56 @@ class NodeProcessUnitTest {
             .terminateTimeout(Duration.ofMillis(300)).build());
         var reader = new java.io.BufferedReader(new java.io.InputStreamReader(unit.output()));
         var pid = Long.parseLong(reader.readLine());
-        var writing = java.util.concurrent.CompletableFuture.runAsync(() -> {
+        var input = unit.input();
+        var payload = new byte[8 * 1024 * 1024];
+        var closing = new AtomicBoolean();
+        var writing = new java.util.concurrent.FutureTask<Void>(() -> {
             try {
-                unit.input().write(new byte[8 * 1024 * 1024]);
-                unit.input().flush();
-            } catch (java.io.IOException expectedAfterClose) { }
+                input.write(payload);
+                input.flush();
+            } catch (java.io.IOException failure) {
+                if (!closing.get()) throw failure;
+            }
+            return null;
         });
+        var writer = Thread.ofPlatform().name("blocked-payload-input").start(writing);
         try {
+            awaitPipeWrite(writer, writing);
             assertThrows(java.util.concurrent.TimeoutException.class,
                 () -> writing.get(100, TimeUnit.MILLISECONDS));
+            closing.set(true);
             unit.close();
             writing.get(2, TimeUnit.SECONDS);
             assertEquals("QUIESCENT", unit.finalState().range());
             assertFalse(ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false));
         } finally {
-            ProcessHandle.of(pid).ifPresent(ProcessHandle::destroyForcibly);
+            closing.set(true);
+            try {
+                unit.close();
+            } finally {
+                ProcessHandle.of(pid).ifPresent(ProcessHandle::destroyForcibly);
+                writer.join(Duration.ofSeconds(2));
+                assertFalse(writer.isAlive(), "管道写线程未随进程关闭而结束");
+            }
         }
+    }
+
+    private static void awaitPipeWrite(Thread writer, java.util.concurrent.Future<?> writing)
+        throws Exception {
+        var deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
+        while (System.nanoTime() < deadline) {
+            if (writing.isDone()) {
+                writing.get();
+                throw new AssertionError("管道写入在关闭前已完成，未形成背压场景");
+            }
+            // 与 sidecar 的真实管道测试一致，确认该线程已进入 JDK 管道写调用。
+            if (java.util.Arrays.stream(writer.getStackTrace()).anyMatch(frame ->
+                frame.getClassName().equals("java.io.FileOutputStream")
+                    && frame.getMethodName().equals("writeBytes"))) return;
+            Thread.sleep(1);
+        }
+        throw new AssertionError("写线程未进入管道写调用: "
+            + java.util.Arrays.toString(writer.getStackTrace()));
     }
 
     @Test

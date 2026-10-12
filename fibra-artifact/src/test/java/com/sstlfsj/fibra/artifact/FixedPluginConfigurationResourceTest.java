@@ -7,6 +7,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
@@ -14,6 +16,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -137,7 +140,9 @@ class FixedPluginConfigurationResourceTest {
     void closeWaitsForBlockedReadAndConcurrentReadReplaysWithoutSecondOpen() throws Exception {
         var entered = new CountDownLatch(1);
         var release = new CountDownLatch(1);
-        var closeStarted = new CountDownLatch(1);
+        var readThread = new AtomicReference<Thread>();
+        var closeThread = new AtomicReference<Thread>();
+        var secondReadThread = new AtomicReference<Thread>();
         var opens = new AtomicInteger();
         var closes = new AtomicInteger();
         var stream = new ByteArrayInputStream(BYTES) {
@@ -162,24 +167,30 @@ class FixedPluginConfigurationResourceTest {
             return stream;
         });
         try (var executor = Executors.newFixedThreadPool(3)) {
-            var read = executor.submit(resource::read);
-            assertTrue(entered.await(5, TimeUnit.SECONDS));
-            var close = executor.submit(() -> {
-                closeStarted.countDown();
-                resource.close();
-            });
-            var secondRead = executor.submit(resource::read);
-            assertTrue(closeStarted.await(5, TimeUnit.SECONDS));
             try {
-                assertThrows(java.util.concurrent.TimeoutException.class,
-                    () -> close.get(100, TimeUnit.MILLISECONDS));
+                var read = executor.submit(() -> {
+                    readThread.set(Thread.currentThread());
+                    return resource.read();
+                });
+                assertTrue(entered.await(5, TimeUnit.SECONDS));
+                var close = executor.submit(() -> {
+                    closeThread.set(Thread.currentThread());
+                    resource.close();
+                });
+                var secondRead = executor.submit(() -> {
+                    secondReadThread.set(Thread.currentThread());
+                    return resource.read();
+                });
+                awaitResourceMonitor(closeThread, resource, readThread.get(), "close");
+                awaitResourceMonitor(secondReadThread, resource, readThread.get(), "read");
                 assertEquals(0, closes.get());
+                release.countDown();
+                assertArrayEquals(BYTES, read.get(5, TimeUnit.SECONDS));
+                close.get(5, TimeUnit.SECONDS);
+                assertArrayEquals(BYTES, secondRead.get(5, TimeUnit.SECONDS));
             } finally {
                 release.countDown();
             }
-            assertArrayEquals(BYTES, read.get(5, TimeUnit.SECONDS));
-            close.get(5, TimeUnit.SECONDS);
-            assertArrayEquals(BYTES, secondRead.get(5, TimeUnit.SECONDS));
         } finally {
             release.countDown();
             resource.close();
@@ -225,6 +236,31 @@ class FixedPluginConfigurationResourceTest {
         var hash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(BYTES));
         return new FixedPluginConfigurationResource(Path.of("unused"),
             ConfigurationResourceEvidence.regular(hash, BYTES.length), path -> open.open());
+    }
+
+    private static void awaitResourceMonitor(AtomicReference<Thread> thread,
+                                             FixedPluginConfigurationResource resource,
+                                             Thread owner, String method) throws InterruptedException {
+        var threads = ManagementFactory.getThreadMXBean();
+        var deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        ThreadInfo last = null;
+        while (System.nanoTime() < deadline) {
+            if (thread.get() != null) {
+                last = threads.getThreadInfo(thread.get().threadId(), 16);
+                if (last != null && last.getThreadState() == Thread.State.BLOCKED
+                    && last.getLockOwnerId() == owner.threadId()
+                    && last.getLockInfo() != null
+                    && last.getLockInfo().getClassName().equals(resource.getClass().getName())
+                    && last.getLockInfo().getIdentityHashCode() == System.identityHashCode(resource)
+                    && java.util.Arrays.stream(last.getStackTrace()).anyMatch(frame ->
+                        frame.getClassName().equals(FixedPluginConfigurationResource.class.getName())
+                            && frame.getMethodName().equals(method))) {
+                    return;
+                }
+            }
+            Thread.sleep(1);
+        }
+        fail(method + " did not block on the resource monitor held by the first read: " + last);
     }
 
     private static InputStream retainedInput(FixedPluginConfigurationResource resource) throws Exception {
