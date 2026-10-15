@@ -2,7 +2,6 @@ package com.sstlfsj.fibra.cli;
 
 import com.sstlfsj.fibra.artifact.PluginId;
 import com.sstlfsj.fibra.bridge.ContributionId;
-import com.sstlfsj.fibra.bridge.ContributionKind;
 import com.sstlfsj.fibra.bridge.ContributionSnapshotEntry;
 import com.sstlfsj.fibra.bridge.ContributionUnavailableException;
 import com.sstlfsj.fibra.cli.api.command.CliCommandRequest;
@@ -22,7 +21,6 @@ import com.sstlfsj.fibra.engine.EngineChangeException;
 import com.sstlfsj.fibra.engine.MutationGateClosedException;
 import com.sstlfsj.fibra.engine.observation.PluginInstanceSnapshot;
 import com.sstlfsj.fibra.engine.publication.PublishedRevisionConflictException;
-import com.sstlfsj.fibra.engine.publication.PublishedView;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.plugins.tool.ToolContent;
 import com.sstlfsj.fibra.plugins.tool.ToolContributions;
@@ -382,13 +380,13 @@ public final class FibraCli {
         var arguments = parseObject(input);
         var view = host().published().current();
         var id = new ContributionId(provider, name);
-        var registrationIdentity = registrationIdentity(view, ToolContributions.KIND, id);
+        var handle = view.resolve(ToolContributions.KIND, id)
+            .orElseThrow(() -> new ContributionUnavailableException(id));
         var cancellation = beginInvocation();
         final ToolOutcome outcome;
         try {
-            outcome = ToolOutcomes.normalize(() -> host().published().invoke(view.viewRevision(),
-                registrationIdentity, ToolContributions.KIND, id,
-                new ToolRequest(arguments, cancellation.token()))).block();
+            outcome = ToolOutcomes.normalize(() -> host().published().invoke(handle,
+                ToolContributions.KIND, new ToolRequest(arguments, cancellation.token()))).block();
         } finally {
             endInvocation(cancellation);
         }
@@ -405,15 +403,6 @@ public final class FibraCli {
                 print(output);
             }
         }
-    }
-
-    private static long registrationIdentity(PublishedView view,
-                                             ContributionKind<?, ?, ?> kind,
-                                             ContributionId id) {
-        return view.contributions().entries().stream()
-            .filter(entry -> entry.kind().equals(kind.name()) && entry.id().equals(id))
-            .findFirst().map(ContributionSnapshotEntry::registrationIdentity)
-            .orElse(Long.MIN_VALUE);
     }
 
     private static List<Map<String, Object>> content(List<ToolContent> content) {

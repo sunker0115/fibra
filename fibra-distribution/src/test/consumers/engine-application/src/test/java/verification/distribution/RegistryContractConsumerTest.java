@@ -36,7 +36,7 @@ class RegistryContractConsumerTest {
         try (var engine = FibraEngine.builder(packages, targets)
             .runtimeProvider(new JavaRuntimeProvider(List.of()))
             .hostTerminationPort(value -> { throw new AssertionError(value); }).build()) {
-            var registry = new PluginRegistry(engine, packages, new InMemoryPluginAuditRepository());
+            var registry = new PluginRegistry(engine, new InMemoryPluginAuditRepository());
             engine.startAsync().block(LIMIT);
             var first = registry.deploy(request(0, "first")).block(LIMIT);
             assertEquals(1, first.target().orElseThrow().targetRevision());
@@ -72,7 +72,7 @@ class RegistryContractConsumerTest {
         try (var engine = FibraEngine.builder(packages, targets)
             .runtimeProvider(new JavaRuntimeProvider(List.of()))
             .hostTerminationPort(value -> { throw new AssertionError(value); }).build()) {
-            var registry = new PluginRegistry(engine, packages, new InMemoryPluginAuditRepository());
+            var registry = new PluginRegistry(engine, new InMemoryPluginAuditRepository());
             engine.startAsync().block(LIMIT);
             assertTrue(registry.snapshot().target().isEmpty());
             registry.deploy(request(0, "current")).block(LIMIT);

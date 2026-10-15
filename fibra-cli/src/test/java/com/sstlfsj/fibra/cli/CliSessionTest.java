@@ -1,5 +1,6 @@
 package com.sstlfsj.fibra.cli;
 
+import com.sstlfsj.fibra.bridge.ContributionHandle;
 import com.sstlfsj.fibra.bridge.ContributionId;
 import com.sstlfsj.fibra.bridge.ContributionKind;
 import com.sstlfsj.fibra.bridge.ContributionSnapshot;
@@ -297,10 +298,8 @@ class CliSessionTest {
             }
 
             @Override @SuppressWarnings("unchecked")
-            public <D, I, O> Mono<O> invoke(String expectedViewRevision,
-                                            long expectedRegistrationIdentity,
-                                            ContributionKind<D, I, O> kind,
-                                            ContributionId id, I input) {
+            public <D, I, O> Mono<O> invoke(ContributionHandle handle,
+                                            ContributionKind<D, I, O> kind, I input) {
                 var request = (com.sstlfsj.fibra.cli.api.command.CliCommandRequest) input;
                 return (Mono<O>) Mono.fromCallable(() -> {
                     runtimeInvocations.incrementAndGet();
@@ -760,14 +759,12 @@ class CliSessionTest {
         }
 
         @Override @SuppressWarnings("unchecked")
-        public <D, I, O> Mono<O> invoke(String expectedViewRevision,
-                                        long expectedRegistrationIdentity,
-                                        ContributionKind<D, I, O> kind,
-                                        ContributionId id, I input) {
-            assertEquals("view-1", expectedViewRevision);
-            assertEquals(41L, expectedRegistrationIdentity);
+        public <D, I, O> Mono<O> invoke(ContributionHandle handle,
+                                        ContributionKind<D, I, O> kind, I input) {
+            assertEquals("view-1", handle.viewRevision());
+            assertEquals(41L, handle.registrationIdentity());
             assertEquals(CliCommandContributions.KIND, kind);
-            assertEquals(new ContributionId("provider", "echo"), id);
+            assertEquals(new ContributionId("provider", "echo"), handle.id());
             invoked = true;
             return Mono.just((O) CliCommandResult.success());
         }

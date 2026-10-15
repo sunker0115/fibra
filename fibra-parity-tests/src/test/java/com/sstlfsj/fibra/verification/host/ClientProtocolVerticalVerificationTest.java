@@ -10,6 +10,7 @@ import com.sstlfsj.fibra.engine.publication.PublishedView;
 import com.sstlfsj.fibra.engine.publication.RemoteContributionInvoker;
 
 import com.sstlfsj.fibra.artifact.PluginPackageStore;
+import com.sstlfsj.fibra.bridge.ContributionHandle;
 import com.sstlfsj.fibra.bridge.ContributionKindRegistry;
 import com.sstlfsj.fibra.bridge.ContributionSnapshotEntry;
 import com.sstlfsj.fibra.bridge.ContributionUnavailableException;
@@ -160,7 +161,8 @@ class ClientProtocolVerticalVerificationTest {
     private static void assertRejected(FibraEngine engine, ContributionKindRegistry kinds,
                                        PublishedView view, ContributionSnapshotEntry stale) {
         assertThrows(ContributionUnavailableException.class, () -> new RemoteContributionInvoker(kinds, engine.published())
-            .invoke(stale.kind(), stale.id(), view.viewRevision(), stale.registrationIdentity(), LiteralValue.of("stale"))
+            .invoke(stale.kind(), new ContributionHandle(view.viewRevision(), stale.registrationIdentity(),
+                stale.id()), LiteralValue.of("stale"))
             .block(TIMEOUT));
     }
 
@@ -169,8 +171,9 @@ class ClientProtocolVerticalVerificationTest {
         var view = engine.published().current();
         var route = route(view, entry);
         assertEquals(LiteralValue.of(config(mode).canonicalJson() + ":request"),
-            new RemoteContributionInvoker(kinds, engine.published()).invoke(route.kind(), route.id(),
-                view.viewRevision(), route.registrationIdentity(), LiteralValue.of("request")).block(TIMEOUT));
+            new RemoteContributionInvoker(kinds, engine.published()).invoke(route.kind(),
+                new ContributionHandle(view.viewRevision(), route.registrationIdentity(), route.id()),
+                LiteralValue.of("request")).block(TIMEOUT));
     }
 
     private static List<ClientMessage.Assignment> write(Path output, String name,

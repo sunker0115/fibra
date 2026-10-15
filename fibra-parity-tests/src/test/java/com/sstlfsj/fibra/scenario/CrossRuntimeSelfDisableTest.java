@@ -130,9 +130,9 @@ class CrossRuntimeSelfDisableTest {
                 work.register(watcher, StandardWatchEventKinds.ENTRY_CREATE,
                     StandardWatchEventKinds.ENTRY_MODIFY);
                 var stableControl = controlId(deployed, "stable-node");
-                var held = engine.published().invoke(deployed.viewRevision(),
-                    identity(deployed, stableControl), CONTROL,
-                    stableControl, "hold").toFuture();
+                var held = engine.published().invoke(
+                    deployed.resolve(CONTROL, stableControl).orElseThrow(), CONTROL,
+                    "hold").toFuture();
                 try {
                     awaitFile(watcher, holdEntered);
                     invokeControl(engine, "self-java", "disable");
@@ -223,8 +223,8 @@ class CrossRuntimeSelfDisableTest {
                     var current = engine.published().current();
                     var currentStableControl = controlId(current, "stable-node");
                     assertEquals("released", engine.published().invoke(
-                        current.viewRevision(), identity(current, currentStableControl),
-                        CONTROL, currentStableControl, "release").block(TIMEOUT));
+                        current.resolve(CONTROL, currentStableControl).orElseThrow(),
+                        CONTROL, "release").block(TIMEOUT));
                     assertEquals("held", held.get(TIMEOUT.toMillis(),
                         TimeUnit.MILLISECONDS));
                     disabledTarget = target(store);
@@ -263,8 +263,8 @@ class CrossRuntimeSelfDisableTest {
             assertNotSame(loader(starts, "stable-java"), starts.getLast().loader());
             var stableControl = controlId(restored, "stable-node");
             assertEquals("released", reopened.published().invoke(
-                restored.viewRevision(), identity(restored, stableControl),
-                CONTROL, stableControl, "release").block(TIMEOUT));
+                restored.resolve(CONTROL, stableControl).orElseThrow(),
+                CONTROL, "release").block(TIMEOUT));
         }
         assertEquals(starts, cleanups);
         assertRecordedPidsStopped(selfPidFile, stablePidFile);
@@ -353,7 +353,7 @@ class CrossRuntimeSelfDisableTest {
         var current = engine.published().current();
         var id = controlId(current, unit);
         assertEquals("requested", engine.published().invoke(
-            current.viewRevision(), identity(current, id), CONTROL, id,
+            current.resolve(CONTROL, id).orElseThrow(), CONTROL,
             command).block(TIMEOUT));
     }
 
@@ -365,12 +365,6 @@ class CrossRuntimeSelfDisableTest {
             .findFirst().orElseThrow();
     }
 
-    private static long identity(PublishedView view, ContributionId id) {
-        return view.contributions().entries().stream()
-            .filter(entry -> entry.kind().equals(CONTROL.name())
-                && entry.id().equals(id))
-            .map(entry -> entry.registrationIdentity()).findFirst().orElseThrow();
-    }
 
     private static PublishedView awaitDisabled(FibraEngine engine, String id) {
         return reactor.core.publisher.Flux.merge(engine.published().views(),

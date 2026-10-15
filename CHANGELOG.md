@@ -13,6 +13,9 @@
 - 新增运行时中立的 `fibra-artifact`、`fibra-config`、`fibra-bridge`、`fibra-registry`。
 - 新增 Java JAR/ClassSpace 与 Node sidecar/JSON-RPC 两个一等 runtime adapter。
 - 新增统一完整 Engine 命令、持久化部署 target、不可变 Engine snapshot 与异步失败投影。
+- 新增 `FibraEngine.packageStore()`，供 Registry 等协作者从 Engine 派生同一 package store。
+- 新增 `ContributionHandle` 值类型与 `PublishedView.resolve(kind, id)`：在单个 view 内原子捕获
+  `viewRevision` 与 `registrationIdentity`，作为贡献调用的进程内凭据（按 view 即时捕获，不可跨 view 复用）。
 
 ### 变更
 
@@ -22,6 +25,11 @@
 - 将内核重构为 `FibraRuntime`、`Scope`、`Context`、`PluginInstance` 四层所有权模型。
 - Java 插件改为单一 `META-INF/fibra/plugin.yaml` 入口，不再扫描扩展类。
 - Spring Boot starter 直接组合 Engine、Registry、Java runtime 和持久化存储。
+- `PluginRegistry` 构造器不再接收 `PluginPackageStore`，改从 `FibraEngine.packageStore()` 派生，
+  使 Engine 与 Registry 使用不一致 store 的装配错误在编译期即不可表达。
+- 贡献调用入口 `PublishedRuntime.invoke` 与 `RemoteContributionInvoker.invoke` 改为按
+  `ContributionHandle` 调用，取代原先分散传入的 `viewRevision` + `registrationIdentity` 两个参数；
+  两个 fence 的校验语义不变。`ContributionUnavailableException` 构造器公开，供 resolve 落空时表达不可用。
 
 ### 移除
 

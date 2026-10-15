@@ -38,10 +38,10 @@ public final class PluginRegistry {
     private final PluginAuditRepository audit;
     private final List<PluginAuditDeliveryFailure> auditFailures = new CopyOnWriteArrayList<>();
 
-    /** packages 必须是构造 engine 时使用的同一 store；Registry 不接管任何资源的关闭所有权。 */
-    public PluginRegistry(FibraEngine engine, PluginPackageStore packages, PluginAuditRepository audit) {
+    /** package store 从 engine 派生，保证与 engine 读取的是同一个；Registry 不接管任何资源的关闭所有权。 */
+    public PluginRegistry(FibraEngine engine, PluginAuditRepository audit) {
         this.engine = Objects.requireNonNull(engine, "engine");
-        this.packages = Objects.requireNonNull(packages, "packages");
+        this.packages = engine.packageStore();
         this.audit = Objects.requireNonNull(audit, "audit");
     }
 

@@ -165,9 +165,9 @@ class CrossRuntimeConditionalConfigTest {
                 work.register(watcher, StandardWatchEventKinds.ENTRY_CREATE,
                     StandardWatchEventKinds.ENTRY_MODIFY);
                 var stableControl = controlId(lastGood, STABLE_NODE);
-                var held = engine.published().invoke(lastGood.viewRevision(),
-                    identity(lastGood, CONTROL, stableControl), CONTROL,
-                    stableControl, "hold").toFuture();
+                var held = engine.published().invoke(
+                    lastGood.resolve(CONTROL, stableControl).orElseThrow(), CONTROL,
+                    "hold").toFuture();
                 try {
                     awaitFile(watcher, holdEntered);
                     var changed = engine.submit(ApplyDeployment.builder(raw)
@@ -212,8 +212,8 @@ class CrossRuntimeConditionalConfigTest {
 
                     var currentControl = controlId(changed, STABLE_NODE);
                     assertEquals("released", engine.published().invoke(
-                        changed.viewRevision(), identity(changed, CONTROL, currentControl),
-                        CONTROL, currentControl, "release").block(TIMEOUT));
+                        changed.resolve(CONTROL, currentControl).orElseThrow(),
+                        CONTROL, "release").block(TIMEOUT));
                     assertEquals("held", held.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
                 } finally {
                     held.cancel(true);
@@ -453,13 +453,6 @@ class CrossRuntimeConditionalConfigTest {
             .map(entry -> entry.id())
             .filter(id -> id.providerInstanceId().equals(unit))
             .findFirst().orElseThrow();
-    }
-
-    private static long identity(PublishedView view, ContributionKind<?, ?, ?> kind,
-                                 ContributionId id) {
-        return view.contributions().entries().stream()
-            .filter(entry -> entry.kind().equals(kind.name()) && entry.id().equals(id))
-            .map(entry -> entry.registrationIdentity()).findFirst().orElseThrow();
     }
 
     private static long processId(String probe) {

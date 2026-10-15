@@ -1,6 +1,6 @@
 package com.sstlfsj.fibra.engine.publication;
 
-import com.sstlfsj.fibra.bridge.ContributionId;
+import com.sstlfsj.fibra.bridge.ContributionHandle;
 import com.sstlfsj.fibra.bridge.ContributionKind;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -12,8 +12,6 @@ public interface PublishedRuntime {
     /** 订阅后的事实变化；不重放历史，慢订阅者可合并中间状态。当前事实通过 current() 读取。 */
     Flux<PublishedView> views();
 
-    <D, I, O> Mono<O> invoke(String expectedViewRevision,
-                             long expectedRegistrationIdentity,
-                             ContributionKind<D, I, O> kind,
-                             ContributionId id, I input);
+    /** 按 PublishedView.resolve 捕获的 handle 调用；两个 fence 由 handle 携带，仍逐次校验。 */
+    <D, I, O> Mono<O> invoke(ContributionHandle handle, ContributionKind<D, I, O> kind, I input);
 }

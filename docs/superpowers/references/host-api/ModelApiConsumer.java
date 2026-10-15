@@ -69,8 +69,10 @@ public final class ModelApiConsumer {
             try { call(engine, old, "model-one"); throw new AssertionError("old view accepted"); }
             catch (PublishedRevisionConflictException expected) { }
             try {
-                engine.published().invoke(view.viewRevision(), oldRegistration, ModelContributions.KIND,
-                    new ContributionId("model-one", "complete"), request()).block(LIMIT);
+                engine.published().invoke(
+                    new ContributionHandle(view.viewRevision(), oldRegistration,
+                        new ContributionId("model-one", "complete")),
+                    ModelContributions.KIND, request()).block(LIMIT);
                 throw new AssertionError("old registration accepted");
             } catch (ContributionUnavailableException expected) { }
             System.out.println("AFTER_REPLACE_TYPED_BOTH=true");
@@ -91,8 +93,9 @@ public final class ModelApiConsumer {
     private static void call(FibraEngine engine, PublishedView view, String name) {
         var item = entry(view, name);
         check(item.descriptor() instanceof ModelDescriptor, "descriptor Host identity");
-        var result = engine.published().invoke(view.viewRevision(), item.registrationIdentity(),
-            ModelContributions.KIND, item.id(), request()).block(LIMIT);
+        var result = engine.published().invoke(
+            new ContributionHandle(view.viewRevision(), item.registrationIdentity(), item.id()),
+            ModelContributions.KIND, request()).block(LIMIT);
         check(result instanceof ModelResponse, "response Host identity");
         check(result.completion() instanceof ModelResponse.RequiresAction, "real provider requests action");
         var toolCall = (ModelResponse.ToolCall) result.output().getFirst();
@@ -103,8 +106,9 @@ public final class ModelApiConsumer {
                 Map.of("number", 1, "text", "host-result")))))).build();
         var continued = new ModelRequest(new ModelRequest.ToolResults(
             result.continuation().orElseThrow(), List.of(toolResult)), List.of(), CancellationToken.never());
-        var completed = engine.published().invoke(view.viewRevision(), item.registrationIdentity(),
-            ModelContributions.KIND, item.id(), continued).block(LIMIT);
+        var completed = engine.published().invoke(
+            new ContributionHandle(view.viewRevision(), item.registrationIdentity(), item.id()),
+            ModelContributions.KIND, continued).block(LIMIT);
         check(completed.completion() instanceof ModelResponse.Completed, "completed real model call");
         check(((ModelResponse.AssistantText) completed.output().getFirst()).text().equals("host-result\n"),
             "Host tool result returned through real provider");

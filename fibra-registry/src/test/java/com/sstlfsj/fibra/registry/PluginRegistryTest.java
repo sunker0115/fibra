@@ -644,7 +644,7 @@ class PluginRegistryTest {
             engine = FibraEngine.builder(packages, targets).runtimeProvider(provider)
                 .hostTerminationPort(request -> { }).lifecycleTimeout(Duration.ofSeconds(2)).build();
             engine.startAsync().block();
-            registry = new PluginRegistry(engine, packages, audit);
+            registry = new PluginRegistry(engine, audit);
         }
         PluginPackageRecord publish(Path source) {
             try (var transaction = packages.prepareInstall(source)) { return transaction.save(); }

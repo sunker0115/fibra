@@ -136,9 +136,10 @@ public final class FibraEngine implements AutoCloseable {
             return views.asFlux().onBackpressureLatest().publishOn(Schedulers.boundedElastic(), 1)
                 .onBackpressureLatest();
         }
-        public <D, I, O> Mono<O> invoke(String revision, long registration,
-                                       ContributionKind<D, I, O> kind, ContributionId id, I input) {
-            return invokePublished(revision, registration, kind, id, input)
+        public <D, I, O> Mono<O> invoke(ContributionHandle handle,
+                                       ContributionKind<D, I, O> kind, I input) {
+            return invokePublished(handle.viewRevision(), handle.registrationIdentity(),
+                    kind, handle.id(), input)
                 .publishOn(Schedulers.boundedElastic());
         }
     };
@@ -292,6 +293,8 @@ public final class FibraEngine implements AutoCloseable {
         return new Builder(packages, targets);
     }
     public PublishedRuntime published() { return published; }
+    /** Engine 独占的 package store；装配 Registry 等协作者时从此派生，避免重复传入不一致的 store。 */
+    public PluginPackageStore packageStore() { return packageStore; }
     public EngineSnapshot snapshot() { return published.current().engine(); }
     public Mono<PublishedView> startAsync() { return Mono.defer(() -> start); }
     public Mono<EngineCommandResult> submit(EngineCommand command) {

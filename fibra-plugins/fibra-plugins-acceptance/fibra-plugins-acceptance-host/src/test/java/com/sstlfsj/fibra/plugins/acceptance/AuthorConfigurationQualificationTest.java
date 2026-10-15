@@ -53,7 +53,7 @@ class AuthorConfigurationQualificationTest {
                     .runtimeProvider(new JavaRuntimeProvider(List.of()))
                     .hostTerminationPort(ignored -> { }).build();
                 engine.startAsync().block(PluginAcceptanceHarness.TIMEOUT);
-                var registry = new PluginRegistry(engine, packages, new InMemoryPluginAuditRepository());
+                var registry = new PluginRegistry(engine, new InMemoryPluginAuditRepository());
                 var request = PluginAcceptanceHarness.installRequest(root.resolve("sources"),
                     PluginAcceptanceHarness.stagedJar("fibra-fs"));
                 var snapshot = registry.install(new PluginInstallRequest(request.source(), false))

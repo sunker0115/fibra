@@ -76,7 +76,7 @@ class EngineConsumerTest {
                  .runtimeProvider(new JavaRuntimeProvider(List.of()))
                  .hostTerminationPort(request -> { }).build()) {
             engine.startAsync().block(TIMEOUT);
-            var registry = new PluginRegistry(engine, packages, new InMemoryPluginAuditRepository());
+            var registry = new PluginRegistry(engine, new InMemoryPluginAuditRepository());
             registry.install(new PluginInstallRequest(legacy, false)).block(TIMEOUT);
             var contract = installRequest(work.resolve("package-sources"), "fibra-fs",
                 Path.of(System.getProperty("fibra.pluginArtifacts"), "fibra-fs.jar"));
@@ -133,7 +133,7 @@ class EngineConsumerTest {
                  .hostTerminationPort(request -> { })
                  .build()) {
             engine.startAsync().block(TIMEOUT);
-            var registry = new PluginRegistry(engine, packages, new InMemoryPluginAuditRepository());
+            var registry = new PluginRegistry(engine, new InMemoryPluginAuditRepository());
             for (var id : FORMAL_ARTIFACTS) {
                 registry.install(installRequest(work.resolve("package-sources"), id,
                     pluginArtifacts.resolve(id + ".jar"))).block(TIMEOUT);
@@ -290,13 +290,10 @@ class EngineConsumerTest {
     private static ToolResult invoke(FibraEngine engine, String provider, String localName,
                                      Map<String, ?> arguments) {
         var current = engine.published().current();
-        var id = ToolContributions.id(provider, localName);
-        var identity = current.contributions().entries().stream()
-            .filter(entry -> entry.kind().equals(ToolContributions.KIND.name())
-                && entry.id().equals(id))
-            .findFirst().orElseThrow().registrationIdentity();
-        return engine.published().invoke(current.viewRevision(), identity,
-            ToolContributions.KIND, id, ToolRequest.of(arguments)).block(TIMEOUT);
+        var handle = current.resolve(ToolContributions.KIND,
+            ToolContributions.id(provider, localName)).orElseThrow();
+        return engine.published().invoke(handle, ToolContributions.KIND,
+            ToolRequest.of(arguments)).block(TIMEOUT);
     }
 
     private static long countJars(Path directory) throws IOException {

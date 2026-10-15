@@ -7,6 +7,7 @@ import com.sstlfsj.fibra.artifact.FacetId;
 import com.sstlfsj.fibra.artifact.PluginId;
 import com.sstlfsj.fibra.artifact.PluginPackageRecord;
 import com.sstlfsj.fibra.artifact.PluginPackageStore;
+import com.sstlfsj.fibra.bridge.ContributionHandle;
 import com.sstlfsj.fibra.bridge.ContributionId;
 import com.sstlfsj.fibra.bridge.ContributionKindRegistry;
 import com.sstlfsj.fibra.bridge.ContributionServices;
@@ -361,8 +362,8 @@ public final class HostRestartRecoveryProcess {
         var contribution = contribution(view, localName, descriptor);
         var result = new RemoteContributionInvoker(kinds(),
             engine.published()).invoke(kind,
-            contribution.id(), view.viewRevision(),
-            contribution.registrationIdentity(), LiteralValue.of("request"))
+            new ContributionHandle(view.viewRevision(), contribution.registrationIdentity(),
+                contribution.id()), LiteralValue.of("request"))
             .block(TIMEOUT);
         if (!(result instanceof LiteralValue.StringValue text)) {
             throw new AssertionError("expected string contribution output: " + result);
@@ -374,8 +375,8 @@ public final class HostRestartRecoveryProcess {
                                     ContributionId id, long registration) {
         try {
             new RemoteContributionInvoker(kinds(), engine.published())
-                .invoke(HostVerificationContract.KIND_NAME, id, view,
-                    registration, LiteralValue.of("stale")).block(TIMEOUT);
+                .invoke(HostVerificationContract.KIND_NAME,
+                    new ContributionHandle(view, registration, id), LiteralValue.of("stale")).block(TIMEOUT);
             return false;
         } catch (RuntimeException expected) {
             return true;

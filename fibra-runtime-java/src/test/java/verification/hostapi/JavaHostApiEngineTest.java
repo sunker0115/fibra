@@ -2,6 +2,7 @@ package verification.hostapi;
 
 import com.sstlfsj.fibra.artifact.PluginPackageRecord;
 import com.sstlfsj.fibra.artifact.PluginPackageStore;
+import com.sstlfsj.fibra.bridge.ContributionHandle;
 import com.sstlfsj.fibra.bridge.ContributionId;
 import com.sstlfsj.fibra.bridge.ContributionUnavailableException;
 import com.sstlfsj.fibra.config.ConfigContextSnapshot;
@@ -93,9 +94,10 @@ class JavaHostApiEngineTest {
             assertNotSame(aLoader, probe.loaders.get("a").get());
             assertEquals("a:new", invoke(engine, replaced, "a", "new").block(LIMIT).text());
             assertThrows(PublishedRevisionConflictException.class, () -> invoke(engine, first, "a", "stale-view").block(LIMIT));
-            assertThrows(ContributionUnavailableException.class, () -> engine.published().invoke(replaced.viewRevision(),
-                oldRegistration, DocumentApi.KIND, new ContributionId("a", "complete"),
-                new DocumentApi.Request("stale-registration")).block(LIMIT));
+            assertThrows(ContributionUnavailableException.class, () -> engine.published().invoke(
+                new ContributionHandle(replaced.viewRevision(), oldRegistration,
+                    new ContributionId("a", "complete")),
+                DocumentApi.KIND, new DocumentApi.Request("stale-registration")).block(LIMIT));
 
             var removed = deploy(engine, 2, List.of(b));
             assertEquals("b:still-live", invoke(engine, removed, "b", "still-live").block(LIMIT).text());
@@ -238,8 +240,10 @@ class JavaHostApiEngineTest {
     }
 
     private static Mono<DocumentApi.Result> invoke(FibraEngine engine, PublishedView view, String name, String text) {
-        return engine.published().invoke(view.viewRevision(), registration(view, name), DocumentApi.KIND,
-            new ContributionId(name, "complete"), new DocumentApi.Request(text));
+        return engine.published().invoke(
+            new ContributionHandle(view.viewRevision(), registration(view, name),
+                new ContributionId(name, "complete")),
+            DocumentApi.KIND, new DocumentApi.Request(text));
     }
 
     private static long registration(PublishedView view, String name) {

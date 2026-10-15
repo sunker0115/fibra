@@ -83,7 +83,7 @@ final class CliHost implements AutoCloseable {
             // Engine owns store cleanup even when its constructor fails.
             storesTransferredToEngine = true;
             engine = builder.build();
-            var registry = new PluginRegistry(engine, packages, audit);
+            var registry = new PluginRegistry(engine, audit);
             engine.startAsync().block();
             var host = new CliHost(paths, packages, targets, engine, registry, audit, termination);
             owner.set(host);

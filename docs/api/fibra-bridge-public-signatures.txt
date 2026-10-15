@@ -67,6 +67,17 @@ Compiled from "ContributionDrainException.java"
 public final class com.sstlfsj.fibra.bridge.ContributionDrainException extends java.lang.IllegalStateException {
   public java.lang.String detail();
 }
+## com.sstlfsj.fibra.bridge.ContributionHandle
+Compiled from "ContributionHandle.java"
+public final class com.sstlfsj.fibra.bridge.ContributionHandle extends java.lang.Record {
+  public com.sstlfsj.fibra.bridge.ContributionHandle(java.lang.String, long, com.sstlfsj.fibra.bridge.ContributionId);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String viewRevision();
+  public long registrationIdentity();
+  public com.sstlfsj.fibra.bridge.ContributionId id();
+}
 ## com.sstlfsj.fibra.bridge.ContributionHandler
 Compiled from "ContributionHandler.java"
 public interface com.sstlfsj.fibra.bridge.ContributionHandler<I, O> {
@@ -151,6 +162,7 @@ public final class com.sstlfsj.fibra.bridge.ContributionSnapshotEntry extends ja
 ## com.sstlfsj.fibra.bridge.ContributionUnavailableException
 Compiled from "ContributionUnavailableException.java"
 public final class com.sstlfsj.fibra.bridge.ContributionUnavailableException extends java.lang.IllegalStateException {
+  public com.sstlfsj.fibra.bridge.ContributionUnavailableException(com.sstlfsj.fibra.bridge.ContributionId);
 }
 ## com.sstlfsj.fibra.bridge.RemoteContributionFailure
 Compiled from "RemoteContributionFailure.java"

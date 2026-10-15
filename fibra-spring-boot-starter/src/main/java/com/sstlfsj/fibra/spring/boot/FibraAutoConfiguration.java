@@ -82,7 +82,7 @@ public class FibraAutoConfiguration {
 
     @Bean @ConditionalOnMissingBean PluginRegistry fibraPluginRegistry(
         FibraEngine engine, PluginPackageStore packages, PluginAuditRepository audit) {
-        return new PluginRegistry(engine, packages, audit);
+        return new PluginRegistry(engine, audit);
     }
 
     @Bean FibraEngineLifecycle fibraEngineLifecycle(FibraEngine engine) {

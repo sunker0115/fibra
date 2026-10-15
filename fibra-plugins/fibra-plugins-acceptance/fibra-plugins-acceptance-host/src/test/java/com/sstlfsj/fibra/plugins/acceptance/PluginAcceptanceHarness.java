@@ -7,9 +7,6 @@ import com.sstlfsj.fibra.engine.deployment.DeploymentTarget;
 import com.sstlfsj.fibra.engine.deployment.DeploymentTargetStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.deployment.PluginSelection;
-import com.sstlfsj.fibra.engine.publication.PublishedView;
-import com.sstlfsj.fibra.bridge.ContributionId;
-import com.sstlfsj.fibra.bridge.ContributionKind;
 import com.sstlfsj.fibra.bridge.ContributionKindRegistry;
 import com.sstlfsj.fibra.registry.InMemoryPluginAuditRepository;
 import com.sstlfsj.fibra.registry.PluginDeploymentRequest;
@@ -57,7 +54,7 @@ final class PluginAcceptanceHarness implements AutoCloseable {
         this.packageStore = packageStore;
         this.targetStore = targetStore;
         this.packages = packages;
-        registry = new PluginRegistry(engine, packageStore, new InMemoryPluginAuditRepository());
+        registry = new PluginRegistry(engine, new InMemoryPluginAuditRepository());
     }
 
     static PluginAcceptanceHarness start(Path storeRoot, DeploymentTargetStore targetStore) {
@@ -85,15 +82,10 @@ final class PluginAcceptanceHarness implements AutoCloseable {
 
     ToolResult invoke(String provider, String localName, Map<String, ?> arguments) {
         var current = engine.published().current();
-        return engine.published().invoke(current.viewRevision(), identity(current, ToolContributions.KIND,
-                ToolContributions.id(provider, localName)), ToolContributions.KIND,
-            ToolContributions.id(provider, localName), ToolRequest.of(arguments)).block(TIMEOUT);
-    }
-
-    private static long identity(PublishedView view, ContributionKind<?, ?, ?> kind, ContributionId id) {
-        return view.contributions().entries().stream()
-            .filter(entry -> entry.kind().equals(kind.name()) && entry.id().equals(id))
-            .map(entry -> entry.registrationIdentity()).findFirst().orElseThrow();
+        var handle = current.resolve(ToolContributions.KIND,
+            ToolContributions.id(provider, localName)).orElseThrow();
+        return engine.published().invoke(handle, ToolContributions.KIND,
+            ToolRequest.of(arguments)).block(TIMEOUT);
     }
 
     FibraEngine engine() {

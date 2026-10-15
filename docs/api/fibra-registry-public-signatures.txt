@@ -104,7 +104,7 @@ public final class com.sstlfsj.fibra.registry.PluginInstallRequest extends java.
 ## com.sstlfsj.fibra.registry.PluginRegistry
 Compiled from "PluginRegistry.java"
 public final class com.sstlfsj.fibra.registry.PluginRegistry {
-  public com.sstlfsj.fibra.registry.PluginRegistry(com.sstlfsj.fibra.engine.FibraEngine, com.sstlfsj.fibra.artifact.PluginPackageStore, com.sstlfsj.fibra.registry.PluginAuditRepository);
+  public com.sstlfsj.fibra.registry.PluginRegistry(com.sstlfsj.fibra.engine.FibraEngine, com.sstlfsj.fibra.registry.PluginAuditRepository);
   public reactor.core.publisher.Mono<com.sstlfsj.fibra.registry.RegistrySnapshot> install(com.sstlfsj.fibra.registry.PluginInstallRequest);
   public reactor.core.publisher.Mono<com.sstlfsj.fibra.registry.RegistrySnapshot> upgrade(java.nio.file.Path);
   public reactor.core.publisher.Mono<com.sstlfsj.fibra.registry.RegistrySnapshot> enablePackage(com.sstlfsj.fibra.artifact.PluginId);

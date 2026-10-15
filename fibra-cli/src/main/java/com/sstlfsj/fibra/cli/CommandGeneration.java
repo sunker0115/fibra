@@ -1,5 +1,6 @@
 package com.sstlfsj.fibra.cli;
 
+import com.sstlfsj.fibra.bridge.ContributionHandle;
 import com.sstlfsj.fibra.bridge.ContributionId;
 import com.sstlfsj.fibra.cli.api.command.CliCommandContributions;
 import com.sstlfsj.fibra.cli.api.command.CliBootstrapCommand;
@@ -64,8 +65,8 @@ final class CommandGeneration {
 
     Mono<CliCommandResult> invoke(Command command, CliCommandRequest request) {
         Objects.requireNonNull(command, "command");
-        return published.invoke(viewRevision, command.registrationIdentity(),
-            CliCommandContributions.KIND, command.id(), request);
+        var handle = new ContributionHandle(viewRevision, command.registrationIdentity(), command.id());
+        return published.invoke(handle, CliCommandContributions.KIND, request);
     }
 
     void install(CommandLine root, Executor executor) {

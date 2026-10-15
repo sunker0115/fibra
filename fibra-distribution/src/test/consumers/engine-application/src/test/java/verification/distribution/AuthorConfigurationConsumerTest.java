@@ -33,7 +33,7 @@ class AuthorConfigurationConsumerTest {
         var targets = DeploymentTargetStore.inMemory();
         var engine = start(packages, targets);
         try (var qa = new AuthorConfigurationQualification(engine, packages, targets, FAILED_OWNERS::add)) {
-            var registry = new PluginRegistry(engine, packages, new InMemoryPluginAuditRepository());
+            var registry = new PluginRegistry(engine, new InMemoryPluginAuditRepository());
             for (var plugin : EngineConsumerTest.FORMAL_ARTIFACTS) install(registry, work, plugin);
             var snapshot = registry.snapshot();
             assertEquals(12, snapshot.selections().size());
@@ -67,7 +67,7 @@ class AuthorConfigurationConsumerTest {
             var targets = DeploymentTargetStore.inMemory();
             var engine = start(packages, targets);
             try (var qa = new AuthorConfigurationQualification(engine, packages, targets, FAILED_OWNERS::add)) {
-                var registry = new PluginRegistry(engine, packages, new InMemoryPluginAuditRepository());
+                var registry = new PluginRegistry(engine, new InMemoryPluginAuditRepository());
                 var snapshot = registry.install(request).block(TIMEOUT);
                 var selection = snapshot.selections().values().iterator().next();
                 assertFalse(selection.enabled());
@@ -86,7 +86,7 @@ class AuthorConfigurationConsumerTest {
         var packages = new PluginPackageStore(work.resolve("store"));
         var targets = DeploymentTargetStore.inMemory();
         var engine = start(packages, targets);
-        var registry = new PluginRegistry(engine, packages, new InMemoryPluginAuditRepository());
+        var registry = new PluginRegistry(engine, new InMemoryPluginAuditRepository());
         install(registry, work, "fibra-fs");
         var snapshot = registry.snapshot();
         var selection = snapshot.selections().values().iterator().next();

@@ -83,7 +83,7 @@ public class EngineTransactionBenchmark {
         engine = FibraEngine.builder(packages, DeploymentTargetStore.inMemory())
             .runtimeProvider(new JavaRuntimeProvider(List.of(builtIn)))
             .hostTerminationPort(request -> { }).build();
-        registry = new PluginRegistry(engine, packages, new DiscardingAudit());
+        registry = new PluginRegistry(engine, new DiscardingAudit());
         engine.startAsync().block();
         var before = registry.snapshot();
         registry.deploy(new PluginDeploymentRequest(

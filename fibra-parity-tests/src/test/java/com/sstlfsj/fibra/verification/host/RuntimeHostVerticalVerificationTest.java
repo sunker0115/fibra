@@ -5,6 +5,7 @@ import com.sstlfsj.fibra.artifact.FacetId;
 import com.sstlfsj.fibra.artifact.PluginId;
 import com.sstlfsj.fibra.artifact.PluginPackageRecord;
 import com.sstlfsj.fibra.artifact.PluginPackageStore;
+import com.sstlfsj.fibra.bridge.ContributionHandle;
 import com.sstlfsj.fibra.bridge.ContributionKindRegistry;
 import com.sstlfsj.fibra.bridge.ContributionSnapshotEntry;
 import com.sstlfsj.fibra.config.ConfigContextSnapshot;
@@ -284,9 +285,10 @@ class RuntimeHostVerticalVerificationTest {
                                  PublishedView view, String kind,
                                  String localName, String descriptor,
                                  String input) {
+        var contribution = contribution(view, localName, descriptor);
         return string(invoker.invoke(kind,
-            contribution(view, localName, descriptor).id(), view.viewRevision(),
-            contribution(view, localName, descriptor).registrationIdentity(),
+            new ContributionHandle(view.viewRevision(), contribution.registrationIdentity(),
+                contribution.id()),
             LiteralValue.of(input)).block(TIMEOUT));
     }
 
@@ -294,8 +296,9 @@ class RuntimeHostVerticalVerificationTest {
         RemoteContributionInvoker invoker, PublishedView view, String kind,
         String localName, String descriptor, String input) {
         var contribution = contribution(view, localName, descriptor);
-        return invoker.invoke(kind, contribution.id(), view.viewRevision(),
-            contribution.registrationIdentity(), LiteralValue.of(input)).toFuture();
+        return invoker.invoke(kind, new ContributionHandle(view.viewRevision(),
+            contribution.registrationIdentity(), contribution.id()),
+            LiteralValue.of(input)).toFuture();
     }
 
     private static ContributionSnapshotEntry contribution(PublishedView view,

@@ -1,6 +1,7 @@
 package com.sstlfsj.fibra.engine.publication;
 
 import com.sstlfsj.fibra.bridge.ContributionCodec;
+import com.sstlfsj.fibra.bridge.ContributionHandle;
 import com.sstlfsj.fibra.bridge.ContributionId;
 import com.sstlfsj.fibra.bridge.ContributionKind;
 import com.sstlfsj.fibra.bridge.ContributionKindRegistry;
@@ -24,10 +25,10 @@ class RemoteContributionInvokerTest {
         var kind = ContributionKind.remote("echo", String.class, String.class,
             String.class, codec);
         var seenKind = new AtomicReference<ContributionKind<?, ?, ?>>();
-        var published = new StubPublishedRuntime((revision, registration, actual, id, input) -> {
-            assertEquals("view-7", revision);
-            assertEquals(41L, registration);
-            assertEquals(ID, id);
+        var published = new StubPublishedRuntime((handle, actual, input) -> {
+            assertEquals("view-7", handle.viewRevision());
+            assertEquals(41L, handle.registrationIdentity());
+            assertEquals(ID, handle.id());
             assertEquals("request", input);
             seenKind.set(actual);
             return Mono.just("response");
@@ -35,7 +36,7 @@ class RemoteContributionInvokerTest {
         var invoker = new RemoteContributionInvoker(
             ContributionKindRegistry.of(kind), published);
 
-        var result = invoker.invoke("echo", ID, "view-7", 41,
+        var result = invoker.invoke("echo", new ContributionHandle("view-7", 41L, ID),
             LiteralValue.of("request")).block();
 
         assertSame(kind, seenKind.get());
@@ -46,17 +47,17 @@ class RemoteContributionInvokerTest {
     void rejectsUnknownAndLocalOnlyKindsBeforeCallingPublishedRuntime() {
         var local = ContributionKind.local("local", String.class, String.class,
             String.class);
-        var published = new StubPublishedRuntime((revision, registration, kind, id, input) -> {
+        var published = new StubPublishedRuntime((handle, kind, input) -> {
             throw new AssertionError("published runtime must not be called");
         });
         var invoker = new RemoteContributionInvoker(
             ContributionKindRegistry.of(local), published);
 
         assertEquals(RemoteContributionInvocationException.Code.UNKNOWN_KIND,
-            failure(() -> invoker.invoke("missing", ID, "view", 1,
+            failure(() -> invoker.invoke("missing", new ContributionHandle("view", 1L, ID),
                 LiteralValue.of("request")).block()).code());
         assertEquals(RemoteContributionInvocationException.Code.KIND_NOT_REMOTE,
-            failure(() -> invoker.invoke("local", ID, "view", 1,
+            failure(() -> invoker.invoke("local", new ContributionHandle("view", 1L, ID),
                 LiteralValue.of("request")).block()).code());
     }
 
@@ -75,7 +76,7 @@ class RemoteContributionInvokerTest {
                 }
             });
         var stale = new PublishedRevisionConflictException("old", "new");
-        var published = new StubPublishedRuntime((revision, registration, kind, id, input) -> {
+        var published = new StubPublishedRuntime((handle, kind, input) -> {
             if (kind == outputFailure) return Mono.just("response");
             return Mono.error(stale);
         });
@@ -85,13 +86,13 @@ class RemoteContributionInvokerTest {
                     String.class, new StringCodec())), published);
 
         assertEquals(RemoteContributionInvocationException.Code.INPUT_CODEC,
-            failure(() -> invoker.invoke("input", ID, "view", 1,
+            failure(() -> invoker.invoke("input", new ContributionHandle("view", 1L, ID),
                 LiteralValue.of("request")).block()).code());
         assertEquals(RemoteContributionInvocationException.Code.OUTPUT_CODEC,
-            failure(() -> invoker.invoke("output", ID, "view", 1,
+            failure(() -> invoker.invoke("output", new ContributionHandle("view", 1L, ID),
                 LiteralValue.of("request")).block()).code());
         assertSame(stale, assertThrows(PublishedRevisionConflictException.class,
-            () -> invoker.invoke("stale", ID, "old", 1,
+            () -> invoker.invoke("stale", new ContributionHandle("old", 1L, ID),
                 LiteralValue.of("request")).block()));
     }
 
@@ -101,9 +102,7 @@ class RemoteContributionInvokerTest {
 
     @FunctionalInterface
     private interface Invocation {
-        Mono<?> invoke(String revision, long registration,
-                       ContributionKind<?, ?, ?> kind, ContributionId id,
-                       Object input);
+        Mono<?> invoke(ContributionHandle handle, ContributionKind<?, ?, ?> kind, Object input);
     }
 
     private record StubPublishedRuntime(Invocation invocation)
@@ -111,11 +110,9 @@ class RemoteContributionInvokerTest {
         @Override public PublishedView current() { throw new UnsupportedOperationException(); }
         @Override public Flux<PublishedView> views() { return Flux.never(); }
         @Override @SuppressWarnings("unchecked")
-        public <D, I, O> Mono<O> invoke(String revision, long registration,
-                                       ContributionKind<D, I, O> kind,
-                                       ContributionId id, I input) {
-            return (Mono<O>) invocation.invoke(revision, registration, kind, id,
-                input);
+        public <D, I, O> Mono<O> invoke(ContributionHandle handle,
+                                       ContributionKind<D, I, O> kind, I input) {
+            return (Mono<O>) invocation.invoke(handle, kind, input);
         }
     }
 

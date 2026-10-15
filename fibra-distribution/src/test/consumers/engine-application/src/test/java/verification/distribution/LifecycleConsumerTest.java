@@ -71,7 +71,7 @@ class LifecycleConsumerTest {
                  .contributionKinds(ContributionKindRegistry.of(ToolContributions.KIND))
                  .hostTerminationPort(request -> { }).build()) {
             engine.startAsync().block(TIMEOUT);
-            var registry = new PluginRegistry(engine, packages, new InMemoryPluginAuditRepository());
+            var registry = new PluginRegistry(engine, new InMemoryPluginAuditRepository());
             var installed = registry.install(new PluginInstallRequest(source, false)).block(TIMEOUT);
             var pluginId = new PluginId("unknown-author-package");
             var selection = installed.selections().get(pluginId);
@@ -179,7 +179,7 @@ class LifecycleConsumerTest {
                  .contributionKinds(ContributionKindRegistry.of(ToolContributions.KIND))
                  .hostTerminationPort(ignored -> { }).build()) {
             engine.startAsync().block(TIMEOUT);
-            var registry = new PluginRegistry(engine, packages, new InMemoryPluginAuditRepository());
+            var registry = new PluginRegistry(engine, new InMemoryPluginAuditRepository());
             registry.install(new PluginInstallRequest(source, true)).block(TIMEOUT);
             var ref = desired(valid).definitionRef();
             var contract = engine.describeConfiguration(ref, engine.snapshot().target().orElseThrow().targetRevision()).block(TIMEOUT);
@@ -248,7 +248,7 @@ class LifecycleConsumerTest {
                  .contributionKinds(ContributionKindRegistry.of(ToolContributions.KIND))
                  .hostTerminationPort(ignored -> { }).build()) {
             engine.startAsync().block(TIMEOUT);
-            var registry = new PluginRegistry(engine, packages, new InMemoryPluginAuditRepository());
+            var registry = new PluginRegistry(engine, new InMemoryPluginAuditRepository());
             registry.install(new PluginInstallRequest(source, true)).block(TIMEOUT);
             var revision = engine.published().current().engine().target().orElseThrow().targetRevision();
             var bytes = Files.readAllBytes(work.resolve("targets/target.json"));
@@ -310,7 +310,7 @@ class LifecycleConsumerTest {
                  .contributionKinds(ContributionKindRegistry.of(ToolContributions.KIND))
                  .hostTerminationPort(ignored -> { }).build()) {
             engine.startAsync().block(TIMEOUT);
-            var registry = new PluginRegistry(engine, packages, new InMemoryPluginAuditRepository());
+            var registry = new PluginRegistry(engine, new InMemoryPluginAuditRepository());
             registry.install(new PluginInstallRequest(source, true)).block(TIMEOUT);
             var revision = engine.published().current().engine().target().orElseThrow().targetRevision();
             var saves = targets.saves;
@@ -352,7 +352,7 @@ class LifecycleConsumerTest {
                  .runtimeProvider(fixture.nodeProvider()).contributionKinds(ContributionKindRegistry.of(ToolContributions.KIND))
                  .hostTerminationPort(ignored -> { }).build()) {
             engine.startAsync().block(TIMEOUT);
-            var registry = new PluginRegistry(engine, packages, new InMemoryPluginAuditRepository());
+            var registry = new PluginRegistry(engine, new InMemoryPluginAuditRepository());
             registry.install(new PluginInstallRequest(source, true)).block(TIMEOUT);
             for (var decimal : List.of("9007199254740991", "9007199254740992", "9007199254740993")) {
                 var values = map(config(fixture, "numeric").toJava());
@@ -386,7 +386,7 @@ class LifecycleConsumerTest {
                  .contributionKinds(ContributionKindRegistry.of(ToolContributions.KIND))
                  .hostTerminationPort(request -> { }).build()) {
             engine.startAsync().block(TIMEOUT);
-            var registry = new PluginRegistry(engine, packages, new InMemoryPluginAuditRepository());
+            var registry = new PluginRegistry(engine, new InMemoryPluginAuditRepository());
             registry.install(new PluginInstallRequest(fixture.packageSource("one", "1.0.0"), true)).block(TIMEOUT);
             assertTrue(registry.snapshot().observed().isEmpty(), "install 不得自动创建 desired entry");
 
@@ -481,12 +481,9 @@ class LifecycleConsumerTest {
     private static ToolResult invoke(FibraEngine engine, ToolRequest request) { return invokeAsync(engine, request).block(TIMEOUT); }
     private static reactor.core.publisher.Mono<ToolResult> invokeAsync(FibraEngine engine, ToolRequest request) {
         var current = engine.published().current();
-        var id = ToolContributions.id(INSTANCE, "lifecycle");
-        var entry = current.contributions().entries().stream().filter(value ->
-            value.kind().equals(ToolContributions.KIND.name())
-                && value.id().equals(id)).findFirst().orElseThrow();
-        return engine.published().invoke(current.viewRevision(), entry.registrationIdentity(),
-            ToolContributions.KIND, id, request);
+        var handle = current.resolve(ToolContributions.KIND,
+            ToolContributions.id(INSTANCE, "lifecycle")).orElseThrow();
+        return engine.published().invoke(handle, ToolContributions.KIND, request);
     }
     private static WeakReference<ClassLoader> atomicallyRemove(PluginRegistry registry, FibraEngine engine, Fixture fixture) throws Exception {
         var loader = fixture.loader(engine); var pids = fixture.activePids();
