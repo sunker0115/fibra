@@ -13,7 +13,14 @@ import com.sstlfsj.fibra.engine.ApplyDeployment;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.HostServiceRegistry;
 import com.sstlfsj.fibra.engine.EngineChangeException;
+import com.sstlfsj.fibra.engine.ReconcileCurrent;
+import com.sstlfsj.fibra.engine.observation.EngineOperationStage;
+import com.sstlfsj.fibra.engine.observation.EngineOperationOutcome;
+import com.sstlfsj.fibra.engine.observation.EngineState;
+import com.sstlfsj.fibra.engine.observation.FailureStage;
+import com.sstlfsj.fibra.engine.observation.TargetConvergence;
 import com.sstlfsj.fibra.engine.observation.TargetSaveState;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTarget;
 import com.sstlfsj.fibra.engine.deployment.DeploymentTargetStore;
 import com.sstlfsj.fibra.engine.deployment.PluginSelection;
 import com.sstlfsj.fibra.engine.publication.PublishedView;
@@ -232,6 +239,191 @@ class JavaHostApiEngineTest {
         }
     }
 
+    @Test
+    @Timeout(35)
+    void missingImportFirstLinkedByFactoryDoesNotStrandEngineOrItsPeer() throws Exception {
+        runLazyLinkageChild("factory");
+    }
+
+    @Test
+    @Timeout(35)
+    void missingImportFirstLinkedByStartDoesNotStrandEngineOrItsPeer() throws Exception {
+        runLazyLinkageChild("start");
+    }
+
+    @Test
+    @Timeout(35)
+    void savedTargetWithALateMissingImportBootstrapsAsBlockedAndStillCloses() throws Exception {
+        runLazyLinkageChild("bootstrap");
+    }
+
+    private void runLazyLinkageChild(String mode) throws Exception {
+        var root = Files.createDirectories(work.resolve("lazy-" + mode));
+        var log = root.resolve("child.log");
+        var child = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "java").toString(),
+            "-cp", System.getProperty("surefire.test.class.path", System.getProperty("java.class.path")),
+            JavaHostApiEngineTest.class.getName(), mode, root.toString())
+            .redirectErrorStream(true).redirectOutput(log.toFile()).start();
+        try {
+            assertTrue(child.waitFor(25, TimeUnit.SECONDS),
+                "lazy linkage child did not terminate; log: " + log + "\n" + Files.readString(log));
+            assertEquals(0, child.exitValue(), "child log: " + log + "\n" + Files.readString(log));
+            assertTrue(Files.exists(root.resolve("completed")), "all assertions and repeated close completed");
+        } finally {
+            if (child.isAlive()) child.destroyForcibly();
+            assertTrue(child.waitFor(5, TimeUnit.SECONDS), "test must reap its own child JVM");
+        }
+    }
+
+    /** Separate process bounds the real scheduler/block failure, including close in finally. */
+    public static void main(String[] args) throws Exception {
+        var test = new JavaHostApiEngineTest();
+        test.work = Path.of(args[1]);
+        if (args[0].equals("bootstrap")) test.lazyBootstrapScenario();
+        else test.lazyApplyScenario(args[0]);
+        Files.writeString(test.work.resolve("completed"), "closed twice");
+    }
+
+    private void lazyApplyScenario(String mode) throws Exception {
+        var probe = new Probe();
+        var packages = new PluginPackageStore(work.resolve("packages"));
+        var peer = install(packages, plugin("peer", "1", IMPORTS, false));
+        var bad = install(packages, latePlugin("bad", mode));
+        var store = DeploymentTargetStore.inMemory();
+        var services = new HostServiceRegistry();
+        services.register(DocumentProbe.KEY, probe);
+        try (var engine = FibraEngine.builder(packages, store).hostServices(services)
+            .runtimeProvider(provider()).lifecycleTimeout(LIMIT)
+            .hostTerminationPort(ignored -> fail("ordinary linkage failure must not terminate Host")).build()) {
+            engine.startAsync().block(LIMIT);
+            deploy(engine, 0, List.of(peer));
+            var scenario = new FutureTask<>(() -> {
+                var retired = new ArrayList<WeakReference<ClassLoader>>();
+                for (var round = 0; round < 2; round++) {
+                    var revision = 1 + 2L * round;
+                    PreparationProbe.LOADER.set(null);
+                    var failure = assertThrows(EngineChangeException.class,
+                        () -> deploy(engine, revision, List.of(peer, bad)));
+                    assertEquals(TargetSaveState.SAVED, failure.targetSaveState());
+                    assertLateFailure(failure.view(), TargetSaveState.SAVED);
+                    assertEquals(revision + 1, store.load().orElseThrow().target().targetRevision());
+                    assertTrue(store.load().orElseThrow().target().selections().containsKey(bad.pluginId()),
+                        "failed activation must not erase the already saved target");
+                    assertEquals("peer:after-failure", invoke(engine, engine.published().current(),
+                        "peer", "after-failure").block(LIMIT).text());
+                    var failedLoader = PreparationProbe.LOADER.get();
+                    assertNotNull(failedLoader, "definition returned and factory actually ran");
+                    assertNotNull(failedLoader.get());
+                    assertNotNull(failedLoader.get().getResource("example/provider/Entry.class"),
+                        "failed unit keeps its generation lease until stop");
+                    retired.add(failedLoader);
+                    if (round == 0) {
+                        PreparationProbe.LOADER.set(null);
+                        var retry = assertThrows(EngineChangeException.class,
+                            () -> engine.submit(new ReconcileCurrent()).block(LIMIT));
+                        assertEquals(TargetSaveState.NOT_APPLICABLE, retry.targetSaveState());
+                        assertLateFailure(retry.view(), TargetSaveState.NOT_APPLICABLE);
+                        assertEquals(revision + 1, store.load().orElseThrow().target().targetRevision());
+                        var retriedLoader = PreparationProbe.LOADER.get();
+                        assertNotNull(retriedLoader);
+                        assertNotEquals(runtimeInstanceId(failure.view(), "bad"),
+                            runtimeInstanceId(retry.view(), "bad"), "retry replaces the failed runtime unit");
+                        assertSame(failedLoader.get(), retriedLoader.get(),
+                            "unchanged payload shares static wiring while the replacement lease is live");
+                        assertNotNull(retriedLoader.get().getResource("example/provider/Entry.class"));
+                        assertEquals("peer:after-retry", invoke(engine, engine.published().current(),
+                            "peer", "after-retry").block(LIMIT).text());
+                        retired.add(retriedLoader);
+                    }
+                    var removed = deploy(engine, revision + 1, List.of(peer));
+                    assertEquals("peer:after-removal", invoke(engine, removed, "peer", "after-removal")
+                        .block(LIMIT).text());
+                    retired.forEach(JavaHostApiEngineTest::assertLoaderClosed);
+                }
+                PreparationProbe.LOADER.set(null);
+                return List.copyOf(retired);
+            });
+            var thread = Thread.ofPlatform().name("late-host-api-reclamation-proof").start(scenario);
+            var retired = scenario.get(15, TimeUnit.SECONDS);
+            thread.join(1000);
+            assertFalse(thread.isAlive());
+            for (var attempt = 0; attempt < 60 && retired.stream().anyMatch(ref -> ref.get() != null); attempt++) {
+                System.gc();
+                Thread.sleep(25);
+            }
+            assertTrue(retired.stream().allMatch(ref -> ref.get() == null), "stopped failed loaders are collectible");
+            var peerLoader = probe.loaders.get("peer").get();
+            assertNotNull(peerLoader, "healthy peer is the collection control");
+            assertEquals("peer:live", invoke(engine, engine.published().current(), "peer", "live").block(LIMIT).text());
+            engine.closeAsync().block(LIMIT);
+            engine.closeAsync().block(LIMIT);
+            assertNull(peerLoader.getResource("example/provider/Entry.class"));
+            assertEquals(EngineState.CLOSED, engine.published().current().engine().state());
+            Reference.reachabilityFence(engine);
+        } finally {
+            PreparationProbe.LOADER.set(null);
+        }
+    }
+
+    private void lazyBootstrapScenario() throws Exception {
+        var probe = new Probe();
+        var packages = new PluginPackageStore(work.resolve("packages"));
+        var peer = install(packages, plugin("peer", "1", IMPORTS, false));
+        var bad = install(packages, latePlugin("bad", "factory"));
+        var store = DeploymentTargetStore.inMemory();
+        var saved = command(0, List.of(peer, bad));
+        store.save(0, DeploymentTarget.of(1, saved.selections(), saved.graph(), saved.configContext()));
+        var services = new HostServiceRegistry();
+        services.register(DocumentProbe.KEY, probe);
+        try (var engine = FibraEngine.builder(packages, store).hostServices(services)
+            .runtimeProvider(provider()).lifecycleTimeout(LIMIT)
+            .hostTerminationPort(ignored -> fail("ordinary linkage failure must not terminate Host")).build()) {
+            PreparationProbe.LOADER.set(null);
+            var blocked = engine.startAsync().block(LIMIT);
+            assertNotNull(blocked);
+            assertLateFailure(blocked, TargetSaveState.NOT_APPLICABLE);
+            assertEquals(1, store.load().orElseThrow().target().targetRevision());
+            assertEquals("peer:bootstrapped", invoke(engine, blocked, "peer", "bootstrapped").block(LIMIT).text());
+            var failedLoader = PreparationProbe.LOADER.get();
+            assertNotNull(failedLoader, "bootstrap reached the late factory link");
+            engine.closeAsync().block(LIMIT);
+            engine.closeAsync().block(LIMIT);
+            assertLoaderClosed(failedLoader);
+            assertEquals(EngineState.CLOSED, engine.published().current().engine().state());
+        } finally {
+            PreparationProbe.LOADER.set(null);
+        }
+    }
+
+    private static void assertLateFailure(PublishedView view, TargetSaveState saveState) {
+        assertEquals(TargetConvergence.BLOCKED, view.engine().targetConvergence());
+        var operation = view.engineDiagnostics().operation().orElseThrow();
+        assertEquals(saveState, operation.targetSaveState());
+        assertEquals(EngineOperationStage.RECONCILING, operation.stage());
+        assertEquals(EngineOperationOutcome.FAILED, operation.outcome());
+        var failure = view.engineDiagnostics().failure().orElseThrow();
+        assertEquals(FailureStage.RECONCILING, failure.stage());
+        assertEquals("RUNTIME_ACTIVATION_FAILED", failure.reason());
+        assertTrue(failure.message().contains("NoClassDefFoundError"), failure.message());
+        assertTrue(failure.message().contains("DocumentApi"), failure.message());
+        assertEquals(1, view.contributions().entries().size(), "only the healthy peer is published");
+        assertTrue(view.contributions().entries().stream()
+            .noneMatch(entry -> entry.id().equals(new ContributionId("bad", "complete"))));
+    }
+
+    private static void assertLoaderClosed(WeakReference<ClassLoader> reference) {
+        var loader = reference.get();
+        if (loader != null) assertNull(loader.getResource("example/provider/Entry.class"),
+            "stopped generation URL loader is physically closed");
+    }
+
+    private static String runtimeInstanceId(PublishedView view, String plugin) {
+        return view.engine().current().orElseThrow().observations().values().stream()
+            .filter(observation -> observation.pluginId().value().equals(plugin))
+            .flatMap(observation -> observation.executions().stream())
+            .findFirst().orElseThrow().runtimeInstanceId();
+    }
+
     private static JavaRuntimeProvider provider() {
         return new JavaRuntimeProvider(List.of(), List.of(new JavaApiContract("fixture.document", "1",
             List.of(DocumentApi.class, DocumentApi.Descriptor.class, DocumentApi.Request.class, DocumentApi.Result.class)),
@@ -269,6 +461,37 @@ class JavaHostApiEngineTest {
         return plugin(name, version, imports, shadow, false);
     }
 
+    private Path latePlugin(String name, String mode) throws Exception {
+        var root = Files.createTempDirectory(work, "late-plugin-");
+        var src = root.resolve("Entry.java");
+        var classes = Files.createDirectories(root.resolve("classes"));
+        Files.writeString(src, """
+            package example.provider;
+            import com.sstlfsj.fibra.*;
+            import fixture.hostapi.DocumentApi;
+            import fixture.hostapi.PreparationProbe;
+            import reactor.core.publisher.Mono;
+            public final class Entry implements PluginEntrypoint<Void> {
+                public PluginDefinition<Void> definition() {
+                    return PluginDefinition.builder("document", Void.class, () -> {
+                        PreparationProbe.LOADER.set(new java.lang.ref.WeakReference<>(getClass().getClassLoader()));
+                        return new Handler();
+                    }).build();
+                }
+            }
+            final class Handler implements Plugin<Void> {
+                Handler() { %s }
+                public Mono<Void> start(Context context, Void config) {
+                    %s
+                    return Mono.empty();
+                }
+            }
+            """.formatted(mode.equals("factory") ? "var forbidden = DocumentApi.KIND;" : "",
+                mode.equals("start") ? "var forbidden = DocumentApi.KIND;" : ""));
+        return packagePlugin(name, "1", "hostApis: [{id: fixture.preparation, version: '1'}]\n",
+            false, false, root, src, classes);
+    }
+
     private Path plugin(String name, String version, String imports, boolean shadow, boolean failPreparation) throws Exception {
         var root = Files.createTempDirectory(work, "plugin-");
         var src = root.resolve("Entry.java");
@@ -297,6 +520,11 @@ class JavaHostApiEngineTest {
                 ? "if (true) { PreparationProbe.LOADER.set(new java.lang.ref.WeakReference<>(getClass().getClassLoader())); "
                     + "throw new IllegalStateException(\"prepare failure\"); }"
                 : "", name, name, version, name));
+        return packagePlugin(name, version, imports, shadow, failPreparation, root, src, classes);
+    }
+
+    private Path packagePlugin(String name, String version, String imports, boolean shadow,
+                               boolean failPreparation, Path root, Path src, Path classes) throws Exception {
         assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, "--release", "21",
             "-classpath", System.getProperty("java.class.path"), "-d", classes.toString(), src.toString()));
         var pkg = Files.createDirectories(root.resolve("package"));

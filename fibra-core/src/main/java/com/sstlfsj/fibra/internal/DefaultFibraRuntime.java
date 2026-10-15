@@ -96,6 +96,7 @@ public final class DefaultFibraRuntime {
         try {
             lifecycle.shutdown();
         } catch (RuntimeException | Error shutdownFailure) {
+            LifecycleCallback.rethrowFatal(shutdownFailure);
             if (error == null) error = shutdownFailure;
             else if (error != shutdownFailure) error.addSuppressed(shutdownFailure);
         }

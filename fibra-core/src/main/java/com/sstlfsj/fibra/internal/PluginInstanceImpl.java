@@ -140,7 +140,7 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner, D
                 return stable.asMono();
             }
             if (error != null) {
-                return Mono.<PluginInstance<C>>error(error);
+                return LifecycleCallback.<PluginInstance<C>>failure(error);
             }
             return Mono.just(this);
         }).flatMap(result -> result));
@@ -406,11 +406,12 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner, D
             config = validatedConfig;
             InjectProcessor.prepare(plugin, context, definition.injectionType());
         } catch (RuntimeException | Error failure) {
+            LifecycleCallback.rethrowFatal(failure);
             startFailed(failure);
             return;
         }
         lifecycle().tick()
-            .then(Mono.defer(() -> Objects.requireNonNull(plugin.start(context, config),
+            .then(LifecycleCallback.defer(() -> Objects.requireNonNull(plugin.start(context, config),
                 "plugin start returned null")))
             .publishOn(lifecycle().scheduler())
             .subscribe(ignored -> { }, this::startFailed, () -> startCompleted(loadingEpoch));
@@ -432,6 +433,7 @@ final class PluginInstanceImpl<C> implements PluginInstance<C>, ResourceOwner, D
     }
 
     private void startFailed(Throwable failure) {
+        LifecycleCallback.rethrowFatal(failure);
         if (state != PluginInstanceState.STARTING
             && state != PluginInstanceState.ACTIVE) {
             return;

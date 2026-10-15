@@ -736,14 +736,16 @@ final class JavaRuntimeDriver implements RuntimeDriver {
                             this::requestDisable);
                         mountedContext = context;
                     }
-                } catch (RuntimeException startFailure) {
+                } catch (RuntimeException | Error startFailure) {
+                    rethrowFatal(startFailure);
                     return failStart(startFailure);
                 }
                 final PluginInstance<?> mounted;
                 try {
                     mounted = mount(mountedContext, prepared.binding,
                         plan().key().value());
-                } catch (RuntimeException startFailure) {
+                } catch (RuntimeException | Error startFailure) {
+                    rethrowFatal(startFailure);
                     return failStart(startFailure);
                 }
                 synchronized (this) {
@@ -752,6 +754,7 @@ final class JavaRuntimeDriver implements RuntimeDriver {
                 try {
                     ownStateObservation(mounted);
                 } catch (RuntimeException | Error observationFailure) {
+                    rethrowFatal(observationFailure);
                     return failStart(observationFailure);
                 }
                 return mounted.settled().then(Mono.fromSupplier(() -> {
@@ -806,8 +809,7 @@ final class JavaRuntimeDriver implements RuntimeDriver {
                 operationId = operation;
                 closing = scope;
             }
-            return (closing == null ? Mono.<Void>empty()
-                : services.releaseScope(closing))
+            return releaseScope(closing)
                 .then(Mono.fromSupplier(() -> {
                     synchronized (Unit.this) {
                         releaseLease();
@@ -898,6 +900,7 @@ final class JavaRuntimeDriver implements RuntimeDriver {
         }
 
         private Mono<ExecutionObservation> failStart(Throwable startFailure) {
+            rethrowFatal(startFailure);
             closeAdmission();
             final Scope failedScope;
             synchronized (this) {
@@ -906,9 +909,7 @@ final class JavaRuntimeDriver implements RuntimeDriver {
                 failedScope = scope;
                 publishedUnits.put(plan().key(), this);
             }
-            var closeScope = failedScope == null ? Mono.<Void>empty()
-                : services.releaseScope(failedScope);
-            return closeScope
+            return releaseScope(failedScope)
                 .then(Mono.fromSupplier(() -> {
                     synchronized (Unit.this) {
                         if (scope == failedScope) {
@@ -927,6 +928,19 @@ final class JavaRuntimeDriver implements RuntimeDriver {
                         return Mono.just(snapshot());
                     }
                 });
+        }
+
+        private Mono<Void> releaseScope(Scope closing) {
+            if (closing == null) return Mono.empty();
+            return Mono.defer(() -> {
+                try {
+                    return Objects.requireNonNull(services.releaseScope(closing),
+                        "scope release returned null");
+                } catch (RuntimeException | Error cleanupFailure) {
+                    rethrowFatal(cleanupFailure);
+                    return Mono.<Void>error(cleanupFailure).hide();
+                }
+            });
         }
 
         private void requestDisable(PluginInstance<?> requested) {

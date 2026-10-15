@@ -830,6 +830,10 @@ Java runtime 是[统一公共 API 分层](2026-10-15-public-api-architecture.md#
   固定共享基线命中的公共契约仍由 parent 唯一定义；未登记为 Host API 且 parent miss 的动态 contract
   继续本地/声明依赖回退。
   只有 `ClassNotFoundException` 表示继续查找；`LinkageError` 不得吞掉后选择另一份类型。
+  显式导入的静态资格检查不扫描方法体或预执行 factory；隐式依赖可在 factory/start 才首次失败。
+  Core 的受控回调边界将非 VM 致命链接错误交付给原等待者，Java Unit 沿原失败路径清理，
+  不改类解析规则、Scope/lease owner 或 Engine 已发生的保存事实。具体边界见
+  [延迟链接生命周期设计](2026-10-15-lazy-linkage-lifecycle-design.md)。
   [JDK 21 ClassLoader 合同](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/ClassLoader.html)
   允许平台 loader 在模块升级/覆盖等启动配置下委派其他具名模块，不能保证任意环境都只看到 JDK 类型；
 - 禁止扫描全部 class 猜入口，不生成 extension index，不维护第二套插件状态机；

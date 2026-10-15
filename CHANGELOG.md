@@ -37,6 +37,11 @@
 - 移除 PF4J、`fibra-pf4j-api`、`fibra-loader-pf4j`、`fibra-loader-config` 和旧 autoconfigure 模块。
 - 移除全部旧 API 与兼容转发；vNext 是破坏性升级。
 
+### 修复
+
+- 修复受控生命周期回调的迟发 `LinkageError` 可能令部署和清理等待者失去终态的问题；
+  保留原错误、类型隔离、实际保存阶段和资源所有权，不增加公开 API。
+
 ## [0.4.0] - 2026-08-29
 
 ### 新增

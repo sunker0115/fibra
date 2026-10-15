@@ -86,7 +86,7 @@ final class EventBus {
         return Mono.defer(() -> {
             var failures = new ConcurrentLinkedQueue<Throwable>();
             return Flux.fromIterable(snapshot)
-                .flatMap(hook -> Mono.defer(() -> {
+                .flatMap(hook -> LifecycleCallback.defer(() -> {
                         if (!domain.runtime().lifecycle().call(() -> beforeInvoke(key, hook))) {
                             return Mono.empty();
                         }
@@ -108,7 +108,7 @@ final class EventBus {
         var snapshot = domain.runtime().lifecycle().call(() ->
             resolve(target, key, EventMode.SERIAL));
         return Flux.fromIterable(snapshot)
-            .concatMap(hook -> Mono.defer(() -> {
+            .concatMap(hook -> LifecycleCallback.defer(() -> {
                 if (!domain.runtime().lifecycle().call(() -> beforeInvoke(key, hook))) {
                     return Mono.<R>empty();
                 }

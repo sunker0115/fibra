@@ -122,7 +122,7 @@ public final class DefaultRuntimeDomain {
             updated = applyUpdateBatch(() -> registerUpdateTargets(
                 requested.stream().map(this::target).toList()));
         } catch (RuntimeException | Error failure) {
-            return Mono.error(failure);
+            return LifecycleCallback.failure(failure);
         }
         return settled().then(Mono.whenDelayError(updated.stream()
                 .map(PluginInstanceImpl::settled).toList()))
@@ -143,7 +143,7 @@ public final class DefaultRuntimeDomain {
                     new BatchTarget(instance, prepared.get())));
             });
         } catch (RuntimeException | Error failure) {
-            return Mono.error(failure);
+            return LifecycleCallback.failure(failure);
         }
         return instance.settled();
     }

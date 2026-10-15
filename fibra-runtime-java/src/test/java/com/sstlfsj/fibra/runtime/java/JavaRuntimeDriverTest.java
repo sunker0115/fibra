@@ -45,9 +45,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -1465,6 +1467,90 @@ class JavaRuntimeDriverTest {
     }
 
     @Test
+    void synchronousReleaseScopeFailuresRetainTheOriginalStartFailureAndLeaseUntilStopRetries()
+        throws Exception {
+        var limit = java.time.Duration.ofSeconds(5);
+        for (var linkageStart : List.of(false, true)) {
+            for (var linkageCleanup : List.of(false, true)) {
+                var facet = facet("synchronous-cleanup-failure",
+                    "entrypoint: fixture.ContributionEntrypoint\ndefinitionId: sample\n",
+                    fixture.ContributionEntrypoint.class);
+                Throwable startFailure = linkageStart
+                    ? new NoClassDefFoundError("prebuilt start linkage failure")
+                    : new IllegalStateException("prebuilt ordinary start failure");
+                Throwable cleanupFailure = linkageCleanup
+                    ? new NoClassDefFoundError("prebuilt releaseScope linkage failure")
+                    : new IllegalStateException("prebuilt releaseScope ordinary failure");
+                var starts = new AtomicInteger();
+                fixture.ContributionObserver.start = context -> {
+                    starts.incrementAndGet();
+                    if (startFailure instanceof RuntimeException ordinary) throw ordinary;
+                    throw (Error) startFailure;
+                };
+                var closes = new ArrayList<PluginClassLoader>();
+                try (var services = new LiveHostServices(cleanupFailure)) {
+                    var driver = new JavaRuntimeDriver(services, List.of(),
+                        getClass().getClassLoader(), List.of("java.",
+                            "com.sstlfsj.fibra.", "reactor.",
+                            "org.reactivestreams.", "org.slf4j.",
+                            "fixture.ContributionObserver"),
+                        loader -> { closes.add(loader); loader.close(); });
+                    var candidate = driver.createCandidate(slice(
+                        new PluginFacetSource(facet, List.of())));
+                    candidate.prepareAsync().block(limit);
+                    var generation = candidate.seal(CompiledRuntimeSlice.of(
+                        candidate.preparedPlan(),
+                        List.of(new ExecutionUnitKey("synchronous-cleanup-failure"))));
+                    var unit = generation.units().get(
+                        new ExecutionUnitKey("synchronous-cleanup-failure"));
+
+                    var observation = unit.reconcileAsync("start").block(limit);
+
+                    assertEquals(com.sstlfsj.fibra.engine.observation.ExecutionObservation.State.FAILED,
+                        observation.aggregateState());
+                    assertEquals(startFailure.toString(),
+                        observation.executions().getFirst().failure().message());
+                    assertEquals(1, startFailure.getSuppressed().length);
+                    assertSame(cleanupFailure, startFailure.getSuppressed()[0],
+                        "the original start error owns the original cleanup error");
+                    assertEquals(1, services.scopeCloseAttempts.get());
+                    var retainedScope = services.synchronouslyFailedScope.get();
+                    assertTrue(retainedScope != null);
+                    assertFalse(retainedScope.isClosed(),
+                        "synchronous releaseScope failure leaves the original Scope owned by the unit");
+                    assertTrue(closes.isEmpty(), "failed cleanup retains its class-space lease");
+                    assertEquals(1, starts.get());
+                    assertTrue(services.reconcileRequests.isEmpty(),
+                        "failed start must not schedule automatic replacement");
+                    assertEquals(observation.executions().getFirst().runtimeInstanceId(),
+                        unit.snapshot().executions().getFirst().runtimeInstanceId());
+
+                    unit.closeAdmission();
+                    unit.drainAsync("drain", java.time.Instant.now().plusSeconds(5)).block(limit);
+                    assertFalse(retainedScope.isClosed());
+                    assertTrue(closes.isEmpty(), "drain alone must not release the retained lease");
+                    unit.stopAsync("stop", java.time.Instant.now().plusSeconds(5)).block(limit);
+
+                    assertEquals(2, services.scopeCloseAttempts.get());
+                    assertTrue(retainedScope.isClosed());
+                    assertEquals(1, closes.size(), "successful stop releases its loader exactly once");
+                    unit.stopAsync("stop-again", java.time.Instant.now().plusSeconds(5)).block(limit);
+                    generation.retireAsync().block(limit);
+                    generation.retireAsync().block(limit);
+                    driver.closeAsync().block(limit);
+                    assertEquals(2, services.scopeCloseAttempts.get());
+                    assertEquals(1, closes.size());
+                    assertEquals(1, starts.get());
+                    assertTrue(services.reconcileRequests.isEmpty());
+                } finally {
+                    fixture.ContributionObserver.start = null;
+                    fixture.ContributionObserver.callback = null;
+                }
+            }
+        }
+    }
+
+    @Test
     void realScopeCleanupFailureRetainsTheUnitClassSpaceLease()
         throws Exception {
         var facet = facet("cleanup-failure",
@@ -1969,7 +2055,10 @@ class JavaRuntimeDriverTest {
         private final List<Set<com.sstlfsj.fibra.engine.execution.RuntimeUnitFence>>
             reconcileRequests = new CopyOnWriteArrayList<>();
         private final boolean failFirstChildClose;
+        private final Throwable synchronousScopeCloseFailure;
         private final AtomicInteger scopeCloseAttempts = new AtomicInteger();
+        private final AtomicReference<com.sstlfsj.fibra.Scope> synchronouslyFailedScope =
+            new AtomicReference<>();
         private long identities;
 
         private LiveHostServices() {
@@ -1978,6 +2067,12 @@ class JavaRuntimeDriverTest {
 
         private LiveHostServices(boolean failFirstChildClose) {
             this.failFirstChildClose = failFirstChildClose;
+            this.synchronousScopeCloseFailure = null;
+        }
+
+        private LiveHostServices(Throwable synchronousScopeCloseFailure) {
+            this.failFirstChildClose = false;
+            this.synchronousScopeCloseFailure = synchronousScopeCloseFailure;
         }
 
         @Override public String hostInstanceId() { return "java-live-host"; }
@@ -2001,6 +2096,11 @@ class JavaRuntimeDriverTest {
         }
         @Override public reactor.core.publisher.Mono<Void> releaseScope(
             com.sstlfsj.fibra.Scope scope) {
+            if (synchronousScopeCloseFailure != null && scopeCloseAttempts.getAndIncrement() == 0) {
+                synchronouslyFailedScope.set(scope);
+                if (synchronousScopeCloseFailure instanceof RuntimeException ordinary) throw ordinary;
+                throw (Error) synchronousScopeCloseFailure;
+            }
             var owned = scope instanceof FailOnceCloseScope wrapped
                 ? wrapped.delegate : scope;
             return reactor.core.publisher.Mono.defer(scope::closeAsync)

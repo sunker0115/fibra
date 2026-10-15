@@ -216,11 +216,17 @@ Engine 用同一次采样生成 view 与 target-satisfied 判断，不能混用�
 ```java
 PublishedView current();
 Flux<PublishedView> views();
-Mono<O> invoke(String expectedViewRevision,
-               long expectedRegistrationIdentity,
-               ContributionKind<D, I, O> kind,
-               ContributionId id,
-               I input);
+Mono<O> invoke(ContributionHandle handle,
+               ContributionKind<D, I, O> kind, I input);
+```
+
+从同一个 view 解析调用凭据，再沿唯一 PublishedRuntime 调用：
+
+```java
+var view = published.current();
+var handle = view.resolve(kind, id)
+    .orElseThrow(() -> new ContributionUnavailableException(id));
+var result = published.invoke(handle, kind, input);
 ```
 
 `views()` 只发布订阅后的变化，不重放历史；需要覆盖当前与后续事实时，先订阅再读取 `current()`。
@@ -295,6 +301,12 @@ var javaProvider = new JavaRuntimeProvider(builtIns, List.of(api));
 
 prepare 在加载入口前核 id/精确版本，拒绝制品携带任意已导出 binary name，包括未导入合同和同字节影子。
 已登记 API 类型只有当前 facet 显式导入才返回 Host 的同一 Class；未导入直接失败，不能从依赖间接取得。
+上述 prepare 校验针对显式声明和静态类型资格，不扫描方法体或预执行 factory。
+遗漏导入的隐式依赖可能直到 factory、start 或后续执行才首次链接失败；不能统一承诺 LOAD/NOT_SAVED。
+受控生命周期回调中的非 VM 致命链接失败沿原失败/清理路径交付，保存结果按实际阶段保留：
+prepare 拒绝为 NOT_SAVED，保存后的 activation 失败为 SAVED，bootstrap/reconcile 为 NOT_APPLICABLE。
+Scope 清理失败仍保留原 owner 和必要 lease；VirtualMachineError/ThreadDeath 保持致命错误边界。
+完整边界见[生命周期失败设计](../superpowers/specs/2026-10-15-lazy-linkage-lifecycle-design.md)。
 其他类型继续按已加载 → 平台实际解析 → 固定共享基线 parent 实际解析 → 本制品 → 声明依赖的顺序加载。
 资源查询、SPI/TCCL 与原依赖图保持原语义；类型共享不构成安全沙箱。
 

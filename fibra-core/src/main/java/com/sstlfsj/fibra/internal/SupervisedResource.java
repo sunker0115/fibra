@@ -37,6 +37,7 @@ final class SupervisedResource implements OwnedEffect, Subscriber<Object> {
         try {
             Objects.requireNonNull(health, "health").subscribe(this);
         } catch (RuntimeException | Error failure) {
+            LifecycleCallback.rethrowFatal(failure);
             lifecycle.call(() -> {
                 fail(failure);
                 return null;
@@ -70,6 +71,7 @@ final class SupervisedResource implements OwnedEffect, Subscriber<Object> {
 
     @Override
     public void onError(Throwable failure) {
+        LifecycleCallback.rethrowFatal(failure);
         lifecycle.call(() -> {
             fail(Objects.requireNonNull(failure, "failure"));
             return null;

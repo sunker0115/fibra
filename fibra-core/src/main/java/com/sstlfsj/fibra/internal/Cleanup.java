@@ -15,7 +15,7 @@ final class Cleanup {
     static Mono<Void> allSettled(List<? extends Disposable> resources) {
         var failures = new ConcurrentLinkedQueue<Throwable>();
         return Flux.fromIterable(resources)
-            .flatMap(resource -> Mono.defer(resource::dispose)
+            .flatMap(resource -> LifecycleCallback.defer(resource::dispose)
                 .onErrorResume(error -> {
                     failures.add(error);
                     return Mono.empty();

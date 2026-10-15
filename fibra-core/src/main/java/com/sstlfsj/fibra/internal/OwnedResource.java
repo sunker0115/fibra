@@ -59,6 +59,7 @@ final class OwnedResource implements OwnedEffect, DrainingDisposable, Subscriber
                 collect(Objects.requireNonNull(source.get(), "effect source returned null"));
                 settleSource(null);
             } catch (RuntimeException | Error failure) {
+                LifecycleCallback.rethrowFatal(failure);
                 settleSource(failure);
                 throw failure;
             }
@@ -71,6 +72,7 @@ final class OwnedResource implements OwnedEffect, DrainingDisposable, Subscriber
         try {
             Objects.requireNonNull(source, "source").subscribe(this);
         } catch (RuntimeException | Error failure) {
+            LifecycleCallback.rethrowFatal(failure);
             lifecycle.call(() -> {
                 settleSource(failure);
                 return null;
@@ -108,6 +110,7 @@ final class OwnedResource implements OwnedEffect, DrainingDisposable, Subscriber
 
     @Override
     public void onError(Throwable error) {
+        LifecycleCallback.rethrowFatal(error);
         lifecycle.call(() -> {
             settleSource(Objects.requireNonNull(error, "error"));
             return null;
@@ -160,7 +163,7 @@ final class OwnedResource implements OwnedEffect, DrainingDisposable, Subscriber
         if (resource instanceof OwnedResource || resource instanceof PluginInstanceImpl<?>) {
             drain.include(resource);
         } else if (resource instanceof DrainingDisposable draining) {
-            drain.await(Mono.defer(draining::drain).doOnError(failure -> lifecycle.call(() -> {
+            drain.await(LifecycleCallback.defer(draining::drain).doOnError(failure -> lifecycle.call(() -> {
                 owner.domain().cleanupFailed(this, owner, label, failure);
                 return null;
             })));
@@ -232,7 +235,7 @@ final class OwnedResource implements OwnedEffect, DrainingDisposable, Subscriber
         var reverse = Cleanup.reversed(collected);
         drain().doOnSuccess(ignored -> drainedForTeardown = true)
             .thenMany(Flux.fromIterable(reverse)
-            .concatMap(disposable -> Mono.defer(() ->
+            .concatMap(disposable -> LifecycleCallback.defer(() ->
                 Objects.requireNonNull(disposable.dispose(), "disposer returned null"))
                 .doOnSuccess(ignored -> lifecycle.call(() -> {
                     removeCollected(disposable);

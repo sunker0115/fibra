@@ -157,6 +157,11 @@ binary name（包括未导入合同、同字节、依赖 JAR、多 release 生�
 每个被取得的动态依赖也执行自己的校验。静态目录 query 只读声明，不证明导入可用，也不加载类型。
 probe/inspect 保持私有声明形状校验；运行资格仍由 prepare 决定，不把安装成功当运行通过。
 
+这里的缺合同是**显式声明**的 id 在 Host 缺失，或导入并集的公开 ABI 未闭合；不承诺提前链接所有
+方法体。完全省略所需导入的隐式依赖，可以直到 factory/start/后续执行才触发类型拒绝。
+受控生命周期中的非 VM 致命 LinkageError 必须交付原失败并沿原 owner 清理，不能令调度等待者失去终态。
+实际保存态按发生阶段区分，不能把迟发失败都投影为 LOAD/NOT_SAVED；见[失败设计](2026-10-15-lazy-linkage-lifecycle-design.md)。
+
 ### 4.3 解析、身份和隔离
 
 对已登记 Host API binary name：当前 facet 已导入则直接返回 inventory 中的 Class；未导入则直接

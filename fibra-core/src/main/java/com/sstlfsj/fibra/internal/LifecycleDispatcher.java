@@ -21,20 +21,21 @@ final class LifecycleDispatcher {
     public <T> T call(Callable<T> action) {
         Objects.requireNonNull(action, "action");
         if (Thread.currentThread() == lifecycleThread) {
-            return invoke(action);
+            return LifecycleCallback.capture(action).get();
         }
-        return Mono.fromCallable(() -> invoke(action))
+        return Mono.fromCallable(() -> LifecycleCallback.capture(action))
             .subscribeOn(scheduler)
-            .block();
+            .block().get();
     }
 
     public <T> Mono<T> mono(Callable<T> action) {
         Objects.requireNonNull(action, "action");
         return Mono.defer(() -> {
             if (Thread.currentThread() == lifecycleThread) {
-                return Mono.justOrEmpty(invoke(action));
+                return LifecycleCallback.capture(action).mono();
             }
-            return Mono.fromCallable(() -> invoke(action)).subscribeOn(scheduler);
+            return Mono.fromCallable(() -> LifecycleCallback.capture(action))
+                .subscribeOn(scheduler).flatMap(LifecycleCallback.Outcome::mono);
         });
     }
 
@@ -59,13 +60,4 @@ final class LifecycleDispatcher {
         scheduler.dispose();
     }
 
-    private <T> T invoke(Callable<T> action) {
-        try {
-            return action.call();
-        } catch (RuntimeException | Error error) {
-            throw error;
-        } catch (Exception exception) {
-            throw new IllegalStateException(exception);
-        }
-    }
 }

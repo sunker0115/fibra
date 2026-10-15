@@ -30,7 +30,7 @@ final class ResourceDrain {
             } else if (resource instanceof PluginInstanceImpl<?> plugin) {
                 plugin.freeze(this);
             } else if (resource instanceof DrainingDisposable draining) {
-                await(Mono.defer(draining::drain));
+                await(LifecycleCallback.defer(draining::drain));
             }
         } finally {
             freezing--;

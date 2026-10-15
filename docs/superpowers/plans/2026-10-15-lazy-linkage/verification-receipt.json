@@ -1,0 +1,161 @@
+{
+  "source_base": "dde0e5de36f8bb524d2f552261a853c44f2489f1",
+  "branch": "codex/lazy-linkage-lifecycle",
+  "source_state": "uncommitted verified working tree",
+  "formal_tests": {
+    "tests": 1317,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "formal_report_count": 177,
+  "external_tests": {
+    "tests": 29,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "public_consumer_resolved_files": 110,
+  "public_modules": 30,
+  "public_outputs": 115,
+  "main_java_source_jar_matches": 431,
+  "supported_signatures_changed": false,
+  "dependencies_changed": false,
+  "compatibility_paths_added": false,
+  "project_specific_paths_added": false,
+  "evidence_root": "/private/tmp/fibra-lazy-linkage-evidence-20261015",
+  "code_artifact_manifest_sha256": "b1a081f10aa7a9e7679970f103b0476e047f772dafcdff0a74027c101293c82f",
+  "distribution_zip_sha256": "bd4bb774b4221dea927d3e430f54f8f4b4d7d13355bce7bf860573469d68b654",
+  "model_qualification": {
+    "passed": true,
+    "root_lib_count": 26,
+    "api_sha256": "f37b73abeab51effa23a222cf1d87860f598b3d576b962ea0917ec3a0975a30a",
+    "provider_sha256": "7f5bb25db7b0f3454d0419fb7e56769019645462f34067d323ce2cffe27511d9",
+    "original_input_drift": false,
+    "provider_class_count": 3,
+    "native_exits": [
+      0,
+      0
+    ]
+  },
+  "independent_reviews": {
+    "design": "B0/I0/M0",
+    "implementation": "B0/I0/M0",
+    "documentation": "B0/I0/M0"
+  },
+  "commands": {
+    "affected-all-tests": {
+      "argv": [
+        "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+        "-o",
+        "-Dmaven.repo.local=/private/tmp/fibra-lazy-linkage-evidence-20261015/build-m2",
+        "-pl",
+        "fibra-runtime-java",
+        "-am",
+        "test"
+      ],
+      "cwd": "/Users/sunke/.codex/worktrees/lazy-linkage-lifecycle/fibra",
+      "exit_code": 0,
+      "started": "2026-10-15T06:54:21.009709+00:00",
+      "finished": "2026-10-15T06:55:06.111968+00:00"
+    },
+    "full-verified-publication": {
+      "argv": [
+        "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+        "--batch-mode",
+        "--no-transfer-progress",
+        "-Dmaven.repo.local=/private/tmp/fibra-lazy-linkage-evidence-20261015/build-m2",
+        "-DaltDeploymentRepository=fibra-lazy-linkage::file:///private/tmp/fibra-lazy-linkage-evidence-20261015/public-repository",
+        "-Dfibra.distribution.verify.skip=false",
+        "-Dsurefire.timeout=300",
+        "-Dfailsafe.timeout=300",
+        "clean",
+        "deploy"
+      ],
+      "cwd": "/Users/sunke/.codex/worktrees/lazy-linkage-lifecycle/fibra",
+      "exit_code": 0,
+      "started": "2026-10-15T06:55:44.744307+00:00",
+      "finished": "2026-10-15T07:00:59.819263+00:00"
+    },
+    "architecture-boundaries": {
+      "argv": [
+        "/opt/homebrew/bin/bash",
+        "scripts/verify-architecture-boundaries.sh"
+      ],
+      "cwd": "/Users/sunke/.codex/worktrees/lazy-linkage-lifecycle/fibra",
+      "exit_code": 0,
+      "started": "2026-10-15T06:57:18.682861+00:00",
+      "finished": "2026-10-15T06:57:19.128320+00:00"
+    },
+    "client-public-packages": {
+      "argv": [
+        "/opt/homebrew/bin/bash",
+        "scripts/verify-client-packages.sh"
+      ],
+      "cwd": "/Users/sunke/.codex/worktrees/lazy-linkage-lifecycle/fibra",
+      "exit_code": 0,
+      "started": "2026-10-15T06:57:17.332112+00:00",
+      "finished": "2026-10-15T06:57:27.236141+00:00"
+    },
+    "engine-client-protocol": {
+      "argv": [
+        "node",
+        "client/tests/engine-connection/consume-snapshots.mjs",
+        "fibra-parity-tests/target/client-protocol-conformance"
+      ],
+      "cwd": "/Users/sunke/.codex/worktrees/lazy-linkage-lifecycle/fibra",
+      "exit_code": 0,
+      "started": "2026-10-15T07:03:04.209819+00:00",
+      "finished": "2026-10-15T07:03:04.416301+00:00"
+    },
+    "public-distribution-consumers": {
+      "argv": [
+        "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+        "--settings",
+        "settings.xml",
+        "--batch-mode",
+        "--no-transfer-progress",
+        "-Dmaven.repo.local=/private/tmp/fibra-lazy-linkage-evidence-20261015/consumer-m2",
+        "-Dfibra.repository.url=file:///private/tmp/fibra-lazy-linkage-evidence-20261015/artifacts/maven",
+        "-Dfibra.version=0.5.0-SNAPSHOT",
+        "-Djunit.version=6.1.3",
+        "-Dspring-boot.version=4.1.0",
+        "clean",
+        "verify"
+      ],
+      "cwd": "/private/tmp/fibra-lazy-linkage-evidence-20261015/distribution-consumers",
+      "exit_code": 0,
+      "started": "2026-10-15T07:02:27.317716+00:00",
+      "finished": "2026-10-15T07:02:53.938237+00:00"
+    },
+    "public-host-contract-consumer": {
+      "argv": [
+        "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+        "--settings",
+        "/private/tmp/fibra-lazy-linkage-evidence-20261015/consumer-settings.xml",
+        "--batch-mode",
+        "--no-transfer-progress",
+        "-Dmaven.repo.local=/private/tmp/fibra-lazy-linkage-evidence-20261015/consumer-m2",
+        "clean",
+        "test"
+      ],
+      "cwd": "/private/tmp/fibra-lazy-linkage-evidence-20261015/host-consumer",
+      "exit_code": 0,
+      "started": "2026-10-15T07:03:37.726790+00:00",
+      "finished": "2026-10-15T07:04:18.669260+00:00"
+    },
+    "release-reproducibility": {
+      "argv": [
+        "/opt/homebrew/bin/bash",
+        "scripts/verify-reproducible-release.sh"
+      ],
+      "cwd": "/Users/sunke/.codex/worktrees/lazy-linkage-lifecycle/fibra",
+      "exit_code": 0,
+      "started": "2026-10-15T07:03:02.972981+00:00",
+      "finished": "2026-10-15T07:05:17.658849+00:00"
+    }
+  },
+  "not_committed_or_merged": true,
+  "not_pushed": true,
+  "tela_source_unchanged": true
+}
