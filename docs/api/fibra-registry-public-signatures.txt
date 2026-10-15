@@ -82,10 +82,11 @@ public interface com.sstlfsj.fibra.registry.PluginAuditRepository extends java.l
 ## com.sstlfsj.fibra.registry.PluginDeploymentRequest
 Compiled from "PluginDeploymentRequest.java"
 public final class com.sstlfsj.fibra.registry.PluginDeploymentRequest extends java.lang.Record {
-  public com.sstlfsj.fibra.registry.PluginDeploymentRequest(java.util.List<com.sstlfsj.fibra.engine.deployment.PluginSelection>, com.sstlfsj.fibra.config.DesiredInputGraph, com.sstlfsj.fibra.config.ConfigContextSnapshot);
+  public com.sstlfsj.fibra.registry.PluginDeploymentRequest(long, java.util.List<com.sstlfsj.fibra.engine.deployment.PluginSelection>, com.sstlfsj.fibra.config.DesiredInputGraph, com.sstlfsj.fibra.config.ConfigContextSnapshot);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
+  public long expectedRevision();
   public java.util.List<com.sstlfsj.fibra.engine.deployment.PluginSelection> selections();
   public com.sstlfsj.fibra.config.DesiredInputGraph graph();
   public com.sstlfsj.fibra.config.ConfigContextSnapshot configContext();
@@ -117,11 +118,23 @@ public final class com.sstlfsj.fibra.registry.PluginRegistry {
   public reactor.core.publisher.Mono<com.sstlfsj.fibra.registry.RegistrySnapshot> remove(java.lang.String);
   public reactor.core.publisher.Mono<com.sstlfsj.fibra.registry.RegistrySnapshot> reconcileCurrent();
   public com.sstlfsj.fibra.registry.RegistrySnapshot snapshot();
+  public com.sstlfsj.fibra.registry.RegistryDiagnostics diagnostics();
   public java.util.Optional<com.sstlfsj.fibra.registry.RegistryPluginState> get(java.lang.String);
   public java.util.List<com.sstlfsj.fibra.registry.RegistryPluginState> list();
   public reactor.core.publisher.Flux<com.sstlfsj.fibra.registry.RegistrySnapshot> watch();
   public java.util.List<com.sstlfsj.fibra.registry.PluginAuditEntry> history();
   public java.util.List<com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure> auditFailures();
+}
+## com.sstlfsj.fibra.registry.RegistryDiagnostics
+Compiled from "RegistryDiagnostics.java"
+public final class com.sstlfsj.fibra.registry.RegistryDiagnostics extends java.lang.Record {
+  public com.sstlfsj.fibra.registry.RegistryDiagnostics(java.lang.String, com.sstlfsj.fibra.engine.observation.EngineSnapshot, com.sstlfsj.fibra.engine.observation.EngineDiagnostics);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String viewRevision();
+  public com.sstlfsj.fibra.engine.observation.EngineSnapshot engine();
+  public com.sstlfsj.fibra.engine.observation.EngineDiagnostics engineDiagnostics();
 }
 ## com.sstlfsj.fibra.registry.RegistryPluginState
 Compiled from "RegistryPluginState.java"
@@ -137,27 +150,34 @@ public final class com.sstlfsj.fibra.registry.RegistryPluginState extends java.l
 ## com.sstlfsj.fibra.registry.RegistrySnapshot
 Compiled from "RegistrySnapshot.java"
 public final class com.sstlfsj.fibra.registry.RegistrySnapshot extends java.lang.Record {
-  public com.sstlfsj.fibra.registry.RegistrySnapshot(java.lang.String, com.sstlfsj.fibra.engine.observation.EngineSnapshot, com.sstlfsj.fibra.engine.observation.EngineDiagnostics, java.util.List<com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure>);
-  public java.util.Optional<com.sstlfsj.fibra.engine.deployment.DeploymentTarget> target();
-  public java.util.Optional<com.sstlfsj.fibra.engine.observation.CurrentAttemptSnapshot> current();
+  public com.sstlfsj.fibra.registry.RegistrySnapshot(java.lang.String, com.sstlfsj.fibra.engine.observation.EngineState, com.sstlfsj.fibra.engine.observation.DurableTargetState, com.sstlfsj.fibra.engine.observation.TargetConvergence, boolean, boolean, java.util.Optional<com.sstlfsj.fibra.engine.deployment.DeploymentTarget>, java.util.Map<java.lang.String, com.sstlfsj.fibra.engine.observation.ExecutionObservation>, java.util.List<com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure>);
   public java.util.Map<com.sstlfsj.fibra.artifact.PluginId, com.sstlfsj.fibra.engine.deployment.PluginSelection> selections();
   public com.sstlfsj.fibra.config.DesiredInputGraph desiredGraph();
-  public java.util.Map<java.lang.String, com.sstlfsj.fibra.engine.observation.ExecutionObservation> observed();
   public static com.sstlfsj.fibra.registry.RegistrySnapshot$Builder builder();
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
   public java.lang.String viewRevision();
-  public com.sstlfsj.fibra.engine.observation.EngineSnapshot engine();
-  public com.sstlfsj.fibra.engine.observation.EngineDiagnostics engineDiagnostics();
+  public com.sstlfsj.fibra.engine.observation.EngineState state();
+  public com.sstlfsj.fibra.engine.observation.DurableTargetState durableState();
+  public com.sstlfsj.fibra.engine.observation.TargetConvergence targetConvergence();
+  public boolean mutationGateOpen();
+  public boolean contributionAdmissionOpen();
+  public java.util.Optional<com.sstlfsj.fibra.engine.deployment.DeploymentTarget> target();
+  public java.util.Map<java.lang.String, com.sstlfsj.fibra.engine.observation.ExecutionObservation> observed();
   public java.util.List<com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure> auditFailures();
 }
 ## com.sstlfsj.fibra.registry.RegistrySnapshot$Builder
 Compiled from "RegistrySnapshot.java"
 public final class com.sstlfsj.fibra.registry.RegistrySnapshot$Builder {
   public com.sstlfsj.fibra.registry.RegistrySnapshot$Builder viewRevision(java.lang.String);
-  public com.sstlfsj.fibra.registry.RegistrySnapshot$Builder engine(com.sstlfsj.fibra.engine.observation.EngineSnapshot);
-  public com.sstlfsj.fibra.registry.RegistrySnapshot$Builder engineDiagnostics(com.sstlfsj.fibra.engine.observation.EngineDiagnostics);
+  public com.sstlfsj.fibra.registry.RegistrySnapshot$Builder state(com.sstlfsj.fibra.engine.observation.EngineState);
+  public com.sstlfsj.fibra.registry.RegistrySnapshot$Builder durableState(com.sstlfsj.fibra.engine.observation.DurableTargetState);
+  public com.sstlfsj.fibra.registry.RegistrySnapshot$Builder targetConvergence(com.sstlfsj.fibra.engine.observation.TargetConvergence);
+  public com.sstlfsj.fibra.registry.RegistrySnapshot$Builder mutationGateOpen(boolean);
+  public com.sstlfsj.fibra.registry.RegistrySnapshot$Builder contributionAdmissionOpen(boolean);
+  public com.sstlfsj.fibra.registry.RegistrySnapshot$Builder target(java.util.Optional<com.sstlfsj.fibra.engine.deployment.DeploymentTarget>);
+  public com.sstlfsj.fibra.registry.RegistrySnapshot$Builder observed(java.util.Map<java.lang.String, com.sstlfsj.fibra.engine.observation.ExecutionObservation>);
   public com.sstlfsj.fibra.registry.RegistrySnapshot$Builder auditFailures(java.util.List<com.sstlfsj.fibra.registry.PluginAuditDeliveryFailure>);
   public com.sstlfsj.fibra.registry.RegistrySnapshot build();
 }

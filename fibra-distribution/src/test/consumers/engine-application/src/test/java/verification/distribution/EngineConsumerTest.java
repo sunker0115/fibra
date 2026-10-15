@@ -2,6 +2,7 @@ package verification.distribution;
 
 import com.sstlfsj.fibra.artifact.PluginPackageStore;
 import com.sstlfsj.fibra.artifact.PluginId;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTarget;
 import com.sstlfsj.fibra.engine.deployment.DefinitionCatalogException;
 import com.sstlfsj.fibra.config.ConfigContextSnapshot;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
@@ -139,8 +140,10 @@ class EngineConsumerTest {
             }
             registry.install(installRequest(work.resolve("package-sources"), "external",
                 Path.of(System.getProperty("plugin.jar")))).block(TIMEOUT);
+            var beforeDeployment = registry.snapshot();
             var deployed = registry.deploy(new PluginDeploymentRequest(
-                new ArrayList<PluginSelection>(registry.snapshot().selections().values()),
+                beforeDeployment.target().map(DeploymentTarget::targetRevision).orElse(0L),
+                new ArrayList<PluginSelection>(beforeDeployment.selections().values()),
                 applicationGraph(content, work.resolve("storage")), ConfigContextSnapshot.empty()))
                 .block(TIMEOUT);
             assertTrue(deployed.observed().values().stream()

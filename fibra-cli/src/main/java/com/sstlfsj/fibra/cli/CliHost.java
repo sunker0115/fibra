@@ -6,6 +6,7 @@ import com.sstlfsj.fibra.artifact.PluginPackageStore;
 import com.sstlfsj.fibra.bridge.ContributionKindRegistry;
 import com.sstlfsj.fibra.config.ConfigLimits;
 import com.sstlfsj.fibra.config.FileDesiredStateRepository;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTarget;
 import com.sstlfsj.fibra.engine.deployment.FileDeploymentTargetStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.HostTerminationPort;
@@ -105,6 +106,8 @@ final class CliHost implements AutoCloseable {
     PublishedRuntime published() { return engine.published(); }
 
     RegistrySnapshot apply() {
+        var before = registry.snapshot();
+        var expectedRevision = before.target().map(DeploymentTarget::targetRevision).orElse(0L);
         var graph = new FileDesiredStateRepository(paths.profileFile(),
             ConfigLimits.defaults()).load().graph();
         var selected = new ProfilePackageSource(paths.profilePackagesFile(), paths.pluginsRoot()).load();
@@ -128,7 +131,7 @@ final class CliHost implements AutoCloseable {
                 return new PluginSelection(published.pluginId(),
                     published.packageRevision(), true);
             }).toList();
-            result = registry.deploy(new PluginDeploymentRequest(selections,
+            result = registry.deploy(new PluginDeploymentRequest(expectedRevision, selections,
                 graph, paths.configContext())).block();
         } catch (RuntimeException | Error failure) {
             closeTransactions(transactions, failure);

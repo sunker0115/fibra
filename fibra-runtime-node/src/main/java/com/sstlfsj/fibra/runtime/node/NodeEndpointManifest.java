@@ -6,9 +6,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public record NodeEndpointManifest(String name, String kind, int schemaVersion,
+record NodeEndpointManifest(String name, String kind, int schemaVersion,
                                    String method, Object descriptor) {
-    public NodeEndpointManifest {
+    NodeEndpointManifest {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("endpoint name must not be blank");
         }

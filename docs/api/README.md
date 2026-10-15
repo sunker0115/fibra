@@ -1,7 +1,9 @@
 # Fibra 公共 API 与嵌入入口
 
-本文描述 `0.5.0-SNAPSHOT` 当前公开边界。公共签名以各模块的 `*-public-signatures.txt` 基线和编译后的 API
-为准；本文解释对象的职责、所有权和组合顺序。
+本文描述 `0.5.0-SNAPSHOT` 当前公开边界。各模块的 `*-public-signatures.txt` 监控全部 public/protected 字节签名，
+具体支持范围、受众与内部协作例外见[公开 API 审定清单](public-api-inventory.md)；不能把编译可见性直接当成SDK承诺。
+本文解释对象的职责、所有权和组合顺序。稳定基线与重开条件见
+[API稳定边界](../superpowers/specs/2026-10-15-public-api-boundaries-design.md#6-稳定基线与重开条件)。
 
 Fibra 只有一套按受众与职责分层的公共 API。完整边界、身份和演进规则见
 [公共 API 整体架构](../superpowers/specs/2026-10-15-public-api-architecture.md)。本次 Java 合同类型身份已通过本地
@@ -201,8 +203,9 @@ Java 和 Node 只是该 SPI 的两个实现。任何外部 provider 都必须只
 
 ## 编译、观察与发布
 
-`DeploymentTargetCompiler` 将完整目标按 runtime 切分，解析 package/facet 依赖、desired entry、配置、realm、
+Engine内部的 `DeploymentTargetCompiler` 将完整目标按 runtime 切分，解析 package/facet 依赖、desired entry、配置、realm、
 intercept、publication requirement 和执行目标。`desiredEntryId` 保证同一 facet 的多次实例化不会折叠。
+它与 `CompiledDeployment` 因跨包协作保持public字节可见性，属于清单中精确列出的内部协作例外，不是Host或runtime扩展入口。
 
 `ExecutionObservation` 是 runtime 对 unit 的唯一观察事实，区分 `PENDING`、`ACTIVE`、`FAILED`，并携带 unit
 target revision、runtime instance、operation 和已发布定义/贡献。driver 状态变化必须请求 Engine 重新采样；
@@ -234,6 +237,19 @@ watch 和审计。
 安装或升级先通过同一个 `PluginPackageStore` 保存 package，再提交锁定精确 package revision 的完整 target。
 逻辑卸载只移除 selection；不可变历史仍由 store 保留。审计投递失败不会改写 Engine 的真实结果。
 
+完整 `deploy` 请求携带调用者读取时的 `expectedRevision`、全部 selections、raw graph 和 config context，
+即 `new PluginDeploymentRequest(expectedRevision, selections, graph, configContext)`；revision非负，无target为0。
+Registry原样传给Engine，不在提交时替换成latest，不自动重试。旧revision即使内容相同仍冲突；同revision同内容沿原no-op。
+增量upsert/enable/disable/move/remove等保持基于订阅时当前图的编辑语义，并继续经同一Engine CAS。
+
+普通 `snapshot()`、`watch()` 和管理命令结果使用 `RegistrySnapshot`：viewRevision、state、durableState、
+targetConvergence、mutationGateOpen、contributionAdmissionOpen、完整target、按entryId的observed及auditFailures。
+target仍提供revision/digest/config context，selections()/desiredGraph()保留原便利读取；无target/current时相应集合为空。
+不再从这个普通视图获取整个EngineSnapshot、attempt或retirement树。
+需要高级诊断时用 `registry.diagnostics()`，返回一次PublishedView捕获的RegistryDiagnostics(viewRevision,engine,engineDiagnostics)。
+这是正式支持的诊断合同；分别读取snapshot/diagnostics可能跨revision，应比较viewRevision，不能当成原子组合。
+普通与高级读取都仅投影原Engine事实，没有新状态源、写入路径或关闭owner。
+
 `fibra-bridge` 的 `ContributionDirectory` 持有本地与远程能力的统一注册。`ContributionKind` 定义 descriptor、
 输入、输出和 codec；`ContributionAdmission` 负责注册身份、调用准入和 drain。Bridge 不负责安装、目标保存或
 生命周期决策。
@@ -256,9 +272,9 @@ hostApis:
 
 `hostApis` 只有上述 id/version 对象列表格式，缺省为空；每项只接受两个必填、非空白字符串字段，重复 id、
 重复/未知字段、null 或错误类型均在 MANIFEST 拒绝。未发布的候选 map 写法同样拒绝，不提供兼容 parser。
-`JavaFacetDescriptor(Optional<String> entrypoint, Optional<String> definitionId, Map<String, String> hostApis)`
-将已验证导入规范化为不可变 Map；双参数构造器仅委托空 Map 到同一路径，没有旧单参数重载。
-该 Map 是声明索引，不是第二配置格式。宿主、外部 runtime provider、executable Java 包和作者模板须统一
+Java runtime私有的 `JavaFacetDescriptor` 将已验证导入规范化为不可变 Map；它及具体Java/Node driver、Node私有descriptor
+均不是作者SDK，外部执行器实现原RuntimeDriver SPI。该 Map 是声明索引，不是第二配置格式。
+宿主、外部 runtime provider、executable Java 包和作者模板须统一
 更新并重新编译/打包。旧 entrypoint-only 格式没有部署或目录回退；新 digest 经原 CAS 更新精确 selection，
 不自动改写旧 target，不覆盖已保存的不可变包，也不混用同坐标的不同 SNAPSHOT 制品。
 

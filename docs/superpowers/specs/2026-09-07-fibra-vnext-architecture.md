@@ -817,10 +817,9 @@ Java runtime 是[统一公共 API 分层](2026-10-15-public-api-architecture.md#
   省略入口不等于声明 exports；
 - 唯一可选 `hostApis` 格式为 id/version 对象列表，例如 `[{id: example.document, version: '1'}]`，缺省为空。
   每项只接受两个必填、非空白字符串字段；null、错误类型、重复/未知字段或重复 id 均在 MANIFEST 拒绝。
-  未发布候选的 map 写法直接拒绝，不增加 parser 或兼容路径。公开
-  `JavaFacetDescriptor(Optional<String> entrypoint, Optional<String> definitionId, Map<String, String> hostApis)`
-  将导入规范化为不可变 Map，双参数构造器仅委托空 Map 到同一路径；Map 不是另一配置格式；
-- 缺名称的旧 executable 格式直接拒绝，无 metadata 回退或兼容分支。公开 descriptor 构造器、runtime/provider、
+  未发布候选的 map 写法直接拒绝，不增加 parser 或兼容路径。私有解析值JavaFacetDescriptor将导入规范化为不可变Map；
+  descriptor及具体driver不属于作者/Host合同，Map不是另一配置格式；
+- 缺名称的旧 executable 格式直接拒绝，无 metadata 回退或兼容分支。runtime/provider、
   作者制品与消费者同步迁移；仅安装/selection 不承诺已校私有格式。目录经 Engine 读取所选精确包的声明，
   不加载目标类或解析依赖闭包；合同及取得/失败 owner 见[definition 目录设计](2026-10-11-definition-catalog-design.md)。
 - 每制品独立 ClassLoader。先对已登记 Host API binary name 执行显式导入门：当前 facet 已导入时返回
@@ -942,12 +941,13 @@ desired、observed 三类状态；observed 只来自 `PublishedView.engine()`。
 `fibra-spring-boot-starter` 装配 Java/Node `RuntimeProvider`、一个 Engine、Registry 和 PublishedRuntime；
 产品若需要 external runtime，由产品 composition root 显式注册额外 provider，starter 不包含产品实现。
 starter 只通过标准 `AutoConfiguration.imports` 发现，默认组件均使用 `@ConditionalOnMissingBean`，配置
-通过 `fibra.storage-root` 与 `fibra.source.refresh-interval` 绑定；不引入另一套 JSON、`.env` 或 Spring
+通过 `fibra.storage-root` 绑定；不引入另一套 JSON、`.env` 或 Spring
 Profile 解释。`SmartLifecycle` 在宿主服务完成预注册后启动 Engine，并在 Spring 关闭阶段调用同一个
 Engine 关闭入口；不得为 Spring 嵌入场景另建 JVM shutdown hook 或绕过 Engine 的排空结果。
 
-默认 `PluginPackageStore` 与 `DeploymentTargetStore` 在 Engine 工厂内部创建，成功构造后由 Engine 唯一负责关闭，
-不另注册为容器自动销毁的 Bean。工厂失败时释放尚未移交的存储，保留原异常及各项关闭失败。
+默认 `PluginPackageStore` 与 `DeploymentTargetStore` 分别作为 `@Bean(destroyMethod = "")` 创建并注入 Engine 工厂，
+不由容器自动销毁。进入 Engine build 后由 Engine 负责存储关闭；build 失败也沿 Engine 的清理路径释放存储，
+保留原异常及各项关闭失败。
 显式提供自定义存储 Bean 时，同样将关闭所有权交给 Engine，须声明 `@Bean(destroyMethod = "")`；
 容器不能在 Engine 因清理失败保留资源后，再独立释放对应存储锁。普通宿主服务 Bean 的容器所有权不变。
 

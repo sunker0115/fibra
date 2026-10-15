@@ -747,6 +747,10 @@ transport、gateway、runner 或产品长会话已实现。
 
 ## 10. Composition root 与关闭所有权
 
+整套公开面的受众、支持合同及精确内部协作例外见[公开API清单](../../api/public-api-inventory.md)，
+稳定管理/诊断、完整Registry CAS与版本演进见[API稳定边界](2026-10-15-public-api-boundaries-design.md)。
+字节public不是另一层管理权；内部优化维持支持合同，不以高级诊断为无兼容承诺的豁免。
+
 公共入口沿同一套职责分层 API 组合：core 拥有进程内内核，artifact/config 拥有不可变制品与配置，Engine
 独占托管 target、command lane 与生命周期；Bridge/PublishedRuntime 负责贡献发布和调用准入，runtime SPI
 负责执行 slice，Registry、CLI、Spring 和外部 execution 适配沿原 owner 协作。完整角色导航见
@@ -879,13 +883,17 @@ pluginId 已有 selection，并原样保留旧 gate；相同 revision 与完整 
 `uninstall(pluginId)` 仅移除 selection，不物理删除不可变内容；raw desired 中仍有任意 entry 引用该 package
 时必须拒绝，包括 disabled entry，调用者须先移除这些 entries。target 保存失败留下的已发布 package 不回滚删除。
 
-完整 deploy 接收已发布的 selections、raw desired graph 和 configContext；增量管理用例从当前 durable target
-派生完整 replacement，并以 targetRevision 做 CAS。`ReconcileCurrent` 只重试当前 target，不另存 target。
+完整 deploy 接收调用者读取的非负 expectedRevision、已发布的 selections、raw desired graph 和 configContext；
+该 revision 原样进入 Engine CAS，0 表示调用者读取时无 durable target，不在订阅或重放时改用最新值。
+增量管理用例在订阅时从当前 durable target 派生完整 replacement，并以同次 targetRevision 做 CAS，不自动重试。
+`ReconcileCurrent` 只重试当前 target，不另存 target。
 审计 `succeeded` 与本次 Engine 命令的成功回执一致；提交前校验失败或 Engine 返回错误时记为 `false`。
 确定性启动失败即使 target 已 `SAVED`，也必须记为 `false`；合法 PENDING 可获得成功回执，但不表示全部
 unit ACTIVE。保存事实与执行观察分别记录。
-审计保存事实按本次前后 durable revision/digest 与 `EngineChangeException` 判断，no-op 和 reconcile 记为
-`NOT_APPLICABLE`，不得将前一次发布视图中的 `SAVED` 误记为本次保存。
+成功 Apply 的审计保存事实按请求 expectedRevision 与结果 targetRevision 判断：相同为 `NOT_APPLICABLE`，
+递增为 `SAVED`；不能比较订阅时独立捕获的 before，因为请求可能在排队期间追上当前 revision 并 no-op。
+失败沿 `EngineChangeException.targetSaveState` 记录，CAS 拒绝为 `NOT_SAVED`；reconcile 为 `NOT_APPLICABLE`，
+不得将前一次发布视图中的 `SAVED` 误记为本次保存。
 
 Registry 只投影 package、durable target、`CurrentAttemptSnapshot` 中的 observations 与 Engine 公开失败事实，
 不从 operation 阶段或 retirement 反推 current，也不建立第二状态机。CLI、Spring、UI 管理页面只能调用相同用例。

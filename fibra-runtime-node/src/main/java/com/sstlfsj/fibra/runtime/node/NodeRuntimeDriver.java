@@ -38,7 +38,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** Node facet 的唯一 owner；prepare 只持有静态 payload lease，不启动 sidecar。 */
-public final class NodeRuntimeDriver implements RuntimeDriver {
+final class NodeRuntimeDriver implements RuntimeDriver {
     private final RuntimeHostServices services;
     private final NodeRuntimeOptions options;
     private final NodeFacetDescriptorReader descriptors = new NodeFacetDescriptorReader();

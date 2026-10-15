@@ -23,29 +23,6 @@ public final class com.sstlfsj.fibra.runtime.java.JavaDefinitionEntry<C> {
   public com.sstlfsj.fibra.PluginDefinition<C> definition();
   public com.sstlfsj.fibra.PluginDefinition$Prepared<C> bind(com.sstlfsj.fibra.value.LiteralValue);
 }
-## com.sstlfsj.fibra.runtime.java.JavaFacetDescriptor
-Compiled from "JavaFacetDescriptor.java"
-public final class com.sstlfsj.fibra.runtime.java.JavaFacetDescriptor extends java.lang.Record {
-  public com.sstlfsj.fibra.runtime.java.JavaFacetDescriptor(java.util.Optional<java.lang.String>, java.util.Optional<java.lang.String>);
-  public com.sstlfsj.fibra.runtime.java.JavaFacetDescriptor(java.util.Optional<java.lang.String>, java.util.Optional<java.lang.String>, java.util.Map<java.lang.String, java.lang.String>);
-  public final java.lang.String toString();
-  public final int hashCode();
-  public final boolean equals(java.lang.Object);
-  public java.util.Optional<java.lang.String> entrypoint();
-  public java.util.Optional<java.lang.String> definitionId();
-  public java.util.Map<java.lang.String, java.lang.String> hostApis();
-}
-## com.sstlfsj.fibra.runtime.java.JavaRuntimeDriver
-Compiled from "JavaRuntimeDriver.java"
-public final class com.sstlfsj.fibra.runtime.java.JavaRuntimeDriver implements com.sstlfsj.fibra.engine.runtime.RuntimeDriver {
-  public synchronized com.sstlfsj.fibra.engine.runtime.RuntimeDefinitionQuery createDefinitionQuery(com.sstlfsj.fibra.artifact.ManagedFacet);
-  public com.sstlfsj.fibra.artifact.RuntimeId id();
-  public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.runtime.RuntimeArtifactInspection> probe(com.sstlfsj.fibra.engine.deployment.PluginFacetSource);
-  public reactor.core.publisher.Mono<com.sstlfsj.fibra.engine.runtime.RuntimeArtifactInspection> inspect(com.sstlfsj.fibra.artifact.ManagedFacet);
-  public synchronized com.sstlfsj.fibra.engine.runtime.RuntimeCandidate createCandidate(com.sstlfsj.fibra.engine.runtime.RuntimeTargetSlice);
-  public synchronized com.sstlfsj.fibra.engine.observation.RuntimeDriverSnapshot snapshot();
-  public synchronized reactor.core.publisher.Mono<java.lang.Void> closeAsync();
-}
 ## com.sstlfsj.fibra.runtime.java.JavaRuntimeException
 Compiled from "JavaRuntimeException.java"
 public final class com.sstlfsj.fibra.runtime.java.JavaRuntimeException extends java.lang.RuntimeException {

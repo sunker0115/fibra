@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-public final class PluginCatalog {
+final class PluginCatalog {
     private final Map<String, PluginCatalogEntry<?>> entries;
 
     private PluginCatalog(Collection<PluginCatalogEntry<?>> entries) {

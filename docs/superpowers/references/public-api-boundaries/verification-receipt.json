@@ -1,0 +1,125 @@
+{
+  "created_at": "2026-10-15T04:16:38.862614+00:00",
+  "base": "e1338146e5c11bd848db69c5cbdf830e7a3cfa20",
+  "branch": "codex/public-api-boundaries",
+  "new_commit": null,
+  "pushed": false,
+  "evidence_root": "/private/tmp/fibra-api-boundaries-evidence-20261015",
+  "gates": {
+    "registry-green-final": {
+      "exit_code": 0,
+      "finished": "2026-10-15T03:59:06.269470+00:00",
+      "command_json": "/private/tmp/fibra-api-boundaries-evidence-20261015/registry-green-final/command.json"
+    },
+    "visibility-green": {
+      "exit_code": 0,
+      "finished": "2026-10-15T03:54:11.142725+00:00",
+      "command_json": "/private/tmp/fibra-api-boundaries-evidence-20261015/visibility-green/command.json"
+    },
+    "signatures-update": {
+      "exit_code": 0,
+      "finished": "2026-10-15T04:01:11.943274+00:00",
+      "command_json": "/private/tmp/fibra-api-boundaries-evidence-20261015/signatures-update/command.json"
+    },
+    "full-verified-publication-bash5": {
+      "exit_code": 0,
+      "finished": "2026-10-15T04:11:51.372218+00:00",
+      "command_json": "/private/tmp/fibra-api-boundaries-evidence-20261015/full-verified-publication-bash5/command.json"
+    },
+    "architecture-boundaries": {
+      "exit_code": 0,
+      "finished": "2026-10-15T04:01:49.371832+00:00",
+      "command_json": "/private/tmp/fibra-api-boundaries-evidence-20261015/architecture-boundaries/command.json"
+    },
+    "client-public-packages-green": {
+      "exit_code": 0,
+      "finished": "2026-10-15T04:02:27.158175+00:00",
+      "command_json": "/private/tmp/fibra-api-boundaries-evidence-20261015/client-public-packages-green/command.json"
+    },
+    "public-distribution-consumers": {
+      "exit_code": 0,
+      "finished": "2026-10-15T04:13:29.311706+00:00",
+      "command_json": "/private/tmp/fibra-api-boundaries-evidence-20261015/public-distribution-consumers/command.json"
+    },
+    "public-host-contract-consumer": {
+      "exit_code": 0,
+      "finished": "2026-10-15T04:13:52.500038+00:00",
+      "command_json": "/private/tmp/fibra-api-boundaries-evidence-20261015/public-host-contract-consumer/command.json"
+    },
+    "real-model-compile": {
+      "exit_code": 0,
+      "finished": "2026-10-15T04:12:21.073826+00:00",
+      "command_json": "/private/tmp/fibra-api-boundaries-evidence-20261015/real-model-compile/command.json"
+    },
+    "real-model-public-zip": {
+      "exit_code": 0,
+      "finished": "2026-10-15T04:12:23.650827+00:00",
+      "command_json": "/private/tmp/fibra-api-boundaries-evidence-20261015/real-model-public-zip/command.json"
+    },
+    "release-reproducibility": {
+      "exit_code": 0,
+      "finished": "2026-10-15T04:15:27.765089+00:00",
+      "command_json": "/private/tmp/fibra-api-boundaries-evidence-20261015/release-reproducibility/command.json"
+    }
+  },
+  "formal_tests": {
+    "tests": 1268,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "consumer_tests": {
+    "distribution-consumers": {
+      "tests": 22,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "host-consumer": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "binding": {
+    "published_non_document_paths_unchanged": 858,
+    "source_jar_java_files_match": 429,
+    "e133814_preserved_files": 526,
+    "e133814_zip_sha256": "7abac3af044e87dce072107b4795313c26c4065f266e38ce08308055e9200639",
+    "new_zip_sha256": "4f9656c1f16d4e66ff4181c188c015904928bc3f566025ee14104ac3c1a6d653"
+  },
+  "reproducible_comparison": {
+    "all_delivery_files_unchanged": 528,
+    "all_30_final_reproduced_modules_match_publication": true,
+    "zip_sha256": "4f9656c1f16d4e66ff4181c188c015904928bc3f566025ee14104ac3c1a6d653"
+  },
+  "code_and_signature_sha256": {
+    "docs/api/fibra-engine-public-signatures.txt": "0058f8926d02dc2748a206b15d60b8aa18d7d9c6cab3ded69387843f8fdcf285",
+    "docs/api/fibra-registry-public-signatures.txt": "b58d4ad368633afecf4464d636c0096f71b098540e6b8da588a1ea255261f7a7",
+    "docs/api/fibra-runtime-java-public-signatures.txt": "eac85f44c4e66bba9f78d4bc8ac6a01877e0173c48fd39f658f8e439628f19fe",
+    "docs/api/fibra-runtime-node-public-signatures.txt": "983cce8da4c91fd11393360c1b83302cdb9e0faa3b1ae1229fac1c85426056ad",
+    "docs/superpowers/references/public-api-boundaries/review-input.json": "ee41de0aa0afe7bbe20d5c38693995532b75332505c9486efdd80fc9c4541dea",
+    "fibra-benchmarks/src/main/java/com/sstlfsj/fibra/benchmarks/EngineTransactionBenchmark.java": "dced03a7dff1f4b5315fa9f0855ac5f8a7d5d3ff45bfe120a802328e5e189895",
+    "fibra-cli/src/main/java/com/sstlfsj/fibra/cli/CliHost.java": "05655cf654e2e3ea8ffb575f607e1f09630f8c1dfb8cbcb74ecc9bb28cd04a36",
+    "fibra-distribution/src/test/consumers/engine-application/src/test/java/verification/distribution/EngineConsumerTest.java": "ce2e49754f4c3b9c057a00c300d3b6a16fadef52ceb7f0308606a30e65d3dd16",
+    "fibra-distribution/src/test/consumers/engine-application/src/test/java/verification/distribution/RegistryContractConsumerTest.java": "b95aead3c20c74631413d58b40da68df056dc97d7c2034fc92ec838979ea2be7",
+    "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/DeploymentCandidate.java": "aab633db1eb419f5b4c189d1c77ae50f8e5dd856c16f4307a3279ddab4d09546",
+    "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/DesiredBindingException.java": "75ba88ab33ccb1226652497bbbc62c90787ee76558e95264c9f79c861996a1a5",
+    "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/PluginCatalog.java": "822aad6dc501de09e31dcf7e981b7d66818f2030e1f44c835e70e66dfd064692",
+    "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/PluginCatalogEntry.java": "ff511c55ad11d5d900b9578176eff4fec7557f9aaa92f7b16bfcf0dd43dbb3ab",
+    "fibra-engine/src/main/java/com/sstlfsj/fibra/engine/UnknownRuntimeException.java": "ad934147c80281657082efe6a071941f8435b0713b17c378554bde6a23dc6d5b",
+    "fibra-parity-tests/src/test/java/com/sstlfsj/fibra/parity/PublicApiBoundaryTest.java": "5ef709969f377f0594afd78c2b07c036a8fcbcf36c981b6dee7df68956264b9c",
+    "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/src/test/java/com/sstlfsj/fibra/plugins/acceptance/PluginAcceptanceHarness.java": "bce37e825fcabcd9f41b234c152c47ac0144a8d15f5d909ba582c376306f198e",
+    "fibra-registry/src/main/java/com/sstlfsj/fibra/registry/PluginDeploymentRequest.java": "4738c2f1be90bb027a7955091e3d4ed707351866eb775934e7c58c349ffee9f3",
+    "fibra-registry/src/main/java/com/sstlfsj/fibra/registry/PluginRegistry.java": "54857eed23d2853136477efc0d762406983648d5bb7c414bce441cb558356845",
+    "fibra-registry/src/main/java/com/sstlfsj/fibra/registry/RegistryDiagnostics.java": "bf01717fb11fa7333273bfa669f887de064ac909f93f2ff68868540daa965cb4",
+    "fibra-registry/src/main/java/com/sstlfsj/fibra/registry/RegistrySnapshot.java": "530e2e2d53fa4380415286b94dd5bb8d7df03e9a26b79ac63a97cc82add7bbe4",
+    "fibra-registry/src/test/java/com/sstlfsj/fibra/registry/PluginRegistryTest.java": "1dea44d645c285af4488319a2048cf031dee917ab0c8af0b4658699df83c509f",
+    "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaFacetDescriptor.java": "69596c414640ac2815f397ade9e267edb05303280c8b2155fde5b3ae0d5a6bd2",
+    "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaRuntimeDriver.java": "8720d342cb53132581ea975b46eceda07d1114ee27f2ccacff6e543d027ff867",
+    "fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeEndpointManifest.java": "5c6d4e74ea230e978d3c8b102b7a44c57116292d598183be65461c13f3589491",
+    "fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeFacetDescriptor.java": "e1706ec749f7468a923c76b4e762a0a40f475cbd8255d6f1d178f052edfe8fa1",
+    "fibra-runtime-node/src/main/java/com/sstlfsj/fibra/runtime/node/NodeRuntimeDriver.java": "d22b6b770a6aece4c6e10fd6e40ab3ce8eae5a52a89f5cef7cc9f7a1b1abb210"
+  }
+}

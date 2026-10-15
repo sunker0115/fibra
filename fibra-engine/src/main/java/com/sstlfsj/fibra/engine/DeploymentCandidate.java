@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /** 从 REGISTERED 起持有所有 runtime candidates；seal 后聚合所有可原子 promote 的所有权。 */
-public final class DeploymentCandidate {
+final class DeploymentCandidate {
     private final DeploymentTarget target;
     private final Map<RuntimeId, RuntimeCandidate> candidates = new LinkedHashMap<>();
     private final Map<RuntimeId, PreparedRuntimeGeneration> generations = new LinkedHashMap<>();
@@ -45,10 +45,10 @@ public final class DeploymentCandidate {
         }
         units = Collections.unmodifiableMap(all);
     }
-    public DeploymentTarget target() { return target; }
-    public CompiledDeployment compiled() { return compiled; }
-    public Map<RuntimeId, PreparedRuntimeGeneration> generations() { return Collections.unmodifiableMap(generations); }
-    public Map<ExecutionUnitKey, RuntimeUnitGeneration> units() { return units; }
+    DeploymentTarget target() { return target; }
+    CompiledDeployment compiled() { return compiled; }
+    Map<RuntimeId, PreparedRuntimeGeneration> generations() { return Collections.unmodifiableMap(generations); }
+    Map<ExecutionUnitKey, RuntimeUnitGeneration> units() { return units; }
     java.util.Set<ExecutionUnitKey> ownedUnitKeys() {
         var keys = new java.util.LinkedHashSet<>(units.keySet());
         generations.values().forEach(value -> keys.addAll(value.units().keySet()));

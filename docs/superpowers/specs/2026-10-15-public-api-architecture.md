@@ -8,7 +8,9 @@
 Fibra 对外提供一套按职责分层的 API。分层服务不同受众，不为不同产品建立平行框架，不通过一个万能 facade
 遮蔽资源所有权。现有模块仍是发布/依赖边界；不为本次缺口改名或整体重组模块。
 本文统一公共 API 的导航、owner 和演进要求；具体语义仍由相应专项规格负责。已交付签名以
-[`docs/api`](../../api/README.md) 的编译基线为准，候选签名必须通过同批制品验证后才成为当前合同。
+[`docs/api`](../../api/README.md) 的编译基线监控可见性；支持受众与精确内部协作例外以
+[公开审定清单](../../api/public-api-inventory.md)和[稳定边界](2026-10-15-public-api-boundaries-design.md)为准。
+候选签名必须通过同批制品验证后才成为当前支持合同，不能把所有public类型自动冻结为SDK。
 
 | 层次/受众 | 已有正式模块与入口 | 唯一职责 | 不允许的旁路 |
 |---|---|---|---|
@@ -140,8 +142,8 @@ hostApis:
 
 hostApis 是显式 id/version 对象列表，缺省为空；每项只允许这两个必填、非空白字符串字段。
 null、非 list、非 object 项、字段缺失/类型错误/未知/重复、重复 id 均 MANIFEST 拒绝；不支持范围、latest、自动选择。
-contract-only JAR 可以仅有 hostApis，仍没有 definition。public `JavaFacetDescriptor` 将其规范化为不可变
-id→version map；保留的两参数构造器只委托空 map 到同一个规范构造器。只接受列表这一种声明格式。
+contract-only JAR 可以仅有 hostApis，仍没有 definition。runtime私有解析值 `JavaFacetDescriptor` 将其规范化为不可变
+id→version map；该Java类型不是作者/Host合同，格式作者只使用列表声明。只接受列表这一种声明格式。
 采用列表与现有制品 dependency 声明风格一致，避免 YAML 的 JSON 对象模型将数字键隐式字符串化；
 不增加第二 parser、原文扫描器或依赖。运行期 Map 是已验证声明的索引，不是另一配置来源。
 这不是由解析器限制推导出的唯一设计：id→version map 对文本标识符也合理；这里选择对象列表是为了与
@@ -209,6 +211,8 @@ API 保持可达不等于旧 unit/registration 可用；不能用共享 API 来�
 文档、模板与独立消费者。不为维护旧快照制造第二行为分支。
 
 后续增加 API 必须先写受众、owner、所在层、现有入口为何不足、失败/关闭和验证矩阵；只有真实消费者才新增能力。
+本轮整体收口后，支持API/SPI/诊断/格式不随内部优化变化；重开必须满足稳定边界中的需求/场景或正确性、安全、生命周期证据门，
+明确版本、迁移与同批消费者验证。
 这不授权本次重做 CLI/Node/client API，不预建未来 contract resolver、跨语言统一 Class 模型、通用 API 容器或热版本层。
 
 ## 7. 权威文档落点

@@ -5,9 +5,9 @@ import java.util.List;
 import java.util.Objects;
 
 /** Node facet payload 的局部静态描述；逻辑 package 身份与依赖由 Engine 提供。 */
-public record NodeFacetDescriptor(int protocol, String definitionId, String entrypoint,
+record NodeFacetDescriptor(int protocol, String definitionId, String entrypoint,
                                   List<NodeEndpointManifest> contributions) {
-    public NodeFacetDescriptor {
+    NodeFacetDescriptor {
         if (protocol != 1) {
             throw new IllegalArgumentException("unsupported Node protocol " + protocol);
         }

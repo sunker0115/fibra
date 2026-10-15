@@ -5,7 +5,7 @@ import com.sstlfsj.fibra.config.ConfigDiagnostic;
 import java.util.Objects;
 
 /** 目标运行代不能绑定某个启用的输入声明。 */
-public final class DesiredBindingException extends IllegalArgumentException {
+final class DesiredBindingException extends IllegalArgumentException {
     private final ConfigDiagnostic diagnostic;
 
     DesiredBindingException(ConfigDiagnostic diagnostic, Throwable cause) {

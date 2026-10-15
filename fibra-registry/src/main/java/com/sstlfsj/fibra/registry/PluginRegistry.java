@@ -15,6 +15,7 @@ import com.sstlfsj.fibra.engine.deployment.PluginSelection;
 import com.sstlfsj.fibra.engine.publication.PublishedView;
 import com.sstlfsj.fibra.engine.ReconcileCurrent;
 import com.sstlfsj.fibra.engine.observation.TargetSaveState;
+import com.sstlfsj.fibra.engine.observation.CurrentAttemptSnapshot;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -28,6 +29,7 @@ import java.util.Optional;
 import java.util.TreeSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /** package 与 desired entry 管理用例；完整 target 的 CAS 和生命周期由 Engine 独占。 */
 public final class PluginRegistry {
@@ -111,8 +113,9 @@ public final class PluginRegistry {
 
     public Mono<RegistrySnapshot> deploy(PluginDeploymentRequest request) {
         Objects.requireNonNull(request, "request");
-        return mutate("deploy", "deployment", snapshot -> replace(snapshot, request.selections(),
-            request.graph(), request.configContext()));
+        return mutate("deploy", "deployment", snapshot -> ApplyDeployment.builder(request.graph())
+            .expectedRevision(request.expectedRevision()).selections(request.selections())
+            .configContext(request.configContext()).build());
     }
 
     public Mono<RegistrySnapshot> upsert(String parentId, DesiredInputEntry entry) {
@@ -145,6 +148,12 @@ public final class PluginRegistry {
     }
 
     public RegistrySnapshot snapshot() { return project(engine.published().current()); }
+
+    /** 单次捕获高级诊断；与另一次 snapshot() 读取组合前应核对 viewRevision。 */
+    public RegistryDiagnostics diagnostics() {
+        var view = engine.published().current();
+        return new RegistryDiagnostics(view.viewRevision(), view.engine(), view.engineDiagnostics());
+    }
 
     public Optional<RegistryPluginState> get(String entryId) {
         requireName(entryId, "entryId");
@@ -185,7 +194,7 @@ public final class PluginRegistry {
             }
             return engine.submit(prepared)
                 .doOnSuccess(result -> append(operation, target, true,
-                    completedSaveState(prepared, before, result.view()), result.view().viewRevision(), "accepted"))
+                    completedSaveState(prepared, result.view()), result.view().viewRevision(), "accepted"))
                 .doOnError(failure -> append(operation, target, false,
                     failure instanceof EngineChangeException change ? change.targetSaveState()
                         : prepared instanceof ReconcileCurrent ? TargetSaveState.NOT_APPLICABLE : TargetSaveState.NOT_SAVED,
@@ -195,12 +204,10 @@ public final class PluginRegistry {
         });
     }
 
-    private static TargetSaveState completedSaveState(EngineCommand command, PublishedView before, PublishedView after) {
+    private static TargetSaveState completedSaveState(EngineCommand command, PublishedView after) {
         if (command instanceof ReconcileCurrent) return TargetSaveState.NOT_APPLICABLE;
-        var previous = before.engine().target();
-        var current = after.engine().target();
-        return previous.map(DeploymentTarget::targetRevision).equals(current.map(DeploymentTarget::targetRevision))
-            && previous.map(DeploymentTarget::targetDigest).equals(current.map(DeploymentTarget::targetDigest))
+        var apply = (ApplyDeployment) command;
+        return apply.expectedRevision() == after.engine().target().orElseThrow().targetRevision()
             ? TargetSaveState.NOT_APPLICABLE : TargetSaveState.SAVED;
     }
 
@@ -246,8 +253,15 @@ public final class PluginRegistry {
     }
 
     private RegistrySnapshot project(PublishedView view) {
-        return RegistrySnapshot.builder().viewRevision(view.viewRevision()).engine(view.engine())
-            .engineDiagnostics(view.engineDiagnostics()).auditFailures(auditFailures()).build();
+        var state = view.engine();
+        var observed = state.current().map(CurrentAttemptSnapshot::observations).orElse(Map.of())
+            .entrySet().stream().collect(Collectors.toUnmodifiableMap(
+                entry -> entry.getKey().value(), Map.Entry::getValue));
+        return RegistrySnapshot.builder().viewRevision(view.viewRevision()).state(state.state())
+            .durableState(state.durableState()).targetConvergence(state.targetConvergence())
+            .mutationGateOpen(view.engineDiagnostics().mutationGateOpen())
+            .contributionAdmissionOpen(view.engineDiagnostics().contributionAdmissionOpen())
+            .target(state.target()).observed(observed).auditFailures(auditFailures()).build();
     }
 
     private static void requireName(String value, String name) {

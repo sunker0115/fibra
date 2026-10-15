@@ -1,0 +1,18 @@
+{
+  "source": "/Users/sunke/.claude/projects/-Users-sunke-dev-ai-project-fibra/1e1ece1b-9811-402c-8aa4-bfe3463e2ee2.jsonl",
+  "source_session": "1e1ece1b-9811-402c-8aa4-bfe3463e2ee2",
+  "assistant_message_at": "2026-10-15T03:39:37.054Z",
+  "message_sha256": "e8adcc8e20462c5a4c088f3131776c9215a3d739676764f54ee165cc357461a4",
+  "baseline": "e1338146e5c11bd848db69c5cbdf830e7a3cfa20",
+  "adopted": [
+    "explicit caller revision for full Registry replacement",
+    "narrow implementation-only types",
+    "separate management projection and supported diagnostics"
+  ],
+  "corrected": [
+    "CAS is not always ineffective; edit-window protection is absent",
+    "direct Engine use is valid, not necessarily a Registry workaround",
+    "Registry already has non-Tela public consumers",
+    "diagnostics retain explicit compatibility obligations"
+  ]
+}

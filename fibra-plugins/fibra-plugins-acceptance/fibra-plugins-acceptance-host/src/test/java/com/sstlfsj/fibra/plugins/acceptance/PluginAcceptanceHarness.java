@@ -3,6 +3,7 @@ package com.sstlfsj.fibra.plugins.acceptance;
 import com.sstlfsj.fibra.artifact.PluginPackageStore;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.ConfigContextSnapshot;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTarget;
 import com.sstlfsj.fibra.engine.deployment.DeploymentTargetStore;
 import com.sstlfsj.fibra.engine.FibraEngine;
 import com.sstlfsj.fibra.engine.deployment.PluginSelection;
@@ -77,6 +78,7 @@ final class PluginAcceptanceHarness implements AutoCloseable {
             installed = registry.install(installRequest(packages, stagedJar(pluginId))).block(TIMEOUT);
         }
         return registry.deploy(new PluginDeploymentRequest(
+            installed.target().map(DeploymentTarget::targetRevision).orElse(0L),
             new ArrayList<PluginSelection>(installed.selections().values()), graph,
             ConfigContextSnapshot.empty())).block(TIMEOUT);
     }

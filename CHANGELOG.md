@@ -2,24 +2,30 @@
 
 本文件记录 Fibra 各版本的对外变更，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循语义化版本。
 
-内核 `fibra-api`/`fibra-core` 的公开 API 由 `ApiSignatureBaselineTest` 与六份 `javap` 基线冻结；标注「内核语义无变化」表示这些基线未变。
+全部可见签名由 `ApiSignatureBaselineTest` 与19份 `javap` 基线监控；支持边界及跨包内部协作例外见
+[`public-api-inventory`](docs/api/public-api-inventory.md)，不能仅以public判断SDK身份。
 
 ## [未发布]
 
 ### 新增
 
+- 新增显式高级诊断读取 `PluginRegistry.diagnostics()` 与不可变 `RegistryDiagnostics`，从同一PublishedView投影；诊断同样受正式兼容规则约束。
 - 新增运行时中立的 `fibra-artifact`、`fibra-config`、`fibra-bridge`、`fibra-registry`。
 - 新增 Java JAR/ClassSpace 与 Node sidecar/JSON-RPC 两个一等 runtime adapter。
-- 新增统一 `ChangeSet`、持久化事务 journal、不可变 Engine snapshot 与异步失败投影。
+- 新增统一完整 Engine 命令、持久化部署 target、不可变 Engine snapshot 与异步失败投影。
 
 ### 变更
 
+- 完整Registry部署改为必填 `PluginDeploymentRequest(expectedRevision,selections,graph,configContext)`，不再替调用者捕获latest；旧编辑基线冲突拒绝，增量编辑保持原fresh图与CAS。
+- `RegistrySnapshot` 收口为普通管理事实，不再暴露engine/engineDiagnostics/current；高级读取使用显式diagnostics。同批消费者须重编，不保留双模式。
+- 明确整套API/SPI/诊断/适配/协议的受众、owner和稳定演进门；内部优化保持支持合同，新场景先验证既有扩展点，破坏性调整须说明版本及迁移。
 - 将内核重构为 `FibraRuntime`、`Scope`、`Context`、`PluginInstance` 四层所有权模型。
 - Java 插件改为单一 `META-INF/fibra/plugin.yaml` 入口，不再扫描扩展类。
 - Spring Boot starter 直接组合 Engine、Registry、Java runtime 和持久化存储。
 
 ### 移除
 
+- 收窄10个无外部消费理由的内部/遗留类型：DeploymentCandidate、PluginCatalog/Entry、DesiredBindingException、UnknownRuntimeException、JavaFacetDescriptor/JavaRuntimeDriver、NodeFacetDescriptor/NodeEndpointManifest/NodeRuntimeDriver；保留真正RuntimeDriver等执行器SPI。
 - 移除 PF4J、`fibra-pf4j-api`、`fibra-loader-pf4j`、`fibra-loader-config` 和旧 autoconfigure 模块。
 - 移除全部旧 API 与兼容转发；vNext 是破坏性升级。
 

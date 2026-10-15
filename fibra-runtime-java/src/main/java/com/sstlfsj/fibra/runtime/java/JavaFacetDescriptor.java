@@ -5,13 +5,13 @@ import java.util.Optional;
 import java.util.Map;
 
 /** Java 本地入口声明；逻辑身份和精确依赖来自外层受管 facet。 */
-public record JavaFacetDescriptor(Optional<String> entrypoint, Optional<String> definitionId,
+record JavaFacetDescriptor(Optional<String> entrypoint, Optional<String> definitionId,
                                   Map<String, String> hostApis) {
-    public JavaFacetDescriptor(Optional<String> entrypoint, Optional<String> definitionId) {
+    JavaFacetDescriptor(Optional<String> entrypoint, Optional<String> definitionId) {
         this(entrypoint, definitionId, Map.of());
     }
 
-    public JavaFacetDescriptor {
+    JavaFacetDescriptor {
         Objects.requireNonNull(entrypoint, "entrypoint");
         Objects.requireNonNull(definitionId, "definitionId");
         hostApis = Map.copyOf(Objects.requireNonNull(hostApis, "hostApis"));

@@ -43,11 +43,245 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class PluginRegistryTest {
+    @Test
+    void fullDeploymentRejectsTheCallersStaleRevisionWithoutChangingFacts() throws Exception {
+        var targets = new FailingStore();
+        try (var fixture = new Fixture(targets, new InMemoryPluginAuditRepository())) {
+            var installed = fixture.registry.install(new PluginInstallRequest(source("one", "1"), true)).block();
+            var revision = installed.target().orElseThrow().targetRevision();
+            var edited = new PluginDeploymentRequest(revision, List.copyOf(installed.selections().values()),
+                new DesiredInputGraph(List.of(entry("edited", "main"))), ConfigContextSnapshot.empty());
+            fixture.registry.upsert(null, entry("winner", "main")).block();
+            var before = fixture.engine.published().current();
+            var saves = targets.saves;
+            var candidates = fixture.provider.candidates;
+            var activations = fixture.provider.activations;
+            var stops = fixture.provider.stops;
+            var failure = assertThrows(IllegalStateException.class, () -> fixture.registry.deploy(edited).block());
+            assertEquals("deployment target revision conflict: expected 1, actual 2", failure.getMessage());
+            assertSame(before, fixture.engine.published().current());
+            assertEquals(saves, targets.saves);
+            assertEquals(candidates, fixture.provider.candidates);
+            assertEquals(activations, fixture.provider.activations);
+            assertEquals(stops, fixture.provider.stops);
+            assertEquals(TargetSaveState.NOT_SAVED, fixture.registry.history().getLast().targetSaveState());
+            assertFalse(fixture.registry.history().getLast().succeeded());
+        }
+    }
+
+    @Test
+    void ordinarySnapshotContainsOnlyManagementFactsAndDiagnosticsAreExplicit() throws Exception {
+        assertEquals(List.of("expectedRevision", "selections", "graph", "configContext"),
+            Arrays.stream(PluginDeploymentRequest.class.getRecordComponents()).map(java.lang.reflect.RecordComponent::getName).toList());
+        assertThrows(NoSuchMethodException.class, () -> PluginDeploymentRequest.class.getConstructor(
+            List.class, DesiredInputGraph.class, ConfigContextSnapshot.class));
+        assertEquals(List.of("viewRevision", "state", "durableState", "targetConvergence",
+            "mutationGateOpen", "contributionAdmissionOpen", "target", "observed", "auditFailures"),
+            Arrays.stream(RegistrySnapshot.class.getRecordComponents()).map(java.lang.reflect.RecordComponent::getName).toList());
+        assertThrows(NoSuchMethodException.class, () -> RegistrySnapshot.class.getMethod("engine"));
+        assertThrows(NoSuchMethodException.class, () -> RegistrySnapshot.class.getMethod("engineDiagnostics"));
+        assertThrows(NoSuchMethodException.class, () -> RegistrySnapshot.class.getMethod("current"));
+        var diagnostics = PluginRegistry.class.getMethod("diagnostics").getReturnType();
+        assertEquals(List.of("viewRevision", "engine", "engineDiagnostics"),
+            Arrays.stream(diagnostics.getRecordComponents()).map(java.lang.reflect.RecordComponent::getName).toList());
+        assertThrows(NoSuchMethodException.class, () -> PluginRegistry.class.getMethod("watchDiagnostics"));
+    }
+
+    @Test
+    void deploymentRequiresANonnegativeRevisionAndDefensivelyCopiesSelections() {
+        var graph = new DesiredInputGraph(List.of());
+        assertThrows(IllegalArgumentException.class, () -> new PluginDeploymentRequest(-1,
+            List.of(), graph, ConfigContextSnapshot.empty()));
+        var selections = new ArrayList<PluginSelection>();
+        var request = new PluginDeploymentRequest(0, selections, graph, ConfigContextSnapshot.empty());
+        selections.add(new PluginSelection(PLUGIN, "a".repeat(64), true));
+        assertEquals(0, request.expectedRevision());
+        assertTrue(request.selections().isEmpty());
+        assertThrows(UnsupportedOperationException.class, () -> request.selections().clear());
+        assertThrows(NullPointerException.class, () -> new PluginDeploymentRequest(0, null, graph, ConfigContextSnapshot.empty()));
+        assertThrows(NullPointerException.class, () -> new PluginDeploymentRequest(0, List.of(), null, ConfigContextSnapshot.empty()));
+        assertThrows(NullPointerException.class, () -> new PluginDeploymentRequest(0, List.of(), graph, null));
+    }
+
+    @Test
+    void snapshotsAndDiagnosticsShareOneCapturedViewAndRemainReadableAfterClose() throws Exception {
+        try (var fixture = fixture()) {
+            var initial = fixture.registry.snapshot();
+            assertProjection(fixture.engine.published().current(), initial);
+            assertTrue(initial.target().isEmpty());
+            assertTrue(initial.selections().isEmpty());
+            assertTrue(initial.desiredGraph().plugins().isEmpty());
+            assertTrue(initial.observed().isEmpty());
+            assertDiagnostics(fixture);
+            fixture.registry.install(new PluginInstallRequest(source("one", "1"), true)).block();
+            var installed = fixture.registry.upsert(null, entry("entry", "main")).block();
+            assertProjection(fixture.engine.published().current(), installed);
+            assertDiagnostics(fixture);
+            assertNotEquals(initial.viewRevision(), fixture.registry.diagnostics().viewRevision(),
+                "separate reads may cross publication revisions");
+            assertThrows(UnsupportedOperationException.class, () -> installed.observed().clear());
+            assertThrows(UnsupportedOperationException.class, () -> installed.auditFailures().clear());
+            var diagnostic = fixture.registry.diagnostics();
+            assertThrows(NullPointerException.class, () -> new RegistryDiagnostics(null, diagnostic.engine(), diagnostic.engineDiagnostics()));
+            assertThrows(NullPointerException.class, () -> new RegistryDiagnostics(diagnostic.viewRevision(), null, diagnostic.engineDiagnostics()));
+            assertThrows(NullPointerException.class, () -> new RegistryDiagnostics(diagnostic.viewRevision(), diagnostic.engine(), null));
+            fixture.engine.close();
+            var closed = fixture.registry.snapshot();
+            assertProjection(fixture.engine.published().current(), closed);
+            assertEquals(EngineState.CLOSED, closed.state());
+            assertFalse(closed.mutationGateOpen());
+            assertFalse(closed.contributionAdmissionOpen());
+            assertDiagnostics(fixture);
+        }
+    }
+
+    private static void assertDiagnostics(Fixture fixture) {
+        var view = fixture.engine.published().current();
+        var diagnostics = fixture.registry.diagnostics();
+        assertEquals(view.viewRevision(), diagnostics.viewRevision());
+        assertSame(view.engine(), diagnostics.engine());
+        assertSame(view.engineDiagnostics(), diagnostics.engineDiagnostics());
+        assertSame(view, fixture.engine.published().current(), "diagnostic reads must not publish or mutate");
+    }
+
+    private static void assertProjection(com.sstlfsj.fibra.engine.publication.PublishedView view, RegistrySnapshot snapshot) {
+        assertEquals(view.viewRevision(), snapshot.viewRevision());
+        assertEquals(view.engine().state(), snapshot.state());
+        assertEquals(view.engine().durableState(), snapshot.durableState());
+        assertEquals(view.engine().targetConvergence(), snapshot.targetConvergence());
+        assertEquals(view.engineDiagnostics().mutationGateOpen(), snapshot.mutationGateOpen());
+        assertEquals(view.engineDiagnostics().contributionAdmissionOpen(), snapshot.contributionAdmissionOpen());
+        assertEquals(view.engine().target(), snapshot.target());
+        var observations = new LinkedHashMap<String, ExecutionObservation>();
+        view.engine().current().ifPresent(current -> current.observations().forEach((id, observation) ->
+            observations.put(id.value(), observation)));
+        assertEquals(observations, snapshot.observed());
+    }
+
+    @Test
+    void staleSameContentIsRejectedBeforeNoopAndCurrentSameContentDoesNotSave() throws Exception {
+        var targets = new FailingStore();
+        try (var fixture = new Fixture(targets, new InMemoryPluginAuditRepository())) {
+            fixture.registry.install(new PluginInstallRequest(source("one", "1"), true)).block();
+            var current = fixture.registry.upsert(null, entry("entry", "main")).block();
+            var selections = List.copyOf(current.selections().values());
+            var saves = targets.saves;
+            var before = fixture.engine.published().current();
+            assertThrows(IllegalStateException.class, () -> fixture.registry.deploy(new PluginDeploymentRequest(1,
+                selections, current.desiredGraph(), ConfigContextSnapshot.empty())).block());
+            assertSame(before, fixture.engine.published().current());
+            var noop = fixture.registry.deploy(new PluginDeploymentRequest(2, selections,
+                current.desiredGraph(), ConfigContextSnapshot.empty())).block();
+            assertEquals(current.target(), noop.target());
+            assertEquals(current.observed(), noop.observed());
+            assertEquals(saves, targets.saves);
+            assertEquals(TargetSaveState.NOT_APPLICABLE, fixture.registry.history().getLast().targetSaveState());
+        }
+    }
+
+    @Test
+    void delayedAndRepeatedSubscriptionsKeepTheRequestRevision() throws Exception {
+        try (var fixture = fixture()) {
+            var installed = fixture.registry.install(new PluginInstallRequest(source("one", "1"), true)).block();
+            var selections = List.copyOf(installed.selections().values());
+            var delayed = fixture.registry.deploy(new PluginDeploymentRequest(1, selections,
+                new DesiredInputGraph(List.of(entry("delayed", "main"))), ConfigContextSnapshot.empty()));
+            fixture.registry.upsert(null, entry("winner", "main")).block();
+            assertThrows(IllegalStateException.class, delayed::block);
+            var repeated = fixture.registry.deploy(new PluginDeploymentRequest(2, selections,
+                new DesiredInputGraph(List.of(entry("once", "main"))), ConfigContextSnapshot.empty()));
+            assertEquals(3, repeated.block().target().orElseThrow().targetRevision());
+            var before = fixture.engine.published().current();
+            assertThrows(IllegalStateException.class, repeated::block);
+            assertSame(before, fixture.engine.published().current());
+        }
+    }
+
+    @Test
+    void incrementalCommandsReadAFreshGraphWhenSubscribed() throws Exception {
+        try (var fixture = fixture()) {
+            fixture.registry.install(new PluginInstallRequest(source("one", "1"), true)).block();
+            fixture.registry.upsert(null, entry("first", "main")).block();
+            var delayed = fixture.registry.disable("first");
+            fixture.registry.upsert(null, entry("second", "aux")).block();
+            var result = delayed.block();
+            assertEquals(Set.of("first", "second"), result.desiredGraph().plugins().keySet());
+            assertFalse(result.desiredGraph().plugins().get("first").enabled());
+            assertTrue(result.desiredGraph().plugins().get("second").enabled());
+            assertEquals(Set.of("second"), result.observed().keySet());
+        }
+    }
+
+    @Test
+    void queuedIncrementalCommandPreservesItsCasWindowWithoutRetry() throws Exception {
+        var targets = new FailingStore();
+        try (var fixture = new Fixture(targets, new InMemoryPluginAuditRepository())) {
+            var installed = fixture.registry.install(new PluginInstallRequest(source("one", "1"), true)).block();
+            var graph = new DesiredInputGraph(List.of(entry("entry", "main")));
+            var gate = reactor.core.publisher.Sinks.<Void>one();
+            var entered = new CountDownLatch(1);
+            fixture.provider.prepareGate = gate.asMono();
+            fixture.provider.prepareEntered = entered;
+            var advancing = fixture.engine.submit(ApplyDeployment.builder(graph).expectedRevision(1)
+                .selections(installed.selections().values()).configContext(ConfigContextSnapshot.empty()).build()).toFuture();
+            try {
+                assertTrue(entered.await(1, TimeUnit.SECONDS));
+                var queued = fixture.registry.disablePackage(PLUGIN).toFuture();
+                assertFalse(queued.isDone());
+                gate.tryEmitEmpty();
+                advancing.get(5, TimeUnit.SECONDS);
+                var failure = assertThrows(java.util.concurrent.ExecutionException.class,
+                    () -> queued.get(5, TimeUnit.SECONDS));
+                assertInstanceOf(IllegalStateException.class, failure.getCause());
+                assertEquals("deployment target revision conflict: expected 1, actual 2", failure.getCause().getMessage());
+                var result = fixture.registry.snapshot();
+                assertEquals(2, result.target().orElseThrow().targetRevision());
+                assertTrue(result.selections().get(PLUGIN).enabled());
+                assertEquals(Set.of("entry"), result.observed().keySet());
+                assertEquals(2, targets.saves);
+                assertEquals(TargetSaveState.NOT_SAVED, fixture.registry.history().getLast().targetSaveState());
+            } finally {
+                gate.tryEmitEmpty();
+            }
+        }
+    }
+
+    @Test
+    void queuedNoopAuditsTheRequestRevisionRatherThanTheEarlierPublishedTarget() throws Exception {
+        var targets = new FailingStore();
+        try (var fixture = new Fixture(targets, new InMemoryPluginAuditRepository())) {
+            var installed = fixture.registry.install(new PluginInstallRequest(source("one", "1"), true)).block();
+            var selections = List.copyOf(installed.selections().values());
+            var graph = new DesiredInputGraph(List.of(entry("entry", "main")));
+            var gate = reactor.core.publisher.Sinks.<Void>one();
+            var entered = new CountDownLatch(1);
+            fixture.provider.prepareGate = gate.asMono();
+            fixture.provider.prepareEntered = entered;
+            var advancing = fixture.engine.submit(ApplyDeployment.builder(graph).expectedRevision(1)
+                .selections(selections).configContext(ConfigContextSnapshot.empty()).build()).toFuture();
+            try {
+                assertTrue(entered.await(1, TimeUnit.SECONDS), "first command must hold the engine lane before target save");
+                assertEquals(1, fixture.registry.snapshot().target().orElseThrow().targetRevision());
+                var queued = fixture.registry.deploy(new PluginDeploymentRequest(2, selections, graph, ConfigContextSnapshot.empty())).toFuture();
+                assertFalse(queued.isDone());
+                gate.tryEmitEmpty();
+                advancing.get(5, TimeUnit.SECONDS);
+                var noop = queued.get(5, TimeUnit.SECONDS);
+                assertEquals(2, noop.target().orElseThrow().targetRevision());
+                assertEquals(2, targets.saves);
+                assertEquals(TargetSaveState.NOT_APPLICABLE, fixture.registry.history().getLast().targetSaveState());
+            } finally {
+                gate.tryEmitEmpty();
+            }
+        }
+    }
+
     @Test
     void fixtureDefinitionQueryReturnsItsActualRunEntryWithoutCreatingUnits() throws Exception {
         try (var fixture = fixture()) {
@@ -103,8 +337,10 @@ class PluginRegistryTest {
             fixture.registry.install(new PluginInstallRequest(first, false)).block();
             var raw = new DesiredInputGraph(List.of(entry("entry", "main")));
             var context = ConfigContextSnapshot.of(new LiteralValue.ObjectValue(Map.of("host", LiteralValue.of("one"))));
+            var installed = fixture.registry.snapshot();
             fixture.registry.deploy(new PluginDeploymentRequest(
-                List.copyOf(fixture.registry.snapshot().selections().values()), raw, context)).block();
+                installed.target().orElseThrow().targetRevision(),
+                List.copyOf(installed.selections().values()), raw, context)).block();
             var before = fixture.registry.snapshot().target().orElseThrow();
 
             var same = fixture.registry.upgrade(first).block();
@@ -176,14 +412,17 @@ class PluginRegistryTest {
             var graph = new DesiredInputGraph(List.of(entry("entry", "main")));
             var context = ConfigContextSnapshot.of(new LiteralValue.ObjectValue(Map.of("region", LiteralValue.of("test"))));
             var deployed = fixture.registry.deploy(new PluginDeploymentRequest(
+                fixture.registry.snapshot().target().map(DeploymentTarget::targetRevision).orElse(0L),
                 List.of(new PluginSelection(PLUGIN, published.packageRevision(), true)), graph, context)).block();
             assertEquals(1, deployed.target().orElseThrow().targetRevision());
             assertEquals(context, deployed.target().orElseThrow().configContext());
             assertEquals(graph, deployed.desiredGraph());
             assertEquals(1, fixture.registry.history().size());
             assertEquals("deploy", fixture.registry.history().getFirst().operation());
+            assertEquals(TargetSaveState.SAVED, fixture.registry.history().getFirst().targetSaveState());
 
             var empty = fixture.registry.deploy(new PluginDeploymentRequest(
+                fixture.registry.snapshot().target().map(DeploymentTarget::targetRevision).orElse(0L),
                 List.of(), new DesiredInputGraph(List.of()), ConfigContextSnapshot.empty())).block();
             assertTrue(empty.selections().isEmpty());
             assertTrue(empty.desiredGraph().plugins().isEmpty());
@@ -203,6 +442,7 @@ class PluginRegistryTest {
                 .publicationRequirement(PublicationRequirement.PENDING_ALLOWED).build();
             var group = DesiredInputGroup.builder("group").children(List.of(entry)).build();
             fixture.registry.deploy(new PluginDeploymentRequest(
+                fixture.registry.snapshot().target().map(DeploymentTarget::targetRevision).orElse(0L),
                 List.of(new PluginSelection(PLUGIN, published.packageRevision(), true)),
                 new DesiredInputGraph(List.of(group, DesiredInputGroup.builder("other").build())),
                 ConfigContextSnapshot.empty())).block();
@@ -228,6 +468,7 @@ class PluginRegistryTest {
             var include = DesiredInputInclude.builder("included").content(new DesiredIncludeContent.Collected(
                 List.of(entry("entry", "main")))).build();
             fixture.registry.deploy(new PluginDeploymentRequest(
+                fixture.registry.snapshot().target().map(DeploymentTarget::targetRevision).orElse(0L),
                 List.of(new PluginSelection(PLUGIN, published.packageRevision(), true)),
                 new DesiredInputGraph(List.of(include)), ConfigContextSnapshot.empty())).block();
             assertTrue(fixture.registry.get("entry").isEmpty());
@@ -250,13 +491,16 @@ class PluginRegistryTest {
             var failed = fixture.registry.snapshot();
             assertEquals(TargetSaveState.SAVED, failure.targetSaveState());
             assertEquals(failure.view().viewRevision(), failed.viewRevision());
-            assertEquals(failure.view().engine(), failed.engine());
+            assertProjection(failure.view(), failed);
+            var diagnostics = fixture.registry.diagnostics();
+            assertEquals(failed.viewRevision(), diagnostics.viewRevision());
+            assertEquals(failure.view().engine(), diagnostics.engine());
             assertEquals(ExecutionObservation.State.FAILED, failed.observed().get("entry").aggregateState());
-            assertEquals(EngineState.RUNNING, failed.engine().state());
-            assertEquals(CurrentPhase.BLOCKED, failed.engine().current().orElseThrow().phase());
-            assertEquals(TargetConvergence.BLOCKED, failed.engine().targetConvergence());
+            assertEquals(EngineState.RUNNING, failed.state());
+            assertEquals(CurrentPhase.BLOCKED, diagnostics.engine().current().orElseThrow().phase());
+            assertEquals(TargetConvergence.BLOCKED, failed.targetConvergence());
             assertEquals(EngineOperationOutcome.FAILED,
-                failed.engineDiagnostics().operation().orElseThrow().outcome());
+                diagnostics.engineDiagnostics().operation().orElseThrow().outcome());
             var audit = fixture.registry.history().getLast();
             assertFalse(audit.succeeded());
             assertEquals(TargetSaveState.SAVED, audit.targetSaveState());
@@ -270,7 +514,7 @@ class PluginRegistryTest {
             assertEquals(saves, targets.saves);
             assertEquals(revision, reconciled.target().orElseThrow().targetRevision());
             assertEquals(ExecutionObservation.State.ACTIVE, reconciled.observed().get("entry").aggregateState());
-            assertEquals(TargetConvergence.SATISFIED, reconciled.engine().targetConvergence());
+            assertEquals(TargetConvergence.SATISFIED, reconciled.targetConvergence());
             assertTrue(fixture.registry.history().getLast().succeeded());
             assertEquals(TargetSaveState.NOT_APPLICABLE, fixture.registry.history().getLast().targetSaveState());
             var identity = reconciled.observed().get("entry").executions().getFirst().runtimeInstanceId();
@@ -305,7 +549,10 @@ class PluginRegistryTest {
             var failure = assertThrows(EngineChangeException.class,
                 () -> fixture.registry.install(new PluginInstallRequest(source("one", "1"), false)).block());
             assertEquals(TargetSaveState.UNCONFIRMED, failure.targetSaveState());
-            assertEquals(DurableTargetState.UNCERTAIN, fixture.registry.snapshot().engine().durableState());
+            assertEquals(DurableTargetState.UNCERTAIN, fixture.registry.snapshot().durableState());
+            assertProjection(fixture.engine.published().current(), fixture.registry.snapshot());
+            assertFalse(fixture.registry.snapshot().mutationGateOpen());
+            assertDiagnostics(fixture);
             assertEquals(TargetSaveState.UNCONFIRMED, fixture.registry.history().getLast().targetSaveState());
             assertFalse(fixture.registry.history().getLast().succeeded());
             assertEquals(1, targets.saves);
@@ -348,8 +595,8 @@ class PluginRegistryTest {
                         TimeUnit.NANOSECONDS);
                     assertNotNull(observed, "watch 未送达已完成安装的视图");
                 } while (!installed.viewRevision().equals(observed.viewRevision()));
-                assertEquals(installed.engine(), observed.engine());
-                assertEquals(fixture.engine.snapshot(), fixture.registry.snapshot().engine());
+                assertEquals(installed, observed);
+                assertProjection(fixture.engine.published().current(), fixture.registry.snapshot());
             } finally { subscription.dispose(); }
         }
     }
@@ -422,6 +669,11 @@ class PluginRegistryTest {
 
     private static final class ProbeProvider implements RuntimeProvider {
         boolean activationFailure;
+        int candidates;
+        int activations;
+        int stops;
+        Mono<Void> prepareGate = Mono.empty();
+        CountDownLatch prepareEntered;
         public RuntimeId id() { return RUNTIME; }
         public String contractIdentity() { return "registry-probe-v1"; }
         public List<BuiltInPluginPackage> builtInPackages() { return List.of(); }
@@ -450,10 +702,14 @@ class PluginRegistryTest {
                 public RuntimeDriverSnapshot snapshot() { return new RuntimeDriverSnapshot(RUNTIME, Map.of()); }
                 public Mono<Void> closeAsync() { return Mono.empty(); }
                 public RuntimeCandidate createCandidate(RuntimeTargetSlice slice) {
+                    candidates++;
                     return new RuntimeCandidate() {
                         RuntimePlan plan;
                         public Mono<Void> prepareAsync() {
-                            return Mono.fromRunnable(() -> {
+                            return Mono.defer(() -> {
+                                if (prepareEntered != null) prepareEntered.countDown();
+                                return prepareGate;
+                            }).then(Mono.fromRunnable(() -> {
                                 var units = new ArrayList<ExecutionUnitPlan>();
                                 var bindings = new ArrayList<DefinitionBindingPlan>();
                                 for (var id : new TreeSet<>(slice.affectedEntryIds())) {
@@ -470,7 +726,7 @@ class PluginRegistryTest {
                                         .publicationRequirement(entry.publicationRequirement()).build());
                                 }
                                 plan = RuntimePlan.of(RUNTIME, units, bindings);
-                            });
+                            }));
                         }
                         public RuntimePlan preparedPlan() { return plan; }
                         public PreparedRuntimeGeneration seal(CompiledRuntimeSlice compiled) {
@@ -504,15 +760,21 @@ class PluginRegistryTest {
                     .build();
             }
             public Mono<ExecutionObservation> reconcileAsync(String operation) {
-                return Mono.fromSupplier(() -> observation = observe(operation,
-                    activationFailure ? ExecutionObservation.State.FAILED : ExecutionObservation.State.ACTIVE));
+                return Mono.fromSupplier(() -> {
+                    activations++;
+                    return observation = observe(operation,
+                        activationFailure ? ExecutionObservation.State.FAILED : ExecutionObservation.State.ACTIVE);
+                });
             }
             public void closeAdmission() { }
             public Mono<ExecutionObservation> drainAsync(String operation, Instant deadline) {
                 return Mono.just(observation);
             }
             public Mono<ExecutionObservation> stopAsync(String operation, Instant deadline) {
-                return Mono.fromSupplier(() -> observation = observe(operation, ExecutionObservation.State.PENDING));
+                return Mono.fromSupplier(() -> {
+                    stops++;
+                    return observation = observe(operation, ExecutionObservation.State.PENDING);
+                });
             }
             public ExecutionObservation snapshot() { return observation; }
             private ExecutionObservation observe(String operation, ExecutionObservation.State state) {

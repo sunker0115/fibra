@@ -9,6 +9,7 @@ import com.sstlfsj.fibra.config.ConfigContextSnapshot;
 import com.sstlfsj.fibra.config.DesiredInputEntry;
 import com.sstlfsj.fibra.config.DesiredInputGraph;
 import com.sstlfsj.fibra.config.PluginDefinitionRef;
+import com.sstlfsj.fibra.engine.deployment.DeploymentTarget;
 import com.sstlfsj.fibra.engine.deployment.BuiltInFacet;
 import com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackage;
 import com.sstlfsj.fibra.engine.deployment.DeploymentTargetStore;
@@ -84,8 +85,10 @@ public class EngineTransactionBenchmark {
             .hostTerminationPort(request -> { }).build();
         registry = new PluginRegistry(engine, packages, new DiscardingAudit());
         engine.startAsync().block();
-        registry.deploy(new PluginDeploymentRequest(List.of(metadata.selection(true)),
-            desired, ConfigContextSnapshot.empty())).block();
+        var before = registry.snapshot();
+        registry.deploy(new PluginDeploymentRequest(
+            before.target().map(DeploymentTarget::targetRevision).orElse(0L),
+            List.of(metadata.selection(true)), desired, ConfigContextSnapshot.empty())).block();
     }
 
     @TearDown

@@ -6,7 +6,7 @@ import com.sstlfsj.fibra.value.LiteralValue;
 import java.util.Objects;
 import java.util.function.Function;
 
-public final class PluginCatalogEntry<C> {
+final class PluginCatalogEntry<C> {
     private final PluginDefinition<C> definition;
     private final Function<Object, C> binder;
 
