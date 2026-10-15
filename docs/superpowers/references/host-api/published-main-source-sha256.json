@@ -1,0 +1,16 @@
+{
+  "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaDefinitionEntry.java": "9686faa3f86d26dffd3cb208ac9995ce9ba860591833b6a302fc35b43c3d67b2",
+  "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaApiContracts.java": "b80ae1f0c18157e2586cdb6f91bed29aa56cd419c23b9d333bdd9a19c2dda152",
+  "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaClassIndex.java": "787c14d1bd59232d84068740e6a372da5b8f114cb679cabdb7273be44c8e839c",
+  "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaRuntimeException.java": "35662f8806e6cd98f4d26d032ac92411c528cf9bf16871c70761360603f2e4d8",
+  "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaFacetDescriptorReader.java": "e4c0811d101da30ce7a1639f450cc00486c2c5c5b4ef712d0929537afe9d006d",
+  "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaFacetDescriptor.java": "1826f66a1b0c1de7aec27bb91b3a5e1dd54edcc46e7503b8767739543475afae",
+  "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaClassSpace.java": "fe36a004cf8ace041af5b852603c05ae3e68eb4fb8eb5a1b59eafa86e2b77aa2",
+  "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaRuntimeDriver.java": "5662b926b4234b4850c3e0cd1dd8f48032f21e475479520fe54bd0c81706af14",
+  "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaBuiltInPackage.java": "7fa94b0efeeb67384f821341e85640c6130305f3fea61a3f9262e4988fee17c4",
+  "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaRuntimePhase.java": "ad31df71e4087450d4b8cb74b310ef5566a6f28b9f1db6c993d62ddac1417202",
+  "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/PluginClassLoader.java": "a23cf056bce9a496afd36978252aacd87360dabf073181fcafebb0a7bb0a22fc",
+  "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaApiSignatures.java": "ef942aef89c6d84d4ed0cf3501f2a90eada6b88e5538e3af131290335c1ba614",
+  "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaRuntimeProvider.java": "d9bf95a015c45e1796a824d070b2d12ee76bd1999bd0dec46176fe0ac2b6c9d3",
+  "fibra-runtime-java/src/main/java/com/sstlfsj/fibra/runtime/java/JavaApiContract.java": "781b7f46a6dc89e17359c8be2c313cf2624cf21c4a7d79c807fe9735ce894427"
+}

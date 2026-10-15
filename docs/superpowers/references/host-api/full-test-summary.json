@@ -1,0 +1,1036 @@
+{
+  "suites": {
+    "fibra-config/surefire-reports/TEST-com.sstlfsj.fibra.config.DesiredConfigCompilerTest.xml": {
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-config/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigSchemaTest.xml": {
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-config/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigExpressionEvaluatorTest.xml": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-config/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigDocumentStoreTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-config/surefire-reports/TEST-com.sstlfsj.fibra.config.DesiredEvaluationTest.xml": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-config/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigSchemaBatchOrderTest.xml": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-config/surefire-reports/TEST-com.sstlfsj.fibra.config.PluginDefinitionRefTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-config/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigContextSnapshotTest.xml": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-config/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigSchemaBootstrapTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-config/surefire-reports/TEST-com.sstlfsj.fibra.config.DesiredStateRepositoryTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-config/surefire-reports/TEST-com.sstlfsj.fibra.config.LiteralValuesTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-config/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigSchemaBudgetTest.xml": {
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-config/surefire-reports/TEST-com.sstlfsj.fibra.config.DesiredInputGraphTest.xml": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-config/surefire-reports/TEST-com.sstlfsj.fibra.config.ConfigSchemaBatchAllocationTest.xml": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-config/surefire-reports/TEST-com.sstlfsj.fibra.config.DefinitionConfigDocumentTest.xml": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-config/surefire-reports/TEST-com.sstlfsj.fibra.config.DesiredConfigPatchTest.xml": {
+      "tests": 22,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-runtime-node/surefire-reports/TEST-com.sstlfsj.fibra.runtime.node.NodeSidecarTest.xml": {
+      "tests": 32,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-runtime-node/surefire-reports/TEST-com.sstlfsj.fibra.runtime.node.NodeProcessUnitTest.xml": {
+      "tests": 49,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-runtime-node/surefire-reports/TEST-com.sstlfsj.fibra.runtime.node.NodeRuntimeDriverTest.xml": {
+      "tests": 27,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-cli/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliTerminalSignalBridgeTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-cli/surefire-reports/TEST-com.sstlfsj.fibra.cli.ProfilePackageSourceTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-cli/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliHostTest.xml": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-cli/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliInvocationCoordinatorTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-cli/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliSessionTest.xml": {
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-cli/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliHostOwnershipTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-cli/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliProcessSignalHandlersTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-cli/surefire-reports/TEST-com.sstlfsj.fibra.cli.FibraCliTest.xml": {
+      "tests": 30,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-cli/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliProcessShutdownTest.xml": {
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-cli/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliPathsTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-cli/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliReplTest.xml": {
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-cli/surefire-reports/TEST-com.sstlfsj.fibra.cli.CliTerminalControllerTest.xml": {
+      "tests": 20,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-bridge/surefire-reports/TEST-com.sstlfsj.fibra.bridge.ContributionKindRegistryTest.xml": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-bridge/surefire-reports/TEST-com.sstlfsj.fibra.bridge.ContributionDrainLifecycleTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-bridge/surefire-reports/TEST-com.sstlfsj.fibra.bridge.ContributionDirectoryTest.xml": {
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-bridge/surefire-reports/TEST-com.sstlfsj.fibra.bridge.ContributionAdmissionTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-bridge/surefire-reports/TEST-com.sstlfsj.fibra.bridge.ContributionCallTest.xml": {
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.EventDispatchContractTest.xml": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.NamedContextPolicyContractTest.xml": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.ScopeRegistrationRaceTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.PluginIdentityContractTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.CleanupFailureDiagnosticsTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.RuntimeDomainSettlementTest.xml": {
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.PropertyCapabilityContractTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.ScopeOwnedCapabilitiesContractTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.PluginDisableRequestContractTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.AnnotationInjectionContractTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.ScopeOwnershipBoundaryTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.internal.RuntimeCloseCompletionTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.EffectCleanupContractTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.OnceEventContractTest.xml": {
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.PluginInstanceLifecycleContractTest.xml": {
+      "tests": 20,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.RuntimeDomainDiagnosticsTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.RuntimeDomainIsolationTest.xml": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.RuntimeScopeContractTest.xml": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.LoggingCapabilityContractTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.EventModeContractTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.EventContractReloadTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.DrainLifecycleTest.xml": {
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.EffectCreationContractTest.xml": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.value.LiteralValueTest.xml": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-core/surefire-reports/TEST-com.sstlfsj.fibra.runtime.InvocationContextCancellationTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.parity.ServiceSpecParityTest.xml": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.migration.EffectParityTest.xml": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.parity.DecoratorSpecParityTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.parity.EventsSpecParityTest.xml": {
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.migration.EventParityTest.xml": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.migration.LoggerParityTest.xml": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.migration.FibraInertiaParityTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.scenario.JavaPublishedViewRetentionTest.xml": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.parity.JavaPackageArchitectureTest.xml": {
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.scenario.NodePublishedCancellationOwnershipTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.migration.ServiceFibraParityTest.xml": {
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.parity.DisposeSpecParityTest.xml": {
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.parity.VNextScenarioTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.migration.PluginAndInvocationParityTest.xml": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.verification.host.RuntimeHostVerticalVerificationTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.parity.FibraSpecParityTest.xml": {
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.parity.ApiSignatureBaselineTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.parity.LoggerSpecParityTest.xml": {
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.verification.external.ExternalFixtureRuntimeDriverTest.xml": {
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.scenario.CrossRuntimeSelfDisableTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.parity.PluginSpecParityTest.xml": {
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.parity.AssociateSpecParityTest.xml": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.migration.CoreEventsParityTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.parity.IsolateSpecParityTest.xml": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.migration.ContextPropertyParityTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.verification.host.ClientProtocolVerticalVerificationTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.verification.host.HostRestartRecoveryTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.parity.ShadowSpecParityTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.migration.ReadmeExampleTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.parity.InvokeSpecParityTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.parity.ReflectSpecParityTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.migration.AnnotationInjectionParityTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.scenario.CrossRuntimeConditionalConfigTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.migration.FibraDisposalParityTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-parity-tests/surefire-reports/TEST-com.sstlfsj.fibra.parity.ArchitectureBaselineTest.xml": {
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-registry/surefire-reports/TEST-com.sstlfsj.fibra.registry.FilePluginAuditRepositoryTest.xml": {
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-registry/surefire-reports/TEST-com.sstlfsj.fibra.registry.PluginRegistryTest.xml": {
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-artifact/surefire-reports/TEST-com.sstlfsj.fibra.artifact.PluginConfigurationResourceTest.xml": {
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-artifact/surefire-reports/TEST-com.sstlfsj.fibra.artifact.PluginConfigurationResourceBootstrapTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-artifact/surefire-reports/TEST-com.sstlfsj.fibra.artifact.PluginPackageTest.xml": {
+      "tests": 46,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-artifact/surefire-reports/TEST-com.sstlfsj.fibra.artifact.FixedPluginConfigurationResourceTest.xml": {
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-artifact/surefire-reports/TEST-com.sstlfsj.fibra.artifact.PluginPackageStoreTest.xml": {
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-client-protocol/surefire-reports/TEST-com.sstlfsj.fibra.client.protocol.ClientProtocolCodecTest.xml": {
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-client-protocol/surefire-reports/TEST-com.sstlfsj.fibra.client.protocol.ClientProtocolFenceTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-api/surefire-reports/TEST-com.sstlfsj.fibra.CancellationSourceTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-runtime-java/surefire-reports/TEST-com.sstlfsj.fibra.runtime.java.JavaBuiltInRecoveryTest.xml": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-runtime-java/surefire-reports/TEST-com.sstlfsj.fibra.runtime.java.PluginClassLoaderTest.xml": {
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-runtime-java/surefire-reports/TEST-com.sstlfsj.fibra.runtime.java.JavaApiContractTest.xml": {
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-runtime-java/surefire-reports/TEST-verification.hostapi.JavaHostApiEngineTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-runtime-java/surefire-reports/TEST-com.sstlfsj.fibra.runtime.java.JavaClassIndexTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-runtime-java/surefire-reports/TEST-com.sstlfsj.fibra.runtime.java.JavaRuntimeDriverTest.xml": {
+      "tests": 52,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-runtime-java/surefire-reports/TEST-com.sstlfsj.fibra.runtime.java.JavaHostApiTest.xml": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-spring-boot-starter/surefire-reports/TEST-com.sstlfsj.fibra.spring.boot.FibraAutoConfigurationTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-engine/surefire-reports/TEST-com.sstlfsj.fibra.engine.runtime.RuntimeTargetSliceTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-engine/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.DeploymentTargetStoreTest.xml": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-engine/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.BuiltInPluginPackageTest.xml": {
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-engine/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.DeploymentTargetContractTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-engine/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.PackageDefinitionCatalogTest.xml": {
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-engine/surefire-reports/TEST-com.sstlfsj.fibra.engine.DeploymentPlannerTest.xml": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-engine/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.BuiltInConfigurationBootstrapTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-engine/surefire-reports/TEST-com.sstlfsj.fibra.engine.RuntimeDriverEngineTest.xml": {
+      "tests": 80,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-engine/surefire-reports/TEST-com.sstlfsj.fibra.engine.RuntimeDriverContractTest.xml": {
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-engine/surefire-reports/TEST-com.sstlfsj.fibra.engine.publication.RemoteContributionInvokerTest.xml": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-engine/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.DeploymentTargetCompilerTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-engine/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.DeploymentTargetContextContractTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-engine/surefire-reports/TEST-com.sstlfsj.fibra.engine.deployment.HostCapabilitySnapshotTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-engine/surefire-reports/TEST-com.sstlfsj.fibra.engine.EngineAttemptStateModelTest.xml": {
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-engine/surefire-reports/TEST-com.sstlfsj.fibra.engine.EngineReadAttemptTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-engine/surefire-reports/TEST-com.sstlfsj.fibra.engine.EngineCommandLoopTest.xml": {
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-engine/surefire-reports/TEST-com.sstlfsj.fibra.engine.EngineConfigurationContractTest.xml": {
+      "tests": 20,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-shell/fibra-shell/surefire-reports/TEST-com.sstlfsj.fibra.plugins.shell.ShellContractTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-shell/fibra-tool-shell/surefire-reports/TEST-com.sstlfsj.fibra.plugins.shell.tool.ShellToolTest.xml": {
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-shell/fibra-shell-local/surefire-reports/TEST-com.sstlfsj.fibra.plugins.shell.local.ShellLifecycleTest.xml": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-shell/fibra-shell-local/surefire-reports/TEST-com.sstlfsj.fibra.plugins.shell.local.LocalShellTest.xml": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-shell/fibra-shell-local/surefire-reports/TEST-com.sstlfsj.fibra.plugins.shell.local.ShellPluginTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/failsafe-reports/TEST-com.sstlfsj.fibra.plugins.acceptance.FormalCliIT.xml": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/failsafe-reports/TEST-com.sstlfsj.fibra.plugins.acceptance.FormalMultiPluginIT.xml": {
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/failsafe-reports/TEST-com.sstlfsj.fibra.plugins.acceptance.FormalPluginArtifactsIT.xml": {
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-acceptance/fibra-plugins-acceptance-host/surefire-reports/TEST-com.sstlfsj.fibra.plugins.acceptance.AuthorConfigurationQualificationTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-fs/fibra-fs-local/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.local.WindowsFilePublisherTest.xml": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-fs/fibra-fs-local/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.local.LocalFileSystemPluginTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-fs/fibra-fs-local/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.local.LocalFileSystemTest.xml": {
+      "tests": 27,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.search.SearchOutputParserTest.xml": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.search.SearchRunnerTest.xml": {
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.search.SearchCommandsTest.xml": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.search.ToolFsSearchEntrypointTest.xml": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-fs/fibra-tool-fs-search/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.search.SearchTimingTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-fs/fibra-fs/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.FileSystemContractTest.xml": {
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-fs/fibra-tool-fs/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.tool.FileToolHandlersTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-fs/fibra-tool-fs/surefire-reports/TEST-com.sstlfsj.fibra.plugins.fs.tool.FileToolPluginTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-tool-api/surefire-reports/TEST-com.sstlfsj.fibra.plugins.tool.ToolApiTest.xml": {
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-tool-api/surefire-reports/TEST-com.sstlfsj.fibra.plugins.tool.ToolOutcomesTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.SystemdScopeOwnerTest.xml": {
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.WindowsJobProcessUnitTest.xml": {
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.SystemdScopeLauncherTest.xml": {
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.LinuxScopeProcessUnitTest.xml": {
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.SupervisorFailureTest.xml": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.LocalSubprocessTest.xml": {
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.JnaWindowsJobOwnerTest.xml": {
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.LocalSubprocessLinuxSelectionTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.SubprocessPluginTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess-local/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.local.WindowsExecutableResolverTest.xml": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-subprocess/fibra-subprocess/surefire-reports/TEST-com.sstlfsj.fibra.plugins.subprocess.SubprocessContractTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-storage/fibra-tool-storage/surefire-reports/TEST-com.sstlfsj.fibra.plugins.storage.tool.StorageToolEntrypointTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-storage/fibra-storage-json/surefire-reports/TEST-com.sstlfsj.fibra.plugins.storage.json.JsonConfigStoreTest.xml": {
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-plugins/fibra-plugins-storage/fibra-storage/surefire-reports/TEST-com.sstlfsj.fibra.plugins.storage.StorageContractTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-cli-api/surefire-reports/TEST-com.sstlfsj.fibra.cli.api.CliApiContractTest.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-spring/surefire-reports/TEST-com.sstlfsj.fibra.spring.FibraServiceBridgeTest.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-spring/surefire-reports/TEST-com.sstlfsj.fibra.spring.FibraServiceExporterTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fibra-example/content-sanitizer/api/surefire-reports/TEST-com.sstlfsj.fibra.example.sanitizer.ContentSanitizerContributionTest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "total": {
+    "tests": 1254,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

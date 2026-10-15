@@ -49,15 +49,14 @@ import java.util.concurrent.ConcurrentHashMap;
 /** Java facet 的唯一 runtime owner。静态 wiring 与实例生命周期均不泄漏到 Engine。 */
 public final class JavaRuntimeDriver implements RuntimeDriver {
     // Host sharing preferences; platform visibility is resolved independently by PluginClassLoader.
-    private static final List<String> DEFAULT_PARENT_PACKAGES = List.of(
-        "java.", "javax.", "jdk.", "sun.", "com.sstlfsj.fibra.",
-        "reactor.", "org.reactivestreams.", "org.slf4j.");
+    private static final List<String> DEFAULT_PARENT_PACKAGES = JavaApiContracts.defaultParentPackages();
 
     private final RuntimeHostServices services;
     private final List<JavaBuiltInPackage> builtIns;
     private final ClassLoader parent;
     private final List<String> parentPackages;
     private final LoaderCloser closer;
+    private final JavaApiContracts apiContracts;
     private final JavaFacetDescriptorReader descriptors = new JavaFacetDescriptorReader();
     private final JavaFacetDescriptorReader.ResourceAccess descriptorAccess;
     private final Set<DescriptorRead> descriptorReads = new LinkedHashSet<>();
@@ -67,8 +66,13 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
     private Mono<Void> close;
 
     JavaRuntimeDriver(RuntimeHostServices services, List<JavaBuiltInPackage> builtIns) {
+        this(services, builtIns, new JavaApiContracts(List.of()));
+    }
+
+    JavaRuntimeDriver(RuntimeHostServices services, List<JavaBuiltInPackage> builtIns,
+                      JavaApiContracts apiContracts) {
         this(services, builtIns, JavaRuntimeDriver.class.getClassLoader(), DEFAULT_PARENT_PACKAGES,
-            PluginClassLoader::close);
+            PluginClassLoader::close, new JavaFacetDescriptorReader.ResourceAccess(), apiContracts);
     }
 
     JavaRuntimeDriver(RuntimeHostServices services, List<JavaBuiltInPackage> builtIns,
@@ -81,12 +85,21 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
     JavaRuntimeDriver(RuntimeHostServices services, List<JavaBuiltInPackage> builtIns,
                       ClassLoader parent, List<String> parentPackages, LoaderCloser closer,
                       JavaFacetDescriptorReader.ResourceAccess descriptorAccess) {
+        this(services, builtIns, parent, parentPackages, closer, descriptorAccess,
+            new JavaApiContracts(List.of()));
+    }
+
+    private JavaRuntimeDriver(RuntimeHostServices services, List<JavaBuiltInPackage> builtIns,
+                               ClassLoader parent, List<String> parentPackages, LoaderCloser closer,
+                               JavaFacetDescriptorReader.ResourceAccess descriptorAccess,
+                               JavaApiContracts apiContracts) {
         this.services = Objects.requireNonNull(services, "services");
         this.builtIns = List.copyOf(Objects.requireNonNull(builtIns, "builtIns"));
         this.parent = Objects.requireNonNull(parent, "parent");
         this.parentPackages = List.copyOf(parentPackages);
         this.closer = Objects.requireNonNull(closer, "closer");
         this.descriptorAccess = Objects.requireNonNull(descriptorAccess, "descriptorAccess");
+        this.apiContracts = Objects.requireNonNull(apiContracts, "apiContracts");
     }
 
     @Override
@@ -292,18 +305,19 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
                 }
             }
             var descriptor = readDescriptor(source.facet(), node);
+            var importedClasses = apiContracts.bind(artifactId, descriptor.hostApis());
             JavaClassIndex.validate(artifactId, List.of(source.facet().facet().payload()), parent,
-                parentPackages);
+                parentPackages, apiContracts.names());
             var dependencyKeys = dependencyLeases.stream().map(lease -> lease.wiring.key.identity())
                 .sorted().toList();
             var key = new WiringKey(source.facet().packageRevision(),
                 source.facet().facet().facetId().value(), source.facet().facet().payloadDigest(),
-                dependencyKeys, JavaRuntimeProvider.CONTRACT_IDENTITY);
+                dependencyKeys, apiContracts.identity());
             var wiring = wiringPool.get(key);
             var publish = wiring == null;
             if (wiring == null) {
                 wiring = createWiring(key, source.facet(), descriptor,
-                    dependencyLeases.stream().map(lease -> lease.wiring).toList(), node);
+                    dependencyLeases.stream().map(lease -> lease.wiring).toList(), importedClasses, node);
             }
             if (descriptor.definitionId().isPresent() != (wiring.definition != null)) {
                 throw new JavaRuntimeException(JavaRuntimePhase.LOAD, artifactId,
@@ -330,10 +344,11 @@ public final class JavaRuntimeDriver implements RuntimeDriver {
 
     private StaticWiring createWiring(WiringKey key, ManagedFacet facet,
                                       JavaFacetDescriptor descriptor,
-                                      List<StaticWiring> dependencies, AcquisitionNode node) {
+                                      List<StaticWiring> dependencies, Map<String, Class<?>> importedClasses,
+                                      AcquisitionNode node) {
         try {
             var loader = new PluginClassLoader(List.of(facet.facet().payload().toUri().toURL()), parent,
-                parentPackages);
+                parentPackages, importedClasses, apiContracts.names());
             node.loader = loader;
             loader.dependencies(dependencies.stream().map(value -> value.loader).toList());
             JavaClassSpace.validate(facet.artifactId(), descriptor, loader);

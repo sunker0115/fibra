@@ -747,6 +747,13 @@ transport、gateway、runner 或产品长会话已实现。
 
 ## 10. Composition root 与关闭所有权
 
+公共入口沿同一套职责分层 API 组合：core 拥有进程内内核，artifact/config 拥有不可变制品与配置，Engine
+独占托管 target、command lane 与生命周期；Bridge/PublishedRuntime 负责贡献发布和调用准入，runtime SPI
+负责执行 slice，Registry、CLI、Spring 和外部 execution 适配沿原 owner 协作。完整角色导航见
+[公共 API 整体架构](2026-10-15-public-api-architecture.md#1-目标受众与唯一体系)。独立嵌入 core 与 Engine 托管
+是组合深度选择；同一组托管 units 不能再从 core 另行挂载或停止。本次 Java 合同类型身份已通过本地实现与发行资格，
+源码、制品、仓外调用和未验证边界见[交付证据](../references/host-api/delivery.md)。
+
 composition root 注册 provider，不传入已经启动的 runtime：
 
 ```text
@@ -785,6 +792,25 @@ Java 的 `ContributionServices.REGISTRAR` 与 `ManagedPluginControl.KEY` 都是 
 `ServiceKey + value`，bootstrap 时冻结并发布到长期 `RuntimeDomain` 根；所有 Java unit scope 通过正常服务
 继承读取同一 binding。Engine 不取得宿主对象的关闭所有权，启动后不支持动态增删。Spring exporter、CLI 和
 非 Spring Host 都走该入口，不能在 Java driver、Spring adapter 或匿名 catalog 中各建一套注入路径。
+
+Java API 类型身份沿同一 provider 装配面提供：
+`public record JavaApiContract(String id, String version, List<Class<?>> classes)` 表达精确 public Class 词汇，
+classes 防御复制且不可变；`new JavaRuntimeProvider(builtIns, apiContracts)` 的第二个 List 在 provider 创建时冻结，
+原单参数构造器只委托空 List 到同一路径。它不注册 ServiceKey、不注入 Host 对象、不创建 kind 或第二调用入口。
+HostServiceRegistry 仍是唯一 Host 对象注入面；ContributionKind 继续定义 descriptor/input/output 及原 codec，
+贡献沿 registrar/admission 发布，托管调用只经 PublishedRuntime 校验 view/registration fence。
+外部 execution 继续使用原 wire/codec，不把 Java Class 身份加入跨进程协议。
+
+每 facet 的 `hostApis` 只接受精确 id/version 对象列表，descriptor 将验证结果规范化为不可变 Map；未发布的
+候选 map 格式拒绝。provider 全部导出并集与 facet 显式导入并集都须闭合，跨合同引用须显式导入其 owner，
+不传递导入。类型资格、私有元数据链接及残缺 sealed 制品的窗口见
+[Java 合同规格](2026-10-15-public-api-architecture.md#4-同一-provider-装配面的精确合同)。
+provider 的冻结 contractIdentity 包含语义版本及 id/version/binary name 摘要，进入原 compiledFingerprint；
+create 将同值交给全新 driver，WiringKey 使用该同值。不增加 target 事实、resolver、热 API 更新或多协议控制面。
+
+API Class 及其定义 loader 由 Host 发行 owner 持有；provider 和 driver 只借用，不随 unit 停用、替换、
+candidate 失败或 Engine close 关闭。Host 须在全部 Engine 依赖真实释放后再关闭发行 loader；关闭失败且资源
+仍保留时不能提前释放它。两个 units 共享 API 不构成彼此的生命周期依赖，静态 facet lease 继续沿原图关闭。
 
 Java 插件 `Context.scope()` 返回实际不实现 `Scope/AutoCloseable` 的 `ScopeView`。插件只能关闭自己
 `openChild()` 获得的 child scope；runtime generation 独占 instance root 关闭权，避免插件等待销毁正在启动的

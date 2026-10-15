@@ -806,17 +806,30 @@ CLI 投影使用 `content`、可选 `structuredContent`、`isError`、失败时�
 
 ### 6.2 Java Runtime
 
+Java runtime 是[统一公共 API 分层](2026-10-15-public-api-architecture.md#1-目标受众与唯一体系)中的标准执行器，
+只拥有私有 payload、类型装载和静态 lease；Engine 保持唯一托管控制面。本次合同的本地签名、整仓回归、
+可复现发行与仓外消费已通过，精确范围见[交付证据](../references/host-api/delivery.md)。
+
 标准 Java 制品使用 `META-INF/fibra/plugin.yaml`：
 
 - executable 制品显式声明唯一 entrypoint 与非空白 definitionId；prepare 在 wiring 发布/bind 前核真实 name 相等；
-- contract-only 制品同时省略 entrypoint/definitionId，只作为依赖图和类型装载节点；省略入口不等于声明 exports；
+- contract-only 制品同时省略 entrypoint/definitionId，只作为依赖图和类型装载节点，仍可声明 hostApis；
+  省略入口不等于声明 exports；
+- 唯一可选 `hostApis` 格式为 id/version 对象列表，例如 `[{id: example.document, version: '1'}]`，缺省为空。
+  每项只接受两个必填、非空白字符串字段；null、错误类型、重复/未知字段或重复 id 均在 MANIFEST 拒绝。
+  未发布候选的 map 写法直接拒绝，不增加 parser 或兼容路径。公开
+  `JavaFacetDescriptor(Optional<String> entrypoint, Optional<String> definitionId, Map<String, String> hostApis)`
+  将导入规范化为不可变 Map，双参数构造器仅委托空 Map 到同一路径；Map 不是另一配置格式；
 - 缺名称的旧 executable 格式直接拒绝，无 metadata 回退或兼容分支。公开 descriptor 构造器、runtime/provider、
   作者制品与消费者同步迁移；仅安装/selection 不承诺已校私有格式。目录经 Engine 读取所选精确包的声明，
   不加载目标类或解析依赖闭包；合同及取得/失败 owner 见[definition 目录设计](2026-10-11-definition-catalog-design.md)。
-- 每制品独立 ClassLoader，类解析顺序为已加载 → `ClassLoader.getPlatformClassLoader()` 实际解析 →
-  配置共享前缀的宿主 parent 实际解析 → 本制品 → 声明依赖。平台能力不依赖包名前缀；宿主共享偏好
+- 每制品独立 ClassLoader。先对已登记 Host API binary name 执行显式导入门：当前 facet 已导入时返回
+  inventory 中的同一 Class，未导入直接 ClassNotFoundException，不查询本地或依赖，不隐式 re-export。
+  其他类型的解析顺序为已加载 → `ClassLoader.getPlatformClassLoader()` 实际解析 →
+  固定共享前缀的宿主 parent 实际解析 → 本制品 → 声明依赖。平台能力不依赖包名前缀；宿主共享偏好
   保留现有 `javax.*` 等前缀，不以这些前缀判断平台类，也不向任意 application classpath 兜底。
-  宿主实际导出的公共契约仍由 parent 唯一定义，parent miss 的动态 contract 继续本地/声明依赖回退。
+  固定共享基线命中的公共契约仍由 parent 唯一定义；未登记为 Host API 且 parent miss 的动态 contract
+  继续本地/声明依赖回退。
   只有 `ClassNotFoundException` 表示继续查找；`LinkageError` 不得吞掉后选择另一份类型。
   [JDK 21 ClassLoader 合同](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/ClassLoader.html)
   允许平台 loader 在模块升级/覆盖等启动配置下委派其他具名模块，不能保证任意环境都只看到 JDK 类型；
@@ -834,7 +847,8 @@ CLI 投影使用 `content`、可选 `structuredContent`、`isError`、失败时�
 - prepare 按每个 artifact 的实际本地 classpath 校验有效二进制类名：主 JAR 与 lib JAR 一并计入，多 release
   JAR 按当前 JVM 的有效类解析，忽略 module-info；同一 artifact 的主 JAR/lib JAR 或不同 lib JAR 之间
   的同名有效类须拒绝并报告两个来源，不能让本地 URL 顺序决定代码版本。预检与加载共用平台/宿主
-  实际解析方法，平台或共享宿主命中的类不计入本地重复；只有前缀匹配而实际 miss 的类仍参与本地校验。
+  实际解析方法；先拒绝制品携带的任意已导出 Host API binary name，含未导入合同、同字节和多 release
+  生效类，再对其他类型跳过实际平台/固定共享宿主命中。只有前缀匹配而实际 miss 的类仍参与本地校验。
   不增加全局 Class 缓存或第二生命周期 owner；
 - 资源继续按本地 → 声明依赖 → parent 查找及去重枚举，不机械套用类解析顺序。本修复不引入隐式
   TCCL 切换或 SPI 入口；依赖 TCCL/SPI 的第三方消费者需在真实调用入口单独验收；
@@ -842,11 +856,28 @@ CLI 投影使用 `content`、可选 `structuredContent`、`isError`、失败时�
   插件自身代码使用自身 loader 的本地定义；依赖方自身缺类时，继续按 manifest 中 `requires` 的声明顺序
   查询依赖 loader，第一条成功路径决定该次直接查找。这个确定顺序只提供隔离和解析规则，不是版本求解：
   不同 loader 定义的同名 `Class` 不可互换，跨插件方法签名、Service 或 DTO 使用的类型必须来自同一个
-  宿主或 contract artifact owner。若一个调用方必须同时直接操作同 FQCN 的两个不兼容版本，应在插件
+  Host API 合同或原动态 contract artifact owner；已登记 Host API 名字不适用本地/依赖回退。
+  若一个调用方必须同时直接操作同 FQCN 的两个不兼容版本，应在插件
   构建时 relocation/shading；本期不增加 OSGi 式 package import/export 或版本 wiring；
 - close-and-collect 以真实 JAR、loader identity 和 WeakReference/ReferenceQueue 取得回收证据，活动
   loader 作为存活对照；close 不等于 JVM 已卸载，不对任意插件承诺 GC 截止，不清理未经证明的全局缓存。
   ClassLoader 只提供类型隔离，不是安全沙箱。
+
+Host 以 `public record JavaApiContract(String id, String version, List<Class<?>> classes)` 显式提供精确 Class
+清单，classes 防御复制且不可变；`new JavaRuntimeProvider(builtIns, apiContracts)` 在原 provider 装配面冻结合同，
+单参数构造器仅委托空 List。合同 id 和 binary name owner 唯一，不允许覆盖平台/固定共享基线或导出受管插件
+loader 定义的 Class。provider 的全部导出并集和每 facet 的显式导入并集均执行 public/protected ABI 闭包校验；
+跨合同引用须显式导入其 owner，不传递导入、不增加版本 resolver。非法 composition 为 IllegalArgumentException；
+prepare 的合同缺失、版本不匹配或导入未闭合为 LOAD，query 只读声明不证明运行资格。
+类型资格与闭包细节、private declared metadata 缺类时的链接失败和
+`getPermittedSubclasses()` 无法证明残缺 permits 制品完整性的窗口，统一见
+[签名闭包合同](2026-10-15-public-api-architecture.md#41-签名闭包校验)，不另写 parser 或引入依赖。
+
+冻结 `contractIdentity()` 的语义版本及 id/version/binary name 清单摘要进入原 compiledFingerprint，并经 create
+原值交给 driver 与 WiringKey；不写入 target，不加热 API 更新、版本仲裁或第二状态机。API Class 和定义 loader
+归 Host 发行 owner，provider/driver 借用且不关闭；Host 在全部 Engine 依赖释放后再关闭发行资源。
+类型合同只统一 Class 词汇，Host 对象仍由 HostServiceRegistry 注入，贡献仍由原 kind/registrar 发布并通过
+PublishedRuntime 校验原 fence 调用；共享类型不取得服务、贡献或生命周期权限。
 
 ### 6.3 Node Runtime
 

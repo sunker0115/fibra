@@ -41,7 +41,6 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RuntimeProviderConsumerTest {
@@ -66,26 +65,37 @@ class RuntimeProviderConsumerTest {
     @Test
     void registersAnExternalRuntimeProviderUsingOnlyPublishedSpi(@TempDir Path work) {
         var provider = new ConsumerRuntimeProvider();
-        try (var packages = new PluginPackageStore(work.resolve("packages"));
-             var targets = new FileDeploymentTargetStore(work.resolve("targets"));
-             var engine = FibraEngine.builder(packages, targets)
-                 .runtimeProvider(provider)
-                 .hostTerminationPort(ignored -> { })
-                 .build()) {
-            assertEquals(1, provider.createdDrivers);
+        for (var run = 0; run < 2; run++) {
+            var packages = new PluginPackageStore(work.resolve("packages-" + run));
+            var targets = new FileDeploymentTargetStore(work.resolve("targets-" + run));
+            try (var engine = FibraEngine.builder(packages, targets)
+                .runtimeProvider(provider).hostTerminationPort(ignored -> { }).build()) {
+                engine.startAsync().block();
+                assertEquals(com.sstlfsj.fibra.engine.observation.EngineState.RUNNING, engine.snapshot().state());
+            }
+        }
+    }
 
-            var candidate = provider.driver.createCandidate(targetSlice());
+    @Test
+    void consumesCandidateGenerationAndUnitSpiWithoutBorrowingAnEnginesDriver() {
+        var driver = new ConsumerRuntimeDriver();
+        var candidate = driver.createCandidate(targetSlice());
+        try {
             candidate.prepareAsync().block();
             var plan = candidate.preparedPlan();
             var generation = candidate.seal(CompiledRuntimeSlice.of(plan,
                 List.copyOf(plan.units().keySet())));
-            var unit = generation.units().get(new ExecutionUnitKey("consumer"));
-
-            assertEquals(ConsumerRuntimeProvider.RUNTIME_ID, plan.runtimeId());
-            assertEquals(ExecutionObservation.State.ACTIVE,
-                unit.reconcileAsync("consumer-activate").block().aggregateState());
-            generation.retireAsync().block();
-            assertSame(provider.driver, provider.lastDriver());
+            try {
+                var unit = generation.units().get(new ExecutionUnitKey("consumer"));
+                assertEquals(ConsumerRuntimeProvider.RUNTIME_ID, plan.runtimeId());
+                assertEquals(ExecutionObservation.State.ACTIVE,
+                    unit.reconcileAsync("consumer-activate").block().aggregateState());
+            } finally {
+                generation.retireAsync().block();
+            }
+        } finally {
+            candidate.closeAsync().block();
+            driver.closeAsync().block();
         }
     }
 
@@ -103,8 +113,6 @@ class RuntimeProviderConsumerTest {
 
     private static final class ConsumerRuntimeProvider implements RuntimeProvider {
         private static final RuntimeId RUNTIME_ID = new RuntimeId("consumer-runtime");
-        private int createdDrivers;
-        private ConsumerRuntimeDriver driver;
 
         @Override public RuntimeId id() { return RUNTIME_ID; }
         @Override public String contractIdentity() { return "verification.consumer.runtime/v1"; }
@@ -112,10 +120,8 @@ class RuntimeProviderConsumerTest {
             return List.of();
         }
         @Override public RuntimeDriver create(RuntimeHostServices services) {
-            createdDrivers++;
-            return driver = new ConsumerRuntimeDriver();
+            return new ConsumerRuntimeDriver();
         }
-        ConsumerRuntimeDriver lastDriver() { return driver; }
     }
 
     private static final class ConsumerRuntimeDriver implements RuntimeDriver {

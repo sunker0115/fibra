@@ -1,0 +1,14 @@
+{
+  "public-maven-consumer-isolated": {
+    "tests": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "public-spi-consumer-isolated": {
+    "tests": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

@@ -11,15 +11,22 @@ import java.util.Objects;
 /** Java runtime 的唯一 provider；执行资源只由其 driver 的 generation 持有。 */
 public final class JavaRuntimeProvider implements RuntimeProvider {
     public static final RuntimeId RUNTIME_ID = new RuntimeId("java");
-    public static final String CONTRACT_IDENTITY = "fibra-runtime-java:task10-v1";
+    public static final String CONTRACT_IDENTITY = "fibra-runtime-java:host-api-v1";
     private final List<JavaBuiltInPackage> builtIns;
+    private final JavaApiContracts apiContracts;
 
     public JavaRuntimeProvider(List<JavaBuiltInPackage> builtIns) {
+        this(builtIns, List.of());
+    }
+
+    /** 借用 Host 发行的合同类型；不取得其定义 ClassLoader 的关闭权。 */
+    public JavaRuntimeProvider(List<JavaBuiltInPackage> builtIns, List<JavaApiContract> apiContracts) {
         this.builtIns = List.copyOf(Objects.requireNonNull(builtIns, "builtIns"));
         if (this.builtIns.stream().map(value -> value.metadata().pluginId()).distinct().count()
             != this.builtIns.size()) {
             throw new IllegalArgumentException("duplicate Java built-in package");
         }
+        this.apiContracts = new JavaApiContracts(apiContracts);
     }
 
     @Override
@@ -29,7 +36,7 @@ public final class JavaRuntimeProvider implements RuntimeProvider {
 
     @Override
     public String contractIdentity() {
-        return CONTRACT_IDENTITY;
+        return apiContracts.identity();
     }
 
     @Override
@@ -39,6 +46,6 @@ public final class JavaRuntimeProvider implements RuntimeProvider {
 
     @Override
     public RuntimeDriver create(RuntimeHostServices services) {
-        return new JavaRuntimeDriver(Objects.requireNonNull(services, "services"), builtIns);
+        return new JavaRuntimeDriver(Objects.requireNonNull(services, "services"), builtIns, apiContracts);
     }
 }

@@ -1,0 +1,463 @@
+{
+  "inventory-imports-red": {
+    "argv": [
+      "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+      "--batch-mode",
+      "--no-transfer-progress",
+      "-o",
+      "-Dmaven.repo.local=/private/tmp/fibra-host-api-evidence-20261015/build-m2",
+      "-pl",
+      "fibra-runtime-java",
+      "-am",
+      "test",
+      "-Dtest=JavaApiContractTest",
+      "-Dsurefire.failIfNoSpecifiedTests=false"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-20261015",
+    "started": "2026-10-15T00:24:22.167495+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "source_head": "5b2d2176fd195525d8b5274511d187c182bdfe28",
+    "exit_code": 1,
+    "finished": "2026-10-15T00:24:28.041871+00:00",
+    "raw_command_sha256": "622bdbb2676a700666a53ec9d1be1db8049d09f42466806f12dcb6690b21365d",
+    "stdout.log_sha256": "bede3f560e625861899d798cd64a92833633f930b894e58ede220d7eb3ee93f0",
+    "stderr.log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "inventory-imports-green": {
+    "argv": [
+      "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+      "--batch-mode",
+      "--no-transfer-progress",
+      "-o",
+      "-Dmaven.repo.local=/private/tmp/fibra-host-api-evidence-20261015/build-m2",
+      "-pl",
+      "fibra-runtime-java",
+      "-am",
+      "test",
+      "-Dtest=JavaApiContractTest",
+      "-Dsurefire.failIfNoSpecifiedTests=false"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-20261015",
+    "started": "2026-10-15T00:25:01.143371+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "source_head": "5b2d2176fd195525d8b5274511d187c182bdfe28",
+    "exit_code": 0,
+    "finished": "2026-10-15T00:25:06.867842+00:00",
+    "raw_command_sha256": "c86af0542d2b5194d53d4d2e30cea661bb20a74b1703417cef4c4574e5982723",
+    "stdout.log_sha256": "50fdd143965f85224341a005df69c4511fab8639e320ae2bfc6666963ded6664",
+    "stderr.log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "inventory-baseline-red": {
+    "argv": [
+      "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+      "--batch-mode",
+      "--no-transfer-progress",
+      "-o",
+      "-Dmaven.repo.local=/private/tmp/fibra-host-api-evidence-20261015/build-m2",
+      "-pl",
+      "fibra-runtime-java",
+      "-am",
+      "test",
+      "-Dtest=JavaApiContractTest",
+      "-Dsurefire.failIfNoSpecifiedTests=false"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-20261015",
+    "started": "2026-10-15T00:30:02.843640+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "source_head": "5b2d2176fd195525d8b5274511d187c182bdfe28",
+    "exit_code": 1,
+    "finished": "2026-10-15T00:30:08.568554+00:00",
+    "raw_command_sha256": "f696da5dd8df08d202b2b0334c46082a416b5270f8bb331acee9c45b08986841",
+    "stdout.log_sha256": "22e6ae52de08db4525eb2e2483d15abb2be49aeb2f2949c4f030560578a130bf",
+    "stderr.log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "inventory-baseline-green": {
+    "argv": [
+      "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+      "--batch-mode",
+      "--no-transfer-progress",
+      "-o",
+      "-Dmaven.repo.local=/private/tmp/fibra-host-api-evidence-20261015/build-m2",
+      "-pl",
+      "fibra-runtime-java",
+      "-am",
+      "test",
+      "-Dtest=JavaApiContractTest",
+      "-Dsurefire.failIfNoSpecifiedTests=false"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-20261015",
+    "started": "2026-10-15T00:30:15.539616+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "source_head": "5b2d2176fd195525d8b5274511d187c182bdfe28",
+    "exit_code": 0,
+    "finished": "2026-10-15T00:30:20.750125+00:00",
+    "raw_command_sha256": "187f8da0bda8dd4b0d3d91e010c43c7eaf78fce379297933ae2f3f248de80061",
+    "stdout.log_sha256": "f494bf78bd8333fbe5d7768d6c19cc1b2d944e19ceed992d43f9fa919387e2e7",
+    "stderr.log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "manifest-list-red": {
+    "argv": [
+      "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+      "--batch-mode",
+      "--no-transfer-progress",
+      "-o",
+      "-Dmaven.repo.local=/private/tmp/fibra-host-api-evidence-20261015/build-m2",
+      "-pl",
+      "fibra-runtime-java",
+      "-am",
+      "test",
+      "-Dtest=JavaHostApiTest",
+      "-Dsurefire.failIfNoSpecifiedTests=false"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-20261015",
+    "started": "2026-10-15T00:27:38.336071+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "source_head": "5b2d2176fd195525d8b5274511d187c182bdfe28",
+    "exit_code": 1,
+    "finished": "2026-10-15T00:27:43.791676+00:00",
+    "raw_command_sha256": "ce790c47f281f31b57f6f9499a7954ad4f79e550c367e1688e3bd792cd2572dc",
+    "stdout.log_sha256": "9a2645d1bdba095d9c0d09a573f0644a8b729ca79a29cc68646b4d758ef2d965",
+    "stderr.log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "engine-qualified-fixture": {
+    "argv": [
+      "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+      "--batch-mode",
+      "--no-transfer-progress",
+      "-o",
+      "-Dmaven.repo.local=/private/tmp/fibra-host-api-evidence-20261015/build-m2",
+      "-pl",
+      "fibra-runtime-java",
+      "-am",
+      "test",
+      "-Dtest=JavaApiContractTest,JavaHostApiTest,JavaHostApiEngineTest",
+      "-Dsurefire.failIfNoSpecifiedTests=false"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-20261015",
+    "started": "2026-10-15T00:30:44.024662+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "source_head": "5b2d2176fd195525d8b5274511d187c182bdfe28",
+    "exit_code": 0,
+    "finished": "2026-10-15T00:30:49.238143+00:00",
+    "raw_command_sha256": "8c04a39dbf57201ba0fc12b40211da4863f7ac22fe48f48a1d429c3e81f46742",
+    "stdout.log_sha256": "a948e1ce89c4c2f948140384f3894b6bcccbab3ce37ecfc45ae02b22945a19c0",
+    "stderr.log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "host-api-reclamation": {
+    "argv": [
+      "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+      "--batch-mode",
+      "--no-transfer-progress",
+      "-o",
+      "-Dmaven.repo.local=/private/tmp/fibra-host-api-evidence-20261015/build-m2",
+      "-pl",
+      "fibra-runtime-java",
+      "-am",
+      "test",
+      "-Dtest=JavaHostApiEngineTest",
+      "-Dsurefire.failIfNoSpecifiedTests=false"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-20261015",
+    "started": "2026-10-15T00:32:39.676123+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "source_head": "5b2d2176fd195525d8b5274511d187c182bdfe28",
+    "exit_code": 0,
+    "finished": "2026-10-15T00:32:47.234038+00:00",
+    "raw_command_sha256": "87b4479ac08865569f48f9fafe61f950b57309cb18764eaccafa5d028862f214",
+    "stdout.log_sha256": "b01ce93beb8ef56e2eeb98a6d186143c5e82f4ffac31c1eb7efff96802f0ea0f",
+    "stderr.log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "runtime-engine-regression": {
+    "argv": [
+      "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+      "--batch-mode",
+      "--no-transfer-progress",
+      "-o",
+      "-Dmaven.repo.local=/private/tmp/fibra-host-api-evidence-20261015/build-m2",
+      "-pl",
+      "fibra-runtime-java",
+      "-am",
+      "test",
+      "-Dsurefire.timeout=300"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-20261015",
+    "started": "2026-10-15T00:33:25.854192+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "source_head": "5b2d2176fd195525d8b5274511d187c182bdfe28",
+    "exit_code": 0,
+    "finished": "2026-10-15T00:33:52.161284+00:00",
+    "raw_command_sha256": "be6b25ce6a22058c073dc01ca80d603289ef516c62bd0360a8171eb8f1c58fa5",
+    "stdout.log_sha256": "a3d255250eaffecaa38ede4a8dcab6c4e028f1ae7688174090a4f42bb3e16b81",
+    "stderr.log_sha256": "6457a203f23eb6c6ba488541d4942173583969fdf0ef9a412f506bae32cbf9db"
+  },
+  "signature-generation": {
+    "argv": [
+      "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+      "--batch-mode",
+      "--no-transfer-progress",
+      "-o",
+      "-Dmaven.repo.local=/private/tmp/fibra-host-api-evidence-20261015/build-m2",
+      "-pl",
+      "fibra-parity-tests",
+      "-am",
+      "test",
+      "-Dtest=ApiSignatureBaselineTest",
+      "-Dsurefire.failIfNoSpecifiedTests=false",
+      "-Dfibra.updateApiBaseline=true"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-20261015",
+    "started": "2026-10-15T00:35:02.728535+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "source_head": "5b2d2176fd195525d8b5274511d187c182bdfe28",
+    "exit_code": 0,
+    "finished": "2026-10-15T00:35:11.423224+00:00",
+    "raw_command_sha256": "9b22a0114964c51d231946f9631906a3f89b03b439c4f36def3dafe54b9d3ae3",
+    "stdout.log_sha256": "5c2d83d507c331037ceabd06424ae0c68292362bcad1dead1e3451a17d81953b",
+    "stderr.log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "architecture-boundaries": {
+    "argv": [
+      "bash",
+      "scripts/verify-architecture-boundaries.sh"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-20261015",
+    "started": "2026-10-15T00:38:03.699253+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "source_head": "5b2d2176fd195525d8b5274511d187c182bdfe28",
+    "exit_code": 0,
+    "finished": "2026-10-15T00:38:03.962937+00:00",
+    "raw_command_sha256": "c487f662e4955e300816b4d7dab2ff9facc7d0fde382dd135da380d18ae81f66",
+    "stdout.log_sha256": "4d7d7a505cec0b5d389dd7afbe742debc431c178b756ed901bb693b9fd99717c",
+    "stderr.log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "client-public-packages": {
+    "argv": [
+      "bash",
+      "scripts/verify-client-packages.sh"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-20261015",
+    "started": "2026-10-15T00:39:02.630317+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "source_head": "5b2d2176fd195525d8b5274511d187c182bdfe28",
+    "exit_code": 0,
+    "finished": "2026-10-15T00:39:10.099263+00:00",
+    "raw_command_sha256": "e397cac549749650b9059c72c2d470bae5f99a6baee9b0df8f072a1e25c6c98b",
+    "stdout.log_sha256": "1ab24085271c78c5542924cabee33aaf2a15ffd9cbc7c9c6c0231bbb04d1c305",
+    "stderr.log_sha256": "66d74306ff9b42c598760698d3311e43ecb734c12ae5ce0596475298a37a588c"
+  },
+  "full-verified-publication": {
+    "argv": [
+      "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+      "--batch-mode",
+      "--no-transfer-progress",
+      "-Dmaven.repo.local=/private/tmp/fibra-host-api-evidence-20261015/build-m2",
+      "-DaltDeploymentRepository=fibra-host-api-evidence::file:///private/tmp/fibra-host-api-evidence-20261015/public-repository",
+      "-Dfibra.distribution.verify.skip=false",
+      "-Dsurefire.timeout=300",
+      "-Dfailsafe.timeout=300",
+      "clean",
+      "deploy"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-20261015",
+    "started": "2026-10-15T00:37:48.132498+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "source_head": "5b2d2176fd195525d8b5274511d187c182bdfe28",
+    "exit_code": 1,
+    "finished": "2026-10-15T00:39:39.707053+00:00",
+    "raw_command_sha256": "c26f58482d0addcbb699d05dbeff8f38ec82e8d84319a1baf29d1be5fc91f19e",
+    "stdout.log_sha256": "65edb5a55dc6bd6d1ba6580513d0ef942c071f8e28077e18ba27056e925e7443",
+    "stderr.log_sha256": "95d35d3f8ff5e68108e0c5b27eeee471896b66de9836b1736b275ff58b77c615"
+  },
+  "node-native-environment": {
+    "argv": [
+      "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+      "--batch-mode",
+      "--no-transfer-progress",
+      "-o",
+      "-Dmaven.repo.local=/private/tmp/fibra-host-api-evidence-20261015/build-m2",
+      "-pl",
+      "fibra-runtime-node",
+      "-am",
+      "test",
+      "-Dtest=NodeProcessUnitTest#supervisorProbeLauncherPreservesRealPayloadAndBundledResource",
+      "-Dsurefire.failIfNoSpecifiedTests=false",
+      "-Dfibra.test.lifecycle.evidenceRoot=/private/tmp/fibra-host-api-evidence-20261015/node-native-evidence"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-20261015",
+    "started": "2026-10-15T00:41:05.458171+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "source_head": "5b2d2176fd195525d8b5274511d187c182bdfe28",
+    "exit_code": 0,
+    "finished": "2026-10-15T00:41:09.994132+00:00",
+    "raw_command_sha256": "02f3176f241fc63856e53d7e356290b197d5598e8943711df63276b475d19d93",
+    "stdout.log_sha256": "09b033c063687772d6e7ba4df52431d85ce3d3873a0f18c33d0ed6ad55779ba6",
+    "stderr.log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "full-native-publication": {
+    "argv": [
+      "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+      "--batch-mode",
+      "--no-transfer-progress",
+      "-Dmaven.repo.local=/private/tmp/fibra-host-api-evidence-20261015/build-m2",
+      "-DaltDeploymentRepository=fibra-host-api-evidence::file:///private/tmp/fibra-host-api-evidence-20261015/public-repository",
+      "-Dfibra.distribution.verify.skip=false",
+      "-Dsurefire.timeout=300",
+      "-Dfailsafe.timeout=300",
+      "-Dfibra.test.lifecycle.evidenceRoot=/private/tmp/fibra-host-api-evidence-20261015/native-lifecycle",
+      "clean",
+      "deploy"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-20261015",
+    "started": "2026-10-15T00:42:10.038265+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "source_head": "5b2d2176fd195525d8b5274511d187c182bdfe28",
+    "exit_code": 0,
+    "finished": "2026-10-15T00:46:05.369205+00:00",
+    "raw_command_sha256": "1b2567e763cba681b0d5d8e2235b7646dc0fa4ce90e68c01f19b7e2e98fb2c2c",
+    "stdout.log_sha256": "94f321f50c41d227482b961d81602b2814d6928fac75086136a1ecd062ff5e47",
+    "stderr.log_sha256": "0e9a0097ea573a1a9fc5cfb389bf97ea552f9695b4bce1c5a598d7cbfb4e0d91"
+  },
+  "public-maven-consumer": {
+    "argv": [
+      "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+      "--batch-mode",
+      "--no-transfer-progress",
+      "-Dmaven.repo.local=/private/tmp/fibra-host-api-evidence-20261015/consumer-m2",
+      "test"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-evidence-20261015/consumer",
+    "started": "2026-10-15T00:49:17.577222+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "exit_code": 1,
+    "finished": "2026-10-15T00:49:19.858693+00:00",
+    "raw_command_sha256": "0314ebb133c8c051b275ab74591dd56ec306276f68ffef38544a680690f06ce6",
+    "stdout.log_sha256": "503d23cf262720a6b580b3c21fe55a5e071d3d91eabc8663fcfc387b702e2191",
+    "stderr.log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "public-spi-consumer": {
+    "argv": [
+      "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+      "--batch-mode",
+      "--no-transfer-progress",
+      "-Dmaven.repo.local=/private/tmp/fibra-host-api-evidence-20261015/consumer-m2",
+      "test"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-evidence-20261015/spi-consumer",
+    "started": "2026-10-15T00:49:37.094530+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "exit_code": 1,
+    "finished": "2026-10-15T00:49:38.859495+00:00",
+    "raw_command_sha256": "17b72308130f817f47dbcbbd3fa3c4d945de0dcd527051cab55d92e87779174e",
+    "stdout.log_sha256": "7c58d5ab1eae20068f018fefacd932bc1151f41846d25a2676a046aea8de3394",
+    "stderr.log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "public-maven-consumer-isolated": {
+    "argv": [
+      "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+      "--settings",
+      "/private/tmp/fibra-host-api-evidence-20261015/consumer-settings.xml",
+      "--batch-mode",
+      "--no-transfer-progress",
+      "-Dmaven.repo.local=/private/tmp/fibra-host-api-evidence-20261015/consumer-m2",
+      "test"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-evidence-20261015/consumer",
+    "started": "2026-10-15T00:50:27.710353+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "exit_code": 0,
+    "finished": "2026-10-15T00:50:52.166276+00:00",
+    "raw_command_sha256": "86500852fc6be376d358f1bac064b855d050928e83f395b83eb3ebabac7f3f52",
+    "stdout.log_sha256": "f838baffcbbc73a928626c0d60b26101201ff2817902e6a33b73d5bde667c6c5",
+    "stderr.log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "public-spi-consumer-isolated": {
+    "argv": [
+      "/Users/sunke/.m2/wrapper/dists/apache-maven-3.9.9-bin/4nf9hui3q3djbarqar9g711ggc/apache-maven-3.9.9/bin/mvn",
+      "--settings",
+      "/private/tmp/fibra-host-api-evidence-20261015/consumer-settings.xml",
+      "--batch-mode",
+      "--no-transfer-progress",
+      "-Dmaven.repo.local=/private/tmp/fibra-host-api-evidence-20261015/consumer-m2",
+      "test"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-evidence-20261015/spi-consumer",
+    "started": "2026-10-15T00:51:06.754694+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "exit_code": 0,
+    "finished": "2026-10-15T00:51:10.840959+00:00",
+    "raw_command_sha256": "02a3d195f754513e1afeae775451900e38ecf1a971f411109ddacdb54a7786dc",
+    "stdout.log_sha256": "a62845aee36768a4ed7bf430a1a309df7f918a98c01df4beb6a1372763910d9d",
+    "stderr.log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "real-model-public-zip": {
+    "argv": [
+      "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home/bin/java",
+      "-ea",
+      "-cp",
+      "/private/tmp/fibra-host-api-evidence-20261015/model-consumer/classes:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-api-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-artifact-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-bridge-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-cli-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-cli-api-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-config-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-core-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-engine-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-registry-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-runtime-java-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-runtime-node-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-tool-api-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/itu-1.14.0.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/jackson-annotations-2.21.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/jackson-core-3.1.5.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/jackson-databind-3.1.5.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/jackson-dataformat-yaml-3.1.5.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/jline-4.4.3-jdk11.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/json-schema-validator-3.0.8.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/jspecify-1.0.0.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/main.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/picocli-4.7.7.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/reactive-streams-1.0.4.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/reactor-core-3.8.6.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/slf4j-api-2.0.18.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/slf4j-simple-2.0.18.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/snakeyaml-engine-3.0.1.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/model-api.jar",
+      "ModelApiConsumer",
+      "/private/tmp/fibra-host-api-evidence-20261015/model-consumer"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-evidence-20261015/model-consumer",
+    "started": "2026-10-15T00:49:44.465699+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "exit_code": 1,
+    "finished": "2026-10-15T00:49:45.661843+00:00",
+    "raw_command_sha256": "cc77e38c00c8af9730202b34137fe3b579fb105119ed1ff696ffc321e8aa3771",
+    "stdout.log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr.log_sha256": "ae2ae30c8b84ea1145ccecbeac9fe5158a61a91199d341aa95193fbff212e329"
+  },
+  "real-model-compile-final": {
+    "argv": [
+      "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home/bin/javac",
+      "--release",
+      "21",
+      "-cp",
+      "/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-api-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-artifact-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-bridge-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-cli-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-cli-api-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-config-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-core-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-engine-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-registry-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-runtime-java-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-runtime-node-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-tool-api-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/itu-1.14.0.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/jackson-annotations-2.21.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/jackson-core-3.1.5.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/jackson-databind-3.1.5.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/jackson-dataformat-yaml-3.1.5.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/jline-4.4.3-jdk11.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/json-schema-validator-3.0.8.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/jspecify-1.0.0.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/picocli-4.7.7.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/reactive-streams-1.0.4.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/reactor-core-3.8.6.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/slf4j-api-2.0.18.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/slf4j-simple-2.0.18.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/snakeyaml-engine-3.0.1.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/model-api.jar",
+      "-d",
+      "/private/tmp/fibra-host-api-evidence-20261015/model-consumer/classes",
+      "/private/tmp/fibra-host-api-evidence-20261015/model-consumer/ModelApiConsumer.java"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-evidence-20261015/model-consumer",
+    "started": "2026-10-15T00:51:23.730712+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "exit_code": 0,
+    "finished": "2026-10-15T00:51:24.482082+00:00",
+    "raw_command_sha256": "19cb2431bf2d81b5d29da49df246a4f0d385452cd41d72102a02871311a4e3ae",
+    "stdout.log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr.log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "real-model-public-zip-final": {
+    "argv": [
+      "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home/bin/java",
+      "-ea",
+      "-cp",
+      "/private/tmp/fibra-host-api-evidence-20261015/model-consumer/classes:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-api-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-artifact-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-bridge-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-cli-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-cli-api-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-config-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-core-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-engine-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-registry-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-runtime-java-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-runtime-node-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/fibra-tool-api-0.5.0-SNAPSHOT.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/itu-1.14.0.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/jackson-annotations-2.21.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/jackson-core-3.1.5.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/jackson-databind-3.1.5.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/jackson-dataformat-yaml-3.1.5.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/jline-4.4.3-jdk11.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/json-schema-validator-3.0.8.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/jspecify-1.0.0.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/picocli-4.7.7.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/reactive-streams-1.0.4.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/reactor-core-3.8.6.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/slf4j-api-2.0.18.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/slf4j-simple-2.0.18.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/lib/snakeyaml-engine-3.0.1.jar:/private/tmp/fibra-host-api-evidence-20261015/model-consumer/model-api.jar",
+      "ModelApiConsumer",
+      "/private/tmp/fibra-host-api-evidence-20261015/model-consumer"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-evidence-20261015/model-consumer",
+    "started": "2026-10-15T00:51:24.528352+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "exit_code": 0,
+    "finished": "2026-10-15T00:51:25.672847+00:00",
+    "raw_command_sha256": "169b5019cbe5a1776d3dfe9d420e513f457e2379db04cb35bd79bb192a281423",
+    "stdout.log_sha256": "519bd4a47dc34944b3ceb7de220d43950da1524c554d419a3a060b9985ef9c13",
+    "stderr.log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "release-reproducibility": {
+    "argv": [
+      "bash",
+      "scripts/verify-reproducible-release.sh"
+    ],
+    "cwd": "/private/tmp/fibra-host-api-20261015",
+    "started": "2026-10-15T00:50:46.116161+00:00",
+    "JAVA_HOME": "/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home",
+    "source_head": "5b2d2176fd195525d8b5274511d187c182bdfe28",
+    "exit_code": 0,
+    "finished": "2026-10-15T00:52:53.702419+00:00",
+    "raw_command_sha256": "bca45ef51299d81ebde1c66cdb93c3d2aa5bc311da562cb5171e0dea396e122a",
+    "stdout.log_sha256": "2b28deadad017a1858a86ac234c284666a6b01e0eb8498fdff63bbb999c4da50",
+    "stderr.log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

@@ -1,0 +1,2632 @@
+[
+  {
+    "path": "fibra-0.5.0-SNAPSHOT-bin.zip",
+    "bytes": 51815440,
+    "sha256": "7abac3af044e87dce072107b4795313c26c4065f266e38ce08308055e9200639"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/fibra-api-0.5.0-20261015.004211-2-javadoc.jar",
+    "bytes": 387430,
+    "sha256": "74da7390b09e217a0a1169972d2ded4fb436e118648ae65f597b95c49f1fa482"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/fibra-api-0.5.0-20261015.004211-2-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "c2f19c5fbce6fdd407653e1ac649136e1573fd7a9377d43a5a9983c6ce283ee2"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/fibra-api-0.5.0-20261015.004211-2-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "53dce69cb44aaa79e36fc39e7169b6783433ed0c26708c2576f9ee8bcc5ecb4b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/fibra-api-0.5.0-20261015.004211-2-sources.jar",
+    "bytes": 24318,
+    "sha256": "e3fe76f1053ea6a878ce328cc95e275698dcb58bcaa1bda8c1fd74c41bd25f2a"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/fibra-api-0.5.0-20261015.004211-2-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "0ae9d0a21cd0273427f0ee0e7be5566bb75328ac80e6a99909abd5ae16988c15"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/fibra-api-0.5.0-20261015.004211-2-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "e786ff8227fcdc60a32c9d997091d7efb92d862f01c7ab2a92a4718697a45583"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/fibra-api-0.5.0-20261015.004211-2.jar",
+    "bytes": 58414,
+    "sha256": "f5a711f7045b78670c3b9f68b0530518daba3a0b7cba8fe15fd3f36d8f0188b8"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/fibra-api-0.5.0-20261015.004211-2.jar.md5",
+    "bytes": 32,
+    "sha256": "cab37f26fa74be36175416a448cebcf8d3e011d775ba9771ad91e63104dedb79"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/fibra-api-0.5.0-20261015.004211-2.jar.sha1",
+    "bytes": 40,
+    "sha256": "a75c41d82656cc6daac2a9cace5ec231db38ae9a2651c0d5672be45a35687bb2"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/fibra-api-0.5.0-20261015.004211-2.pom",
+    "bytes": 1721,
+    "sha256": "5b250b7af9386468965893def4947ab989ddfa6d6a1bb7b5db174ad08b39df83"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/fibra-api-0.5.0-20261015.004211-2.pom.md5",
+    "bytes": 32,
+    "sha256": "2b7482f94d68504e94e6557acb64ec1f1bccac9aba43f76ee41c34188ed12536"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/fibra-api-0.5.0-20261015.004211-2.pom.sha1",
+    "bytes": 40,
+    "sha256": "c25cbe4651960a950901788913eab8d198791e2b3ff62960e6971f946a682379"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1198,
+    "sha256": "92a53060410c0e141ad464034ef4b334dae48dae8089153962d6a6baedefb340"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "3528300eee6cbf012ae9303786ffd55828d215925f31a8f758504d8764d39128"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "4fe7fe71e5379c8adf303e956418959c288e27b91169931b4df93a95124112cd"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-api/maven-metadata.xml",
+    "bytes": 280,
+    "sha256": "d058362d930eed38ea3a0cf457ad8f48f461bdc2512c93ca659c36a75db7e7e5"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-api/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "a7beaa97b73aec493caa5da9bb64b611bdb52e2f8fc70300924d36b69da164bf"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-api/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "eeedfebd772ecf835d709dd2c4e1f2dd937021e789f1b71c5c946c7cccbab84d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/fibra-artifact-0.5.0-20261015.004211-2-javadoc.jar",
+    "bytes": 205289,
+    "sha256": "cd665be4ad43712060cdfeb9a96996b667c22c542a7bcd6c18683217846e51aa"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/fibra-artifact-0.5.0-20261015.004211-2-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "b6e6e53654b690d4ce521f81125c092f2e4191f4f88c4d5ec2b4c6b92e224361"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/fibra-artifact-0.5.0-20261015.004211-2-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "34eceb8dbf9a809029b71971a0f6fb4dbd6cc7eadceddb17bbbff107168cf553"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/fibra-artifact-0.5.0-20261015.004211-2-sources.jar",
+    "bytes": 24280,
+    "sha256": "905e3699b6149186b54b2b99e9494f44916384af93cb3944683b0160a7eaf53a"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/fibra-artifact-0.5.0-20261015.004211-2-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "387ddb7d9c6583ffd358bf3cfd52dc80959bdc755de9749bc2154cf1439afcfb"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/fibra-artifact-0.5.0-20261015.004211-2-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "60c4be54ba84a9c193940ec72f16bad74799bb5d8e9bf505160d409b8d628b19"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/fibra-artifact-0.5.0-20261015.004211-2.jar",
+    "bytes": 67436,
+    "sha256": "705e7235f9acf2827b5b05b6943766c2dd713293d8843707f984487cff493b1e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/fibra-artifact-0.5.0-20261015.004211-2.jar.md5",
+    "bytes": 32,
+    "sha256": "a766a93ca0fd38222591444916042faffc03aaed3cae4fb71150beca0fa2b8bd"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/fibra-artifact-0.5.0-20261015.004211-2.jar.sha1",
+    "bytes": 40,
+    "sha256": "3b84b7987d185c27ed568046acc58896f35d86f42f0edc194a8aeac022829d24"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/fibra-artifact-0.5.0-20261015.004211-2.pom",
+    "bytes": 1755,
+    "sha256": "77383e2e1a6f92c8d2736b05906e4e3997db83639a240df4c3fe035c353b516b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/fibra-artifact-0.5.0-20261015.004211-2.pom.md5",
+    "bytes": 32,
+    "sha256": "15d72d704a93c77137321b6e0120c14c2eb695a71447e7a4ea233f207064db4e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/fibra-artifact-0.5.0-20261015.004211-2.pom.sha1",
+    "bytes": 40,
+    "sha256": "7ee0970e83b9a6cb34c70cc3ac9fd852f0038c1ed14e9b1bc31e7ed3c224195d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1203,
+    "sha256": "c7aaa6f43f2ef32eb442bac216e3f0bab3d575f9fb183486f8b3b33268c2781c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "446204045a074054b95de008c8ba122e7666bbd22b8e008489523479f1ec256d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "bc47936ae40964df8d3dbd8a69ec9f84a80f0b00b5553bfea51a77b7ae66811c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-artifact/maven-metadata.xml",
+    "bytes": 285,
+    "sha256": "d53d1bded4e5d4f183785b4002147c88788b1ffe23d65f05fb50eafbaca36d1b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-artifact/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "b05fc4e3b791c1e852bc6fc13afeec1efb0faa826ec408ac11b91c90fb2f8932"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-artifact/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "66be55892da33a65a0b2647f480ac19ee96ca2051d726099d06a33124326b4f9"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bom/0.5.0-SNAPSHOT/fibra-bom-0.5.0-20261015.004211-2.pom",
+    "bytes": 9628,
+    "sha256": "be6d517fd7fde683afa6a345ece50799e1af0bf6998639eb34d0d0af9125aa10"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bom/0.5.0-SNAPSHOT/fibra-bom-0.5.0-20261015.004211-2.pom.md5",
+    "bytes": 32,
+    "sha256": "1edce7975c99801dcc68d322b9c111e87c6f794ea8a8a386e5a2b4db7fa0b303"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bom/0.5.0-SNAPSHOT/fibra-bom-0.5.0-20261015.004211-2.pom.sha1",
+    "bytes": 40,
+    "sha256": "b662092e838c5c47138752cf106390caa213336de735ec5fb4cd85a0be85b42e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bom/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 597,
+    "sha256": "bf976fce3b7dd9895298077ad8cbc59b3bf0630f66aff4129422a0b151a3d7e1"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bom/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "4a8e3ac4df3cb4a16f2a67464979fafaaaf915459253148068bec23efe28e56f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bom/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "42f1532282bd4351194daab927359d85822a1173bc8f772eea071362eabdc779"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bom/maven-metadata.xml",
+    "bytes": 280,
+    "sha256": "04dc580c6daaaaaee1fa128e890292c005fc34edd552bd1b9a9f7b661516a60b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bom/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "34bceb640a8315c5e77854a950b3a932f06c88e6db387502b6edb5648dae8c8c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bom/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "4aff4184abe9eb23730e5a7f7493d6f5c6434968e02065d5e47aae6c71b902f3"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/fibra-bridge-0.5.0-20261015.004211-2-javadoc.jar",
+    "bytes": 193898,
+    "sha256": "4d755e4d7f4be55cb4059fae15b1182239e88dfa4d3c04fdb12236f73596d457"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/fibra-bridge-0.5.0-20261015.004211-2-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "8269704e42ccb01789119527cda9ff57c462bd0209c1518886a29b6f51b30f5f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/fibra-bridge-0.5.0-20261015.004211-2-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "de1f69850469e6c7554df350d1a50927eee945287126f740f3c6b5df0fa742dd"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/fibra-bridge-0.5.0-20261015.004211-2-sources.jar",
+    "bytes": 15141,
+    "sha256": "b0052443e1f6ac9a690a21b2d0fdbdc32e2ca4ff87f245225d139e690d859bc3"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/fibra-bridge-0.5.0-20261015.004211-2-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "6b87d41d5b663dbcf1594b94b8d5a23783f74d21b94d02231aaae09de0cfb880"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/fibra-bridge-0.5.0-20261015.004211-2-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "b07d1949a342a46fc03e4eb1e9f68f2f9db4a17d91c80fe42a0610ef94adc5be"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/fibra-bridge-0.5.0-20261015.004211-2.jar",
+    "bytes": 41494,
+    "sha256": "33b7ccc639c3a547a36c169e95a4de37714495f2e740ed1aa3303e654de7cb82"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/fibra-bridge-0.5.0-20261015.004211-2.jar.md5",
+    "bytes": 32,
+    "sha256": "5ecd13155cc073072b426ba6f2e1528ffe78f3a8533b89b72f6a5635c9fb654b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/fibra-bridge-0.5.0-20261015.004211-2.jar.sha1",
+    "bytes": 40,
+    "sha256": "b2328edeb5ebb9c0cc02fe8144a76e43ca23e831c1800adb3b511c1d235d1c39"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/fibra-bridge-0.5.0-20261015.004211-2.pom",
+    "bytes": 1922,
+    "sha256": "fe567b0191d0528ded683cfd23dd4f2ea0e8d535b55c2f75f35ab4b7db3c06bf"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/fibra-bridge-0.5.0-20261015.004211-2.pom.md5",
+    "bytes": 32,
+    "sha256": "7eea8f66e1d429ef4ac3f4767cb6ae0f31081bb90002dca96d6232f4acfa5960"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/fibra-bridge-0.5.0-20261015.004211-2.pom.sha1",
+    "bytes": 40,
+    "sha256": "a6532d9a60bdd09d73fabda368bde613cc4308649019e6e412affaa2d573add9"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1201,
+    "sha256": "e15dc3705a08effef7731b4dd89833009208c8cd662bf7ab11b1fdcae9442ffd"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "1a57cbf2a903814bd30a4c576881548249af6a424ec50a7a7aed2931f26134f7"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "05c5f2a036e87e8143e6acc7af4750bc9837bff23bdbe9f6a03dad50a791e80f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bridge/maven-metadata.xml",
+    "bytes": 283,
+    "sha256": "ba3de10f2bd479fe32bfe91f97fdad726c41d268abdd0a179f24395ce163967b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bridge/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "f5c87b6d96394ad083145487c04bc35671d15c7a19f10ab372c2609ab21e41f8"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-bridge/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "94533921492cf7b05f1dc7b1267f41bbf3ebcf2516ff0f00a95af3271aa0f153"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli/0.5.0-SNAPSHOT/fibra-cli-0.5.0-20261015.004211-1-javadoc.jar",
+    "bytes": 108047,
+    "sha256": "ae6d37dc5d172cd22ad23a6e54aef3b0b8d1bf4450a767df1663e4f6b1f83adc"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli/0.5.0-SNAPSHOT/fibra-cli-0.5.0-20261015.004211-1-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "934357e0892f7b2ece3f58d81910d4d67cea6ccfaeb71c33becedff13747a9e8"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli/0.5.0-SNAPSHOT/fibra-cli-0.5.0-20261015.004211-1-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "b7ee7ea385ff9dee5468d43faf52a9d74c3cb977ee42b80e3d8377e98738d93f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli/0.5.0-SNAPSHOT/fibra-cli-0.5.0-20261015.004211-1-sources.jar",
+    "bytes": 44020,
+    "sha256": "d3935293c0c02dc4b8c666019ea66d3dbd3924e18cf456cb06d2aced4fa35f8d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli/0.5.0-SNAPSHOT/fibra-cli-0.5.0-20261015.004211-1-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "04866053746224049ff8333ef43ec6ad2ebcb95664ce336f08b8b8a9eccfbd89"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli/0.5.0-SNAPSHOT/fibra-cli-0.5.0-20261015.004211-1-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "4eda8764d4e16970822be12ad3cad768c9c514bc35b8f450a439f042aa84f358"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli/0.5.0-SNAPSHOT/fibra-cli-0.5.0-20261015.004211-1.jar",
+    "bytes": 143735,
+    "sha256": "5fe296d3a1aae67098163a4d708edffcaaed14063d6707d4dc3f3bedc6f94827"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli/0.5.0-SNAPSHOT/fibra-cli-0.5.0-20261015.004211-1.jar.md5",
+    "bytes": 32,
+    "sha256": "d071b27fc49901cf7cd4bbf445b01ef30f67444f9cd3f878cdba1e907bebaf74"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli/0.5.0-SNAPSHOT/fibra-cli-0.5.0-20261015.004211-1.jar.sha1",
+    "bytes": 40,
+    "sha256": "6e8cd31dec6d75f4beecdb1b6d448bd70bf8f9f68f349cbded896c62eaab2398"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli/0.5.0-SNAPSHOT/fibra-cli-0.5.0-20261015.004211-1.pom",
+    "bytes": 3384,
+    "sha256": "06f42c7e1eb602ae688f238674db704039fee1a2b1c060d10c248cd8fb4651b9"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli/0.5.0-SNAPSHOT/fibra-cli-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "3f7970288a593822119963b2a19f9f0ad403238e1b9e21ec4e92ec7aa6a0b20f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli/0.5.0-SNAPSHOT/fibra-cli-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "4e50bc84413c344ace07d4ee417f90f69778f883d1753393d000be2b8b40c013"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1198,
+    "sha256": "090910d5b7e0d6771c9a353851589c589eb128d2f9ab872c4c09037a1c263842"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "8ede85f176305b32951611903f3b711225d4348f3bbaaba283a6b903f00585a2"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "4e6085b9fd3f9d38ff20704c9f91ed7c4cf4804fd929f20b3bae8132a5e65ecd"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli/maven-metadata.xml",
+    "bytes": 280,
+    "sha256": "3087440f6cab417cd2866cfb98e7cf3b21777c49dbcc60a1870f2cc13878ab2f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "8664642c18a91a55dd943f15488ffe8a98af4376e23404511340d0a8807de724"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "ad62aaf49f5b59efc8ffb706fb0efbfaa7aa99ddeae95de20ebbef55ecfd237e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli-api/0.5.0-SNAPSHOT/fibra-cli-api-0.5.0-20261015.004211-1-javadoc.jar",
+    "bytes": 272840,
+    "sha256": "17baaab0aba84e33326e5ac6179fc1135d21d65f12c7d06e8df3581d0c23761e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli-api/0.5.0-SNAPSHOT/fibra-cli-api-0.5.0-20261015.004211-1-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "a6f727a8d75558442c462357d2ff1da085e2171ca41b7bd507226fbd095a21bd"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli-api/0.5.0-SNAPSHOT/fibra-cli-api-0.5.0-20261015.004211-1-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "a1026bcb13db6bb3e683393096642a3a286dcd63ea6026f416d67c0f937e6625"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli-api/0.5.0-SNAPSHOT/fibra-cli-api-0.5.0-20261015.004211-1-sources.jar",
+    "bytes": 16989,
+    "sha256": "0105f365a3999af576c505a2e3f5ff7e560d45d5a95868aafc47ea7b6f0290f7"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli-api/0.5.0-SNAPSHOT/fibra-cli-api-0.5.0-20261015.004211-1-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "1d08eb3ce150583d3f001ff90e1da108c8289c7ca3567add8134caff95968968"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli-api/0.5.0-SNAPSHOT/fibra-cli-api-0.5.0-20261015.004211-1-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "41f59605b2ae7a2ff084bb2bb10e0a43669b49cda18a03a68f07c620ae184978"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli-api/0.5.0-SNAPSHOT/fibra-cli-api-0.5.0-20261015.004211-1.jar",
+    "bytes": 38512,
+    "sha256": "c33a540fb62ea285f255d648eb1622e45f5d54b6054991f8d04330402b702af5"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli-api/0.5.0-SNAPSHOT/fibra-cli-api-0.5.0-20261015.004211-1.jar.md5",
+    "bytes": 32,
+    "sha256": "b162831e8deee26448920f3086a74590cc8d73c5708a2895289c3e4aaf23392c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli-api/0.5.0-SNAPSHOT/fibra-cli-api-0.5.0-20261015.004211-1.jar.sha1",
+    "bytes": 40,
+    "sha256": "7f9c53a8839ea3d195978cfc523e196bc8182f732134893914249a00d28fb1e6"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli-api/0.5.0-SNAPSHOT/fibra-cli-api-0.5.0-20261015.004211-1.pom",
+    "bytes": 1930,
+    "sha256": "0de219a7cb9a636961633421cc35cb56f5695e9860a707b308cc982fdb474b59"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli-api/0.5.0-SNAPSHOT/fibra-cli-api-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "088824e60942df2b62a849720a15aa2e42834f5d7e7938467e57f438161c531f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli-api/0.5.0-SNAPSHOT/fibra-cli-api-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "f55654d37ad040a18aa44b54cb59f705820aa65892e6d564b028021f8935d601"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli-api/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1202,
+    "sha256": "e33e40215482a76ea82ec63f0486d36750a92feb290616dd9598e438ab423ca1"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli-api/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "079732b6af196dc4f7273a21364b245534700b047c1ada92a438f69643fdf07e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli-api/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "f099bbaa1455f719e748f80cef643f7640011275a4ebf83da9c8b987d1a9a238"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli-api/maven-metadata.xml",
+    "bytes": 284,
+    "sha256": "277ee2d656686c1e979fd4689fa074356b335e41e51e643c257e6f4ac69910e0"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli-api/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "e9242bfb8a17b002f4758e59e7cd92371e17b247e141cd86f0222bff74581105"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-cli-api/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "2589a79ffeaa233e6bb806bffc82779eea91291294a180b49e0df8b6b1c7dd43"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/fibra-client-protocol-0.5.0-20261015.004211-1-javadoc.jar",
+    "bytes": 282534,
+    "sha256": "e96f941f217a106ac2f45a03f82a598b30dae0919adaa85f3452ec71474bce2c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/fibra-client-protocol-0.5.0-20261015.004211-1-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "3d079874516477f4decffb89d2e4c9656ee970e096cd48bca8eb703e3ffb1d4c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/fibra-client-protocol-0.5.0-20261015.004211-1-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "deb3ecb42796508b7d530b74ec7ecc79683d6482679e541a59c548cd1bf38bf4"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/fibra-client-protocol-0.5.0-20261015.004211-1-sources.jar",
+    "bytes": 15461,
+    "sha256": "6d5baaa8bfdfcd6f1c3dd3e883e86f23af5941736fd552940a25c1bfab84949c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/fibra-client-protocol-0.5.0-20261015.004211-1-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "dbed61835a7cf9cb90a4e326f59ddd884a71b882ea23d9ca565c287cbe901fbf"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/fibra-client-protocol-0.5.0-20261015.004211-1-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "1ebe937556d5266aaf46c9dbdbd0c17d26fd8d9542a54db87ea9b1f13602039f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/fibra-client-protocol-0.5.0-20261015.004211-1.jar",
+    "bytes": 65970,
+    "sha256": "dc0292ac593e181e57c490db5cf741f35cf44eed86c16431196e5e83560844cb"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/fibra-client-protocol-0.5.0-20261015.004211-1.jar.md5",
+    "bytes": 32,
+    "sha256": "6114c27d52f8a186ede97deb3cae5696876f0e46da9c98b3a87d55521b4a0a43"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/fibra-client-protocol-0.5.0-20261015.004211-1.jar.sha1",
+    "bytes": 40,
+    "sha256": "fa6d30f26eb76b3327c029c7bf80f19b3a4dd60ee52d22cd632f8f69ece9c34e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/fibra-client-protocol-0.5.0-20261015.004211-1.pom",
+    "bytes": 1921,
+    "sha256": "515d95a3810aac59d883e66ee1a4673183e3cc315bd766508e8a93641f4567d6"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/fibra-client-protocol-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "7bc297453ea04d3fa6db5f6305feccb7010c39f2aa572425f5773ae8c1ee60cb"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/fibra-client-protocol-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "7ed54ba2c260825789332975b091592f669933c1c35098ae49067eed4bdd418f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1210,
+    "sha256": "30e3892821dc09495e93bb7b7a33793e2b2d1a942d4b56a7ef73240176d1e5e4"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "5a5703c6b26934b8f4ceb53934251630356db43961607e7541edd91681a18067"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "312e48fcf5c76cdbd248ec6ce3d992a53d4602cec3dae95d0109be6f49b8c2ac"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-client-protocol/maven-metadata.xml",
+    "bytes": 292,
+    "sha256": "839a32ef611a82246f8522ef63456ae4897e65d0d6dd9247a0a498be80a6541b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-client-protocol/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "6d2d21d219fcef559af24e7fcb109cf55bc01c4fc592e6aa89eadbad3dfaeb6f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-client-protocol/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "7c23096544d544987dc9e404051a141138e21ee919734370759156e90432588a"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/fibra-config-0.5.0-20261015.004211-2-javadoc.jar",
+    "bytes": 307425,
+    "sha256": "3943ca78c4d4787b653e75698bf566bb6fe0996dfd2f52b2301271499343aa07"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/fibra-config-0.5.0-20261015.004211-2-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "f9ee8f23b1549722e5ca5873ba3a80b6608b8d1e1e066a5edfa74c4bcab0cc8b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/fibra-config-0.5.0-20261015.004211-2-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "61c1a33063d3ca60b18c4d98fd8ec5c40585a2ab0ce63277af7fe690f269150d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/fibra-config-0.5.0-20261015.004211-2-sources.jar",
+    "bytes": 48058,
+    "sha256": "9a3a543da68b822bfd4e2fd4db9f14ca2af7837c28b19b05b666aa2c7b0f6f4b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/fibra-config-0.5.0-20261015.004211-2-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "eb2a407364f34e9978d65d9154546a814a04b8a1be4f241f4b91db9a0b498551"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/fibra-config-0.5.0-20261015.004211-2-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "25e414627e685edd5fa16bded7018f3fb575da0d16565fb2a782d23a744c7899"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/fibra-config-0.5.0-20261015.004211-2.jar",
+    "bytes": 135742,
+    "sha256": "0e617c9f148c124ca3fc63268d3688115728367b517778593838aecfd379aab0"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/fibra-config-0.5.0-20261015.004211-2.jar.md5",
+    "bytes": 32,
+    "sha256": "6609a6ebd579bf520beac8387ca606270e7f14a3c1bb8f534217a36fb5026bd1"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/fibra-config-0.5.0-20261015.004211-2.jar.sha1",
+    "bytes": 40,
+    "sha256": "7dbe7a19a540331bba990daa8ae026c1b044b637a7596eb8d2fb31eab25424be"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/fibra-config-0.5.0-20261015.004211-2.pom",
+    "bytes": 2503,
+    "sha256": "bc1deda5f6e281d3eead4c6fef668ac57bb2679540b91b17c17f1a04e10dd5ad"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/fibra-config-0.5.0-20261015.004211-2.pom.md5",
+    "bytes": 32,
+    "sha256": "47e4f040320d7a0867f4d5472c8473441694341631c44dc5966e541f3bcbbc54"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/fibra-config-0.5.0-20261015.004211-2.pom.sha1",
+    "bytes": 40,
+    "sha256": "e208410971e99fd35fa3a6d0d52481d6549fcd2eb471008fbe519cabbe8d2284"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1201,
+    "sha256": "e5c6cf1dfd4574439b63cd06b53eb0972b6a9eaa517dc84a5c43a22fdc2d4fd6"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "3fa96a17e5701f64f1f8d5d584113d4ea673e7a63f0b3ed7378b7494050ba72d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "4852548fe7145d486cb853112425717b6803f993f8c95d85b16103ba3069b0df"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-config/maven-metadata.xml",
+    "bytes": 283,
+    "sha256": "0601fb81a675cd58c00d3496c17c5f39bb6f1316eb141428ded618ea8845f866"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-config/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "c0e05a6d07355f0cf3d73f906c67d939e80c4fbca8494775203248579859762d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-config/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "3e767a6b17ce8bca39c316749d1a1ad5e4b7928093b294c5a0989b92d9b6d9a0"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/fibra-core-0.5.0-20261015.004211-2-javadoc.jar",
+    "bytes": 186296,
+    "sha256": "e62cdbaa9d24b55a46564d784eeca66204134d6c9661d04f6a27d3567f15a032"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/fibra-core-0.5.0-20261015.004211-2-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "7c8eb8d294d308412b3b5ced026721af60049b8998a5122883cadcce1edeed4d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/fibra-core-0.5.0-20261015.004211-2-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "97a72a3f452824a592c6991f9f326de40ae7aebef59576f1f8dd105764ddaf8e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/fibra-core-0.5.0-20261015.004211-2-sources.jar",
+    "bytes": 39578,
+    "sha256": "b1092bfb9079505df12425e2d7ff3a311368be17566bc6629e857b4963811d0c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/fibra-core-0.5.0-20261015.004211-2-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "64e5dff9314d78161a56d96a7d7578d52eaa73ede0c4a6bb12dad9ddc085f373"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/fibra-core-0.5.0-20261015.004211-2-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "8f917632fa224c94ddb0cf2e6d7e842c2835abdeaff346b418bdba385df4d5ac"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/fibra-core-0.5.0-20261015.004211-2.jar",
+    "bytes": 126392,
+    "sha256": "030e9457ff674aa054244ffe47c43c53493a99777becf4d91a3be219e38155a0"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/fibra-core-0.5.0-20261015.004211-2.jar.md5",
+    "bytes": 32,
+    "sha256": "69d1ff95bcc5904982e8a64ac3c9a0eb08336f41aaff75dd1e7ced23dfc2e0ca"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/fibra-core-0.5.0-20261015.004211-2.jar.sha1",
+    "bytes": 40,
+    "sha256": "a48d00f4c45c027eb3bf3daf6eb7fcb58452403239b7cc215147dc3b5e496f07"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/fibra-core-0.5.0-20261015.004211-2.pom",
+    "bytes": 2092,
+    "sha256": "4e19223f68bbbdd822a748aa33df69ef22b8d7553b164343de38c20b48a3c0a5"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/fibra-core-0.5.0-20261015.004211-2.pom.md5",
+    "bytes": 32,
+    "sha256": "7e2a542be28d084005398fa82df2512983da495a75544ccbb3644296c8a3b98e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/fibra-core-0.5.0-20261015.004211-2.pom.sha1",
+    "bytes": 40,
+    "sha256": "c398141e3bd5e4e971eba8ae9e157fa63e78b8d2244465922416b316fcbf898c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1199,
+    "sha256": "9b03aae08867e396f9824d5b341c84201f0a8c2bf889a6f0526cbe0fa887e1c5"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "4ee9a56467ac97f30d76a462f66493034f5acb5b7bcfa29ad691d8436fb0eabf"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "16a9700773f38a545ce1a207bcb2a514605cbd6fecbfab47a1a7ecea26be50c4"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-core/maven-metadata.xml",
+    "bytes": 281,
+    "sha256": "b3c5ffca9241c462c48afd92d809571d374424a4d7ed14485cea958e5968b546"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-core/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "1ec1f191dd7807119c931f3f4235f944845703c061cbc8c7eb7425a607fa6b74"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-core/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "7e7b8b4dfc6905565d201d6a957686a97b89bb77c8c66b9888ccf707b554a7d4"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-distribution/0.5.0-SNAPSHOT/fibra-distribution-0.5.0-20261015.004211-1-bin.zip",
+    "bytes": 51815440,
+    "sha256": "7abac3af044e87dce072107b4795313c26c4065f266e38ce08308055e9200639"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-distribution/0.5.0-SNAPSHOT/fibra-distribution-0.5.0-20261015.004211-1-bin.zip.md5",
+    "bytes": 32,
+    "sha256": "1967e95a17db51c67d3fff9cd0b67467901144251c64cb544cf9f2b18b1fe6a4"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-distribution/0.5.0-SNAPSHOT/fibra-distribution-0.5.0-20261015.004211-1-bin.zip.sha1",
+    "bytes": 40,
+    "sha256": "ee36816cbe6065f0e19716b630f1a28c3a67ea08fca101809928c3bacef01208"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-distribution/0.5.0-SNAPSHOT/fibra-distribution-0.5.0-20261015.004211-1.pom",
+    "bytes": 4062,
+    "sha256": "2e7755c1cae8a6e091a96a9df6418df7edea0fa19b4b0e921b6fafc0ae9b0466"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-distribution/0.5.0-SNAPSHOT/fibra-distribution-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "6688dbea9258b0951379d215fb1afa180da13bc219e8666a5b846048b22b977a"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-distribution/0.5.0-SNAPSHOT/fibra-distribution-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "3f5123d0318024284967119aa76b18a4d6132ce3ef714db2866fa7ba896d432d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-distribution/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 816,
+    "sha256": "3dafbd90556ca39e6d561e3f99645e61897f742f0b0f667e93341f45f4c57094"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-distribution/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "c004c4ee619c5a68a39af3049bf260eed32d5021d1cfa59ddf157796eaa0d0dd"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-distribution/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "9ae6e7fec550925890cab4792a28cc61e4e977f024161ec018d2cdcfab859e17"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-distribution/maven-metadata.xml",
+    "bytes": 289,
+    "sha256": "79712c776e7421a6298811d49368f2f05c4b2f1abb530567c73315a1ecd19498"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-distribution/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "32d1bd19ce0c5aee01605b457191664b3872dc9a96805ae8ad6305ab81b41356"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-distribution/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "bf7f853d5aaf565e27b96c8ac93524f13cd07e88472c41e0e7089ee91c58e2c9"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/fibra-engine-0.5.0-20261015.004211-2-javadoc.jar",
+    "bytes": 713595,
+    "sha256": "6d6f64a5110746237eea705094cb873e77e0460b7280a6b6a4af2c77c33a67f9"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/fibra-engine-0.5.0-20261015.004211-2-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "23768325de70160439d44bb9565de0f0d546e03aa9a9210c216892265661c6ea"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/fibra-engine-0.5.0-20261015.004211-2-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "617382e81ba45c76d09800b5a882ddc1bde5eff71dc5f299a3876df91cb08ce1"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/fibra-engine-0.5.0-20261015.004211-2-sources.jar",
+    "bytes": 88206,
+    "sha256": "4510dcd168ea712a585ae108aed898ece943be9f7445e5e0c39c026fc5d517be"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/fibra-engine-0.5.0-20261015.004211-2-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "5ea8c3c7b365e09631ff12074dd7ab5df1b238a905748ceacb2e94fae3917e9c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/fibra-engine-0.5.0-20261015.004211-2-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "b66ecbde6daf1014baa81c9a61039f4250e7cc73ef9615ccb8f2de63f21a5b59"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/fibra-engine-0.5.0-20261015.004211-2.jar",
+    "bytes": 262522,
+    "sha256": "eb45f515cbbb59852496278979c069197009eba0e29d60f277895b2293fdc219"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/fibra-engine-0.5.0-20261015.004211-2.jar.md5",
+    "bytes": 32,
+    "sha256": "7f281bc208ba79dcbfb50f1fe1f30b791d06a69a8a978b6cfa731d82efbece5c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/fibra-engine-0.5.0-20261015.004211-2.jar.sha1",
+    "bytes": 40,
+    "sha256": "9383e341ae0ff9b9f1d9669ed7ce42fec988928bea41e59da01ce639e1f52211"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/fibra-engine-0.5.0-20261015.004211-2.pom",
+    "bytes": 2851,
+    "sha256": "0a4c0c1c8443b7beb61edb5b5ca60f5a549e38312d61c0f05f9202f57675f6a2"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/fibra-engine-0.5.0-20261015.004211-2.pom.md5",
+    "bytes": 32,
+    "sha256": "76fd473ba03d2b899da9836417c82bd40cee7a3365c3ddfd5623facd819aeadb"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/fibra-engine-0.5.0-20261015.004211-2.pom.sha1",
+    "bytes": 40,
+    "sha256": "602aaebd0dbb2aaf85cb97a9a51a3e7cc1c9c2233a26c5bf9308234960bb77f0"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1201,
+    "sha256": "d758b5c4db53a92952f320ef7cbb258623864302264aaf36e8cc4e3027e58e78"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "a1eb7cadc24e6158a2826cb07fe6920505f092b5c7c933d913c5beda4c03f4fe"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "4d41e0ab30eb8d1f0af4f2167e9891dbe50576e006e3c2328a8696ea58219f8b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-engine/maven-metadata.xml",
+    "bytes": 283,
+    "sha256": "59a34ebb4858dfc0a4bb4024e4dfa055172d7ccc4d28652f83a464e4ce4bc3c6"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-engine/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "d85c66ada4a40e002ceb2de381b0c17ef5926244e88ef7d8e37a4b2e0d28ae23"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-engine/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "c0741887fe724b072fb3f03053775bbe89616ff0d3976ee72d61d6ff5d2fad9e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs/0.5.0-SNAPSHOT/fibra-fs-0.5.0-20261015.004211-1-javadoc.jar",
+    "bytes": 189590,
+    "sha256": "7a25bbb5ddc0dda3e76320f3e5b0623ac0f52fbfe6aa06f66b229d683ff0dc1e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs/0.5.0-SNAPSHOT/fibra-fs-0.5.0-20261015.004211-1-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "5c27222d7ffdf067c4bbb8243d334b1010f5252e2f608ee12254189da7fe3da4"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs/0.5.0-SNAPSHOT/fibra-fs-0.5.0-20261015.004211-1-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "e66edb3f934113ef5cfb06d4ce46d282bd6952ee293cdc04c7764b479b3c27b4"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs/0.5.0-SNAPSHOT/fibra-fs-0.5.0-20261015.004211-1-sources.jar",
+    "bytes": 7599,
+    "sha256": "2de22382d98a6d5c144cdd2720679d064125dbd9aed46d4ac62d5bdd2070e07f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs/0.5.0-SNAPSHOT/fibra-fs-0.5.0-20261015.004211-1-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "d68964ed05d70467a3c8f13b0a0824a56bceb53d0c5e4f1f668a27b4c3696a8c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs/0.5.0-SNAPSHOT/fibra-fs-0.5.0-20261015.004211-1-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "a0d7d5a58e0b7babc38a930ea883df5216d4b06ce23755216ca443a2f256aef2"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs/0.5.0-SNAPSHOT/fibra-fs-0.5.0-20261015.004211-1.jar",
+    "bytes": 25129,
+    "sha256": "0d1828792f9c35dbdeb6720f9ad2af40f1c2eb619bc9f1c64429d25c629dfcea"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs/0.5.0-SNAPSHOT/fibra-fs-0.5.0-20261015.004211-1.jar.md5",
+    "bytes": 32,
+    "sha256": "bc2aeccb1be1f11c2538af01a2ffa62cb16efbbc30e2b494f4ca1eb2e3c9a42a"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs/0.5.0-SNAPSHOT/fibra-fs-0.5.0-20261015.004211-1.jar.sha1",
+    "bytes": 40,
+    "sha256": "acc76a4d7a0f95175398aee7f462fa4b147d0c50be0d7db58f7fb4917fe74f22"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs/0.5.0-SNAPSHOT/fibra-fs-0.5.0-20261015.004211-1.pom",
+    "bytes": 1720,
+    "sha256": "456c176edba34c75c9374565ba384b5bf6ffecd938a4b7e007c893a6a77d4534"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs/0.5.0-SNAPSHOT/fibra-fs-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "3ca217b022c1949d52a914f88c78524bb76d8a0ac4902c5be8dde65dfef7569a"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs/0.5.0-SNAPSHOT/fibra-fs-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "62e585370562ea1312c50497b7094f6cac1c959af4882a96d2f7cd24cd29d195"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1197,
+    "sha256": "9f9f0f53b0677d2f8a4d9cc172172d86d7a5b606eaa5ff21df80aa6811d1765e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "4ef4a65c8995d7a4227cb58cacb3fa592581060d931685807b37d227750283b0"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "d5892bc8c9b8ec6c2537e5d093c7b123a638919596862827876563844cf68ef1"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs/maven-metadata.xml",
+    "bytes": 279,
+    "sha256": "5363fb181621431e465b973921897a25982cb7cbdede5006397b9e366b663d9b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "bc541ed3d84f7ad04fd8afbd261e33ba478907cfd35e2fde7e670e838e68beec"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "155b24a64996169ce7adfab1bbaf5d535d6861ada87cc7f6795affabbd2a97d6"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs-local/0.5.0-SNAPSHOT/fibra-fs-local-0.5.0-20261015.004211-1-javadoc.jar",
+    "bytes": 108637,
+    "sha256": "9886d97dde90217d7b4b23a06410a03262905017b6009cc8bede2a986db8b19f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs-local/0.5.0-SNAPSHOT/fibra-fs-local-0.5.0-20261015.004211-1-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "71c60e9b5d4f663856443fc880a34f209c4d71126dabc607fbec18672a65f03e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs-local/0.5.0-SNAPSHOT/fibra-fs-local-0.5.0-20261015.004211-1-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "3604ea8b1ba93239e27bfd092dd8e7a3d385bfaa9992e967ae6b329d48e89d32"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs-local/0.5.0-SNAPSHOT/fibra-fs-local-0.5.0-20261015.004211-1-sources.jar",
+    "bytes": 14214,
+    "sha256": "df5d950b0bb7a3ebff7cbc22354871b68eeea4afdc150b064cee123f80b57f2e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs-local/0.5.0-SNAPSHOT/fibra-fs-local-0.5.0-20261015.004211-1-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "f1266876f72074e5f7bd157c8a5f380f4b1c9a6ac902c066354a1c65b2bb21a8"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs-local/0.5.0-SNAPSHOT/fibra-fs-local-0.5.0-20261015.004211-1-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "260f2090d435c21c32e3066074f76f3658b68a30c68757135d6f9873bb80ee05"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs-local/0.5.0-SNAPSHOT/fibra-fs-local-0.5.0-20261015.004211-1.jar",
+    "bytes": 2033949,
+    "sha256": "f56f69842d2f11942bb05cac8c6480d5100b2220d58d8f87bde97174c9573dbe"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs-local/0.5.0-SNAPSHOT/fibra-fs-local-0.5.0-20261015.004211-1.jar.md5",
+    "bytes": 32,
+    "sha256": "28ad84cd7aa4bc67274f22d8f89c29a803ad0f25f49297f25a1947f9ab8f0d73"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs-local/0.5.0-SNAPSHOT/fibra-fs-local-0.5.0-20261015.004211-1.jar.sha1",
+    "bytes": 40,
+    "sha256": "c7f93a1d4cfaf4d388f9afe801ffa788d680b49a8a7e89ea3e7acbf7785f2274"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs-local/0.5.0-SNAPSHOT/fibra-fs-local-0.5.0-20261015.004211-1.pom",
+    "bytes": 2333,
+    "sha256": "22b361db1cf91dcd51801266649e9172943c7e3f388c419fd4f67d249ab3c444"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs-local/0.5.0-SNAPSHOT/fibra-fs-local-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "d40304df85d24592b658bae63727320551fc485e1beda1663948e5010cefbac7"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs-local/0.5.0-SNAPSHOT/fibra-fs-local-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "122acee81c3a9397141a07ce22a57be98b18c958d7cab25212238cfccc474433"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs-local/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1203,
+    "sha256": "18f18ab7befd6ab4d0c1faf2a81b7d3d2ca343e4637f15897836e2e856e0925c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs-local/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "51aed9f6184d63741eaf60a1ae98716c2b58cec4d54a772cdb11ba1032609ef0"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs-local/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "04814fc22c528f8ac479284363e4d7d5f0910ae2283126f6f352e7da886633fa"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs-local/maven-metadata.xml",
+    "bytes": 285,
+    "sha256": "6eb4da6811a427bd37f7e6eafb60757782052dad7a12d530b51443f69acad583"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs-local/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "fe30f7969fd6c82465d94ff4c6dbda2aaf03aa97902b0e7379df595b3e248261"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-fs-local/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "c6d6dcdfd430d2678a892b8ed383c56392af5a7a9854c63ed823fbbc29d32e72"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-plugin-archetype/0.5.0-SNAPSHOT/fibra-plugin-archetype-0.5.0-20261015.004211-1-javadoc.jar",
+    "bytes": 1894,
+    "sha256": "0c675c7ed6820c98b683fc4899cbbaa074b26b0a0758544b1080a8bf25f0623c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-plugin-archetype/0.5.0-SNAPSHOT/fibra-plugin-archetype-0.5.0-20261015.004211-1-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "785b3b871f755cfe30a24a90298909e856361c711ea58ae78195187c5739ab27"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-plugin-archetype/0.5.0-SNAPSHOT/fibra-plugin-archetype-0.5.0-20261015.004211-1-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "7bd920e2e98082cea5c3dfbe9905ac5a264861b91cd989d146104b1c3e00aab3"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-plugin-archetype/0.5.0-SNAPSHOT/fibra-plugin-archetype-0.5.0-20261015.004211-1-sources.jar",
+    "bytes": 9201,
+    "sha256": "ce1326ae452f7dc7877044d85a3f315a8f1647cb2a2e234666bfc29a5f05eb92"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-plugin-archetype/0.5.0-SNAPSHOT/fibra-plugin-archetype-0.5.0-20261015.004211-1-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "10157b57763e24c6c85166fd317524712940036ab32b2f34f8e2587477f8ad57"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-plugin-archetype/0.5.0-SNAPSHOT/fibra-plugin-archetype-0.5.0-20261015.004211-1-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "26654992cdf485c538b7badbc860995923460c5ec0645557e5237979be67e8bf"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-plugin-archetype/0.5.0-SNAPSHOT/fibra-plugin-archetype-0.5.0-20261015.004211-1.jar",
+    "bytes": 15441,
+    "sha256": "a0e2fe696b519f87fc27a20de715a1df38bbe95aefa65720f408b469569a75ac"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-plugin-archetype/0.5.0-SNAPSHOT/fibra-plugin-archetype-0.5.0-20261015.004211-1.jar.md5",
+    "bytes": 32,
+    "sha256": "302848841ad32e83782f3871f4874456ab0f8351a6e5fff43080b24083275629"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-plugin-archetype/0.5.0-SNAPSHOT/fibra-plugin-archetype-0.5.0-20261015.004211-1.jar.sha1",
+    "bytes": 40,
+    "sha256": "8b791ed65e3b31d3176fdbb94e0ced3622bbefb81b4deb11fc509a9ea7e26e25"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-plugin-archetype/0.5.0-SNAPSHOT/fibra-plugin-archetype-0.5.0-20261015.004211-1.pom",
+    "bytes": 1590,
+    "sha256": "d74b168dd5b57646d0ffa68c1ded91a8bf2cc29540b8d3888d67bff412ecfd8b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-plugin-archetype/0.5.0-SNAPSHOT/fibra-plugin-archetype-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "621a786a697aa8703ccd724ddfe7a96b36408ef79fab07ea6075f3c41c966857"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-plugin-archetype/0.5.0-SNAPSHOT/fibra-plugin-archetype-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "434c3a043cbdea1cc03fbeb4969e7f6af82934d6cdcd32309877d76572a0fcb4"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-plugin-archetype/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1211,
+    "sha256": "5a5b9194c0e275f90b8109b329245e150b80422937a8a9d2d379a6acb3e557a6"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-plugin-archetype/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "8aeb80d38aa310af9848ec7acb09279c29790c37e0121cf9f873473ffa244933"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-plugin-archetype/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "acd7a4b6dce4f67881e1790e3ad6cef194706938aa178bb61b3c0bdc59f92507"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-plugin-archetype/maven-metadata.xml",
+    "bytes": 293,
+    "sha256": "1bf769a5c2d5becffbd95fc82b52dfe8cb7f624ca70869a1238dab1df4f57f0d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-plugin-archetype/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "96e5ed00d839df8221f4c12e1680073bbd55d81cdf37ad9421d810cae2ed4704"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-plugin-archetype/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "8891b5263b5fba66bf1d3f28dc90f701afad7cf179d440de0ea6772b17af9db8"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-registry/0.5.0-SNAPSHOT/fibra-registry-0.5.0-20261015.004211-1-javadoc.jar",
+    "bytes": 166849,
+    "sha256": "b62f8e838d06c6da3c437c420de3ac3711524b395d76dbf0cd55737a4c84229f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-registry/0.5.0-SNAPSHOT/fibra-registry-0.5.0-20261015.004211-1-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "0e6cda5dde9710317d22d272e49f9790a53c902fdd43c2bc77580800adab5727"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-registry/0.5.0-SNAPSHOT/fibra-registry-0.5.0-20261015.004211-1-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "19952623aeaec3847a177899a34611411c64921c918f6476024959c2fdd99968"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-registry/0.5.0-SNAPSHOT/fibra-registry-0.5.0-20261015.004211-1-sources.jar",
+    "bytes": 12853,
+    "sha256": "8d530637a8a5db326ce8424072b64c3f259d5306938a633e0bb40f61eaa44e08"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-registry/0.5.0-SNAPSHOT/fibra-registry-0.5.0-20261015.004211-1-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "8133e6f7bfdb93182f8d6af52781fba5567fc57dfca5dd2ef7fc0aeb943e9efb"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-registry/0.5.0-SNAPSHOT/fibra-registry-0.5.0-20261015.004211-1-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "ab0c32a552336eecfe95dbf7a3b5f871b1abd520ee5ac83f92732ac5d4d5e58d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-registry/0.5.0-SNAPSHOT/fibra-registry-0.5.0-20261015.004211-1.jar",
+    "bytes": 36471,
+    "sha256": "ccc1fbacc0605f2ecc27ad2cd8afebc68afde40ab250d49445a183e46ab067ed"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-registry/0.5.0-SNAPSHOT/fibra-registry-0.5.0-20261015.004211-1.jar.md5",
+    "bytes": 32,
+    "sha256": "70a182d59caeba5aab4475cbaff17e46bccfbaa05c532c768d93a7557419a213"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-registry/0.5.0-SNAPSHOT/fibra-registry-0.5.0-20261015.004211-1.jar.sha1",
+    "bytes": 40,
+    "sha256": "dad98c9bcd7fc21d908fb3164a7b9813cc0cf4aa0d34fe91e3ca6ba6b8545dc8"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-registry/0.5.0-SNAPSHOT/fibra-registry-0.5.0-20261015.004211-1.pom",
+    "bytes": 1723,
+    "sha256": "6e3867b3c3f7395c83231e4452c616f071d434d90b8ab77fa4cdab6c013dc4ae"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-registry/0.5.0-SNAPSHOT/fibra-registry-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "67bc26facdcfd346cfbf6f5bb1c3c04ab9201d6a07462d71ab70fa85808e9e78"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-registry/0.5.0-SNAPSHOT/fibra-registry-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "d520b0bc67f875413ad2fe8311996f94afbd71b1bb58fa87f0bc44cf368b8458"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-registry/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1203,
+    "sha256": "f79c540b1f0c7e607c8331ca3ead5ae0622a6ae1dc94aec343822145c2e86b02"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-registry/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "79d99b669bd7d69a384cc4f2741c365e8063e61c33b0bb7f1e39b38a90b0e9a4"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-registry/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "573ce6338760502d5f3f541fd76429368491a9dd3f054a7869be67f74c3f22b9"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-registry/maven-metadata.xml",
+    "bytes": 285,
+    "sha256": "8f47c5a04ab72043384371a86d3d06a53ae35ae7b199cdaa390bbded39895362"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-registry/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "857f2e82e4c859771fbae6e2bf26b789468d3dfa21920b68ba94e3f89e66d2d6"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-registry/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "cd0510a36b08d6368ff3c12cbcfb0852b09608e5b5174b9868c03f96ea2ab6c7"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/fibra-runtime-java-0.5.0-20261015.004211-2-javadoc.jar",
+    "bytes": 138434,
+    "sha256": "beaf1c080ebe8c166778f50f2c25f2519022439c463d1e7883c5394f1fd12233"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/fibra-runtime-java-0.5.0-20261015.004211-2-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "83a268f889353ab89ab1341fdf1c14d9b28be34958df45b5a5669b65e1141610"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/fibra-runtime-java-0.5.0-20261015.004211-2-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "b2c3f852e70dd3a9464a61a9da93678dd51cf03815dc6b9d9204bb6194e40fd3"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/fibra-runtime-java-0.5.0-20261015.004211-2-sources.jar",
+    "bytes": 27552,
+    "sha256": "aa9f361d686565222573deef586a64bd06f1fbcb58a9cb180cf0b3daa7fd5481"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/fibra-runtime-java-0.5.0-20261015.004211-2-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "2e2149040ed074f0004d595b107fa6dbee92e82d3784b3a0c06e9105965f1764"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/fibra-runtime-java-0.5.0-20261015.004211-2-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "4b875aa2d8d355c0458277ff43d54e0f1b3b8d3ce9c79ed32e5f8733ab7e8c75"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/fibra-runtime-java-0.5.0-20261015.004211-2.jar",
+    "bytes": 88946,
+    "sha256": "378e95b12d7132dfb33bf324e2fd7e2cf2c9e93480082c11f0a26ce7bd3357d4"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/fibra-runtime-java-0.5.0-20261015.004211-2.jar.md5",
+    "bytes": 32,
+    "sha256": "ac3af74939698f856f008ebd9a286ab21bd171b089185514c415bdd6e9b6b676"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/fibra-runtime-java-0.5.0-20261015.004211-2.jar.sha1",
+    "bytes": 40,
+    "sha256": "2eccd42a2038a020b6672795595fe1c37ef27762f6b5fea8c10c34b3e3e2469e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/fibra-runtime-java-0.5.0-20261015.004211-2.pom",
+    "bytes": 2488,
+    "sha256": "459d7c6d44e3a8d8314f6aa4a8357881f9faf265c14c34358f528d10567ae482"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/fibra-runtime-java-0.5.0-20261015.004211-2.pom.md5",
+    "bytes": 32,
+    "sha256": "67d6acf87c2e9c814286c277c6025a1c58ef24bb3766da86a061f98959f28085"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/fibra-runtime-java-0.5.0-20261015.004211-2.pom.sha1",
+    "bytes": 40,
+    "sha256": "5a9231324b98c53969005cd4a9306440ab465532dc27728fcd419cfe4da42074"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1207,
+    "sha256": "6fee9bbab46f6d5143688dd85be5e8a8611ae1ccdbca1881d0162a662bc47504"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "0f2961f79717fd1d31b2206df112c84ab1bd821631d9acd9952cd8b83f177ec6"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "47faecbbec7b98fbd7f6f89a095d3d980e03e66fab7ec95589d79ffb204d5b0c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-java/maven-metadata.xml",
+    "bytes": 289,
+    "sha256": "ba99069f548449425a523190e44db30e6766f707a39583a7642b20d88f9cca29"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-java/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "6153c56be2af5b93d3d496216c2f13d847db548745bb69fa5b334806b55aad89"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-java/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "7d320c9fc4ac0135a7ed563904a25f627ddfef50b8cb36e620e962b16ac72927"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-node/0.5.0-SNAPSHOT/fibra-runtime-node-0.5.0-20261015.004211-1-javadoc.jar",
+    "bytes": 143221,
+    "sha256": "846b47edd5cbc43cb9963dcf71a36c491b147a6c124fb3c52ef46c7b9eab74bd"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-node/0.5.0-SNAPSHOT/fibra-runtime-node-0.5.0-20261015.004211-1-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "a3800be268579d8e49337a9d5d399697f4231a9573395db7e7f45a071d060fb3"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-node/0.5.0-SNAPSHOT/fibra-runtime-node-0.5.0-20261015.004211-1-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "0aa5e45d05a108fb0fcfce6b8bfaca8ff60da1ba8fbe20f94de28c153857496e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-node/0.5.0-SNAPSHOT/fibra-runtime-node-0.5.0-20261015.004211-1-sources.jar",
+    "bytes": 30384,
+    "sha256": "cd20f8042e0509bc962dee95945d3d319a6c3ec1d7aa78675b2a3f76a5f0dde5"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-node/0.5.0-SNAPSHOT/fibra-runtime-node-0.5.0-20261015.004211-1-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "c749fb2a9bb29f35b35d405c988ff71b9ef95b7830d96f858a98c8d81e90baf1"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-node/0.5.0-SNAPSHOT/fibra-runtime-node-0.5.0-20261015.004211-1-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "c51237967000f542744182071d9b90839904a5030124adde517b3fe421c92ac8"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-node/0.5.0-SNAPSHOT/fibra-runtime-node-0.5.0-20261015.004211-1.jar",
+    "bytes": 96131,
+    "sha256": "09542dee60070e982a856cdb9d7a4cf73b6ca0de29faa08d4a20490d1bc92830"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-node/0.5.0-SNAPSHOT/fibra-runtime-node-0.5.0-20261015.004211-1.jar.md5",
+    "bytes": 32,
+    "sha256": "212b391dfbf0109bbf0d16b58a0a215841fa0b299deebf6cd36ee1b146a27b3c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-node/0.5.0-SNAPSHOT/fibra-runtime-node-0.5.0-20261015.004211-1.jar.sha1",
+    "bytes": 40,
+    "sha256": "4a04d187c4f755ca67b4296724e76281ed05394b6f77c5fc1fb86ac701c14983"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-node/0.5.0-SNAPSHOT/fibra-runtime-node-0.5.0-20261015.004211-1.pom",
+    "bytes": 2848,
+    "sha256": "c699625d0fc02e56d126eac33339428d4d98c010e6bee32bdf96b67d1b0df041"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-node/0.5.0-SNAPSHOT/fibra-runtime-node-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "593d52655f07e4afc8e6107b6a2619eb5119e3f18973d9d97e697bfe1f223ab5"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-node/0.5.0-SNAPSHOT/fibra-runtime-node-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "61ff8c05d926ddaed9a5fc38dd31880a2ea098efc9b33c5392bcb33a9b17416d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-node/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1207,
+    "sha256": "3885c0710c248ab456f7ab810dc181451d5fc07facee2643b22975b4bc4f58a6"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-node/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "44fd043b7aaf4bb6dbb4a11f2a22bb6c43e768af6f2c6fa656b5849df26de5fd"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-node/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "87582ca4e5e7aebe8bce4c26643ad3d6117c99d7f12d2c0169e3162735b78920"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-node/maven-metadata.xml",
+    "bytes": 289,
+    "sha256": "95554d9000e76657c5c9c3fd2d077d59133fc1909733b22fab139a5b36291170"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-node/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "dce1d1b2e82fcf37ca6c00fb9b2ceb3ab93ea19004e26bcfbdbeae6f5445b75d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-runtime-node/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "47a659c0060d8067dacee5ed21601fecd30e59ed6b8ecf050fd7e441921d0077"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell/0.5.0-SNAPSHOT/fibra-shell-0.5.0-20261015.004211-1-javadoc.jar",
+    "bytes": 145226,
+    "sha256": "a35de66b7ebf5479b4502e0a301750ab44dcd100b87ee101a91e8e84e253095a"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell/0.5.0-SNAPSHOT/fibra-shell-0.5.0-20261015.004211-1-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "eabd254d5c50742b6f2b6264215ec9f0dd05a1048cb8b4dbc383af439e080b74"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell/0.5.0-SNAPSHOT/fibra-shell-0.5.0-20261015.004211-1-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "96509498b459c9e8ff404995076b97a27c88aeb84c02972e0f04c26188aa59f3"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell/0.5.0-SNAPSHOT/fibra-shell-0.5.0-20261015.004211-1-sources.jar",
+    "bytes": 5829,
+    "sha256": "b8a0e4417658728a94eacb0bf05504c3ec7d1e9009e340cb5e65838a1fe8f875"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell/0.5.0-SNAPSHOT/fibra-shell-0.5.0-20261015.004211-1-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "d120505c67f4a155d627aaa92051e393b85ce279e737ee0c979dfa9dc76921bc"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell/0.5.0-SNAPSHOT/fibra-shell-0.5.0-20261015.004211-1-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "422a920fbbe5ca38afb5360c57e4b0c615cd8f345bf08595eeb6b19e3f8a7d2f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell/0.5.0-SNAPSHOT/fibra-shell-0.5.0-20261015.004211-1.jar",
+    "bytes": 17901,
+    "sha256": "6d7fa5351d370adc8ccb0f3efab76723c6448d59806c0ce7554519a7798e277e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell/0.5.0-SNAPSHOT/fibra-shell-0.5.0-20261015.004211-1.jar.md5",
+    "bytes": 32,
+    "sha256": "86ecfc9e20d276ede1c0c651744cded2f592cf94f4753def40b910d902c8427b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell/0.5.0-SNAPSHOT/fibra-shell-0.5.0-20261015.004211-1.jar.sha1",
+    "bytes": 40,
+    "sha256": "e2cac3b7d86ebb588dfb7d45182a227ce0e112362c402a90f4f59514d7323343"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell/0.5.0-SNAPSHOT/fibra-shell-0.5.0-20261015.004211-1.pom",
+    "bytes": 1723,
+    "sha256": "0612a647f41629d6b88939892044851db86901d943910494d3f27ede9ffefd43"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell/0.5.0-SNAPSHOT/fibra-shell-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "bdaaeea488ebe1fcb680397de8e66fcfec961888c0f96f8777a39a05f92f27d8"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell/0.5.0-SNAPSHOT/fibra-shell-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "d3932c16f7293178ceabf4798bace41142a804bed4c349821dbb4b7a4f8fcaf2"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1200,
+    "sha256": "f18ed3cd3a69f0dcfb8bf6cbbde556ecb8ea6bad5195fa879e02d675e65a698e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "4b961bcb9a1bc7df8247482a769c8d394025443f11c498db6734b94c67476b0c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "65db2d0aae5c6e2c63df17e918bcd4bd6f8996bf9bf3460f12511ae6ccb9fd7b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell/maven-metadata.xml",
+    "bytes": 282,
+    "sha256": "5c5242fac908692673698a34aeaba8b858bd8219b6991fa7d16c2ad0ad3a4b40"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "8a5731eb6a07fb9c077a25959825d1a0a76fd35e137553a06efdbf8366b0d08f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "b5702ce22d02f4fa491d372bc959df73af4e910516692a0c7e2c0b30297cb849"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell-local/0.5.0-SNAPSHOT/fibra-shell-local-0.5.0-20261015.004211-1-javadoc.jar",
+    "bytes": 107507,
+    "sha256": "2d026e04ebfc01895996464a297416bcd96d8699c05e893d43e06a64bbf5c48d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell-local/0.5.0-SNAPSHOT/fibra-shell-local-0.5.0-20261015.004211-1-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "bb7540ec401b7652252da7c024c9fef1b983e5250f7bdf6d51a1fc71bfc5bbc5"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell-local/0.5.0-SNAPSHOT/fibra-shell-local-0.5.0-20261015.004211-1-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "15b83fe0b6fad3b368a19e8e98f14d2788a3a511a5bb691ac636a57ef69475f2"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell-local/0.5.0-SNAPSHOT/fibra-shell-local-0.5.0-20261015.004211-1-sources.jar",
+    "bytes": 5770,
+    "sha256": "224e4fb277aef89ac98470156c44dd1c2b89b594cbe3101619c9e4290d94fd00"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell-local/0.5.0-SNAPSHOT/fibra-shell-local-0.5.0-20261015.004211-1-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "a673075a07d3547507582f05362c0387451f1052e3570b5aa41ec4dbf2052c87"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell-local/0.5.0-SNAPSHOT/fibra-shell-local-0.5.0-20261015.004211-1-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "f3b1678db44734f6bd6a55063af577e37672769b5ae9702c7c442964cb4eebf7"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell-local/0.5.0-SNAPSHOT/fibra-shell-local-0.5.0-20261015.004211-1.jar",
+    "bytes": 17546,
+    "sha256": "4533da2ed99d05f68a97737f9c085d2f66e56e19091581c52a40d9b2b2789bef"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell-local/0.5.0-SNAPSHOT/fibra-shell-local-0.5.0-20261015.004211-1.jar.md5",
+    "bytes": 32,
+    "sha256": "3503ab48ecb2c631cba947ca781b61904739ad64bb542b7f7ef44729dc6ea2c3"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell-local/0.5.0-SNAPSHOT/fibra-shell-local-0.5.0-20261015.004211-1.jar.sha1",
+    "bytes": 40,
+    "sha256": "d40b77e915e34fefe7fdfddf5413de27cda803c2379a8b0d350ca3e68d913ace"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell-local/0.5.0-SNAPSHOT/fibra-shell-local-0.5.0-20261015.004211-1.pom",
+    "bytes": 2139,
+    "sha256": "7ce14233da36783977bdeaa4d548142ef052eda11ca611b9794aa5ed1f59f9f8"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell-local/0.5.0-SNAPSHOT/fibra-shell-local-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "d12fccd129e3fa6fb0b88612f694a6e26df91018a4e3956fffaf028946f7d2c8"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell-local/0.5.0-SNAPSHOT/fibra-shell-local-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "1e74c908fdfbbe7d26417af28655a77620524dc0d66d15eb6043c05c3a3b7f62"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell-local/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1206,
+    "sha256": "ac4980e12f6a62a7cf3a57f3b7616330757dab1d1a9af520b565d760464bd146"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell-local/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "1b2796c910493ef8f43f4b282467b8d6f83a068c4bc27bb7d05208d09a0afeca"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell-local/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "97b9adfd0f820b973fdd562d98c5931aa8a006b72030aaa7d8bf228429a2c0a8"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell-local/maven-metadata.xml",
+    "bytes": 288,
+    "sha256": "be29a9668e8982ef55fc20f996142a5b1115c6f81c52ed6f47f5f595031c11ef"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell-local/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "aa3622e5634a3654b6ddd5331f3c5bcf312fefa33476c9b026d75f2320fb44b1"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-shell-local/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "74ab3acd1a4eb9f7aa087c9fc35e8e4079ac13066f5282fb40a1f33ce1e25d9a"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring/0.5.0-SNAPSHOT/fibra-spring-0.5.0-20261015.004211-1-javadoc.jar",
+    "bytes": 106570,
+    "sha256": "19bb40d4af1018c847e965d5b3328090969f5acb3340ddd8161724e19bbd9f5f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring/0.5.0-SNAPSHOT/fibra-spring-0.5.0-20261015.004211-1-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "9ee2334a3f752d21fd2c76175a8eb4795bf2c50affd1da3de501cbc05cd2f736"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring/0.5.0-SNAPSHOT/fibra-spring-0.5.0-20261015.004211-1-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "bdd7cbbc2747957a97d98fc02cda740048b9231e5cbbcf494452cbb0abf44022"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring/0.5.0-SNAPSHOT/fibra-spring-0.5.0-20261015.004211-1-sources.jar",
+    "bytes": 4246,
+    "sha256": "3b408a181e9fdaefbf1da91b7ef28eebea1bb9a3b0e7d838a1b96b3d6c8d9563"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring/0.5.0-SNAPSHOT/fibra-spring-0.5.0-20261015.004211-1-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "48622ac454f5a00c20203eac03f5206f8b9f4ee004ce312173c129fd1be5a12b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring/0.5.0-SNAPSHOT/fibra-spring-0.5.0-20261015.004211-1-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "b0b42e6ede48c95cd32e82b15cccb70b3f04c0bead5f2b9d286b69420e94c193"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring/0.5.0-SNAPSHOT/fibra-spring-0.5.0-20261015.004211-1.jar",
+    "bytes": 12287,
+    "sha256": "83064ebfcfb163dcdc54a418b4e00ade4830c4dd890b86b3b4f954bac4693f65"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring/0.5.0-SNAPSHOT/fibra-spring-0.5.0-20261015.004211-1.jar.md5",
+    "bytes": 32,
+    "sha256": "28d280a3e18d444b960c3e68b3fc24348334325c514392efacf451bb73575c8f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring/0.5.0-SNAPSHOT/fibra-spring-0.5.0-20261015.004211-1.jar.sha1",
+    "bytes": 40,
+    "sha256": "d5f53875118b6afc914f84057829581f88c0c4a3b8a26840beb81bf5dff0d38e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring/0.5.0-SNAPSHOT/fibra-spring-0.5.0-20261015.004211-1.pom",
+    "bytes": 2093,
+    "sha256": "8ed8a46f0f7853214166fe992ad7559783034f4d0668b961de69be87d20ebcbb"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring/0.5.0-SNAPSHOT/fibra-spring-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "0e6b1407e7aa68473c7f393e4e06baefb3c18769e2d51456d207bde22e6813fb"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring/0.5.0-SNAPSHOT/fibra-spring-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "fa395db8cb5fc9fced6a81729dd142cbd5033f2d220eae0decdde04c86ff36e1"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1201,
+    "sha256": "a14d39f98115e0bae2e845fcf5524b8b1b41f95569b10fbfeb3d310c1907dcf3"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "c81a0352946606b5fce0eb9e45a1bb9740314e302ba777a1b77495b52888ee4e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "6bcb3206b86ee55622381cd9c77fe716602eec1d5e909b3843b36b82b31bbc7d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring/maven-metadata.xml",
+    "bytes": 283,
+    "sha256": "5224cbcb38f6360f220e2ada4f1144695d0382b7cd3a2b7a896024c1061829d9"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "dee554ec3e1753bcb514ed6a0069967cf41a4b47ad8810c50a9e90dfc596d0fb"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "31cf773132344e8ab781e5244385d9ba5da9799e8a4f331351799235cec069cf"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring-boot-starter/0.5.0-SNAPSHOT/fibra-spring-boot-starter-0.5.0-20261015.004211-1-javadoc.jar",
+    "bytes": 101600,
+    "sha256": "306e5075d600652b331a1c815fc53860213ecc9a6f768ef34c66a8864c7c98f5"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring-boot-starter/0.5.0-SNAPSHOT/fibra-spring-boot-starter-0.5.0-20261015.004211-1-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "047b55a72880f3e00624e6b761efedc035bc9ba522acde84be6c9b0cf1505ab3"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring-boot-starter/0.5.0-SNAPSHOT/fibra-spring-boot-starter-0.5.0-20261015.004211-1-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "16f4003c9d5fbfad4244f155275da706c609632d0b11e13d365477b47448d5a9"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring-boot-starter/0.5.0-SNAPSHOT/fibra-spring-boot-starter-0.5.0-20261015.004211-1-sources.jar",
+    "bytes": 5462,
+    "sha256": "665eb2f478d43a303809f2910c0a7b33c6f9095fffc315be3b6049c1586c09c2"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring-boot-starter/0.5.0-SNAPSHOT/fibra-spring-boot-starter-0.5.0-20261015.004211-1-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "8288d66d1a522c300137ef23f7dbc0f3d3873ff01f286d7cf6e902645125dc32"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring-boot-starter/0.5.0-SNAPSHOT/fibra-spring-boot-starter-0.5.0-20261015.004211-1-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "42f076152f8e786e0858aa649e52015c47ff84fb17564fe6a717d2d271f4a826"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring-boot-starter/0.5.0-SNAPSHOT/fibra-spring-boot-starter-0.5.0-20261015.004211-1.jar",
+    "bytes": 15064,
+    "sha256": "98f1e4ba2b4ca219b452c619abee69a030eabc8317580235a96e8901cf5da7b1"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring-boot-starter/0.5.0-SNAPSHOT/fibra-spring-boot-starter-0.5.0-20261015.004211-1.jar.md5",
+    "bytes": 32,
+    "sha256": "7a27d1cd97257f69700c8400cb94e776b96c989452d70ea7fdcc8c85c21421c6"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring-boot-starter/0.5.0-SNAPSHOT/fibra-spring-boot-starter-0.5.0-20261015.004211-1.jar.sha1",
+    "bytes": 40,
+    "sha256": "243f150b9dc08de95fd090a8b460443a1832d64f25908f13c2756c1461601ee5"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring-boot-starter/0.5.0-SNAPSHOT/fibra-spring-boot-starter-0.5.0-20261015.004211-1.pom",
+    "bytes": 2786,
+    "sha256": "c572bb3159a32fe317c817cc550124e3bd6dd9abb5a3a04be180d05c9698592d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring-boot-starter/0.5.0-SNAPSHOT/fibra-spring-boot-starter-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "19cc71d61033940c6a2c54950d1ad888c81aaf02a4834c9296b1581fe020b6bd"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring-boot-starter/0.5.0-SNAPSHOT/fibra-spring-boot-starter-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "a4cec44cbcf8671d1a56bcc049d4f585c59b7122c665e63b6f51cde6ce6bac9b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring-boot-starter/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1214,
+    "sha256": "c6cee5215b5dc77c3a0fb02cf1256a0a065b94cd21c9b22c9c810e351ca60b44"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring-boot-starter/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "b3ecf2d2375893529a760278a6a6b0e4776cf942efc9cb1e078a7e21e8e73bb5"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring-boot-starter/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "57859fb2483645ba968e56162cfdb90f9edbafc0f065599edbf8587c32c66923"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring-boot-starter/maven-metadata.xml",
+    "bytes": 296,
+    "sha256": "89e484a0136f57075383054d8e8d1ea8adcb7dedd318918cda15f9d43d94e7a4"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring-boot-starter/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "afa6388584e30d412efc54daf0ef3ccccd55375751d3e3e4ba2f265fb4eae717"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-spring-boot-starter/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "4ee3b7ba7e0128503d0c50bc1a838652f15c773c232b88cd38e1e1a40c88c391"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage/0.5.0-SNAPSHOT/fibra-storage-0.5.0-20261015.004211-1-javadoc.jar",
+    "bytes": 135556,
+    "sha256": "a577a617f317dc00b30c158a9352da1ac8e47196f84a712333c34bdf1b1d994e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage/0.5.0-SNAPSHOT/fibra-storage-0.5.0-20261015.004211-1-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "08d13d9f1064269626ba5198cfb564280f951320512ff2b417d27b83028b8b7a"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage/0.5.0-SNAPSHOT/fibra-storage-0.5.0-20261015.004211-1-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "9da683d85ba3d572b5c6089f0c5825f0e804f717bc11efbbcc15e54cc781953f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage/0.5.0-SNAPSHOT/fibra-storage-0.5.0-20261015.004211-1-sources.jar",
+    "bytes": 6232,
+    "sha256": "02755398303b9bef6461b1cdaaaa0d0ac63f27e8c15aa0cae8e94a5dca383b8a"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage/0.5.0-SNAPSHOT/fibra-storage-0.5.0-20261015.004211-1-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "01a818957df474877422fab2721e9d82cb7593ab9db1ed29df0a59365523cc6a"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage/0.5.0-SNAPSHOT/fibra-storage-0.5.0-20261015.004211-1-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "9ac8ba64c037f78338cf7abd6cee0c545375e2d983db70dd3192ef18d5b85fa1"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage/0.5.0-SNAPSHOT/fibra-storage-0.5.0-20261015.004211-1.jar",
+    "bytes": 16404,
+    "sha256": "d6f49d890f68f70b0ebb3c9506eb911067606a73c4d7966cc456239bac4f73b5"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage/0.5.0-SNAPSHOT/fibra-storage-0.5.0-20261015.004211-1.jar.md5",
+    "bytes": 32,
+    "sha256": "53689fe89519e9d1b71d82e389b8acf605ab2c6dffb38f6f1c9a0fdde8f1595f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage/0.5.0-SNAPSHOT/fibra-storage-0.5.0-20261015.004211-1.jar.sha1",
+    "bytes": 40,
+    "sha256": "8c7f9d1e5fc1c3bd8f99629b5ed37162c39c1e207a2d8be101d62f6bd633d3e5"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage/0.5.0-SNAPSHOT/fibra-storage-0.5.0-20261015.004211-1.pom",
+    "bytes": 1744,
+    "sha256": "5c924dbbb800145091c28a8365a51e6f81ab152ea9ffd67c1692af63dfd0caa1"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage/0.5.0-SNAPSHOT/fibra-storage-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "33afac23e7d2bc2108de0e9f9bcde22a61f736694868338eed3187c395914771"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage/0.5.0-SNAPSHOT/fibra-storage-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "797c2ac784cd47184b969c80ce7f1350df13e8bb6f1a85430a1cf04ed7359830"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1202,
+    "sha256": "d08dcb97298f51cbad78363ca2ad8b06de816b7360144af64de81610dcdf96bc"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "a1162081bb7382e3da4aa2b7b50490991e9b63177d10a91f9c8e4f1d80d1e6c0"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "0a0b7036bdf555219a1fa0f70bc437ed9fc871ba238745a446ef02da83186e95"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage/maven-metadata.xml",
+    "bytes": 284,
+    "sha256": "722d737bb2a3ce1639afc01834817736d57c89b5d3efb70f4654064b802be1d8"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "25e10d6d9a87567481cba5bedf9bbbef4279030b476bddb352f30674fcb99f79"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "0c62e3c7d5e326044d9863a8e3b18e1cdb01492ad067f7134fbcfb4f1a17a1a4"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage-json/0.5.0-SNAPSHOT/fibra-storage-json-0.5.0-20261015.004211-1-javadoc.jar",
+    "bytes": 102889,
+    "sha256": "a9938f8761742e189a24ec984f2091e2dbaefc894336902a1a46625bbe42c68c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage-json/0.5.0-SNAPSHOT/fibra-storage-json-0.5.0-20261015.004211-1-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "2c0c465faebc059d7d83ef4d5d5d302defdbf99ccfdfee0829fb66f9a4a9972a"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage-json/0.5.0-SNAPSHOT/fibra-storage-json-0.5.0-20261015.004211-1-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "eaf9090584309895c2465af5e7bcce21fa2914b3a9f3ef1adede874e4a4ec9fe"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage-json/0.5.0-SNAPSHOT/fibra-storage-json-0.5.0-20261015.004211-1-sources.jar",
+    "bytes": 9636,
+    "sha256": "c8f5dfe9a429c60a930bb1b187cdb6982be467bb8ffb182b2e6597ab65074048"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage-json/0.5.0-SNAPSHOT/fibra-storage-json-0.5.0-20261015.004211-1-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "aef334fabc7b514d6bf5240431c9b57b8045f105b42c4c83fab9410aef885ae9"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage-json/0.5.0-SNAPSHOT/fibra-storage-json-0.5.0-20261015.004211-1-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "a16dcdb9c0990887b242d9f3b2b73dcd2bf88db6eeb5b0a15ddd0266380304a0"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage-json/0.5.0-SNAPSHOT/fibra-storage-json-0.5.0-20261015.004211-1.jar",
+    "bytes": 30452,
+    "sha256": "8c6adca7460bacc5c150d3f80b9ae4a8688d0d0693d966886b985ccccfe4bcd8"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage-json/0.5.0-SNAPSHOT/fibra-storage-json-0.5.0-20261015.004211-1.jar.md5",
+    "bytes": 32,
+    "sha256": "f6eebfbea0aaaf620aa2973d4fccd15bca6e71b8369f6dde1b9b6cbd82d4c666"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage-json/0.5.0-SNAPSHOT/fibra-storage-json-0.5.0-20261015.004211-1.jar.sha1",
+    "bytes": 40,
+    "sha256": "3b0ec39418269835a501106255375532c0e816e8f6d3dfcec1a27019b9ad46ee"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage-json/0.5.0-SNAPSHOT/fibra-storage-json-0.5.0-20261015.004211-1.pom",
+    "bytes": 1954,
+    "sha256": "2b78114b84776cf1a45f5af01f6734bda5d930e349b31ce527daa315eda4153f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage-json/0.5.0-SNAPSHOT/fibra-storage-json-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "94f8e3ec8f031f3d1be5eb533c01a9dda7164de8e35ea60147bc988ded9cdd12"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage-json/0.5.0-SNAPSHOT/fibra-storage-json-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "87dc8321d49d5a95003545cdb7e947c2a276c34f9eadf2a9c4a6e805d5f83d87"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage-json/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1207,
+    "sha256": "395d3df8c98fd89781181ca9bbaa5de87cd4a38d092a6e4762fbd578afc94b62"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage-json/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "801c9772dc46ccab00ec853cae1aea9edbba5fca4349acee356ae304edc279d8"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage-json/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "3b54b67de5aa00c06c6e8406552079936cd5128ba217132f2d18084b700e6079"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage-json/maven-metadata.xml",
+    "bytes": 289,
+    "sha256": "21bcb7725c0ff53f29e4cd3493096a0e6a3167fed7237d5228e723c4d5380713"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage-json/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "8c19cd5440090b2f8293c8ca868d4aeb8d04ca4df1f7c43a5ef29c866b3f46c1"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-storage-json/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "c85186455086bb5c55126937dfb232422707538cde78a9730857a34974216e27"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess/0.5.0-SNAPSHOT/fibra-subprocess-0.5.0-20261015.004211-1-javadoc.jar",
+    "bytes": 150122,
+    "sha256": "ce315bb088ced864f15a2ed7839a0353a1dde1bd3859ef4165ba787b45343b5e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess/0.5.0-SNAPSHOT/fibra-subprocess-0.5.0-20261015.004211-1-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "a76011c208c3569eefaf4251c92a32cc61691613c2e8f0764910b1e3a21ee6c2"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess/0.5.0-SNAPSHOT/fibra-subprocess-0.5.0-20261015.004211-1-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "975817050fac722e0b9d976666802326d0e0c420bdffa4495cb46d8f9ba18dd8"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess/0.5.0-SNAPSHOT/fibra-subprocess-0.5.0-20261015.004211-1-sources.jar",
+    "bytes": 6518,
+    "sha256": "6281e1b5804838dc3fd3d8be0848528efbe86812de5cf1a6839d717a009042bf"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess/0.5.0-SNAPSHOT/fibra-subprocess-0.5.0-20261015.004211-1-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "c1d4ba9277a4442ca5a186ed059d532e7b9128549fc593cf3e77fbfc14b8661e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess/0.5.0-SNAPSHOT/fibra-subprocess-0.5.0-20261015.004211-1-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "60be2b106cde3c3d03cfc3bb58bf7a940512e7cf6a3571b6a5df6a9f1ea69213"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess/0.5.0-SNAPSHOT/fibra-subprocess-0.5.0-20261015.004211-1.jar",
+    "bytes": 19140,
+    "sha256": "f5f00552b73915bff32650074d1a6347027ae627fe270960b73900817ffd2140"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess/0.5.0-SNAPSHOT/fibra-subprocess-0.5.0-20261015.004211-1.jar.md5",
+    "bytes": 32,
+    "sha256": "6da589c7ac23c76e2b96662c7623b528ff43c17ca8ef5db64876d08d33de003f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess/0.5.0-SNAPSHOT/fibra-subprocess-0.5.0-20261015.004211-1.jar.sha1",
+    "bytes": 40,
+    "sha256": "1bc525ca2b0e98b9f72c16d16602ff76844f1b590e8ccd67921aa4f1ee33664b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess/0.5.0-SNAPSHOT/fibra-subprocess-0.5.0-20261015.004211-1.pom",
+    "bytes": 1743,
+    "sha256": "522d38c70f95327114ef6c105a19522e7baa520b314e0fcc37bd25c495b285e6"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess/0.5.0-SNAPSHOT/fibra-subprocess-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "c3ada419b1d08060cc662592c3abbb32268c9bd58d087c36b7ff7b018293f0ee"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess/0.5.0-SNAPSHOT/fibra-subprocess-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "6555e8890b5affcceec9764aec79ae74d2263945f9a74fdad6fb0034f3c49a9d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1205,
+    "sha256": "7b8e986d3a82531de343808be1307e2a4b43751161fe18322697e9d122e898b1"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "ac0a08111e3825df0aa97327c8adbbef61ee8782ca227ec10c9d334773d9aa92"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "75d086ed3daf1a2e4f6986c589935dcf6d0b0619fd1570b3ec9ecadfe6b7551f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess/maven-metadata.xml",
+    "bytes": 287,
+    "sha256": "348dd163c0c35b6a0948c2f185a74eb7f068d07be812eca70c0f1221520f189c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "7b9c0b70d2bc2deaa1aecff612ba8f4f3d176716f15e5a471d8be45a71fdaa7f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "f6e88e12f5ce872bab8d349d76d2cb0ab73efae39baa18dc3cb6c1ce381a5f43"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess-local/0.5.0-SNAPSHOT/fibra-subprocess-local-0.5.0-20261015.004211-1-javadoc.jar",
+    "bytes": 107640,
+    "sha256": "f7343b078921b930eaef4e2ff6d939d5dad5a44ad0dcf8987ad59280d6ecfb7f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess-local/0.5.0-SNAPSHOT/fibra-subprocess-local-0.5.0-20261015.004211-1-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "29aa79334b55017937275404b969caf7b7e1ac52c56bb7da76010f1cd88d55a0"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess-local/0.5.0-SNAPSHOT/fibra-subprocess-local-0.5.0-20261015.004211-1-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "99101f44fbd11a6bdc8bbe56d20662dd9717aefcf501c3f7239f46c983494c5b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess-local/0.5.0-SNAPSHOT/fibra-subprocess-local-0.5.0-20261015.004211-1-sources.jar",
+    "bytes": 34532,
+    "sha256": "9893412b8cfd8e94345bcb539bd804a8f08c0b038517ab45115f9df45cc00679"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess-local/0.5.0-SNAPSHOT/fibra-subprocess-local-0.5.0-20261015.004211-1-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "abe9dbc6edfac004248cc46593b1bc0b53ebcaf8b36f346f69d6ac61ff241521"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess-local/0.5.0-SNAPSHOT/fibra-subprocess-local-0.5.0-20261015.004211-1-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "596e0e059812d85becb077a03a1747ad7120cf1a494e22564934111f5f9e0a01"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess-local/0.5.0-SNAPSHOT/fibra-subprocess-local-0.5.0-20261015.004211-1.jar",
+    "bytes": 2091410,
+    "sha256": "8bd3a3b8ffc464b46a44251457a58b42a226383752baece0cf34f103063e7f51"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess-local/0.5.0-SNAPSHOT/fibra-subprocess-local-0.5.0-20261015.004211-1.jar.md5",
+    "bytes": 32,
+    "sha256": "a5aa6b87a1694dbb0ba58251f03338ebdd5d00174438969b698530bcc01f942e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess-local/0.5.0-SNAPSHOT/fibra-subprocess-local-0.5.0-20261015.004211-1.jar.sha1",
+    "bytes": 40,
+    "sha256": "dca9c87dd535035e0ba30d3c5a9010acbd26499764fa61747daf8639078c76f5"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess-local/0.5.0-SNAPSHOT/fibra-subprocess-local-0.5.0-20261015.004211-1.pom",
+    "bytes": 2175,
+    "sha256": "95c1f5af9906d29bb8b24aee82bca38f0af7ddd3a28f0e43bd19827141c10246"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess-local/0.5.0-SNAPSHOT/fibra-subprocess-local-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "dddca337c23f9e33f8339720d2ffc5479e086cf1749ad0268c18f8b42bf59520"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess-local/0.5.0-SNAPSHOT/fibra-subprocess-local-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "dc1661005bd2e42e72e375040339b16788389c96bca55de72c05618caa1ea349"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess-local/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1211,
+    "sha256": "5b9b1969747ea29a43497eaa73f34e903188d254c3073ce51d53bd40e1caf616"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess-local/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "981deff443075882d7ea965f55faaa0084f264f1345a9b1de34d68214107d3f0"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess-local/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "bae0325def57353fe138eb5509a93785ef2c1c1c73f4091d155301af99f9a9f2"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess-local/maven-metadata.xml",
+    "bytes": 293,
+    "sha256": "122625f847b4e36d6f97b1875323a4557fd91e22056589c82dc46792a69bff36"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess-local/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "6f99559feb29d5feb8d5152e0c3946564137dce0e325a9af76020e222067376e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-subprocess-local/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "88bc891e4772685abc4f14af0aaee9dd66fc1991b921fadc96e75908836b5942"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-api/0.5.0-SNAPSHOT/fibra-tool-api-0.5.0-20261015.004211-2-javadoc.jar",
+    "bytes": 170119,
+    "sha256": "113664e5d536967bff97795fdbcc35d4c61e891872aa05c0ae5e8621b568d7f3"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-api/0.5.0-SNAPSHOT/fibra-tool-api-0.5.0-20261015.004211-2-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "fa21b624b5fef67e0379153f395013c03f09003b22725dfe731bd3a5004a9b90"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-api/0.5.0-SNAPSHOT/fibra-tool-api-0.5.0-20261015.004211-2-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "f2154c74ef9e193e8ff82169422c5c092fc368c8d92aaceb1a359f4879299eea"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-api/0.5.0-SNAPSHOT/fibra-tool-api-0.5.0-20261015.004211-2-sources.jar",
+    "bytes": 9837,
+    "sha256": "d14822eaf21a24eecb9cdd1293ed7f6fa94b35442dfd768328952ebcbca30508"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-api/0.5.0-SNAPSHOT/fibra-tool-api-0.5.0-20261015.004211-2-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "18b5524e892e92514e667ddf8b28a64bf3aeb6a93ac4323db3aa3d2e9d2903e2"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-api/0.5.0-SNAPSHOT/fibra-tool-api-0.5.0-20261015.004211-2-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "a7250252c976de9c28983635685f2b67e8f492ef7f5458e7d5a002b36c47a742"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-api/0.5.0-SNAPSHOT/fibra-tool-api-0.5.0-20261015.004211-2.jar",
+    "bytes": 27786,
+    "sha256": "6ebc4072818b1fdd37ffc9e9e60864528194a851e8ed9a5c00d987e181151f7d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-api/0.5.0-SNAPSHOT/fibra-tool-api-0.5.0-20261015.004211-2.jar.md5",
+    "bytes": 32,
+    "sha256": "05f7308cfa4040e14139fd393190a88dc1f79c9488f7c84c7ec41efb5a9fe4b0"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-api/0.5.0-SNAPSHOT/fibra-tool-api-0.5.0-20261015.004211-2.jar.sha1",
+    "bytes": 40,
+    "sha256": "3914c161683bc36765b7db923a7bfdcdca8700b1c6e9159d7be66a92b3eb09cb"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-api/0.5.0-SNAPSHOT/fibra-tool-api-0.5.0-20261015.004211-2.pom",
+    "bytes": 1931,
+    "sha256": "71ca475cb7522e287227f8d01af748dac2bb06b1f681f3b092154ab6f2343d87"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-api/0.5.0-SNAPSHOT/fibra-tool-api-0.5.0-20261015.004211-2.pom.md5",
+    "bytes": 32,
+    "sha256": "e769e5bbc694ac874391a6079ed07465d277a2463ae9a83d764e7fb674bc935e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-api/0.5.0-SNAPSHOT/fibra-tool-api-0.5.0-20261015.004211-2.pom.sha1",
+    "bytes": 40,
+    "sha256": "ca2eecd7f64ccb87e74363a69d9ff6df5623afe586181764a60c4795c82dc3e2"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-api/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1203,
+    "sha256": "28dac48731d7ae891276c63357cd5fef7ec3817df74f28f971e693d229730b4e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-api/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "4363ceab86d93c8ec2a8f20220a59a814673b063a092f6bc2b055517446775fe"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-api/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "89dcfb3bd28e475463c5084a5acac4f7aa7c872f33ce63dcae96c914e9c53f04"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-api/maven-metadata.xml",
+    "bytes": 285,
+    "sha256": "73e80607ea8f180313a418e7d5b261b7cc17af27171e036d1be4ba686536d69a"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-api/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "9eb34d28d54d805b37a3282ee026edeef480a27061a9b634493b8bea23d32f3b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-api/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "a99d2e52ce7d87d7d7eceae4b7dfbd144b97f8c5d5b349276b46025ffd6efc81"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs/0.5.0-SNAPSHOT/fibra-tool-fs-0.5.0-20261015.004211-1-javadoc.jar",
+    "bytes": 108163,
+    "sha256": "eb876732a09ee7c2df45c3e55c1b484539a89defef474518ae120afab68a517b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs/0.5.0-SNAPSHOT/fibra-tool-fs-0.5.0-20261015.004211-1-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "a94da0bd05bb5a5047d9867cdfae3ce306a27fba4886ce45576b4c876e4c12ab"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs/0.5.0-SNAPSHOT/fibra-tool-fs-0.5.0-20261015.004211-1-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "05ade893ef9e89bb2e3b225d6409bf314ec55390998b3beec80e2953fdf0079a"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs/0.5.0-SNAPSHOT/fibra-tool-fs-0.5.0-20261015.004211-1-sources.jar",
+    "bytes": 8633,
+    "sha256": "30a9f56647f07fe9f70d20da7e5b372a076e2aaa4da153be1167fadb0fb4a6ec"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs/0.5.0-SNAPSHOT/fibra-tool-fs-0.5.0-20261015.004211-1-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "93f5a05f209dba6fc7d047dc2ea572def433f4921f635d0b2cbc46ef1d76aaa3"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs/0.5.0-SNAPSHOT/fibra-tool-fs-0.5.0-20261015.004211-1-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "26cb8d0f0ae3b80cca88f1ad0c0f98e8de14d048036e417980f5d3d37f78d5ac"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs/0.5.0-SNAPSHOT/fibra-tool-fs-0.5.0-20261015.004211-1.jar",
+    "bytes": 25502,
+    "sha256": "f2ea89fda37b1aefad140f63f69ccb487dd01d0fb725d46aa811e09744a713b2"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs/0.5.0-SNAPSHOT/fibra-tool-fs-0.5.0-20261015.004211-1.jar.md5",
+    "bytes": 32,
+    "sha256": "5800236fa380806419a3f3de396d3e1073abb5f9432ed963f3a48fdaf5fbe69d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs/0.5.0-SNAPSHOT/fibra-tool-fs-0.5.0-20261015.004211-1.jar.sha1",
+    "bytes": 40,
+    "sha256": "52903196fa45a63b8587529e9ce3f5a2fede80b9c6cba488348c36647994c312"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs/0.5.0-SNAPSHOT/fibra-tool-fs-0.5.0-20261015.004211-1.pom",
+    "bytes": 2305,
+    "sha256": "4a905c22cc7312af3771cbc06cc71bd1843e02c9c59796ac68f48d0d90aaec0b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs/0.5.0-SNAPSHOT/fibra-tool-fs-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "bd5f5f118b82c6dce95b3559f3fb2f0f2e2f1fd7de2d1e4a5f254f0cf2c86cee"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs/0.5.0-SNAPSHOT/fibra-tool-fs-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "1647da317938b48742ff7239d4ed688ee00ca8b963d0dfc90b120153b586fe5d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1202,
+    "sha256": "cc32caca1281f8b5f471226d6a0e78f2d54844150c149310ba9c34622a25cc29"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "de2134c74cf11cc2d39d9dbee07bd41cdf06c2a7f834f53859a05f4dd9777f49"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "aae454e11ba14759d4d84138c4712240560c0cf29b9f28ed91ab5048e93dd3c2"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs/maven-metadata.xml",
+    "bytes": 284,
+    "sha256": "e1945b1dfad9a53595ac4099900939ec81af5d787fee833aa6bf7b1994521fb0"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "50b059cac31c20a40999698a663b76cd1996d6e31595911e84a965f6801df7dc"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "d093f51afded80070dad2ca7383fff30aa0c4c06d0a25397d6544c5b39346ef9"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs-search/0.5.0-SNAPSHOT/fibra-tool-fs-search-0.5.0-20261015.004211-1-javadoc.jar",
+    "bytes": 115778,
+    "sha256": "b51c3b406874a3800a798406b817d866335e3c2b375d37993779426ad4a4da77"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs-search/0.5.0-SNAPSHOT/fibra-tool-fs-search-0.5.0-20261015.004211-1-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "543013a5b28914291c7865d72faef4224dc33fb976d1dd74d6e1b58ac5435b7d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs-search/0.5.0-SNAPSHOT/fibra-tool-fs-search-0.5.0-20261015.004211-1-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "01794623f833afa88b275642b1f92f553e515ad2ada08b2ec1f87cfb5d7623e2"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs-search/0.5.0-SNAPSHOT/fibra-tool-fs-search-0.5.0-20261015.004211-1-sources.jar",
+    "bytes": 12542,
+    "sha256": "d4142145483a288de6e4a7ac3dc540ca7aba66342b3bff79dea36ae53261e309"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs-search/0.5.0-SNAPSHOT/fibra-tool-fs-search-0.5.0-20261015.004211-1-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "748ff53d581deb38476a66c3972efbaa90fda7889355a9095e59d8e86d34c58d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs-search/0.5.0-SNAPSHOT/fibra-tool-fs-search-0.5.0-20261015.004211-1-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "7936432aa44110a21c1ec3ea1c6003ac08460e570a1cab69c596b1881cfdf4ad"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs-search/0.5.0-SNAPSHOT/fibra-tool-fs-search-0.5.0-20261015.004211-1.jar",
+    "bytes": 2759127,
+    "sha256": "2d787e763f3087fc42ee8d513108d0d89e77c18be98af831cfce9dbc116fe727"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs-search/0.5.0-SNAPSHOT/fibra-tool-fs-search-0.5.0-20261015.004211-1.jar.md5",
+    "bytes": 32,
+    "sha256": "2346bc358739fe69eec848fdb0d830f4e590435c4923a5d87caf2de0049514ca"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs-search/0.5.0-SNAPSHOT/fibra-tool-fs-search-0.5.0-20261015.004211-1.jar.sha1",
+    "bytes": 40,
+    "sha256": "35d8797e1482826b224708c7e66d035f672cfbcb447ddcfa23fa9201e4240776"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs-search/0.5.0-SNAPSHOT/fibra-tool-fs-search-0.5.0-20261015.004211-1.pom",
+    "bytes": 2540,
+    "sha256": "d92586dff903b3ff86e2bcf3bc88aabbc98ee5e6db0c0b28efa8de0b7d9e4548"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs-search/0.5.0-SNAPSHOT/fibra-tool-fs-search-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "337643d6030aaa7c3e2b96724d533b55eeaba44ffb606e46005794f0e0e29d0f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs-search/0.5.0-SNAPSHOT/fibra-tool-fs-search-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "7b299dfaca9666577f7e7645bd95736f37d61950b906ec18950533412436eb7d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs-search/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1209,
+    "sha256": "7c194b8e946a2530dc4cecf5f7b5aa5f8aa2d8854117802feb8567df27f3a636"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs-search/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "a043f150cb14bef2bf5782be7268cf484dd1ec391c9c1b599126a6c6433f0be3"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs-search/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "84af99de43d2aa8fb1f26e9348dd381372c301fd3ca018d60c67c22796ab712f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs-search/maven-metadata.xml",
+    "bytes": 291,
+    "sha256": "29ff21cfa79bc49aefd38ad5d7b3fcc9287678f54a008561539ac5aca17e2a7f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs-search/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "e9a52dfc656f32d06de878ef63f699d17ed8bdcb12a7fa8fb062c05f4bbf9f2c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-fs-search/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "c8462459c9b8919f03d8dc2cecee851524cc0d6792611ed60ffddbd25ca310f1"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-shell/0.5.0-SNAPSHOT/fibra-tool-shell-0.5.0-20261015.004211-1-javadoc.jar",
+    "bytes": 96899,
+    "sha256": "589765b01bb115da2ea67d7febb5f14ed6aebe5e6bdbfa7ab83bbee9f32bdf2d"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-shell/0.5.0-SNAPSHOT/fibra-tool-shell-0.5.0-20261015.004211-1-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "ca9ceaeb2cfd4eaba52318889b45ecda3de009cc0b9c98ff4c048f9ae627d00c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-shell/0.5.0-SNAPSHOT/fibra-tool-shell-0.5.0-20261015.004211-1-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "c8385b10b4aabc0475e9f394b327b4220cf4aaf241d3896e9100c4fe755ceeb5"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-shell/0.5.0-SNAPSHOT/fibra-tool-shell-0.5.0-20261015.004211-1-sources.jar",
+    "bytes": 5493,
+    "sha256": "1fcad49d93242b6209fefd5f86b8e2d1b5cc49e270a039714541a2193da8e786"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-shell/0.5.0-SNAPSHOT/fibra-tool-shell-0.5.0-20261015.004211-1-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "fb15a1bbe8104d27327dc7771d5a8219951c373bed54f96478f200a9f9b9ee2e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-shell/0.5.0-SNAPSHOT/fibra-tool-shell-0.5.0-20261015.004211-1-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "e6bbd8a692fa3c7d0a06953bc93754e7535c7eceeb3b19da7469349afbe469d7"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-shell/0.5.0-SNAPSHOT/fibra-tool-shell-0.5.0-20261015.004211-1.jar",
+    "bytes": 16021,
+    "sha256": "7290c8cd2d8fc7eb09a65c7c6d934e98c4b1fd851ed74310529be685ba407b1f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-shell/0.5.0-SNAPSHOT/fibra-tool-shell-0.5.0-20261015.004211-1.jar.md5",
+    "bytes": 32,
+    "sha256": "586ba72116fcdb4efbb9e50557514798e053fd2a67d8fefdd57507e65b9e112f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-shell/0.5.0-SNAPSHOT/fibra-tool-shell-0.5.0-20261015.004211-1.jar.sha1",
+    "bytes": 40,
+    "sha256": "2b1214def3386638aa48fafdf31b576d5d5c9a56556a8618660d27bcd6044a0e"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-shell/0.5.0-SNAPSHOT/fibra-tool-shell-0.5.0-20261015.004211-1.pom",
+    "bytes": 2297,
+    "sha256": "393efd7a04cbc8a993e00d9cdaffa102b65b536c81e189fd1a5416699c35466b"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-shell/0.5.0-SNAPSHOT/fibra-tool-shell-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "6c6c2b423aa970ec8fb76ace0f2c53985c7be44f6cfffb4d1ea24f7767549ff6"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-shell/0.5.0-SNAPSHOT/fibra-tool-shell-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "a9f0186a6aa41b95addff0ffbe20ff61f8c75b2708f4752121823d7da4a26454"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-shell/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1205,
+    "sha256": "4581d6eb7007b98237911e5eada6bc77b3a48deed2f142277055feac330130e0"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-shell/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "2c113a6423652edd18e47bb4ef089878d1199d53f1ea4f37445ffe69714c91b9"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-shell/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "12ba5bbb815c617d64c365a4dd4f1f4938b46b072cab81f7a240b31f1c3e6ee5"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-shell/maven-metadata.xml",
+    "bytes": 287,
+    "sha256": "13331dd8d8c0908c1121bbace24917c96ebb9a119a4996ba6233c766c8f2566c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-shell/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "7f3f84442e3cabe0ce6d8d0320a04d8a3e1b27b9302938bcf11c377c7ea80553"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-shell/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "c2a66155ac203fc7e1a90c66af5b0c70b473f65d4de2b17e72527a6e7f08429c"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-storage/0.5.0-SNAPSHOT/fibra-tool-storage-0.5.0-20261015.004211-1-javadoc.jar",
+    "bytes": 97184,
+    "sha256": "8eea1f8bdccd7b4a0d6e5507c9f838b0f2d879f7fe5ba8dafc5a3fb4f6c65af4"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-storage/0.5.0-SNAPSHOT/fibra-tool-storage-0.5.0-20261015.004211-1-javadoc.jar.md5",
+    "bytes": 32,
+    "sha256": "42e3df7b1ca564e0997e4944ad26c72cc5d80389f1ca13ee435d244e3d845ab2"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-storage/0.5.0-SNAPSHOT/fibra-tool-storage-0.5.0-20261015.004211-1-javadoc.jar.sha1",
+    "bytes": 40,
+    "sha256": "0c3a872d1eb8f26d531902d65bf80f7823a901c52530d42cf053f775b3e94e31"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-storage/0.5.0-SNAPSHOT/fibra-tool-storage-0.5.0-20261015.004211-1-sources.jar",
+    "bytes": 5725,
+    "sha256": "652ec3c037a37511fe215e2d543ea7bb4ff7447971360a1460e4f862ccd119b5"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-storage/0.5.0-SNAPSHOT/fibra-tool-storage-0.5.0-20261015.004211-1-sources.jar.md5",
+    "bytes": 32,
+    "sha256": "ae15f79ffc3d0cc3f6e28c74ff664e36f7c58e91e86d31968cf7479ce8fdcf9a"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-storage/0.5.0-SNAPSHOT/fibra-tool-storage-0.5.0-20261015.004211-1-sources.jar.sha1",
+    "bytes": 40,
+    "sha256": "7f466beac7d9968d0dc87f5ee50b904df0011b8480dad31153008bd1eb23a9f3"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-storage/0.5.0-SNAPSHOT/fibra-tool-storage-0.5.0-20261015.004211-1.jar",
+    "bytes": 20231,
+    "sha256": "131ea0907f82e03e724a1566b685a60698f11804cf088588651fdc6344d238a9"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-storage/0.5.0-SNAPSHOT/fibra-tool-storage-0.5.0-20261015.004211-1.jar.md5",
+    "bytes": 32,
+    "sha256": "1840cbb5eead5087d3f38f28b4b3411d1bcfb516bb9a96b2abd7216961ab4752"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-storage/0.5.0-SNAPSHOT/fibra-tool-storage-0.5.0-20261015.004211-1.jar.sha1",
+    "bytes": 40,
+    "sha256": "5aebfb8772fd6483194866d6d585615a89c1d1147fcd802fd52e1709d5b47cfd"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-storage/0.5.0-SNAPSHOT/fibra-tool-storage-0.5.0-20261015.004211-1.pom",
+    "bytes": 2313,
+    "sha256": "df4ba8b2183d78b691f16e3ab5f17f5f4b8b28a579ad7412ede0f11770f60bf3"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-storage/0.5.0-SNAPSHOT/fibra-tool-storage-0.5.0-20261015.004211-1.pom.md5",
+    "bytes": 32,
+    "sha256": "33ec0435fc79d50d23fa136ced69e3ee588d6b15b49421cf51b1e088ff1ec664"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-storage/0.5.0-SNAPSHOT/fibra-tool-storage-0.5.0-20261015.004211-1.pom.sha1",
+    "bytes": 40,
+    "sha256": "bed8e631772bfd74390b0fc4ffc729248119de31e6bbcc90bff44a7a15c7a166"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-storage/0.5.0-SNAPSHOT/maven-metadata.xml",
+    "bytes": 1207,
+    "sha256": "ce810a2750ccb6129d670bee7b4bc7f48b0a13d29ce8941fe1dd7c5e80fdd137"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-storage/0.5.0-SNAPSHOT/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "b622ef8643e1884841c3283e36feb4745d78cb2a9304ed729691b335840c8a2f"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-storage/0.5.0-SNAPSHOT/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "69f482cdbbd0b89f06c5bac150d5faacb298caf34adb37833a8ce77acc7b28b9"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-storage/maven-metadata.xml",
+    "bytes": 289,
+    "sha256": "993172a2be1769832766c0d39de50452d98023e1328db242b91f86b3c9c0a0ef"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-storage/maven-metadata.xml.md5",
+    "bytes": 32,
+    "sha256": "ed4b0ed2c7b9aeb53537988ec0ad8b9cf309d365972aa01d1e29ec32c65c9339"
+  },
+  {
+    "path": "maven/com/sstlfsj/fibra-tool-storage/maven-metadata.xml.sha1",
+    "bytes": 40,
+    "sha256": "dcfbf7d21d674823bbc75dcc3a6ef692f1787e89565c1ec3007ecafa1ae3e45f"
+  }
+]

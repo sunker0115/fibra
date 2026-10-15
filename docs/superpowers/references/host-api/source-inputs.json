@@ -1,0 +1,45 @@
+{
+  "kind": "read-only current consumer source, not rebuilt artifact proof",
+  "inputs": [
+    {
+      "path": "/Users/sunke/dev/ai-project/tela/tela-model-api/src/main/java/com/sstlfsj/tela/model/api/ModelContinuation.java",
+      "sha256": "d9ddfc8ed975c26fe2a61ac6f456cde51bb5cbe2589e598e98f8e45afdc3e804"
+    },
+    {
+      "path": "/Users/sunke/dev/ai-project/tela/tela-model-api/src/main/java/com/sstlfsj/tela/model/api/ModelContributions.java",
+      "sha256": "d083f5b507000fea30648606070b48b384d064e8c392c1bfbee8a72d16938a2b"
+    },
+    {
+      "path": "/Users/sunke/dev/ai-project/tela/tela-model-api/src/main/java/com/sstlfsj/tela/model/api/ModelDescriptor.java",
+      "sha256": "52956da5841645d63db69d81157c4c404733f99bb7eadfab3758c013c79c0d1f"
+    },
+    {
+      "path": "/Users/sunke/dev/ai-project/tela/tela-model-api/src/main/java/com/sstlfsj/tela/model/api/ModelFailure.java",
+      "sha256": "bb626112f4bd8827931c75bb578bb3b7f13ff70385d2330b9c422419f742a452"
+    },
+    {
+      "path": "/Users/sunke/dev/ai-project/tela/tela-model-api/src/main/java/com/sstlfsj/tela/model/api/ModelProviderException.java",
+      "sha256": "8d5365586bf6e109768114e25ae04bffe0835097f48324b0a9b4f4cd513ced97"
+    },
+    {
+      "path": "/Users/sunke/dev/ai-project/tela/tela-model-api/src/main/java/com/sstlfsj/tela/model/api/ModelRequest.java",
+      "sha256": "d1c38d9b50af231518c606a8636c99ec9316b054687519f0e9ac5210ee25d9ec"
+    },
+    {
+      "path": "/Users/sunke/dev/ai-project/tela/tela-model-api/src/main/java/com/sstlfsj/tela/model/api/ModelResponse.java",
+      "sha256": "3a5dd578708e9bd575114892945b93742011b11e36b32842cd5edffaa0a6282a"
+    },
+    {
+      "path": "/Users/sunke/dev/ai-project/tela/tela-model-api/src/main/java/com/sstlfsj/tela/model/api/TelaModelApiEntrypoint.java",
+      "sha256": "58dcac6790cf1a3bd8f99f8bd058e3b24618d7c987a866350b68837aaf0351bc"
+    },
+    {
+      "path": "/Users/sunke/dev/ai-project/tela/tela-model-api/src/main/java/com/sstlfsj/tela/model/api/ToolDefinition.java",
+      "sha256": "dec1592a73fdf5e70d80532deccbcf8679f5a17ea7c516bf93ed04096efeb972"
+    },
+    {
+      "path": "/Users/sunke/dev/ai-project/tela/tela-model-api/src/main/java/com/sstlfsj/tela/model/api/ToolExecutionResult.java",
+      "sha256": "4d9380fd93a099ea7cef00c0cd4e44a5cddb4bdca1b0c4f1ce7e707388c29ac5"
+    }
+  ]
+}

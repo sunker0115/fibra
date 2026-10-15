@@ -3,6 +3,27 @@
 本文描述 `0.5.0-SNAPSHOT` 当前公开边界。公共签名以各模块的 `*-public-signatures.txt` 基线和编译后的 API
 为准；本文解释对象的职责、所有权和组合顺序。
 
+Fibra 只有一套按受众与职责分层的公共 API。完整边界、身份和演进规则见
+[公共 API 整体架构](../superpowers/specs/2026-10-15-public-api-architecture.md)。本次 Java 合同类型身份已通过本地
+签名、整仓回归、可复现发行与仓外公开制品验证；精确源码、制品和未验证边界见
+[交付证据](../superpowers/references/host-api/delivery.md)。
+
+| 使用者/层次 | 正式入口 | 唯一 owner |
+|---|---|---|
+| 插件作者与进程内内核 | `fibra-api`、`FibraRuntime/RuntimeDomain` | 定义、服务、事件、effect 和资源树；core 可独立嵌入 |
+| 制品与配置作者 | `fibra-artifact`、`fibra-config` | 不可变 package/revision、安装事务与配置表达 |
+| 托管宿主 | `FibraEngine`、完整 command、observation | target CAS、command lane、编译及 generation 协调 |
+| 能力提供者与调用方 | Bridge 的 kind/registrar/admission、`PublishedRuntime` | Bridge 持调用租约；Engine 发布面校验 view/registration fence |
+| 执行器作者 | Engine `.runtime` provider/driver SPI | 在同一 Engine 编排下执行 runtime slice |
+| 标准执行器使用者 | `JavaRuntimeProvider`、`NodeRuntimeProvider` | 私有 payload、类型装载/sidecar 与静态 lease |
+| 管理与交互适配 | Registry、CLI、Spring | 翻译管理用例、交互与容器装配，沿原 Engine/服务入口 |
+| 外部 execution/客户端 | Java `fibra-client-protocol`、npm `client-api/client-protocol` | 生命周期、发布和调用的 wire 值/codec 与作者 SPI |
+
+选择 Engine 托管后，由 Engine 独占该运行域的管理和关闭，不能再从 core 直接挂载或停止同一组 units。
+Registry、CLI、Spring 与产品 composition root 均使用同一体系，不增加第二控制面、服务发现或恢复状态。
+Java API 合同只共享 Class 词汇身份；宿主对象经 `HostServiceRegistry` 注入，贡献经原 kind/registrar 发布并由
+`PublishedRuntime` 调用。三者分别拥有类型、对象 binding 与调用准入，不能相互替代。
+
 ## Java 包迁移
 
 Engine 按 `deployment`、`execution`、`observation`、`publication`、`runtime` 划分能力包，
@@ -220,23 +241,53 @@ watch 和审计。
 ## Java 与 Node provider
 
 Java facet 的 payload 是包含 `META-INF/fibra/plugin.yaml` 的 JAR。executable descriptor 同时声明非空白
-`entrypoint` 与 `definitionId`，名称必须等于真实 `PluginDefinition.name()`；空对象表示 contract-only JAR。
-只声明一个字段、名称类型错误或空白均为非法制品，实际 probe/inspect/query/prepare 读取时拒绝；安装/仅选择
-不承诺已校私有格式。prepare 在 wiring 发布和 bind 前核真实名称，取得失败仍由原 candidate owner 清理。
+`entrypoint` 与 `definitionId`，名称必须等于真实 `PluginDefinition.name()`；contract-only JAR 同时省略两者，
+仍可声明 `hostApis`，空对象也合法。只声明一个入口字段、名称类型错误或空白均为非法制品，实际
+probe/inspect/query/prepare 读取时拒绝；安装/仅选择不承诺已校私有格式。prepare 在 wiring 发布和 bind 前核
+真实名称，取得失败仍由原 candidate owner 清理。
 
 ```yaml
-entrypoint: example.WidgetEntrypoint
+entrypoint: example.plugin.WidgetEntrypoint
 definitionId: widget
+hostApis:
+  - id: example.widget
+    version: '1'
 ```
 
-`JavaFacetDescriptor` 只保留包含两个 Optional 字段的规范构造器；没有旧单参数重载。宿主、外部 runtime
-provider、executable Java 包和作者模板必须统一更新并重新编译/打包。旧 entrypoint-only 格式没有部署或目录
-回退；新 digest 经原 CAS 更新精确 selection，不自动改写旧 target，不覆盖已保存的不可变包，也不混用同坐标
-的不同 SNAPSHOT 制品。
+`hostApis` 只有上述 id/version 对象列表格式，缺省为空；每项只接受两个必填、非空白字符串字段，重复 id、
+重复/未知字段、null 或错误类型均在 MANIFEST 拒绝。未发布的候选 map 写法同样拒绝，不提供兼容 parser。
+`JavaFacetDescriptor(Optional<String> entrypoint, Optional<String> definitionId, Map<String, String> hostApis)`
+将已验证导入规范化为不可变 Map；双参数构造器仅委托空 Map 到同一路径，没有旧单参数重载。
+该 Map 是声明索引，不是第二配置格式。宿主、外部 runtime provider、executable Java 包和作者模板须统一
+更新并重新编译/打包。旧 entrypoint-only 格式没有部署或目录回退；新 digest 经原 CAS 更新精确 selection，
+不自动改写旧 target，不覆盖已保存的不可变包，也不混用同坐标的不同 SNAPSHOT 制品。
 
-`JavaRuntimeProvider` 为每个 execution unit 建立隔离 class space
-和 unit-local service/control realm，按 facet 依赖图委派，按 dependent-first 顺序关闭。Java 实例状态变化会
-触发实时观察刷新。
+composition root 通过同一 provider 装配面配置精确类型合同：
+
+```java
+var api = new JavaApiContract("example.widget", "1",
+    List.of(WidgetApi.class, WidgetRequest.class, WidgetResult.class));
+var javaProvider = new JavaRuntimeProvider(builtIns, List.of(api));
+```
+
+公共值为 `public record JavaApiContract(String id, String version, List<Class<?>> classes)`，清单防御复制且不可变。
+原单参数 provider 构造器只委托空合同 List 到同一实现。provider 冻结唯一 id、精确版本、各 binary name 的
+唯一 owner 及显式 public Class inventory，拒绝受管插件定义的类型、共享基线覆盖和未闭合 ABI。
+允许跨合同引用，但 provider 的全部导出并集和每 facet 的显式导入并集都必须闭合；引用另一合同就须显式导入，
+不自动传递或求解版本。资格、泛型/嵌套/sealed 签名、private declared metadata 链接，以及
+`getPermittedSubclasses()` 对残缺制品的窗口见[类型合同与签名闭包](../superpowers/specs/2026-10-15-public-api-architecture.md#41-签名闭包校验)。
+
+prepare 在加载入口前核 id/精确版本，拒绝制品携带任意已导出 binary name，包括未导入合同和同字节影子。
+已登记 API 类型只有当前 facet 显式导入才返回 Host 的同一 Class；未导入直接失败，不能从依赖间接取得。
+其他类型继续按已加载 → 平台实际解析 → 固定共享基线 parent 实际解析 → 本制品 → 声明依赖的顺序加载。
+资源查询、SPI/TCCL 与原依赖图保持原语义；类型共享不构成安全沙箱。
+
+provider 的冻结 `contractIdentity()` 包含合同语义版本及 id/version/binary name 清单摘要，参与原
+`compiledFingerprint`，并将同值交给 driver 的 `WiringKey`；不增加 target 状态、resolver、热 API 更新或
+另一协议。精确版本由 Host 发行保证，不是字节码兼容证明。API Class/定义 loader 归 Host 发行 owner，
+driver 仅借用，在全部 Engine 依赖释放后才由 Host 关闭。Java unit 继续拥有隔离 class space 和 unit-local
+service/control realm，按 facet 图委派和 dependent-first 顺序释放静态 lease；停用一个 unit 不关闭其他 unit
+或 Host API。Java 实例状态变化继续触发实时观察刷新。
 
 Node facet 的 payload 是包含本地 descriptor 和 `.js`、`.mjs` 或 `.cjs` 入口的目录。
 `NodeRuntimeProvider` 以受管进程范围启动 sidecar，处理有界消息、deadline、取消、心跳和异常退出。运行时不

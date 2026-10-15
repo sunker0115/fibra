@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.jar.JarFile;
 import java.util.zip.ZipFile;
 
@@ -15,6 +16,11 @@ final class JavaClassIndex {
 
     static void validate(ArtifactId owner, List<Path> jars,
                                  ClassLoader parent, List<String> parentPackages) {
+        validate(owner, jars, parent, parentPackages, Set.of());
+    }
+
+    static void validate(ArtifactId owner, List<Path> jars, ClassLoader parent,
+                          List<String> parentPackages, Set<String> hostApiNames) {
         var classes = new LinkedHashMap<String, Path>();
         try {
             for (var path : jars) {
@@ -25,6 +31,10 @@ final class JavaClassIndex {
                         var className = name.substring(0, name.length() - ".class".length())
                             .replace('/', '.');
                         if (className.equals("module-info") || className.endsWith(".module-info")) return;
+                        if (hostApiNames.contains(className)) {
+                            throw new JavaRuntimeException(JavaRuntimePhase.LOAD, owner,
+                                "Java facet redefines host API class " + className + " in JAR " + path, null);
+                        }
                         try {
                             if (PluginClassLoader.isPlatformOrParentDefined(className, parent, parentPackages)) return;
                         } catch (LinkageError failure) {

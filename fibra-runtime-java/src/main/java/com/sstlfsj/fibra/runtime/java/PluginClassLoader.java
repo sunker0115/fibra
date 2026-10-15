@@ -8,6 +8,8 @@ import java.util.Enumeration;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Map;
+import java.util.Set;
 
 final class PluginClassLoader extends URLClassLoader {
     static {
@@ -15,16 +17,26 @@ final class PluginClassLoader extends URLClassLoader {
     }
 
     private final List<String> parentPackages;
+    private final Map<String, Class<?>> hostApiClasses;
+    private final Set<String> hostApiNames;
     private volatile List<PluginClassLoader> dependencies = List.of();
 
     PluginClassLoader(List<URL> jars, ClassLoader parent, List<String> parentPackages) {
-        this(List.copyOf(jars).toArray(URL[]::new), Objects.requireNonNull(parent, "parent"),
-            List.copyOf(parentPackages));
+        this(jars, parent, parentPackages, Map.of(), Set.of());
     }
 
-    private PluginClassLoader(URL[] jars, ClassLoader parent, List<String> parentPackages) {
+    PluginClassLoader(List<URL> jars, ClassLoader parent, List<String> parentPackages,
+                       Map<String, Class<?>> hostApiClasses, Set<String> hostApiNames) {
+        this(List.copyOf(jars).toArray(URL[]::new), Objects.requireNonNull(parent, "parent"),
+            List.copyOf(parentPackages), Map.copyOf(hostApiClasses), Set.copyOf(hostApiNames));
+    }
+
+    private PluginClassLoader(URL[] jars, ClassLoader parent, List<String> parentPackages,
+                              Map<String, Class<?>> hostApiClasses, Set<String> hostApiNames) {
         super(jars, parent);
         this.parentPackages = parentPackages;
+        this.hostApiClasses = hostApiClasses;
+        this.hostApiNames = hostApiNames;
     }
 
     void dependencies(List<PluginClassLoader> values) {
@@ -37,6 +49,13 @@ final class PluginClassLoader extends URLClassLoader {
     @Override
     protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
         synchronized (getClassLoadingLock(name)) {
+            // A dependency's imports never become this facet's implicit re-exports.
+            if (hostApiNames.contains(name)) {
+                var shared = hostApiClasses.get(name);
+                if (shared == null) throw new ClassNotFoundException("host API is not imported: " + name);
+                if (resolve) resolveClass(shared);
+                return shared;
+            }
             var loaded = findLoadedClass(name);
             if (loaded == null) {
                 try {
@@ -104,7 +123,7 @@ final class PluginClassLoader extends URLClassLoader {
         }
     }
 
-    private static Class<?> platformOrParentClass(String name, ClassLoader parent,
+    static Class<?> platformOrParentClass(String name, ClassLoader parent,
                                                   List<String> parentPackages) throws ClassNotFoundException {
         try {
             return ClassLoader.getPlatformClassLoader().loadClass(name);

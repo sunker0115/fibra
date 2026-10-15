@@ -11,6 +11,9 @@ import java.nio.file.Path;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Set;
 import java.util.Optional;
 import java.util.ArrayList;
 import java.util.jar.Attributes;
@@ -61,17 +64,38 @@ final class JavaFacetDescriptorReader {
             if (bytes.length > MAX_BYTES) throw error("Java facet descriptor is too large", null);
             var raw = yaml.readValue(bytes, Object.class);
             if (!(raw instanceof Map<?, ?> values)) throw error("Java facet descriptor must be an object", null);
-            if (values.keySet().stream().anyMatch(key -> !"entrypoint".equals(key) && !"definitionId".equals(key))) {
+            if (values.keySet().stream().anyMatch(key -> !"entrypoint".equals(key)
+                && !"definitionId".equals(key) && !"hostApis".equals(key))) {
                 throw error("unknown Java facet descriptor fields " + values.keySet(), null);
             }
-            if (values.isEmpty()) return new JavaFacetDescriptor(Optional.empty(), Optional.empty());
+            var imports = new LinkedHashMap<String, String>();
+            if (values.containsKey("hostApis")) {
+                if (!(values.get("hostApis") instanceof List<?> hostApis)) {
+                    throw error("hostApis must be a list of API id and exact version objects", null);
+                }
+                for (var item : hostApis) {
+                    if (!(item instanceof Map<?, ?> api) || !api.keySet().equals(Set.of("id", "version"))) {
+                        throw error("hostApis entries must contain only id and version", null);
+                    }
+                    if (!(api.get("id") instanceof String id) || id.isBlank()
+                        || !(api.get("version") instanceof String version) || version.isBlank()) {
+                        throw error("hostApis id and version must be non-blank strings", null);
+                    }
+                    if (imports.putIfAbsent(id, version) != null) {
+                        throw error("duplicate host API import " + id, null);
+                    }
+                }
+            }
+            if (!values.containsKey("entrypoint") && !values.containsKey("definitionId")) {
+                return new JavaFacetDescriptor(Optional.empty(), Optional.empty(), imports);
+            }
             if (!(values.get("entrypoint") instanceof String name) || name.isBlank()) {
                 throw error("entrypoint must be a non-blank string", null);
             }
             if (!(values.get("definitionId") instanceof String definitionId) || definitionId.isBlank()) {
                 throw error("definitionId must be a non-blank string", null);
             }
-            return new JavaFacetDescriptor(Optional.of(name), Optional.of(definitionId));
+            return new JavaFacetDescriptor(Optional.of(name), Optional.of(definitionId), imports);
         } catch (JavaRuntimeException failure) {
             throw failure;
         } catch (IOException | RuntimeException failure) {

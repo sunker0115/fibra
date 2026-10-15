@@ -1,0 +1,40 @@
+{
+  "api_source": "/private/tmp/tela-p3-core-abi-qualification-20261015/packages/tela-model-api/lib/main.jar",
+  "api_sha256": "f37b73abeab51effa23a222cf1d87860f598b3d576b962ea0917ec3a0975a30a",
+  "provider_source": "/private/tmp/tela-p3-core-abi-qualification-20261015/packages/tela-model-deterministic/lib/main.jar",
+  "provider_sha256": "7f5bb25db7b0f3454d0419fb7e56769019645462f34067d323ce2cffe27511d9",
+  "provider_class_sha256": {
+    "com/sstlfsj/tela/model/deterministic/DeterministicModelHandler.class": "94a095a4d90a615465cb94941f26968a4acb5a75f30fe201f6b79dd127106d74",
+    "com/sstlfsj/tela/model/deterministic/DeterministicModelEntrypoint$ModelPlugin.class": "68350f0c74fa825ec514c429da68f8755939f62a075a1bc40c46d5119f4712ce",
+    "com/sstlfsj/tela/model/deterministic/DeterministicModelEntrypoint.class": "9eb6aba08c618aab26e7288736dfeab7995645ce0c42664209fb1fc449839e70"
+  },
+  "inventory_binary_names": [
+    "com.sstlfsj.tela.model.api.ModelContinuation",
+    "com.sstlfsj.tela.model.api.ModelContributions",
+    "com.sstlfsj.tela.model.api.ModelDescriptor",
+    "com.sstlfsj.tela.model.api.ModelFailure",
+    "com.sstlfsj.tela.model.api.ModelFailure$Category",
+    "com.sstlfsj.tela.model.api.ModelFailure$ModelFailureBuilder",
+    "com.sstlfsj.tela.model.api.ModelProviderException",
+    "com.sstlfsj.tela.model.api.ModelRequest",
+    "com.sstlfsj.tela.model.api.ModelRequest$Initial",
+    "com.sstlfsj.tela.model.api.ModelRequest$Input",
+    "com.sstlfsj.tela.model.api.ModelRequest$ToolResults",
+    "com.sstlfsj.tela.model.api.ModelResponse",
+    "com.sstlfsj.tela.model.api.ModelResponse$AssistantText",
+    "com.sstlfsj.tela.model.api.ModelResponse$Completed",
+    "com.sstlfsj.tela.model.api.ModelResponse$Completion",
+    "com.sstlfsj.tela.model.api.ModelResponse$Incomplete",
+    "com.sstlfsj.tela.model.api.ModelResponse$ModelResponseBuilder",
+    "com.sstlfsj.tela.model.api.ModelResponse$OutputItem",
+    "com.sstlfsj.tela.model.api.ModelResponse$RequiresAction",
+    "com.sstlfsj.tela.model.api.ModelResponse$ToolCall",
+    "com.sstlfsj.tela.model.api.ModelResponse$Usage",
+    "com.sstlfsj.tela.model.api.ToolDefinition",
+    "com.sstlfsj.tela.model.api.ToolDefinition$ToolDefinitionBuilder",
+    "com.sstlfsj.tela.model.api.ToolExecutionResult",
+    "com.sstlfsj.tela.model.api.ToolExecutionResult$Status",
+    "com.sstlfsj.tela.model.api.ToolExecutionResult$ToolExecutionResultBuilder"
+  ],
+  "adaptation": "Only external package metadata/hostApis declaration changed; original API JAR and all provider class bytes unchanged; no product source modified."
+}

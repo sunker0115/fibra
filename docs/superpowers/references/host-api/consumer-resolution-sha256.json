@@ -1,0 +1,66 @@
+{
+  "com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/fibra-config-0.5.0-20261015.004211-2.pom": {
+    "sha256": "bc1deda5f6e281d3eead4c6fef668ac57bb2679540b91b17c17f1a04e10dd5ad",
+    "source": "host-api-publication"
+  },
+  "com/sstlfsj/fibra-config/0.5.0-SNAPSHOT/fibra-config-0.5.0-20261015.004211-2.jar": {
+    "sha256": "0e617c9f148c124ca3fc63268d3688115728367b517778593838aecfd379aab0",
+    "source": "host-api-publication"
+  },
+  "com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/fibra-bridge-0.5.0-20261015.004211-2.pom": {
+    "sha256": "fe567b0191d0528ded683cfd23dd4f2ea0e8d535b55c2f75f35ab4b7db3c06bf",
+    "source": "host-api-publication"
+  },
+  "com/sstlfsj/fibra-bridge/0.5.0-SNAPSHOT/fibra-bridge-0.5.0-20261015.004211-2.jar": {
+    "sha256": "33b7ccc639c3a547a36c169e95a4de37714495f2e740ed1aa3303e654de7cb82",
+    "source": "host-api-publication"
+  },
+  "com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/fibra-core-0.5.0-20261015.004211-2.jar": {
+    "sha256": "030e9457ff674aa054244ffe47c43c53493a99777becf4d91a3be219e38155a0",
+    "source": "host-api-publication"
+  },
+  "com/sstlfsj/fibra-core/0.5.0-SNAPSHOT/fibra-core-0.5.0-20261015.004211-2.pom": {
+    "sha256": "4e19223f68bbbdd822a748aa33df69ef22b8d7553b164343de38c20b48a3c0a5",
+    "source": "host-api-publication"
+  },
+  "com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/fibra-artifact-0.5.0-20261015.004211-2.jar": {
+    "sha256": "705e7235f9acf2827b5b05b6943766c2dd713293d8843707f984487cff493b1e",
+    "source": "host-api-publication"
+  },
+  "com/sstlfsj/fibra-artifact/0.5.0-SNAPSHOT/fibra-artifact-0.5.0-20261015.004211-2.pom": {
+    "sha256": "77383e2e1a6f92c8d2736b05906e4e3997db83639a240df4c3fe035c353b516b",
+    "source": "host-api-publication"
+  },
+  "com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/fibra-client-protocol-0.5.0-20261015.004211-1.jar": {
+    "sha256": "dc0292ac593e181e57c490db5cf741f35cf44eed86c16431196e5e83560844cb",
+    "source": "host-api-publication"
+  },
+  "com/sstlfsj/fibra-client-protocol/0.5.0-SNAPSHOT/fibra-client-protocol-0.5.0-20261015.004211-1.pom": {
+    "sha256": "515d95a3810aac59d883e66ee1a4673183e3cc315bd766508e8a93641f4567d6",
+    "source": "host-api-publication"
+  },
+  "com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/fibra-api-0.5.0-20261015.004211-2.pom": {
+    "sha256": "5b250b7af9386468965893def4947ab989ddfa6d6a1bb7b5db174ad08b39df83",
+    "source": "host-api-publication"
+  },
+  "com/sstlfsj/fibra-api/0.5.0-SNAPSHOT/fibra-api-0.5.0-20261015.004211-2.jar": {
+    "sha256": "f5a711f7045b78670c3b9f68b0530518daba3a0b7cba8fe15fd3f36d8f0188b8",
+    "source": "host-api-publication"
+  },
+  "com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/fibra-runtime-java-0.5.0-20261015.004211-2.pom": {
+    "sha256": "459d7c6d44e3a8d8314f6aa4a8357881f9faf265c14c34358f528d10567ae482",
+    "source": "host-api-publication"
+  },
+  "com/sstlfsj/fibra-runtime-java/0.5.0-SNAPSHOT/fibra-runtime-java-0.5.0-20261015.004211-2.jar": {
+    "sha256": "378e95b12d7132dfb33bf324e2fd7e2cf2c9e93480082c11f0a26ce7bd3357d4",
+    "source": "host-api-publication"
+  },
+  "com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/fibra-engine-0.5.0-20261015.004211-2.jar": {
+    "sha256": "eb45f515cbbb59852496278979c069197009eba0e29d60f277895b2293fdc219",
+    "source": "host-api-publication"
+  },
+  "com/sstlfsj/fibra-engine/0.5.0-SNAPSHOT/fibra-engine-0.5.0-20261015.004211-2.pom": {
+    "sha256": "0a4c0c1c8443b7beb61edb5b5ca60f5a549e38312d61c0f05f9202f57675f6a2",
+    "source": "host-api-publication"
+  }
+}
